@@ -108,6 +108,17 @@ test('capture refuses unavailable and reentrant retention without leaving a live
   assert.equal(captureImageInsertionIntent(changed.session), null); assert.equal(changed.releases(), 1);
 });
 
+test('insertion capture rejects a changed snapshot instead of rebasing its lease', () => {
+  const f = fixture(); let reads = 0;
+  const session = { ...f.session, snapshot: () => {
+    if (++reads === 2) f.change({ selection: { kind: 'caret', version: 2 } });
+    return f.session.snapshot();
+  } } as DocxSession;
+  assert.equal(captureImageInsertionIntent(session), null);
+  assert.equal(f.retains(), 1);
+  assert.equal(f.releases(), 1);
+});
+
 test('dispatch transfers lease ownership before synchronous notifications and hide cannot release it', async () => {
   const f = fixture(), intent = captureImageInsertionIntent(f.session)!;
   f.onInsert(() => { intent.release(); assert.equal(f.releases(), 0); });

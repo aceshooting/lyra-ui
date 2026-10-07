@@ -1387,7 +1387,7 @@ describe('<lr-navigation-menu> collapse', () => {
     part(menu, 'toggle')!.click();
     await settle(menu);
     expect(expanded).to.deep.equal([{ expanded: true, source: 'user' }]);
-    expect(ownToggles).to.have.length(0);
+    expect(ownToggles).to.have.length(1);
     expect(part(menu, 'toggle')!.getAttribute('aria-expanded')).to.equal('true');
     const listWidth = part(menu, 'list')!.getBoundingClientRect().width;
     for (const entry of itemsOf(menu)) {
@@ -1408,6 +1408,48 @@ describe('<lr-navigation-menu> collapse', () => {
     hoverSynthetic(resources);
     await aTimeout(30);
     expect(resources.open).to.equal(false);
+  });
+
+  it('vetoes the canonical list toggle request without suppressing child item toggle events', async () => {
+    const menu = await menuFixture(html`<div style="inline-size: 320px"><lr-navigation-menu mobile-breakpoint="40rem" show-delay="0">${items()}</lr-navigation-menu></div>`);
+    await waitUntil(() => part(menu, 'toggle') !== null);
+    let requests = 0;
+    menu.addEventListener('lr-toggle-request', (event) => {
+      if (event.target !== menu) return;
+      requests += 1;
+      event.preventDefault();
+    });
+    part(menu, 'toggle')!.click();
+    await settle(menu);
+    expect(menu.expanded).to.equal(false);
+    expect(requests).to.equal(1);
+    menu.show();
+    await settle(menu);
+    expect(menu.expanded).to.equal(true);
+    menu.hide();
+    await settle(menu);
+    expect(menu.expanded).to.equal(false);
+  });
+
+  it('respects identical host writes and drops superseded queued toggle notifications', async () => {
+    const menu = await menuFixture(html`<div style="inline-size: 320px"><lr-navigation-menu mobile-breakpoint="40rem">${items()}</lr-navigation-menu></div>`);
+    await waitUntil(() => part(menu, 'toggle') !== null);
+    const accepted: boolean[] = [];
+    menu.addEventListener('lr-toggle', (event) => {
+      if (event.target === menu) accepted.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+    });
+    const resolve = () => { menu.expanded = false; };
+    menu.addEventListener('lr-toggle-request', resolve);
+    part(menu, 'toggle')!.click();
+    await settle(menu);
+    expect(menu.expanded).to.equal(false);
+    expect(accepted).to.deep.equal([]);
+    menu.removeEventListener('lr-toggle-request', resolve);
+    menu.show();
+    menu.hide();
+    await settle(menu);
+    expect(menu.expanded).to.equal(false);
+    expect(accepted).to.deep.equal([false]);
   });
 
   it('closes and repairs focus when the allocation crosses the breakpoint both ways', async () => {

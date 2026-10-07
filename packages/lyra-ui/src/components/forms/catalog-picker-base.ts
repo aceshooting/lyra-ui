@@ -19,8 +19,6 @@ import type { PlaceStrategy } from '../../internal/positioner.js';
 import type { LyraSize } from '../../internal/variants.js';
 import type { LyraSelect } from './select/select.class.js';
 import type { LyraCombobox } from './combobox/combobox.class.js';
-import './select/select.class.js';
-import './combobox/option.class.js';
 import { styles } from './catalog-picker-base.styles.js';
 
 export interface LyraCatalogPickerChangeDetail {

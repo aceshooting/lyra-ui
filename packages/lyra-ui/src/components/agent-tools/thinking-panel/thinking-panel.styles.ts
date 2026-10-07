@@ -1,3 +1,4 @@
+import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
 // Shares its collapsible-header shape (border/radius/hover/focus-ring, the
@@ -49,20 +50,12 @@ export const styles = css`
     background: transparent;
   }
   [part="header"] {
-    display: flex;
+    ${disclosureHeader}
     flex-wrap: wrap;
-    align-items: center;
-    gap: var(--lr-space-xs);
-    inline-size: 100%;
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border: none;
-    background: none;
-    color: var(--lr-color-text);
-    font: inherit;
+
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-md-sm);
-    text-align: start;
-    cursor: pointer;
+
   }
   [part="header"]:hover {
     background: var(--lr-color-brand-quiet);

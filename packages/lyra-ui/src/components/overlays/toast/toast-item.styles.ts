@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
@@ -152,8 +153,7 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   ::slotted(button:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The display above is author-origin, outranking the UA '[hidden] { display: none }', so a
      caller hiding toaster.ts's light-DOM action button -- an undo already taken, say -- would
@@ -176,8 +176,7 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
     padding: var(--lr-space-xs);
     border-radius: var(--lr-radius);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part="progress-ring"] {
     position: relative;
@@ -257,8 +256,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part="close-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   @keyframes lr-toast-progress {

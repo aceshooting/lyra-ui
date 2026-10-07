@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -45,8 +46,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     inline-size: 100%;
     /* Shared WCAG 2.5.8 floor on BOTH axes, as every other interactive part in this family takes. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding-inline: var(--lr-space-xs);
     border: 0;
     border-radius: var(--lr-radius);
@@ -76,8 +76,7 @@ export const styles = css`
     color: var(--lr-app-rail-group-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* icons.ts ships one right-pointing chevron and asks callers to rotate the WRAPPING element.
      Open points down (the content below it), closed points along the reading direction. */

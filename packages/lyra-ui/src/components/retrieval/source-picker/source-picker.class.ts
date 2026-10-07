@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -429,7 +429,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         // reflects the caller's own intent) and on the very first update (nothing to resync yet).
         // Mirrors retrieval-results.class.ts's `shouldAnnounce` gate for the identical shape.
         const shouldAnnounce = this.hasUpdated && changed.has('sources');
-        this.selectedSourceIds = normalized;
+        writeNormalizedOwnedCollection(this, 'selectedSourceIds', () => {
+          this.selectedSourceIds = normalized;
+        });
         if (shouldAnnounce) this.reportSelection(normalized);
       }
     }
@@ -497,14 +499,20 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       this.lastFilterAnnouncement = '';
       return;
     }
-    const count = this.visibleRows().length;
+    // Ancestor folders remain visible for navigation but are not matches unless their own label
+    // matches the query.
+    const count = this.visibleRows().filter((row) => this.matchesQuery(row.entry)).length;
     const signature = `${this.query
       .trim()
       .toLocaleLowerCase(this.effectiveLocale)}\u0000${count}`;
     if (signature === this.lastFilterAnnouncement) return;
     this.lastFilterAnnouncement = signature;
-    if (count === 0)
-      this.announcementSink?.announce(this.localize('noMatches'));
+    this.announcementSink?.announce(count === 0
+      ? this.localize('noMatches')
+      : this.localize('sourcePickerMatches', undefined, {
+          count: getNumberFormat(this.effectiveLocale).format(count),
+          pluralCount: count,
+        }));
   }
 
   private reportSelection(selectedSourceIds: string[]): void {

@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './subagent-panel.js';
 import type { LyraSubagentPanel, SubagentRun } from './subagent-panel.js';
@@ -36,13 +37,6 @@ function replaceCssEscape(
     if (previous) Object.defineProperty(target, 'escape', previous);
     else Reflect.deleteProperty(target, 'escape');
   };
-}
-
-function sinkTexts(): string[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
-    (node) => node.textContent ?? '',
-  );
 }
 
 const runs: SubagentRun[] = [
@@ -813,7 +807,6 @@ describe('run-row chrome theming hooks', () => {
     }
   });
 });
-
 
 describe('lr-subagent-panel deprecated --lr-subagent-panel-background/-hover-background aliases', () => {
   const fill = (el: LyraSubagentPanel): string =>

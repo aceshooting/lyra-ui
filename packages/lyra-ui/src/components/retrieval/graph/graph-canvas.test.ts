@@ -553,12 +553,7 @@ describe('canvas renderer — interaction and a11y', () => {
       </div>
     `)) as HTMLElement;
     const el = asTestGraph(container.querySelector('lr-graph')!);
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -586,12 +581,13 @@ describe('canvas renderer — interaction and a11y', () => {
     expect(tooltip.style.insetInlineStart).to.equal('');
   });
 
-  it('renders one offscreen cursor-item button per node/link, in the same roving order as svg mode, driving the same keyboard/announcement logic', async () => {
+  it('keeps one virtual cursor while advancing through the complete graph order', async () => {
     const el = await mountCanvas();
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
-    expect(items).to.have.length(3); // 2 nodes + 1 link
+    expect(items).to.have.length(1);
+    expect(items[0]!.parentElement!.getAttribute('aria-setsize')).to.equal('3');
     expect(
       items.filter((i) => i.getAttribute('tabindex') === '0')
     ).to.have.length(1);
@@ -599,7 +595,8 @@ describe('canvas renderer — interaction and a11y', () => {
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
     );
     await el.updateComplete;
-    expect(items[1]!.getAttribute('tabindex')).to.equal('0');
+    expect(items[0]!.getAttribute('tabindex')).to.equal('0');
+    expect(items[0]!.parentElement!.getAttribute('aria-posinset')).to.equal('2');
     expect(
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent
     ).to.not.equal('');
@@ -623,9 +620,14 @@ describe('canvas renderer — interaction and a11y', () => {
       timeout: NODE_COUNT_TIMEOUT,
     });
     const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')];
-    expect(
-      items.map((item) => item.getAttribute('aria-pressed'))
-    ).to.deep.equal(['true', 'false', 'true']);
+    const cursor = items[0]!;
+    const states = [cursor.getAttribute('aria-pressed')];
+    for (const key of ['ArrowDown', 'End']) {
+      cursor.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      await el.updateComplete;
+      states.push(cursor.getAttribute('aria-pressed'));
+    }
+    expect(states).to.deep.equal(['true', 'false', 'true']);
   });
 
   it('clamps the canvas tooltip inside the visible canvas and viewport bounds', async () => {
@@ -798,17 +800,7 @@ it('rejects url paint servers from node, type, link, and community colors', asyn
 });
 
 it('wires up d3-drag on each draggable node', async () => {
-  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-  el.nodes = nodes;
-  el.edges = links;
-  await el.updateComplete;
-  await waitUntil(
-    () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-    undefined,
-    {
-      timeout: NODE_COUNT_TIMEOUT,
-    }
-  );
+  const el = await graphSupport.mountGraphPair();
   const nodeEl = el.shadowRoot!.querySelector(
     '[part="node"]'
   ) as SVGCircleElement;
@@ -1536,17 +1528,7 @@ it('seed unset: layout is unaffected (still uses forceSimulation()s own random i
 });
 
 it('user-initiated drag still works normally after a seeded synchronous settle', async () => {
-  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
-  el.nodes = nodes;
-  el.edges = links;
-  await el.updateComplete;
-  await waitUntil(
-    () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-    undefined,
-    {
-      timeout: NODE_COUNT_TIMEOUT,
-    }
-  );
+  const el = await graphSupport.mountGraphPair(7);
 
   const nodeEl = el.shadowRoot!.querySelector(
     '[part="node"]'

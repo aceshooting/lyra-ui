@@ -32,6 +32,25 @@ export const DockedEnd: Story = {
   `,
 };
 
+export const CappedResize: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Each pointer or keyboard step proposes an extent through lr-resize-request. Preventing a step keeps the current size; lr-resize-change reports an accepted drag when released.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="position:relative;block-size:16rem;display:flex">
+      <main style="flex:1;min-inline-size:0">Resize the panel up to 360px.</main>
+      <lr-dock-panel placement="end" extent="280px" min-extent="180px" max-extent="480px"
+        @lr-resize-request=${(event: CustomEvent<{ extent: string }>) => {
+          if (parseFloat(event.detail.extent) > 360) event.preventDefault();
+        }}>Panel content</lr-dock-panel>
+    </div>
+  `,
+};
+
 export const DockedStart: Story = {
   render: () => html`
     <div style="position: relative; height: 20rem; border: 1px solid var(--lr-color-border); display: flex;">

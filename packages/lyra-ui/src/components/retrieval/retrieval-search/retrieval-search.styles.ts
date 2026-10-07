@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -84,8 +85,7 @@ export const styles = css`
     );
   }
   [part='submit']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host([loading]) [part='submit'] {
     background: var(--lr-color-surface);

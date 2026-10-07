@@ -24,7 +24,7 @@ function text(node: Element | null | undefined): string {
   return (node?.textContent ?? '').replace(/[\u00a0\u202f]/g, ' ').trim();
 }
 
-expectLocaleFallback('de-DE', ['chart', 'comparePanel', 'statTrendDecreased']);
+expectLocaleFallback('de-DE', ['chart', 'comparePanel', 'funnelDropoffDecreased']);
 
 describe('<lr-funnel>', () => {
   it('renders one stage per entry with both the absolute value and the share of the FIRST stage, and stays accessible', async () => {
@@ -240,6 +240,20 @@ describe('<lr-funnel>', () => {
     el.strings = { noData: 'Nothing yet' };
     await el.updateComplete;
     expect(text(part(el, 'empty'))).to.equal('Nothing yet');
+  });
+
+  it('uses funnel-specific overrides for comparison and drop-off text', async () => {
+    const el = await fixture<LyraFunnel>(html`<lr-funnel
+      .stages=${[{ label: 'Start', value: 10 }, { label: 'End', value: 5 }]}
+      .comparison=${[{ label: 'Start', value: 10 }, { label: 'End', value: 8 }]}
+    ></lr-funnel>`);
+    el.strings = {
+      funnelComparisonShare: 'Peer {label} has {value}',
+      funnelDropoffDecreased: 'Lost {value}',
+    };
+    await el.updateComplete;
+    expect(text(parts(el, 'comparison-value')[1])).to.equal('Peer Comparison has 80%');
+    expect(text(part(el, 'dropoff'))).to.equal('Lost 50%');
   });
 
   it('grows every bar from the inline-start edge in both directions', async () => {

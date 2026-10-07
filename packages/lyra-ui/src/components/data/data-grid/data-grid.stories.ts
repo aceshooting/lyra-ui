@@ -141,7 +141,7 @@ export const BoundedTreeProjection: Story = {
     docs: {
       description: {
         story:
-          "Nested input is cycle-safe and bounded to 64 descendant levels and 10,000 total rows. This 70-level example renders the supported prefix plus the localized `tree-limit` notice.",
+          "Nested input is cycle-safe and bounded to 64 descendant levels and 10,000 total rows. This 70-level example renders the supported prefix plus the localized `tree-limit` notice. A flat row collection beyond 10,000 uses the `row-limit` notice instead.",
       },
     },
   },

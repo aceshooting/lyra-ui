@@ -1,5 +1,7 @@
+import { setNativeRangeText } from '../../../internal/native-text-control.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
-import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -44,7 +46,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_countryPickerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraPhoneInputSelectionDirection = LyraSelectionDirection;
 
@@ -328,9 +329,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       this.touched = true;
     });
   }
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   @state() private hasCountryPrefixSlot = false;
   @state() private hasEndSlot = false;
 
@@ -594,34 +596,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    if (this.hasUpdated) this.syncExternalDescription();
+    this.hostDescription.adopted();
   }
 
-  override disconnectedCallback(): void {
-    this.releaseExternalDescription();
-    super.disconnectedCallback();
-  }
-
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-
-  private syncExternalDescription(): void {
-    if (!this.isConnected) return;
-    const target = this.inputElement ?? null;
-    if (!target) return;
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
-  }
+  private readonly hostDescription = new HostDescriptionController(this, () => this.inputElement ?? null);
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -638,9 +616,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
       // handed no children at all) has been reproduced, so the hydrating client's first render
       // matches the server's markup instead of tearing it down.
       this.seedFirstRenderState(() => {
-        this.hasLabelSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'label');
-        this.hasHintSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'hint');
-        this.hasErrorSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'error');
+
         this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
           (child) => child.getAttribute('slot') === 'country-prefix' || child.getAttribute('slot') === 'start',
         );
@@ -669,7 +645,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.syncExternalDescription();
     if (changed.has('strings')) this.updateValidity();
     if (
       changed.has('touched') ||
@@ -775,17 +750,6 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
   // fix), even though the assigned child's own `slot` attribute never changed. Mirrors the
   // light-DOM check `willUpdate()` above already uses for the same flags.
-  private onLabelSlotChange = (): void => {
-    this.hasLabelSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'label');
-  };
-
-  private onHintSlotChange = (): void => {
-    this.hasHintSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'hint');
-  };
-
-  private onErrorSlotChange = (): void => {
-    this.hasErrorSlot = Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === 'error');
-  };
 
   private onCountryPrefixSlotChange = (): void => {
     this.hasCountryPrefixSlot = Array.from(this.children ?? []).some(
@@ -836,11 +800,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
     const input = this.inputElement;
     if (!input) return;
-    if (start === undefined || end === undefined) {
-      input.setRangeText(replacement);
-    } else {
-      input.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(input, replacement, start, end, selectMode);
     const caret = input.selectionStart;
     const digitsBeforeCaret = caret == null ? null : digitsBefore(input.value, caret);
     this.applyParsed(input.value, this.parse(input.value));
@@ -871,7 +831,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     return html`
       <div part="form-control">
         <label part="form-control-label" for=${this.inputId} ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+          ${this.label}<slot name="label"></slot>
         </label>
         <div part="input-wrapper">
           <span part="country-prefix" ?hidden=${!this.hasCountryPrefixSlot}>
@@ -939,10 +899,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
           </span>
         </div>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+          ${this.hint}<slot name="hint"></slot>
         </div>
         <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
       </div>
     `;

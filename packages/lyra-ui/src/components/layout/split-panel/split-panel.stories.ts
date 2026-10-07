@@ -61,7 +61,7 @@ export const CancelableReposition: Story = {
     docs: {
       description: {
         story:
-          'The `lr-reposition-request` event proposes a snapped and constrained pointer or keyboard position before the divider moves. This example vetoes positions above 65%, leaving `lr-reposition` as the existing post-commit notification.',
+          'The shared `lr-resize-request` event proposes a snapped and constrained position on each pointer or keyboard step. This example vetoes positions above 65%. The mirrored `lr-reposition-request` and `lr-reposition` events remain available.',
       },
     },
   },
@@ -69,7 +69,7 @@ export const CancelableReposition: Story = {
     <lr-split-panel
       aria-label="Resize capped panes"
       style="block-size: 16rem; border: var(--lr-border-width-thin) solid var(--lr-color-border)"
-      @lr-reposition-request=${capReposition}
+      @lr-resize-request=${capReposition}
     >
       <section slot="start" style=${`${paneStyle} background: var(--lr-color-surface-raised);`}>
         This pane can grow to 65%.

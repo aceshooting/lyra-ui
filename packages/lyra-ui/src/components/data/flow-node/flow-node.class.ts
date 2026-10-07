@@ -36,7 +36,8 @@ import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_D
  *
  * @customElement lr-flow-node
  * @slot - Body content.
- * @slot icon - Leading header glyph.
+ * @slot start - Leading header glyph.
+ * @slot icon - Legacy slot content is deprecated; use `start`.
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge. Always visible on coarse-pointer/no-hover
  *   devices; pointer-hover and focus-within reveal it elsewhere, and it stays revealed while an
@@ -238,7 +239,8 @@ export class LyraFlowNode extends LyraElement {
     const children = (this as unknown as { children?: HTMLCollection }).children;
     const lightChildren = Array.from(children ?? []);
     this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
-    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'icon');
+    this.hasIconSlot = lightChildren.some((element) =>
+      element.getAttribute('slot') === 'start' || element.getAttribute('slot') === 'icon');
     this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
 
     const renderRoot = this.renderRoot as ParentNode | undefined;
@@ -364,7 +366,9 @@ export class LyraFlowNode extends LyraElement {
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onSlotChange}></slot>
         <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.renderSlotPresence(this.hasIconSlot))}>
-          <slot name="icon" part="icon" @slotchange=${this.onSlotChange}></slot>
+          <slot name="start" part="icon" @slotchange=${this.onSlotChange}
+            ><slot name="icon" @slotchange=${this.onSlotChange}></slot
+          ></slot>
           <span
             part="heading"
             role=${headingLevel ? 'heading' : nothing}

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from './compact-build-css.mjs';
 import { consolidateBuildDeclarations } from './consolidate-build-declarations.mjs';
 import { compactBuildDeclarations } from './compact-build-declarations.mjs';
+import { pruneUnreachableBuildDeclarations } from './prune-build-declarations.mjs';
+import { stripTestOnlyBuildExports } from './strip-test-only-build-exports.mjs';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
 import { checkLocalizationSlices, checkTranslationSlices } from './check-localization-slices.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
@@ -47,6 +49,9 @@ await new Promise((resolve, reject) => {
   });
 });
 
+const testOnlyExports = stripTestOnlyBuildExports(packageDir);
+console.log(`Test-only build exports stripped: ${testOnlyExports.exports} symbols across ${testOnlyExports.files} emitted files.`);
+
 const normalizedMixins = await normalizeMixinDeclarations(join(packageDir, 'dist'));
 assertNormalizedMixinCount(normalizedMixins, 21);
 console.log(
@@ -63,6 +68,9 @@ console.log(
 
 const consolidatedDeclarations = consolidateBuildDeclarations(packageDir);
 console.log(`Published declaration entries consolidated: ${consolidatedDeclarations.removed} redundant files removed.`);
+
+const prunedDeclarations = pruneUnreachableBuildDeclarations(packageDir);
+console.log(`Published unreachable declaration modules removed: ${prunedDeclarations.removedPaths.length}.`);
 
 for (const asset of ['theme.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
   await cp(join(packageDir, 'src', asset), join(packageDir, 'dist', asset), { recursive: true });

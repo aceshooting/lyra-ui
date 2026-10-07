@@ -7,6 +7,8 @@ import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 
 // The locale-collation fixture deliberately retains the unregistered English messages.
 expectLocaleFallback('de', [
@@ -36,6 +38,19 @@ function examples(): EvalExample[] {
 function gridRowCount(el: LyraEvalDataset): number {
   return el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelectorAll('tbody tr[part="row"]').length;
 }
+
+it('discloses examples dropped by the public collection boundary', async () => {
+  expectDevWarning(collectionTruncationWarningKey('lr-eval-dataset', 'examples'));
+  const many: EvalExample[] = Array.from({ length: 10_001 }, (_, index) => ({
+    id: `example-${index}`, input: `Input ${index}`,
+  }));
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${many}></lr-eval-dataset>`);
+  expect(el.examples).to.have.length(10_000);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('Only the first 10,000 examples');
+  el.examples = examples();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});
 
 it('uses one compact localized import instruction with a matching accessible name', async () => {
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .strings=${{
@@ -764,4 +779,35 @@ it('keeps every row of a large dataset whose metadata would exhaust a per-field 
   }));
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${rows}></lr-eval-dataset>`);
   expect(el.examples).to.have.lengthOf(5000);
+});
+
+it('contains the import control value events while exposing the import request', async () => {
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset></lr-eval-dataset>`);
+  const picker = el.shadowRoot!.querySelector<LyraFileInput>('lr-file-input')!;
+  await picker.updateComplete;
+  const seen: string[] = [];
+  for (const name of ['input', 'change', 'lr-input', 'lr-change', 'lr-files', 'lr-import-request']) {
+    el.addEventListener(name, () => seen.push(name));
+  }
+  const transfer = new DataTransfer();
+  transfer.items.add(new File(['[]'], 'examples.json', { type: 'application/json' }));
+  const input = picker.shadowRoot!.querySelector<HTMLInputElement>('input[type="file"]')!;
+  input.files = transfer.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(seen).to.deep.equal(['lr-import-request']);
+});
+
+it('gates the shared search clear action immediately when disabled changes', async () => {
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable></lr-eval-dataset>`);
+  const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  field.value = 'pending';
+  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+  el.disabled = true;
+  clear.click();
+  expect(field.value).to.equal('pending');
+  await el.updateComplete;
+  expect(field.value).to.equal('pending');
+  expect(clear.disabled).to.equal(true);
 });

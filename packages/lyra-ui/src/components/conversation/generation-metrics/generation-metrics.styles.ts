@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -54,8 +55,7 @@ export const styles = css`
        below the floor at 1.75rem/28px for a compact inline look, but nothing in the readout row
        requires that, so the full 40px floor applies directly rather than via invisible hit-slop.
        */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-inline-start: var(--lr-space-s);
     padding: 0;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -82,8 +82,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='stop-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='stop-button'] svg {
     display: block;

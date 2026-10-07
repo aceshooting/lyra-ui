@@ -153,7 +153,8 @@ Full rules: **[docs/agents/coding-conventions.md](docs/agents/coding-conventions
 - Class modules stay side-effect-free, registration entries side-effectful; `pnpm registrations`
   generates root imports, both `sideEffects` forms and subpath exports; named root exports stay
   hand-curated.
-- `FormAssociated` mixin for string values, else `ElementInternals` plus your own `setValidity()`.
+- `FormAssociated` plus value adapters for value/default tracking; `FormControlController` for
+  controls with their own checked, aggregate, or submitter lifecycle.
 - JSDoc sits DIRECTLY above `export class Lyra*` or `cem` empties the entry; check
   `custom-elements.json`.
 - Lean/full pairs (`x.class.ts`/`x-core.class.ts`) share logic via `x-shared.ts`.

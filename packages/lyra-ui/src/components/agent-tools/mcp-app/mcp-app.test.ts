@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './mcp-app.js';
 import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
@@ -7,15 +8,6 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 // its render incidentally touches instead of tripping the partial-catalog fallback warning.
 // 'de-DE' chains down to the registered base 'de'.
 import '../../../translations/de.js';
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>(
-      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"] > div`,
-    ),
-    (node) => node.textContent ?? '',
-  );
-}
 
 /** Firefox does not accept a sandboxed iframe's cross-origin WindowProxy through the
  * `MessageEventInit.source` Web IDL conversion. Define the readonly test-event property directly

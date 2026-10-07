@@ -1,3 +1,4 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -17,7 +18,7 @@ import {
 } from '../../../internal/persisted-restore.js';
 import { styles } from './table.styles.js';
 import { chevronIcon, closeIcon, sortIcon } from '../../../internal/icons.js';
-import { minMax } from '../heatmap/heatmap-scale.js';
+import { minMax } from '../../../internal/numbers.js';
 // Type-only: registration (and the code) of the composed `<lr-empty>` comes from `table.ts`.
 import type {} from '../../overlays/empty/empty.class.js';
 import {
@@ -25,7 +26,7 @@ import {
   trueDefaultSpellcheckConverter as spellcheckConverter,
 } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   normalizeSize,
@@ -35,6 +36,7 @@ import {
 } from '../../../internal/variants.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -71,7 +73,6 @@ const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-min-width
 
 /** An omitted ARIA maximum defaults to 100 for `role="separator"`. Represent an author-unbounded
  * CSS maximum with the largest exact finite integer so wider pixel values stay truthful. */
-const UNBOUNDED_RESIZE_ARIA_MAX = Number.MAX_SAFE_INTEGER;
 const MISSING_CELL_RENDERER_WARNING = 'lyra-table-missing-cell-renderer';
 const MISSING_ACCESSIBLE_NAME_WARNING = 'lyra-table-missing-accessible-name';
 const INERT_PRIORITY_COLUMN_CONFIG_WARNING = 'lyra-table-inert-priority-column-config';
@@ -513,8 +514,8 @@ function eventInteractiveTarget(event: Event, boundary: HTMLElement): Element | 
  *  (`LyraTable<Row, number>` -> `rowKey: number` in every detail below), defaulting to the
  *  `string | number` union an unparameterized table has always carried. */
 export interface LyraTableEventMap<T = unknown, K extends string | number = string | number> {
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  blur: FocusEvent;
+  focus: FocusEvent;
   'lr-priority-columns-visibility-change': CustomEvent<Readonly<{ visible: boolean }>>;
   'lr-sort-request': CustomEvent<TableSortRequestDetail>;
   'lr-sort': CustomEvent<TableSortCommitDetail>;
@@ -773,9 +774,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   final pointer drag width. `detail: { columnKey, width }`. Vetoing discards the proposal or drag preview.
  * @event lr-column-resize - Non-cancelable live pointer preview or accepted resize notification.
  *   `detail: { columnKey, width }`, with width in CSS pixels. Use `lr-column-resize-request` to veto.
- * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
+ * @event {FocusEvent} focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
- * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
+ * @event {FocusEvent} blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
  *   the same reason as `focus`.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
@@ -833,6 +834,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   is what keeps them geometrically identical to real rows), so this is the part to target for
  *   the placeholder's own look — e.g. `::part(skeleton) { --lr-skeleton-h: 2em; }`.
  * @csspart pagination - The optional pagination component.
+ * @csspart row-limit - Localized notice when the assigned row collection exceeds 10,000 entries.
  * @csspart empty - The built-in `<lr-empty>` host, in all three empty states (no columns
  *   configured, no rows at all, and filtered/paginated down to zero rows). The two data-empty
  *   states render it as the `empty` slot's fallback, so it disappears once that slot is filled.
@@ -1460,8 +1462,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  by the time `updated()` runs, so a dedicated flag is needed. Mirrors `lr-app-rail`'s
    *  `persistReady`. */
   private persistReady = false;
-  private announcementSink?: AnnouncementSink;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private firstUpdateAnnouncementsReady = false;
 
   /** Roving-tabindex position among header cells; `null` until a header is
@@ -1516,7 +1517,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   private resizeState?: TableResizeState;
   /** Window that owns the active resize gesture's global pointer listeners. */
-  private resizeEventWindow?: Window;
+  private readonly resizePointer = new ColumnResizePointerSession(
+    (event) => this.onResizePointerMove(event),
+    (event) => this.onResizePointerEnd(event),
+    (event) => this.onResizePointerEnd(event),
+  );
 
   private rowsByKey = new Map<string, TableRowEntry<T>>();
   private rowsLocale?: string;
@@ -1661,15 +1666,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private resizeColumnTo(column: TableColumn<T>, requestedWidth: number): void {
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
-    const width = Math.min(maxWidth, Math.max(minWidth, requestedWidth));
+    const width = columnResizeWidth(requestedWidth, minWidth, maxWidth);
     const previousWidth = this.resizedColumnWidths.get(column.key);
     if (previousWidth === width) return;
-    this.resizeWriteGuard.open();
-    const request = this.emit('lr-column-resize-request', Object.freeze({ columnKey: column.key, width }), { cancelable: true });
-    if (request.defaultPrevented || this.resizeWriteGuard.touched) return;
-    this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
-    this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }));
-    markVetoGuardWrite(this.resizeWriteGuard);
+    requestThenCommit({
+      requestDetail: Object.freeze({ columnKey: column.key, width }),
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-column-resize-request', detail, init),
+      guard: this.resizeWriteGuard,
+      commit: () => {
+        this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
+        this.emit('lr-column-resize', Object.freeze({ columnKey: column.key, width }));
+        markVetoGuardWrite(this.resizeWriteGuard);
+      },
+    });
   }
 
   private renderedColumnWidth(column: TableColumn<T>): string | undefined {
@@ -1684,8 +1693,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
     const header = handle.closest('th[data-col-key]') as HTMLElement | null;
-    const resizeEventWindow = this.ownerDocument.defaultView;
-    if (!key || !column || !header || !resizeEventWindow) return;
+    if (!key || !column || !header || !this.ownerDocument.defaultView) return;
     const replacedStartWidth = this.resizeState?.key === key ? this.resizeState.startWidth : undefined;
     this.cancelResizeGesture();
     const minWidth = this.minimumResizeWidth(column);
@@ -1704,19 +1712,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     handle.toggleAttribute('data-resizing', true);
     event.preventDefault();
     event.stopPropagation();
-    handle.setPointerCapture?.(event.pointerId);
-    this.resizeEventWindow = resizeEventWindow;
-    resizeEventWindow.addEventListener('pointermove', this.onResizePointerMove);
-    resizeEventWindow.addEventListener('pointerup', this.onResizePointerEnd);
-    resizeEventWindow.addEventListener('pointercancel', this.onResizePointerEnd);
-    resizeEventWindow.addEventListener('lostpointercapture', this.onResizePointerEnd);
+    this.resizePointer.start(event, handle);
   };
 
   private onResizePointerMove = (event: PointerEvent): void => {
     const state = this.resizeState;
     if (!state || event.pointerId !== state.pointerId) return;
-    const delta = isRtl(this) ? state.startX - event.clientX : event.clientX - state.startX;
-    const width = Math.min(state.maxWidth, Math.max(state.minWidth, state.startWidth + delta));
+    const width = columnResizePointerWidth(state.startWidth, state.startX, event.clientX, isRtl(this), state.minWidth, state.maxWidth);
     if (this.resizedColumnWidths.get(state.key) === width) return;
     this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(state.key, width);
     this.emit('lr-column-resize', Object.freeze({ columnKey: state.key, width }));
@@ -1731,12 +1733,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
     const currentWidth = this.currentResizeWidth(column, handle);
-    const step = event.shiftKey ? 50 : 10;
-    let requestedWidth: number | undefined;
-    if (event.key === 'Home') requestedWidth = minWidth;
-    else if (event.key === 'End' && Number.isFinite(maxWidth)) requestedWidth = maxWidth;
-    else if (event.key === 'ArrowLeft') requestedWidth = currentWidth + (isRtl(this) ? step : -step);
-    else if (event.key === 'ArrowRight') requestedWidth = currentWidth + (isRtl(this) ? -step : step);
+    const requestedWidth = columnResizeKeyboardWidth(event, currentWidth, minWidth, maxWidth, isRtl(this));
     if (requestedWidth === undefined) return;
 
     event.preventDefault();
@@ -1749,6 +1746,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
     const width = this.currentResizeWidth(column);
+    const aria = columnResizeAriaValues(width, minWidth, maxWidth);
     return html`<span
       part="resize-handle"
       data-col-key=${column.key}
@@ -1756,10 +1754,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       tabindex="0"
       aria-orientation="vertical"
       aria-label=${this.localize('resizeColumn', undefined, { label: column.label })}
-      aria-valuemin=${Math.round(minWidth)}
-      aria-valuenow=${Math.round(width)}
+      aria-valuemin=${aria.min}
+      aria-valuenow=${aria.now}
       aria-valuetext=${this.resizeValueText(width)}
-      aria-valuemax=${Number.isFinite(maxWidth) ? Math.round(maxWidth) : UNBOUNDED_RESIZE_ARIA_MAX}
+      aria-valuemax=${aria.max}
       @pointerdown=${this.onResizePointerDown}
       @keydown=${this.onResizeKeyDown}
     ></span>`;
@@ -1786,15 +1784,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const state = this.resizeState;
     if (!state || event.pointerId !== state.pointerId) return;
     state.handle.removeAttribute('data-resizing');
-    if (event.type === 'pointerup') {
-      try {
-        state.handle.releasePointerCapture?.(event.pointerId);
-      } catch {
-        // Native capture may already have been released.
-      }
-    }
     this.resizeState = undefined;
-    this.detachResizePointerListeners();
+    this.resizePointer.stop();
 
     if (event.type !== 'pointerup') {
       const reverted = new Map(this.resizedColumnWidths);
@@ -1820,16 +1811,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.emit('lr-column-resize', Object.freeze({ columnKey: state.key, width: committedWidth }));
   };
 
-  private detachResizePointerListeners(): void {
-    const resizeEventWindow = this.resizeEventWindow;
-    if (!resizeEventWindow) return;
-    resizeEventWindow.removeEventListener('pointermove', this.onResizePointerMove);
-    resizeEventWindow.removeEventListener('pointerup', this.onResizePointerEnd);
-    resizeEventWindow.removeEventListener('pointercancel', this.onResizePointerEnd);
-    resizeEventWindow.removeEventListener('lostpointercapture', this.onResizePointerEnd);
-    this.resizeEventWindow = undefined;
-  }
-
   private rollbackResizePreview(state: TableResizeState): void {
     const reverted = new Map(this.resizedColumnWidths);
     if (state.previousWidth === undefined) reverted.delete(state.key);
@@ -1840,14 +1821,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private cancelResizeGesture(): void {
     const state = this.resizeState;
     this.resizeState = undefined;
-    this.detachResizePointerListeners();
+    this.resizePointer.stop();
     if (!state) return;
     state.handle.removeAttribute('data-resizing');
-    try {
-      state.handle.releasePointerCapture?.(state.pointerId);
-    } catch {
-      // Native capture may already have been released by removal/cancellation.
-    }
     this.rollbackResizePreview(state);
   }
 
@@ -1889,7 +1865,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     const owner = this.ownerDocument.defaultView;
     const ResizeObserverCtor = owner?.ResizeObserver;
     let observer: ResizeObserver | undefined;
@@ -1923,7 +1898,6 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
     this.cancelResizeGesture();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -1935,32 +1909,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.observedHeaders.clear();
   }
 
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    // Assertive, not the shared polite sink above: an error transition is more urgent than the
-    // routine loading/empty-state copy the polite sink otherwise carries, matching the
-    // `errorAnnouncementSink` convention already used across the library (e.g. `<lr-retrieval-
-    // results>`, `<lr-image-viewer>`) rather than inventing a table-specific mechanism.
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   private localizedOverride(key: string, override: string | undefined): string {
@@ -2521,11 +2472,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   };
   private onNativeFocus = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, event);
   };
   private onNativeBlur = (event: FocusEvent): void => {
     event.stopPropagation();
-    this.emit('blur');
+    relayNativeEvent(this, event);
   };
 
   private onPaginationChange = (event: Event): void => {
@@ -2859,13 +2810,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.firstUpdateAnnouncementsReady && changed.has('loading') && this.loading) {
-      this.announcementSink?.announce(this.loadingText());
+      this.announcements.announcePolite(this.loadingText());
     }
     if (
       this.firstUpdateAnnouncementsReady && changed.has('loadingMore') && this.loadingMore &&
       !this.loading && this.shadowRoot?.querySelector('[part="more-button"]')
     ) {
-      this.announcementSink?.announce(this.loadingMoreText());
+      this.announcements.announcePolite(this.loadingMoreText());
     }
     // Guarded the same way as the loading announcement above -- `error` defaulting to `false`
     // means a bare `changed.has('error')` would otherwise be true (and announce) on whatever the
@@ -2877,7 +2828,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const announcesMountedError =
       !this.firstUpdateAnnouncementsReady && this.announce && this.error;
     if (announcesErrorTransition || announcesMountedError) {
-      this.errorAnnouncementSink?.announce(this.localizedOverride('tableLoadFailed', this.errorHeading));
+      this.announcements.announceAssertive(this.localizedOverride('tableLoadFailed', this.errorHeading));
     }
     this.firstUpdateAnnouncementsReady = true;
     // Persist `priorityColumnsVisible` whenever it changes, but never on the initial update -- willUpdate()
@@ -3884,7 +3835,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                       : nothing}
                   </th>`;
                 })}
-                ${hasRowTotal ? html`<th part="header-cell" data-row-total aria-hidden="true"></th>` : nothing}
+                ${hasRowTotal ? html`<th part="header-cell" data-row-total scope="col" aria-label=${this.localize('tableRowTotal')}></th>` : nothing}
               </tr>
             </thead>
             <tbody>
@@ -4056,6 +4007,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
             </label>`
           : nothing}
         ${tableContent}
+        ${this.rowsTruncated
+          ? html`<div part="row-limit">${this.localize('tableRowLimit', undefined, {
+              count: getNumberFormat(this.effectiveLocale).format(MAX_TABLE_COLLECTION_ENTRIES),
+            })}</div>`
+          : nothing}
         ${this.priorityToggleAvailable
           ? html`<button
               part="reveal-columns-button"

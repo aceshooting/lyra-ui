@@ -1,4 +1,6 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -60,8 +62,7 @@ export const styles = css`
   }
 
   [part='sources-summary']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='source-picker'] {
@@ -79,7 +80,7 @@ export const styles = css`
     display: inline-flex;
   }
 
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='controls'] {
       flex-direction: column;
     }

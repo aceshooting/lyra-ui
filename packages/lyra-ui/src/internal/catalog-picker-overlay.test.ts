@@ -41,6 +41,7 @@ function createPicker(owner: Document, allowCustom = false): PickerFixture {
       isReadonly: () => false,
       locale: () => 'en',
       searchableFields: (entry) => [entry.id, entry.label],
+      emitInput: () => {},
       emitChange: () => {},
       onValueChange: () => {},
       onDefaultValueChange: () => {},
@@ -106,6 +107,21 @@ it('keeps one nonmodal overlay per opening and routes Escape/outside dismissal t
   } finally {
     removePicker(upper);
     removePicker(lower);
+  }
+});
+
+it('dismisses a catalog popup before an outside target stops pointer propagation', () => {
+  const picker = createPicker(document);
+  const outside = document.createElement('button');
+  outside.addEventListener('pointerdown', event => event.stopPropagation());
+  document.body.append(picker.host, outside);
+  try {
+    openPicker(picker);
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    expect(picker.controller.open).to.equal(false);
+  } finally {
+    outside.remove();
+    removePicker(picker);
   }
 });
 

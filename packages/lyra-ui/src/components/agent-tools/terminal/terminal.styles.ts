@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -68,8 +69,7 @@ export const styles = css`
   }
   [part='copy-button']:focus-visible,
   [part='download-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='viewport'] {
     position: relative;
@@ -141,8 +141,7 @@ export const styles = css`
     background: var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface));
   }
   lr-virtual-list::part(line):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The log's half of the density escape above: the same one-hop ::part() selector as the base
      rule, plus the host attribute selector, so it outranks it on specificity and source order. */
@@ -190,8 +189,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='jump-to-latest']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   @media (prefers-reduced-motion: reduce) {
     [part='jump-to-latest'] {

@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -15,9 +16,6 @@ import '../../../translations/de/data.js';
 import '../../../translations/sv/data.js';
 import { installTableTestHooks, type Row, columns, rows } from '../../../../test/table.js';
 installTableTestHooks();
-
-
-
 
 it('shows a rendered hover affordance on the public filter control', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
@@ -983,17 +981,6 @@ describe('sticky + sortable header pointer feedback', () => {
     { key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r) => r.name },
     { key: 'score', label: 'Score', sortable: true, cell: (r) => r.score },
   ];
-
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(el: LyraTable<Row>, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function stickyTable(): Promise<LyraTable<Row>> {
     const el = (await fixture(html`

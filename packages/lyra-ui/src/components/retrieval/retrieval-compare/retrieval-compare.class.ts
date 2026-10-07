@@ -8,6 +8,7 @@ import type {
 } from '../../../ai/types.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
@@ -67,6 +68,19 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
+  private readonly rovingChunkBySet = new Map<string, string>();
+
+  private onChunkKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const buttons = (event.currentTarget as HTMLElement).closest('[part="chunks"]')
+      ?.querySelectorAll<HTMLButtonElement>('[part~="chunk"]');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons?.[next]?.focus();
+  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -204,6 +218,8 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   ): TemplateResult => {
     const headingId = `${this.headingIdPrefix}-set-${setIndex}`;
     const level = resolveHeadingLevel(this.headingLevel);
+    const remembered = this.rovingChunkBySet.get(set.id);
+    const rovingChunkId = chunks.some((chunk) => chunk.id === remembered) ? remembered : chunks[0]?.id;
     return html`
       <section part="set" aria-labelledby=${headingId}>
         <div part="set-heading" id=${headingId} role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${set.label}</div>
@@ -218,6 +234,9 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
                 <button
                   part=${chunkPart}
                   type="button"
+                  tabindex=${chunk.id === rovingChunkId ? '0' : '-1'}
+                  @focus=${() => { this.rovingChunkBySet.set(set.id, chunk.id); this.requestUpdate(); }}
+                  @keydown=${(event: KeyboardEvent) => this.onChunkKeyDown(event, index, chunks.length)}
                   aria-pressed=${selected ? 'true' : 'false'}
                   aria-labelledby="${id}-rank ${id}-title"
                   aria-describedby="${id}-text ${id}-scores"

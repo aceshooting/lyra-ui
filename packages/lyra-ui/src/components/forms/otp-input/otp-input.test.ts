@@ -1,3 +1,5 @@
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
+import { settleEnterSubmission } from '../../../../test/contracts/enter-submit.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './otp-input.js';
 import '../input/input.js';
@@ -1088,7 +1090,29 @@ it('submits its owning form exactly once on Enter, leaving the keystroke uncance
   // The internal input has no form owner, so the keystroke has no default action to cancel here;
   // cancelling it would only suppress unrelated handlers downstream.
   expect(key(el, 'Enter').defaultPrevented).to.equal(false);
+  await settleEnterSubmission();
   expect(submits).to.equal(1);
+});
+
+it('flushes a pending segment change once before a deferred Enter submission', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-otp-input name="code" label="Code" length="4"></lr-otp-input><button type="submit">Go</button></form>
+  `);
+  const el = form.querySelector('lr-otp-input') as LyraOtpInput;
+  const order: string[] = [];
+  el.addEventListener('change', () => order.push('change'));
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    order.push('submit');
+  });
+  key(el, '1');
+  key(el, 'Enter');
+  await settleEnterSubmission();
+  expect(order).to.deep.equal(['change', 'submit']);
+
+  key(el, 'Enter');
+  await settleEnterSubmission();
+  expect(order).to.deep.equal(['change', 'submit', 'submit']);
 });
 
 it('never submits on an Enter that commits an IME candidate', async () => {
@@ -1110,6 +1134,7 @@ it('never submits on an Enter that commits an IME candidate', async () => {
   expect(submits, 'keyCode 229 is the fallback for engines that under-report isComposing').to.equal(0);
 
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submits, 'a bare Enter still submits').to.equal(1);
 });
 
@@ -1131,6 +1156,7 @@ it('never submits on a modifier-held Enter', async () => {
   }
 
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submits).to.equal(1);
 });
 
@@ -1152,6 +1178,7 @@ it('leaves an already-vetoed Enter keydown vetoed', async () => {
   expect(submits).to.equal(0);
 
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submits).to.equal(1);
 });
 
@@ -1172,6 +1199,7 @@ it('does not submit on Enter while readonly', async () => {
   el.readonly = false;
   await el.updateComplete;
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submits).to.equal(1);
 });
 
@@ -1191,9 +1219,11 @@ it("names the form's default (first) submit button as SubmitEvent.submitter and 
   });
 
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submitters, 'the default button carries its own name/value into the submission').to.deep.equal(['go']);
   form.querySelector<HTMLButtonElement>('#go')!.disabled = true;
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submitters, 'a disabled default button blocks Enter rather than handing it to the next button').to
     .deep.equal(['go']);
 });
@@ -1217,6 +1247,7 @@ it('activates an lr-button submitter, which requestSubmit() itself would reject'
   });
 
   key(el, 'Enter');
+  await settleEnterSubmission();
   expect(submits).to.equal(1);
   expect(submitterName, 'the lr-button was the submitter').to.equal('action');
 });
@@ -1856,11 +1887,7 @@ it('relays one native focus/blur pair from the real input, and never lr-focus/lr
   el.focus();
   el.blur();
 
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it('does not mark touched from a blur caused by the control itself becoming disabled', async () => {

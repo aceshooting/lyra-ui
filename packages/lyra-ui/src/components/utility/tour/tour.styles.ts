@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
@@ -140,8 +141,7 @@ export const styles = css`
   [part="previous-button"],
   [part="skip-button"],
   [part="next-button"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part="previous-button"] {
     margin-inline-end: auto;
@@ -190,8 +190,7 @@ export const styles = css`
   [part="previous-button"]:focus-visible,
   [part="skip-button"]:focus-visible,
   [part="next-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   @media (prefers-reduced-motion: no-preference) {
     [part="popover"] {

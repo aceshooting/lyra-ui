@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -34,8 +35,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     box-sizing: border-box;
     padding-inline: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -73,8 +73,7 @@ export const styles = css`
   [part~="skip-to-content"]:where(:focus-visible) {
     opacity: 1;
     pointer-events: auto;
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     transform: none;
   }
 
@@ -143,8 +142,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     box-sizing: border-box;
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -179,12 +177,10 @@ export const styles = css`
   }
   [part~="navigation-toggle"]:where(:focus-visible),
   ::slotted([slot="navigation-toggle"]:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   ::slotted([slot="navigation-toggle"]) {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
   }
   [part~="navigation-toggle-icon"] {

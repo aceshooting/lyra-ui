@@ -760,7 +760,7 @@ describe('lr-video-playlist public contract', () => {
     `);
     await settle(el);
     const [a, b] = childVideos(el);
-    const oldTrack = { kind: 'captions', label: 'English', language: 'en', mode: 'showing' } as TextTrack;
+    const oldTrack = { kind: 'captions', label: 'English', language: 'en', mode: 'hidden' } as TextTrack;
     const incomingEnglish = { kind: 'captions', label: 'English', language: 'en', mode: 'disabled' } as TextTrack;
     const incomingFrench = { kind: 'captions', label: 'Français', language: 'fr', mode: 'showing' } as TextTrack;
     Object.defineProperties(media(a!), {
@@ -796,7 +796,7 @@ describe('lr-video-playlist public contract', () => {
     `);
     await settle(el);
     const [a, b] = childVideos(el);
-    const outgoingCaption = { kind: 'captions', label: 'English', language: 'en', mode: 'showing' } as TextTrack;
+    const outgoingCaption = { kind: 'captions', label: 'English', language: 'en', mode: 'hidden' } as TextTrack;
     const incomingCaption = { kind: 'captions', label: 'English', language: 'en', mode: 'disabled' } as TextTrack;
     const alternateCaption = { kind: 'captions', label: 'Français', language: 'fr', mode: 'showing' } as TextTrack;
     stubPlayback(a!, false);

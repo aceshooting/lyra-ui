@@ -1,10 +1,11 @@
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController } from '../../../internal/form-control-controller.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -14,27 +15,23 @@ import { appearanceStyles } from './radio-button.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
-import {
   declaredDefaultConverter,
-  omittedEmptyStringConverter } from '../../../internal/converters.js';
+  omittedEmptyStringConverter,
+} from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export interface LyraRadioEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -242,7 +239,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   @state() private hasLabel = false;
   @state() private hasStart = false;
   @state() private hasEnd = false;
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [], () => {
+      this.recomputeHasLabel();
+      this.recomputeButtonAdornments();
+    }, ['slot'],
+  );
   /** Whether the user has acted on this radio yet, which gates `user-valid`/`user-invalid` and
    *  intrinsic `aria-invalid`: a selection, a blur, or interactive validation (`reportValidity()`
    *  or a submission attempt, via `installInteractionOnInvalid()`). A silent `checkValidity()`
@@ -251,7 +253,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   /** Set while an `appearance` change replaces the focused control; its blur is not interaction. */
   private swappingControl = false;
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private _checked = false;
@@ -299,6 +301,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(value);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
     this.updateValidity();
@@ -369,52 +373,13 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   constructor() {
     super();
-    this.internals = this.safeAttachInternals();
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(
-      this,
-      () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
-    );
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like selecting or blurring; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.syncFormState();
-  }
-
-  /** `attachInternals()` throws in any environment without a real `ElementInternals`
-   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
-   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
-   *  form participation and validity reporting are unavailable in that environment (there is no
-   *  polyfillable substitute), but rendering and every non-form-associated feature keep working.
-   *  Mirrors lr-graph-query-builder's identical guard. */
-  private safeAttachInternals(): ElementInternals {
-    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
-      return this.inertInternals();
-    }
-    try {
-      return this.attachInternals();
-    } catch {
-      return this.inertInternals();
-    }
-  }
-
-  private inertInternals(): ElementInternals {
-    return {
-      form: null,
-      labels: [] as unknown as NodeList,
-      validity: {} as ValidityState,
-      validationMessage: '',
-      willValidate: false,
-      setFormValue: () => {},
-      setValidity: () => {},
-      checkValidity: () => true,
-      reportValidity: () => true,
-      states: new Set<string>(),
-    } as unknown as ElementInternals;
   }
 
   /** @internal Matches on a part *token*, not the whole attribute: `<lr-radio-button>` encodes
@@ -454,17 +419,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.bindLabelObserverTargets();
-          this.recomputeHasLabel();
-          this.recomputeButtonAdornments();
-        })
-      : undefined;
     this.addEventListener('slotchange', this.onLabelSlotChange);
     this.addEventListener('slotchange', this.onAdornmentSlotChange);
-    this.bindLabelObserverTargets();
     this.recomputeHasLabel();
     this.recomputeButtonAdornments();
     this.updateValidity();
@@ -473,6 +429,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.labelTextObserver.adopted();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
   }
@@ -481,8 +438,6 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.removeEventListener('slotchange', this.onAdornmentSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
     super.disconnectedCallback();
   }
 
@@ -521,7 +476,10 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     // Cascaded disablement bars constraint validation exactly like the radio's own `disabled`.
     this.updateValidity();
     this.requestUpdate();
@@ -630,11 +588,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
    *  whatever `invalid` event fires synchronously inside this call is this call, not a
    *  submission attempt. */
   checkValidity(): boolean {
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
 
   /** `checkValidity()`, plus the browser's own validation UI on failure. */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
     // point, so it counts as interaction for the `user-*` custom states. (A submission attempt
     // itself never calls this method -- it drives `ElementInternals` directly -- which is what
@@ -807,49 +766,6 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     });
   }
 
-  private adornmentForwardingSlots(): HTMLSlotElement[] {
-    const names = ['start', 'prefix', 'end', 'suffix'];
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return (
-        top === slot &&
-        top.parentNode === this &&
-        names.includes(slot.getAttribute('slot') ?? '')
-      );
-    });
-  }
-
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    for (const slot of this.labelForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
-    for (const slot of this.adornmentForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
-  }
-
   private recomputeHasLabel(): void {
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
     const nodes: Node[] = slot
@@ -897,14 +813,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       target.getRootNode() !== this.renderRoot &&
       !this.labelForwardingSlots().includes(target as HTMLSlotElement)
     ) return;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.bind();
     this.recomputeHasLabel();
   }
 
   private onLabelSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
   private onAdornmentSlotChange = (): void => {
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.bind();
     this.recomputeButtonAdornments();
   };
 

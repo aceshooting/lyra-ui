@@ -1,3 +1,4 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -76,14 +77,7 @@ export const styles = css`
   /* The outcome is announced, not shown: the button is icon-only, so the status text exists for
      assistive technology alone. Same clipped-1px pattern lr-pagination's live region uses. */
   [part='feedback'] {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
+    ${visuallyHidden}
     margin: var(--lr-size-neg-1px);
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
   }
 `;

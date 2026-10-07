@@ -14,6 +14,42 @@ async function popover() {
   return { viewer, input };
 }
 
+it('keeps the full match list readable while only fifty suggestions can render or commit', async () => {
+  const { viewer } = await popover();
+  viewer.items = Array.from({ length: 52 }, (_, index) => ({ suggestionId: String(index), label: `Person ${index}` }));
+  await viewer.updateComplete;
+  const listbox = viewer.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  const options = viewer.shadowRoot!.querySelectorAll('[part="option"]');
+  const more = viewer.shadowRoot!.querySelector<HTMLElement>('[part="more-results"]')!;
+  expect(viewer.filteredItems.length).to.equal(52);
+  expect(options.length).to.equal(50);
+  expect(more.textContent?.trim()).to.equal('2 more suggestions');
+  expect(more.hasAttribute('role')).to.equal(false);
+  expect(listbox.getAttribute('aria-describedby')).to.equal(more.id);
+  for (let index = 0; index < 60; index += 1) {
+    viewer.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+  }
+  expect(viewer.activeDescendantId).to.equal(`${viewer.listboxId}-opt-49`);
+  let selected: string | undefined;
+  viewer.addEventListener('lr-mention-select', (event) => { selected = event.detail.suggestionId; });
+  more.click();
+  expect(selected).to.equal(undefined);
+  viewer.handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter', cancelable: true }));
+  expect(selected).to.equal('49');
+});
+
+it('localizes the non-option overflow description and removes it when the query narrows', async () => {
+  const { viewer } = await popover();
+  viewer.items = Array.from({ length: 51 }, (_, index) => ({ suggestionId: String(index), label: `Person ${index}` }));
+  viewer.strings = { mentionMoreResults: { one: '{count} extra match', other: '{count} extra matches' } };
+  await viewer.updateComplete;
+  expect(viewer.shadowRoot!.querySelector('[part="more-results"]')?.textContent?.trim()).to.equal('1 extra match');
+  viewer.query = 'Person 50';
+  await viewer.updateComplete;
+  expect(viewer.shadowRoot!.querySelector('[part="more-results"]') === null).to.equal(true);
+  expect(viewer.shadowRoot!.querySelector('[part="listbox"]')?.hasAttribute('aria-describedby')).to.equal(false);
+});
+
 it('treats removed query as an empty filter without changing null or explicit empty readback', async () => {
   const { viewer } = await popover();
   viewer.setAttribute('query', 'ada');

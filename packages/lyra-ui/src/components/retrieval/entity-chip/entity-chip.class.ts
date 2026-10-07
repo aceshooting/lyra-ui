@@ -1,11 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
-import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './entity-chip.styles.js';
@@ -97,12 +94,15 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
    *  same "does this slot carry real consumer content" question every other presence-driven
    *  component asks, seeded before the first render and kept live afterwards. */
   private readonly slotPresence = new SlotPresenceController(this);
-  private cleanupPositioner?: () => void;
-  private overlayHandle?: OverlayHandle;
-  private hideTimer?: number;
-  private hideTimerOwner?: Window;
-  private hovering = false;
-  private focused = false;
+  private readonly preview = new PreviewDisclosureController({
+    host: this,
+    button: () => this.buttonEl,
+    panel: () => this.popoverEl,
+    hasContent: () => this.hasPreviewSlot,
+    isOpen: () => this.popoverOpen,
+    setOpen: (open) => { this.popoverOpen = open; },
+    hideDelayMs: HIDE_DELAY_MS,
+  });
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
@@ -113,51 +113,22 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     // The slot can be emptied out from under an already-open popover (e.g. a consumer clearing
     // preview content asynchronously) -- nothing left to show, so don't leave an empty panel
     // floating open.
-    if (this.popoverOpen && !this.hasPreviewSlot) this.hidePreviewNow();
+    this.preview.ensureContent();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('popoverOpen')) {
-      this.cleanupPositioner?.();
-      this.cleanupPositioner = undefined;
-      this.overlayHandle?.deactivate({ restoreFocus: false });
-      this.overlayHandle = undefined;
-      if (this.popoverOpen && this.buttonEl && this.popoverEl) {
-        this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
-          placement: 'top-start',
-          strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
-        });
-        // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
-        // Escape defers to a genuinely topmost overlay opened above this popover, instead of
-        // this preview always winning regardless of stacking order -- mirrors
-        // <lr-tooltip>'s activateTooltipOverlay(). Nonmodal/non-trapping: this popover is
-        // always `inert` and never owns focus of its own.
-        this.overlayHandle = activateNonmodalOverlay({
-          host: this,
-          panel: () => this.popoverEl ?? null,
-          onEscape: () => this.hidePreviewNow(),
-          restoreFocusTo: null,
-        });
-      }
-    }
+    if (changed.has('popoverOpen')) this.preview.syncOpen();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cleanupPositioner?.();
-    this.cleanupPositioner = undefined;
-    this.overlayHandle?.deactivate({ restoreFocus: false });
-    this.overlayHandle = undefined;
-    this.clearHideTimer();
+    this.preview.disconnect();
     // Reset so a reconnect (e.g. a drag-drop reparent, or a virtualized/reordering
     // message list moving this element) re-triggers updated()'s open-driven branch --
     // without this, popoverOpen stays true across the disconnect/reconnect and
     // changed.has('popoverOpen') never fires again, leaving the popover rendered open
     // with a torn-down positioner and no live position/dismissal.
-    this.popoverOpen = false;
-    this.hovering = false;
-    this.focused = false;
   }
 
   private get accessibleLabel(): string {
@@ -173,65 +144,8 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     });
   }
 
-  private showPreview(): void {
-    if (!this.hasPreviewSlot) return;
-    this.clearHideTimer();
-    if (this.popoverOpen) return;
-    this.popoverOpen = true;
-  }
-
-  private clearHideTimer(): void {
-    if (this.hideTimer !== undefined) this.hideTimerOwner?.clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
-    this.hideTimerOwner = undefined;
-  }
-
-  private scheduleHidePreview(): void {
-    if (!this.popoverOpen || this.hovering || this.focused) return;
-    this.clearHideTimer();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const handle = ownerWindow.setTimeout(() => {
-      if (this.hideTimer !== handle) return;
-      this.hideTimer = undefined;
-      this.hideTimerOwner = undefined;
-      this.popoverOpen = false;
-    }, HIDE_DELAY_MS);
-    this.hideTimer = handle;
-    this.hideTimerOwner = ownerWindow;
-  }
-
-  private hidePreviewNow(): void {
-    this.clearHideTimer();
-    if (this.popoverOpen) this.popoverOpen = false;
-  }
-
-  private onPointerEnter = (): void => {
-    this.hovering = true;
-    this.showPreview();
-  };
-  private onPointerLeave = (): void => {
-    this.hovering = false;
-    this.scheduleHidePreview();
-  };
-  private onFocusIn = (event: FocusEvent): void => {
-    if (!isKeyboardFocusEvent(event)) return;
-    this.focused = true;
-    this.showPreview();
-  };
-  private onFocusOut = (): void => {
-    this.focused = false;
-    if (this.hovering) return;
-    this.hidePreviewNow();
-  };
-
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && !e.isComposing && this.popoverOpen && this.overlayHandle?.isTopmost()) {
-      // preventDefault, as lr-tooltip does: the overlay stack then leaves a containing dialog open.
-      e.preventDefault();
-      this.hidePreviewNow();
-      return;
-    }
+    if (this.preview.handleEscape(e)) return;
     if (e.key === ' ' && !e.repeat && e.target === this.buttonEl) {
       e.preventDefault();
       this.emitOpen();
@@ -256,10 +170,10 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     return html`
       <span
         class="wrapper"
-        @pointerenter=${this.onPointerEnter}
-        @pointerleave=${this.onPointerLeave}
-        @focusin=${this.onFocusIn}
-        @focusout=${this.onFocusOut}
+        @pointerenter=${() => this.preview.pointerEnter()}
+        @pointerleave=${() => this.preview.pointerLeave()}
+        @focusin=${(event: FocusEvent) => this.preview.focusIn(event)}
+        @focusout=${() => this.preview.focusOut()}
         @keydown=${this.onKeyDown}
       >
         <button

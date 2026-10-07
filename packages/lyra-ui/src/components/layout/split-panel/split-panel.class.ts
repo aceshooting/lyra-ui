@@ -3,6 +3,8 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { SeparatorDragController, separatorArrowDirection, separatorCoordinate, separatorDelta } from '../../../internal/separator-drag.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './split-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -34,8 +36,7 @@ export interface LyraSplitPanelSnapFunctionParams {
 
 export type LyraSplitPanelSnapFunction = (options: LyraSplitPanelSnapFunctionParams) => number;
 
-/** A snap function that returns the proposed position unchanged. */
-export const SNAP_NONE: LyraSplitPanelSnapFunction = ({ pos }) => pos;
+export { SNAP_NONE } from './split-panel-snap.js';
 
 /** A proposed user-driven divider position, normalized after constraints and snapping. */
 export interface LyraSplitPanelRepositionDetail {
@@ -55,6 +56,12 @@ const snapConverter: ComplexAttributeConverter<string | LyraSplitPanelSnapFuncti
 };
 
 export interface LyraSplitPanelEventMap {
+  /** Cancelable proposal before each pointer or keyboard resize step. */
+  'lr-resize-request': CustomEvent<LyraSplitPanelRepositionDetail>;
+  /** Emitted after each accepted pointer or keyboard resize step. */
+  'lr-resize': CustomEvent<LyraSplitPanelRepositionDetail>;
+  /** Emitted when an accepted drag or keyboard step finishes. */
+  'lr-resize-change': CustomEvent<LyraSplitPanelRepositionDetail>;
   /** Emitted before a pointer or keyboard interaction repositions the divider. */
   'lr-reposition-request': CustomEvent<LyraSplitPanelRepositionDetail>;
   /** Emitted whenever a pointer or keyboard interaction repositions the divider. */
@@ -65,6 +72,12 @@ interface DragState {
   pointerId: number;
   startCoordinate: number;
   startPrimaryPixels: number;
+  bounds: { min: number; max: number };
+  rtl: boolean;
+  orientation: LyraSplitPanelOrientation;
+  primary: LyraSplitPanelPrimary | undefined;
+  size: number;
+  acceptedResize: boolean;
 }
 
 interface DividerSourceSnapshot {
@@ -197,6 +210,10 @@ function nearlyEqual(left: number | undefined, right: number | undefined): boole
  * @slot end - Content in the logical end pane.
  * @slot divider - Optional decorative content rendered inside the draggable divider. Assigned
  *   content is inert, so the separator remains the sole resize control.
+ * @event lr-resize-request - Cancelable snapped and constrained position proposal on each pointer
+ *   or keyboard step; `detail: LyraSplitPanelRepositionDetail`.
+ * @event lr-resize - Accepted pointer or keyboard resize step with the same position detail.
+ * @event lr-resize-change - Accepted position when a drag ends or a keyboard step commits.
  * @event lr-reposition-request - A cancelable proposed divider position from a pointer drag or
  *   keyboard interaction. Both detail values measure from the selected primary edge and match
  *   accepted public readback. Call `preventDefault()` to keep `position` unchanged. Not fired when a
@@ -243,12 +260,19 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private _primary?: LyraSplitPanelPrimary;
   private _snapThreshold = DEFAULT_SNAP_THRESHOLD;
   private availableSize = 0;
+  private measuredConstraintBounds = { min: 0, max: 0 };
+  private readonly resizeWriteGuard = new VetoWriteGuard();
+  private resizeRequestSequence = 0;
   private pendingPositionInPixels?: number;
   private preservedPrimaryPixels?: number;
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private drag?: DragState;
-  private dragView?: Window;
+  private readonly dragController = new SeparatorDragController(
+    this,
+    (event) => this.onPointerMove(event),
+    (event) => this.onPointerEnd(event),
+  );
   private readonly dividerSourceSnapshots = new Map<Element, DividerSourceSnapshot>();
   private dividerSourceObserver?: MutationObserver;
   private dividerSourceObserverDocument?: Document;
@@ -270,6 +294,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     return this.primary === 'end' ? 100 - start : start;
   }
   set position(value: number) {
+    markVetoGuardWrite(this.resizeWriteGuard);
     const oldPosition = this.position;
     const oldPixels = this.positionInPixels;
     const next = finiteRange(value, DEFAULT_POSITION, 0, 100);
@@ -295,6 +320,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     return (this.position / 100) * this.availableSize;
   }
   set positionInPixels(value: number | undefined | null) {
+    markVetoGuardWrite(this.resizeWriteGuard);
     const oldPosition = this.position;
     const oldPixels = this.positionInPixels;
 
@@ -490,6 +516,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     requestedPixels: number,
     useSnap: boolean,
     fallbackPixels: number | undefined,
+    bounds = this.constraintBounds(),
   ): number {
     const size = this.availableSize;
     const proposed = finiteRange(
@@ -499,7 +526,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
       size,
     );
     const snapped = useSnap ? this.applySnap(proposed, size) : proposed;
-    const { min, max } = this.constraintBounds();
+    const { min, max } = bounds;
     return finiteRange(snapped, proposed, min, max);
   }
 
@@ -531,24 +558,61 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     );
   }
 
-  /** Proposes a finalized user-driven position before committing it. Direct
+  /** Proposes a user-driven position before committing it. Direct
    *  property assignments deliberately continue through applyPrimaryPixels()
    *  without either interaction event. */
-  private requestReposition(requestedPixels: number, useSnap: boolean): boolean {
+  private requestReposition(
+    requestedPixels: number,
+    useSnap: boolean,
+    bounds = this.constraintBounds(),
+  ): boolean {
     if (this.availableSize <= 0) return false;
     const oldPosition = this.position;
     const oldPixels = this.positionInPixels;
-    const primaryPixels = this.resolvePrimaryPixels(requestedPixels, useSnap, oldPixels);
+    const primaryPixels = this.resolvePrimaryPixels(requestedPixels, useSnap, oldPixels, bounds);
     const primaryPercent = (primaryPixels / this.availableSize) * 100;
     const position = primaryPercent;
     if (nearlyEqual(oldPosition, position) && nearlyEqual(oldPixels, primaryPixels)) return false;
 
+    const detail = Object.freeze({ position, positionInPixels: primaryPixels });
+    const snapshot = {
+      drag: this.drag,
+      disabled: this.disabled,
+      primary: this.primary,
+      orientation: this.effectiveOrientation,
+      direction: this.effectiveDirection,
+      size: this.availableSize,
+      snap: this.snap,
+      snapThreshold: this.snapThreshold,
+    };
+    const requestSequence = ++this.resizeRequestSequence;
+    this.resizeWriteGuard.open();
+    const resizeRequest = this.emit('lr-resize-request', detail, { cancelable: true });
     const request = this.emit(
       'lr-reposition-request',
-      { position, positionInPixels: primaryPixels },
+      detail,
       { cancelable: true },
     );
-    if (request.defaultPrevented) return false;
+    if (resizeRequest.defaultPrevented || request.defaultPrevented || this.resizeWriteGuard.touched) return false;
+    const currentBounds = this.constraintBounds();
+    if (
+      this.drag !== snapshot.drag ||
+      this.resizeRequestSequence !== requestSequence ||
+      this.disabled || this.disabled !== snapshot.disabled ||
+      this.primary !== snapshot.primary ||
+      this.effectiveOrientation !== snapshot.orientation ||
+      this.effectiveDirection !== snapshot.direction ||
+      !nearlyEqual(this.availableSize, snapshot.size) ||
+      this.snap !== snapshot.snap ||
+      this.snapThreshold !== snapshot.snapThreshold ||
+      !nearlyEqual(this.position, oldPosition) ||
+      !nearlyEqual(this.positionInPixels, oldPixels) ||
+      !nearlyEqual(currentBounds.min, bounds.min) ||
+      !nearlyEqual(currentBounds.max, bounds.max)
+    ) {
+      if (snapshot.drag && this.drag === snapshot.drag) this.stopDragging();
+      return false;
+    }
     if (
       !this.applyPrimaryPixels(
         requestedPixels,
@@ -561,6 +625,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     ) {
       return false;
     }
+    this.emit('lr-resize', Object.freeze({ position: this.position, positionInPixels: this.positionInPixels }));
     this.emit('lr-reposition', null);
     return true;
   }
@@ -574,6 +639,12 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     const preserved = this.preservedPrimaryPixels;
     const sizeChanged = !nearlyEqual(this.availableSize, nextSize);
     this.availableSize = nextSize;
+    const nextBounds = this.constraintBounds();
+    if (
+      this.drag &&
+      (sizeChanged || !nearlyEqual(nextBounds.min, this.drag.bounds.min) || !nearlyEqual(nextBounds.max, this.drag.bounds.max))
+    ) this.stopDragging();
+    this.measuredConstraintBounds = nextBounds;
 
     if (pending != null) {
       this.applyPrimaryPixels(pending, false, oldPosition, oldPixels, false);
@@ -777,68 +848,76 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   }
 
   private pointerCoordinate(event: PointerEvent): number {
-    return this.effectiveOrientation === 'vertical' ? event.clientY : event.clientX;
+    return separatorCoordinate(event, this.effectiveOrientation === 'vertical' ? 'block' : 'inline');
   }
 
   private onPointerDown(event: PointerEvent): void {
     if (this.disabled || this.drag || event.button !== 0) return;
     const primaryPixels = this.positionInPixels;
     if (primaryPixels == null || this.availableSize <= 0) return;
+    if (!this.dragController.start(event, event.currentTarget as HTMLElement)) return;
     event.preventDefault();
     this.drag = {
       pointerId: event.pointerId,
       startCoordinate: this.pointerCoordinate(event),
       startPrimaryPixels: primaryPixels,
+      bounds: this.constraintBounds(),
+      rtl: this.effectiveDirection === 'rtl',
+      orientation: this.effectiveOrientation,
+      primary: this.primary,
+      size: this.availableSize,
+      acceptedResize: false,
     };
     this.dividerElement?.setAttribute('data-dragging', '');
-    try {
-      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    } catch {
-      // Synthetic pointer events and older engines can reject capture; the window listeners below
-      // still keep the gesture coherent until up/cancel.
-    }
-    const view = this.ownerDocument.defaultView;
-    this.dragView = view ?? undefined;
-    view?.addEventListener('pointermove', this.onPointerMove);
-    view?.addEventListener('pointerup', this.onPointerEnd);
-    view?.addEventListener('pointercancel', this.onPointerEnd);
   }
 
   private readonly onPointerMove = (event: PointerEvent): void => {
     const drag = this.drag;
-    if (!drag || event.pointerId !== drag.pointerId || this.disabled) return;
-    let delta = this.pointerCoordinate(event) - drag.startCoordinate;
-    if (this.effectiveOrientation === 'horizontal' && this.effectiveDirection === 'rtl')
-      delta *= -1;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (
+      this.disabled ||
+      (this.effectiveDirection === 'rtl') !== drag.rtl ||
+      this.effectiveOrientation !== drag.orientation ||
+      this.primary !== drag.primary ||
+      !nearlyEqual(this.availableSize, drag.size)
+    ) {
+      this.stopDragging();
+      return;
+    }
+    let delta = separatorDelta(
+      drag.startCoordinate,
+      event,
+      this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
+      drag.rtl,
+    );
     if (this.primary === 'end') delta *= -1;
-    this.requestReposition(drag.startPrimaryPixels + delta, true);
+    if (this.requestReposition(drag.startPrimaryPixels + delta, true, drag.bounds)) drag.acceptedResize = true;
   };
 
   private readonly onPointerEnd = (event: PointerEvent): void => {
-    if (!this.drag || event.pointerId !== this.drag.pointerId) return;
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const bounds = this.constraintBounds();
+    const shouldSettle = event.type === 'pointerup' && drag.acceptedResize && !this.disabled &&
+      this.effectiveOrientation === drag.orientation && this.primary === drag.primary &&
+      (this.effectiveDirection === 'rtl') === drag.rtl &&
+      nearlyEqual(this.availableSize, drag.size) &&
+      nearlyEqual(bounds.min, drag.bounds.min) && nearlyEqual(bounds.max, drag.bounds.max);
     this.stopDragging();
+    if (shouldSettle) this.emitResizeChange();
   };
-
-  private onLostPointerCapture(event: PointerEvent): void {
-    if (!this.drag || event.pointerId !== this.drag.pointerId) return;
-    this.stopDragging();
-  }
 
   private stopDragging(): void {
     const pointerId = this.drag?.pointerId;
     this.drag = undefined;
     this.dividerElement?.removeAttribute('data-dragging');
-    this.dragView?.removeEventListener('pointermove', this.onPointerMove);
-    this.dragView?.removeEventListener('pointerup', this.onPointerEnd);
-    this.dragView?.removeEventListener('pointercancel', this.onPointerEnd);
-    this.dragView = undefined;
-    if (pointerId != null && this.dividerElement?.hasPointerCapture(pointerId)) {
-      try {
-        this.dividerElement.releasePointerCapture(pointerId);
-      } catch {
-        // Capture can already have been released by a detach or platform-level cancellation.
-      }
-    }
+    if (pointerId != null) this.dragController.end(pointerId);
+  }
+
+  private emitResizeChange(): void {
+    const positionInPixels = this.positionInPixels;
+    if (positionInPixels == null) return;
+    this.emit('lr-resize-change', Object.freeze({ position: this.position, positionInPixels }));
   }
 
   private onKeyDown(event: KeyboardEvent): void {
@@ -851,15 +930,11 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
     if (event.key === 'Home') next = min;
     else if (event.key === 'End') next = max;
     else {
-      let physicalDirection = 0;
-      if (this.effectiveOrientation === 'vertical') {
-        if (event.key === 'ArrowDown') physicalDirection = 1;
-        else if (event.key === 'ArrowUp') physicalDirection = -1;
-      } else if (event.key === 'ArrowRight') {
-        physicalDirection = this.effectiveDirection === 'rtl' ? -1 : 1;
-      } else if (event.key === 'ArrowLeft') {
-        physicalDirection = this.effectiveDirection === 'rtl' ? 1 : -1;
-      }
+      const physicalDirection = separatorArrowDirection(
+        event,
+        this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
+        this.effectiveDirection === 'rtl',
+      );
       if (physicalDirection !== 0) {
         const primaryDirection = this.primary === 'end' ? -physicalDirection : physicalDirection;
         next = current + (primaryDirection * KEYBOARD_STEP_PERCENT * this.availableSize) / 100;
@@ -868,7 +943,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
     if (next == null) return;
     event.preventDefault();
-    this.requestReposition(next, false);
+    if (this.requestReposition(next, false)) this.emitResizeChange();
   }
 
   private get separatorLabel(): string {
@@ -889,7 +964,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   private get ariaBounds(): { min: number; max: number } {
     if (this.availableSize <= 0) return { min: 0, max: 100 };
-    const bounds = this.constraintBounds();
+    const bounds = this.measuredConstraintBounds;
     return {
       min: (bounds.min / this.availableSize) * 100,
       max: (bounds.max / this.availableSize) * 100,
@@ -920,7 +995,6 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
           aria-disabled=${this.disabled ? 'true' : 'false'}
           tabindex=${this.disabled ? '-1' : '0'}
           @pointerdown=${this.onPointerDown}
-          @lostpointercapture=${this.onLostPointerCapture}
           @keydown=${this.onKeyDown}
         >
           <slot name="divider" @slotchange=${this.onDividerSlotChange}></slot>

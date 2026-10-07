@@ -1,3 +1,4 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import {
   aTimeout,
   expect,
@@ -193,11 +194,6 @@ function deferred<T>(): {
 
 /** Waits two animation frames -- enough for `<lr-virtual-list>`'s own rAF-coalesced scroll handler
  *  to have run (mirrors the identical helper in virtual-list.test.ts). */
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
-  );
-}
 
 describe("lr-pdf-viewer", () => {
   it("defaults to an empty document, page one, and 100% zoom", async () => {

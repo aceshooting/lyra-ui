@@ -1,3 +1,5 @@
+import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,22 +35,14 @@ export const styles = css`
     background: transparent;
   }
   [part='header'] {
-    display: flex;
-    align-items: center;
-    gap: var(--lr-space-xs);
+    ${disclosureHeader}
+
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    inline-size: 100%;
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border: none;
-    background: none;
-    color: var(--lr-color-text);
-    font: inherit;
+    ${iconHitTarget}
+
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-md-sm);
-    text-align: start;
-    cursor: pointer;
+
     transition: var(--lr-transition-interactive);
   }
   [part='header']:hover {

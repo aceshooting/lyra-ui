@@ -6,7 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { styles } from './span-waterfall.styles.js';
@@ -33,6 +33,7 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
   error: 'statusError',
   denied: 'statusDenied',
   incomplete: 'statusIncomplete',
+  unknown: 'statusUnknown',
 };
 /** success->success, error->danger, denied->warning, running->accent, pending and incomplete->neutral outline. */
 const STATUS_TONE: Record<LyraSpan['status'], string> = {
@@ -42,6 +43,7 @@ const STATUS_TONE: Record<LyraSpan['status'], string> = {
   running: 'accent',
   pending: 'neutral',
   incomplete: 'neutral',
+  unknown: 'neutral',
 };
 
 /** Nice-numbers step (1/2/5 x 10^n) for axis tick spacing — the same small
@@ -207,13 +209,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private axisSignature = '';
   private axisObserver?: ResizeObserver;
   private observedAxis?: Element;
-  private limitAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.sortedCacheTruncated;
     if (this.hasUpdated) {
@@ -226,22 +227,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.axisObserver?.disconnect();
     this.axisObserver = undefined;
     this.observedAxis = undefined;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    this.syncLimitAnnouncementSink();
-  }
-
-  private syncLimitAnnouncementSink(): void {
-    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.announcements.adopted();
   }
 
   private sortedSpans(): LyraSpan[] {
@@ -404,7 +395,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       }
     }
     if (this.limitAnnouncementInitialized && this.sortedCacheTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.projectionLimitText());
+      this.announcements.announcePolite(this.projectionLimitText());
     }
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.sortedCacheTruncated;

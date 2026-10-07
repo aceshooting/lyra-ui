@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -63,8 +65,7 @@ export const styles = css`
   [part~="scroll-container"]:focus-visible,
   [part~="navigation-button"]:focus-visible,
   [part~="pagination-item"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   /* no-pressed-state: no action. */
@@ -179,8 +180,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border-radius: var(--lr-radius-pill);
     cursor: pointer;
   }
@@ -227,7 +227,7 @@ export const styles = css`
     align-items: center;
   }
 
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part="controls"],
     [part~="navigation"] {
       gap: var(--lr-space-xs);

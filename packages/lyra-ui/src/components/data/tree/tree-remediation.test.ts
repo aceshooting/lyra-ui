@@ -16,6 +16,24 @@ function inspectedArray(
 }
 
 describe('tree object projection limits and names', () => {
+  it('shows the localized item cap only when the retained-node budget is reached', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Many"></lr-tree>`);
+    el.data = Array.from({ length: 1_001 }, (_, index) => ({ id: String(index), label: String(index) }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
+      'Only the first 1,000 items are shown.',
+    );
+    el.strings = { treeLimit: 'Showing {count} items only.' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
+      'Showing 1,000 items only.',
+    );
+    el.data = [{ id: 'one', label: 'One' }, { id: 'one', label: 'Duplicate' }];
+    await el.updateComplete;
+    expect(el.dataTruncated).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+
   it('shares one inspected-position budget across roots and child collections in depth-first order', () => {
     const inspected: string[] = [];
     const first = new Array<LyraTreeNodeData>(6_000);

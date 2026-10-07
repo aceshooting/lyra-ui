@@ -4,6 +4,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
@@ -11,11 +12,12 @@ import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraSpan } from '../../agent-tools/trace-tree/span.js';
 import '../../agent-tools/span-waterfall/span-waterfall.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
+import '../../overlays/empty/empty.class.js';
 import {
   firstByRetrievalIdentity,
   isValidRetrievalChunk,
 } from '../retrieval-identity.js';
-import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
+import { hasRetrievalMetadata, renderRetrievalMetadata } from '../retrieval-metadata.js';
 import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -52,6 +54,8 @@ export interface RetrievalStageEvidence {
  * maps onto whichever existing `LyraSpan['kind']` fits best (`embed` -> `'embedding'`, `retrieve`
  * -> `'retriever'`, `query-rewrite` -> `'llm'`, `rerank`/`filter` -> `'tool'`), and the visible
  * bar name is `label` (if set) or the stage's own localized default for `kind`.
+ * An unrecognized runtime kind uses a localized unknown label; an explicit unknown status
+ * remains neutral in the shared timeline.
  */
 export interface RetrievalStage {
   id: string;
@@ -95,8 +99,6 @@ function validChunks(evidence: RetrievalStageEvidence | undefined): RetrievalChu
     : [];
 }
 
-const MAX_METADATA_ENTRIES = 32;
-
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return {
     id: chunk.id,
@@ -111,7 +113,9 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
 
 export interface LyraRetrievalTraceEventMap {
   'lr-stage-select': CustomEvent<{ stageId: string }>;
+  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
   'lr-stage-toggle': CustomEvent<{ stageId: string; expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>;
   'lr-stage-chunk-action': CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
 
@@ -140,6 +144,8 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { stageId }`.
  * @event lr-stage-toggle - A stage's evidence panel was expanded or collapsed (via its own toggle,
  * or implicitly by selecting that stage in the timeline for the first time). `detail: { stageId, expanded }`.
+ * @event lr-toggle - A stage changed (`{ expanded, itemId }`) or a nested chunk changed
+ *   (`{ expanded, itemId, stageId }`).
  * @event lr-stage-chunk-action - A chunk inside a stage was opened or expanded. The discriminated
  *   detail always includes `stageId` and `action`, so consumers never infer ownership from DOM ancestry.
  * @csspart base - The root wrapper.
@@ -154,6 +160,10 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @csspart evidence-metadata-row - One metadata entry's `<dt>`/`<dd>` pair wrapper, inside `evidence-metadata`.
  * @csspart evidence-metadata-key - One metadata entry's key (a `<dt>`).
  * @csspart evidence-metadata-value - One metadata entry's value (a `<dd>`).
+ * @csspart metadata - Shared metadata list part; `evidence-metadata` remains an alias.
+ * @csspart metadata-entry - Shared metadata pair part; `evidence-metadata-row` remains an alias.
+ * @csspart metadata-term - Shared metadata key part; `evidence-metadata-key` remains an alias.
+ * @csspart metadata-value - Shared metadata value part; `evidence-metadata-value` remains an alias.
  * @csspart chunk-inspector - The stage-owned chunk inspector; its generic child actions are
  *   stopped and re-emitted as `lr-stage-chunk-action`.
  * @cssprop [--lr-retrieval-trace-active-border=var(--lr-color-brand)] - Border color of the
@@ -247,14 +257,18 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       evidence !== null &&
       (Boolean(evidence.text) ||
         this.stageChunks(evidence).length > 0 ||
-        Boolean(evidence.metadata && Object.keys(evidence.metadata).length > 0))
+        hasRetrievalMetadata(evidence.metadata))
     );
   }
 
   private stageLabel(stage: RetrievalStage): string {
     if (typeof stage.label === 'string' && stage.label) return stage.label;
-    const entry = STAGE_LABEL[stage.kind];
-    return entry ? this.localize(entry.key) : String(stage.kind);
+    const entry = typeof stage.kind === 'string' ? STAGE_LABEL[stage.kind as RetrievalStageKind] : undefined;
+    if (!entry) devWarnOnce(
+      'lr-retrieval-trace:unknown-kind',
+      `<lr-retrieval-trace>: unknown stage kind ${JSON.stringify(typeof stage.kind === 'string' ? stage.kind.slice(0, 80) : typeof stage.kind)}; rendering a localized unknown label.`
+    );
+    return entry ? this.localize(entry.key) : this.localize('retrievalStageKindUnknown');
   }
 
   private toSpans(
@@ -265,7 +279,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       (stage, index): LyraSpan => ({
         id: stage.id,
         name: names[index]!,
-        kind: STAGE_SPAN_KIND[stage.kind] ?? 'tool',
+        kind: typeof stage.kind === 'string' ? STAGE_SPAN_KIND[stage.kind as RetrievalStageKind] ?? 'tool' : 'tool',
         startMs: stage.startMs,
         endMs: stage.endMs,
         status: stage.status,
@@ -281,6 +295,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     else next.delete(stageId);
     this.expandedStageIds = next;
     this.emit('lr-stage-toggle', { stageId, expanded });
+    this.emit('lr-toggle', { itemId: stageId, expanded });
   }
 
   private onStageSelect = (e: CustomEvent<{ spanId: string }>): void => {
@@ -301,6 +316,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       next.add(stageId);
       this.expandedStageIds = next;
       this.emit('lr-stage-toggle', { stageId, expanded: true });
+      this.emit('lr-toggle', { itemId: stageId, expanded: true });
     }
   };
 
@@ -322,9 +338,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   private renderEvidenceBody(stage: RetrievalStage): TemplateResult {
     const evidence = stage.evidence!;
     const chunks = this.stageChunks(evidence);
-    const metaEntries = evidence.metadata
-      ? Object.entries(evidence.metadata)
-      : [];
     return html`
       ${evidence.text
         ? html`<p part="evidence-text">${evidence.text}</p>`
@@ -334,6 +347,10 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             part="chunk-inspector"
             size="s"
             .chunks=${chunks}
+            @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
+              event.stopPropagation();
+              this.emit('lr-toggle', { ...event.detail, stageId: stage.id });
+            }}
             @lr-chunk-open=${(
               event: CustomEvent<{
                 chunkId: string;
@@ -360,31 +377,8 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             }}
           ></lr-chunk-inspector>`
         : nothing}
-      ${metaEntries.length > 0
-        ? html`<dl part="evidence-metadata">
-            ${metaEntries.slice(0, MAX_METADATA_ENTRIES).map(
-              ([key, value]) =>
-                html`<div part="evidence-metadata-row">
-                  <dt part="evidence-metadata-key">${key}</dt>
-                  <dd part="evidence-metadata-value">
-                    ${this.formatMetadataValue(value)}
-                  </dd>
-                </div>`
-            )}
-            ${metaEntries.length > MAX_METADATA_ENTRIES
-              ? html`<div part="evidence-metadata-row"><dt part="evidence-metadata-key">…</dt></div>`
-              : nothing}
-          </dl>`
-        : nothing}
+      ${renderRetrievalMetadata(evidence.metadata, this.effectiveLocale, this.localize('valueInvalid'), this.localize('valueTruncated'), true)}
     `;
-  }
-
-  private formatMetadataValue(value: unknown): string {
-    return formatBoundedRetrievalValue(value, {
-      locale: this.effectiveLocale,
-      invalid: this.localize('valueInvalid'),
-      truncated: '…',
-    });
   }
 
   private renderEvidenceRow(
@@ -436,6 +430,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     const label = this.label;
     return html`
       <div part="base">
+        ${stages.length === 0 ? html`<lr-empty part="empty" heading=${this.localize('retrievalTraceEmpty')}></lr-empty>` : nothing}
         <lr-span-waterfall
           part="timeline"
           .spans=${guard([stages, ...names], () => this.toSpans(stages, names))}

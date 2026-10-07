@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import * as graphSupport from '../../../../test/graph-test-support.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
@@ -542,12 +543,7 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -582,12 +578,7 @@ describe('coverage: canvas renderer internals', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -649,7 +640,7 @@ describe('coverage: canvas renderer internals', () => {
     await el.updateComplete;
     await waitUntil(
       () =>
-        el.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 4,
+        el.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 1,
       undefined,
       {
         timeout: NODE_COUNT_TIMEOUT,
@@ -679,19 +670,23 @@ describe('coverage: canvas renderer internals', () => {
       build().keyboardFocusHull,
     ]).to.deep.equal([undefined, undefined, undefined]);
 
-    items[0]!.focus();
+    await focusByKeyboard(items[0]!);
     let scene = build();
     expect(Boolean(scene.keyboardFocusRing)).to.equal(true);
     expect(Boolean(scene.keyboardFocusLink)).to.equal(false);
     expect(Boolean(scene.keyboardFocusHull)).to.equal(false);
 
-    items[2]!.focus();
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
     scene = build();
     expect(Boolean(scene.keyboardFocusRing)).to.equal(false);
     expect(Boolean(scene.keyboardFocusLink)).to.equal(true);
     expect(Boolean(scene.keyboardFocusHull)).to.equal(false);
 
-    items[3]!.focus();
+    items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
     scene = build();
     expect(Boolean(scene.keyboardFocusRing)).to.equal(false);
     expect(Boolean(scene.keyboardFocusLink)).to.equal(false);
@@ -783,14 +778,14 @@ describe('coverage: canvas renderer internals', () => {
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
     );
     await el.updateComplete;
-    items()[1]!.dispatchEvent(
+    items()[0]!.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })
     );
     await el.updateComplete;
-    expect(items()[2]!.getAttribute('tabindex')).to.equal('0'); // the link cursor-item is now active
+    expect(items()[0]!.parentElement!.getAttribute('aria-posinset')).to.equal('3');
   });
 
-  it('canvas mode renders one cursor-item per community, driving lr-community-activate via click and Enter, with an id fallback when unlabeled', async () => {
+  it('canvas virtual cursor reaches communities and activates them via click and Enter, with an id fallback when unlabeled', async () => {
     const el = (await fixture(
       html`<lr-graph
         renderer="canvas"
@@ -812,8 +807,10 @@ describe('coverage: canvas renderer internals', () => {
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
-    expect(items).to.have.length(3); // 2 nodes + 1 hull, no links
-    const hullItem = items[2]!;
+    expect(items).to.have.length(1);
+    const hullItem = items[0]!;
+    hullItem.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
     expect(hullItem.getAttribute('aria-label')).to.contain('team-1');
     let detail: { communityId: string } | undefined;
     el.addEventListener(
@@ -882,17 +879,7 @@ describe('coverage: selection/drag/hover edge cases', () => {
   });
 
   it('dragging a node (svg mode) sets fx/fy live and clears them + isDragging on release (d3-drag start/drag/end)', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGCircleElement;
@@ -925,17 +912,7 @@ describe('coverage: selection/drag/hover edge cases', () => {
   });
 
   it('suppresses lr-node-leave and leaves data-hovered untouched while panning (mouseleave, mirrors the existing mouseenter suppression tests)', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     nodeEl.setAttribute('data-hovered', ''); // as if entered before the pan started
     (el as unknown as { isPanning: boolean }).isPanning = true;
@@ -1156,17 +1133,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
   });
 
   it("onGraphKeyDown's double-activate timer falls back to 0 instead of throwing when ownerWindow is unavailable", async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     const restore = stubNoOwnerWindow(el);
     try {
@@ -1247,12 +1214,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -1774,12 +1736,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -1821,12 +1778,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -2190,17 +2142,7 @@ describe('coverage: selection and keyboard edge cases', () => {
   });
 
   it('clearing every node while one is DOM-focused resolves the pending base-focus fallback without throwing (all items removed)', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as unknown as HTMLElement;
@@ -2268,12 +2210,7 @@ describe('coverage: remaining branch gaps', () => {
         height="200"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;

@@ -78,6 +78,7 @@ interface DelimitedDialect {
 interface DelimitedPreflight {
   dataRowCount: number;
   quoteErrors: DelimitedParserError[];
+  undetectableDelimiter: boolean;
 }
 
 const DELIMITER_CANDIDATES = [',', '\t', '|', ';', '\x1e', '\x1f'] as const;
@@ -357,7 +358,9 @@ function preflightDelimitedText(
   let headerColumns = 0;
   let dataRowCount = 0;
   let totalCells = 0;
-  let parserErrorCount = dialect.delimiterDetected ? 0 : 1;
+  let parserErrorCount = 0;
+  let sawRow = false;
+  let sawMultipleFields = false;
 
   const scan = scanDelimitedStructure(
     text,
@@ -365,6 +368,8 @@ function preflightDelimitedText(
     dialect.newline,
     Number.POSITIVE_INFINITY,
     (row) => {
+      sawRow = true;
+      if (row.fieldCount > 1) sawMultipleFields = true;
       if (row.fieldCount > limits.maxColumns) {
         throw tableLimit('The table contains too many columns.');
       }
@@ -391,12 +396,14 @@ function preflightDelimitedText(
     true,
   );
 
+  const undetectableDelimiter = !dialect.delimiterDetected && (!sawRow || sawMultipleFields);
+  if (undetectableDelimiter) parserErrorCount++;
   parserErrorCount += scan.parserErrorCount;
   if (parserErrorCount > limits.maxErrors) {
     throw tableLimit('The table contains too many parser errors.');
   }
 
-  return { dataRowCount, quoteErrors: scan.parserErrors };
+  return { dataRowCount, quoteErrors: scan.parserErrors, undetectableDelimiter };
 }
 
 function isQuoteDiagnostic(value: unknown): boolean {
@@ -426,7 +433,7 @@ function boundedParse<T>(
   const rows: T[] = [];
   const fields: string[] = [];
   const errors: unknown[] = [...preflight.quoteErrors];
-  if (!dialect.delimiterDetected) errors.push(undetectableDelimiterError());
+  if (preflight.undetectableDelimiter) errors.push(undetectableDelimiterError());
   let remainingQuoteDuplicates = preflight.quoteErrors.length;
   let parsedRows = 0;
   let totalCells = 0;

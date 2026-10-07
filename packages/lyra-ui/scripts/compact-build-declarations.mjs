@@ -38,13 +38,52 @@ function assertDeclarationParses(source, filename) {
   }
 }
 
+/** Remove documentation attached to inaccessible class members from the published copy only. */
+export function stripPrivateMemberJsdoc(source, filename = 'module.d.ts') {
+  const parsed = parseSync(filename, source, { lang: 'dts', sourceType: 'module' });
+  const fatal = parsed.errors.filter((error) => error.severity !== 'Warning');
+  if (fatal.length > 0) {
+    throw new Error(`${filename}: cannot inspect private declaration documentation: ` +
+      fatal.map((error) => error.message).join('; '));
+  }
+
+  const comments = parsed.comments;
+  const removals = [];
+  const seen = new WeakSet();
+  function visit(node) {
+    if (!node || typeof node !== 'object' || seen.has(node)) return;
+    seen.add(node);
+    if (node.type === 'ClassBody') {
+      for (const member of node.body) {
+        if (member.accessibility !== 'private') continue;
+        const preceding = comments.findLast((comment) => comment.end <= member.start);
+        if (preceding?.type !== 'Block' || !source.startsWith('/**', preceding.start)) continue;
+        if (!/^\s*$/u.test(source.slice(preceding.end, member.start))) continue;
+        removals.push({ start: preceding.start, end: preceding.end });
+      }
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'parent') continue;
+      if (Array.isArray(value)) value.forEach(visit);
+      else if (value && typeof value === 'object') visit(value);
+    }
+  }
+  visit(parsed.program);
+
+  let stripped = source;
+  for (const { start, end } of removals.sort((left, right) => right.start - left.start)) {
+    stripped = stripped.slice(0, start) + stripped.slice(end);
+  }
+  return stripped;
+}
+
 /**
- * Removes lexically redundant declaration whitespace while retaining every type token and every
- * documentation comment. String and template bodies are copied byte-for-byte. JSDoc keeps an
- * explicit line boundary on each side, while indentation before its leading `*` is normalized
- * away because TypeScript's documentation parser discards it.
+ * Removes lexically redundant declaration whitespace and private-member JSDoc while retaining
+ * every type token and all public/protected documentation. String and template bodies are copied
+ * byte-for-byte. Remaining JSDoc keeps an explicit line boundary on each side.
  */
 export function compactDeclarationText(source, filename = 'module.d.ts') {
+  source = stripPrivateMemberJsdoc(source, filename);
   let output = '';
   let index = 0;
   let state = 'code';

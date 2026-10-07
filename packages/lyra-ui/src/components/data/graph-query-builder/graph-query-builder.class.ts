@@ -1,14 +1,17 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { BUILDER_CHILD_EVENTS, containShadowChildEvent } from '../../../internal/child-event-containment.js';
+import { boundedRecordString, normalizeLabeledOptions } from '../../../internal/record-normalize.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { closeIcon } from '../../../internal/icons.js';
-import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -16,23 +19,18 @@ import { nextId } from '../../../internal/a11y.js';
 import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
-import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
-import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_noData, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -114,11 +112,6 @@ export interface GraphQueryDeleteDetail {
   readonly queryId: string;
 }
 
-const CHILD_EVENTS = ['input', 'change', 'lr-input', 'lr-change', 'lr-activate', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide', 'lr-clear', 'lr-filter', 'lr-invalid'];
-// Slotted light-DOM content keeps its events; only the shadow tree's own controls are contained.
-const containChildEvent = (event: Event): void => {
-  if ((event.target as Node).getRootNode() === event.currentTarget) event.stopPropagation();
-};
 
 const MAX_TYPES = 500;
 const MAX_SAVED_QUERIES = 200;
@@ -147,7 +140,7 @@ function ownValue(record: object, key: string): unknown {
 }
 
 function boundedString(value: unknown): string {
-  return typeof value === 'string' ? value.slice(0, MAX_TEXT) : '';
+  return boundedRecordString(value, MAX_TEXT);
 }
 
 function stringArray(value: unknown): readonly string[] {
@@ -192,17 +185,7 @@ function normalizeGraphQuery(value: unknown): GraphQuery {
 
 function normalizeTypeOptions(value: unknown): readonly GraphQueryTypeOption[] {
   if (!Array.isArray(value)) return EMPTY_OPTIONS;
-  const values = new Set<string>();
-  const result: GraphQueryTypeOption[] = [];
-  for (const candidate of value.slice(0, MAX_TYPES)) {
-    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const optionValue = boundedString(ownValue(candidate, 'value'));
-    if (optionValue.trim().length === 0 || values.has(optionValue)) continue;
-    values.add(optionValue);
-    const label = boundedString(ownValue(candidate, 'label'));
-    result.push(Object.freeze({ value: optionValue, ...(label ? { label } : {}) }));
-  }
-  return Object.freeze(result);
+  return normalizeLabeledOptions(value, MAX_TYPES, MAX_TEXT);
 }
 
 function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
@@ -226,6 +209,9 @@ function normalizeSavedQueries(value: unknown): readonly GraphQuerySavedItem[] {
 export interface LyraGraphQueryBuilderEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>;
+  input: Event;
+  change: Event;
   'lr-validity-change': CustomEvent<{
     readonly valid: boolean;
     readonly errors: Readonly<Record<string, string>>;
@@ -305,6 +291,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * @slot label - Visible label for the complete form control.
  * @slot hint - Supporting text for the complete form control.
  * @slot error - Error text for the complete form control.
+ * @event {Event} input - Native notification after a user edits the aggregate value.
+ * @event {Event} change - Native notification after a user commits an aggregate value edit.
+ * @event lr-change - A user committed an edit; detail is `{ value }` with the complete value snapshot.
  * @event lr-input - `detail: { value }` — any field changed; the full current query, once per edit.
  *   Child controls' native/prefixed value and listbox lifecycle events are contained.
  * @event lr-validity-change - Frozen `detail: { valid, errors }` from effective native validity,
@@ -431,6 +420,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',
+    'lr-change',
     'lr-query-run-request',
     'lr-query-run',
     'lr-query-save-request',
@@ -503,21 +493,16 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   @state() private _errors: Record<string, string> = {};
   @state() private touchedFields = new Set<string>();
   @state() private saveName = '';
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  // Read once more from `firstUpdated()` in addition to each slot's own `@slotchange` listener --
-  // see `collectInitialSlotAssignment`'s doc: happy-dom never fires a slot's INITIAL `slotchange`,
-  // so a builder whose hint/error children already exist at connect (the ordinary "render once data
-  // is ready" Lit pattern) would otherwise leave these two booleans false forever.
-  @query('slot[name="hint"]') private hintSlotEl?: HTMLSlotElement;
-  @query('slot[name="error"]') private errorSlotEl?: HTMLSlotElement;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private readonly labelId = nextId('graph-query-builder-label');
   private readonly hintId = nextId('graph-query-builder-hint');
   private readonly errorId = nextId('graph-query-builder-error');
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private _fieldsetDisabled = false;
@@ -553,21 +538,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   constructor() {
     super();
-    // Degrades to the shared `createFallbackInternals()` stand-in rather than throwing in an
-    // environment without a working `attachInternals()` (a downstream consumer's happy-dom test
-    // suite): merely constructing -- or importing -- this component must not hard-crash there.
-    // Form participation is genuinely unavailable in that environment and stays inert, but the
-    // stand-in tracks real validity flags, so `checkValidity()`/`validity`/`validationMessage`
-    // keep answering this control's own constraints instead of claiming valid unconditionally.
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) => this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like an edit or a blur; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.syncFormState();
   }
 
@@ -644,8 +620,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -656,6 +631,8 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the published validity and `:state()` hooks change
     // even though the value did not. The guard covers a setter call that lands before the
     // constructor body under a DOM shim.
@@ -771,17 +748,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
-    this.syncFormState();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.syncFormState());
   }
 
   /** Reveals every current field error and returns overall validity -- the hook Run calls before
    *  acting, mirroring a native `<form>`'s `reportValidity()`. */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // A reportValidity() call is what a submit attempt (here, the Run button) runs, so it counts as
     // interaction for the user-valid/user-invalid pair — set before syncFormState(), which is what
     // republishes them. (A real `<form>` submission attempt never calls this method -- it drives
@@ -847,7 +820,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.value = restored;
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.syncFormState();
     this.requestUpdate();
   }
@@ -887,13 +863,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.focusFirstControl();
   }
 
-  private setValue(next: GraphQuery): void {
+  private setValue(next: GraphQuery, committed = true): void {
     if (this.effectiveDisabled) return;
     // Set before the `value` assignment, whose setter republishes the custom states.
     this.hasInteracted = true;
     this.value = next;
-    this.emit('lr-input', Object.freeze({ value: this._value }));
+    const detail = Object.freeze({ value: this._value });
+    emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+    if (committed) emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
   }
+
+  private onValueCommit = (event: Event): void => {
+    event.stopPropagation();
+    if (!this.effectiveDisabled) emitValueEvents(this, 'change', Object.freeze({ value: this._value }), detail => this.emit('lr-change', detail));
+  };
 
   private addRelationshipType(type: string): void {
     if (!type || this._value.relationshipTypes.includes(type)) return;
@@ -1061,55 +1044,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return [...options].sort((a, b) => a - b);
   }
 
-  /**
-   * Also called once from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
-   * environment, or a real-browser timing race, where a slot's initial assignment never fires
-   * `slotchange`. Idempotent: re-reading the same still-assigned nodes just re-derives the same
-   * boolean, so running once from `firstUpdated()` and again from a real initial `slotchange` (every
-   * real-browser connect) produces no duplicate side effect.
-   */
-  private onChromeSlotChange = (event: Event): void => {
-    this.collectChromeSlotAssignment(event.currentTarget as HTMLSlotElement);
-  };
-
-  private collectChromeSlotAssignment(slot: HTMLSlotElement): void {
-    const hasContent = slot
-      .assignedNodes({ flatten: true })
-      .some((node) =>
-        node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true);
-    if (slot.name === 'hint') this.hasHintSlot = hasContent;
-    else if (slot.name === 'error') this.hasErrorSlot = hasContent;
-  }
-
-  protected override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
-    // `collectInitialSlotAssignment`'s own doc -- so a builder whose hint/error children already
-    // exist at connect (the ordinary "render once data is ready" Lit pattern) would otherwise leave
-    // `hasHintSlot`/`hasErrorSlot` false forever, even though the slot truly has content. Collect
-    // once here too, from each slot's current assignment. Deferred a microtask, mirroring
-    // `select.class.ts`'s identical fix: these are reactive `@state` fields, so writing them
-    // synchronously inside `firstUpdated()` -- after this same update has already been marked
-    // complete -- trips Lit's "scheduled an update after an update completed" dev warning. A real
-    // `slotchange` event runs this same collection from a task/microtask entirely outside the update
-    // cycle, which never trips it; queuing a microtask here reproduces that same "outside the cycle"
-    // timing instead. Still guaranteed to land before any caller's own `await el.updateComplete`
-    // continuation, which joins the microtask queue behind this one.
-    const hintSlot = this.hintSlotEl;
-    const errorSlot = this.errorSlotEl;
-    queueMicrotask(() => {
-      collectInitialSlotAssignment(hintSlot, (s) => this.collectChromeSlotAssignment(s));
-      collectInitialSlotAssignment(errorSlot, (s) => this.collectChromeSlotAssignment(s));
-    });
-  }
-
   private labelForType(options: readonly GraphQueryTypeOption[], value: string): string {
     return options.find((o) => o.value === value)?.label ?? value;
   }
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
-    for (const type of CHILD_EVENTS) root.addEventListener(type, containChildEvent);
+    for (const type of BUILDER_CHILD_EVENTS) root.addEventListener(type, containShadowChildEvent);
     return root;
   }
 
@@ -1186,15 +1127,15 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
         aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
       >
         <div part="form-control-label label" id=${this.labelId}>
-          <slot name="label" @slotchange=${this.onChromeSlotChange}
+          <slot name="label"
             >${this.label || this.localize('graphQueryBuilderLabel')}</slot
           >
         </div>
         <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onChromeSlotChange}></slot>
+          ${this.hint}<slot name="hint"></slot>
         </div>
         <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onChromeSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
         <div part="path-fields">
           <lr-input
@@ -1204,9 +1145,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             .required=${true}
             error-text=${hasStartError ? this._errors['start-input'] : ''}
             ?disabled=${disabled}
+            @lr-change=${this.onValueCommit}
             @lr-input=${(e: CustomEvent<{ value: string }>) => {
               e.stopPropagation();
-              this.setValue({ ...this._value, startId: e.detail.value });
+              this.setValue({ ...this._value, startId: e.detail.value }, false);
             }}
             @blur=${() => this.markTouched('start-input')}
           ></lr-input>
@@ -1215,9 +1157,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             label=${this.localize('graphQueryEndLabel')}
             .value=${value.endId}
             ?disabled=${disabled}
+            @lr-change=${this.onValueCommit}
             @lr-input=${(e: CustomEvent<{ value: string }>) => {
               e.stopPropagation();
-              this.setValue({ ...this._value, endId: e.detail.value });
+              this.setValue({ ...this._value, endId: e.detail.value }, false);
             }}
           ></lr-input>
           <lr-select

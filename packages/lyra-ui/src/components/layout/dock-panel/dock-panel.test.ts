@@ -80,6 +80,18 @@ it("floors the collapse toggle at the shared minimum hit target", async () => {
   expect(toggle.getBoundingClientRect().height).to.be.at.least(36);
 });
 
+it('keeps the resize handle hittable 20px inside the clipped panel', async () => {
+  for (const edge of ['end', 'top'] as const) {
+    const el = await dockedFixture('extent="180px"', edge);
+    await elementUpdated(el);
+    const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+    const rect = handle.getBoundingClientRect();
+    const x = edge === 'end' ? rect.left + 20 : rect.left + rect.width / 2;
+    const y = edge === 'top' ? rect.top - 20 : rect.top + rect.height / 2;
+    expect(el.shadowRoot!.elementFromPoint(x, y) === handle).to.equal(true);
+  }
+});
+
 it("contains long RTL dock and main content through collapse/expand in an exact 320px allocation", async () => {
   const longText = "UnbrokenLocalizedDockPanelContent".repeat(20);
   const wrapper = await fixture<HTMLElement>(html`
@@ -227,7 +239,7 @@ it("lets an explicit min-extent below the collapsed-rail token width render whil
   expect(el.getBoundingClientRect().width).to.be.closeTo(24, 1);
 });
 
-it("treats each genuine keyboard step as a frozen input/change transaction", async () => {
+it("treats each genuine keyboard step as a frozen resize/input/change transaction", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
@@ -236,6 +248,10 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
 
   const order: string[] = [];
   const details: LyraDockPanelResizeDetail[] = [];
+  el.addEventListener("lr-resize", (event) => {
+    order.push(event.type);
+    details.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
+  });
   el.addEventListener("lr-resize-input", (event) => {
     order.push(event.type);
     details.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
@@ -244,8 +260,6 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
     order.push(event.type);
     details.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail);
   });
-  let legacyEvents = 0;
-  el.addEventListener("lr-resize", () => (legacyEvents += 1));
   // placement="end" in LTR: the panel's right edge is pinned, so ArrowLeft (moving
   // the draggable left edge further left) grows it.
   handle.dispatchEvent(
@@ -253,14 +267,14 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
   );
   await elementUpdated(el);
   expect(el.extent).to.equal("316px");
-  expect(order).to.deep.equal(["lr-resize-input", "lr-resize-change"]);
+  expect(order).to.deep.equal(["lr-resize", "lr-resize-input", "lr-resize-change"]);
   expect(details.map((detail) => detail.extent)).to.deep.equal([
+    "316px",
     "316px",
     "316px",
   ]);
   expect(details[0]).to.not.equal(details[1]);
   expect(details.every((detail) => Object.isFrozen(detail))).to.equal(true);
-  expect(legacyEvents).to.equal(0);
 
   handle.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
@@ -268,8 +282,10 @@ it("treats each genuine keyboard step as a frozen input/change transaction", asy
   await elementUpdated(el);
   expect(el.extent).to.equal("300px");
   expect(order).to.deep.equal([
+    "lr-resize",
     "lr-resize-input",
     "lr-resize-change",
+    "lr-resize",
     "lr-resize-input",
     "lr-resize-change",
   ]);
@@ -305,7 +321,7 @@ it("proposes a keyboard step through the cancelable lr-resize-request veto befor
   expect(changes).to.equal(0);
 });
 
-it("does not fire lr-resize-request per continuous pointer-drag tick, only on the drag's final settle", async () => {
+it("requests and reports each accepted pointer-drag tick, then settles once", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
@@ -315,6 +331,8 @@ it("does not fire lr-resize-request per continuous pointer-drag tick, only on th
 
   let requests = 0;
   el.addEventListener("lr-resize-request", () => (requests += 1));
+  let resizes = 0;
+  el.addEventListener("lr-resize", () => (resizes += 1));
   const input = oneEvent(el, "lr-resize-input");
 
   handle.dispatchEvent(
@@ -325,25 +343,81 @@ it("does not fire lr-resize-request per continuous pointer-drag tick, only on th
   );
   await input;
   expect(el.extent).to.equal("350px");
-  expect(requests, "a live drag tick must not fire the veto event").to.equal(0);
+  expect(requests).to.equal(1);
+  expect(resizes).to.equal(1);
 
   const secondInput = oneEvent(el, "lr-resize-input");
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 140 })
   );
   await secondInput;
-  expect(requests, "still no veto event mid-drag").to.equal(0);
+  expect(requests).to.equal(2);
+  expect(resizes).to.equal(2);
 
-  const request = oneEvent(el, "lr-resize-request");
+  const change = oneEvent(el, "lr-resize-change");
   window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
-  const requestDetail = (
-    (await request) as CustomEvent<LyraDockPanelResizeDetail>
+  const changeDetail = (
+    (await change) as CustomEvent<LyraDockPanelResizeDetail>
   ).detail;
-  expect(requestDetail).to.deep.equal({ extent: "360px" });
-  expect(requests, "exactly one veto event, for the final settle").to.equal(1);
+  expect(changeDetail).to.deep.equal({ extent: "360px" });
+  expect(requests).to.equal(2);
 });
 
-it("snaps a rejected pointer-drag final settle back to the size the gesture started from", async () => {
+it('reuses drag-start bounds while checking live container geometry on each pointer tick', async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', primaryPointer(7, { clientX: 200 })));
+  const container = el.parentElement!;
+  const originalPanelRect = el.getBoundingClientRect;
+  const originalContainerRect = container.getBoundingClientRect;
+  let panelReads = 0;
+  let containerReads = 0;
+  el.getBoundingClientRect = function () { panelReads += 1; return originalPanelRect.call(this); };
+  container.getBoundingClientRect = function () { containerReads += 1; return originalContainerRect.call(this); };
+  try {
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 150 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 140 }));
+    expect(panelReads).to.equal(0);
+    expect(containerReads).to.equal(2);
+    expect(el.extent).to.equal('360px');
+  } finally {
+    el.getBoundingClientRect = originalPanelRect;
+    container.getBoundingClientRect = originalContainerRect;
+    window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 7 }));
+  }
+});
+
+it('cancels a drag when an ancestor changes its direction', async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.dispatchEvent(new PointerEvent('pointerdown', primaryPointer(8, { clientX: 200 })));
+  el.parentElement!.dir = 'rtl';
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointerup', primaryPointer(8)));
+  expect(el.extent).to.equal('300px');
+});
+
+it('renders its separator range from reconciled layout measurements', async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+  await elementUpdated(el);
+  const originalPanelRect = el.getBoundingClientRect;
+  const container = el.parentElement!;
+  const originalContainerRect = container.getBoundingClientRect;
+  el.getBoundingClientRect = () => { throw new Error('render read the panel box'); };
+  container.getBoundingClientRect = () => { throw new Error('render read the container box'); };
+  try {
+    expect(() => el.render()).to.not.throw();
+  } finally {
+    el.getBoundingClientRect = originalPanelRect;
+    container.getBoundingClientRect = originalContainerRect;
+  }
+});
+
+it("vetoes pointer ticks before mutation and does not settle a rejected drag", async () => {
   const el = await dockedFixture(
     'extent="300px" min-extent="100px" max-extent="500px"'
   );
@@ -352,9 +426,10 @@ it("snaps a rejected pointer-drag final settle back to the size the gesture star
   handle.setPointerCapture = () => {};
 
   el.addEventListener("lr-resize-request", (event) => event.preventDefault());
+  let resizes = 0;
+  el.addEventListener("lr-resize", () => (resizes += 1));
   let changes = 0;
   el.addEventListener("lr-resize-change", () => (changes += 1));
-  const input = oneEvent(el, "lr-resize-input");
 
   handle.dispatchEvent(
     new PointerEvent("pointerdown", primaryPointer(1, { clientX: 200 }))
@@ -362,13 +437,63 @@ it("snaps a rejected pointer-drag final settle back to the size the gesture star
   window.dispatchEvent(
     new PointerEvent("pointermove", { pointerId: 1, clientX: 150 })
   );
-  await input;
-  expect(el.extent).to.equal("350px");
+  expect(el.extent).to.equal("300px");
 
   window.dispatchEvent(new PointerEvent("pointerup", primaryPointer(1)));
   await elementUpdated(el);
-  expect(el.extent, "rejected final settle snaps back to the pre-drag size").to.equal("300px");
-  expect(changes, "lr-resize-change must not fire for a rejected settle").to.equal(0);
+  expect(el.extent).to.equal("300px");
+  expect(resizes).to.equal(0);
+  expect(changes).to.equal(0);
+});
+
+it("keeps the last accepted dock extent when a later drag tick is vetoed", async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  el.addEventListener('lr-resize-request', (event) => {
+    if (parseFloat((event as CustomEvent<LyraDockPanelResizeDetail>).detail.extent) > 350) {
+      event.preventDefault();
+    }
+  });
+  const changed: string[] = [];
+  el.addEventListener('lr-resize-change', (event) => {
+    changed.push((event as CustomEvent<LyraDockPanelResizeDetail>).detail.extent);
+  });
+  handle.dispatchEvent(new PointerEvent('pointerdown', primaryPointer(3, { clientX: 200 })));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: 140 }));
+  expect(el.extent).to.equal('350px');
+  window.dispatchEvent(new PointerEvent('pointerup', primaryPointer(3)));
+  expect(changed).to.deep.equal(['350px']);
+});
+
+it('does not overwrite a resize-request listener that writes the current extent', async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const events: string[] = [];
+  el.addEventListener('lr-resize-request', () => { el.extent = '300px'; events.push('request'); });
+  el.addEventListener('lr-resize', () => events.push('resize'));
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  expect(el.extent).to.equal('300px');
+  expect(events).to.deep.equal(['request']);
+});
+
+it('drops a pointer proposal if its request listener collapses the panel', async () => {
+  const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px" collapsible');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  let accepted = 0;
+  el.addEventListener('lr-resize-request', () => { el.collapsed = true; });
+  el.addEventListener('lr-resize', () => { accepted += 1; });
+  handle.dispatchEvent(new PointerEvent('pointerdown', primaryPointer(46, { clientX: 200 })));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 46, clientX: 150 }));
+  window.dispatchEvent(new PointerEvent('pointerup', primaryPointer(46)));
+  expect(el.collapsed).to.equal(true);
+  expect(el.extent).to.equal('300px');
+  expect(accepted).to.equal(0);
 });
 
 it('swaps ArrowLeft/ArrowRight for placement="end" under dir="rtl"', async () => {
@@ -1039,6 +1164,32 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(
     true
   );
+});
+
+it('emits the canonical toggle pair once and lets its request veto a reentrant click', async () => {
+  const el = await dockedFixture('extent="280px" collapsible');
+  const button = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  const seen: string[] = [];
+  el.addEventListener('lr-toggle-request', (event) => {
+    seen.push('request');
+    button.click();
+    event.preventDefault();
+  });
+  el.addEventListener('lr-toggle', () => seen.push('toggle'));
+  button.click();
+  expect(el.collapsed).to.equal(false);
+  expect(seen).to.deep.equal(['request']);
+});
+
+it('does not overwrite an identical host collapsed write made in a toggle request', async () => {
+  const el = await dockedFixture('extent="280px" collapsible');
+  const button = el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLButtonElement;
+  let accepted = 0;
+  el.addEventListener('lr-toggle-request', () => { el.collapsed = false; });
+  el.addEventListener('lr-toggle', () => { accepted += 1; });
+  button.click();
+  expect(el.collapsed).to.equal(false);
+  expect(accepted).to.equal(0);
 });
 
 it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing the mutation when prevented", async () => {

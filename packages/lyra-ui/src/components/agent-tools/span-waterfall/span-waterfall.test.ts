@@ -146,6 +146,16 @@ describe('lr-span-waterfall', () => {
     expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.equal('27.5%');
   });
 
+  it('refreshes a projected bar after mutating and reassigning the same source array', async () => {
+    const spans: LyraSpan[] = [{ id: 'run', name: 'Before', kind: 'tool', startMs: 0, endMs: 10, status: 'success' }];
+    const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`);
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+    spans[0]!.name = 'After';
+    el.spans = spans;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
+  });
+
   it('clips bars to viewStartMs/viewEndMs when set', async () => {
     const el = (await fixture(
       html`<lr-span-waterfall .spans=${SPANS} .viewStartMs=${100} .viewEndMs=${300}></lr-span-waterfall>`,
@@ -692,11 +702,11 @@ it('normalizes foreign runtime enum values before rendering and focusing a span'
   const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
 
   expect(bar.getAttribute('data-tone')).to.equal('neutral');
-  expect(bar.getAttribute('data-status')).to.equal('pending');
+  expect(bar.getAttribute('data-status')).to.equal('unknown');
   expect(bar.getAttribute('aria-label')).to.include('Other');
-  expect(status.getAttribute('data-status')).to.equal('pending');
-  expect(status.textContent).to.equal('Pending');
-  expect(bar.getAttribute('aria-label')).to.include('Pending');
+  expect(status.getAttribute('data-status')).to.equal('unknown');
+  expect(status.textContent).to.equal('Unknown');
+  expect(bar.getAttribute('aria-label')).to.include('Unknown');
 });
 
 it('keeps a tabbable row when activeSpanId is dangling', async () => {

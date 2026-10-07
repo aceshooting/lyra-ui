@@ -1,24 +1,18 @@
+import { installFormControlLabelSupport } from './form-control-labels.js';
+import { FormControlController, reflectFormName } from './form-control-controller.js';
 import type { ComplexAttributeConverter, LitElement, PropertyValues } from 'lit';
 import { LYRA_DEFAULT_fieldRequired } from './default-strings.generated.js';
 import { resolveLyraString } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization-types.js';
 import {
-  AnchoredValidityController,
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
 import { syncValidityStates } from './custom-states.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from './invalid-event-alias.js';
 import { omittedEmptyStringConverter } from './converters.js';
 import { attachInternalsSafely, createFallbackInternals } from './element-internals.js';
-import { installFormControlLabelSupport } from './form-control-labels.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   setFormOwner,
   type FormOwnerValue,
 } from './direct-form-associated.js';
@@ -26,7 +20,6 @@ import {
 export { attachInternalsSafely, createFallbackInternals };
 export {
   getFormOwner,
-  installCustomErrorProperty,
   setFormOwner,
   type FormOwnerValue,
 };
@@ -343,8 +336,6 @@ export declare class FormAssociatedSubclassInterface<TValue = string> {
   }): void;
 }
 
-
-
 /**
  * Mixin that turns a Lit component into a form-associated custom element via
  * `ElementInternals`, so it participates in native `<form>` submission,
@@ -371,8 +362,6 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
   Base: T,
   valueAdapter?: FormValueAdapter<TValue>,
 ): T & Constructor<FormAssociatedInterface<TValue> & FormAssociatedSubclassInterface<TValue>> {
-  // Installed by the mixin, not by importing this module: components that only import a re-exported
-  // helper (`attachInternalsSafely`) are not form controls and must not ship the label bridge.
   installFormControlLabelSupport();
   const adapter = resolveFormValueAdapter<TValue>(valueAdapter);
 
@@ -405,16 +394,10 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     };
 
     internals: ElementInternals;
-    private validityController: AnchoredValidityController;
+    private validityController: FormControlController;
 
     private _fieldsetDisabled = false;
     private _disabled = false;
-    // Set for the synchronous duration of a `disabled`-attribute mutation this instance itself
-    // performs (own property setter, or an external `?disabled=${...}` binding calling
-    // toggleAttribute() directly) — see the three overrides below and formDisabledCallback().
-    // Restored when the native mutation returns, after its synchronous reactions. Nested
-    // attribute/property reflection retains the outer guard without hiding later fieldset changes.
-    private _reflectingDisabledAttribute = false;
 
     // Hand-written accessor (mirrors `value`/`required` below): native form
     // submission for a form-associated custom element keys its `FormData`
@@ -450,25 +433,24 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
 
     constructor(...args: any[]) {
       super(...args);
-      this.internals = attachInternalsSafely(this);
-      this.validityController = new AnchoredValidityController(
-        this,
-        this.internals,
-        () => this[VALIDITY_ANCHOR](),
-      );
+      const markInteracted = (): void => {
+        if (this._hasInteracted) return;
+        this._hasInteracted = true;
+        this.syncValidityStates();
+      };
+      this.validityController = new FormControlController(this, {
+        invalid: (init) => (this as unknown as {
+          emit(name: string, detail?: null, options?: { cancelable: boolean }): CustomEvent<null>;
+        }).emit('lr-invalid', null, init),
+        interacted: markInteracted,
+      });
+      this.internals = this.validityController.formInternals;
       // Native <input> always has a submission value ("") from construction —
       // without this, a control whose `value` is never touched is entirely
       // absent from FormData instead of present as "". An adapter whose empty
       // value serializes to `null` (an unchecked checkbox's shape) opts out of
       // that on purpose, which is the platform's own behaviour for it.
       this.commitFormValue(this._value);
-      installInvalidEventAlias(this, (init: { cancelable: true }) =>
-        (
-          this as unknown as {
-            emit(name: string, detail?: null, options?: { cancelable: boolean }): CustomEvent<null>;
-          }
-        ).emit('lr-invalid', null, init),
-      );
       // Interaction signals, listened for on the host itself so subclasses need no wiring:
       // `input`/`change` from an internal native control are composed and reach the host (as are
       // the components' own re-emitted copies), and `focusout` is the blur signal — native `blur`
@@ -476,24 +458,13 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // Registered once, in the constructor, so reconnecting cannot stack duplicates.
       // Idempotent: a drag-driven control (`lr-slider`) fires `input` per pointermove, and only
       // the first one can change anything here.
-      const markInteracted = (): void => {
-        if (this._hasInteracted) return;
-        this._hasInteracted = true;
-        this.syncValidityStates();
-      };
+
       this.addEventListener('input', markInteracted);
       this.addEventListener('change', markInteracted);
       this.addEventListener('focusout', () => {
         if (this.effectiveDisabled) return;
         markInteracted();
       });
-      // Interactive validation is also interaction: a submission attempt (`requestSubmit()`, a
-      // submit button, implicit Enter submission) never calls this control's own
-      // `reportValidity()` method — it drives `ElementInternals` directly — so it would otherwise
-      // never mark `_hasInteracted` at all. `checkValidity()` below wraps its own internal call in
-      // `withStaticValidityCheck()` so this listener can tell that silent query apart from every
-      // other path that raises the same `invalid` event.
-      installInteractionOnInvalid(this, markInteracted);
       this.syncValidityStates();
     }
 
@@ -586,14 +557,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       this.syncValidityStates();
     }
 
-    /**
-     * Publishes the six validity custom states. The implementation lives in
-     * `internal/custom-states.ts` because only 11 of the library's 31 form-associated components
-     * use this mixin today — 18 still drive `ElementInternals` directly (and publish the same six
-     * states by calling the same helper), and 2 carry no value at all. That split is a migration
-     * backlog, not a design: since the mixin became value-generic there is no value type it cannot
-     * carry.
-     */
+    /** Publishes the six validity states shared by value-adapted and direct FACE controls. */
     protected syncValidityStates(): void {
       syncValidityStates(this.internals, {
         required: this.required,
@@ -619,11 +583,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     set name(next: string | null) {
       const old = this._name;
       this._name = next ?? '';
-      if (this._name) {
-        this.setAttribute('name', this._name);
-      } else {
-        this.removeAttribute('name');
-      }
+      reflectFormName(this, this._name);
       this.requestUpdate('name', old);
     }
 
@@ -737,62 +697,6 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       this.requestUpdate('disabled', old);
     }
 
-    /**
-     * Brackets every mutation of the `disabled` attribute — from this setter above, or from an
-     * external `?disabled=${...}` lit-html binding calling `toggleAttribute()` directly on this
-     * element — with `_reflectingDisabledAttribute`, so `formDisabledCallback()` can recognize a
-     * same-tick echo of this exact mutation regardless of which of the platform's own reactions
-     * (`attributeChangedCallback` vs `formDisabledCallback`) it delivers first. That order is not
-     * guaranteed across engines: Chromium fires `attributeChangedCallback` (and so this element's
-     * own `disabled` property setter) before `formDisabledCallback`, but Firefox and WebKit were
-     * observed firing `formDisabledCallback` FIRST — at which point `this.disabled` (own) hadn't
-     * been updated yet, so a before/after `effectiveDisabled` comparison alone sees a real
-     * transition and redoes the exact work the setter is about to do anyway, once again risking
-     * the reentrant-update warning this file's `formDisabledCallback` doc comment describes.
-     * The flag itself is order-independent: it is set before the
-     * underlying native mutation runs, so every reaction the platform delivers for it — in any
-     * order — observes it `true`. Restoring the prior flag as the mutation returns preserves
-     * nested reflection while allowing a later fieldset mutation in the same task through.
-     */
-    override toggleAttribute(qualifiedName: string, force?: boolean): boolean {
-      if (qualifiedName !== 'disabled') return super.toggleAttribute(qualifiedName, force);
-      const wasReflecting = this._reflectingDisabledAttribute;
-      this._reflectingDisabledAttribute = true;
-      try {
-        return super.toggleAttribute(qualifiedName, force);
-      } finally {
-        this._reflectingDisabledAttribute = wasReflecting;
-      }
-    }
-
-    override setAttribute(qualifiedName: string, value: string): void {
-      if (qualifiedName !== 'disabled') {
-        super.setAttribute(qualifiedName, value);
-        return;
-      }
-      const wasReflecting = this._reflectingDisabledAttribute;
-      this._reflectingDisabledAttribute = true;
-      try {
-        super.setAttribute(qualifiedName, value);
-      } finally {
-        this._reflectingDisabledAttribute = wasReflecting;
-      }
-    }
-
-    override removeAttribute(qualifiedName: string): void {
-      if (qualifiedName !== 'disabled') {
-        super.removeAttribute(qualifiedName);
-        return;
-      }
-      const wasReflecting = this._reflectingDisabledAttribute;
-      this._reflectingDisabledAttribute = true;
-      try {
-        super.removeAttribute(qualifiedName);
-      } finally {
-        this._reflectingDisabledAttribute = wasReflecting;
-      }
-    }
-
     get required(): boolean {
       return this._required;
     }
@@ -873,22 +777,11 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * `slotchange` timing, which is not this method's business.
      */
     protected syncConstraintsToNative(): void {
-      // Cast rather than `this.performUpdate()`: `performUpdate`/`hasUpdated` are protected on
-      // `ReactiveElement`, and this class extends a *generic* base, so they are not statically
-      // reachable through `super`'s type here.
-      const host = this as unknown as { hasUpdated: boolean; performUpdate(): void };
-      if (!host.hasUpdated) return;
-      host.performUpdate();
+      this.validityController.syncConstraints();
     }
 
     checkValidity(): boolean {
-      this.syncConstraintsToNative();
-      this.updateValidity();
-      // Silent query: must never mark a pristine control as interacted, however invalid it already
-      // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-      // that whatever `invalid` event fires synchronously inside this call is this call, not a
-      // submission attempt.
-      return withStaticValidityCheck(this, () => this.internals.checkValidity());
+      return this.validityController.checkValidity(() => this.updateValidity());
     }
 
     reportValidity(): boolean {
@@ -940,9 +833,9 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * `<input>`'s own `disabled` IDL property/attribute is never mutated by fieldset cascading, so
      * a consumer's explicit `disabled` must survive the fieldset re-enabling.
      *
-     * Skipped entirely while `_reflectingDisabledAttribute` is set — this call is then guaranteed
+     * Skipped entirely while `FormControlController.reflectingDisabled` is set — this call is then guaranteed
      * to be a synchronous echo of a `disabled`-attribute mutation this instance itself is performing
-     * (see the flag's own doc comment above `toggleAttribute()`), regardless of whether the
+     * (see the shared controller's attribute guard), regardless of whether the
      * platform delivered it before or after this element's own `disabled` property setter ran.
      *
      * Otherwise, only recomputes when doing so would actually change `effectiveDisabled`. Own
@@ -954,7 +847,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * observable ever needed.
      */
     formDisabledCallback(fieldsetDisabled: boolean): void {
-      if (this._reflectingDisabledAttribute) return;
+      if (this.validityController?.reflectingDisabled) return;
       const before = this.effectiveDisabled;
       this._fieldsetDisabled = fieldsetDisabled;
       if (this.effectiveDisabled === before) return;

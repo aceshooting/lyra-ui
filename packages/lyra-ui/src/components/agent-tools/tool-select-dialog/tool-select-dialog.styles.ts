@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 
 export const styles = css`
   :host {
@@ -8,18 +10,7 @@ export const styles = css`
        lr-dialog's --lr-dialog-overlay-color and lr-tool-result-dialog's
        --lr-tool-result-dialog-overlay-color. */
     --_lr-tool-select-dialog-overlay-color: var(--lr-color-overlay);
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    /* Neutralizes the user-agent popover styles of the open, top-layer host. */
-    margin: 0;
-    border: none;
-    background: transparent;
-    color: inherit;
-    overflow: visible;
-    inline-size: auto;
-    block-size: auto;
+    ${modalHostStyles}
     align-items: center;
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
@@ -119,8 +110,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: none;
     cursor: pointer;
@@ -144,8 +134,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part="search-input"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* no-pressed-state: a search field is a caret target, not a push target -- pointer-down places
      an insertion point and hands the affordance to :focus-visible, so a pressed tint would flash
@@ -235,8 +224,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part="load-more"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -260,8 +248,7 @@ export const styles = css`
     );
   }
   [part="load-more"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part="category"] {

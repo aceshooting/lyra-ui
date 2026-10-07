@@ -7,10 +7,7 @@ import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.j
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-types.js';
 import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-controller.js';
 import { styles } from './flow-minimap.styles.js';
@@ -125,7 +122,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
   @state() private liveText = '';
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private dragState?: {
@@ -160,7 +157,6 @@ export class LyraFlowMinimap extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     this.companionController.connect();
   }
 
@@ -197,7 +193,6 @@ export class LyraFlowMinimap extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
     this.announceNextSnapshot = false;
     this.liveText = '';
     this.companionController.disconnect();
@@ -205,26 +200,8 @@ export class LyraFlowMinimap extends LyraElement {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.syncAnnouncementSink();
+    this.announcements.adopted();
     this.companionController.adopt();
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   private announceViewport(
@@ -241,7 +218,7 @@ export class LyraFlowMinimap extends LyraElement {
       zoom: percent.format(viewport.zoom),
     });
     this.liveText = text;
-    this.announcementSink?.announce(text);
+    this.announcements.announcePolite(text);
   }
 
   // Guarded by `hasUpdated` -- `connectedCallback()` already ran the initial `resolveAndAttach()`

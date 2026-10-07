@@ -506,6 +506,17 @@ it("round-trips its own localized Arabic digits and bidi marks as Gregorian ISO"
   expect(el.value).to.equal("2026-07-15");
 });
 
+it("accepts Unicode decimal digits from a non-locale script when parsing", async () => {
+  const el = (await fixture(
+    html`<lr-date-input value="" locale="en-US"></lr-date-input>`
+  )) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = "२०२६-०७-१५\u200f";
+  input.dispatchEvent(new Event("change"));
+  expect(el.value).to.equal("2026-07-15");
+});
+
 it("applies the shared focus-ring tokens to the clear and expand buttons", () => {
   const css = styles.cssText;
   const focusBlock =

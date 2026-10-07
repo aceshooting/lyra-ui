@@ -1,3 +1,4 @@
+import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import { LyraLiteChart } from './lite-chart.js';
@@ -4803,18 +4804,7 @@ describe('bidi isolation of formatted labels', () => {
    *  Range so the bidi reordering the engine actually painted is what gets compared. SVG's own
    *  getExtentOfChar() is no substitute: WebKit reports logical rather than visual positions and
    *  Gecko mis-offsets every character after a bidi control. */
-  function renderedBox(root: Element, needle: string): DOMRect {
-    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
-      const index = node.data.indexOf(needle);
-      if (index < 0) continue;
-      const range = root.ownerDocument.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + needle.length);
-      return range.getBoundingClientRect();
-    }
-    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
-  }
+
 
   const rateLabel = (value: number) => `${value} MiB/s`;
 

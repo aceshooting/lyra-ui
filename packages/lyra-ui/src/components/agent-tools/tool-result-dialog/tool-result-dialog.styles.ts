@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 
 export const styles = css`
   :host {
@@ -29,18 +31,7 @@ export const styles = css`
     --_lr-tool-result-dialog-denied-bg: var(--lr-color-warning-quiet);
     --_lr-tool-result-dialog-incomplete-color: var(--lr-color-text-quiet);
     --_lr-tool-result-dialog-incomplete-bg: transparent;
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    /* Neutralizes the user-agent popover styles of the open, top-layer host. */
-    margin: 0;
-    border: none;
-    background: transparent;
-    color: inherit;
-    overflow: visible;
-    inline-size: auto;
-    block-size: auto;
+    ${modalHostStyles}
     align-items: center;
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
@@ -233,8 +224,7 @@ export const styles = css`
     font: inherit;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: transparent;
     color: var(--lr-color-text-quiet);
@@ -258,8 +248,7 @@ export const styles = css`
   }
   [part="maximize-button"]:focus-visible,
   [part="close-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="body"] {
     flex: 1 1 auto;

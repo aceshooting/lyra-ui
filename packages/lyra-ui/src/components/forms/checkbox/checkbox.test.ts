@@ -1,50 +1,24 @@
+import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import type { PropertyValues } from "lit";
 import "./checkbox.js";
 import type { LyraCheckbox } from "./checkbox.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 it("emits one cancelable lr-invalid alias when a validity check fails", async () => {
   const el = (await fixture(
     html`<lr-checkbox required>Accept</lr-checkbox>`
   )) as LyraCheckbox;
-  const aliases: CustomEvent[] = [];
-  el.addEventListener("lr-invalid", (event) =>
-    aliases.push(event as CustomEvent)
-  );
-  // Registered after the component's own constructor-time relay, so it observes the native event
-  // once the alias has had its turn at it.
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = aliases[0];
-  if (!alias) throw new Error('The invalid alias was not emitted.');
-  expect(alias.target === el).to.equal(true);
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
-  // Nothing cancelled it, so the browser's own validation UI stays enabled.
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.false;
+  assertInvalidAlias(el);
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
   const el = (await fixture(
     html`<lr-checkbox required>Accept</lr-checkbox>`
   )) as LyraCheckbox;
-  el.addEventListener("lr-invalid", (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled' });
 });
 
 it('defaults to unchecked with role="checkbox" and aria-checked="false"', async () => {
@@ -1331,17 +1305,7 @@ it("forwards focus/blur and relays exactly one native pair, never firing the rem
   );
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-    "focus",
-    "blur",
-  ]);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(
-    nativeEvents.every(
-      (event) => event.target === el && event.bubbles && event.composed
-    )
-  ).to.be.true;
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it("forwards host click() to the internal control, toggling checked", async () => {
@@ -1367,10 +1331,7 @@ it("does not toggle on host click() while disabled", async () => {
 
 describe("ElementInternals availability", () => {
   it("does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
-    delete HTMLElement.prototype.attachInternals;
-    try {
+    withUnavailableInternals(() => {
       let el: LyraCheckbox | undefined;
       expect(() => {
         el = document.createElement("lr-checkbox") as LyraCheckbox;
@@ -1379,55 +1340,20 @@ describe("ElementInternals availability", () => {
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    });
   });
 });
 
 it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. stat.test.ts) to
-  // prove LyraCheckbox's own willUpdate() override actually calls super.willUpdate(...) rather
-  // than shadowing it silently.
-  const proto = LyraElement.prototype as unknown as {
-    willUpdate: (changed: PropertyValues) => void;
-  };
-  const original = proto.willUpdate;
-  let called = false;
-  proto.willUpdate = function (
-    this: LyraElement,
-    changed: PropertyValues
-  ): void {
-    called = true;
-    original.call(this, changed);
-  };
-  try {
-    const el = (await fixture(
-      html`<lr-checkbox>Label</lr-checkbox>`
-    )) as LyraCheckbox;
-    await el.updateComplete;
-    expect(called).to.be.true;
-  } finally {
-    proto.willUpdate = original;
-  }
+  await assertCallsBaseWillUpdate('lr-checkbox', async () =>
+    (await fixture(html`<lr-checkbox>Label</lr-checkbox>`)) as LyraCheckbox
+  );
 });
 
 describe("checked-state cssprop escape hatch", () => {
   // Same probe idiom as lr-source-picker's identical checked-state cssprop test: resolve a raw
   // declaration inside the same shadow root so the comparison format (rgb(...)) always matches
   // getComputedStyle's, rather than comparing a raw custom-property string against it.
-  function resolvedInShadow(
-    el: LyraCheckbox,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   it("renders byte-identical to --lr-color-brand when --lr-checkbox-checked-bg/-border are unset", async () => {
     const el = (await fixture(

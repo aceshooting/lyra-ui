@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
@@ -23,6 +24,11 @@ export const styles = css`
        --lr-theme-* input on an ancestor sees no change. */
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+  }
+  [part='row-limit'] {
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
 
   /* A scroll container clips both axes, so overflow: auto makes [part='base'] the header's sticky
@@ -54,8 +60,7 @@ export const styles = css`
     font: inherit;
   }
   [part='filter']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :where([part='filter']):hover {
     background: var(--lr-color-brand-quiet);
@@ -87,8 +92,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     border-radius: var(--lr-radius-xs);
     background: transparent;
@@ -191,8 +195,7 @@ export const styles = css`
     inset-block: 0;
     inset-inline-end: 0;
     inline-size: var(--lr-size-0-5rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: col-resize;
     touch-action: none;
   }
@@ -272,8 +275,7 @@ export const styles = css`
   /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.ts's focusedColKey()) can
      land on any column, so every header cell needs its own focus indicator. */
   [part='header-cell']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='header-cell'][data-align='end'] {
     text-align: end;
@@ -371,8 +373,7 @@ export const styles = css`
     text-align: start;
   }
   [part='row']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
@@ -399,8 +400,7 @@ export const styles = css`
     );
   }
   [part='cell'][data-editable]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* A column's cell(row) may return any TemplateResult, rendered in this shadow root -- unreachable
      from the page's stylesheet, and ::part() cannot select past its first compound selector, so a
@@ -430,8 +430,7 @@ export const styles = css`
     font: inherit;
   }
   [part='cell-editor']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :where([part='cell-editor']):hover {
     background: var(--lr-color-brand-quiet);
@@ -535,8 +534,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     cursor: pointer;
     color: inherit;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part='row-expand-toggle']:hover {
     background: var(--lr-color-brand-quiet);
@@ -549,8 +547,7 @@ export const styles = css`
     );
   }
   [part='row-expand-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='row-expand-icon'] {
     display: inline-block;
@@ -670,8 +667,7 @@ export const styles = css`
   }
   [part='more-button']:focus-visible,
   [part='reveal-columns-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='more-button']:where([aria-disabled='true']) {
     cursor: progress;

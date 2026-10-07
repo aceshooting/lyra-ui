@@ -352,7 +352,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed.',
+        'Lyra snapshots collection inputs and event details synchronously into frozen readonly values, removes the redundant wa-data-request alias, and deprecates the unprefixed request event in favor of lr-request. Migrated code that mutates arrays or event details in place, assigns derived collections, listens for the removed alias, or relies on the unprefixed request event must be reviewed.',
       expectedDrift: WA_DATA_GRID_V9_DRIFT,
     },
   ],
@@ -490,7 +490,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra snapshots each input/change event\'s value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.',
+        'Native input/change notifications on lr-combobox are bubbling, composed Event instances without a detail payload. Its lr-input/lr-change aliases carry the frozen readonly value, previousValue and row data, narrowed by the picker value generic; migrated handlers reading or mutating upstream CustomEvent detail must use the prefixed aliases and review the narrower single-select type. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.',
       expectedDrift: [
         {
           code: 'type-mismatch',
@@ -500,28 +500,32 @@ const DECISION_OVERRIDES = new Map([
           actual: 'LyraAppearance',
         },
         {
+          code: 'event-constructor-mismatch',
+          section: 'events',
+          member: 'change',
+          expected: 'CustomEvent',
+          actual: 'Event',
+        },
+        {
           code: 'event-type-mismatch',
           section: 'events',
           member: 'change',
           expected: 'CustomEvent<{ value: string | string[] }>',
-          actual:
-            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+          actual: 'Event',
         },
         {
           code: 'event-constructor-mismatch',
           section: 'events',
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
-          actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+          actual: 'Event',
         },
         {
           code: 'event-type-mismatch',
           section: 'events',
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
-          actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+          actual: 'Event',
         },
       ],
     },

@@ -1,5 +1,6 @@
-import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
-import { chartSyncStyles } from './chart-sync.styles.js';
+import type { ChartSyncPresentation } from './chart-sync.js';
+import { LazyChartSyncController } from './chart-sync-lazy.js';
+import { chartDataTableVisible, hasSlottedChartDataTable, hasArraySeriesData } from './chart-data-table.js';
 import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import { boundChartSeriesValues, chartSeriesValueLimit } from './chart-series-bounds.js';
 import { nativeSvgTitle } from '../../../internal/svg-title.js';
@@ -38,10 +39,7 @@ import {
 import { literalSetConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   MAX_RENDERED_CHART_RECORDS,
   sampleChartTableIndexes,
@@ -77,16 +75,7 @@ export interface LyraLiteChartSeries {
 }
 
 function isLiteChartSeries(value: unknown): value is LyraLiteChartSeries {
-  try {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      !Array.isArray(value) &&
-      Array.isArray((value as { data?: unknown }).data)
-    );
-  } catch {
-    return false;
-  }
+  return hasArraySeriesData(value);
 }
 
 function normalizeLiteChartSeries(value: unknown): readonly LyraLiteChartSeries[] {
@@ -541,7 +530,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     'selectedIndices',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles, chartSyncStyles];
+  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
 
   @property({ converter: { fromAttribute: (value) => normalizeLiteChartType(value) } })
   type: LyraLiteChartType = 'bar';
@@ -635,8 +624,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Identical to `withDataTable` whenever `dataTableToggle` is off, keeping the unset path
    *  byte-identical to before. */
   private get dataTableVisible(): boolean {
-    if (!this.dataTableToggle) return this.withDataTable;
-    return this.dataTableExpandedOverride ?? this.withDataTable;
+    return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }
 
   private toggleDataTable(): void {
@@ -824,7 +812,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private forcedColorsWindow?: Window;
   private refocusMarkAfterUpdate = false;
   private refocusChartAfterUpdate = false;
-  private politeAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private lastDataTruncationAnnouncement = '';
   /** Gates the sampling notice so an initially supplied large dataset is described, not announced. */
   private isMounting = true;
@@ -912,13 +900,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    */
   @property({ attribute: 'sync-group' }) syncGroup = '';
 
-  // @renderController ChartSyncController
-  private readonly chartSync = new ChartSyncController(this, (label, index) => this.syncPresentation(label, index), undefined,
-    (target) => target.nodeType === 1 && (target as Element).hasAttribute('data-mark-index'));
+  // @renderController LazyChartSyncController
+  private readonly chartSync = new LazyChartSyncController(this, (label, index) => this.syncPresentation(label, index), undefined,
+    (target) => target.nodeType === 1 && (target as Element).hasAttribute('data-mark-index'),
+    () => this.requestUpdate());
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     this.armResizeObserver();
     this.armForcedColorsWatcher();
   }
@@ -983,7 +971,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   override disconnectedCallback(): void {
     this.chartSync.disconnect();
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.resetResizeObserver();
@@ -995,8 +982,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     super.adoptedCallback();
     this.requestUpdate();
     this.resetResizeObserver();
-    this.releaseAnnouncementSink();
-    this.syncAnnouncementSink();
+    this.announcements.adopted();
     this.refreshFitMeasurementAvailability();
     this.armForcedColorsWatcher();
   }
@@ -1020,21 +1006,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.forcedColorsQuery?.removeEventListener('change', this.onForcedColorsChange);
     this.forcedColorsQuery = undefined;
     this.forcedColorsWindow = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.politeAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.politeAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.politeAnnouncementSink?.release();
-    this.politeAnnouncementSink = undefined;
   }
 
   private resetResizeObserver(): void {
@@ -1115,7 +1086,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.lastDataTruncationAnnouncement = dataTruncation;
     } else if (dataTruncation !== this.lastDataTruncationAnnouncement) {
       this.lastDataTruncationAnnouncement = dataTruncation;
-      if (dataTruncation) this.politeAnnouncementSink?.announce(dataTruncation);
+      if (dataTruncation) this.announcements.announcePolite(dataTruncation);
     }
     if (this.refocusMarkAfterUpdate) {
       this.refocusMarkAfterUpdate = false;
@@ -1531,7 +1502,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private hasCustomDataTable(): boolean {
-    return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
+    return hasSlottedChartDataTable(this);
   }
 
   /** The ordered set of eligible marks used by both keyboard navigation and
@@ -2247,7 +2218,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</path>
+            >${this.chartSync.enabled ? nothing : nativeSvgTitle(titleText)}</path>
           </g>
         `
             : svg`
@@ -2272,7 +2243,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${() => this.emitPoint(di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</rect>
+            >${this.chartSync.enabled ? nothing : nativeSvgTitle(titleText)}</rect>
           </g>
         `,
         );
@@ -2391,7 +2362,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               @click=${(event: MouseEvent) => this.emitNearestLinePoint(event, hitPoints, di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-            >${typeof this.syncGroup === 'string' && this.syncGroup.trim() ? nothing : nativeSvgTitle(titleText)}</circle>
+            >${this.chartSync.enabled ? nothing : nativeSvgTitle(titleText)}</circle>
           </g>
         `;
       });

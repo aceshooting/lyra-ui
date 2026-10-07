@@ -1,4 +1,4 @@
-import { maxCssTime } from '../../../internal/css-motion-time.js';
+import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
@@ -17,7 +17,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from '../overlay/overlay-arrow.js';
-import { observeOverlayAnchorIdentity } from '../overlay/overlay-shared.js';
+import { observeOverlayAnchorRoots } from '../overlay/overlay-shared.js';
 import { styles } from './popup.styles.js';
 
 export type {
@@ -332,35 +332,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
     const token = ++this.popupHideToken;
     await this.updateComplete;
     if (token !== this.popupHideToken || this.active) return;
-    const popup = this.popup;
-    const view = this.ownerDocument.defaultView;
-    if (popup && view && !prefersReducedMotion(this)) {
-      const computed = view.getComputedStyle(popup);
-      const durationMs =
-        maxCssTime(computed.transitionDuration) +
-        maxCssTime(computed.transitionDelay);
-      if (durationMs > 0) {
-        await new Promise<void>((resolve) => {
-          let settled = false;
-          let timeout: number | undefined;
-          const finish = (): void => {
-            if (settled) return;
-            settled = true;
-            if (timeout !== undefined) view.clearTimeout(timeout);
-            popup.removeEventListener('transitionend', onEnd);
-            popup.removeEventListener('transitioncancel', onEnd);
-            resolve();
-          };
-          const onEnd = (event: Event): void => {
-            if (event.target === popup) finish();
-          };
-          popup.addEventListener('transitionend', onEnd);
-          popup.addEventListener('transitioncancel', onEnd);
-          timeout = view.setTimeout(finish, durationMs + 50);
-        });
-        if (token !== this.popupHideToken || this.active) return;
-      }
-    }
+    await waitForTransitionSettle(this.popup, this, {
+      reducedMotion: prefersReducedMotion(this),
+    }).finished;
+    if (token !== this.popupHideToken || this.active) return;
     this.popupHidden = true;
   }
 
@@ -531,15 +506,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
       const currentIdentity = this.placingAnchorIdentity ?? this.positionedAnchorIdentity;
       if (nextIdentity !== currentIdentity) this.reposition();
     };
-    const observedRoots = new Set<Node>([this]);
-    if (directAnchor && directAnchor.getRootNode() !== this.getRootNode()) {
-      observedRoots.add(directAnchor.isConnected ? directAnchor : directAnchor.ownerDocument);
-    }
-    const cleanups = [...observedRoots].map((root) =>
-      observeOverlayAnchorIdentity(root, onIdentityChange));
-    this.stopAnchorIdentityObservation = () => {
-      for (const cleanup of cleanups) cleanup();
-    };
+    this.stopAnchorIdentityObservation = observeOverlayAnchorRoots(this, directAnchor, onIdentityChange);
   }
 
   private setPositioned(positioned: boolean): void {

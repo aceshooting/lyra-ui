@@ -1,3 +1,5 @@
+import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifecycle.js';
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import {
   fixture,
   expect,
@@ -76,7 +78,6 @@ function overflowTag(el: LyraSelect): HTMLElement | null {
 function clearButton(el: LyraSelect): HTMLButtonElement | null {
   return el.shadowRoot!.querySelector('[part="clear-button"]');
 }
-
 
 
 it('keeps a cold-open listbox hidden and defers after-show until placement succeeds', async () => {
@@ -254,6 +255,22 @@ describe('collecting already-slotted options without relying on the initial slot
 });
 
 describe("adoptedCallback", () => {
+  it('resolves both public transition promises when adoption supersedes settling', async () => {
+    const el = await fixture<LyraSelect>(html`
+      <lr-select><lr-option value="a">Apple</lr-option></lr-select>
+    `);
+    const opened = el.show();
+    await el.updateComplete;
+    (el as unknown as { adoptedCallback(): void }).adoptedCallback();
+    // wait-reason: Bound the pending open transition after adoption cancels its paint.
+    expect(await Promise.race([opened.then(() => true), aTimeout(100).then(() => false)])).to.equal(true);
+
+    const closed = el.hide();
+    await el.updateComplete;
+    (el as unknown as { adoptedCallback(): void }).adoptedCallback();
+    // wait-reason: Bound the pending close transition after adoption cancels its paint.
+    expect(await Promise.race([closed.then(() => true), aTimeout(100).then(() => false)])).to.equal(true);
+  });
   it("tears down positioning cleanup and pending listeners when adopted into another document", async () => {
     const el = (await fixture(
       html`<lr-select open><lr-option value="a">Apple</lr-option></lr-select>`
@@ -684,18 +701,7 @@ it("relays exactly one native trigger focus/blur pair, and never lr-focus/lr-blu
   btn.focus();
   btn.blur();
 
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-    "focus",
-    "blur",
-  ]);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(
-    nativeEvents.every(
-      (event) => event.target === el && event.bubbles && event.composed
-    )
-  ).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it("skips a disabled option during click selection and keyboard navigation", async () => {
@@ -765,29 +771,9 @@ describe("lifecycle super calls", () => {
   const LyraSelectCtor = customElements.get("lr-select")!;
 
   it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-    // Keyed on `this === el` (not a bare shared boolean) -- `basic()`'s slotted <lr-option>
-    // children are themselves LyraElement subclasses that update through this exact same patched
-    // prototype method, so a plain "was it called at all" flag would pass even if LyraSelect's
-    // own willUpdate() never called super, as long as some sibling element happened to.
-    const proto = LyraElement.prototype as unknown as {
-      willUpdate: (changed: PropertyValues) => void;
-    };
-    const original = proto.willUpdate;
-    let calledOnSelect = false;
-    proto.willUpdate = function (
-      this: LyraElement,
-      changed: PropertyValues
-    ): void {
-      if (this instanceof LyraSelectCtor) calledOnSelect = true;
-      original.call(this, changed);
-    };
-    try {
-      const el = (await fixture(basic())) as LyraSelect;
-      await el.updateComplete;
-      expect(calledOnSelect).to.be.true;
-    } finally {
-      proto.willUpdate = original;
-    }
+    await assertCallsBaseWillUpdate('lr-select', async () =>
+      (await fixture(basic())) as LyraSelect
+    );
   });
 
   it("calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in", async () => {

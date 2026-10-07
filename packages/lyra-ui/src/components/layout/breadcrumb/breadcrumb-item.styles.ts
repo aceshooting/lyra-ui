@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 // A pressed link uses a token-derived fill so it tints its inherited surface without assuming a
@@ -72,8 +73,7 @@ export const styles = css`
     );
   }
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="base"][aria-current="page"] {
     color: var(--lr-breadcrumb-current-color, var(--lr-color-text-quiet));

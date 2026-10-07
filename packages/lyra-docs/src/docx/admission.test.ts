@@ -139,6 +139,8 @@ test('accepts directory entries and package-relative image relationships', async
 
 test('bounds ZIP entry count, aggregate expansion and XML byte size', async () => {
   const entries: Record<string, Uint8Array> = {};
+  for (let i = 0; i < 2045; i++) entries[`custom/${i}.bin`] = new Uint8Array();
+  assert.deepEqual(await admitDocx(docxFixture(entries)), { ok: true, value: undefined });
   for (let i = 0; i < 2048; i++) entries[`custom/${i}.bin`] = new Uint8Array();
   assert.deepEqual(await admitDocx(docxFixture(entries)), limited);
   const large: Record<string, Uint8Array> = {};

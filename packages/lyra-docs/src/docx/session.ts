@@ -2,6 +2,7 @@ import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
 import { normalizeImageInsertion, imageInsertionAborted, listenImageInsertionAbort } from './image-insertion-input.js';
 import { DOCX_LIMITS, isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
+import { ownDataRecord } from './own-data-record.js';
 import type {
   DocxAction, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
   DocxSaveReceipt, DocxSelection, DocxSelectionLease, DocxSession,
@@ -29,25 +30,12 @@ function equalRevision(a: DocxRevision | null | undefined, b: DocxRevision | nul
 }
 function searchRevisionOptions(value: unknown, allowSelection = false): DocxResult<{ expectedRevision?: DocxRevision; selection?: DocxSelectionLease }> {
   try {
-    const data = (input: unknown): Record<string, unknown> | null => {
-      if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
-      const prototype = Object.getPrototypeOf(input);
-      if (prototype !== Object.prototype && prototype !== null) return null;
-      const result: Record<string, unknown> = Object.create(null);
-      for (const key of Reflect.ownKeys(input)) {
-        if (typeof key !== 'string') return null;
-        const descriptor = Object.getOwnPropertyDescriptor(input, key);
-        if (!descriptor || !Object.hasOwn(descriptor, 'value')) return null;
-        result[key] = descriptor.value;
-      }
-      return result;
-    };
-    const options = data(value);
+    const options = ownDataRecord(value);
     if (!options || Object.keys(options).some(key => key !== 'expectedRevision' && !(allowSelection && key === 'selection'))) return refused('invalid-option');
     if (options.selection !== undefined && (!options.selection || typeof options.selection !== 'object')) return refused('invalid-option');
     const selection = options.selection === undefined ? {} : { selection: options.selection as DocxSelectionLease };
     if (options.expectedRevision === undefined) return ok(selection);
-    const revision = data(options.expectedRevision);
+    const revision = ownDataRecord(options.expectedRevision);
     if (!revision || Object.keys(revision).some(key => key !== 'documentId' && key !== 'value') ||
         typeof revision.documentId !== 'string' || !revision.documentId.length || revision.documentId.length > 128 ||
         typeof revision.value !== 'number' || !Number.isSafeInteger(revision.value) || revision.value < 0) return refused('invalid-option');

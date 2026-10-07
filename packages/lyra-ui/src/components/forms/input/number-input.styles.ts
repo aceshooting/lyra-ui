@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 /**
@@ -22,8 +23,7 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-input-action-color, var(--lr-color-text-quiet));
     padding: var(--lr-space-xs);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     line-height: var(--lr-line-height-none);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
     /* Hover/active below repaint color, and active also fills a background, so both channels
@@ -47,8 +47,7 @@ export const styles = css`
   }
   [part~='stepper-down']:focus-visible,
   [part~='stepper-up']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~='stepper-down']:disabled,
   [part~='stepper-up']:disabled {

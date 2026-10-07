@@ -1,17 +1,10 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import type { LyraPushToTalk } from '../push-to-talk/push-to-talk.js';
 import './realtime-session.js';
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
-import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-
-function sinkTexts(politeness: 'polite' | 'assertive', doc: Document = document): string[] {
-  return Array.from(
-    doc.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"] > div`),
-    (node) => node.textContent ?? ''
-  );
-}
 
 it('composes connection status, voice activity, transcript, and capture controls', async () => {
   const el = (await fixture(

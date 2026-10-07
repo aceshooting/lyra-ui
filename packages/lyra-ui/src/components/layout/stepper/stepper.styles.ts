@@ -1,3 +1,5 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { scrollOverflowFade } from '../../../internal/scroll-overflow.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -28,8 +30,7 @@ export const styles = css`
      nothing of its own to light up -- and tinting the whole strip under the pointer would read as
      a selection it cannot make. */
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="step-item"] {
     display: contents;
@@ -58,96 +59,10 @@ export const styles = css`
     -webkit-mask-image: none;
     mask-image: none;
   }
-  /* Same overflow gate as the authored-horizontal rules above, restated at this rule's specificity
-     so the live-axis override re-applies the fade instead of the 'none' it must otherwise declare
-     -- the vertical arm it competes with sets the property, and CSS cascades per-property.
-     data-scroll-start/data-scroll-end are :where()-wrapped as above, pinning specificity to this
-     rule's own [data-scroll-overflow]-only baseline so the forced-colors override below wins. */
-  :host([data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  :host([data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  :host([data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)[data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)[data-effective-orientation="horizontal"])
-    [part="base"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
+  ${scrollOverflowFade(
+    ':host([data-effective-orientation="horizontal"]) [part="base"][data-scroll-overflow]',
+    ':host(:dir(rtl)[data-effective-orientation="horizontal"]) [part="base"][data-scroll-overflow]',
+  )}
   [part="step"] {
     display: flex;
     align-items: center;
@@ -199,8 +114,7 @@ export const styles = css`
     color: var(--lr-stepper-active-color, var(--lr-color-text));
   }
   [part="step"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor with no :host declaration shadowing them. ::part(step)[data-state='current'] is

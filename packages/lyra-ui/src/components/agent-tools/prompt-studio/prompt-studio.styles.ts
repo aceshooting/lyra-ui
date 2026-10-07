@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wideContainerQuery, compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
@@ -52,9 +54,8 @@ export const styles = css`
   [part='variables'] .subheading, [part='preview'] .subheading { margin: 0; font-size: var(--lr-font-size-m); }
   [part='variable'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-xs); }
   [part='variable'] input { min-inline-size: 0; padding-inline: var(--lr-space-s); }
-  [part='toolbar'] button, [part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+  [part='version'] {
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -64,16 +65,12 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  /* The state pseudo-class stays outside :where(), matching each resting [part] selector's
-     specificity, while the toolbar descendant keeps its own type specificity. */
-  :where([part='toolbar']) button:hover:where(:not(:disabled)),
-  :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):hover:where(:not(:disabled)) {
+  [part='version']:hover:where(:not(:disabled)) {
     background: var(--lr-color-surface-raised);
   }
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour -- a distinctly deeper step in both light and dark themes. */
-  :where([part='toolbar']) button:active:where(:not(:disabled)),
-  :where([part='move-message-up'], [part='move-message-down'], [part='remove-message'], [part='add-message'], [part='version']):active:where(:not(:disabled)) {
+  [part='version']:active:where(:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='move-message-up'] { transform: rotate(-90deg); }
@@ -100,16 +97,16 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='toolbar'] button:focus-visible, [part='move-message-up']:focus-visible, [part='move-message-down']:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,
+  [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   button:disabled, textarea:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: var(--lr-opacity-disabled); }
   [part='preview'] { padding: var(--lr-space-m); border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); border-radius: var(--lr-radius); }
   [part='preview'] article { display: grid; grid-template-columns: var(--lr-size-6rem) minmax(0, 1fr); gap: var(--lr-space-s); padding-block: var(--lr-space-xs); }
   [part='preview'] pre { min-inline-size: 0; margin: 0; color: var(--lr-color-text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
-  @container (max-inline-size: 40rem) { [part='editor'] { grid-template-columns: 1fr; } }
-  @container (max-inline-size: 319.98px) {
+  @container ${wideContainerQuery} { [part='editor'] { grid-template-columns: 1fr; } }
+  @container ${compactContainerQuery} {
     [part='message'], [part='variable'], [part='preview'] article { grid-template-columns: 1fr; }
     [part='message-actions'] { flex-direction: row; justify-self: end; }
     [part='remove-message'] { justify-self: end; }

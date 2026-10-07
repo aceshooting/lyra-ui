@@ -1,5 +1,5 @@
-import { getNumberFormat } from '../../internal/intl-cache.js';
-import { finiteRange } from '../../internal/numbers.js';
+import { getNumberFormat } from './intl-cache.js';
+import { finiteRange } from './numbers.js';
 
 /** Formats a media position or duration in whole seconds, rounded down. */
 export function formatMediaTime(seconds: number, locale: string): string {

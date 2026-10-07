@@ -1,3 +1,4 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -285,9 +286,10 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   }
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   @query('textarea') private textarea?: HTMLTextAreaElement;
   @query('[part="editor"]') private editor?: HTMLElement;
   @query('[part="gutter"]') private gutter?: HTMLElement;
@@ -613,41 +615,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     });
     this.syncGutterInlinePosition();
   }
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => {
-        this.hasLabelSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'label',
-        );
-        this.hasHintSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'hint',
-        );
-        this.hasErrorSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'error',
-        );
-      });
-    }
-  }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
@@ -903,7 +870,6 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}
         >${this.label}<slot
           name="label"
-          @slotchange=${this.onLabelSlotChange}
         ></slot
       ></label>
       <div
@@ -960,13 +926,11 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>
         ${this.hint}<slot
           name="hint"
-          @slotchange=${this.onHintSlotChange}
         ></slot>
       </div>
       <div id="textarea-error" part="error" ?hidden=${!hasError}>
         ${this.errorText}<slot
           name="error"
-          @slotchange=${this.onErrorSlotChange}
         ></slot>
       </div>
     </div>`;

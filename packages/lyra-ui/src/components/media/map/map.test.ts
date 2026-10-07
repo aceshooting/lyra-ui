@@ -2161,7 +2161,9 @@ it('keeps every color-only legend category pattern distinct in forced colors', a
 });
 
 it('projects stable parts onto every supported peer-chrome class without erasing tokens', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`
+    <lr-map .strings=${{ mapToggleAttribution: 'Afficher les attributions' }}></lr-map>
+  `)) as LyraMap;
   const root = document.createElement('div');
   const cases = [
     ['maplibregl-marker', 'marker'],
@@ -2183,6 +2185,28 @@ it('projects stable parts onto every supported peer-chrome class without erasing
     expect(tokens.includes('peer-token')).to.be.true;
     expect(tokens.includes(part)).to.be.true;
   }
+  const toggle = root.querySelector('.maplibregl-ctrl-attrib-button')!;
+  expect(toggle.getAttribute('aria-label')).to.equal('Afficher les attributions');
+  expect(toggle.getAttribute('title')).to.equal('Afficher les attributions');
+});
+
+it('uses the localized map-specific fallback name for unlabeled markers', async () => {
+  const el = (await fixture(html`
+    <lr-map .strings=${{ mapMarker: 'Repère cartographique' }}></lr-map>
+  `)) as LyraMap;
+  const marker = document.createElement('div');
+  const privateMap = el as unknown as {
+    configureMarkerInteraction(
+      element: HTMLElement,
+      activation: { id?: string; lngLat: readonly [number, number]; marker: LyraMapMarker },
+    ): void;
+  };
+  privateMap.configureMarkerInteraction(marker, {
+    id: undefined,
+    lngLat: [0, 0],
+    marker: { lngLat: [0, 0] },
+  });
+  expect(marker.getAttribute('aria-label')).to.equal('Repère cartographique');
 });
 
 it('projects parts onto peer chrome added after map construction', async () => {

@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './agent-trace.js';
@@ -85,6 +86,61 @@ describe('lr-agent-trace', () => {
     // The tree itself owns row rendering -- this component never builds its own [role="treeitem"]
     // rows, it only renders through lr-trace-tree.
     expect(tree.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(SPANS.length);
+  });
+
+  it('refreshes the projected tree after mutating a span and reassigning the same source array', async () => {
+    const spans: LyraSpan[] = [{ id: 'agent', name: 'Before', kind: 'agent', startMs: 0, status: 'running' }];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`);
+    const tree = el.shadowRoot!.querySelector<LyraTraceTree>('lr-trace-tree')!;
+    expect(tree.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+
+    spans[0]!.name = 'After';
+    el.spans = spans;
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(tree.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
+  });
+
+  it('does not re-project source descriptors for an unrelated workspace label update', async () => {
+    const source: LyraSpan = { id: 'agent', name: 'Agent', kind: 'agent', startMs: 0, status: 'running' };
+    const spans = [source];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`);
+    const original = Object.getOwnPropertyDescriptor;
+    let descriptorReads = 0;
+    Object.getOwnPropertyDescriptor = ((target: object, key: PropertyKey) => {
+      if (target === source) descriptorReads++;
+      return original.call(Object, target, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    try {
+      el.label = 'Updated label';
+      await el.updateComplete;
+      expect(descriptorReads).to.equal(0);
+      el.spans = spans;
+      await el.updateComplete;
+      expect(descriptorReads).to.be.greaterThan(0);
+    } finally {
+      Object.getOwnPropertyDescriptor = original;
+    }
+  });
+
+  it('reuses legend types on unrelated updates and refreshes localized kind labels', async () => {
+    const spans: LyraSpan[] = [{ id: 'agent', name: 'Agent', kind: 'agent', startMs: 0, status: 'running' }];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`);
+    const legend = el.shadowRoot!.querySelector<LyraGraphLegend>('lr-graph-legend')!;
+    const initialTypes = legend.types;
+    el.label = 'Updated trace';
+    await el.updateComplete;
+    expect(legend.types === initialTypes).to.equal(true);
+
+    el.strings = { spanKindAgent: 'Delegate' };
+    await el.updateComplete;
+    expect(legend.types === initialTypes).to.equal(false);
+    expect(legend.types[0]!.label).to.equal('Delegate');
+
+    spans[0]!.kind = 'tool';
+    el.spans = spans;
+    await el.updateComplete;
+    expect(legend.types.map((type) => type.id)).to.deep.equal(['tool']);
   });
 
   it('leaves its own label unset by default so the composed tree falls back to its localized name', async () => {
@@ -592,16 +648,6 @@ describe('lr-agent-trace', () => {
 });
 
 describe('active-handoff pointer feedback', () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(el: LyraAgentTrace, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themed(): Promise<LyraAgentTrace> {
     const el = (await fixture(html`

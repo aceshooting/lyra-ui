@@ -70,9 +70,9 @@ export const Interactive: Story = {
           const log = document.getElementById('source-card-log');
           if (log) log.textContent = `lr-open: ${JSON.stringify((e as CustomEvent).detail)}`;
         }}
-        @lr-expand=${(e: Event) => {
+        @lr-toggle=${(e: Event) => {
           const log = document.getElementById('source-card-log');
-          if (log) log.textContent = `lr-expand: ${JSON.stringify((e as CustomEvent).detail)}`;
+          if (log) log.textContent = `lr-toggle: ${JSON.stringify((e as CustomEvent).detail)}`;
         }}
       >
         <span slot="excerpt">Revenue grew 12% year over year.</span>

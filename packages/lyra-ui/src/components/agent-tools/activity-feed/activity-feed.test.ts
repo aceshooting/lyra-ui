@@ -1,12 +1,9 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './activity-feed.js';
 import type { LyraActivityFeed, ActivityEntry } from './activity-feed.js';
-
-async function twoFrames(): Promise<void> {
-  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-}
 
 function makeEntries(count: number): ActivityEntry[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -160,6 +157,18 @@ it('shows a localized "Completed N steps" summary in the header while mode="post
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Completed 14 steps');
 });
 
+it('refreshes a post-hoc entry after mutating it and reassigning the same source array', async () => {
+  const entries = makeEntries(1);
+  const el = await fixture<LyraActivityFeed>(html`
+    <lr-activity-feed mode="post-hoc" .entries=${entries}></lr-activity-feed>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="entry-text"]')?.textContent).to.equal(entries[0]!.text);
+  entries[0]!.text = 'Updated step';
+  el.entries = entries;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="entry-text"]')?.textContent).to.equal('Updated step');
+});
+
 it('formats the completed count for the effective locale while retaining the raw count for plural selection', async () => {
   const count = 12;
   const el = (await fixture(
@@ -176,6 +185,33 @@ it('uses the singular form for exactly one completed step', async () => {
     html`<lr-activity-feed mode="post-hoc" .entries=${makeEntries(1)}></lr-activity-feed>`,
   )) as LyraActivityFeed;
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Completed 1 step');
+});
+
+it('selects all locale plural categories from one completed-steps message', async () => {
+  const cases = [
+    { lang: 'ru-RU', count: 1, expected: 'one' },
+    { lang: 'ru-RU', count: 2, expected: 'few' },
+    { lang: 'ru-RU', count: 5, expected: 'many' },
+    { lang: 'ar-EG', count: 0, expected: 'zero' },
+    { lang: 'ar-EG', count: 2, expected: 'two' },
+    { lang: 'ar-EG', count: 3, expected: 'few' },
+    { lang: 'ar-EG', count: 11, expected: 'many' },
+  ];
+  for (const { lang, count, expected } of cases) {
+    const el = await fixture<LyraActivityFeed>(html`
+      <lr-activity-feed
+        lang=${lang}
+        mode="post-hoc"
+        .entries=${makeEntries(count)}
+        .strings=${{
+          activityFeedCompletedSteps: {
+            zero: 'zero', one: 'one', two: 'two', few: 'few', many: 'many', other: 'other',
+          },
+        }}
+      ></lr-activity-feed>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="summary"]')?.textContent?.trim()).to.equal(expected);
+  }
 });
 
 it('uses string overrides for the header label and completed-steps summary', async () => {
@@ -1772,7 +1808,6 @@ describe('RTL', () => {
     expect(getComputedStyle(toggle).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
   });
 });
-
 
 describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () => {
   const fill = (el: LyraActivityFeed): string =>

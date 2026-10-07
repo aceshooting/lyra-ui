@@ -1,3 +1,4 @@
+import { assertOptionalPeerSilent } from '../../test/contracts/optional-peer-loader.js';
 import { expect } from '@open-wc/testing';
 import { loadPapaParse, loadPapaParseCached } from './papaparse-loader.js';
 
@@ -39,20 +40,7 @@ it('returns null with one fixed dev diagnostic that never includes importer fail
 });
 
 it('stays silent when Lit development diagnostics are unavailable', async () => {
-  const originalWarn = console.warn;
-  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
-  const originalIssuedWarnings = runtime.litIssuedWarnings;
-  const calls: unknown[][] = [];
-  console.warn = (...args: unknown[]) => calls.push(args);
-  delete runtime.litIssuedWarnings;
-  try {
-    expect(await loadPapaParse(() => Promise.reject(new Error('production secret')))).to.equal(null);
-    expect(calls).to.have.length(0);
-  } finally {
-    console.warn = originalWarn;
-    if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
-    else runtime.litIssuedWarnings = originalIssuedWarnings;
-  }
+  await assertOptionalPeerSilent(() => loadPapaParse(() => Promise.reject(new Error('production secret'))));
 });
 
 it('warns once when the resolved module has no parse capability', async () => {

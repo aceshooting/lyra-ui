@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import {
+  formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -321,8 +322,6 @@ export const styles = css`
   [part='form-control-label'],
   [part='hint'],
   [part='error'] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 `;

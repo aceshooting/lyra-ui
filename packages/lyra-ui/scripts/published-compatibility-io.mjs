@@ -177,7 +177,8 @@ export function validatePublishedCapture(capture, facts, archive) {
     ensure(major < 23, 'Published capture requires pinned compatibility history evidence');
   }
   const projection = projectRenameLedger(parsed.source.renameLedger, parsed.source.inventory, {
-    exportDeprecations: parsed.source.metadata.exportDeprecations, compatibilityContext });
+    exportDeprecations: parsed.source.metadata.exportDeprecations, compatibilityContext,
+    historicalReleaseMajor: Number(capture.sourceVersion.split('.')[0]) });
   ensure(JSON.stringify(projection) === JSON.stringify(parsed.packed.migrationContract.lyraRenames), 'Packed migration projection differs from published source');
   ensure(usedSources.size === Object.keys(sourceValues).length, 'Unrelated export source input');
   ensure(JSON.stringify(extracted) === JSON.stringify(facts) && sha256(jsonBytes(facts)) === capture.factsSha256, 'Published facts differ from exact evidence extraction');

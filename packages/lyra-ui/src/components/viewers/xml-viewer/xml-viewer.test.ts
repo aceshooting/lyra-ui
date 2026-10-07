@@ -1,3 +1,5 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './xml-viewer.js';
@@ -117,6 +119,26 @@ it('validates maxHeight before assigning the base custom property', async () => 
 });
 
 describe('parsing and tree rendering', () => {
+  it('caps expanded rows and localizes the truncation notice without rejecting the document', async () => {
+    const xml = `<root>${'<item/>'.repeat(5_005)}</root>`;
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .xml=${xml}
+      .strings=${{ xmlViewerLimit: 'Showing at most {count} rows.' }}></lr-xml-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="limit"]') !== null);
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(5_000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Showing at most 5,000 rows.');
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: [5_004] })).to.equal(false);
+    expect(await el.search('item')).to.equal(5_005);
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(5_000);
+    el.clearSearch();
+    (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+
   it('renders one node row per element and text leaf', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.updateComplete;
@@ -1099,14 +1121,6 @@ describe('accessibility', () => {
 });
 
 describe('active-match cssprop escape hatch', () => {
-  function resolvedInShadow(el: LyraXmlViewer, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function activeMatch(style = ''): Promise<{ el: LyraXmlViewer; node: HTMLElement }> {
     const wrapper = (await fixture(html`<div style=${style}><lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer></div>`)) as HTMLElement;
@@ -1144,15 +1158,6 @@ describe('non-active match cssprop escape hatch', () => {
   // describe block is about (the active one already has its own dedicated cssprop, tested
   // above).
   const MATCH_XML = '<root><match id="value-match">TextMatchHere</match><match id="value-match">TextMatchHere</match></root>';
-
-  function resolvedInShadow(el: LyraXmlViewer, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function nonActiveMatch(
     style = '',
@@ -1703,9 +1708,6 @@ describe('host-supplied highlights', () => {
 describe('per-row copy-button reveal', () => {
   /** Two animation frames -- enough for a pointer move to have been dispatched and the resulting
    *  :hover state to have been applied and painted. */
-  async function nextFrames(): Promise<void> {
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }
 
   async function moveMouseTo(target: HTMLElement): Promise<void> {
     target.scrollIntoView({ block: 'center', inline: 'center' });

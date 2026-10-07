@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -117,8 +118,7 @@ export const styles = css`
      nothing of its own to paint, and tinting the whole strip under the pointer would suggest a
      selection a timeline cannot make. */
   [part='base']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The shared edge fade is for the horizontal strip only; a vertical base never scrolls sideways. */
   :host(:not([orientation='horizontal'])) [part='base'] {

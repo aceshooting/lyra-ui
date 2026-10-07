@@ -1,10 +1,12 @@
+import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
+import type { RangeDragState } from '../../../internal/range-drag.js';
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController } from '../../../internal/form-control-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { attachInternalsSafely } from '../../../internal/element-internals.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
@@ -18,25 +20,21 @@ import {
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
+
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type TimeRangeHandle = 'start' | 'end';
 
@@ -54,28 +52,8 @@ interface PresetRow {
   end: number;
 }
 
-interface DragState {
-  handle: TimeRangeHandle;
-  changed: boolean;
-  /** Holds pointer capture; released when the drag aborts. */
-  captureTarget: HTMLElement;
-  /** `[part="base"]`'s rect and the resolved direction, snapshotted once in
-   *  onPointerDown rather than re-read on every pointermove of the same
-   *  gesture: getBoundingClientRect()/getComputedStyle() in a window-level
-   *  pointermove handler force a synchronous layout/style flush interleaved
-   *  with the previous move's own style writes, and neither value changes
-   *  from this component's own updates mid-drag (the drag only moves the
-   *  handles/fill, never the base's box). Re-measured at every gesture
-   *  start, so any between-gesture layout change is always picked up.
-   *  Mirrors lr-slider's identical snapshot. */
-  rect: DOMRect;
-  rtl: boolean;
-}
+type DragState = RangeDragState<TimeRangeHandle>;
 
-/** PageUp/PageDown move by a larger increment than a single ArrowUp/Down
- *  step, matching the WAI-ARIA APG slider pattern's expected keyboard
- *  interactions (and native `<input type=range>`). */
-const PAGE_STEP_MULTIPLIER = 10;
 
 /** A single discrete-preset option for the `presets` property: `<lr-date-picker>`'s preset shape
  *  with numbers instead of ISO dates; unlike it, both bounds are required (at most 256 entries). */
@@ -95,8 +73,8 @@ export interface TimeRangePreset {
 export interface LyraTimeRangeEventMap {
   input: Event;
   change: Event;
-  'lr-input': CustomEvent<{ start: number; end: number }>;
-  'lr-change': CustomEvent<{ start: number; end: number }>;
+  'lr-input': CustomEvent<{ value: Readonly<{ start: number; end: number }>; start: number; end: number }>;
+  'lr-change': CustomEvent<{ value: Readonly<{ start: number; end: number }>; start: number; end: number }>;
   focus: FocusEvent;
   blur: FocusEvent;
   'lr-invalid': CustomEvent<null>;
@@ -152,9 +130,9 @@ export interface LyraTimeRangeEventMap {
  * @customElement lr-time-range
  * @event input - Native event fired continuously while a user moves either handle.
  * @event change - Native event fired when a handle interaction or preset commits.
- * @event lr-input - Fired continuously while dragging or on each arrow-key press. `detail: { start, end }`.
+ * @event lr-input - Fired continuously while dragging or on each arrow-key press. `detail: { value: { start, end }, start, end }`.
  * @event lr-change - Fired on pointer release, keyboard keyup or handle-blur commit, or when a
- *   preset button is clicked. `detail: { start, end }`.
+ *   preset button is clicked. `detail: { value: { start, end }, start, end }`.
  * @event focus - Native focus relayed once from either handle.
  * @event blur - Native blur relayed once from either handle.
  * @event lr-invalid - Cancelable prefixed alias fired when native validity checking fails.
@@ -337,17 +315,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   // `effectiveDisabled` pattern), only the combined getter below.
   private _fieldsetDisabled = false;
 
-  // Keyed by pointerId rather than a single scalar so two concurrent drags
-  // (e.g. a two-finger touch, one per handle) each keep tracking their own
-  // handle instead of the second pointerdown hijacking which handle the
-  // first pointer's subsequent moves apply to.
-  private drags = new Map<number, DragState>();
-  /** Exact realm carrying shared drag listeners, retained across adoption for symmetric cleanup. */
-  private dragWindow?: Window;
+  private readonly dragController = new RangeDragController<TimeRangeHandle>(
+    this, (event) => this.onPointerMove(event), (event) => this.onPointerUp(event),
+  );
+  private get drags() { return this.dragController.active; }
   private keyboardChanged = false;
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Reflected consumer validity message; only `setCustomValidity('')` clears it. */
   declare customError: string | null;
   /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
@@ -361,23 +336,17 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () =>
-      this[VALIDITY_ANCHOR](),
-    );
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     // Blur counts as interaction exactly as it does in the `FormAssociated` mixin. `focusout` is
     // the observable signal: native `blur` neither bubbles nor crosses the shadow boundary, so a
     // host-level `blur` listener would never fire for the internal handles. Registered in the
     // constructor, on the host itself, so reconnecting cannot stack duplicates.
     this.addEventListener('focusout', this.markInteracted);
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like moving a handle or blurring; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
     this.reflectValidityStates();
   }
 
@@ -393,14 +362,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
   }
 
-  private emitInput(): void {
-    dispatchNativeEvent(this, 'input');
-    this.emit('lr-input', { start: this.start, end: this.end });
+  private emitInput(): Readonly<{ start: number; end: number }> {
+    const value = Object.freeze({ start: this.start, end: this.end });
+    emitValueEvents(this, 'input', { value, ...value }, detail => this.emit('lr-input', detail));
+    return value;
   }
 
-  private emitChange(): void {
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { start: this.start, end: this.end });
+  private emitChange(value = Object.freeze({ start: this.start, end: this.end })): void {
+    emitValueEvents(this, 'change', { value, ...value }, detail => this.emit('lr-change', detail));
   }
 
   private onHandleFocus = (event: FocusEvent): void => {
@@ -465,11 +434,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  whatever `invalid` event fires synchronously inside this call is this call, not a
    *  submission attempt. */
   checkValidity(): boolean {
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
 
   /** `checkValidity()`, plus the browser's own validation UI on failure. */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
     // point, so it counts as interaction for the `user-*` custom states.
     this.markInteracted();
@@ -506,6 +476,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // Reflected before the republish below, because `internals.willValidate` answers from the live
     // host attribute rather than from this field.
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the `invalid`/`user-invalid` states go with it,
     // synchronously — a same-tick `matches(':state(invalid)')` must answer from the new state.
     this.reflectValidityStates();
@@ -527,7 +499,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    * fieldset re-enabling instead of being permanently overwritten.
    */
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     if (disabled) this.abortActiveGestures();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.reflectValidityStates();
@@ -595,18 +570,14 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // pointercancel/alt-tab means `pointerup` never reaches `window`), these
     // window-level listeners — and the closure keeping this instance alive —
     // would otherwise leak indefinitely.
-    this.drags.clear();
-    this.keyboardChanged = false;
-    this.teardownDragWindow();
+    this.abortActiveGestures();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     // Adoption can happen while already disconnected, so defensively retire any previous-realm
     // drag state even when no new disconnected callback will run.
-    this.drags.clear();
-    this.keyboardChanged = false;
-    this.teardownDragWindow();
+    this.abortActiveGestures();
   }
 
   /** Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without
@@ -700,8 +671,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // A handle that actually moved is an interaction the instant it happens, the same way a
     // toggle is for `<lr-checkbox>` — that is what turns the `user-*` custom states on.
     this.markInteracted();
-    this.emitInput();
-    if (commit) this.emitChange();
+    const detail = this.emitInput();
+    if (commit) this.emitChange(detail);
     return true;
   }
 
@@ -735,8 +706,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.start = nextStart;
     this.end = nextEnd;
     this.markInteracted();
-    this.emitInput();
-    this.emitChange();
+    const detail = this.emitInput();
+    this.emitChange(detail);
   }
 
   /** Project a caller preset into the same legal domain/rendered order used when it is applied. */
@@ -788,10 +759,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
       move(-1);
     } else if (e.key === 'PageUp') {
       e.preventDefault();
-      move(1, PAGE_STEP_MULTIPLIER);
+      move(1, RANGE_PAGE_STEP_MULTIPLIER);
     } else if (e.key === 'PageDown') {
       e.preventDefault();
-      move(-1, PAGE_STEP_MULTIPLIER);
+      move(-1, RANGE_PAGE_STEP_MULTIPLIER);
     } else if (e.key === 'Home') {
       e.preventDefault();
       this.keyboardChanged =
@@ -835,40 +806,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   ): DragState | undefined {
     if (e.button !== 0 || this.liveDisabled) return undefined;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
-    const dragWindow = base?.ownerDocument.defaultView;
-    if (!base || !this.isConnected || !dragWindow) return undefined;
-    const firstDrag = this.drags.size === 0;
-    if (!firstDrag && this.dragWindow !== dragWindow) return undefined;
-    captureTarget.setPointerCapture?.(e.pointerId);
-    const drag: DragState = {
-      handle,
-      changed: false,
-      captureTarget,
-      rect: base.getBoundingClientRect(),
-      rtl: isRtl(this),
-    };
-    this.drags.set(e.pointerId, drag);
-    if (firstDrag) {
-      this.dragWindow = dragWindow;
-      dragWindow.addEventListener('pointermove', this.onPointerMove);
-      dragWindow.addEventListener('pointerup', this.onPointerUp);
-      dragWindow.addEventListener('pointercancel', this.onPointerUp);
-      dragWindow.addEventListener('lostpointercapture', this.onPointerUp);
-    }
-    // A drag can end without a pointerup: a system gesture / palm rejection
-    // can fire `pointercancel`, and losing capture (e.g. element removed)
-    // fires `lostpointercapture` — both need the same teardown as pointerup
-    // or `this.drags` keeps a permanently-stale entry and these window
-    // listeners (and the closure keeping this instance alive) never get
-    // removed. Mirrors lr-multi-split's identical fix.
-    return drag;
+    if (!base || base.ownerDocument.defaultView !== captureTarget.ownerDocument.defaultView) return undefined;
+    return this.dragController.begin(e, {
+      handle, changed: false, captureTarget, rect: base.getBoundingClientRect(), rtl: isRtl(this),
+    });
   }
 
   /** Domain value at a pointer position, using the same mirrored ratio `onPointerMove` uses so a
    *  seek and a drag can never disagree about which end of the track is `min` under RTL. */
   private valueAtPointer(clientX: number, rect: DOMRect, rtl: boolean): number {
-    const raw = rect.width === 0 ? 0 : (clientX - rect.left) / rect.width;
-    const ratio = Math.min(1, Math.max(0, rtl ? 1 - raw : raw));
+    const ratio = rangePointerRatio(clientX, 0, rect, rtl);
     const { lo, hi } = this.domain();
     return finiteInterpolate(lo, hi, ratio);
   }
@@ -880,11 +827,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const { lo, hi } = this.domain();
     const start = finiteRange(this.start, lo);
     const end = finiteRange(this.end, hi);
-    const toStart = Math.abs(target - start);
-    const toEnd = Math.abs(target - end);
-    if (toStart < toEnd) return 'start';
-    if (toEnd < toStart) return 'end';
-    return target < start ? 'start' : 'end';
+    return nearestRangeEnd(target, start, end) === 0 ? 'start' : 'end';
   }
 
   /** A pointerdown anywhere on `[part="base"]` other than a handle itself — the vast majority of
@@ -935,6 +878,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // right edge under RTL), so the pointer ratio has to mirror that or a
     // rightward drag would move the handle the wrong way -- `valueAtPointer`
     // owns that mirroring for both this and click-to-seek.
+    if (!drag.rect) return;
     const value = this.valueAtPointer(e.clientX, drag.rect, drag.rtl);
     drag.changed = this.setValue(drag.handle, value, false) || drag.changed;
   };
@@ -946,40 +890,13 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   /** Retire every pending input generation without turning its current value into a commit. */
   private abortActiveGestures(): void {
     this.keyboardChanged = false;
-    for (const pointerId of [...this.drags.keys()]) this.endDrag(pointerId, false);
+    this.dragController.abort();
   }
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {
-    const drag = this.drags.get(pointerId);
-    if (!drag) return;
-    this.drags.delete(pointerId);
-    if (commit && drag.changed) this.emitChange();
-    // An aborted drag gives the pointer back, as lr-slider does.
-    if (!commit) {
-      try {
-        if (drag.captureTarget.hasPointerCapture(pointerId)) {
-          drag.captureTarget.releasePointerCapture(pointerId);
-        }
-      } catch {
-        // Capture may already be gone.
-      }
-    }
-    // Only the last concurrent drag to end tears down the shared window
-    // listeners — another pointer (e.g. the other finger of a two-finger
-    // drag) may still be down.
-    if (this.drags.size === 0) {
-      this.teardownDragWindow();
-    }
-  }
-
-  private teardownDragWindow(): void {
-    const dragWindow = this.dragWindow;
-    this.dragWindow = undefined;
-    dragWindow?.removeEventListener('pointermove', this.onPointerMove);
-    dragWindow?.removeEventListener('pointerup', this.onPointerUp);
-    dragWindow?.removeEventListener('pointercancel', this.onPointerUp);
-    dragWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
+    const drag = this.dragController.end(pointerId);
+    if (commit && drag?.changed) this.emitChange();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1126,7 +1043,6 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

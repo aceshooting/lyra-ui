@@ -1,10 +1,11 @@
+import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifecycle.js';
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import { fixture, expect, html, oneEvent, waitUntil, nextFrame } from "@open-wc/testing";
-import type { PropertyValues } from "lit";
 import "./textarea.js";
 import type { LyraTextarea } from "./textarea.js";
 import { styles } from "./textarea.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { resolvedColorToken } from "../../../../test/color-contrast.js";
 
@@ -12,52 +13,21 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea required aria-label="Notes"></lr-textarea>`
   );
-  const aliases: CustomEvent[] = [];
-  el.addEventListener("lr-invalid", (event) =>
-    aliases.push(event as CustomEvent)
-  );
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = aliases[0];
-  if (!alias) throw new Error('The invalid alias was not emitted.');
-  expect(alias.target === el).to.equal(true);
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
+  assertInvalidAlias(el, { native: 'ignore' });
 });
 
 it("forwards preventDefault() on lr-invalid to the native invalid event", async () => {
-  // Cancelling the alias has to cancel the event it aliases, or an app that wires `lr-invalid` to
-  // its own error banner has no way to suppress the browser's validation bubble alongside it. The
-  // host's alias listener is installed in the constructor, so it runs before this recorder and its
-  // preventDefault() is already visible here.
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea required aria-label="Notes"></lr-textarea>`
   );
-  el.addEventListener("lr-invalid", (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.cancelable, "the native invalid event is cancelable").to.be.true;
-  expect(native.defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled', nativeCancelable: true });
 });
 
 it("leaves the native invalid event alone when the lr-invalid alias is not cancelled", async () => {
   const el = await fixture<LyraTextarea>(
     html`<lr-textarea required aria-label="Notes"></lr-textarea>`
   );
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.false;
+  assertInvalidAlias(el, { alias: 'ignore' });
 });
 
 it("bars constraint validation while disabled, fieldset-disabled or readonly", async () => {
@@ -231,30 +201,9 @@ it("suppresses host click/focus in the same task that fieldset disablement start
 });
 
 it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
-  // to prove LyraTextarea's own willUpdate() override actually calls super.willUpdate(...) rather
-  // than shadowing it silently.
-  const proto = LyraElement.prototype as unknown as {
-    willUpdate: (changed: PropertyValues) => void;
-  };
-  const original = proto.willUpdate;
-  let called = false;
-  proto.willUpdate = function (
-    this: LyraElement,
-    changed: PropertyValues
-  ): void {
-    called = true;
-    original.call(this, changed);
-  };
-  try {
-    const el = (await fixture(
-      html`<lr-textarea></lr-textarea>`
-    )) as LyraTextarea;
-    await el.updateComplete;
-    expect(called).to.be.true;
-  } finally {
-    proto.willUpdate = original;
-  }
+  await assertCallsBaseWillUpdate('lr-textarea', async () =>
+    (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea
+  );
 });
 
 it('defaults to the mapped rows=4, resize="vertical", editable, and an empty value', async () => {
@@ -1230,19 +1179,7 @@ describe("blur/focus bubbling", () => {
     ta.focus();
     ta.blur();
 
-    expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-      "focus",
-      "blur",
-    ]);
-    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be
-      .true;
-    expect(
-      nativeEvents.every(
-        (event) => event.target === el && event.bubbles && event.composed
-      )
-    ).to.be.true;
-    // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-    expect(aliases).to.deep.equal([]);
+    assertNativeFocusBlurPair(el, nativeEvents, aliases);
   });
 });
 

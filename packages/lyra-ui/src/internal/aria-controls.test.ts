@@ -1,5 +1,7 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
+  HostDescriptionController,
   acquireAriaDescription,
   acquireResolvedAriaRelationship,
   describeElement,
@@ -65,6 +67,65 @@ function propertyOwner(start: object, property: PropertyKey): object | null {
 it('syncAriaControlsElements is a no-op when no control is supplied', async () => {
   const root = await fixture<HTMLElement>(html`<div><span id="dangling"></span></div>`);
   expect(() => syncAriaControlsElements(root, undefined, 'dangling')).to.not.throw();
+});
+
+it('retargets host descriptions and releases them with the controller lifecycle', function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
+  let controller: ReactiveController | undefined;
+  host.addController = (value) => { controller = value; };
+  host.removeController = () => undefined;
+  const help = document.createElement('span');
+  help.id = 'host-description-controller-help';
+  const first = document.createElement('button');
+  const second = document.createElement('button');
+  const root = host.attachShadow({ mode: 'open' });
+  root.append(first, second);
+  document.body.append(help, host);
+  host.setAttribute('aria-describedby', help.id);
+  let target = first;
+  const description = new HostDescriptionController(host, () => target);
+  try {
+    controller?.hostConnected?.();
+    expect(first.ariaDescribedByElements?.includes(help)).to.equal(true);
+    target = second;
+    controller?.hostUpdated?.();
+    expect(first.ariaDescribedByElements?.includes(help)).to.equal(false);
+    expect(second.ariaDescribedByElements?.includes(help)).to.equal(true);
+    description.adopted();
+    expect(second.ariaDescribedByElements?.includes(help)).to.equal(true);
+    controller?.hostDisconnected?.();
+    expect(second.ariaDescribedByElements?.includes(help)).to.equal(false);
+  } finally {
+    controller?.hostDisconnected?.();
+    host.remove();
+    help.remove();
+  }
+});
+
+it('projects a host description added after the first render', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
+  let controller: ReactiveController | undefined;
+  host.addController = (value) => { controller = value; };
+  host.removeController = () => undefined;
+  const help = document.createElement('span');
+  help.id = 'late-host-description-help';
+  const target = document.createElement('button');
+  host.attachShadow({ mode: 'open' }).append(target);
+  document.body.append(help, host);
+  new HostDescriptionController(host, () => target);
+  try {
+    controller?.hostConnected?.();
+    host.setAttribute('aria-describedby', help.id);
+    await waitUntil(() => target.ariaDescribedByElements?.includes(help) === true);
+    host.removeAttribute('aria-describedby');
+    await waitUntil(() => target.ariaDescribedByElements?.includes(help) === false);
+  } finally {
+    controller?.hostDisconnected?.();
+    host.remove();
+    help.remove();
+  }
 });
 
 it('tokenizes reflected IDREFs with ASCII whitespace only', async function () {

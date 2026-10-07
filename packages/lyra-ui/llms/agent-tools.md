@@ -33,6 +33,9 @@ Security fix (non-breaking): `<lr-mcp-app>`'s `postMessage` call to its sandboxe
 uses the correctly computed target origin instead of an inverted check that previously fell through
 to the wildcard `'*'` origin unconditionally.
 
+Native action buttons in agent tools use the shared `--lr-button-*` fill, border, radius, padding,
+and size tokens. Their documented CSS parts remain available for a component-specific theme.
+
 ## `lr-tool-call-chip`
 
 A compact inline pill representing one tool/function call an agent made mid-conversation, e.g.
@@ -78,9 +81,8 @@ interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
-slot is empty), `icon` (overrides the built-in per-status glyph entirely via native slot-fallback
-content — assigned content wins; otherwise the `icon` prop is rendered as a literal hint; otherwise
-the built-in glyph for the current `status` is used)
+slot is empty), `status-icon` (overrides the built-in per-status glyph; otherwise the `icon` prop or
+built-in glyph appears), `icon` (deprecated slot alias for `status-icon`)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
@@ -646,7 +648,10 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
 `--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob. The scrollable
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
+component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
+`--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
+The search field remains a filter toolbar, with the native editing hints listed above. The scrollable
 tool list's mouse-hover preview on `[part="body"]` has its own four-longhand outline shape:
 `--lr-tool-select-dialog-body-hover-outline-width` (default `var(--lr-border-width-thin)`),
 `--lr-tool-select-dialog-body-hover-outline-style` (default `solid`),
@@ -1616,6 +1621,11 @@ selected vote button without changing shared brand tokens.
 
 ## `lr-span-waterfall`
 
+For `lr-span-waterfall`, `lr-trace-tree`, `lr-agent-trace`, `lr-tool-timeline`, `lr-activity-feed`,
+and `lr-test-results`, assigning a collection refreshes its rendered projection. A host can mutate
+an item and reassign the same source array to publish that change. Unrelated property updates
+reuse the current projection where possible.
+
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
@@ -1625,15 +1635,16 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
-startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete';
+startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete' | 'unknown';
 tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, exported from
 `trace-tree/span.ts`. `startMs`/`endMs` are milliseconds **relative to the trace start**, not
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
 by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. One flat array powers
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
-projection via `parentId`) — never two shapes. Foreign runtime `kind` and `status` values render
-as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
-documented literal sets. At most 500 unique valid spans mount; when `activeSpanId` resolves beyond
+projection via `parentId`) — never two shapes. Foreign runtime `kind` values render as `'other'`;
+explicitly unrecognized `status` values render the localized neutral `'unknown'` state, while an
+absent status renders `'pending'`. Raw provider status text is never shown. At most 500 unique valid
+spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
 controlled active state remains visible. A localized `[part="limit"]` note exposes truncation. The
 time axis always scales to the whole trace, measured before that 500-span cap is applied, so a
@@ -1699,6 +1710,8 @@ component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no
 several steps may be `running` at once. By default it is a status report; `reorderable` adds
 controlled keyboard reorder requests without changing ownership of `items`. Status changes and
 confirmed moves are announced through an internal `<lr-live-region>`.
+The list renders at most 500 tasks across top-level rows and direct children; `[part="limit"]`
+explains when more were supplied. The summary still counts every top-level task.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
@@ -1749,7 +1762,8 @@ otherwise, within the configured semantic heading), `label` (the `heading` text)
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
 `item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
-valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
+valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (shown when the task
+render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
@@ -1781,7 +1795,8 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/keystroke handling, no
 cursor-addressed full-screen apps. An ANSI sequence split across chunks retains at most 4,096
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
-clean parser boundary.
+clean parser boundary. Carriage return and erase-in-line (`CSI K`, `0K`, `1K`, `2K`) support
+in-place progress updates; other cursor-addressing sequences remain unsupported.
 
 Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 
@@ -2132,6 +2147,8 @@ hooks tune the card presentation rather than reinstating chrome you asked to dro
 
 A compact commit summary (subject, author/time, diffstat, per-file changes) that links file rows out
 to a diff view.
+An expanded commit renders its first 500 files and shows `[part="limit"]` when more exist;
+the diffstat and fold count still reflect the full file list.
 
 Removing the `message` attribute clears the displayed subject and body; the property retains the
 normal `null` readback of a removed string attribute.
@@ -2169,8 +2186,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
-`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`), and
-`actions`.
+`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`),
+`limit` (shown when the expanded file list exceeds the render cap), and `actions`.
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
@@ -2856,6 +2873,8 @@ shown when `segments` exceeds the 500-row render ceiling).
 ## `lr-eval-dataset`
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
+If the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
+number of retained examples. Pagination within those examples remains available in the table.
 
 **Properties:**
 
@@ -2898,7 +2917,8 @@ the host to apply to its controlled `examples` array.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
 search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `import` (the internal `compact` `lr-file-input`; its
+`grid`, `add-button`, `remove-button`, `limit` (shown when the source examples exceed the snapshot
+cap), `import` (the internal `compact` `lr-file-input`; its
 dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
@@ -2907,7 +2927,10 @@ dropzone text and accessible name are the localized `evalDatasetImportLabel`), `
 `--lr-eval-dataset-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-eval-dataset-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob.
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
+component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
+`--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
+The search field remains a filter toolbar, with the native editing hints listed above.
 
 **Known gotchas:**
 
@@ -2921,6 +2944,12 @@ inline gutter is reserved for the overlaid `search-clear` button and is not a kn
 ## `lr-eval-result`
 
 Rubric scoring and human-review surface for comparing the runs of one evaluation example.
+
+For a table-only state, import `components/agent-tools/eval-result/eval-result-register.js` and
+set `selectedRunId` to an unmatched id. It registers the table; import `lr-rubric-form.js` and
+`lr-diff-view.js` before allowing a run to become selected. A null selection automatically selects
+the first run, so a normal populated evaluation needs both children. The default entry registers
+all three.
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
@@ -3206,6 +3235,8 @@ explicit empty string renders no heading/name; `withoutChart: boolean = false` (
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
+Supply runs newest-first: when the list exceeds that window, `[part="limit"]` explains that the
+displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
@@ -3215,7 +3246,8 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
+`maxRenderedRuns`), `empty`.
 
 **Additional API surface:**
 
@@ -4527,7 +4559,11 @@ request cancellation. The component does not poll, schedule timers, start runs, 
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
 
-**Statuses and events:** the shared agent spellings `done`/`success` render as `completed` and `error` as `failed` instead of dropping the run. `lr-run-activate` (`detail: { runId }`) requests opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+**Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
+`completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
+neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
+`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
+opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
 
 **CSS parts:**
 
@@ -4591,3 +4627,13 @@ its own localized accessible name.
 ```html
 <lr-budget-meter used="72000" limit="100000" unit="tokens"></lr-budget-meter>
 ```
+
+`lr-tool-param-form` publishes native `input` and typed `lr-input` after live field edits, followed
+by native `change` and typed `lr-change` when an edit commits. Discrete choices publish both pairs.
+The typed events contain the complete effective `{ value }` snapshot, including schema defaults;
+child value events remain contained. Programmatic value changes and form reset remain silent.
+
+The dataset search field and other small internal editors intentionally use native controls to
+keep granular imports lean. They share native field surface, focus, sizing, editing, and accessible
+relationship helpers while retaining their existing parts and geometry tokens. Composing a full
+form control is appropriate when its public validation, selection, or form behavior is needed.

@@ -1,7 +1,8 @@
 import { normalizeDocxAction } from './commands.js';
+import { captureSelectionIntent, type DocxSelectionIntent } from './selection-intent.js';
 import type {
   DocxImageAction, DocxImageContext, DocxImageDescription, DocxResult,
-  DocxRevision, DocxSelectionLease, DocxSession,
+  DocxRevision, DocxSession,
 } from './types.js';
 
 type Resize = Extract<DocxImageAction, { type: 'resize-image' }>;
@@ -45,17 +46,12 @@ export function imageDescriptionDraft(title: string, description: string): Descr
 
 /** A popup owns the original lease even after the facade has invalidated it. */
 class ImageToolIntent {
-  private released = false;
   readonly image: Readonly<DocxImageContext>;
-  constructor(private readonly session: DocxSession, private readonly lease: DocxSelectionLease,
-    private readonly revision: DocxRevision, private readonly selectionVersion: number, image: Readonly<DocxImageContext>) {
+  constructor(private readonly session: DocxSession, private readonly intent: DocxSelectionIntent, image: Readonly<DocxImageContext>) {
     this.image = Object.freeze({ widthPoints: image.widthPoints, heightPoints: image.heightPoints });
   }
   valid(session: DocxSession | null): boolean {
-    const snapshot = session?.snapshot();
-    return !this.released && session === this.session && snapshot?.status === 'ready' && snapshot.image !== null &&
-      snapshot.revision?.documentId === this.revision.documentId && snapshot.revision.value === this.revision.value &&
-      snapshot.selection.version === this.selectionVersion;
+    return this.intent.valid(session);
   }
   description(session: DocxSession | null): DocxResult<Readonly<DocxImageDescription>> {
     if (!this.valid(session)) return stale;
@@ -64,25 +60,16 @@ class ImageToolIntent {
     return result.ok ? { ok: true, value: Object.freeze({ title: result.value.title, description: result.value.description }) } : result;
   }
   execute(session: DocxSession | null, action: DocxImageAction): DocxResult<DocxRevision> {
-    try {
-      if (!this.valid(session)) return stale;
-      return this.session.execute(action, { expectedRevision: this.revision, selection: this.lease });
-    } finally { this.release(); }
+    return this.intent.execute(session, action);
   }
   release(): void {
-    if (this.released) return;
-    this.released = true;
-    this.lease.release();
+    this.intent.release();
   }
 }
 
 export function captureImageToolIntent(session: DocxSession | null): ImageToolIntent | null {
   const snapshot = session?.snapshot();
   if (!session || snapshot?.status !== 'ready' || !snapshot.revision || !snapshot.image) return null;
-  const retained = session.retainSelection();
-  if (!retained.ok) return null;
-  const intent = new ImageToolIntent(session, retained.value, snapshot.revision, snapshot.selection.version, snapshot.image);
-  if (intent.valid(session)) return intent;
-  intent.release();
-  return null;
+  const retained = captureSelectionIntent(session, current => current.image !== null, snapshot);
+  return retained ? new ImageToolIntent(session, retained, snapshot.image) : null;
 }

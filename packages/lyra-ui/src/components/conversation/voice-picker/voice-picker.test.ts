@@ -1,6 +1,9 @@
+import { resolvedColorIn } from '../../../../test/shadow-style.js';
+import { measureListboxRow } from '../../../../test/row-style.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
@@ -27,6 +30,43 @@ const PREVIEW_CATALOG = [
     previewUrl: SILENT_AUDIO_DATA_URL,
   },
 ];
+
+it('keeps the active voice by id across a live catalog refresh', async () => {
+  const el = await fixture<LyraVoicePicker>(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`);
+  el.open = true;
+  await el.updateComplete;
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  el.catalog = ['alloy', 'replacement'];
+  await el.updateComplete;
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  expect(el.value).to.equal('alloy');
+});
+
+it('rebases an open free-text draft when its controlled value changes', async () => {
+  const el = await fixture<LyraVoicePicker>(html`
+    <lr-voice-picker allow-custom value="alloy" .catalog=${CATALOG}></lr-voice-picker>
+  `);
+  await focusByKeyboard(input(el));
+  input(el).value = 'obsolete draft';
+  input(el).dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  el.value = 'verse';
+  await el.updateComplete;
+  expect(input(el).value).to.equal('verse');
+});
+
+it('keeps a keyboard focus stop when switching to a disabled rendering mode', async () => {
+  const el = await fixture<LyraVoicePicker>(html`
+    <lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>
+  `);
+  await focusByKeyboard(trigger(el));
+  el.allowCustom = true;
+  el.disabled = true;
+  await el.updateComplete;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part="form-control"]')).to.equal(true);
+});
 
 function trigger(el: LyraVoicePicker): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
@@ -61,12 +101,7 @@ function syntheticRow(el: LyraVoicePicker): HTMLElement {
 }
 
 function resolvedColor(el: LyraVoicePicker, value: string, scope: HTMLElement = el): string {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  (scope === el ? el.shadowRoot! : scope).append(probe);
-  const color = getComputedStyle(probe).color;
-  probe.remove();
-  return color;
+  return resolvedColorIn(scope === el ? el.shadowRoot! : scope, value);
 }
 
 function relativeLuminance(color: string): number {
@@ -455,6 +490,18 @@ it('treats non-array and sparse catalogs as safe empty snapshots', async () => {
   expect(Object.isFrozen(el.catalog)).to.equal(true);
 });
 
+it('limits voice catalog admission to the shared first 1,024 source rows', async () => {
+  const catalog = Array.from({ length: 1_025 }, (_, index) => ({
+    id: `voice-${index}`,
+    label: `Voice ${index}`,
+  }));
+  const el = (await fixture(html`<lr-voice-picker .catalog=${catalog}></lr-voice-picker>`)) as LyraVoicePicker;
+
+  expect(el.catalog?.length).to.equal(1_024);
+  expect(el.catalog?.some((entry) => typeof entry !== 'string' && entry.id === 'voice-1024')).to.be.false;
+  expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(1_024);
+});
+
 it('retains valid mixed catalog rows around descriptor traps and accessor-only fields', async () => {
   const hostileEntry = new Proxy({}, {
     getOwnPropertyDescriptor(): never {
@@ -696,20 +743,7 @@ describe('open and synthetic stale-row theme cssprops', () => {
 
 describe('row state feedback on the already-selected option', () => {
   const THREE_VOICES = ['alloy', 'verse', 'sage'];
-  const centerOf = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
-  };
 
-  /** Polls a pointer-driven condition for up to 500ms, reporting whether it ever held. Pointer
-   *  state lands a variable number of frames after the mouse command resolves, per engine. */
-  const settle = async (holds: () => boolean): Promise<boolean> => {
-    for (let attempt = 0; attempt < 25; attempt++) {
-      if (holds()) return true;
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-    return holds();
-  };
 
   const openWithSelectedMiddleRow = async (): Promise<LyraVoicePicker> => {
     const el = (await fixture(html`
@@ -743,32 +777,8 @@ describe('row state feedback on the already-selected option', () => {
     ).to.equal('rgb(1, 2, 3)');
   });
 
-  /** Hovers and presses one row of a freshly opened listbox, returning both computed backgrounds
-   *  (or null when the engine never put the pointer over the row). One fixture per row on purpose:
-   *  releasing the button over an option commits that option and closes the listbox. */
-  const measureRow = async (
-    pick: (rows: HTMLElement[]) => HTMLElement,
-  ): Promise<{ hover: string; press: string } | null> => {
-    const el = await openWithSelectedMiddleRow();
-    const row = pick(Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]')));
-    const resting = getComputedStyle(row).backgroundColor;
-    try {
-      await sendMouse({ type: 'move', position: centerOf(row) });
-      // Earlier pointer tests in this file can leave Firefox with no document hover state at all
-      // until a real pointer entry; an unverified reading would report the fixed cascade as broken
-      // again, so report 'no pointer' rather than a background.
-      if (!(await settle(() => row.matches(':hover')))) return null;
-      await settle(() => getComputedStyle(row).backgroundColor !== resting);
-      const hover = getComputedStyle(row).backgroundColor;
-      await sendMouse({ type: 'down' });
-      await settle(() => getComputedStyle(row).backgroundColor !== hover);
-      return { hover, press: getComputedStyle(row).backgroundColor };
-    } finally {
-      await sendMouse({ type: 'up' });
-      await resetMouse();
-      el.remove();
-    }
-  };
+  const measureRow = (pick: (rows: HTMLElement[]) => HTMLElement) =>
+    measureListboxRow(openWithSelectedMiddleRow, pick);
 
   it('hovers and presses the selected row exactly like an unselected one', async function () {
     const control = await measureRow((rows) => rows.find((row) => row.getAttribute('aria-selected') !== 'true')!);

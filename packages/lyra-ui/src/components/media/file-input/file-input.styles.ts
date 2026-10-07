@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlFocusHalo,
@@ -88,8 +89,7 @@ export const styles = css`
     grid-area: 1 / 1;
     inline-size: 100%;
     block-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     box-sizing: border-box;
     font: inherit;
     cursor: pointer;
@@ -321,8 +321,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     border-radius: var(--lr-radius);

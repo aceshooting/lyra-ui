@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './reorder-item.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
@@ -155,19 +156,6 @@ describe('move-button state cssprops', () => {
       () => getComputedStyle(painted(host)).getPropertyValue(property) === expected,
       `${message} (expected ${expected})`,
     );
-  }
-
-  function resolvedInShadow(
-    el: LyraReorderItem,
-    declaration: string,
-    property: string,
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.append(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
   }
 
   it('keeps the pre-cssprop hover and active paint when the props are unset', async () => {

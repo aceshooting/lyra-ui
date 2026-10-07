@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import DOMPurify from 'dompurify';
-import { sanitizePassiveMarkup } from './passive-markup.js';
+import { sanitizePassiveMarkup, sanitizePassiveMarkupFragment } from './passive-markup.js';
 import './html-viewer/html-viewer.js';
 import './email-viewer/email-viewer.js';
 import './notebook-viewer/notebook-viewer.js';
@@ -19,6 +19,17 @@ import { MINIMAL_DOCX_BASE64 } from './docx-viewer/fixtures/minimal-docx-fixture
 import { __clearIncludeResourceCacheForTesting } from './include/include-resource.js';
 
 describe('sanitizePassiveMarkup', () => {
+  it('returns a sanitized fragment for direct document rendering', () => {
+    const fragment = sanitizePassiveMarkupFragment(
+      DOMPurify,
+      '<h2>Safe heading</h2><form><button>Keep text</button></form><img src="https://example.test/x.png"><x-active>Passive text</x-active>',
+      document,
+    );
+    expect(fragment.querySelector('h2')?.textContent).to.equal('Safe heading');
+    expect(fragment.querySelectorAll('form,button,x-active,[src]')).to.have.lengthOf(0);
+    expect(fragment.textContent).to.contain('Keep text');
+    expect(fragment.textContent).to.contain('Passive text');
+  });
   it('makes a passive document network-silent and non-interactive after the real sanitizer', () => {
     const clean = sanitizePassiveMarkup(DOMPurify, `
       <style>@import url(https://example.test/a.css)</style>

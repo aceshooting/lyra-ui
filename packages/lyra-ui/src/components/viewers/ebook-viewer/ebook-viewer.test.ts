@@ -491,7 +491,7 @@ describe("lr-ebook-viewer", () => {
       await missingEvent;
       expect(
         unsafe.shadowRoot!.querySelector('[part="error"]')!.textContent
-      ).to.contain("Failed to load the ebook");
+      ).to.contain('epubjs is not installed');
       expect(unsafeCount).to.equal(2);
     } finally {
       restore();
@@ -1691,34 +1691,6 @@ describe("lr-ebook-viewer search", () => {
     }
   });
 
-  it("localizes numeric search announcements", async () => {
-    const fake = fakeBookWithFeatures({ "ch1.xhtml": "match match" });
-    __setEpubJsForTesting(fake.factory as never);
-    const restore = stubFetch();
-    try {
-      const el = (await fixture(
-        html`<lr-ebook-viewer
-          src="https://example.test/book.epub"
-        ></lr-ebook-viewer>`
-      )) as LyraEbookViewer;
-      await aTimeout(20);
-      el.lang = "ar";
-      (
-        el as unknown as { announcer: { throttleMs: number } }
-      ).announcer.throttleMs = 0;
-      await el.search("match");
-      await aTimeout(10);
-      const sink = document.querySelector(
-        `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
-      );
-      expect(sink?.lastElementChild?.textContent).to.include(
-        new Intl.NumberFormat("ar").format(1)
-      );
-    } finally {
-      restore();
-    }
-  });
-
   it("aborts a stale scan when a newer search() call supersedes it", async () => {
     const fake = fakeBookWithFeatures({
       "ch1.xhtml": "apple",
@@ -2073,32 +2045,31 @@ describe("lr-ebook-viewer search", () => {
     }
   });
 
-  it("announces search results through the document-level polite region", async () => {
-    const fake = fakeBookWithFeatures({
-      "ch1.xhtml": "no match",
-      "ch2.xhtml": "the treasure map",
-    });
+  it("leaves search-result speech to an event-driven find bar", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
     __setEpubJsForTesting(fake.factory as never);
     const restore = stubFetch();
     try {
       const el = (await fixture(
-        html`<lr-ebook-viewer
-          src="https://example.test/book.epub"
-        ></lr-ebook-viewer>`
+        html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
       )) as LyraEbookViewer;
       await aTimeout(20);
-      await el.search("treasure");
-      await aTimeout(600); // the shared Announcer's default throttle window
       const sink = document.querySelector(
         `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
       );
-      expect(sink?.lastElementChild?.textContent).to.equal("Match 1 of 1");
-      // 9.0.0 removed `[part="announcer"]`: once announcements moved to the shared document-level
-      // sink the shadow mirror was a permanently-empty div with no rule anywhere in the stylesheet,
-      // so it was a part consumers could target but never see anything in.
-      expect(
-        el.shadowRoot!.querySelectorAll('[part="announcer"]').length
-      ).to.equal(0);
+      const priorMessages = sink?.childElementCount ?? 0;
+      const changed = oneEvent(el, 'lr-search-change');
+      await el.search('treasure');
+      expect((await changed as CustomEvent).detail).to.include({
+        query: 'treasure',
+        matchCount: 1,
+        activeIndex: 0,
+      });
+      // wait-reason: Observe the full delayed announcement window for unwanted match speech.
+      await aTimeout(600);
+      const searchMessages = [...(sink?.children ?? [])].slice(priorMessages)
+        .map((message) => message.textContent).join(' ');
+      expect(searchMessages).not.to.include('Match 1 of 1');
     } finally {
       restore();
     }

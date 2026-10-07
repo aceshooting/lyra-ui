@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   fixture,
   expect,
@@ -1624,21 +1625,6 @@ describe("step hover specificity", () => {
 });
 
 describe("state-styling cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
-   *  the tokens they fall back to. */
-  function resolvedInShadow(
-    el: LyraStepper,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const themedSteps = () => [
     { stepId: "basics", label: "Basics", state: "completed" as const },

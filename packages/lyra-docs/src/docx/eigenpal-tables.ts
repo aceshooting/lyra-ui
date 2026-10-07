@@ -2,9 +2,9 @@ import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
 import type { DocxCommandAvailability, DocxResult, DocxTableAction, DocxTableContext } from './types.js';
 import { DOCX_LIMITS } from './commands.js';
+import { WORD_NS as WORD } from './ooxml.js';
 
 export type TableReaders = Pick<typeof import('@docx-editor.dev/core/store'), 'findNode' | 'parentNodeOf'>;
-const WORD = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const TABLE_READ_LIMITS = Object.freeze({ parts: 128, nodes: 20_000, depth: 64, attributes: 64, cells: 4_000 });
 const word = (node: OoxmlNode, name: string): node is OoxmlElement =>
   node.kind !== 'textValue' && node.namespaceUri === WORD && node.localName === name;

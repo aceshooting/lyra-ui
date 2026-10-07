@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
@@ -52,7 +53,7 @@ export const styles = css`
     background: var(--lr-json-schema-viewer-info-bg, var(--lr-color-brand-quiet));
   }
   [part='constraints'] { display: flex; flex-flow: row wrap; gap: var(--lr-space-xs); padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-xs); }
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part~='node'] {
       --_lr-schema-indent: min(
         calc(var(--_lr-schema-depth, 0) * var(--lr-space-xs)),

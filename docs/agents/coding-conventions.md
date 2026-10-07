@@ -39,6 +39,8 @@
   regardless of the declared TypeScript type, and this bug class has shipped twice.
   `pnpm run check:numeric-guards` finds them; a genuine exception takes a
   `// numeric-guard-exempt: <reason>` comment.
+- New timer-duration attributes end in `-ms`; new render ceilings use `max-rendered-<noun>`.
+  Preserve established public names when adding a shared helper or documenting an existing limit.
 - **Closed string sets are literal union types, never a real TypeScript `enum`.** A prop backed by
   a fixed set of strings (`variant`, `placement`, `size`, `tone`, `status`, ...) is typed as a
   colocated exported union — e.g. `export type ButtonVariant = 'neutral' | 'brand' | 'success' |
@@ -177,12 +179,28 @@
   `event.defaultPrevented` before doing the thing it announced. A `cancelable: true` nothing
   consults is dead, misleading API surface — consumers will `preventDefault()` against it and
   quietly get nothing; no script checks this, so verify by hand whenever `cancelable: true`
-  appears in a diff. `emit()` does not rename events: use native-style `input`/`change` only when
-  mirroring a native/form-control contract, and name library-specific events explicitly with the
-  `lr-` prefix. Direct dispatch is reserved for the rare wrapper that must preserve a native
-  `Event`/`InputEvent` instance rather than turn it into a `CustomEvent`. Keep the component
-  event-map type, class JSDoc, tests, stories, and consumer reference aligned with the exact
-  names and details.
+  appears in a diff. Library-specific events use the `lr-` prefix. Value-changing form controls
+  expose native `input`/`change` and typed `lr-input`/`lr-change` with `{ value, ... }` details:
+  input reports live edits, change reports commits, and discrete selections report both. Use
+  `emitValueEvents()` from `internal/value-events.ts` for each matching native/typed pair.
+  Native input/change are `Event` or `InputEvent`, never custom-detail events; use
+  `relayNativeEvent()` or `dispatchNativeInputEvent()` when preserving native editing metadata.
+  Preserve explicitly documented compatibility fields, such as known-date's native event detail,
+  and documented primitive exceptions. Submitter-only buttons have no value-edit quartet.
+  Composite forms contain child value events and publish their complete aggregate value once;
+  capture the triggering value before dispatching either event so listener writes do not change
+  the matching typed detail. Collection-bearing typed details must cross the immutable snapshot boundary or be explicitly
+  detached/frozen. Programmatic writes, reset, and state restoration remain silent. Non-form
+  widgets may retain their documented `lr-change`-only contract; do not invent native form events
+  for them. Focus/blur bridges use native `FocusEvent` via `relayNativeEvent()` and retain
+  `relatedTarget`. Keep event maps, class JSDoc, tests, stories, and consumer references aligned.
+- **Choice controls** use `option` for an acted-on child identity when their detail includes one.
+  Radio groups retain `radio` as an equal compatibility alias. Publish live boolean selection with
+  `:state(checked)` for checkbox/switch/radio and `:state(pressed)` for toggles; repeated swatches
+  expose `swatch-selected`, and the swatch owner exposes `:state(selected)` while its value matches
+  an option. These hooks describe current values, including programmatic changes. Preserve each
+  control's documented request/veto behavior; additive identity or styling hooks do not introduce
+  a new cancelable event contract.
 - **Sibling `*.styles.ts` file** per component (e.g. `empty.styles.ts` exports `styles`), not
   inline `css`; the component sets `static styles = [LyraElement.styles, styles]`.
 - **A backtick inside a `css` / `html` tagged template terminates the literal — including inside a
@@ -306,12 +324,12 @@
   side-effect-only component import, so no `<lr-*>` element ever registers on the deployed site.
   Keep plain class modules free of top-level side effects or tree-shaking breaks for every
   consumer.
-- **Form-associated controls** use the `FormAssociated` mixin (`src/internal/form-associated.ts`,
-  built on `ElementInternals`) where the value fits a plain string (`lr-date-input`); it calls
-  `internals.setValidity()` so `required` participates in native constraint validation
-  (`checkValidity()`/`reportValidity()`/`:invalid`). Components whose value isn't a single string
-  (e.g. `lr-combobox`'s multi-select array) attach `ElementInternals` directly instead, but must
-  still call `setValidity()` themselves — see `combobox.ts`'s `updateValidity()` for the pattern.
+- **Form-associated controls** use `FormAssociated` (`src/internal/form-associated.ts`) for
+  value/default tracking, with a `FormValueAdapter` for non-string values. Controls whose checked,
+  aggregate, or submitter semantics need their own value lifecycle use `FormControlController`
+  (`src/internal/form-control-controller.ts`) for the same internals, anchored validity, invalid
+  alias, interaction, disabled-reaction guard, and synchronous validation setup. Preserve the
+  control's value/reset model; do not copy the shared plumbing or attach internals a second time.
 - **JSDoc header** on the component class (`@customElement lr-x`, `@slot`, `@csspart` tags — see
   any existing component, e.g. `src/components/overlays/empty/empty.class.ts`) feeds the generated
   manifest and the consumer-facing docs. The block must sit **directly above** `export class
@@ -387,3 +405,11 @@ streams), which keeps the newest, trailing entries instead.
 Top-layer reset CSS is adopted by `promoteToTopLayer()` into the surface's actual root, once per
 owner-document sheet. It is no longer part of `LyraElement.styles`; overlay consumers use the
 positioner/promoter rather than adding their own UA reset.
+
+For matching internal controls, reuse declaration fragments from `internal/interactive-control.styles.ts`
+and `internal/layout-fragments.styles.ts` inside the existing selector. Keep component geometry,
+state selectors, and public tokens local. `iconHitTarget` is recognized by the static hit-area
+checker; a later undersized override still fails. Use `scrollOverflowFade()` for a conditional
+track selector and `scrollOverflowFadeStyles` for the standard controller attributes. Small native
+wrappers such as dataset search and research-progress keep lean imports; share their behavior and
+style helpers when a full composed control's public API is unnecessary.

@@ -1,4 +1,4 @@
-import { minMax } from '../../data/heatmap/heatmap-scale.js';
+import { minMax } from '../../../internal/numbers.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 
 /** One topic in the hierarchy. Owns the shared `LyraTopic` shape for the whole component, the same
@@ -212,7 +212,7 @@ export function layoutMindMap(
   // `placed` always has >= 1 entry here (the `topics.length === 0` guard above already returned,
   // and `place()` unconditionally pushes the root), so `minMax` never returns `null` below. Using
   // `minMax()` instead of `Math.min(...xs)`/`Math.max(...xs)` avoids spreading a potentially huge
-  // array as call arguments -- see heatmap-scale.ts's `minMax()` doc comment for the
+  // array as call arguments -- see internal `minMax()`'s linear scan for the
   // `RangeError: Maximum call stack size exceeded` this sidesteps once topic counts get large.
   const [xLo, xHi] = minMax(placed.map((p) => p.x)) ?? [0, 0];
   const [yLo, yHi] = minMax(placed.map((p) => p.y)) ?? [0, 0];

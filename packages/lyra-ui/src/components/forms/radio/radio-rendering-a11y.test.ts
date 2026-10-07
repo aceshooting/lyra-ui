@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./radio.js";
@@ -6,8 +7,6 @@ import "./radio-group.js";
 import type { LyraRadio } from "./radio.js";
 import type { LyraRadioGroup } from "./radio-group.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-
-
 
 it("contains a standalone unbroken label at 320px in LTR and RTL", async () => {
   const label =
@@ -508,18 +507,6 @@ describe("checked-state cssprop escape hatch", () => {
   // resolve a raw declaration inside the same shadow root so the comparison format (rgb(...))
   // always matches getComputedStyle's, rather than comparing a raw custom-property string
   // against it.
-  function resolvedInShadow(
-    el: LyraRadio,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   it("renders byte-identical to --lr-color-brand when --lr-radio-checked-border-color/-dot-color are unset", async () => {
     const el = (await fixture(

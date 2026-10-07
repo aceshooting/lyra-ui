@@ -1,3 +1,5 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { html as litHtml } from "lit";
 import "./segmented.js";
@@ -18,11 +20,6 @@ const items = (): LyraSegmentedItem[] => [
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
  *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
-async function nextFrames(): Promise<void> {
-  await new Promise((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(resolve))
-  );
-}
 
 function segmentButtons(el: LyraSegmented): HTMLButtonElement[] {
   return [
@@ -1051,23 +1048,6 @@ describe("segment hover specificity", () => {
     }
   });
 });
-
-/** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
- *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
- *  see none of them). Used to assert the unset defaults byte-for-byte against the tokens they are
- *  documented to fall back to. */
-function resolvedInShadow(
-  el: LyraSegmented,
-  declaration: string,
-  property: string
-): string {
-  const probe = document.createElement("span");
-  probe.setAttribute("style", declaration);
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return value;
-}
 
 describe("selected-state cssprops", () => {
   const overrides =

@@ -16,6 +16,8 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
+import { renderRegionHighlightLayer } from '../region-highlight-layer.js';
 import type {
   HighlightActivateDetail,
   LyraAnchor,
@@ -305,7 +307,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly];
 
   /** URL to fetch (for `text`/`application/json`) or display (`image`, or as
    *  the generic fallback's download `href`). The value is validated against
@@ -692,43 +694,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     regionHighlights: readonly ProjectedRegionHighlight[],
     interactive: boolean,
   ): TemplateResult | typeof nothing {
-    if (!regionHighlights.length) return nothing;
-    // Region rects are physical percent-of-image coordinates and the previewed image never
-    // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
-    // overlay under RTL while the image underneath stays put.
-    return html`<div part="highlight-layer">
-      ${regionHighlights.map(
-        (h, index) => html`
-          ${interactive ? html`<button
-            part="region-highlight-target"
-            data-highlight-id=${h.id}
-            style=${styleMap({
-              left: `calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%)`,
-              top: `calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%)`,
-              width: `max(${h.anchor.rect.width}%, var(--lr-icon-button-size))`,
-              height: `max(${h.anchor.rect.height}%, var(--lr-icon-button-size))`,
-            })}
-            type="button"
-            role="button"
-            aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
-            @click=${() => this.emit('lr-highlight-activate', { highlightId: h.id })}
-          ></button>` : nothing}
-          <div
-            part="region-highlight"
-            data-id=${h.id}
-            data-tone=${h.tone ?? 'accent'}
-            ?data-active=${h.id === this.activeHighlightId}
-            aria-hidden="true"
-            style=${styleMap({
-              left: `${h.anchor.rect.x}%`,
-              top: `${h.anchor.rect.y}%`,
-              width: `${h.anchor.rect.width}%`,
-              height: `${h.anchor.rect.height}%`,
-            })}
-          ></div>
-        `,
-      )}
-    </div>`;
+    return renderRegionHighlightLayer(regionHighlights, this.activeHighlightId, interactive,
+      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
+      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
   }
 
   /** Moves focus among the `region-highlight-action` list to match `<lr-highlight-layer>`'s

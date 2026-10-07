@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { composedContains } from '../../../internal/overlay-stack.js';
 import type { LyraReorderItem } from './reorder-item.class.js';
 import {
   releaseReorderOwnerState,
@@ -53,19 +54,6 @@ function isRowOwnChrome(node: Element, item: LyraReorderItem): boolean {
   while (root instanceof ShadowRoot) {
     if (root === item.shadowRoot) return true;
     root = root.host.getRootNode();
-  }
-  return false;
-}
-
-/** True when `node` sits inside `root`'s composed subtree. `Node.contains()` alone never crosses
- *  a shadow boundary, and the captured focus target here is typically one or two shadow roots
- *  deep (list -> item -> composed `<lr-icon-button>` -> native `<button>`), so this climbs via
- *  `ShadowRoot.host` whenever a plain `parentNode` walk runs out. */
-function composedContains(root: Element, node: Node): boolean {
-  let current: Node | null = node;
-  while (current) {
-    if (current instanceof Element && root.contains(current)) return true;
-    current = current instanceof ShadowRoot ? current.host : current.parentNode;
   }
   return false;
 }

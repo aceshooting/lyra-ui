@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
@@ -16,6 +17,21 @@ import type {
 import { styles } from "./multi-split.styles.js";
 
 expectLocaleFallback('ar-EG', ['resizeDivider', 'resizeValuePercent']);
+
+it('renders divider ranges from the update measurement without a layout read', async () => {
+  const el = await fixture<LyraMultiSplit>(html`
+    <lr-multi-split style="inline-size:400px;block-size:160px"><div>A</div><div>B</div></lr-multi-split>
+  `);
+  await elementUpdated(el);
+  const measured = el as unknown as { getContainerSize: () => number };
+  const original = measured.getContainerSize;
+  measured.getContainerSize = () => { throw new Error('render read the container size'); };
+  try {
+    expect(() => el.render()).to.not.throw();
+  } finally {
+    measured.getContainerSize = original;
+  }
+});
 
 it("removes only the floating pane's adjacent divider track in either orientation and collapse direction", async () => {
   for (const orientation of ["horizontal", "vertical"] as const) {
@@ -610,6 +626,24 @@ it('mirrors pointer-drag direction under dir="rtl" so it grows the panel under t
   );
   expect(el.sizes[0]!).to.be.lessThan(before);
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+});
+
+it('ends an in-flight divider drag when an ancestor flips direction', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="ltr"><lr-multi-split><div>A</div><div>B</div></lr-multi-split></div>
+  `);
+  const el = wrapper.querySelector('lr-multi-split') as LyraMultiSplit;
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  mockWidth(base, 200);
+  divider.setPointerCapture = () => {};
+  const before = [...el.sizes];
+  pointerDown(divider, 98, 100);
+  wrapper.dir = 'rtl';
+  pointerMove(98, 140);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 98 }));
+  expect(el.sizes).to.deep.equal(before);
 });
 
 it("ignores secondary mouse and pen button drags while keeping concurrent touch drags active", async () => {
@@ -1789,18 +1823,6 @@ it("reserves a contained vertical divider gutter and paints only its center", as
 });
 
 // -- Divider color/thickness cssprop hooks ---------------------------------
-
-/** Resolves a CSS value (e.g. a `var()`/`color-mix()` expression) to its computed value using a
- *  throwaway probe in `el`'s own shadow root, so a comparison uses the browser's own resolution
- *  instead of restating token math by hand. */
-function resolvedInShadow(el: LyraMultiSplit, declaration: string, property: string): string {
-  const probe = document.createElement("span");
-  probe.setAttribute("style", declaration);
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return value;
-}
 
 it("defaults the divider hairline to --lr-color-border/-brand/-brand+mix with none of the new color cssprops set (unset regression)", async () => {
   const el = (await fixture(html`

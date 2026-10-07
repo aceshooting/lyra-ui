@@ -1,10 +1,11 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { isAccessibilityVisible, nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
@@ -15,7 +16,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { styles } from './lightbox.styles.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
-import { ownsKeyboardInput } from '../pan-zoom/key-ownership.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
@@ -233,6 +234,16 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, srOnly, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>(
+      this.nativeModal.requested ? 'dialog[data-native-modal-carrier]' : '[part="panel"][role="dialog"]',
+    ),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   private _open = false;
 
@@ -331,11 +342,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => { if (this.overlay?.isTopmost()) void this.closeFrom('escape', this.renderRoot.querySelector('[part="panel"]') ?? this); },
     onUnexpectedClose: () => {
-      void this.hide().then(() => { if (this.open) this.nativeModal.show(); });
+      void this.hide().then(() => { if (this.open) this.modalSurface.show(); });
     },
   });
-  private focusReturnOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private announcementSink?: AnnouncementSink;
   private announcementBaseline?: {
     index: number;
@@ -516,24 +526,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
     if (changed.has('open')) {
       if (this.open) {
-        this.deferredFocusReturn.cancel();
-        this.focusReturnOpener = captureFocusReturnOpener(this);
-        this.nativeModal.prepare();
-        this.activateOverlay();
+        this.modalSurface.open(() => this.activateOverlay());
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.deactivateOverlay();
-        // The synchronous return keeps the established timing whenever the opener can already
-        // take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.focusReturnOpener;
-        this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
+        this.modalSurface.close(hadOverlay, () => this.deactivateOverlay(), () => !this.open);
       }
     }
   }
@@ -559,7 +555,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
     if (this.isConnected) this.captureAnnouncementBaseline();
     if (changed.has('open') && this.open) {
-      this.nativeModal.show();
+      this.modalSurface.show();
       this.overlay?.focusInitial();
     }
     // Imperative, not a binding -- see the class doc for why this is required for the reset to
@@ -607,7 +603,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           this.isConnected &&
           this.open
         ) {
-          this.nativeModal.show();
+          this.modalSurface.show();
           this.overlay?.focusInitial();
         }
       });
@@ -621,9 +617,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.announcementSink = undefined;
     this.announcementBaseline = undefined;
     super.disconnectedCallback();
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
     if (this.open) {
       // Deferred one microtask so a synchronous reparent (disconnect immediately followed by
       // reconnect) isn't mistaken for a real removal -- mirrors <lr-dialog>'s identical
@@ -669,7 +664,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private deactivateOverlay(): void {
-    this.nativeModal.hide();
     this.overlay?.deactivate();
     this.overlay = undefined;
   }
@@ -689,7 +683,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
-    if (ownsKeyboardInput(event, 'lr-pan-zoom')) return;
+    if (
+      keyEventOwnedByInnerControl(event, {
+        container: this,
+        ownerTag: 'lr-pan-zoom',
+        ownsButtons: true,
+      })
+    ) return;
     const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';

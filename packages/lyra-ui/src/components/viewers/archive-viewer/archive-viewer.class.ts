@@ -10,8 +10,6 @@ import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
-  boundedSelectionRects,
-  boundedSelectionText,
   buildQuoteAnchor,
   createTextQuoteIndex,
   scopeFromElement,
@@ -43,43 +41,6 @@ const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = Number.POSITIVE_INFINITY;
 class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
 const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
-
-function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range | null {
-  const document = viewer.ownerDocument;
-  const view = document.defaultView;
-  const nestedRoot = contentRoot.getRootNode();
-  const outerRoot = viewer.shadowRoot;
-  const ShadowRootCtor = view?.ShadowRoot;
-  const shadowRoots = [outerRoot, nestedRoot].filter(
-    (root, index, roots): root is ShadowRoot => (
-      ShadowRootCtor !== undefined
-      && root instanceof ShadowRootCtor
-      && roots.indexOf(root) === index
-    ),
-  );
-  const globalSelection = view?.getSelection() as
-    | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
-    | null
-    | undefined;
-  if (globalSelection?.getComposedRanges) {
-    const [composed] = globalSelection.getComposedRanges({ shadowRoots });
-    if (composed && (
-      composed.startContainer !== composed.endContainer
-      || composed.startOffset !== composed.endOffset
-    )) {
-      const range = document.createRange();
-      range.setStart(composed.startContainer, composed.startOffset);
-      range.setEnd(composed.endContainer, composed.endOffset);
-      return range;
-    }
-  }
-  const nestedSelection = (
-    nestedRoot as { getSelection?: () => Selection | null }
-  ).getSelection?.();
-  const selection = nestedSelection ?? globalSelection ?? null;
-  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
-  return selection.getRangeAt(0);
-}
 
 /** Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents
  * or loading an archive parser. One owned central-directory parser is the listing and validation
@@ -219,8 +180,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   private archiveSearchQuery = '';
   private lastSearchLocale = '';
   private pendingSearchResetEvent = false;
-  private archiveSelectionRoot: Element | null = null;
-  private archiveSelectionCleanup?: () => void;
   private styledVirtualListRoot: ShadowRoot | null = null;
   private archiveNestedUpdatePending = false;
   // A ZIP central directory may legally repeat a filename across two distinct entries (the
@@ -286,9 +245,6 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   }
 
   override disconnectedCallback(): void {
-    this.archiveSelectionCleanup?.();
-    this.archiveSelectionCleanup = undefined;
-    this.archiveSelectionRoot = null;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -301,7 +257,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   }
 
   /** The rows' real DOM lives inside the embedded virtual list, not the archive viewer's own body. */
-  protected textContentRoot(): Element | null {
+  protected override textContentRoot(): Element | null {
     return this.archiveVirtualList()?.shadowRoot?.querySelector('[part="spacer"]') ?? null;
   }
 
@@ -311,7 +267,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
    *  `document.getElementById()`/`:target` for a duplicated DOM `id`. A `text-quote` anchor is
    *  unaffected: it resolves by quote content, not by name, so it can reach any occurrence whose
    *  rendered text actually contains the quote. */
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (this.fetchState.kind !== 'loaded') return false;
     // Captured before any await so the post-wait checks below can tell a completed jump apart from
     // one whose archive was replaced underneath it by a concurrent `src` reassignment.
@@ -384,7 +340,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
 
   /** A quote emitted from selection is scoped to one entry path; a cross-row selection is not a
    * stable archive anchor because either endpoint may be unmounted by virtualization. */
-  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+  protected override computeSelectionAnchor(range: Range): LyraAnchor | null {
     const entryName = (node: Node): Element | null => {
       const elementNode = this.ownerDocument.defaultView?.Node.ELEMENT_NODE ?? 1;
       const element = node.nodeType === elementNode ? node as Element : node.parentElement;
@@ -482,76 +438,9 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     return false;
   }
 
-  /** Replaces TextViewerTarget's outer-shadow selection binding with one that includes the nested
-   * virtual-list ShadowRoot in composed-range lookup. Highlight painting still uses the mixin, but
-   * its content root is redirected to the same nested spacer above. */
+  /** Keeps nested-list highlight styling in sync with the text content root. */
   private syncArchiveNestedRoot(): void {
     const root = this.textContentRoot();
-    if (root !== this.archiveSelectionRoot) {
-      (this as unknown as { unbindTextSelection(): void }).unbindTextSelection();
-      this.archiveSelectionCleanup?.();
-      this.archiveSelectionCleanup = undefined;
-      this.archiveSelectionRoot = root;
-      if (root) {
-        const ownerDocument = root.ownerDocument;
-        const view = ownerDocument.defaultView;
-        // Shared cadence: report each settled selection once; touch handles only fire selectionchange.
-        let pointerSelecting = false;
-        let reported: readonly [Node, number, Node, number] | undefined;
-        const emitSelection = (): void => {
-          const range = archiveSelectionRange(this, root);
-          if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) {
-            reported = undefined;
-            return;
-          }
-          if (
-            reported
-            && reported[0] === range.startContainer && reported[1] === range.startOffset
-            && reported[2] === range.endContainer && reported[3] === range.endOffset
-          ) return;
-          const text = boundedSelectionText(range);
-          if (!text) return;
-          reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
-          const anchor = this.computeSelectionAnchor(range);
-          const rects = boundedSelectionRects(range);
-          this.emit('lr-text-select', { text, anchor, rects });
-        };
-        let debounceHandle: number | undefined;
-        const onSelectionChange = (): void => {
-          if (pointerSelecting || !view) return;
-          if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
-          debounceHandle = view.requestAnimationFrame(() => {
-            debounceHandle = undefined;
-            emitSelection();
-          });
-        };
-        const onPointerDown = (event: PointerEvent): void => {
-          if (event.isPrimary && event.button === 0) pointerSelecting = true;
-        };
-        // Document-level, so a drag released outside the listing still ends its selection.
-        const onPointerRelease = (): void => {
-          if (!pointerSelecting) return;
-          pointerSelecting = false;
-          emitSelection();
-        };
-        root.addEventListener('pointerup', emitSelection);
-        root.addEventListener('keyup', emitSelection);
-        ownerDocument.addEventListener('selectionchange', onSelectionChange);
-        ownerDocument.addEventListener('pointerdown', onPointerDown, true);
-        ownerDocument.addEventListener('pointerup', onPointerRelease, true);
-        ownerDocument.addEventListener('pointercancel', onPointerRelease, true);
-        this.archiveSelectionCleanup = () => {
-          root.removeEventListener('pointerup', emitSelection);
-          root.removeEventListener('keyup', emitSelection);
-          ownerDocument.removeEventListener('selectionchange', onSelectionChange);
-          ownerDocument.removeEventListener('pointerdown', onPointerDown, true);
-          ownerDocument.removeEventListener('pointerup', onPointerRelease, true);
-          ownerDocument.removeEventListener('pointercancel', onPointerRelease, true);
-          if (debounceHandle !== undefined) view?.cancelAnimationFrame(debounceHandle);
-        };
-      }
-    }
-
     const listRoot = this.archiveVirtualList()?.shadowRoot ?? null;
     if (listRoot && listRoot !== this.styledVirtualListRoot) {
       const existing = listRoot.querySelector('style[data-lr-archive-highlight-styles]');

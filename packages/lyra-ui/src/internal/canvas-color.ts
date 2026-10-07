@@ -1,5 +1,8 @@
 const INVALID_COLOR_SENTINELS = ['rgb(1, 2, 3)', 'rgb(4, 5, 6)'] as const;
 
+/** Concrete fallback shared by canvas consumers when a live accent token cannot be resolved. */
+export const DEFAULT_CANVAS_COLOR = '#0969da';
+
 /**
  * Resolves a CSS color expression in an element's live theme scope. Canvas APIs silently retain
  * their previous paint when assigned an unresolved variable, `currentColor`, or an invalid value,

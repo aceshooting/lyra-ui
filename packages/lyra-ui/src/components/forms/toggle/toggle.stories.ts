@@ -151,3 +151,8 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const LivePressedState: Story = {
+  render: () => html`<style>lr-toggle.live-state:state(pressed) { --lr-toggle-pressed-bg: var(--lr-color-brand-quiet); }</style>
+    <lr-toggle class="live-state">Pin item</lr-toggle>`,
+};

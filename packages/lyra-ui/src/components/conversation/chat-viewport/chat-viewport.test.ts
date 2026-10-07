@@ -1,3 +1,5 @@
+import { sinkTexts } from '../../../../test/announcements.js';
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-viewport.js";
@@ -18,23 +20,7 @@ function sinkElement(
   );
 }
 
-function sinkTexts(
-  politeness: "polite" | "assertive",
-  doc: Document = document
-): string[] {
-  const sink = sinkElement(politeness, doc);
-  return sink
-    ? Array.from(sink.children, (child) => child.textContent ?? "")
-    : [];
-}
 
-/** Waits two animation frames -- enough for this component's own rAF-coalesced growth tick (and,
- *  when a slotted lr-virtual-list is involved, its own rAF-coalesced scroll handler) to settle. */
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
-  );
-}
 
 // Returns a real lit-html TemplateResult (not a plain HTML string) -- a plain string
 // interpolated via `${...}` in an `html` tagged template renders as escaped text, not parsed
@@ -1036,7 +1022,12 @@ describe("jump pill", () => {
         lang="ar-EG"
         style="block-size:100px"
         unread-start-index="8"
-        .strings=${{ newMessagesCount: "{count} رسائل جديدة" }}
+        .strings=${{
+          newMessagesCount: {
+            one: "{count} رسالة جديدة",
+            other: "{count} رسائل جديدة",
+          },
+        }}
       >
         ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
       </lr-chat-viewport>

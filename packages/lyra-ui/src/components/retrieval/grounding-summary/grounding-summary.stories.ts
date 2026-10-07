@@ -62,6 +62,7 @@ export const WithConfidenceAndWarnings: Story = {
 };
 
 export const WithEvidence: Story = {
+  parameters: { docs: { description: { story: 'Tab to the first evidence badge, then use ArrowUp, ArrowDown, Home, or End to move within the evidence list.' } } },
   render: () => html`
     <lr-grounding-summary
       label="Answer grounding"

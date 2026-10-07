@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -29,8 +30,7 @@ export const styles = css`
     align-items: baseline;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-size-2px) 0;
     border: none;
     background: transparent;
@@ -42,8 +42,7 @@ export const styles = css`
   }
   [part='node-label']:focus-visible,
   lr-virtual-list::part(node-label):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='node-label']:hover,
   lr-virtual-list::part(node-label):hover {
@@ -89,8 +88,7 @@ export const styles = css`
        same split as lr-code-block's own [part='toggle']. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     border-radius: var(--lr-radius-xs);
     background: transparent;
@@ -109,8 +107,7 @@ export const styles = css`
   }
   [part='expand-button']:focus-visible,
   lr-virtual-list::part(expand-button):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Virtualized, the groups property's relation headers render through lr-virtual-list's own
      "group" part (re-exported here as "group-header"), not this component's [part='group-header'],

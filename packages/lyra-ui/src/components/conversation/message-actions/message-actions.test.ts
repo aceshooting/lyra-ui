@@ -12,6 +12,24 @@ import type { LyraMessageActions } from "./message-actions.js";
 import type { LyraToolbarAction } from "./toolbar-actions.js";
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
+it('projects a live host description onto the toolbar role owner', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="message-actions-help">Choose an action</p>
+    <lr-message-actions aria-describedby="message-actions-help"></lr-message-actions>
+  </div>`);
+  const host = wrapper.querySelector<LyraMessageActions>('lr-message-actions')!;
+  const help = wrapper.querySelector<HTMLElement>('#message-actions-help')!;
+  const toolbar = host.shadowRoot!.querySelector<HTMLElement>('[role="toolbar"]')!;
+  const includesHelp = (): boolean =>
+    toolbar.ariaDescribedByElements?.includes(help) === true ||
+    (toolbar.getAttribute('aria-describedby')?.split(/\s+/).includes(help.id) ?? false);
+  expect(includesHelp()).to.equal(true);
+  host.removeAttribute('aria-describedby');
+  await waitUntil(() => !includesHelp());
+  expect(includesHelp()).to.equal(false);
+});
+
 class ClosedToolbarProvider extends HTMLElement {
   private readonly trigger: HTMLButtonElement;
   private unavailable = false;

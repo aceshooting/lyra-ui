@@ -2000,6 +2000,24 @@ describe("resizable", () => {
     expect(commits).to.deep.equal([280]);
   });
 
+  it('ends a resize gesture when inherited direction changes', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="ltr"><lr-app-rail resizable rail-width="240" min-rail-width="190" max-rail-width="440"></lr-app-rail></div>
+    `);
+    const el = wrapper.querySelector('lr-app-rail') as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    resizer.setPointerCapture = () => {};
+    resizer.dispatchEvent(new PointerEvent('pointerdown', {
+      pointerId: 74, button: 0, isPrimary: true, clientX: 100, bubbles: true,
+    }));
+    wrapper.dir = 'rtl';
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 74, clientX: 140 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 74 }));
+    expect(el.railWidth).to.equal(240);
+    expect(el.dragging).to.equal(false);
+  });
+
   it("does not consume or emit a boundary keyboard resize no-op", async () => {
     const el = (await fixture(
       html`<lr-app-rail

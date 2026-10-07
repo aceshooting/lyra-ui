@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -62,8 +63,7 @@ export const styles = css`
     cursor: pointer;
   }
   :host(:focus-visible) [part~="base"] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The mouse-user counterpart of the :focus-visible outline above, mirroring lr-checkbox's and
      lr-radio's [part~='base']:hover pattern. Gated on :host(:not(:disabled):not([readonly])) like

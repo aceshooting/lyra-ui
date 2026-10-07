@@ -31,6 +31,14 @@ import {
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './date-picker.styles.js';
 import {
+  isSafeArray,
+  copyNativeDate,
+  projectDisabledDateKeys,
+  parseDisabledWeekdays,
+  inclusiveDayCount,
+} from './date-picker-disabled-dates.js';
+export { projectDisabledDateKeys, parseDisabledWeekdays, inclusiveDayCount } from './date-picker-disabled-dates.js';
+import {
   monthMatrix,
   weekdayLabels,
   monthTitle,
@@ -118,6 +126,8 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
 };
 
 export interface LyraDatePickerEventMap {
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   input: InputEvent;
   change: Event;
   'lr-focus-day': CustomEvent<{ date: Date }>;
@@ -161,14 +171,6 @@ const canonicalPresetSnapshots = new WeakMap<
   readonly unknown[],
   readonly CanonicalDateRangePreset[]
 >();
-
-function isSafeArray(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
 
 function isSafeNonArrayObject(value: unknown): value is object {
   if (value === null || typeof value !== 'object') return false;
@@ -230,100 +232,6 @@ function canonicalDateRangePresets(
   return snapshot;
 }
 
-/** Returns a fresh local Date using the native Date slot, never an overridable instance method. */
-function copyNativeDate(value: unknown): Date | null {
-  if (value === null || typeof value !== 'object') return null;
-  try {
-    const epoch = Date.prototype.getTime.call(value);
-    return Number.isFinite(epoch) ? new Date(epoch) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** A disabled-date assignment cannot turn a month render into an unbounded proxy walk. */
-const MAX_DISABLED_DATE_ENTRIES = 10_000;
-
-/**
- * ISO keys of a `disabledDates` value, capped at 10,000 entries.
- * @internal
- */
-export function projectDisabledDateKeys(value: unknown): readonly string[] {
-  if (typeof value === 'string') {
-    return Object.freeze(
-      value
-        .split(/[\s,]+/)
-        .map((entry) => parseISO(entry))
-        .filter((entry): entry is Date => entry !== null)
-        .map((entry) => formatISO(entry)),
-    );
-  }
-  if (!isSafeArray(value)) return Object.freeze([]);
-  const length = getOwnDataDescriptor(value, 'length');
-  if (
-    length === MISSING_OWN_DATA_DESCRIPTOR ||
-    length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-    typeof length.value !== 'number' ||
-    !Number.isSafeInteger(length.value) ||
-    length.value < 0
-  )
-    return Object.freeze([]);
-
-  const dates: string[] = [];
-  for (let index = 0; index < Math.min(length.value, MAX_DISABLED_DATE_ENTRIES); index += 1) {
-    const entry = getOwnDataDescriptor(value, String(index));
-    if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
-    const date = typeof entry.value === 'string' ? parseISO(entry.value) : copyNativeDate(entry.value);
-    if (date) dates.push(formatISO(date));
-  }
-  return Object.freeze(dates);
-}
-
-const WEEKDAY_NAMES: Readonly<Record<string, number>> = {
-  sun: 0,
-  sunday: 0,
-  mon: 1,
-  monday: 1,
-  tue: 2,
-  tues: 2,
-  tuesday: 2,
-  wed: 3,
-  wednesday: 3,
-  thu: 4,
-  thur: 4,
-  thurs: 4,
-  thursday: 4,
-  fri: 5,
-  friday: 5,
-  sat: 6,
-  saturday: 6,
-};
-
-/**
- * Weekday numbers (0 = Sunday) named by a `disabledDaysOfWeek` value.
- * @internal
- */
-export function parseDisabledWeekdays(value: unknown): Set<number> {
-  return new Set(
-    String(value || '')
-      .toLowerCase()
-      .split(/[\s,]+/)
-      .filter(Boolean)
-      .map((name) => WEEKDAY_NAMES[name] ?? (/^[0-6]$/.test(name) ? Number(name) : -1))
-      .filter((day) => day >= 0)
-  );
-}
-
-/**
- * Calendar days from `from` to `to`, both included, DST-safe.
- * @internal
- */
-export function inclusiveDayCount(from: Date, to: Date): number {
-  const fromUtc = utcDate(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
-  const toUtc = utcDate(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
-  return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
-}
-
 /**
  * `<lr-date-picker>` — an inline month-grid calendar for picking a single date
  * or a date range. Mirrors the core `<wa-date-picker>` API under `lr-`.
@@ -349,6 +257,8 @@ export function inclusiveDayCount(from: Date, to: Date): number {
  * navigation stay within the supported ISO years 0000–9999.
  *
  * @customElement lr-date-picker
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event {Event} change - The user committed a value. Bubbling, composed, and non-cancelable.
  * @event {InputEvent} input - The value changed during interaction (range: after the first
  *   click). Bubbling, composed, and non-cancelable.
@@ -1017,7 +927,11 @@ const active = activeElementIn(this.renderRoot as ShadowRoot);
     if (next !== this.value) this.committedValue = next;
     this.value = next;
     dispatchNativeInputEvent(this);
-    if (fire) dispatchNativeEvent(this, 'change');
+    this.emit('lr-input', { value: next });
+    if (fire) {
+      dispatchNativeEvent(this, 'change');
+      this.emit('lr-change', { value: next });
+    }
   }
 
   private selectDate(date: Date): void {

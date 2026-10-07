@@ -1,3 +1,5 @@
+import { flattenedParentElement } from './composed-tree.js';
+
 /**
  * Reads `activeElement` off a shadow root (or document) without letting a throwing getter escape.
  *
@@ -59,9 +61,5 @@ export function deepActiveElementIn(
 
 /** Returns an element's composed parent, crossing assigned slots and shadow-root hosts. */
 export function composedParentElement(element: Element): Element | null {
-  if (element.assignedSlot) return element.assignedSlot;
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode() as Document | ShadowRoot;
-  const host = 'host' in root ? root.host : null;
-  return host?.nodeType === 1 ? host : null;
+  return flattenedParentElement(element);
 }

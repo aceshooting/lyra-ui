@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './flow-canvas.js';
@@ -7,6 +8,7 @@ import '../flow-minimap/flow-minimap.js';
 import type { LyraFlowCanvas, FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-canvas.js';
 import { FLOW_PALETTE_MIME_TYPE } from './flow-canvas.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { fitTransform } from '../../../internal/fit-transform.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
@@ -30,17 +32,34 @@ function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
 }
 
-function sinkTexts(doc: Document = document): string[] {
-  const sink = sinkElement(doc);
-  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
-}
-
 function transformCoordinates(value: string): [number, number] {
   const match = value.match(/^translate\(([-\d.]+)px(?:,\s*([-\d.]+)px)?\)$/);
   return match ? [Number(match[1]), Number(match[2] ?? 0)] : [Number.NaN, Number.NaN];
 }
 
 expectLocaleFallback('ar', ['flowCanvasLabel', 'flowCanvasSummary', 'flowEdge', 'flowInputHandle', 'flowOutputHandle', 'noData']);
+
+it('preserves flow fit centering for zero and sub-unit extents', () => {
+  const zoomBounds = { min: 0.25, max: 10 };
+  const view = { width: 200, height: 100 };
+  const zeroExtent = fitTransform(
+    { minX: 5, minY: 10, maxX: 5, maxY: 10 },
+    view,
+    0,
+    zoomBounds,
+    { minimumAvailableSize: 0, invalidZoomFallback: 1, centerWithMinimumExtent: true },
+  );
+  expect(zeroExtent).to.deep.equal({ x: 45, y: -55, zoom: 10 });
+
+  const subUnitExtent = fitTransform(
+    { minX: 2, minY: 3, maxX: 2.25, maxY: 3.5 },
+    view,
+    0,
+    zoomBounds,
+    { minimumAvailableSize: 0, invalidZoomFallback: 1, centerWithMinimumExtent: true },
+  );
+  expect(subUnitExtent).to.deep.equal({ x: 25, y: 15, zoom: 10 });
+});
 
 it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid bounds', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
@@ -232,7 +251,7 @@ it('re-targets announcements to the adopted owner document', async () => {
       announcer: { announce(text: string, options: { force: true }): void };
     }).announcer.announce('Frame flow update', { force: true });
     expect(sinkElement() === null, 'the original document must release its sink').to.be.true;
-    expect(sinkTexts(frameDocument)).to.deep.equal(['Frame flow update']);
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(['Frame flow update']);
   } finally {
     el.remove();
     iframe.remove();

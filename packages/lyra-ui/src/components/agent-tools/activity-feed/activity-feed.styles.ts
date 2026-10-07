@@ -1,3 +1,4 @@
+import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -41,18 +42,10 @@ export const styles = css`
     background: transparent;
   }
   [part="header"] {
-    display: flex;
-    align-items: center;
-    gap: var(--lr-space-xs);
-    inline-size: 100%;
+    ${disclosureHeader}
+
     box-sizing: border-box;
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border: none;
-    background: none;
-    color: var(--lr-color-text);
-    font: inherit;
-    text-align: start;
-    cursor: pointer;
+
   }
   [part="header"]:hover {
     background: var(--lr-color-brand-quiet);
@@ -139,6 +132,7 @@ export const styles = css`
     display: none;
   }
   lr-virtual-list {
+    --lr-virtual-list-row-link-color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));
     display: block;
     inline-size: 100%;
     block-size: var(
@@ -211,8 +205,8 @@ export const styles = css`
      so without this rule a returned anchor computes to the UA default link blue. At or above
      virtualize-at the same template instantiates inside lr-virtual-list's OWN shadow root instead
      (::part() takes no descendant combinator, so this selector cannot reach across that second
-     boundary either) -- that twin lives in virtual-list.styles.ts next to the identical
-     lr-thread-list row-excerpt precedent. :where() keeps specificity at zero so an inline style on
+     boundary either) -- the generic opt-in link hook lives in virtual-list.styles.ts.
+     :where() keeps specificity at zero so an inline style on
      the callback's own returned anchor still wins. */
   [part="entry-text"] a:where(:any-link) {
     color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));

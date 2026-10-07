@@ -99,6 +99,29 @@ test('applies raw-value policy to shared internal styles outside token definitio
   }
 });
 
+test('allows only the shared container-query threshold definition to use raw dimensions', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lyra-style-policy-'));
+  try {
+    write(
+      root,
+      'src/internal/container-breakpoints.styles.ts',
+      "export const compact = css`(inline-size < 20rem)`;\n"
+    );
+    assert.equal(run(root).status, 0);
+
+    write(
+      root,
+      'src/internal/policy-probe.styles.ts',
+      "export const styles = css`\n:host { margin-inline-start: 12px; }\n`;\n"
+    );
+    const result = run(root);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /src\/internal\/policy-probe\.styles\.ts:2: raw dimension literal/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('rejects documented CSS inputs declared by a component while accepting private defaults', () => {
   const root = mkdtempSync(join(tmpdir(), 'lyra-style-policy-'));
   try {

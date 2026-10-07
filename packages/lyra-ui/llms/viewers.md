@@ -397,11 +397,14 @@ for the native download action's hover and pressed backgrounds.
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
-`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`), which installs
+`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
+`dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
+`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
-registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all nine at once, for
+registers. `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer-kinds.js`
+imports and re-exports all built-in kinds at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
 individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
 A lazy registration's declared capabilities apply unless its loaded definition declares its own.
@@ -471,6 +474,19 @@ Converted markup then passes through the passive-document profile: anchors, form
 custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
 attributes are removed, and an `<a>` itself never remains. Images render only inline base64 GIF,
 JPEG, PNG, or WebP data; same-document SVG fragment references may remain.
+DOCX admission now shares the editor's ZIP checks: input and each expanded entry are capped at
+16 MiB, with at most 2,048 entries, 64 MiB total expansion, 250,000 XML nodes, and XML depth 128.
+The tighter entry and expansion ceilings can reject documents that this viewer previously opened.
+The shared `@aceshooting/lyra-ui/utils/docx-zip-admission.js` route exposes the ZIP metadata
+boundary to integrations that process DOCX bytes. `inspectDocxZip` checks archive structure,
+entry names, declared sizes, and the ZIP byte/count ceilings before expansion; by default it also
+requires the package content-types, relationships, and main document parts. Pass `false` for
+`requireParts` only when validating a partial ZIP independently of DOCX document admission.
+It returns entry metadata rather than expanded content. `validDocxZipName` checks one entry path;
+it does not validate an archive. Explicit admission rejections throw `DocxZipAdmissionError` with
+code `invalid-document`, `resource-limit`, or `aborted`; malformed UTF-8 may throw `TypeError`
+from the fatal decoder.
+`DOCX_ZIP_LIMITS` publishes the shared input, entry, expansion, XML, node, and depth ceilings.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate
@@ -613,10 +629,10 @@ localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
 an exact DOM `id` lookup: Lyra generates no ids for message headers or a plain-text body, while an
 HTML message can resolve only an id retained from its sanitized body. Without such an id the jump
-reports `found: false`; text-quote anchors work across all rendered message text.
+reports `found: false`; text-quote anchors use the rendered message body.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
-`scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
+`scrollToAnchor()` operate on the rendered message body and emit the shared search/anchor events.
 
 **Events:**
 
@@ -625,7 +641,7 @@ reports `found: false`; text-quote anchors work across all rendered message text
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
   replaces the mutable `Uint8Array` event field.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
-  whenever rendered-message search state changes.
+  whenever message-body search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:
@@ -1188,10 +1204,12 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. Up to 100
-PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
-malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
-budget is a resource-limit error instead.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+`lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
+`detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
+`severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial table remains rendered.
+Exceeding that diagnostic budget is a resource-limit error. Valid single-column files do not
+generate an undetectable-delimiter diagnostic.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
@@ -1593,9 +1611,12 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
-100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
-resource-limit error instead.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+`lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
+`detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
+`severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial grid remains rendered.
+Exceeding that diagnostic budget is a resource-limit error. Valid single-column files do not
+generate an undetectable-delimiter diagnostic.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
@@ -2070,7 +2091,8 @@ boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is a
 `[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
 part of this structural tree viewer's event contract because it installs no selection binding.
 
-**CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
+**CSS parts:** `base`, `limit` (notice when the expanded tree exceeds the rendered-row limit),
+`toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
 the resolved anchor target, `data-match`, `data-active-match`, `data-highlight` carrying a resolved
 highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`data-active` while a
@@ -2136,7 +2158,10 @@ await viewer.search(query);
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
 tree. A collapsed element's child count includes element, text, comment, CDATA, and processing-
-instruction children rather than only element descendants.
+instruction children rather than only element descendants. Expanded rendering stops after 5,000
+rows and shows a localized `limit` notice; collapse state and the parsed document remain intact.
+Search still counts the complete parsed document, while a `node-path` outside the rendered window
+reports `found: false` until it can be rendered.
 
 ## `lr-document-compare`
 
@@ -2550,6 +2575,12 @@ These named interfaces and helper signatures are available to typed integrations
   `registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `snapshotLyraDocumentRendererPayload(value: LyraDocumentRendererPayload): LyraDocumentRendererPayload`
+
+- **`utils-docx-zip-admission-contracts`** — Shared DOCX ZIP admission metadata and validation.
+  Import: `@aceshooting/lyra-ui/utils/docx-zip-admission.js`.
+  `DocxZipEntry { name: string; size: number; packed: number; crc: number; method: number; flags: number; offset: number; start: number; end: number }`
+  `inspectDocxZip(bytes: Uint8Array, signal?: AbortSignal, requireParts?: boolean): DocxZipEntry[]`
+  `validDocxZipName(name: string): boolean`
 
 - **`components-viewers-docx-viewer-docx-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/lr-docx-viewer.js`.

@@ -9,6 +9,7 @@ import { getListFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
@@ -105,7 +106,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
   /** Optional display name for the source document. It names `[part='base']` when host

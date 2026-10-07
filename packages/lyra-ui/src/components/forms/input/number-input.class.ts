@@ -1,7 +1,5 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { sizes } from '../../../internal/sizes.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
   presenceTrueDefaultBooleanConverter,
@@ -10,7 +8,6 @@ import { LyraInput } from './input.class.js';
 import type { LyraInputEventMap } from './input-shared.js';
 import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { styles as inputStyles } from './input.styles.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import type { LyraFormValidator } from '../form-validator.js';
@@ -84,7 +81,7 @@ export class LyraNumberInput extends LyraInput {
   static override get validators(): LyraFormValidator<LyraInput>[] {
     return super.validators;
   }
-  static override styles = [LyraElement.styles, sizes, inputStyles, numberInputStyles];
+  static override styles = [...LyraInput.styles, numberInputStyles];
 
   protected override get inputWrapperParts(): string {
     return `${super.inputWrapperParts} number-input`;
@@ -116,11 +113,6 @@ export class LyraNumberInput extends LyraInput {
     super.connectedCallback();
     this.type = 'number';
     this.syncMappedStates();
-  }
-
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (changed.has('value')) this.syncMappedStates();
   }
 
   private syncMappedStates(): void {

@@ -2,11 +2,11 @@ import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { fitTransform } from '../../../internal/fit-transform.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
-  acquireAnnouncementSink,
+  AnnouncementSinkController,
   Announcer,
-  type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -16,6 +16,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { isNativeTopLayerElement } from '../../../internal/fixed-containing-block.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
@@ -109,7 +110,15 @@ interface DragEdgeRef {
 
 export interface LyraFlowCanvasEventMap {
   'lr-node-activate': CustomEvent<Readonly<{ nodeId: string }>>;
-  'lr-edge-activate': CustomEvent<Readonly<{ edgeId: string; source: string; target: string }>>;
+  'lr-edge-activate': CustomEvent<Readonly<{
+    edgeId: string;
+    sourceNodeId: string;
+    targetNodeId: string;
+    /** @deprecated Use `sourceNodeId`; it carries the same node id. */
+    source: string;
+    /** @deprecated Use `targetNodeId`; it carries the same node id. */
+    target: string;
+  }>>;
   'lr-selection-change': CustomEvent<
     Readonly<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }>
   >;
@@ -164,12 +173,6 @@ interface OwnedAnimationFrame {
   owner: Window;
 }
 
-function isHtmlElement(value: EventTarget): value is HTMLElement {
-  if (typeof value !== 'object' || value === null) return false;
-  const element = value as Element;
-  return element.nodeType === 1 && element.namespaceURI === 'http://www.w3.org/1999/xhtml';
-}
-
 /**
  * `<lr-flow-canvas>` — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws
  * SVG edges between their handles, runs a shared layered auto-layout for unpositioned nodes, and owns
@@ -213,7 +216,8 @@ function isHtmlElement(value: EventTarget): value is HTMLElement {
  * @slot bottom-start - Floating start-side content in the wrapping bottom overlay rail (e.g. `lr-flow-controls`).
  * @slot bottom-end - Floating end-side content in the wrapping bottom overlay rail (e.g. `lr-flow-minimap`).
  * @event lr-node-activate - `detail: { nodeId }`.
- * @event lr-edge-activate - `detail: { edgeId, source, target }`.
+ * @event lr-edge-activate - `detail: { edgeId, sourceNodeId, targetNodeId, source, target }`.
+ *   `sourceNodeId` and `targetNodeId` are canonical; `source` and `target` remain deprecated aliases.
  * @event lr-selection-change - `detail: { selectedNodeIds, selectedEdgeIds }`.
  * @event lr-node-move - `detail: { nodeId, position, previous }`.
  * @event lr-connect - `detail: { source, target, sourceHandle, targetHandle }`.
@@ -530,11 +534,11 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     danger: nextId('flow-canvas-arrow-danger'),
   };
   private readonly liveRegionId = nextId('flow-canvas-live');
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly announcer = new Announcer({
     onFlush: (text) => {
       this.mirrorAnnouncement(text);
-      this.announcementSink?.announce(text);
+      this.announcements.announcePolite(text);
     },
   });
   @state() private activeItemIndex = 0;
@@ -622,7 +626,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const ownerWindow = this.ownerDocument.defaultView;
     this.connectedWindow = ownerWindow ?? undefined;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    this.syncAnnouncementSink();
     const ResizeObserverCtor = ownerWindow?.ResizeObserver;
     this.resizeObserver = ResizeObserverCtor
       ? new ResizeObserverCtor((entries) => this.onNodesResized(entries))
@@ -648,7 +651,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.hasConnectedLayoutBaseline = false;
     this.layoutLimitAnnouncementPending = false;
     this.announcer.cancel();
-    this.releaseAnnouncementSink();
     this.mirrorAnnouncement('');
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -698,6 +700,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.announcements.adopted();
     this.resetAuthoredCardObserver();
     this.restoreAuthoredCardSlots();
     this.hasConnectedLayoutBaseline = false;
@@ -723,24 +726,6 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private mirrorAnnouncement(text: string): void {
     (this.renderRoot as ParentNode | undefined)?.querySelector('[part="live-region"]')?.replaceChildren(text);
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   private resetAuthoredCardObserver(): void {
@@ -1377,13 +1362,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
     const viewW = rect.width;
     const viewH = rect.height;
-    const contentW = Math.max(1, maxX - minX);
-    const contentH = Math.max(1, maxY - minY);
-    const fitZoom = Math.min((viewW - padding * 2) / contentW, (viewH - padding * 2) / contentH);
-    const zoom = this.clampZoom(Number.isFinite(fitZoom) && fitZoom > 0 ? fitZoom : 1);
-    this.panX = viewW / 2 - (minX + contentW / 2) * zoom;
-    this.panY = viewH / 2 - (minY + contentH / 2) * zoom;
-    this.zoomLevel = zoom;
+    const transform = fitTransform(
+      { minX, minY, maxX, maxY },
+      { width: viewW, height: viewH },
+      padding,
+      this.effectiveZoomBounds,
+      { minimumAvailableSize: 0, invalidZoomFallback: 1, centerWithMinimumExtent: true },
+    );
+    this.panX = transform.x;
+    this.panY = transform.y;
+    this.zoomLevel = transform.zoom;
     this.applyWorldTransform();
     this.scheduleViewportChange();
     return true;
@@ -1960,7 +1948,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onEdgeActivate(edge: FlowEdge, additive: boolean): void {
     this.emit(
       'lr-edge-activate',
-      Object.freeze({ edgeId: edge.id, source: edge.source, target: edge.target }),
+      Object.freeze({
+        edgeId: edge.id,
+        sourceNodeId: edge.source,
+        targetNodeId: edge.target,
+        source: edge.source,
+        target: edge.target,
+      }),
     );
     this.applySelection('edge', edge.id, additive);
   }

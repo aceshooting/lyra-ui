@@ -1,20 +1,9 @@
+import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './model-select.js';
 import type { LyraModelSelect } from './model-select.js';
 
 const CATALOG = ['gpt-4o', 'claude-opus'];
-
-/** Resolves what `expression` computes to *inside this component's shadow root*, where the `--lr-*`
- *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none of them). */
-function resolvedInShadow(el: LyraModelSelect, expression: string): string {
-  const probe = document.createElement('span');
-  probe.style.position = 'absolute';
-  probe.style.maxInlineSize = expression;
-  el.shadowRoot!.append(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
 
 function trigger(el: LyraModelSelect): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;

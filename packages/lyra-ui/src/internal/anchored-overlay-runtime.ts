@@ -156,10 +156,79 @@ export async function waitForDeferredPlacement(
 ): Promise<boolean> {
   let operation: DeferredOperationHandle | undefined;
   while ((operation = current())) {
-    if (await operation.ready) return true;
-    if (operation === current()) return false;
+    const positioned = await operation.ready;
+    // A superseded placement cannot satisfy a newer open, even when its first onPlaced callback
+    // settled successfully before the waiting transition resumed.
+    if (operation !== current()) continue;
+    if (positioned) return true;
+    return false;
   }
   return true;
+}
+
+/** Waits for the next paint and the popup's current animations without settling a superseded open. */
+export async function awaitPopupAnimations(
+  host: HTMLElement,
+  popup: () => Element | null,
+  isCurrent: () => boolean,
+): Promise<boolean> {
+  const ownerDocument = host.ownerDocument;
+  if (!isCurrent()) return false;
+  if (!host.isConnected) return true;
+  const view = ownerDocument.defaultView;
+  if (view) await new Promise<void>(resolve => view.requestAnimationFrame(() => resolve()));
+  if (host.ownerDocument !== ownerDocument || !isCurrent()) return false;
+  const animations = popup()?.getAnimations({ subtree: true }) ?? [];
+  await Promise.all(animations.map(animation => animation.finished.catch(() => undefined)));
+  return host.ownerDocument === ownerDocument && isCurrent();
+}
+
+/** Shared show/hide ordering; hosts keep their own veto, placement-failure and event policies. */
+export async function settlePopupTransition(options: {
+  host: HTMLElement & { readonly updateComplete: Promise<unknown> };
+  popup: () => Element | null;
+  isCurrent: () => boolean;
+  waitForPosition?: () => Promise<boolean>;
+  conceal?: () => void;
+  onSettled: () => void;
+}): Promise<void> {
+  const { host, isCurrent } = options;
+  const ownerDocument = host.ownerDocument;
+  const current = (): boolean => host.ownerDocument === ownerDocument && isCurrent();
+  await host.updateComplete;
+  if (!current()) return;
+  if (options.waitForPosition) {
+    if (!await options.waitForPosition() || !current()) return;
+    await host.updateComplete;
+    if (!current()) return;
+  }
+  if (!await awaitPopupAnimations(host, options.popup, current)) return;
+  if (options.conceal) {
+    options.conceal();
+    await host.updateComplete;
+    if (!current()) return;
+  }
+  options.onSettled();
+}
+
+/** Resolves superseded show/hide callers without emitting a stale lifecycle event. */
+export class PopupTransitionWaiters<EventName extends string> {
+  readonly #waiters = new Map<EventName, Set<() => void>>();
+
+  wait(event: EventName): Promise<void> {
+    return new Promise<void>(resolve => {
+      const waiters = this.#waiters.get(event) ?? new Set<() => void>();
+      waiters.add(resolve);
+      this.#waiters.set(event, waiters);
+    });
+  }
+
+  resolve(event: EventName): void {
+    const waiters = this.#waiters.get(event);
+    if (!waiters) return;
+    this.#waiters.delete(event);
+    for (const resolve of waiters) resolve();
+  }
 }
 
 /** Starts raw-rect tracking after the shared runtime chunk resolves and remains disposable. */

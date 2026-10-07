@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
@@ -272,6 +273,17 @@ it("formats the elapsed timer with the effective locale’s digits and zero-padd
   expect(el.shadowRoot!.querySelector('[part="timer"]')?.textContent).to.equal(
     expected
   );
+});
+
+it('formats elapsed time with an hour field when the recording exceeds an hour', async () => {
+  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+  const runtime = el as unknown as { _state: 'recording'; elapsedMs: number };
+  runtime._state = 'recording';
+  runtime.elapsedMs = 3_661_000;
+  el.requestUpdate();
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="timer"]')?.textContent).to.equal('1:01:01');
 });
 
 it("forwards focus/blur to the trigger and exposes state as a true getter-only property", async () => {
@@ -2393,18 +2405,6 @@ it("preserves an explicitly empty host aria-label by attribute presence", async 
 });
 
 describe("recording-state cssprop escape hatch", () => {
-  function resolvedInShadow(
-    el: LyraPushToTalk,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   // The recording tint keys purely on the `data-state` attribute, so setting it directly is enough
   // to activate the `[part='trigger']` treatment under test (the internal lifecycle sets the same

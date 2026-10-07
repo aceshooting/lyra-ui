@@ -21,6 +21,18 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
+it('caps top-level and nested tasks within one render budget and shows the omitted tail', async () => {
+  const children: TaskItem[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `child-${index}`, label: `Child ${index}`, status: 'pending',
+  }));
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .items=${[{ id: 'parent', label: 'Parent', status: 'running', children }]}></lr-task-list>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('Only the first 500 tasks');
+  expect(el.shadowRoot!.querySelector('[data-id="child-499"]') === null).to.equal(true);
+});
+
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('ar-EG', [
   'taskListLabel',

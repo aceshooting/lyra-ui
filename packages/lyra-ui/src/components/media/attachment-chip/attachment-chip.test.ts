@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -21,11 +22,6 @@ const COMPACT: readonly DeprecatedUsage[] = [
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = sinkElement(politeness);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 function makeFile(name: string, type: string, sizeBytes = 1): File {
@@ -1115,7 +1111,6 @@ describe('thumbnailOnly', () => {
     const meta = el.shadowRoot!.querySelector('[part="meta"]') as HTMLElement;
     expect(getComputedStyle(meta).display).to.not.equal('none');
   });
-
 
   it('shows [part=meta] again when size changes from small to medium', async () => {
     await captureDeprecationWarnings(COMPACT, async () => {

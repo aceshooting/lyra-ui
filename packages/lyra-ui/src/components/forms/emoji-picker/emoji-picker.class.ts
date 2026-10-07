@@ -10,8 +10,7 @@ import {
   type ResolvedAriaRelationshipLease,
 } from '../../../internal/aria-controls.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import {
   dispatchNativeEvent,
@@ -383,7 +382,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** Live region for the peer-load failure. A shadow-root `role="alert"` is unreliable, so the
    *  message goes through the document's shared light-DOM assertive sink -- the same channel
    *  `<lr-combobox>` uses for its own `sourceFailed` announcement. */
-  private peerErrorAnnouncementSink?: AnnouncementSink;
+  private readonly peerErrorAnnouncements = new AnnouncementSinkController(this);
 
   /** The full, ungrouped data set to search/render. Consumer-supplied — this component ships no
    *  emoji data of its own. Leaving the property unset allows the optional convenience loader to
@@ -1196,30 +1195,18 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
     super.disconnectedCallback();
-    this.releasePeerErrorAnnouncementSink();
     this.resetOwnerRealmResources();
   }
 
   /** Announces the peer-load failure once, through the owning document's shared assertive sink. */
   private announcePeerLoadFailure(): void {
     if (!this.isConnected) return;
-    if (this.peerErrorAnnouncementSink?.element.ownerDocument !== this.ownerDocument) {
-      this.releasePeerErrorAnnouncementSink();
-      this.peerErrorAnnouncementSink = acquireAnnouncementSink('assertive', {
-        document: this.ownerDocument,
-        source: this,
-      });
-    }
-    this.peerErrorAnnouncementSink?.announce(this.localize('emojiPickerLoadError'));
-  }
-
-  private releasePeerErrorAnnouncementSink(): void {
-    this.peerErrorAnnouncementSink?.release();
-    this.peerErrorAnnouncementSink = undefined;
+    this.peerErrorAnnouncements.announceAssertive(this.localize('emojiPickerLoadError'));
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.peerErrorAnnouncements.adopted();
     this.releaseExternalDescription();
     this.resetOwnerRealmResources();
     if (this.isConnected && this.hasUpdated) this.syncExternalDescription();

@@ -617,3 +617,8 @@ export const UnavailableSwatch: Story = {
     ></lr-swatch-picker>
   `,
 };
+
+export const LiveSelectedState: StoryObj = {
+  render: () => html`<style>lr-swatch-picker.live-state:state(selected) { outline: var(--lr-focus-ring-width) solid var(--lr-color-brand); }</style>
+    <lr-swatch-picker class="live-state" aria-label="Accent" .items=${accents()} value="blue"></lr-swatch-picker>`,
+};

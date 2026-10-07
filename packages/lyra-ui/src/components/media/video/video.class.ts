@@ -5,11 +5,12 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime } from '../media-time.js';
+import { formatMediaTime } from '../../../internal/media-time.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE,
   MIN_NATIVE_PLAYBACK_RATE,
   NATIVE_MEDIA_RELAY_EVENTS,
+  type NativeMediaPreferences,
   NativeMediaController,
   canExitFullscreen,
   canRequestFullscreen,
@@ -300,6 +301,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @query('[part~="video-wrapper"]') private wrapperEl?: HTMLElement;
 
   private readonly mediaController = new NativeMediaController(this, {
+    selectedTrackMode: 'hidden',
     // 'timeupdate' is deliberately excluded from the generic auto-relay: seek() fires an
     // immediate, synchronous host 'timeupdate' of its own (below), and letting the controller's
     // generic relay ALSO fire once the real native 'timeupdate' the HTML seeking algorithm queues
@@ -323,7 +325,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private captionListeners: Array<{ track: TextTrack; listener: EventListener }> = [];
   private lastSourceSignature?: string;
   private listenerDocument?: Document;
-  private selectedCaption?: TextTrack;
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (name === 'currenttime' || name === 'current-time') {
@@ -501,7 +502,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (!force && signature === this.lastSourceSignature) return;
     this.lastSourceSignature = signature;
     this.visibilityPaused = false;
-    this.selectedCaption = undefined;
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
@@ -547,6 +547,35 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.visibilityPaused = false;
     this.currentTime = 0;
     this.syncSources(true);
+  }
+
+  /** @internal Releases native resources through the controller's source generation. */
+  unloadMedia(): void {
+    const native = this.videoEl;
+    if (!native || (!native.hasAttribute('src') && ![...native.children].some(
+      (child) => child.localName === 'source' || child.localName === 'track',
+    ))) return;
+    this.visibilityPaused = false;
+    this.mediaController.unload();
+    this.currentTime = 0;
+    this.lastSourceSignature = undefined;
+    this.unbindCaptionTracks();
+    this.captionTracks = [];
+    this.captionText = '';
+  }
+
+  /** @internal Captures the same validated native preferences used for reconnects. */
+  captureMediaPreferences(native: HTMLVideoElement | undefined = this.videoEl): NativeMediaPreferences {
+    return this.mediaController.captureUserPreferences(native);
+  }
+
+  /** @internal Applies playlist preferences through the controller and synchronizes host controls. */
+  applyMediaPreferences(preferences: Readonly<NativeMediaPreferences>): void {
+    this.mediaController.applyUserPreferences(preferences);
+    const state = this.getState();
+    this.volume = state.volume;
+    this.muted = state.muted;
+    this.playbackRate = state.playbackRate;
   }
 
   /** Seeks to a finite time, clamped to the known duration. */
@@ -806,10 +835,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     for (const track of selectable) {
       if (track.mode === 'showing') track.mode = 'hidden';
     }
-    // A reconnect re-applies the shared controller's preference, which only recognizes `showing`.
-    if (this.selectedCaption && selectable.every((track) => track.mode === 'disabled')) {
-      this.selectedCaption.mode = 'hidden';
-    }
     this.captionTracks = selectable.map((track) => ({
       track,
       label: track.label || track.language || this.localize('videoCaptions'),
@@ -837,7 +862,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   private onCaptionChange = (event: Event): void => {
     const selected = Number((event.currentTarget as HTMLSelectElement).value);
-    this.selectedCaption = this.captionTracks[selected]?.track;
     this.captionTracks.forEach(({ track }, index) => {
       // `hidden` keeps cue activity available to the custom overlay without asking the user agent
       // to paint the same captions a second time.

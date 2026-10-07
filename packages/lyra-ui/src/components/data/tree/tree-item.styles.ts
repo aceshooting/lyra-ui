@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -15,8 +16,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   :host(:focus-visible) [part='row'] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* no-hover-state: the dynamically named [part~='item'] ancestor owns the row's hover and active
      fills below, and this row explicitly inherits that background. itemPartNames() assembles the
@@ -92,8 +92,7 @@ export const styles = css`
     font: inherit;
     inline-size: var(--lr-size-1-75rem);
     block-size: var(--lr-size-1-75rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs);
     display: inline-flex;
     align-items: center;
@@ -172,8 +171,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
     flex: 0 0 auto;
   }

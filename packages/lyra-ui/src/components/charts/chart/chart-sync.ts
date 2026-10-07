@@ -1,3 +1,5 @@
+import { adoptChartSyncStyles } from './chart-sync-style-adoption.js';
+
 /** Peer-neutral, document-scoped coordination for categorical chart interaction. */
 export interface ChartSyncPresentation {
   readonly container: HTMLElement;
@@ -22,6 +24,7 @@ const documents = new WeakMap<Document, Map<string, ChartSyncGroup>>();
 
 /** Only adapters resolve data eligibility, formatting and renderer geometry. */
 export class ChartSyncController {
+  private releaseStyles?: () => void;
   private document?: Document;
   private groupName = '';
   private group?: ChartSyncGroup;
@@ -68,6 +71,7 @@ export class ChartSyncController {
       this.scrollTargets = [...roots];
       for (const root of this.scrollTargets) root.addEventListener('scroll', this.onScroll, true);
     }
+    this.releaseStyles ??= adoptChartSyncStyles(this.host);
     if (invalidateOwner && this.group?.active?.owner === this) this.clear();
     this.receive();
   }
@@ -93,6 +97,8 @@ export class ChartSyncController {
   }
 
   disconnect(): void {
+    this.releaseStyles?.();
+    this.releaseStyles = undefined;
     if (!this.group) { this.hide(false); return; }
     this.clear();
     const group = this.group;

@@ -4,6 +4,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { styles } from './suggestion-chips.styles.js';
 import {
   applyComposedFocusRepair,
@@ -11,6 +12,7 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { RovingToolbarController } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings.generated.js';
@@ -93,6 +95,9 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   protected static override readonly ownedCollectionProperties = Object.freeze(['suggestions']);
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="group"]'),
+  );
 
   /** The clone-owned suggestions to render, in order. `suggestionId` must be unique and nonempty;
    *  the first valid occurrence wins. Empty renders nothing at all. Reassign a new array after
@@ -107,6 +112,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   @property() label?: string;
 
   @state() private activeIndex = 0;
+  private readonly rovingToolbar = new RovingToolbarController();
   private pendingFocus?: PendingSuggestionFocus;
   private focusRepairGeneration = 0;
 
@@ -147,6 +153,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.focusRepairGeneration++;
     this.pendingFocus = undefined;
   }
@@ -241,52 +248,25 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     return -1;
   }
 
-  /** Steps `from` by one chip in `direction`, wrapping around while skipping a disabled chip --
-   *  the wrap-around analogue of `stepEnabledIndex()` in `internal/catalog-picker.ts`. Returns `-1`
-   *  only when every suggestion is disabled. Unset regression: with no disabled suggestion, this
-   *  is the same `(from + direction + n) % n` the arrow-key handler always computed. */
-  private stepEnabledIndex(
-    suggestions: readonly LyraChatSuggestion[],
-    from: number,
-    direction: 1 | -1,
-  ): number {
-    const n = suggestions.length;
-    if (!n) return -1;
-    let index = from;
-    for (let steps = 0; steps < n; steps += 1) {
-      index = (index + direction + n) % n;
-      if (!this.isSuggestionDisabled(suggestions[index])) return index;
-    }
-    return -1;
-  }
-
-  private firstEnabledIndex(suggestions: readonly LyraChatSuggestion[]): number {
-    return suggestions.findIndex((suggestion) => !this.isSuggestionDisabled(suggestion));
-  }
-
-  private lastEnabledIndex(suggestions: readonly LyraChatSuggestion[]): number {
-    for (let index = suggestions.length - 1; index >= 0; index -= 1) {
-      if (!this.isSuggestionDisabled(suggestions[index])) return index;
-    }
-    return -1;
-  }
-
   private stopEvent = (e: Event): void => e.stopPropagation();
 
   private onKeyDown = (e: KeyboardEvent): void => {
     const suggestions = this.effectiveSuggestions;
-    const n = suggestions.length;
-    if (n === 0) return;
-    const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    let target: number;
-    if (e.key === forwardKey) target = this.stepEnabledIndex(suggestions, this.activeIndex, 1);
-    else if (e.key === backwardKey) target = this.stepEnabledIndex(suggestions, this.activeIndex, -1);
-    else if (e.key === 'Home') target = this.firstEnabledIndex(suggestions);
-    else if (e.key === 'End') target = this.lastEnabledIndex(suggestions);
-    else return;
+    const target = this.rovingToolbar.move(
+      e,
+      suggestions.length,
+      this.activeIndex,
+      this.effectiveDirection,
+      (index) => !this.isSuggestionDisabled(suggestions[index]),
+    );
+    if (target === null) {
+      const navigationKey = e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End';
+      if (navigationKey && suggestions.length > 0 && suggestions.every((item) => this.isSuggestionDisabled(item))) {
+        e.preventDefault();
+      }
+      return;
+    }
     e.preventDefault();
-    if (target < 0) return;
     this.activeIndex = target;
     this.focusChip(target);
   };

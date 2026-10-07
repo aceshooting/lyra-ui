@@ -40,6 +40,8 @@ export interface LyraScrollerEventMap {
  * @csspart control - Shared part on both `previous` and `next`.
  * @csspart previous-glyph - The chevron glyph inside `previous`, mirrored under RTL.
  * @csspart next-glyph - The chevron glyph inside `next`, mirrored under RTL.
+ * @cssprop [--lr-scroller-control-hover-bg=var(--lr-color-brand-quiet)] - Previous/next hover fill.
+ * @cssprop [--lr-scroller-control-active-bg=color-mix(in oklab, var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Previous/next pressed fill.
  * @cssprop [--lr-scroller-control-size=var(--lr-size-2rem)] - Control size.
  * @cssprop [--lr-scroller-min-block-size=var(--lr-size-10rem)] - Minimum vertical scroller size.
  * @cssprop [--shadow-color=var(--lr-color-surface)] - Base color of each edge shadow.

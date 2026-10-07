@@ -11,7 +11,6 @@ import {
 } from '../../../internal/text-viewer-target.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { chevronIcon } from '../../../internal/icons.js';
 import {
   adaptPptxViewer,
   getPptxRenderer,
@@ -29,6 +28,7 @@ import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../document-viewer/anchors.js';
 import { textQuoteContextScore } from '../document-viewer/anchors.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
+import { PageViewerSnapshotController } from '../page-rail/page-viewer-snapshot.js';
 import type {
   LyraPageViewerSnapshot,
   LyraPageViewerStateChangeDetail,
@@ -36,6 +36,7 @@ import type {
 } from '../page-rail/page-rail.class.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { renderViewerPagerButton, viewerPagerStyles } from '../viewer-pager.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -142,7 +143,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   // `srOnly` keeps the anchor-target mixin's aria-hidden diagnostic mirror from painting as a
   // visible row under the fidelity notice. The spoken copy lives in the document-level sink.
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerPagerStyles, srOnly, viewerLoadingStyles];
 
   /** URL of the PPTX file. */
   @property() src = '';
@@ -261,17 +262,11 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   private pptxSearchActiveIndex = -1;
   private pptxSearchGeneration = 0;
   private searchHighlight?: PptxSearchHighlightHandle;
-  private pageViewerIdentity = 0;
-  private pageViewerSnapshotValue: LyraPageViewerSnapshot = Object.freeze({
-    identity: 0,
-    status: 'idle',
-    page: 1,
-    pageCount: 0,
-  });
+  private readonly pageViewerState = new PageViewerSnapshotController();
 
   /** Atomic readonly page/count/lifecycle state; `identity` changes for every load transaction. */
   get pageViewerSnapshot(): LyraPageViewerSnapshot {
-    return this.pageViewerSnapshotValue;
+    return this.pageViewerState.value;
   }
   /** Intentionally inert -- `pageViewerSnapshot` is always the atomic state the last load/slide
    *  transaction published. A getter with no setter throws (in strict-mode module code, which
@@ -282,14 +277,14 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     // Deliberate no-op; see getter doc comment above.
   }
 
-  protected textContentRoot(): Element | null {
+  protected override textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="container"]') ?? this.renderRoot.querySelector('[part="base"]');
   }
 
   /** Deck-wide `text-quote`, one-based `page`, and `fragment` ids in the mounted output. */
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['text-quote', 'fragment', 'page'];
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const viewer = this.viewer;
     if (anchor.kind === 'page') {
       const index = anchor.page - 1;
@@ -444,13 +439,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.slideCount = 0;
     this.currentSlideIndex = 0;
     this.page = 1;
-    this.pageViewerIdentity++;
-    this.pageViewerSnapshotValue = Object.freeze({
-      identity: this.pageViewerIdentity,
-      status: 'idle',
-      page: 1,
-      pageCount: 0,
-    });
+    this.pageViewerState.reset();
   }
 
   override adoptedCallback(): void {
@@ -557,24 +546,8 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     status: LyraPageViewerSnapshot['status'],
     pageCount: number,
   ): void {
-    const snapshot: LyraPageViewerSnapshot = Object.freeze({
-      identity: this.pageViewerIdentity,
-      status,
-      page: status === 'ready'
-        ? finiteInteger(this.page, 1, 1, Math.max(1, pageCount))
-        : 1,
-      pageCount: status === 'ready'
-        ? finiteInteger(pageCount, 0, 0, Number.MAX_SAFE_INTEGER)
-        : 0,
-    });
-    const previous = this.pageViewerSnapshotValue;
-    if (
-      previous.identity === snapshot.identity
-      && previous.status === snapshot.status
-      && previous.page === snapshot.page
-      && previous.pageCount === snapshot.pageCount
-    ) return;
-    this.pageViewerSnapshotValue = snapshot;
+    const snapshot = this.pageViewerState.publish(status, finiteInteger(this.page, 1, 1, Math.max(1, pageCount)), finiteInteger(pageCount, 0, 0, Number.MAX_SAFE_INTEGER));
+    if (!snapshot) return;
     if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
   }
 
@@ -714,7 +687,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   private async mount(): Promise<void> {
     this.teardown();
-    this.pageViewerIdentity++;
+    this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
     const generation = this.generation;
     this.slideCount = 0;
@@ -755,7 +728,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (!module || !response.ok) {
       void response.body?.cancel().catch(() => undefined);
       const error = new LyraUserFacingError(
-        this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerRenderError'),
+        this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerMissingLibrary'),
       );
       this.phase = 'error';
       this.errorMessage = error.message;
@@ -815,16 +788,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (this.phase !== 'mounted') return nothing;
     return html`
       <div part="nav" ?hidden=${this.slideCount <= 1}>
-        <button part="previous-button" type="button" aria-label=${this.localize('pptxViewerPreviousSlide')} ?disabled=${this.currentSlideIndex <= 0} @click=${() => this.goToSlide(this.currentSlideIndex - 1)}>
-          <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
-        </button>
+        ${renderViewerPagerButton('previous', this.localize('pptxViewerPreviousSlide'), this.currentSlideIndex <= 0, () => this.goToSlide(this.currentSlideIndex - 1))}
         <span part="slide-count">${this.localize('pptxViewerSlideOf', undefined, {
           current: getNumberFormat(this.effectiveLocale).format(this.currentSlideIndex + 1),
           total: getNumberFormat(this.effectiveLocale).format(this.slideCount),
         })}</span>
-        <button part="next-button" type="button" aria-label=${this.localize('pptxViewerNextSlide')} ?disabled=${this.currentSlideIndex >= this.slideCount - 1} @click=${() => this.goToSlide(this.currentSlideIndex + 1)}>
-          <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
-        </button>
+        ${renderViewerPagerButton('next', this.localize('pptxViewerNextSlide'), this.currentSlideIndex >= this.slideCount - 1, () => this.goToSlide(this.currentSlideIndex + 1))}
       </div>
       <div part="container"></div>
     `;

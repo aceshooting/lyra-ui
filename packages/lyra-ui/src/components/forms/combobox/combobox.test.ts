@@ -1,3 +1,4 @@
+import { measureListboxRow } from '../../../../test/row-style.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
 import { LitElement, type PropertyValues } from "lit";
@@ -272,8 +273,8 @@ it("emits one native input/change pair, in order, when a row changes the selecti
 
   expect(events.map((event) => event.type)).to.deep.equal(["input", "change"]);
   expect(events.map((event) => event.constructor.name)).to.deep.equal([
-    "CustomEvent",
-    "CustomEvent",
+    "Event",
+    "Event",
   ]);
   expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
   expect(events.every((event) => !event.cancelable)).to.be.true;
@@ -300,8 +301,8 @@ it("emits one native input/change pair for keyboard selection", async () => {
 
   expect(events.map((event) => event.type)).to.deep.equal(["input", "change"]);
   expect(events.map((event) => event.constructor.name)).to.deep.equal([
-    "CustomEvent",
-    "CustomEvent",
+    "Event",
+    "Event",
   ]);
 });
 
@@ -319,8 +320,8 @@ it("emits one native input/change pair for both adding and toggling off a multip
   ).click();
   expect(events.map((event) => event.type)).to.deep.equal(["input", "change"]);
   expect(events.map((event) => event.constructor.name)).to.deep.equal([
-    "CustomEvent",
-    "CustomEvent",
+    "Event",
+    "Event",
   ]);
 
   events.length = 0;
@@ -330,8 +331,8 @@ it("emits one native input/change pair for both adding and toggling off a multip
   ).click();
   expect(events.map((event) => event.type)).to.deep.equal(["input", "change"]);
   expect(events.map((event) => event.constructor.name)).to.deep.equal([
-    "CustomEvent",
-    "CustomEvent",
+    "Event",
+    "Event",
   ]);
 });
 
@@ -352,8 +353,8 @@ it("emits the same native input/change pair when a selected tag is removed", asy
 
   expect(events.map((event) => event.type)).to.deep.equal(["input", "change"]);
   expect(events.map((event) => event.constructor.name)).to.deep.equal([
-    "CustomEvent",
-    "CustomEvent",
+    "Event",
+    "Event",
   ]);
   expect(events.every((event) => !event.cancelable)).to.be.true;
 });
@@ -433,7 +434,7 @@ it("emits one input/change pair and one lr-clear event when cleared", async () =
   ]);
   expect(
     events.slice(0, 2).map((event) => event.constructor.name)
-  ).to.deep.equal(["CustomEvent", "CustomEvent"]);
+  ).to.deep.equal(["Event", "Event"]);
   expect(events.slice(0, 2).every((event) => !event.cancelable)).to.be.true;
 });
 
@@ -669,13 +670,13 @@ it('surfaces each newly committed row\'s data by reference in the change/input e
   await el.updateComplete;
 
   const seen: unknown[] = [];
-  for (const type of ['input', 'change', 'lr-change']) {
+  for (const type of ['lr-input', 'lr-change']) {
     el.addEventListener(type, (e) => seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data));
   }
   (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
   await el.updateComplete;
 
-  expect(seen.length).to.equal(3);
+  expect(seen.length).to.equal(2);
   for (const data of seen) {
     expect((data as unknown[])[0]).to.equal(payload);
   }
@@ -694,7 +695,7 @@ it('keeps selectedRows-derived event data index-aligned with value when a stale 
   await el.updateComplete;
 
   const seen: unknown[][] = [];
-  for (const type of ['input', 'change', 'lr-change']) {
+  for (const type of ['lr-input', 'lr-change']) {
     el.addEventListener(type, (e) => seen.push((e as CustomEvent<{ data: unknown[] }>).detail.data));
   }
   (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
@@ -703,7 +704,7 @@ it('keeps selectedRows-derived event data index-aligned with value when a stale 
   expect(el.value).to.deep.equal(['stale', 'b']);
   // `data` stays the same length as `value`: the stale value's own slot is `undefined`, never
   // dropped, so `b`'s payload lands at index 1 -- not shifted into index 0.
-  expect(seen.length).to.equal(3);
+  expect(seen.length).to.equal(2);
   for (const data of seen) {
     expect(data.length).to.equal(2);
     expect(data[0]).to.equal(undefined);
@@ -1967,6 +1968,15 @@ it('never settles a stale lr-after-show promise when disconnected mid-transition
   ).to.be.false;
 });
 
+it('resolves a pending show promise when adoption supersedes its paint', async () => {
+  const el = await fixture<LyraCombobox>(basic());
+  const opened = el.show();
+  await el.updateComplete;
+  (el as unknown as { adoptedCallback(): void }).adoptedCallback();
+  // wait-reason: Bound a transition promise that must settle after adoption cancels its paint.
+  expect(await Promise.race([opened.then(() => true), aTimeout(100).then(() => false)])).to.equal(true);
+});
+
 it('binds the outside-pointer listener only once when reopening races the queued reconnect handler', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.open = true;
@@ -2713,23 +2723,7 @@ it("colors the combobox-input's placeholder text instead of leaving the UA defau
 });
 
 describe("row state feedback on the already-selected option", () => {
-  const centerOf = (node: Element): [number, number] => {
-    const rect = node.getBoundingClientRect();
-    return [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-  };
 
-  /** Polls a pointer-driven condition for up to 500ms, reporting whether it ever held. Pointer
-   *  state lands a variable number of frames after the mouse command resolves, per engine. */
-  const settle = async (holds: () => boolean): Promise<boolean> => {
-    for (let attempt = 0; attempt < 25; attempt++) {
-      if (holds()) return true;
-      await aTimeout(20);
-    }
-    return holds();
-  };
 
   const openWithSelectedMiddleRow = async (): Promise<LyraCombobox> => {
     const el = (await fixture(html`
@@ -2774,34 +2768,8 @@ describe("row state feedback on the already-selected option", () => {
     ).to.equal("rgb(1, 2, 3)");
   });
 
-  /** Hovers and presses one row of a freshly opened listbox, returning both computed backgrounds
-   *  (or null when the engine never put the pointer over the row). One fixture per row on purpose:
-   *  releasing the button over an option commits that option and closes the listbox. */
-  const measureRow = async (
-    pick: (rows: HTMLElement[]) => HTMLElement
-  ): Promise<{ hover: string; press: string } | null> => {
-    const el = await openWithSelectedMiddleRow();
-    const row = pick(
-      Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]'))
-    );
-    const resting = getComputedStyle(row).backgroundColor;
-    try {
-      await sendMouse({ type: "move", position: centerOf(row) });
-      // Earlier pointer tests in this file can leave Firefox with no document hover state at all
-      // until a real pointer entry; an unverified reading would report the fixed cascade as
-      // broken again, so report "no pointer" rather than a background.
-      if (!(await settle(() => row.matches(":hover")))) return null;
-      await settle(() => getComputedStyle(row).backgroundColor !== resting);
-      const hover = getComputedStyle(row).backgroundColor;
-      await sendMouse({ type: "down" });
-      await settle(() => getComputedStyle(row).backgroundColor !== hover);
-      return { hover, press: getComputedStyle(row).backgroundColor };
-    } finally {
-      await sendMouse({ type: "up" });
-      await resetMouse();
-      el.remove();
-    }
-  };
+  const measureRow = (pick: (rows: HTMLElement[]) => HTMLElement) =>
+    measureListboxRow(openWithSelectedMiddleRow, pick);
 
   it("hovers and presses the selected row exactly like an unselected one", async function () {
     const control = await measureRow(

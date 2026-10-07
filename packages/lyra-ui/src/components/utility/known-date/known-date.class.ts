@@ -1,6 +1,9 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import {
   FormAssociated,
   isBarredFromValidation,
@@ -10,7 +13,6 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import {
-  composedParentElement,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisible,
   isAccessibilityVisibilityHidden,
@@ -23,10 +25,7 @@ import {
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
-import {
-  getDateTimeFormat,
-  getNumberFormat,
-} from '../../../internal/intl-cache.js';
+import { localeDateOrder, localeDigitMap, normalizeLocaleDigits } from '../../../internal/locale-date.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
   isImplicitSubmission,
@@ -66,46 +65,6 @@ const EMPTY_PARTS: Readonly<LyraKnownDateParts> = {
   year: '',
 };
 
-/** Determines the locale's day/month/year field order from a real formatted
- *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
- *  distinguishable), instead of relying on `Date.parse()`'s implementation-
- *  defined (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated
- *  date. Local port of `date-picker/date-input.class.ts`'s own `localeDateOrder()`. */
-function localeDateOrder(locale: string): LyraKnownDateField[] {
-  try {
-    const parts = getDateTimeFormat(locale || undefined, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date(2026, 0, 2));
-    const order = parts
-      .filter(
-        (p): p is Intl.DateTimeFormatPart & { type: LyraKnownDateField } =>
-          p.type === 'day' || p.type === 'month' || p.type === 'year'
-      )
-      .map((p) => p.type);
-    return order.length === 3 ? order : ['month', 'day', 'year'];
-  } catch {
-    return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
-  }
-}
-
-/** Maps Arabic-Indic, Extended Arabic-Indic and the locale's own digits to ASCII. */
-function localeDigitMap(locale: string): Map<string, string> {
-  const map = new Map<string, string>();
-  for (let digit = 0; digit <= 9; digit++) {
-    map.set(String.fromCharCode(0x660 + digit), String(digit));
-    map.set(String.fromCharCode(0x6f0 + digit), String(digit));
-  }
-  try {
-    const formatter = getNumberFormat(locale || undefined, { useGrouping: false });
-    for (let digit = 0; digit <= 9; digit++) map.set(formatter.format(digit), String(digit));
-  } catch {
-    // The two Unicode decimal ranges above remain available if an invalid locale was assigned.
-  }
-  return map;
-}
-
 export interface LyraKnownDateEventDetail {
   /** Canonical ISO 8601 date (`YYYY-MM-DD`), or `''` while incomplete/invalid. Mirrors `value`. */
   value: string;
@@ -119,10 +78,12 @@ export interface LyraKnownDateEventDetail {
 
 export interface LyraKnownDateEventMap {
   'lr-invalid': CustomEvent<null>;
+  'lr-input': CustomEvent<LyraKnownDateEventDetail>;
+  'lr-change': CustomEvent<LyraKnownDateEventDetail>;
   input: InputEvent & { readonly detail: LyraKnownDateEventDetail };
   change: Event & { readonly detail: LyraKnownDateEventDetail };
-  focus: CustomEvent<null>;
-  blur: CustomEvent<null>;
+  focus: FocusEvent;
+  blur: FocusEvent;
 }
 
 class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
@@ -180,6 +141,8 @@ function addCompatibilityDetail<T extends Event>(
  * render as absent. Disabled native fields retain their resting border on hover or press.
  *
  * @customElement lr-known-date
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event {InputEvent & { readonly detail: LyraKnownDateEventDetail }} input - A bubbling, composed
  *   native input event fired on every keystroke in
  *   any field, retaining the originating edit's `inputType`. Its compatibility `detail.value` is
@@ -191,9 +154,9 @@ function addCompatibilityDetail<T extends Event>(
  *   (including a Tab/auto-advance move away from it)
  *   and the composite value has newly transitioned to a different complete date, or from complete
  *   back to incomplete/blank. Programmatic `value`/`valueAsDate` assignment stays silent.
- * @event focus - Re-dispatched, bubbling and composed, when any of the three internal fields
+ * @event {FocusEvent} focus - Re-dispatched, bubbling and composed, when any of the three internal fields
  *   receives focus (native `focus` doesn't bubble or cross a shadow boundary).
- * @event blur - Re-dispatched, bubbling and composed, once when focus leaves all three internal
+ * @event {FocusEvent} blur - Re-dispatched, bubbling and composed, once when focus leaves all three internal
  *   fields for something outside the control -- not once per internal field-to-field Tab.
  * @event lr-invalid - The composite date failed a validity check; cancelable. Calling
  *   `preventDefault()` also cancels the native `invalid` event it aliases, suppressing the
@@ -343,9 +306,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   // Tab); gates the touched-only invalid presentation, same as every other
   // lyra form control.
   @state() private touched = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private _min = '';
   private _max = '';
@@ -356,7 +320,9 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private lastCommittedValue = '';
   private lastEditedField: LyraKnownDateField = 'day';
   private errorAnnouncementSink?: AnnouncementSink;
-  private errorObserver?: MutationObserver;
+  private readonly errorTextObserver = new AccessibleTextController(
+    this, ['error'], () => this.announceVisibleError(), ['slot'],
+  );
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private errorAnnouncementsArmed = false;
   private lastVisibleError = '';
@@ -364,7 +330,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   private readonly onForwardedSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    this.bindErrorObserverTargets();
+    this.errorTextObserver.bind();
     this.announceVisibleError();
   };
 
@@ -395,16 +361,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       document: this.ownerDocument,
       source: this,
     });
-    const MutationObserverCtor =
-      this.ownerDocument.defaultView?.MutationObserver;
-    this.errorObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.bindErrorObserverTargets();
-          this.announceVisibleError();
-        })
-      : undefined;
     this.addEventListener('slotchange', this.onForwardedSlotChange);
-    this.bindErrorObserverTargets();
     this.errorAnnouncementsArmed = false;
     const generation = ++this.connectionGeneration;
     void this.updateComplete
@@ -425,64 +382,12 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       });
   }
 
-  private observeErrorNode(node: Node): void {
-    if (!this.errorObserver) return;
-    if (node.nodeType === 3) {
-      this.errorObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.errorObserver.observe(node, {
-      attributes: true,
-      attributeFilter: [
-        'aria-hidden',
-        'aria-label',
-        'class',
-        'hidden',
-        'inert',
-        'slot',
-        'style',
-      ],
-      characterData: true,
-      childList: true,
-      subtree: true,
-    });
-  }
-
-  private bindErrorObserverTargets(): void {
-    if (!this.errorObserver) return;
-    this.errorObserver.disconnect();
-    this.observeErrorNode(this);
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      this.errorObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
-      ancestor = composedParentElement(ancestor);
-    }
-
-    const errorBranches = Array.from(this.children).filter(
-      (element) => element.getAttribute('slot') === 'error'
-    );
-    const forwardedSlots = errorBranches.flatMap((branch) => [
-      ...(branch.localName === 'slot' ? [branch as HTMLSlotElement] : []),
-      ...branch.querySelectorAll<HTMLSlotElement>('slot'),
-    ]);
-    for (const slot of forwardedSlots) {
-      for (const assigned of slot.assignedNodes({ flatten: true }))
-        this.observeErrorNode(assigned);
-    }
-  }
-
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
     this.connectionGeneration += 1;
     this.errorAnnouncementsArmed = false;
     this.lastVisibleError = '';
     this.removeEventListener('slotchange', this.onForwardedSlotChange);
-    this.errorObserver?.disconnect();
-    this.errorObserver = undefined;
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     super.disconnectedCallback();
@@ -490,6 +395,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.errorTextObserver.adopted();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
   }
@@ -708,11 +614,13 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     if (this.value === this.lastCommittedValue) return;
     this.lastCommittedValue = this.value;
     const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
+    const detail = this.detailFor(this.lastEditedField);
     const event = addCompatibilityDetail(
       new EventConstructor('change', { bubbles: true, composed: true }),
-      this.detailFor(this.lastEditedField)
+      detail
     );
     this.dispatchEvent(event);
+    this.emit('lr-change', detail);
   }
 
   private fieldInputElement(
@@ -790,21 +698,6 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasLabelSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'label'
-      );
-      this.hasHintSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'hint'
-      );
-      this.hasErrorSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'error'
-      );
-    }
-  }
-
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
@@ -878,24 +771,6 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.updateValidity();
   }
 
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
   private visibleErrorText(): string {
     const slottedElements = Array.from(this.children).filter(
       (element) => element.getAttribute('slot') === 'error'
@@ -947,19 +822,13 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     if (message) this.errorAnnouncementSink?.announce(message);
   }
 
-  private digitMapCache?: { locale: string; map: Map<string, string> };
+  private digitMapCache?: { locale: string; map: ReadonlyMap<string, string> };
 
   private normalizeFieldDigits(value: string): string {
     const locale = this.effectiveLocale;
     if (this.digitMapCache?.locale !== locale)
       this.digitMapCache = { locale, map: localeDigitMap(locale) };
-    const { map } = this.digitMapCache;
-    let normalized = '';
-    for (const character of value) {
-      if (character >= '0' && character <= '9') normalized += character;
-      else normalized += map.get(character) ?? '';
-    }
-    return normalized;
+    return normalizeLocaleDigits(value, locale, this.digitMapCache.map).replace(/\D/g, '');
   }
 
   private onFieldInput = (field: LyraKnownDateField, e: Event): void => {
@@ -973,15 +842,17 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.commitFromFields();
     const InputEventConstructor =
       this.ownerDocument.defaultView?.InputEvent ?? InputEvent;
+    const detail = this.detailFor(field);
     const event = addCompatibilityDetail(
       new InputEventConstructor('input', {
         bubbles: true,
         composed: true,
         inputType: (e as Partial<InputEvent>).inputType || 'insertText',
       }),
-      this.detailFor(field)
+      detail
     );
     this.dispatchEvent(event);
+    this.emit('lr-input', detail);
     // Auto-advance is purely digit-count-based (length reaches the field's
     // own cap), not value-based -- this library's own addition layered on
     // top of Web Awesome's bare typing model, see the class doc comment.
@@ -1030,7 +901,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     // Trusted composed focus can be retargeted to the host even though it does not bubble.
     // Suppress that private event before emitting the one documented public bridge.
     e.stopPropagation();
-    this.emit('focus');
+    relayNativeEvent(this, e);
   };
 
   private onFieldBlur = (e: FocusEvent): void => {
@@ -1050,7 +921,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     // it was focused -- a platform reaction to disablement, not a user interaction, so it must not
     // mark the control touched.
     if (!this.effectiveDisabled) this.touched = true;
-    this.emit('blur');
+    relayNativeEvent(this, e);
   };
 
   /** Focuses the first field in locale order. */
@@ -1148,7 +1019,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
         <fieldset part="fieldset" aria-label=${this.accessibleLabel ?? nothing}>
           <legend part="legend" ?hidden=${!hasLabel}>
             <span part="form-control-label label">
-              <slot name="label" @slotchange=${this.onLabelSlotChange}
+              <slot name="label"
                 >${this.label}</slot
               >
             </span>
@@ -1160,12 +1031,12 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
           </div>
         </fieldset>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
-          <slot name="hint" @slotchange=${this.onHintSlotChange}
+          <slot name="hint"
             >${this.hint}</slot
           >
         </div>
         <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          <slot name="error" @slotchange=${this.onErrorSlotChange}
+          <slot name="error"
             >${renderedError}</slot
           >
         </div>

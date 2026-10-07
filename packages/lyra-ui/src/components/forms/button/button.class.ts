@@ -1,3 +1,4 @@
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import {
@@ -24,16 +25,12 @@ import type {
 } from '../../../internal/variants.js';
 import { styles } from './button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { installInvalidEventAlias } from '../../../internal/invalid-event-alias.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/direct-form-associated.js';
-import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
-  AnchoredValidityController,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -354,7 +351,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   private readonly localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer validity retained while a non-action mode is barred from validation. */
   private customValidityMessage = '';
   private reflectingCustomError = false;
@@ -369,8 +366,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     this.requestUpdate('disabled', old);
     this.updateValidity();
+    this.syncButtonStates();
   }
 
   /** Submitted as a `name`/`value` pair with the form data, but only while this button is the
@@ -387,8 +387,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -423,16 +422,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init)
-    );
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(
-      this,
-      this.internals,
-      () => this[VALIDITY_ANCHOR]()
-    );
-    installCustomErrorProperty(this, () => this.customValidityMessage);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      customError: () => this.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.updateValidity();
     this.syncButtonStates();
   }
@@ -696,10 +690,11 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
 
   checkValidity(): boolean {
-    return this.internals.checkValidity();
+    return this.validityController.checkValidity();
   }
 
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     return this.internals.reportValidity();
   }
 
@@ -875,7 +870,10 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    * mirrors `<lr-checkbox>`'s/`<lr-switch>`'s identical `_fieldsetDisabled` pattern.
    */
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.updateValidity();
     this.syncButtonStates();
     this.requestUpdate();

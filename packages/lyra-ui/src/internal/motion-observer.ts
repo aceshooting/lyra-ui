@@ -1,5 +1,6 @@
 import { prefersReducedMotion } from './motion.js';
 import { flattenedThemeParent } from './theme-observation.js';
+import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 type Subscription = {
   element: Element;
@@ -9,7 +10,7 @@ type Subscription = {
   roots: Set<Node>;
   refresh: () => void;
 };
-type RootWatch = { subscribers: Set<Subscription>; observer: MutationObserver; onSlotChange: () => void };
+type RootWatch = { subscribers: Set<Subscription>; releaseObserver: () => void; onSlotChange: () => void };
 type MediaWatch = { subscribers: Set<Subscription>; query: MediaQueryList; changed: () => void };
 const rootWatches = new WeakMap<Node, RootWatch>();
 const mediaWatches = new WeakMap<Window, MediaWatch>();
@@ -26,24 +27,28 @@ function addRoot(root: Node, subscription: Subscription): void {
     if (!view?.MutationObserver) return;
     const subscribers = new Set<Subscription>();
     const onSlotChange = (): void => { for (const item of [...subscribers]) item.refresh(); };
-    const observer = new view.MutationObserver(records => {
-      for (const item of [...subscribers]) {
-        const nearest = item.nearest.get(root);
-        if (records.some(record => {
-          if (record.type === 'attributes') {
-            return item.ancestors.has(record.target as Element) ||
-              (record.attributeName === 'name' && (record.target as Element).localName === 'slot');
+    const releaseObserver = subscribeInheritedAttributes(root, view.MutationObserver, {
+      attributes: ['data-lr-motion', 'slot', 'name'],
+      childList: true,
+      changed: records => {
+        for (const item of [...subscribers]) {
+          const nearest = item.nearest.get(root);
+          if (records.some(record => {
+            if (record.type === 'attributes') {
+              return item.ancestors.has(record.target as Element) ||
+                (record.attributeName === 'name' && (record.target as Element).localName === 'slot');
+            }
+            // Ordinary rendering elsewhere in the document does not change this inheritance path.
+            return touches(record.addedNodes, item, nearest) || touches(record.removedNodes, item, nearest);
+          })) {
+            item.refresh();
           }
-          // Ordinary rendering elsewhere in the document does not change this inheritance path.
-          return touches(record.addedNodes, item, nearest) || touches(record.removedNodes, item, nearest);
-        })) {
-          item.refresh();
         }
-      }
+      },
     });
-    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-lr-motion', 'slot', 'name'] });
+    if (!releaseObserver) return;
     root.addEventListener('slotchange', onSlotChange, true);
-    watch = { subscribers, observer, onSlotChange };
+    watch = { subscribers, releaseObserver, onSlotChange };
     rootWatches.set(root, watch);
   }
   watch.subscribers.add(subscription);
@@ -54,7 +59,7 @@ function removeRoot(root: Node, subscription: Subscription): void {
   if (!watch) return;
   watch.subscribers.delete(subscription);
   if (watch.subscribers.size) return;
-  watch.observer.disconnect();
+  watch.releaseObserver();
   root.removeEventListener('slotchange', watch.onSlotChange, true);
   rootWatches.delete(root);
 }

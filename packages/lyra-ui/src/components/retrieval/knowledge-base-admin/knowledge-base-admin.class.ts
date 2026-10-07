@@ -1,3 +1,4 @@
+import { resolveListMove, isRovingTargetAvailable } from '../../../internal/list-navigation.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -158,19 +159,17 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     const tabs: KnowledgeBaseAdminTab[] = this.withoutIngestion
       ? ['sources']
       : ['sources', 'ingestion'];
-    const currentIndex = tabs.indexOf(current);
-    const previousKey =
-      this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    const nextKey =
-      this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    let nextIndex = currentIndex;
-    if (event.key === previousKey)
-      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    else if (event.key === nextKey)
-      nextIndex = (currentIndex + 1) % tabs.length;
-    else if (event.key === 'Home') nextIndex = 0;
-    else if (event.key === 'End') nextIndex = tabs.length - 1;
-    else return;
+    const nextIndex = resolveListMove(event, {
+      count: tabs.length,
+      current: tabs.indexOf(current),
+      orientation: 'horizontal',
+      direction: this.effectiveDirection,
+      isAvailable: (index) => {
+        const target = this.shadowRoot?.getElementById(this.tabId(tabs[index]!));
+        return Boolean(target && isRovingTargetAvailable(target));
+      },
+    });
+    if (nextIndex === null) return;
 
     event.preventDefault();
     const next = tabs[nextIndex]!;

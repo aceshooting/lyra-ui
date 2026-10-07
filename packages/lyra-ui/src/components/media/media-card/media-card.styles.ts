@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -143,8 +144,7 @@ export const styles = css`
     /* The shared minimum tappable size (--lr-icon-button-size), not the former 2rem/32px compact
        overlay cap: this button floats in a corner of the video's own canvas, which has ample room
        for the full floor. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     border-radius: var(--lr-radius);

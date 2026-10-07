@@ -7,9 +7,7 @@ import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   observeScrollOverflow,
@@ -309,20 +307,13 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   }
 
   private get safeDurationMs(): number | null {
-    return this.durationMs != null && Number.isFinite(this.durationMs)
-      ? finiteRange(this.durationMs, 0, 0)
-      : null;
+    return safeDurationMs(this.durationMs);
   }
 
   private durationText(): string | null {
     const ms = this.safeDurationMs;
     if (ms == null) return null;
-    const duration = durationMessageValue(ms);
-    const seconds = duration.key === 'durationSeconds';
-    const value = getNumberFormat(this.effectiveLocale, {
-      maximumFractionDigits: seconds ? 1 : 0,
-    }).format(duration.value);
-    return this.localize(seconds ? 'durationSeconds' : 'durationMilliseconds', undefined, { value });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   private emptyText(): string {

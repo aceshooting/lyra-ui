@@ -4,7 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
-import { isRtl } from '../../../internal/rtl.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
@@ -353,33 +353,13 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
       selectedIndex < 0 && this.segmentButtonAt(originIndex)?.tabIndex === 0
         ? -1
         : navigable.findIndex(({ index }) => index === originIndex);
-    const rtl = isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
-
-    let targetIndex: number;
-    switch (e.key) {
-      case forwardKey:
-      case 'ArrowDown':
-        targetIndex =
-          currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
-        break;
-      case backwardKey:
-      case 'ArrowUp':
-        targetIndex =
-          currentIndex < 0
-            ? navigable.length - 1
-            : (currentIndex - 1 + navigable.length) % navigable.length;
-        break;
-      case 'Home':
-        targetIndex = 0;
-        break;
-      case 'End':
-        targetIndex = navigable.length - 1;
-        break;
-      default:
-        return;
-    }
+    const targetIndex = resolveListMove(e, {
+      count: navigable.length,
+      current: currentIndex,
+      orientation: 'both',
+      direction: this.effectiveDirection,
+    });
+    if (targetIndex === null) return;
     e.preventDefault();
     const target = navigable[targetIndex]!;
     this.select(target.item);

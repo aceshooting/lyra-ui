@@ -1,13 +1,17 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
+  render as renderLit,
   svg,
+  type PropertyValues,
   type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -20,7 +24,7 @@ import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
-import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
+import type { LyraMenu, MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
@@ -326,8 +330,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   @property({ type: Boolean, attribute: 'without-create', reflect: true })
   withoutCreate = false;
 
-
-
   /** Reports a failed source-list load. Forwarded to the nested `<lr-table>`, whose own built-in
    *  failed-load state renders in place of the source rows; `<lr-table>`'s own precedence applies
    *  (`error` beats the empty state). Reflected so `[error]` is selectable from outside. */
@@ -340,40 +342,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   /** Failed-load supporting copy, forwarded to the nested table. */
   @property({ attribute: 'error-description' }) errorDescription = '';
 
-  /** True once a real light-DOM child assigned `slot="error"` is observed -- see `errorSlotObserver`
-   *  below. Gates whether the `error` slot passthrough is mounted on the nested `<lr-table>`: an
-   *  always-mounted passthrough would count as "assigned content" for the table's own `error` slot
-   *  regardless of whether anything real is inside it, permanently hiding the table's built-in
-   *  failed-load state even when the consumer never used the slot. */
-  @state() private hasErrorSlot = false;
-
-  private errorSlotObserver?: MutationObserver;
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.hasErrorSlot = this.computeHasErrorSlot();
-    this.errorSlotObserver = new MutationObserver(() => {
-      this.hasErrorSlot = this.computeHasErrorSlot();
-    });
-    this.errorSlotObserver.observe(this, {
-      childList: true,
-      attributes: true,
-      subtree: true,
-      attributeFilter: ['slot'],
-    });
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.errorSlotObserver?.disconnect();
-    this.errorSlotObserver = undefined;
-  }
-
-  private computeHasErrorSlot(): boolean {
-    return Array.from(this.children).some(
-      (el) => el.getAttribute('slot') === 'error'
-    );
-  }
+  private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private retryRequestActive = false;
 
@@ -542,15 +512,64 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       this.emit('lr-source-delete', { sourceId: source.id });
   }
 
-  private renderActionsCell(source: KnowledgeSource): TemplateResult {
+  private readonly openActionMenus = new Map<HTMLElement, string>();
+
+  private updateActionMenu(dropdown: HTMLElement, sourceId: string): void {
+    const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
+    const source = this.normalizedSources.find((row) => row.id === sourceId);
+    if (!menu || !source) return;
+    menu.label = this.localize('knowledgeBaseRowActionsLabel', undefined, { name: this.sourceName(source) });
     const canPause = source.syncStatus === 'syncing';
-    const canSync =
-      SYNC_STATUS_VARIANT[source.syncStatus] !== undefined && !canPause;
+    const canSync = SYNC_STATUS_VARIANT[source.syncStatus] !== undefined && !canPause;
+    renderLit(this.renderActionItems(canSync, canPause), menu);
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    for (const [dropdown, sourceId] of this.openActionMenus) {
+      if (!dropdown.isConnected || !(dropdown as HTMLElement & { open: boolean }).open) {
+        this.openActionMenus.delete(dropdown);
+        continue;
+      }
+      this.updateActionMenu(dropdown, sourceId);
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.openActionMenus.clear();
+    super.disconnectedCallback();
+  }
+
+  private renderActionsCell(source: KnowledgeSource): TemplateResult {
     const label = this.localize('knowledgeBaseRowActionsLabel', undefined, {
       name: this.sourceName(source),
     });
     return html`
-      <lr-dropdown without-arrow part="actions-menu" placement="bottom-end">
+      <lr-dropdown without-arrow part="actions-menu" placement="bottom-end"
+        @lr-show=${(event: Event) => {
+          const dropdown = event.currentTarget as HTMLElement & { open: boolean };
+          if (event.target !== dropdown) return;
+          const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
+          if (menu) {
+            this.openActionMenus.set(dropdown, source.id);
+            this.updateActionMenu(dropdown, source.id);
+            queueMicrotask(() => {
+              if (!dropdown.open) {
+                this.openActionMenus.delete(dropdown);
+                renderLit(nothing, menu);
+              }
+            });
+          }
+        }}
+        @lr-after-hide=${(event: Event) => {
+          const dropdown = event.currentTarget as HTMLElement & { open: boolean };
+          if (event.target !== dropdown) return;
+          const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
+          if (!dropdown.open && menu) {
+            this.openActionMenus.delete(dropdown);
+            renderLit(nothing, menu);
+          }
+        }}>
         <button
           slot="trigger"
           type="button"
@@ -565,7 +584,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
             e.stopPropagation();
             this.onRowAction(source, e.detail.item.value);
           }}
-        >
+        ></lr-menu>
+      </lr-dropdown>
+    `;
+  }
+
+  private renderActionItems(canSync: boolean, canPause: boolean): TemplateResult {
+    return html`
           <lr-menu-item value="sync" ?disabled=${!canSync}>
             <span slot="icon">${playIcon()}</span>
             ${this.localize('knowledgeBaseSyncAction')}
@@ -578,8 +603,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
             <span slot="icon">${trashIcon()}</span>
             ${this.localize('knowledgeBaseDeleteAction')}
           </lr-menu-item>
-        </lr-menu>
-      </lr-dropdown>
     `;
   }
 

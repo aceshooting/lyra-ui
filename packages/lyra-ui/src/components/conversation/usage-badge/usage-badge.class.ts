@@ -5,11 +5,11 @@ import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { reserveOverlayOrder, type OverlayOrderReservation } from '../../../internal/overlay-order.js';
 import type { UsageBadgeOverlayHandle } from './usage-badge-overlay-runtime.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveIdReferencesIn, updateDescriptionBaseline } from '../../../internal/aria-reflection.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings.generated.js';
@@ -244,8 +244,7 @@ export class LyraUsageBadge extends LyraElement {
   /** `latencyMs` normalized to a finite, non-negative duration -- `undefined` while unset or
    *  non-finite (the `latency` segment/tooltip row is omitted entirely). */
   private get validLatencyMs(): number | undefined {
-    if (this.latencyMs == null || !Number.isFinite(this.latencyMs)) return undefined;
-    return finiteRange(this.latencyMs, this.latencyMs, 0);
+    return safeDurationMs(this.latencyMs) ?? undefined;
   }
 
   private get hasLatency(): boolean {
@@ -275,11 +274,7 @@ export class LyraUsageBadge extends LyraElement {
   }
   private localizedDuration(ms: number): string {
     if (this.formatLatency) return this.formatLatency(ms);
-    const duration = durationMessageValue(ms);
-    const value = getNumberFormat(this.effectiveLocale, {
-      maximumFractionDigits: duration.key === 'durationMilliseconds' ? 0 : 1,
-    }).format(duration.value);
-    return this.localize(duration.key, undefined, { value });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   private loadTooltipOverlayRuntime(): Promise<typeof import('./usage-badge-overlay-runtime.js')> {

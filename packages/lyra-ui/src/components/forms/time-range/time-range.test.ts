@@ -1,31 +1,18 @@
+import { assertCallsBaseWillUpdate } from '../../../../test/contracts/form-lifecycle.js';
+import { stubTimeRangePointerGeometry } from '../../../../test/contracts/time-range-pointer.js';
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
-import type { PropertyValues } from "lit";
 import "./time-range.js";
 import type { LyraTimeRange, TimeRangePreset } from "./time-range.js";
 import { styles } from "./time-range.styles.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
 
 function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const startHandle = el.shadowRoot!.querySelector<HTMLElement>(
     '[part="handle-start"]'
   )!;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, pointerId, clientX: 40 })
   );
@@ -177,18 +164,7 @@ it("relays each handle focus/blur as one native pair, and never lr-focus/lr-blur
   endHandle.focus();
   endHandle.blur();
 
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-    "focus",
-    "blur",
-  ]);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(
-    nativeEvents.every(
-      (event) => event.target === el && event.bubbles && event.composed
-    )
-  ).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it("forwards host click() to the start handle", async () => {
@@ -460,21 +436,7 @@ it("stops an in-progress drag without mutating start/end once disabled mid-drag"
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -525,21 +487,7 @@ it('aborts a still-tracked drag on the next pointermove when :disabled starts ma
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
@@ -648,21 +596,7 @@ it("drags the start handle with pointer events and emits lr-input then lr-change
   // it out to exercise the drag math (ratio/clamp/emit) headlessly. Likewise
   // stub the layout rect so the ratio math is deterministic regardless of
   // the test runner's viewport.
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   let inputDetail: { start: number; end: number } | undefined;
   el.addEventListener(
@@ -710,21 +644,7 @@ it("keeps an adopted iframe drag on its owner window and releases that window on
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
@@ -777,21 +697,7 @@ it("does not arm a drag while disconnected in an ownerless document", async () =
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   try {
     el.remove();
@@ -837,21 +743,7 @@ it("pointer-maps the midpoint of the full finite number range without overflowin
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -926,21 +818,7 @@ it("keeps live values but suppresses lr-change and tears down on pointercancel/l
     const startHandle = el.shadowRoot!.querySelector(
       '[part="handle-start"]'
     ) as HTMLElement;
-    startHandle.setPointerCapture = () => {};
-    base.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        right: 200,
-        bottom: 0,
-        width: 200,
-        height: 0,
-        x: 0,
-        y: 0,
-        toJSON() {
-          return {};
-        },
-      } as DOMRect);
+    stubTimeRangePointerGeometry(base, startHandle);
     let inputs = 0;
     let changes = 0;
     el.addEventListener("lr-input", () => inputs++);
@@ -982,21 +860,7 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
     '[part="handle-start"]'
   ) as HTMLElement;
 
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   let inputDetail: { start: number; end: number } | undefined;
   el.addEventListener(
@@ -1099,30 +963,9 @@ it("uses cursor:not-allowed (not pointer-events:none) when disabled, matching ev
 });
 
 it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
-  // to prove LyraTimeRange's own willUpdate() override actually calls super.willUpdate(...)
-  // rather than shadowing it silently.
-  const proto = LyraElement.prototype as unknown as {
-    willUpdate: (changed: PropertyValues) => void;
-  };
-  const original = proto.willUpdate;
-  let called = false;
-  proto.willUpdate = function (
-    this: LyraElement,
-    changed: PropertyValues
-  ): void {
-    called = true;
-    original.call(this, changed);
-  };
-  try {
-    const el = (await fixture(
-      html`<lr-time-range></lr-time-range>`
-    )) as LyraTimeRange;
-    await el.updateComplete;
-    expect(called).to.be.true;
-  } finally {
-    proto.willUpdate = original;
-  }
+  await assertCallsBaseWillUpdate('lr-time-range', async () =>
+    (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange
+  );
 });
 
 it("references the shared focus-ring tokens on the handle focus-visible outline instead of hardcoded literals", () => {
@@ -1148,21 +991,7 @@ it("does not lock dragging to a fixed value when min > max", async () => {
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -1199,21 +1028,7 @@ it("maps RTL pointer positions through the normalized domain when min > max", as
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -1247,22 +1062,7 @@ it("tracks concurrent drags by pointerId so a second pointer cannot hijack the f
   const endHandle = el.shadowRoot!.querySelector(
     '[part="handle-end"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  endHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle, endHandle);
 
   // Finger 1 starts dragging handle-start; finger 2 starts dragging
   // handle-end before finger 1 lifts (two-finger touch drag).
@@ -1323,22 +1123,7 @@ it('ignores a stray pointermove for an already-ended pointerId while a second co
   const endHandle = el.shadowRoot!.querySelector(
     '[part="handle-end"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  endHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle, endHandle);
 
   // Two concurrent drags, then only the first (pointerId 1) is released -- the window-level
   // pointermove listener stays attached because pointerId 2's drag is still active, so a further
@@ -1381,21 +1166,7 @@ it('ignores a pointerup for an untracked pointerId without disturbing an active 
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
@@ -2137,21 +1908,7 @@ it("still supports brush dragging via handle-start/handle-end while presets is s
   const startHandle = el.shadowRoot!.querySelector(
     '[part="handle-start"]'
   ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
 
   let inputDetail: { start: number; end: number } | undefined;
   el.addEventListener(

@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -52,8 +53,7 @@ export const styles = css`
   [part='title'] button {
     display: block;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding: 0;
     border: none;
@@ -77,8 +77,7 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='title'] button:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='title'] button {
     overflow: hidden;
@@ -110,8 +109,7 @@ export const styles = css`
   [part='member'],
   [part='overflow'] {
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: transparent;
     padding: 0;
@@ -128,7 +126,6 @@ export const styles = css`
   }
   [part='member']:focus-visible,
   [part='overflow']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 `;

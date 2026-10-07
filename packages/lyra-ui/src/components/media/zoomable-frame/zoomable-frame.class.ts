@@ -4,6 +4,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
@@ -206,6 +207,14 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="iframe"]'),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   /** The URL of the content to display. Active/non-embeddable schemes are rejected. */
   @property() src = '';

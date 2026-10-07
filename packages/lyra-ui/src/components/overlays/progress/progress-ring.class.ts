@@ -1,7 +1,6 @@
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { accessibleTextRecordsMatter, bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -111,18 +110,9 @@ export class LyraProgressRing extends LyraElement {
   // Assigned nodes do not exist in Lit's server DOM. Cache their accessible text only when the
   // browser can sample it, before a client-only first paint or just after the hydration render.
   private cachedVisibleLabelText = '';
-  private labelObserver?: MutationObserver;
-  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.labelObserver) return;
-    this.bindLabelObserverTargets();
-    this.recomputeVisibleLabelText();
-  });
-  private readonly onLabelSlotChange = (event: Event): void => {
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    this.bindLabelObserverTargets();
-    this.recomputeVisibleLabelText();
-  };
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, ['', 'label'], () => this.recomputeVisibleLabelText(),
+  );
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -131,8 +121,6 @@ export class LyraProgressRing extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
-    this.rebuildLabelObserver();
     if (this.hasUpdated) this.recomputeVisibleLabelText();
     else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
   }
@@ -148,36 +136,7 @@ export class LyraProgressRing extends LyraElement {
    */
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.rebuildLabelObserver();
-  }
-
-  /** Tears down and reconstructs `labelObserver` bound to the current `ownerDocument`'s realm, then
-   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
-  private rebuildLabelObserver(): void {
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
-      ?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor((records, observer) => {
-          if (!accessibleTextRecordsMatter(observer, records)) return;
-          this.bindLabelObserverTargets();
-          this.recomputeVisibleLabelText();
-        })
-      : undefined;
-    this.bindLabelObserverTargets();
-  }
-
-  private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
-  }
-
-  override disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    this.labelObserver = undefined;
-    super.disconnectedCallback();
+    this.labelTextObserver.adopted();
   }
 
   private computeVisibleLabelText(): string {
@@ -259,7 +218,7 @@ export class LyraProgressRing extends LyraElement {
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${offset}></circle>
       </svg>
-      <span part="label"><slot @slotchange=${this.onLabelSlotChange}>${this.indeterminate || !this.withValue ? '' : this.formattedPercent}</slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot></span>
+      <span part="label"><slot>${this.indeterminate || !this.withValue ? '' : this.formattedPercent}</slot><slot name="label"></slot></span>
     </div>`;
   }
 }

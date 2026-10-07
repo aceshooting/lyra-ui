@@ -1,7 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -40,7 +39,7 @@ import {
   type TextQuoteMatches,
   type TextQuoteScope,
 } from '../../../internal/text-quote.js';
-import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
+import { acquireHighlightHandle, supportsCustomHighlights, wrapTextRangeInMarks, unwrapTextMark, type HighlightHandle, type TextMarkPaintBudget } from '../../../internal/text-highlights.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -49,6 +48,7 @@ import type {
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 export type {
   LyraViewerDiagnostic,
@@ -59,7 +59,7 @@ export type {
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
-import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -71,7 +71,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 type FetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'loaded'; markup: string }
+  | { kind: 'loaded'; content: DocumentFragment }
   | { kind: 'error'; message: string };
 
 /** One entry of `getHeadingTree()`'s document-ordered outline. Same shape as `<lr-markdown>`'s
@@ -144,121 +144,10 @@ function normalizeDocxConversion(value: unknown): NormalizedDocxConversion | nul
   return Object.freeze({ value: markup.value, messages: Object.freeze(messages) });
 }
 
-/** Wraps the text covered by `range` in one or more `<mark part="...">` elements, splitting any
- *  text node the range only partially covers -- handles a match spanning an inline element
- *  boundary, not just a single text node. */
-interface DocxPaintWorkBudget {
-  traversalNodes: number;
-  codeUnits: number;
-  marks: number;
-}
-
-function nextDocxPaintNode(node: Node, root: Node): Node | null {
-  if (node.firstChild) return node.firstChild;
-  let cursor: Node | null = node;
-  while (cursor && cursor !== root) {
-    if (cursor.nextSibling) return cursor.nextSibling;
-    cursor = cursor.parentNode;
-  }
-  return null;
-}
-
-function wrapRangeInSearchMarks(
-  range: Range,
-  part: string,
-  budget: DocxPaintWorkBudget,
-): HTMLElement[] {
+/** Decorates bounded search marks while sharing the fallback painter. */
+function wrapRangeInSearchMarks(range: Range, part: string, budget: TextMarkPaintBudget): HTMLElement[] {
   const doc = range.startContainer.ownerDocument;
-  if (!doc) return [];
-  const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
-  if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
-    const textNode = range.startContainer as Text;
-    if (budget.traversalNodes <= 0 || budget.codeUnits <= 0 || budget.marks <= 0) return [];
-    budget.traversalNodes--;
-    if (textNode.data.length > budget.codeUnits) {
-      budget.codeUnits = 0;
-      return [];
-    }
-    budget.codeUnits -= textNode.data.length;
-    let target = textNode;
-    if (range.endOffset < target.data.length) target.splitText(range.endOffset);
-    if (range.startOffset > 0) target = target.splitText(range.startOffset);
-    if (!target.data) return [];
-    const mark = doc.createElement('mark');
-    mark.setAttribute('part', part);
-    target.parentNode?.insertBefore(mark, target);
-    mark.appendChild(target);
-    budget.marks--;
-    return [mark];
-  }
-  const ancestor = range.commonAncestorContainer;
-  const covered: Text[] = [];
-  let node: Node | null = ancestor;
-  while (node && budget.traversalNodes > 0 && budget.codeUnits > 0) {
-    budget.traversalNodes--;
-    if (node.nodeType === textNodeType) {
-      const textNode = node as Text;
-      if (textNode.data.length > budget.codeUnits) {
-        budget.codeUnits = 0;
-        break;
-      }
-      budget.codeUnits -= textNode.data.length;
-      try {
-        if (textNode.data.length > 0 && range.intersectsNode(textNode)) {
-          covered.push(textNode);
-          if (covered.length > budget.marks) return [];
-        }
-      } catch {
-        return [];
-      }
-    }
-    node = nextDocxPaintNode(node, ancestor);
-  }
-  if (node) return [];
-  const marks: HTMLElement[] = [];
-  for (const textNode of covered) {
-    const start = textNode === range.startContainer ? range.startOffset : 0;
-    const end = textNode === range.endContainer ? range.endOffset : textNode.data.length;
-    let target = textNode;
-    if (end < target.data.length) target.splitText(end);
-    if (start > 0) target = target.splitText(start);
-    if (!target.data) continue;
-    const mark = doc.createElement('mark');
-    mark.setAttribute('part', part);
-    target.parentNode?.insertBefore(mark, target);
-    mark.appendChild(target);
-    marks.push(mark);
-    budget.marks--;
-  }
-  return marks;
-}
-
-/** Unwraps a `<mark>` painted by `wrapRangeInSearchMarks()` back into plain text, merging the
- *  restored text with untouched sibling text nodes. */
-function unwrapSearchMark(mark: HTMLElement): void {
-  const parent = mark.parentNode;
-  if (!parent) return;
-  const before = mark.previousSibling;
-  const firstMoved = mark.firstChild;
-  while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-  const after = mark.nextSibling;
-  parent.removeChild(mark);
-  let cursor = before?.nodeType === 3 ? before : firstMoved ?? after;
-  let localSteps = 0;
-  while (cursor && cursor.parentNode === parent && localSteps++ < 4) {
-    if (cursor.nodeType !== 3) break;
-    const text = cursor as Text;
-    if (text.data === '') {
-      const next = text.nextSibling;
-      text.remove();
-      cursor = next;
-      continue;
-    }
-    const next = text.nextSibling;
-    if (next?.nodeType !== 3) break;
-    text.appendData((next as Text).data);
-    next.remove();
-  }
+  return doc ? wrapTextRangeInMarks(range, doc, budget, (mark) => mark.setAttribute('part', part)) : [];
 }
 
 export interface LyraDocxViewerEventMap extends LyraAnchorTargetEventMap {
@@ -365,7 +254,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and convert as a DOCX document. */
   @property() src = '';
@@ -548,7 +437,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         || this.ownerDocument.defaultView !== fetchTarget.view
       )
         return;
-      await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal });
+      await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal, strictAdmission: true });
       if (
         !this.isConnected
         || generation !== this.generation
@@ -582,7 +471,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       if (!converted) {
         throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
       }
-      const markup = sanitizePassiveMarkup(
+      const content = sanitizePassiveMarkupFragment(
         DOMPurify,
         converted.value,
         this.ownerDocument,
@@ -596,7 +485,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return;
       this.fetchState = {
         kind: 'loaded',
-        markup: this.stampHeadings(markup),
+        content: this.stampHeadings(content),
       };
       for (const cause of converted.messages) {
         this.emit('lr-viewer-diagnostic', {
@@ -631,19 +520,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     this.emit('lr-render-error', { error });
   }
 
-  /** Parses the already-sanitized markup once (`DOMParser`), stamps a `Slugger`-computed `id` on
-   *  every `h1`-`h6`, and caches the resulting document-ordered outline into `headingTree`. A fresh
-   *  `Slugger` per call, matching `<lr-markdown>`'s own per-parse instance, so re-loading a new
-   *  document never carries duplicate-slug state from a previous one. Traversal admits at most the
-   *  shared 20,000-node ceiling, and the slugger's monotonic suffix cursor keeps aggregate duplicate
-   *  membership work linear across that bounded pass. */
-  private stampHeadings(sanitizedHtml: string): string {
-    const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
-    if (!DOMParserCtor) throw new Error('DOMParser is unavailable without a browsing context.');
-    const doc = new DOMParserCtor().parseFromString(sanitizedHtml, 'text/html');
+  /** Stamp heading ids and collect the outline on the sanitized fragment. */
+  private stampHeadings(content: DocumentFragment): DocumentFragment {
     const slugger = new Slugger();
     const tree: DocxHeadingItem[] = [];
-    const walker = doc.createTreeWalker(doc.body, 0x1 /* NodeFilter.SHOW_ELEMENT */);
+    const walker = this.ownerDocument.createTreeWalker(content, 0x1 /* NodeFilter.SHOW_ELEMENT */);
     let inspected = 0;
     let node: Node | null;
     while (
@@ -660,7 +541,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       tree.push({ id: slug, label, level });
     }
     this.headingTree = tree;
-    return doc.body.innerHTML;
+    return content;
   }
 
   /** A document-ordered, flattened heading outline -- empty until a document has finished loading. */
@@ -670,7 +551,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   // -- anchor-target: applyAnchor per kind -----------------------------------------------------
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const root = this.contentRoot();
     if (!root) return false;
     switch (anchor.kind) {
@@ -733,7 +614,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   /** Overrides `DocumentAnchorTarget`'s default (whole render-root) selection scope -- only
    *  `[part="content"]` is a meaningful text-quote scope for this component. */
-  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+  protected override computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
     if (!root) return null;
     return buildQuoteAnchor(range, this.currentTextIndex(root).scope);
@@ -1044,7 +925,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private clearSearchPaint(): void {
     if (this.paintedSearchMarks.length > 0) this.textIndexMappingDirty = true;
-    for (const mark of this.paintedSearchMarks) unwrapSearchMark(mark);
+    for (const mark of this.paintedSearchMarks) unwrapTextMark(mark);
     this.paintedSearchMarks = [];
   }
 
@@ -1066,7 +947,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const half = MAX_DOCX_PAINTED_SEARCH_MATCHES >> 1;
     const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
     const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - count));
-    const budget: DocxPaintWorkBudget = {
+    const budget: TextMarkPaintBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
       marks: MAX_DOCX_PAINTED_SEARCH_MATCHES,
@@ -1102,7 +983,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
             aria-label=${viewerSemanticLabel(this, this.name || this.localize('docxViewerLabel')) ?? nothing}
             @click=${this.onContentClick}
           >
-            ${unsafeHTML(this.fetchState.markup)}
+            ${this.fetchState.content}
           </div>
         `;
       case 'loading':

@@ -1,13 +1,15 @@
-import { type PropertyValues } from 'lit';
+import type { PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import {
   DocumentAnchorTarget,
   prioritizedHighlightCandidates,
   type LyraAnchorTarget,
+  type DocumentAnchorTargetHooks,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
 import {
+  buildQuoteAnchor,
   createTextQuoteIndex,
   emptyTextQuoteMatches,
   rangeFromTextQuoteMatch,
@@ -61,6 +63,18 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
   clearSearch(): void;
 }
 
+/** Protected extension points implemented by DOM-text viewers. */
+declare class TextViewerTargetHooks extends DocumentAnchorTargetHooks {
+  protected textContentRoot(): Element | null;
+  protected buildTextScope(root: Element): TextQuoteScope;
+  protected searchPaintedRangeCount(): number;
+  protected textScopeBuildCount(): number;
+  protected textQuoteScanCount(): number;
+  protected highlightPaintedRangeCount(): number;
+}
+
+export type { TextViewerTargetHooks };
+
 /**
  * Shared anchor/search behavior for viewers whose loaded output is ordinary DOM text. The mixin
  * deliberately leaves rendering to each viewer, while resolving `text-quote`/`fragment` anchors,
@@ -92,13 +106,13 @@ export function TextViewerTarget<
   T extends InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
 >(
   Base: T,
-): T & InternalMixinConstructor<LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }>;
+): T & InternalMixinConstructor<LyraTextViewerTarget & TextViewerTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 /** Public, declaration-safe mixin signature. */
 export function TextViewerTarget<
   T extends PublicConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
 >(
   Base: T,
-): MixedConstructor<T, LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }>;
+): MixedConstructor<T, LyraTextViewerTarget & TextViewerTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 export function TextViewerTarget(
   Base: InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap>>,
 ): InternalMixinConstructor<LyraElement<LyraTextViewerTargetEventMap> & LyraTextViewerTarget & {
@@ -143,6 +157,15 @@ export function TextViewerTarget(
       return this.renderRoot.querySelector('[part="body"]');
     }
 
+    protected override computeSelectionAnchor(range: Range, _text: string): LyraAnchor | null {
+      const root = this.textContentRoot();
+      return root ? buildQuoteAnchor(range, this.cachedTextScope(root)) : null;
+    }
+
+    protected buildTextScope(root: Element): TextQuoteScope {
+      return scopeFromElement(root);
+    }
+
     override connectedCallback(): void {
       super.connectedCallback();
       // Lit does not schedule a new update merely because an already-rendered element reconnects.
@@ -161,14 +184,14 @@ export function TextViewerTarget(
       if (!this.isConnected) return;
       const root = this.textContentRoot();
       if (root !== this.selectionRoot || root?.ownerDocument !== this.contentObserverDocument) {
-        (this as unknown as { unbindTextSelection(): void }).unbindTextSelection();
+        this.unbindTextSelection();
         this.contentObserver?.disconnect();
         this.contentObserver = undefined;
         this.contentObserverDocument = undefined;
         this.selectionRoot = root;
         this.invalidateTextContent();
         if (root) {
-          (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
+          this.bindTextSelection(root);
           this.observeTextContent(root);
         }
       } else if (root && (this.contentObserver?.takeRecords().length ?? 0) > 0) {
@@ -245,7 +268,7 @@ export function TextViewerTarget(
         this.invalidateTextContent();
         return true;
       }
-      const next = scopeFromElement(root);
+      const next = this.buildTextScope(root);
       this.textScopeBuilds++;
       this.textScope = next;
       const semanticChange = previous.text !== next.text || previous.truncated !== next.truncated;
@@ -273,7 +296,7 @@ export function TextViewerTarget(
         if (semanticChange && this.searchQuery) this.scheduleSearchRecompute();
       }
       if (!this.textScope) {
-        this.textScope = scopeFromElement(root);
+        this.textScope = this.buildTextScope(root);
         this.textScopeBuilds++;
       }
       return this.textScope;
@@ -301,7 +324,7 @@ export function TextViewerTarget(
         return;
       }
       const previous = this.textScope;
-      const next = scopeFromElement(root);
+      const next = this.buildTextScope(root);
       this.textScope = next;
       this.textScopeBuilds++;
       this.observedNodeMappingGeneration++;
@@ -313,7 +336,7 @@ export function TextViewerTarget(
       }
     }
 
-    protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+    protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
       const root = this.textContentRoot();
       if (!root) return false;
       if (anchor.kind === 'fragment') {
@@ -638,9 +661,5 @@ export function TextViewerTarget(
       this.lastPaintHandle = this.searchHandle;
     }
   }
-  return TextViewerTargetElement as InternalMixinConstructor<
-    LyraElement<LyraTextViewerTargetEventMap> & LyraTextViewerTarget & {
-      renderAnchorLiveRegion(): unknown;
-    }
-  >;
+  return TextViewerTargetElement;
 }

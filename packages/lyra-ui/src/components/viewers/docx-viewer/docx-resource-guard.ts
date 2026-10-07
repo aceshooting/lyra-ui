@@ -1,13 +1,14 @@
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import { DOCX_ZIP_LIMITS, DocxZipAdmissionError, inspectDocxZip } from '../../../internal/docx-zip-admission.js';
 import {
   assertZipArchiveWithinLimits,
   createXmlComplexityInspectorFactory,
   zipEntryLookupNames,
 } from '../archive-viewer/zip-resource-guard.js';
 
-const DEFAULT_MAX_DOCX_ENTRIES = 10_000;
-const DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
-const DEFAULT_MAX_DOCX_XML_NODES = 250_000;
+const DEFAULT_MAX_DOCX_ENTRIES = DOCX_ZIP_LIMITS.entries;
+const DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES = DOCX_ZIP_LIMITS.expanded;
+const DEFAULT_MAX_DOCX_XML_NODES = DOCX_ZIP_LIMITS.nodes;
 const MAX_DOCX_RELATIONSHIP_BYTES = 8 * 1024 * 1024;
 const DOCX_XML_PART_NAME = /\.(?:xml|rels)$/i;
 const RELATIONSHIP_PART_NAME = /^(?:(.*)\/)?_rels\/[^/]*\.rels$/i;
@@ -22,6 +23,97 @@ const XML_ENTITIES: Readonly<Record<string, string>> = { amp: '&', apos: '\'', g
 export interface DocxResourceGuardOptions {
   signal?: AbortSignal;
   maxXmlNodes?: number;
+  strictAdmission?: boolean;
+}
+
+export function createDocxXmlDepthInspector(maxDepth: number): { write(chunk: Uint8Array): void; close(): void } {
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let depth = 0;
+  let state: 'text' | 'open' | 'tag' | 'close' | 'bang' | 'comment' | 'cdata' | 'pi' = 'text';
+  let bang = '';
+  let tail = '';
+  let quote = '';
+  let lastNonSpace = '';
+  let tagName = '';
+  let readingTagName = false;
+  let closeName = '';
+  let closeNameEnded = false;
+  const names: string[] = [];
+  const invalid = (): never => { throw new LyraResourceLimitError('The DOCX archive contains invalid XML.'); };
+  const consume = (text: string): void => {
+    for (const char of text) {
+      if (state === 'text') {
+        if (char === '<') state = 'open';
+        continue;
+      }
+      if (state === 'open') {
+        if (char === '!') { state = 'bang'; bang = ''; }
+        else if (char === '?') { state = 'pi'; tail = ''; }
+        else if (char === '/') { state = 'close'; closeName = ''; closeNameEnded = false; }
+        else if (/^[\p{L}_:]$/u.test(char)) {
+          if (++depth > maxDepth) throw new LyraResourceLimitError('The DOCX archive contains overly deep XML.');
+          state = 'tag';
+          quote = '';
+          lastNonSpace = char;
+          tagName = char;
+          readingTagName = true;
+        } else invalid();
+        continue;
+      }
+      if (state === 'bang') {
+        bang += char;
+        if ('--'.startsWith(bang) && bang === '--') { state = 'comment'; tail = ''; }
+        else if ('[CDATA['.startsWith(bang) && bang === '[CDATA[') { state = 'cdata'; tail = ''; }
+        else if (!'--'.startsWith(bang) && !'[CDATA['.startsWith(bang)) invalid();
+        continue;
+      }
+      if (state === 'comment' || state === 'cdata' || state === 'pi') {
+        tail = (tail + char).slice(-3);
+        if ((state === 'comment' && tail === '-->') || (state === 'cdata' && tail === ']]>') || (state === 'pi' && tail.endsWith('?>'))) {
+          state = 'text';
+          tail = '';
+        }
+        continue;
+      }
+      if (state === 'close') {
+        if (char === '>') {
+          if (!closeName || names.pop() !== closeName) invalid();
+          depth--;
+          state = 'text';
+        } else if (!closeNameEnded && /^[\p{L}\p{N}\p{M}_.:-]$/u.test(char)) closeName += char;
+        else if (/\s/u.test(char) && closeName) closeNameEnded = true;
+        else invalid();
+        continue;
+      }
+      if (readingTagName) {
+        if (/^[\p{L}\p{N}\p{M}_.:-]$/u.test(char)) {
+          tagName += char;
+          lastNonSpace = char;
+          continue;
+        }
+        names.push(tagName);
+        readingTagName = false;
+      }
+      if (quote) { if (char === quote) quote = ''; continue; }
+      if (char === '"' || char === "'") quote = char;
+      else if (char === '>') {
+        if (lastNonSpace === '/') { names.pop(); depth--; }
+        state = 'text';
+      } else if (char === '<') invalid();
+      else if (!/\s/u.test(char)) lastNonSpace = char;
+    }
+  };
+  return {
+    write(chunk) {
+      try { consume(decoder.decode(chunk, { stream: true })); }
+      catch (error) { if (error instanceof LyraResourceLimitError) throw error; invalid(); }
+    },
+    close() {
+      try { consume(decoder.decode()); }
+      catch (error) { if (error instanceof LyraResourceLimitError) throw error; invalid(); }
+      if (state !== 'text' || depth !== 0 || names.length !== 0) invalid();
+    },
+  };
 }
 
 function isXmlSpace(character: string | undefined): boolean {
@@ -104,6 +196,16 @@ export async function assertDocxArchiveWithinLimits(
   maxUncompressedBytes = DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES,
   options: DocxResourceGuardOptions = {},
 ): Promise<void> {
+  if (options.strictAdmission) {
+    try {
+      inspectDocxZip(new Uint8Array(source), options.signal);
+    } catch (error) {
+      if (error instanceof DocxZipAdmissionError && error.code === 'aborted') {
+        throw new DOMException('The operation was aborted.', 'AbortError');
+      }
+      throw new LyraResourceLimitError('The DOCX archive is malformed or exceeds its resource limits.');
+    }
+  }
   let countEveryEntry = false;
   const countNodes = createXmlComplexityInspectorFactory({
     includeEntry: (name) => countEveryEntry || DOCX_XML_PART_NAME.test(name),
@@ -113,6 +215,8 @@ export async function assertDocxArchiveWithinLimits(
     description: 'DOCX',
     maxEntries,
     maxUncompressedBytes,
+    maxEntryBytes: options.strictAdmission ? DOCX_ZIP_LIMITS.entry : undefined,
+    verifyCrc: options.strictAdmission,
     signal: options.signal,
   };
   const skipped: string[] = [];
@@ -127,19 +231,24 @@ export async function assertDocxArchiveWithinLimits(
         skipped.push(entry.name);
         return undefined;
       }
-      if (!zipEntryLookupNames(entry.name).some((name) => RELATIONSHIP_PART_NAME.test(name))) return counter;
+      const depth = options.strictAdmission ? createDocxXmlDepthInspector(DOCX_ZIP_LIMITS.depth) : undefined;
+      const inspect = depth ? {
+        write(chunk: Uint8Array) { counter.write(chunk); depth.write(chunk); },
+        close() { counter.close(); depth.close(); },
+      } : counter;
+      if (!zipEntryLookupNames(entry.name).some((name) => RELATIONSHIP_PART_NAME.test(name))) return inspect;
       const part = { name: entry.name, chunks: [] as Uint8Array[] };
       relationshipParts.push(part);
       return {
         write(chunk) {
-          counter.write(chunk);
+          inspect.write(chunk);
           relationshipBytes += chunk.byteLength;
           if (relationshipBytes > MAX_DOCX_RELATIONSHIP_BYTES) {
             throw new LyraResourceLimitError('The DOCX archive contains too many document relationships.');
           }
           part.chunks.push(chunk);
         },
-        close: () => counter.close(),
+        close: () => inspect.close(),
       };
     },
   });
@@ -164,6 +273,15 @@ export async function assertDocxArchiveWithinLimits(
   countEveryEntry = true;
   await assertZipArchiveWithinLimits(source, {
     ...guardOptions,
-    createInspector: (entry) => (uncounted.has(entry.name) ? countNodes(entry) : undefined),
+    createInspector: (entry) => {
+      if (!uncounted.has(entry.name)) return undefined;
+      const counter = countNodes(entry);
+      if (!counter || !options.strictAdmission) return counter;
+      const depth = createDocxXmlDepthInspector(DOCX_ZIP_LIMITS.depth);
+      return {
+        write(chunk: Uint8Array) { counter.write(chunk); depth.write(chunk); },
+        close() { counter.close(); depth.close(); },
+      };
+    },
   });
 }

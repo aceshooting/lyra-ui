@@ -26,10 +26,12 @@
        own transitions share the kit's rhythm.
 
    WHAT IS DELIBERATELY OUT.
-     - --lr-ramp-<variant>-<step> (55): documented as never-reference-directly. A step encodes a
-       light-mode choice and carries no theme hook, so a rule written against one silently breaks in
-       dark mode.
-     - --lr-size-<value> (178): value-named geometry constants. Frozen internals, not decisions.
+     - --lr-ramp-<variant>-<step> (55): tooling-only numeric inputs retained in canonical token
+       data; component hosts expose the resolved semantic --lr-color-* grid instead. Do not
+       reference ramp names in application CSS.
+     - --lr-size-<value> and --lr-theme-size-<value> (89 pairs): supported per-component
+       geometry tokens and theme inputs. This root sheet omits them; theme them through the
+       documented --lr-theme-size-* inputs instead of expecting a :root alias here.
      - The chart, graph and terminal palettes: generated ramps that move with the palette tooling.
      - --lr-layer-<role> and the z-index scale: stacking order is the application's decision.
      - --lr-color-mix-hover, --lr-color-mix-active, --lr-color-mix-partner, --lr-hover-brightness:

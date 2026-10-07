@@ -1,3 +1,5 @@
+import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -69,31 +71,18 @@ export const styles = css`
     font: inherit;
   }
   [part='table']::part(actions-trigger) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-radius);
-    background: none;
-    color: var(--lr-color-text-quiet);
-    cursor: pointer;
-    font: inherit;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    ${iconHitTarget}
+    ${iconAction}
+    --_lr-icon-button-color-default: var(--lr-color-text-quiet);
+    --_lr-icon-button-color-hover-default: var(--lr-color-text);
   }
   [part='table']::part(actions-trigger):hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
-    color: var(--lr-color-text);
+    ${iconActionHover}
   }
   [part='table']::part(actions-trigger):active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-text);
+    ${iconActionActive}
   }
   [part='table']::part(actions-trigger):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 `;

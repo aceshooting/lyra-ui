@@ -1,27 +1,9 @@
 import { finiteRatio } from '../../../internal/numbers.js';
+export { minMax } from '../../../internal/numbers.js';
 
 /** Maps `value` in `[lo, hi]` to a 0.1-1.0 alpha so the lowest real value still reads as faintly present rather than invisible. */
 export function linearAlpha(value: number, lo: number, hi: number): number {
   return 0.1 + 0.9 * finiteRatio(value, lo, hi);
-}
-
-/**
- * Computes `[min, max]` of `values` via a linear scan, or `null` for an
- * empty array. Deliberately not `Math.min(...values)`/`Math.max(...values)`
- * — spreading a large array as call arguments throws `RangeError: Maximum
- * call stack size exceeded` once the engine's argument-list limit is
- * exceeded (verified at ~150k+ elements).
- */
-export function minMax(values: number[]): [number, number] | null {
-  if (values.length === 0) return null;
-  let lo = values[0]!;
-  let hi = values[0]!;
-  for (let i = 1; i < values.length; i++) {
-    const v = values[i]!;
-    if (v < lo) lo = v;
-    if (v > hi) hi = v;
-  }
-  return [lo, hi];
 }
 
 /**

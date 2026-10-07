@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
 export const styles = css`
@@ -60,7 +62,7 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast);
   }
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part='rate-select'] {
       max-inline-size: var(--lr-size-8rem);
     }
@@ -141,8 +143,7 @@ export const styles = css`
     inset-block: 0;
     border: none;
     padding: 0;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
     --_lr-av-player-marker-fill: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
     background: var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill));

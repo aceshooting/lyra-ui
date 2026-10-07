@@ -1,3 +1,6 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
@@ -6,10 +9,8 @@ import {
   type PropertyValues,
   type TemplateResult,
 } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -18,11 +19,10 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
-import { isStaticValidityCheckInProgress, withStaticValidityCheck } from '../../../internal/invalid-event-alias.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { isStaticValidityCheckInProgress } from '../../../internal/invalid-event-alias.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
   isBarredFromValidation,
   setFormOwner,
@@ -31,7 +31,8 @@ import {
 import {
   declaredDefaultConverter,
   literalSetConverter,
-  omittedEmptyStringConverter } from '../../../internal/converters.js';
+  omittedEmptyStringConverter,
+} from '../../../internal/converters.js';
 import {
   isAccessibilitySubtreeExcluded,
   isAriaTrue,
@@ -39,18 +40,19 @@ import {
 import { composedParentElement } from '../../../internal/active-element.js';
 import { measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
 export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
-  'lr-input': CustomEvent<{ value: string; radio: LyraRadio }>;
-  'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
-  'lr-activate': CustomEvent<{ value: string; radio: LyraRadio }>;
+  'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
+  'lr-change': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
+  'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -87,11 +89,13 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @slot error - Validation text.
  * @event {Event} input - Native event fired from the group when its selected value changes.
  * @event {Event} change - Native event fired after `input` for the same group selection.
- * @event lr-input - Prefixed alias for `input`; `detail: { value, radio }`.
- * @event lr-change - A radio was selected. `detail: { value, radio }`.
+ * `option` identifies the acted-on radio; `radio` remains an equal compatibility alias.
+ *
+ * @event lr-input - Prefixed alias for `input`; `detail: { value, option, radio }`.
+ * @event lr-change - A radio was selected. `detail: { value, option, radio }`.
  * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
  * whether or not the selection moved; emitted after `lr-change` when it did.
- * `detail: { value, radio }`.
+ * `detail: { value, option, radio }`.
  * @event lr-invalid - The group's owned validity control failed a validity check. Cancelable:
  * calling `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -145,9 +149,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     'lr-activate',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
-    'lr-input': Object.freeze(['radio']),
-    'lr-change': Object.freeze(['radio']),
-    'lr-activate': Object.freeze(['radio']),
+    'lr-input': Object.freeze(['option', 'radio']),
+    'lr-change': Object.freeze(['option', 'radio']),
+    'lr-activate': Object.freeze(['option', 'radio']),
   });
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraRadioGroup>[] {
@@ -197,10 +201,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** Accessible-name override forwarded to the internal radiogroup. Attribute presence wins,
    * including an explicitly empty `aria-label`, which also suppresses visible-label linkage. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasHelpTextSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly labelId = nextId('radio-group-label');
   private readonly hintId = nextId('radio-group-hint');
   private readonly errorId = nextId('radio-group-error');
@@ -212,7 +217,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private runResizeObserver?: ResizeObserver;
   private runProjectionFrame?: number;
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   private _name = '';
   private _value = '';
   private _defaultValue = '';
@@ -234,8 +239,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.syncFormState();
     this.requestUpdate('name', old);
   }
@@ -290,6 +294,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // `syncRadios()` recomputes validity itself, but only once radios exist -- an empty or
     // not-yet-upgraded group still has to drop its own barred violation synchronously.
     this.syncRadios();
@@ -308,12 +314,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(
-      this,
-      this.internals,
-      () => this[VALIDITY_ANCHOR](),
-    );
+    this.validityController = new FormControlController(this);
+    this.internals = this.validityController.formInternals;
     // `invalid` does not bubble, but its capture phase reaches the light-DOM group. Listening here
     // lets the group own the public alias while one of its radios temporarily owns native validity;
     // it also covers a host-targeted event when the group itself becomes the aggregate FACE owner.
@@ -367,14 +369,6 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     super.connectedCallback();
     if (this.hasUpdated) {
       this.syncExternalDescription();
-      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
-      this.syncSupportSlots();
-    } else {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => this.syncSupportSlots());
     }
     this.syncRadios();
     this.armMembershipObserver();
@@ -513,15 +507,6 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     super.updated(changed);
     this.syncExternalDescription();
     if (changed.has('size') || changed.has('orientation')) this.syncRadios();
-  }
-
-  private syncSupportSlots(): void {
-    this.hasLabelSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'label');
-    this.hasHintSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'hint');
-    this.hasHelpTextSlot = Array.from(this.children ?? []).some(
-      (element) => element.getAttribute('slot') === 'help-text',
-    );
-    this.hasErrorSlot = Array.from(this.children ?? []).some((element) => element.getAttribute('slot') === 'error');
   }
 
   private radioGroupOwner(element: Element): Element | null {
@@ -683,6 +668,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** @internal */
   selectRadio(radio: LyraRadio): boolean {
     if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio)) return false;
+    const detail = Object.freeze({ value: radio.value, option: radio, radio });
     if (!radio.checked) {
       this._valueDirty = true;
       this.hasInteracted = true;
@@ -696,11 +682,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       }
       this.syncRadios();
       dispatchNativeEvent(this, 'input');
-      this.emit('lr-input', { value: radio.value, radio });
+      this.emit('lr-input', detail);
       dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: radio.value, radio });
+      this.emit('lr-change', detail);
     }
-    this.emit('lr-activate', { value: radio.value, radio });
+    this.emit('lr-activate', detail);
     return true;
   }
   private onFocusOut = (event: FocusEvent): void => {
@@ -733,14 +719,6 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     // selection while still receiving them for click and Space. Native <input type=radio> fires
     // both on arrow navigation.
     next.activateFromGroup();
-  };
-  private onSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    const elements = slot.assignedElements({ flatten: true });
-    if (slot.name === 'label') this.hasLabelSlot = elements.length > 0;
-    if (slot.name === 'hint') this.hasHintSlot = elements.length > 0;
-    if (slot.name === 'help-text') this.hasHelpTextSlot = elements.length > 0;
-    if (slot.name === 'error') this.hasErrorSlot = elements.length > 0;
   };
   private onRadioSlotChange = (): void => {
     this.syncRadios();
@@ -815,8 +793,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     });
   }
 
-  checkValidity(): boolean { return withStaticValidityCheck(this, () => this.internals.checkValidity()); }
+  checkValidity(): boolean { return this.validityController.checkValidity(); }
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.hasInteracted = true;
     this.updateValidity();
     this.requestUpdate();
@@ -868,7 +847,10 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     this.selectValue(this.pendingSelection);
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     // Cascaded disablement bars constraint validation exactly like the group's own `disabled`.
     this.syncRadios();
     this.updateValidity();
@@ -896,15 +878,15 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         @keydown=${this.onKeyDown}
         @focusout=${this.onFocusOut}>
         <div part="form-control">
-          <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
+          <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label"></slot></div>
           <div part="radios form-control-input button-group button-group__base">
             <slot @slotchange=${this.onRadioSlotChange}></slot>
           </div>
           <div part="hint form-control-help-text" id=${this.hintId} ?hidden=${!hasHint}>
-            ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onSlotChange}></slot
-            ><slot name="help-text" @slotchange=${this.onSlotChange}></slot>
+            ${this.hint || this.helpText}<slot name="hint"></slot
+            ><slot name="help-text"></slot>
           </div>
-          <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
+          <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error"></slot></div>
         </div>
       </div>
     `;

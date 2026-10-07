@@ -4,7 +4,6 @@ import {
   layoutMindMap,
   type LyraTopic,
 } from './mind-map-layout.js';
-import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
@@ -12,12 +11,6 @@ import {
 } from '../retrieval-identity.js';
 
 const alwaysExpanded = () => true;
-
-const valueFormatOptions = {
-  locale: 'en',
-  invalid: '[invalid]',
-  truncated: '[truncated]',
-};
 
 describe('retrieval identity helpers', () => {
   it('retains the first byte-exact nonblank identity and contains identity readers that throw', () => {
@@ -51,56 +44,6 @@ describe('retrieval identity helpers', () => {
     expect(first).to.deep.equal(['one', 'two']);
     expect(Object.isFrozen(first)).to.equal(true);
     expect(canonicalIdentityList(source) === first).to.equal(true);
-  });
-});
-
-describe('formatBoundedRetrievalValue', () => {
-  it('bounds object entries and string lengths while ignoring inherited fields', () => {
-    const inherited = { inherited: 'not rendered' };
-    const value = Object.assign(Object.create(inherited) as Record<string, unknown>, {
-      first: 'abcdef',
-      second: 2,
-      third: 3,
-    });
-
-    expect(formatBoundedRetrievalValue(value, {
-      ...valueFormatOptions,
-      maxEntries: 2,
-      maxStringLength: 3,
-    })).to.equal('{fir[truncated]: abc[truncated], sec[truncated]: 2, [truncated]}');
-  });
-
-  it('rejects a runtime array whose length is not a safe non-negative integer', () => {
-    const value = new Proxy([], {
-      get(target, key, receiver) {
-        return key === 'length' ? -1 : Reflect.get(target, key, receiver);
-      },
-    });
-
-    expect(formatBoundedRetrievalValue(value, valueFormatOptions)).to.equal('[invalid]');
-  });
-
-  it('contains hostile collection traps and releases path-local cycle tracking', () => {
-    const hostile = new Proxy({}, {
-      ownKeys() {
-        throw new Error('keys denied');
-      },
-    });
-    const shared = { ok: true };
-
-    expect(formatBoundedRetrievalValue(hostile, valueFormatOptions)).to.equal('[invalid]');
-    expect(formatBoundedRetrievalValue([shared, shared], valueFormatOptions)).to.equal(
-      '{ok: true} and {ok: true}',
-    );
-  });
-
-  it('distinguishes nullish, unsupported primitive, and traversal-limit sentinels', () => {
-    expect(formatBoundedRetrievalValue(null, valueFormatOptions)).to.equal('');
-    expect(formatBoundedRetrievalValue(Symbol('unsupported'), valueFormatOptions)).to.equal('[invalid]');
-    expect(formatBoundedRetrievalValue({ nested: { value: 'too deep' } }, {
-      ...valueFormatOptions,
-      maxDepth: 1,
-    })).to.equal('{nested: {value: [truncated]}}');
   });
 });
 

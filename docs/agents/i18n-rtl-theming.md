@@ -96,6 +96,13 @@ rules, so that entry explicitly records the existing `en-US` fallback categories
 Punjabi or Lahnda grammar. Do not generalize that exception to another unsupported locale or
 advertise either canonical alias as an additional translated catalog.
 
+Author Portuguese (Portugal) differences in `scripts/fixtures/pt-PT-overrides.ts`, against the
+complete `pt-BR` catalog. The translation slice generator resolves those differences into full,
+standalone `src/translations/pt-PT/<family>.ts` modules. Edit the override fixture rather than the
+generated `pt-PT` slices. A consumer importing one `pt-PT` family never imports `pt-BR`; the
+translation checker compares the emitted messages with the authored base and overrides, while
+review snapshots still cover the complete resolved Portuguese (Portugal) catalog.
+
 ## Catalog review tiers and native-speaker review
 
 Author review evidence in `scripts/fixtures/translation-reviews/locales/<source-locale>.json`
@@ -147,6 +154,9 @@ category fixture defines structural requirements without claiming linguistic qua
   swap which arrow means which under RTL — a plain `ArrowLeft === previous` hardcode is an RTL
   bug, not just an LTR-only shortcut. The single most common RTL miss in this library's own
   standardization pass (graph, heatmap, word-cloud roving-focus nav).
+  For list-like controls, use `resolveListMove()` from `internal/list-navigation.ts` with the
+  host's `effectiveDirection`; each component still owns its focus and selection side effects.
+  Shared typeahead uses `TypeAheadBuffer`, including its composition guard and circular matcher.
 - A directional glyph (chevron/arrow meaning "expand toward", "previous", "next") must mirror
   under RTL: rotate the wrapping `part` element via
   `:host(:dir(rtl)) [part='x'] { transform: ... }` rather than baking a fixed rotation into the

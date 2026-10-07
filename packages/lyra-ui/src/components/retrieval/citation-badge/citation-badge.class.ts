@@ -1,10 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
-import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
-import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
-import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { PreviewDisclosureController } from '../../../internal/preview-disclosure-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -200,6 +197,9 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
    *  (`"Citation {index}, {label}"`). */
   @property() label = '';
 
+  /** Optional tab index for the internal citation button when a parent owns a roving list. */
+  @property({ attribute: false }) rovingTabIndex?: number;
+
   @state() private popoverOpen = false;
 
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
@@ -209,16 +209,15 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // A rendered slot is never empty because the slot node itself is present;
   // the shared controller also counts bare, non-whitespace text content.
   private readonly slotPresence = new SlotPresenceController(this);
-  private cleanupPositioner?: () => void;
-  private overlayHandle?: OverlayHandle;
-  private hideTimer?: number;
-  private hideTimerOwner?: Window;
-  // Hover and focus are tracked as independent "keep it open" reasons —
-  // mirrors lr-toast-item's identical hovering/focused pair — so releasing
-  // one (e.g. the pointer leaving while the badge still has keyboard focus)
-  // doesn't schedule a hide the other modality is still holding open.
-  private hovering = false;
-  private focused = false;
+  private readonly preview = new PreviewDisclosureController({
+    host: this,
+    button: () => this.buttonEl,
+    panel: () => this.popoverEl,
+    hasContent: () => this.hasPreviewSlot,
+    isOpen: () => this.popoverOpen,
+    setOpen: (open) => { this.popoverOpen = open; },
+    hideDelayMs: HIDE_DELAY_MS,
+  });
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
@@ -229,48 +228,19 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     // The slot can be emptied out from under an already-open popover (e.g. a
     // consumer clearing preview content asynchronously) — nothing left to
     // show, so don't leave an empty panel floating open.
-    if (this.popoverOpen && !this.hasPreviewSlot) this.hidePreviewNow();
+    this.preview.ensureContent();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('popoverOpen')) {
-      this.cleanupPositioner?.();
-      this.cleanupPositioner = undefined;
-      this.overlayHandle?.deactivate({ restoreFocus: false });
-      this.overlayHandle = undefined;
-      if (this.popoverOpen && this.buttonEl && this.popoverEl) {
-        this.cleanupPositioner = place(this.buttonEl, this.popoverEl, {
-          placement: 'top-start',
-          strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
-        });
-        // Registers with the shared topmost-overlay stack (internal/overlay-manager.ts) so
-        // Escape defers to a genuinely topmost overlay opened above this popover, instead of
-        // this preview always winning regardless of stacking order -- mirrors
-        // <lr-tooltip>'s activateTooltipOverlay(). Nonmodal/non-trapping: this popover is
-        // always `inert` and never owns focus of its own.
-        this.overlayHandle = activateNonmodalOverlay({
-          host: this,
-          panel: () => this.popoverEl ?? null,
-          onEscape: () => this.hidePreviewNow(),
-          restoreFocusTo: null,
-        });
-      }
-    }
+    if (changed.has('popoverOpen')) this.preview.syncOpen();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cleanupPositioner?.();
-    this.cleanupPositioner = undefined;
-    this.overlayHandle?.deactivate({ restoreFocus: false });
-    this.overlayHandle = undefined;
-    this.clearHideTimer();
+    this.preview.disconnect();
     // Reset transient state so reconnecting a reparented or virtualized element re-arms its
     // positioner and does not preserve stale hover/keyboard-focus ownership.
-    this.popoverOpen = false;
-    this.hovering = false;
-    this.focused = false;
   }
 
   private get accessibleLabel(): string {
@@ -291,80 +261,6 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
         })
       : citationLabel;
   }
-
-  // Named showPreview/hidePreviewNow (not show/hidePopover) to avoid
-  // colliding with the standard HTML Popover API's own
-  // HTMLElement.prototype.showPopover()/hidePopover() -- this component
-  // renders its own floating panel via internal/positioner.js rather than
-  // the native `popover` attribute, but TS's DOM lib still declares those
-  // method names on every HTMLElement subclass, so reusing them here would
-  // be a same-name-different-signature override error.
-  private showPreview(): void {
-    if (!this.hasPreviewSlot) return;
-    // Cancel any pending hide unconditionally -- including when the popover
-    // is already open -- so hover/keyboard focus returning within the grace period
-    // (pointerenter -> pointerleave -> pointerenter before HIDE_DELAY_MS)
-    // actually cancels the scheduled hide instead of leaving it armed to
-    // fire later regardless of the now-restored hover/keyboard-focus state.
-    this.clearHideTimer();
-    if (this.popoverOpen) return;
-    this.popoverOpen = true;
-  }
-
-  private clearHideTimer(): void {
-    if (this.hideTimer !== undefined) this.hideTimerOwner?.clearTimeout(this.hideTimer);
-    this.hideTimer = undefined;
-    this.hideTimerOwner = undefined;
-  }
-
-  private scheduleHidePreview(): void {
-    if (!this.popoverOpen || this.hovering || this.focused) return;
-    this.clearHideTimer();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const handle = ownerWindow.setTimeout(() => {
-      if (this.hideTimer !== handle) return;
-      this.hideTimer = undefined;
-      this.hideTimerOwner = undefined;
-      this.popoverOpen = false;
-    }, HIDE_DELAY_MS);
-    this.hideTimer = handle;
-    this.hideTimerOwner = ownerWindow;
-  }
-
-  private hidePreviewNow(): void {
-    this.clearHideTimer();
-    if (this.popoverOpen) this.popoverOpen = false;
-  }
-
-  // Attached to the wrapper (not the button alone) so the popover's own
-  // slotted content counts too — pointerenter/pointerleave/focusin/focusout
-  // fire relative to whichever element they're bound to, not per descendant,
-  // so moving the pointer or focus between the button and the popover panel
-  // within this same wrapper never toggles hovering/focused off and on.
-  private onPointerEnter = (): void => {
-    this.hovering = true;
-    this.showPreview();
-  };
-  private onPointerLeave = (): void => {
-    this.hovering = false;
-    this.scheduleHidePreview();
-  };
-  private onFocusIn = (event: FocusEvent): void => {
-    if (!isKeyboardFocusEvent(event)) return;
-    this.focused = true;
-    this.showPreview();
-  };
-  // No grace period here, unlike onPointerLeave -- a blur (Tab/Shift+Tab
-  // away, or focus programmatically moved elsewhere) is a deliberate
-  // navigation, not the transient pointer travel the delay exists to survive,
-  // so it closes at once. Still deferred to hover if the pointer happens to
-  // be resting on the badge/popover at the same time.
-  private onFocusOut = (): void => {
-    this.focused = false;
-    if (this.hovering) return;
-    this.hidePreviewNow();
-  };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     // Space normally activates a <button> the same as Enter, but this
@@ -405,15 +301,16 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     return html`
       <span
         class="wrapper"
-        @pointerenter=${this.onPointerEnter}
-        @pointerleave=${this.onPointerLeave}
-        @focusin=${this.onFocusIn}
-        @focusout=${this.onFocusOut}
+        @pointerenter=${() => this.preview.pointerEnter()}
+        @pointerleave=${() => this.preview.pointerLeave()}
+        @focusin=${(event: FocusEvent) => this.preview.focusIn(event)}
+        @focusout=${() => this.preview.focusOut()}
         @keydown=${this.onKeyDown}
       >
         <button
           part="base"
           type="button"
+          tabindex=${this.rovingTabIndex ?? 0}
           aria-label=${this.accessibleLabel}
           aria-describedby=${this.hasPreviewSlot ? this.popoverId : nothing}
           @click=${this.onClick}

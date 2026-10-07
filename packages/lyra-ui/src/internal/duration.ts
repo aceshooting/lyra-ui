@@ -6,6 +6,11 @@ export interface LyraDurationMessageValue {
   readonly value: number;
 }
 
+/** A finite, non-negative duration, or `null` when the source value is absent or non-finite. */
+export function safeDurationMs(milliseconds: number | null | undefined): number | null {
+  return milliseconds != null && Number.isFinite(milliseconds) ? Math.max(0, milliseconds) : null;
+}
+
 /**
  * Converts milliseconds to the one shared short-duration value model. Callers retain ownership of
  * locale-aware numeric formatting and message interpolation, so this helper is side-effect-free

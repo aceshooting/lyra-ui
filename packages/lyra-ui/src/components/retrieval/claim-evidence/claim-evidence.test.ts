@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { Citation, GroundedClaim } from '../../../ai/types.js';
 import './claim-evidence.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraClaimEvidence } from './claim-evidence.js';
 import {
   captureDeprecationWarnings,
@@ -33,6 +34,18 @@ const citations: Citation[] = [
     quote: 'Lyra components extend Lit.',
   },
 ];
+
+it('roves claim selection across a single tab stop while evidence badges remain reachable', async () => {
+  const el = (await fixture(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`)) as LyraClaimEvidence;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="claim-trigger"]')];
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  await focusByKeyboard(buttons[0]!);
+  buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  expect(el.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+  await el.updateComplete;
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+  expect(el.shadowRoot!.querySelector('lr-citation-badge')).to.exist;
+});
 
 it('renders claim status, confidence, and only evidence that resolves', async () => {
   const el = (await fixture(
@@ -84,8 +97,14 @@ it('renders distinct localized labels for partially supported and contradicted c
   ).to.deep.equal(['Partial evidence', 'Contradicting evidence']);
 });
 
-it('fails an unrecognized claim status closed to the visible unsupported treatment', async () => {
-  const el = await fixture<LyraClaimEvidence>(html`
+it('renders an unrecognized claim status as a neutral localized unknown state', async () => {
+  (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-claim-evidence:unknown-status');
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+  let el: LyraClaimEvidence;
+  try {
+    el = await fixture<LyraClaimEvidence>(html`
     <lr-claim-evidence
       .claims=${[
         {
@@ -96,15 +115,22 @@ it('fails an unrecognized claim status closed to the visible unsupported treatme
         },
       ] as unknown as GroundedClaim[]}
     ></lr-claim-evidence>
-  `);
+    `);
+  } finally {
+    console.warn = originalWarn;
+  }
+  expect(warnings.some((warning) => warning.includes('uncertain'))).to.equal(true);
 
   const status = el.shadowRoot!.querySelector(
     'lr-badge[part="status"]'
   ) as HTMLElement & {
     variant: string;
   };
-  expect(status.textContent?.trim()).to.equal('Unsupported');
-  expect(status.variant).to.equal('danger');
+  expect(status.textContent?.trim()).to.equal('Unknown');
+  expect(status.variant).to.equal('neutral');
+  el.strings = { statusUnknown: 'Inconnu' };
+  await el.updateComplete;
+  expect(status.textContent?.trim()).to.equal('Inconnu');
 });
 
 it('emits controlled claim and citation selection events with complete records', async () => {

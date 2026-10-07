@@ -942,6 +942,29 @@ it('keeps Escape ownership when open interactive content stops being actionable'
   unrelated.remove();
 });
 
+it('refreshes closed content on trigger focus and observes ancestor visibility while open', async () => {
+  const wrapper = await fixture(html`
+    <div style="visibility: hidden">
+      <lr-tooltip manual>
+        <button type="button" slot="trigger">Help</button>
+        <button type="button">Action</button>
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
+  const trigger = wrapper.querySelector('button') as HTMLButtonElement;
+  await waitUntil(() => popup(el).getAttribute('role') === 'tooltip');
+
+  wrapper.style.visibility = 'visible';
+  await focusByKeyboard(trigger);
+  await waitUntil(() => popup(el).getAttribute('role') === 'dialog');
+
+  el.open = true;
+  await el.updateComplete;
+  wrapper.style.visibility = 'hidden';
+  await waitUntil(() => popup(el).getAttribute('role') === 'tooltip');
+});
+
 it('keeps the tooltip open when lr-hide is prevented', async () => {
   const el = (await fixture(html`<lr-tooltip manual></lr-tooltip>`)) as LyraTooltip;
   el.open = true;

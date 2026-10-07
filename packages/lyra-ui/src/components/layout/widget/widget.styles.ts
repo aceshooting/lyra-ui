@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -105,8 +106,7 @@ export const styles = css`
        justify-content (normal => flex-start) dumped on the trailing side -- off true center
        once the asymmetric inline padding counts. A labeled toggle fills its fit-sized pill. */
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     gap: var(--lr-space-2xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-s);
@@ -179,16 +179,14 @@ export const styles = css`
     color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
   }
   [part="view-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="collapse-button"],
   [part="fullscreen-button"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: transparent;
     color: var(--lr-color-text-quiet);
@@ -229,8 +227,7 @@ export const styles = css`
   }
   [part="collapse-button"]:focus-visible,
   [part="fullscreen-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Chevron points at the content: rotated down while expanded, resting right while collapsed --
      same convention as lr-code-block's/lr-json-viewer's own toggles. */

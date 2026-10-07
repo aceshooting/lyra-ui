@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import "./responsive-panel.js";
 import type {
@@ -492,6 +493,23 @@ it('close() fires lr-close with reason "api" in the inline presentation too (doc
 
   expect(el.open).to.be.false;
   expect(event.detail).to.deep.equal({ reason: "api" });
+});
+
+it('show() opens and hide() preserves the close request and veto contract', async () => {
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="inline">body</lr-responsive-panel>`
+  )) as LyraResponsivePanel;
+  el.show();
+  expect(el.open).to.be.true;
+  const veto = (event: Event) => event.preventDefault();
+  el.addEventListener('lr-close-request', veto);
+  el.hide();
+  expect(el.open).to.be.true;
+  el.removeEventListener('lr-close-request', veto);
+  const closed = oneEvent(el, 'lr-close');
+  el.hide();
+  expect((await closed).detail).to.deep.equal({ reason: 'api' });
+  expect(el.open).to.be.false;
 });
 
 it("makes lr-close-request a cancelable pre-mutation veto for close(), Escape, and backdrop dismissal", async () => {
@@ -1197,18 +1215,6 @@ it("scrolls the body of a docked panel inside a height-bounded host", async () =
 });
 
 describe("overlay state cssprops", () => {
-  function resolvedInShadow(
-    el: LyraResponsivePanel,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.append(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   it("keeps the pre-cssprop scrim and overlay-surface treatment when the props are unset", async () => {
     const el = (await fixture(

@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -22,8 +23,7 @@ export const styles = css`
        every other icon-button, without disturbing the fixed circle. */
     inline-size: var(--lr-icon-button-size);
     block-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border-radius: 50%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);

@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -26,8 +28,7 @@ export const styles = css`
   [part~='metric'],
   [part='run'] {
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -66,8 +67,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part~='slice-selected'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part~='slice']:hover,
   [part~='metric']:hover,
@@ -86,8 +86,7 @@ export const styles = css`
   [part~='slice']:focus-visible,
   [part~='metric']:focus-visible,
   [part='run']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='metrics'] {
     display: grid;
@@ -111,7 +110,7 @@ export const styles = css`
     padding: var(--lr-space-s);
     text-align: start;
   }
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='metrics'] {
       grid-template-columns: 1fr;
     }

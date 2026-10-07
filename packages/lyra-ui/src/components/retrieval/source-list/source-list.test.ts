@@ -88,6 +88,33 @@ it('toggles expanded and fires lr-toggle on header click', async () => {
   expect(header.getAttribute('aria-expanded')).to.equal('false');
 });
 
+it('re-emits one contextual toggle for a slotted source card', async () => {
+  const el = await fixture<LyraSourceList>(html`<lr-source-list expanded>
+    <lr-source-card source-id="source-1"><span slot="full">Full text</span></lr-source-card>
+  </lr-source-list>`);
+  const card = el.querySelector('lr-source-card')!;
+  await (card as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  const seen: CustomEvent[] = [];
+  el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
+  (card.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+  expect(seen.map((event) => event.detail)).to.deep.equal([{ expanded: true, itemId: 'source-1' }]);
+  expect(seen[0]!.target === el).to.equal(true);
+  expect(seen[0]!.composed).to.equal(true);
+});
+
+it('lets unrelated slotted toggle events pass through unchanged', async () => {
+  const el = await fixture<LyraSourceList>(html`<lr-source-list expanded><div id="other"></div></lr-source-list>`);
+  const other = el.querySelector('#other')!;
+  const seen: Event[] = [];
+  el.addEventListener('lr-toggle', (event) => seen.push(event));
+  const original = new CustomEvent('lr-toggle', {
+    detail: { expanded: true, itemId: 'unrelated' }, bubbles: true, composed: true,
+  });
+  other.dispatchEvent(original);
+  expect(seen).to.deep.equal([original]);
+  expect(seen[0]!.target === other).to.equal(true);
+});
+
 it('links the header to the list region it controls via aria-controls', async () => {
   const el = (await fixture(html`<lr-source-list></lr-source-list>`)) as LyraSourceList;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
@@ -421,6 +448,36 @@ it('recreates its role observer in the adopted owner realm and disconnects it on
     expect(roleDisconnects, 'adoption disconnects the old owner observer').to.be.greaterThan(0);
   } finally {
     frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('re-emits a toggle from a slotted card created in an adopted iframe realm', async () => {
+  const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  if (!frameDocument) {
+    iframe.remove();
+    throw new Error('The iframe document was unavailable.');
+  }
+  try {
+    frameDocument.body.append(frameDocument.adoptNode(el));
+    const card = frameDocument.createElement('lr-source-card') as HTMLElement & { sourceId: string };
+    card.sourceId = 'cross-realm';
+    el.append(card);
+    await el.updateComplete;
+    const seen: CustomEvent[] = [];
+    el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
+    card.dispatchEvent(new CustomEvent('lr-toggle', {
+      detail: { expanded: true, itemId: 'cross-realm' }, bubbles: true, composed: true,
+    }));
+    expect(seen.length).to.equal(1);
+    expect(seen[0]!.detail).to.deep.equal({ expanded: true, itemId: 'cross-realm' });
+    expect(seen[0]!.target === el).to.equal(true);
+  } finally {
     if (el.ownerDocument !== document) document.adoptNode(el);
     el.remove();
     iframe.remove();

@@ -6,6 +6,7 @@ import type {
   RetrievalChunk,
 } from "../../../ai/types.js";
 import type { LyraMarkdown } from "../markdown/markdown.class.js";
+import type { LyraChatComposer } from '../chat-composer/chat-composer.class.js';
 import type { LyraToolTimeline, ToolTimelineEntry } from "../../agent-tools/tool-timeline/tool-timeline.class.js";
 import type { LyraToolApprovalDialog } from "../../agent-tools/tool-approval-dialog/tool-approval-dialog.class.js";
 import "../../forms/button/button.js";
@@ -275,6 +276,74 @@ it('forwards retrieval, context-total, and composer state and restores opt-in de
   expect(defaultComposer.status).to.equal('idle');
   expect(defaultComposer.minRows).to.equal(1);
   expect(defaultComposer.maxRows).to.equal(8);
+});
+
+it('forwards built-in composer editing, submission, and native textarea options', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      composer-value="ready"
+      composer-submit-disabled
+      composer-without-enter-submit
+      composer-readonly
+      composer-minlength="2"
+      composer-maxlength="20"
+      composer-spellcheck="false"
+      composer-autocapitalize="sentences"
+      composer-autocorrect="off"
+      composer-wrap="hard"
+      composer-autocomplete="off"
+      composer-inputmode="text"
+      composer-enterkeyhint="done"
+    ></lr-agent-workspace>
+  `);
+  const composer = el.shadowRoot!.querySelector<LyraChatComposer>('lr-chat-composer')!;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector<HTMLTextAreaElement>('textarea')!;
+  const action = composer.shadowRoot!.querySelector<HTMLButtonElement>('[part="action-button"]')!;
+
+  expect(composer.submitDisabled).to.be.true;
+  expect(composer.withoutEnterSubmit).to.be.true;
+  expect(composer.readOnly).to.be.true;
+  expect(composer.minLength).to.equal(2);
+  expect(composer.maxLength).to.equal(20);
+  expect(textarea.readOnly).to.be.true;
+  expect(textarea.minLength).to.equal(2);
+  expect(textarea.maxLength).to.equal(20);
+  expect(textarea.spellcheck).to.be.false;
+  expect(textarea.autocapitalize).to.equal('sentences');
+  expect(textarea.getAttribute('autocorrect')).to.equal('off');
+  expect(textarea.wrap).to.equal('hard');
+  expect(textarea.autocomplete).to.equal('off');
+  expect(textarea.inputMode).to.equal('text');
+  expect(textarea.enterKeyHint).to.equal('done');
+  expect(action.disabled).to.be.true;
+  expect(textarea.disabled).to.be.false;
+
+  let submitted = false;
+  el.addEventListener('lr-submit', () => (submitted = true));
+  action.click();
+  expect(submitted).to.be.false;
+
+  el.composerSubmitDisabled = false;
+  el.composerWithoutStop = true;
+  el.composerStatus = 'streaming';
+  await el.updateComplete;
+  await composer.updateComplete;
+  const busyAction = composer.shadowRoot!.querySelector<HTMLButtonElement>('[part="action-button"]')!;
+  expect(composer.withoutStop).to.be.true;
+  expect(busyAction.disabled).to.be.true;
+  let stopped = false;
+  el.addEventListener('lr-stop', () => (stopped = true));
+  busyAction.click();
+  expect(stopped).to.be.false;
+
+  const unset = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+  const defaultComposer = unset.shadowRoot!.querySelector<LyraChatComposer>('lr-chat-composer')!;
+  expect(defaultComposer.submitDisabled).to.be.false;
+  expect(defaultComposer.withoutStop).to.be.false;
+  expect(defaultComposer.withoutEnterSubmit).to.be.false;
+  expect(defaultComposer.spellcheck).to.be.true;
+  expect(defaultComposer.autocorrect).to.be.true;
 });
 
 it('normalizes hostile composer-status without rewriting the workspace host’s authored attribute', async () => {

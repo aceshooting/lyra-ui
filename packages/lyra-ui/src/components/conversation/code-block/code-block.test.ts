@@ -1,3 +1,6 @@
+import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
+import { assertCodeBlockLineKeyboard, assertCodeBlockSelection } from '../../../../test/contracts/code-block-interactions.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   fixture,
@@ -762,65 +765,13 @@ describe("copy button", () => {
   });
 
   it("uses and cancels the exact adopted owner clipboard and confirmation timer", async () => {
-    const frame = document.createElement("iframe");
-    document.body.append(frame);
-    const frameDocument = frame.contentDocument!;
-    const frameWindow = frame.contentWindow!;
-    const mainClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    const frameClipboard = Object.getOwnPropertyDescriptor(
-      frameWindow.navigator,
-      "clipboard"
-    );
-    const nativeSetTimeout = frameWindow.setTimeout.bind(frameWindow);
-    const nativeClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
-    let mainWrites = 0;
-    const frameWrites: string[] = [];
-    let confirmationHandle: number | undefined;
-    let confirmationCallback: (() => void) | undefined;
-    const cancelled: number[] = [];
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: () => {
-          mainWrites++;
-          return Promise.resolve();
-        },
-      },
-    });
-    Object.defineProperty(frameWindow.navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: (text: string) => {
-          frameWrites.push(text);
-          return Promise.resolve();
-        },
-      },
-    });
-    frameWindow.setTimeout = ((
-      handler: TimerHandler,
-      timeout?: number,
-      ...args: unknown[]
-    ) => {
-      const handle = nativeSetTimeout(handler, timeout, ...args);
-      if (timeout === 1500) {
-        confirmationHandle = handle;
-        if (typeof handler === "function") confirmationCallback = () => handler(...args);
-      }
-      return handle;
-    }) as typeof frameWindow.setTimeout;
-    frameWindow.clearTimeout = ((handle?: number) => {
-      if (handle !== undefined) cancelled.push(handle);
-      nativeClearTimeout(handle);
-    }) as typeof frameWindow.clearTimeout;
+    const probe = adoptedClipboardProbe(1500);
     const el = (await fixture(
       html`<lr-code-block .code=${jsSample}></lr-code-block>`
     )) as LyraCodeBlock;
 
     try {
-      frameDocument.body.append(frameDocument.adoptNode(el));
+      probe.frameDocument.body.append(probe.frameDocument.adoptNode(el));
       await el.updateComplete;
       const copied = oneEvent(el, "lr-copy");
       (
@@ -830,12 +781,12 @@ describe("copy button", () => {
       ).click();
       await copied;
       await el.updateComplete;
-      expect(mainWrites).to.equal(0);
-      expect(frameWrites).to.deep.equal([jsSample]);
-      expect(confirmationHandle).to.be.a("number");
+      expect(probe.mainWrites).to.equal(0);
+      expect(probe.frameWrites).to.deep.equal([jsSample]);
+      expect(probe.confirmationHandle).to.be.a("number");
 
       document.body.append(document.adoptNode(el));
-      expect(cancelled).to.include(confirmationHandle!);
+      expect(probe.cancelled).to.include(probe.confirmationHandle!);
       await el.updateComplete;
       expect(
         el
@@ -851,7 +802,7 @@ describe("copy button", () => {
       ).click();
       await copiedAgain;
       await el.updateComplete;
-      confirmationCallback?.();
+      probe.confirmationCallback?.();
       await el.updateComplete;
       expect(
         el
@@ -860,22 +811,8 @@ describe("copy button", () => {
         "the retired iframe callback cannot clear the new owner state"
       ).to.equal("Copied!");
     } finally {
-      if (confirmationHandle !== undefined)
-        nativeClearTimeout(confirmationHandle);
       el.remove();
-      frameWindow.setTimeout = nativeSetTimeout;
-      frameWindow.clearTimeout = nativeClearTimeout;
-      if (mainClipboard)
-        Object.defineProperty(navigator, "clipboard", mainClipboard);
-      else Reflect.deleteProperty(navigator, "clipboard");
-      if (frameClipboard)
-        Object.defineProperty(
-          frameWindow.navigator,
-          "clipboard",
-          frameClipboard
-        );
-      else Reflect.deleteProperty(frameWindow.navigator, "clipboard");
-      frame.remove();
+      probe.close();
     }
   });
 
@@ -1549,84 +1486,7 @@ describe("anchor-target (line-range)", () => {
 });
 
 describe("text selection (lr-text-select)", () => {
-  it("emits lr-text-select for a text selection spanning code lines", async () => {
-    const el = (await fixture(
-      html`<lr-code-block code=${"alpha\nbeta\ngamma"}></lr-code-block>`
-    )) as LyraCodeBlock;
-    await el.updateComplete;
-    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
-    const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
-    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
-    // Lit inserts a static per-expression marker comment before the dynamic text node it commits,
-    // so the real Text node is not reliably `firstChild` -- find it directly instead of assuming a
-    // fixed sibling position (same precedent as terminal.test.ts's identical selection test).
-    const textNodeOf = (line: Element): Node =>
-      line.querySelector(".line-source")!.firstChild!;
-    const range = document.createRange();
-    range.setStart(textNodeOf(line1), 0);
-    range.setEnd(textNodeOf(line2), 2);
-    // `ShadowRoot.getSelection` is a Chromium-only extension -- same precedent the component
-    // itself documents for onBodyMouseUp(). Falls back to window.getSelection() otherwise.
-    const shadowSelection = (
-      el.shadowRoot as unknown as { getSelection?: () => Selection | null }
-    ).getSelection?.();
-    const selection = shadowSelection ?? window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    // WebKit rejects a programmatic Selection whose endpoints live in a shadow tree. Its native
-    // drag selection is exposed through getComposedRanges(), so provide that same range shape when
-    // the setup was rejected and restore the browser global in finally.
-    const needsSelectionFacade =
-      selection.rangeCount === 0 || selection.isCollapsed;
-    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(
-      window,
-      "getSelection"
-    );
-    if (needsSelectionFacade) {
-      const composedRange = {
-        startContainer: range.startContainer,
-        startOffset: range.startOffset,
-        endContainer: range.endContainer,
-        endOffset: range.endOffset,
-      } as StaticRange;
-      const facade = {
-        getComposedRanges: () => [composedRange],
-      } as unknown as Selection;
-      Object.defineProperty(window, "getSelection", {
-        configurable: true,
-        value: () => facade,
-      });
-    }
-    try {
-      const listener = oneEvent(el, "lr-text-select");
-      body.dispatchEvent(
-        new MouseEvent("mouseup", { bubbles: true, composed: true })
-      );
-      const event = (await listener) as CustomEvent<{
-        text: string;
-        anchor: unknown;
-      }>;
-      expect(event.detail.anchor).to.deep.equal({
-        kind: "line-range",
-        start: 1,
-        end: 2,
-      });
-      expect(event.detail.text.length).to.be.greaterThan(0);
-    } finally {
-      selection.removeAllRanges();
-      if (needsSelectionFacade) {
-        if (ownGetSelectionDescriptor) {
-          Object.defineProperty(
-            window,
-            "getSelection",
-            ownGetSelectionDescriptor
-          );
-        } else {
-          Reflect.deleteProperty(window, "getSelection");
-        }
-      }
-    }
-  });
+  assertCodeBlockSelection('lr-code-block');
 
   it("does not emit lr-text-select when there is no active selection on mouseup", async () => {
     const el = (await fixture(
@@ -1824,107 +1684,7 @@ describe("activatable-lines", () => {
     ).to.equal(0);
   });
 
-  it("moves focus with ArrowUp, jumps with Home/End, and activates on Enter and Space", async () => {
-    const el = (await fixture(
-      html`<lr-code-block
-        code=${"a\nb\nc\nd"}
-        line-numbers
-        activatable-lines
-      ></lr-code-block>`
-    )) as LyraCodeBlock;
-    await el.updateComplete;
-
-    const line3 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="3"]'
-    ) as HTMLButtonElement;
-    line3.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowUp",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="2"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line2 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="2"]'
-    ) as HTMLButtonElement;
-    line2.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "End",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="4"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line4 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="4"]'
-    ) as HTMLButtonElement;
-    line4.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Home",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line1 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="1"]'
-    ) as HTMLButtonElement;
-    let listener = oneEvent(el, "lr-line-activate");
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    let event = (await listener) as CustomEvent<{ line: number }>;
-    expect(event.detail).to.deep.equal({ line: 1 });
-
-    listener = oneEvent(el, "lr-line-activate");
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: " ",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    event = (await listener) as CustomEvent<{ line: number }>;
-    expect(event.detail).to.deep.equal({ line: 1 });
-
-    // Home while already on line 1 is a no-op (next === line) -- must not move focus or throw.
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Home",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-  });
+  assertCodeBlockLineKeyboard('lr-code-block');
 
   it("marks a highlighted line as both line-button and line-highlight when activatable-lines and highlight-lines are combined", async () => {
     const el = (await fixture(
@@ -2449,20 +2209,6 @@ it("does not write highlighted state from the default per-language load once the
 });
 
 describe("gutter line-button pointer feedback", () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(
-    el: LyraCodeBlock,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function gutterFixture(): Promise<LyraCodeBlock> {
     const el = (await fixture(

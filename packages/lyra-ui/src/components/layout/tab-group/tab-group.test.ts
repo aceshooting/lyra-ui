@@ -1,3 +1,5 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   fixture,
   expect,
@@ -34,11 +36,6 @@ const basic = () => html`
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
  *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
-async function nextFrames(): Promise<void> {
-  await new Promise((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(resolve))
-  );
-}
 
 function tabButtons(el: LyraTabGroup): HTMLButtonElement[] {
   return [
@@ -981,21 +978,6 @@ it("does not steal focus by reassigning it when the invalid-active correction ha
 });
 
 describe("selected/hover cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
-   *  see none of them). */
-  function resolvedInShadow(
-    el: LyraTabGroup,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themed(style: string): Promise<LyraTabGroup> {
     const wrapper = (await fixture(
@@ -3048,7 +3030,6 @@ describe("upstream tab surface", () => {
     await expect(el).to.be.accessible();
   });
 });
-
 
 /**
  * Regression: an accessible name computed from slotted content must not depend on whether the

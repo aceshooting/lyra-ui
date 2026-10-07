@@ -1,7 +1,6 @@
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { accessibleTextRecordsMatter, bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -94,18 +93,9 @@ export class LyraProgressBar extends LyraElement {
    *  explicitly empty value stays empty. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
   private cachedVisibleLabelText = '';
-  private labelObserver?: MutationObserver;
-  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.labelObserver) return;
-    this.bindLabelObserverTargets();
-    this.recomputeVisibleLabelText();
-  });
-  private readonly onLabelSlotChange = (event: Event): void => {
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    this.bindLabelObserverTargets();
-    this.recomputeVisibleLabelText();
-  };
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, ['', 'label'], () => this.recomputeVisibleLabelText(),
+  );
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -114,8 +104,6 @@ export class LyraProgressBar extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
-    this.rebuildLabelObserver();
     if (this.hasUpdated) this.recomputeVisibleLabelText();
     else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
   }
@@ -131,35 +119,7 @@ export class LyraProgressBar extends LyraElement {
    */
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.rebuildLabelObserver();
-  }
-
-  /** Tears down and reconstructs `labelObserver` bound to the current `ownerDocument`'s realm, then
-   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
-  private rebuildLabelObserver(): void {
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor((records, observer) => {
-          if (!accessibleTextRecordsMatter(observer, records)) return;
-          this.bindLabelObserverTargets();
-          this.recomputeVisibleLabelText();
-        })
-      : undefined;
-    this.bindLabelObserverTargets();
-  }
-
-  private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
-  }
-
-  override disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    this.labelObserver = undefined;
-    super.disconnectedCallback();
+    this.labelTextObserver.adopted();
   }
 
   private computeVisibleLabelText(): string {
@@ -218,7 +178,7 @@ export class LyraProgressBar extends LyraElement {
     return html`<div part="base progress-bar" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
-      <div part="label" ?hidden=${!hasVisibleLabel}><slot @slotchange=${this.onLabelSlotChange}></slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.withValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
+      <div part="label" ?hidden=${!hasVisibleLabel}><slot></slot><slot name="label"></slot>${this.withValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
       <div part="track"><div part="indicator" style=${this.indeterminate ? nothing : `inline-size:${this.percent}%`}></div></div>
     </div>`;
   }

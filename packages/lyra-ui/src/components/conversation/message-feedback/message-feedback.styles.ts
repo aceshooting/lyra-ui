@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -23,8 +24,7 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-size-1-75rem);
     block-size: var(--lr-size-1-75rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     font: inherit;
     border: var(--lr-border-width-thin) solid transparent;
@@ -54,8 +54,7 @@ export const styles = css`
   }
   [part="up-button"]:focus-visible,
   [part="down-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Never color-alone: the icon swaps to a filled glyph in lockstep with aria-pressed, and these
      color/background/border rules are additive emphasis on that shape change. */
@@ -144,8 +143,7 @@ export const styles = css`
     resize: vertical;
   }
   [part="comment"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* no-pressed-state: [part='comment'] is a textarea -- pressing it raises the focus ring, which is
      stronger than any momentary pressed tint and outlasts the mouse button, so a competing
@@ -205,8 +203,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="submit-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* 320px baseline needs no extra rule: the panel already stacks in a flex column and the comment
      field is full-width by construction. */

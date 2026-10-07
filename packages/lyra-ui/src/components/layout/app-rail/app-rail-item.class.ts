@@ -20,6 +20,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { tag } from '../../../internal/prefix.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -87,8 +88,10 @@ export interface LyraAppRailItemEventMap {
  *
  * @customElement lr-app-rail-item
  * @slot - The visible navigation label.
- * @slot icon - The leading decorative icon. Its flattened subtree is inert and hidden from
+ * @slot start - The leading decorative icon. Its flattened subtree is inert and hidden from
  *   assistive technology; the default slot or host `aria-label` names the internal control.
+ * @slot icon - Legacy slot content is deprecated; use `start`. Its flattened subtree is inert and
+ *   hidden from assistive technology.
  * @slot meta - Secondary trailing text -- an unread count, a keyboard shortcut. Rendered as a
  *   SIBLING of the internal link/button, never inside it, so it is not part of the item's
  *   accessible name and a pointer landing on it does not activate the item. Visually clipped in
@@ -305,7 +308,9 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   @query('slot[name="end"]') private endSlot?: HTMLSlotElement;
   private stopPositioning?: () => void;
   private tooltipOverlay?: OverlayHandle;
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [], () => this.requestUpdate(), [], false,
+  );
   private childrenObserver?: MutationObserver;
   private recoverFocusAfterIconOnly = false;
   private semanticFocusRepair?: ComposedFocusRepairSnapshot;
@@ -325,19 +330,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncRailTopLayer();
-    this.armLabelObserver();
     this.armChildrenObserver();
     this.syncOwnedChildren();
-  }
-
-  private armLabelObserver(): void {
-    this.labelObserver?.disconnect();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    this.labelObserver = new MutationObserverCtor(() => {
-      if (this.showTooltip) this.requestUpdate();
-    });
-    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
   }
 
   /** Watches the light DOM for a `children`-slotted node being added, removed, or re-slotted, so
@@ -495,6 +489,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('tooltip') && !this.tooltip) this.showTooltip = false;
+    this.labelTextObserver.setEnabled(this.showTooltip);
     const children = this.renderRoot?.querySelector('[part="children"]');
     if (changed.has('expanded') && !this._expanded && children) {
       repairComposedFocus(children, () => this.renderRoot.querySelector('[part="toggle"]'));
@@ -581,8 +576,6 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     super.disconnectedCallback();
     this.semanticFocusRepair = undefined;
     this.focusReturnTarget = undefined;
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
     this.childrenObserver?.disconnect();
     this.childrenObserver = undefined;
     this.stopPositioning?.();
@@ -590,6 +583,11 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     this.tooltipOverlay?.deactivate({ restoreFocus: false });
     this.tooltipOverlay = undefined;
     this.showTooltip = false;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.labelTextObserver.adopted();
   }
 
   private focusFallback(): HTMLElement | null {
@@ -614,7 +612,10 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     const href = safeLinkHref(this.href);
     const content = html`
       ${this.current ? html`<span part="current-indicator" aria-hidden="true"></span>` : nothing}
-      ${renderInertPresentation(html`<slot name="icon"></slot>`, { part: 'icon' })}
+      ${renderInertPresentation(
+        html`<slot name="start"><slot name="icon"></slot></slot>`,
+        { part: 'icon' },
+      )}
       <span part="label"><slot></slot></span>
     `;
     const tooltip = this.showTooltip && this.tooltip && this.hasAttribute('icon-only')

@@ -1,5 +1,7 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -125,8 +127,7 @@ export const styles = css`
     transition: border-color var(--lr-transition-fast);
   }
   [part='search']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to keyboard focus and stays unchanged, while a halo a consumer
@@ -152,8 +153,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: transparent;
@@ -264,8 +264,7 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
     block-size: var(--lr-emoji-picker-item-size, var(--_lr-emoji-picker-item-size-default));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     border-radius: var(--lr-emoji-picker-item-radius, var(--_lr-emoji-picker-item-radius-default));
     background: transparent;
@@ -337,8 +336,7 @@ export const styles = css`
   }
   [part='load-retry'] {
     justify-self: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-button);
@@ -355,8 +353,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
   }
   [part='load-retry']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='load-retry']:where(:disabled) {
     cursor: default;
@@ -366,9 +363,7 @@ export const styles = css`
   [part='form-control-label'],
   [part='hint'],
   [part='error'] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
   @media (forced-colors: active) {
     [part='emoji']:hover:not(:disabled) {

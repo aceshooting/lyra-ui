@@ -1,3 +1,5 @@
+import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
+import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
 import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';
@@ -179,6 +181,15 @@ describe('bounded chart surface regressions', () => {
     expect(el.hiddenDatasets).to.not.equal(hiddenDatasets);
     expect(Object.isFrozen(el.hiddenDatasets)).to.be.true;
     expect(() => (el.hiddenDatasets as unknown as number[]).push(1)).to.throw();
+  });
+
+  it('normalizes hidden indexes from its owned snapshot without revisiting caller data', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    const source = [0, 1, 1, -1, Number.NaN, '2'] as unknown as number[];
+    el.hiddenDatasets = source;
+    source[0] = 9;
+    expect((el as any).canonicalHiddenDatasets()).to.deep.equal([0, 1, 1, -1]);
+    expect((el as any).canonicalHiddenDatasets()).to.equal((el as any).canonicalHiddenDatasets());
   });
 
   it('projects descriptor-safe Chart.js inputs once while retaining valid siblings and opaque plugins', () => {
@@ -956,10 +967,6 @@ it('announces keyboard datum changes through one light-DOM sink and keeps the sh
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
 
-  const sink = announcementSink();
-  expect(sink !== null, 'a connected chart must acquire its sink before announcing').to.be.true;
-  expect(sink!.getRootNode() === document, 'the live region must be in document light DOM').to.be
-    .true;
   expect(announcementTexts(), 'mounting a chart must not announce its initial datum').to.deep.equal(
     [],
   );
@@ -967,6 +974,9 @@ it('announces keyboard datum changes through one light-DOM sink and keeps the sh
   const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
   canvas.focus();
   await el.updateComplete;
+  const sink = announcementSink();
+  expect(sink !== null, 'a datum announcement must acquire a light-DOM sink').to.be.true;
+  expect(sink!.getRootNode() === document, 'the live region must be in document light DOM').to.be.true;
   expect(announcementTexts()).to.have.length(1);
   expect(announcementTexts()[0]).to.contain('Revenue');
   expect(announcementTexts()[0]).to.contain('North');
@@ -990,36 +1000,27 @@ it('releases and reacquires its announcement sink when adopted into another docu
   try {
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, 'chart.js never initialized');
+    (el as any).announcements.announcePolite('Before adoption');
     const originalSink = announcementSink();
-    const originalAssertiveSink = announcementSink(document, 'assertive');
-    expect(originalSink !== null, 'the original document must own the connected chart sink').to.be
-      .true;
-    expect(originalAssertiveSink !== null).to.be.true;
+    expect(originalSink !== null).to.be.true;
 
     foreignDocument.adoptNode(el);
     expect(originalSink!.isConnected, 'adoption must release the old document sink').to.be.false;
-    expect(originalAssertiveSink!.isConnected).to.be.false;
     foreignDocument.body.appendChild(el);
     await el.updateComplete;
 
-    const adoptedSink = announcementSink(foreignDocument);
-    const adoptedAssertiveSink = announcementSink(foreignDocument, 'assertive');
-    expect(adoptedSink !== null, 'reconnect must acquire a sink in the adopted document').to.be.true;
-    expect(adoptedAssertiveSink !== null).to.be.true;
-    expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
     expect(announcementTexts(foreignDocument), 'reconnect must not re-announce stale state').to.deep
       .equal([]);
 
-    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    canvas.dispatchEvent(new frame.contentWindow!.FocusEvent('focus'));
-    await el.updateComplete;
+    (el as any).announcements.announcePolite('After adoption');
+    const adoptedSink = announcementSink(foreignDocument);
+    expect(adoptedSink?.ownerDocument === foreignDocument).to.be.true;
     expect(announcementTexts(foreignDocument)).to.have.length(1);
     expect(announcementTexts(), 'nothing may be announced into the old document').to.deep.equal([]);
 
     el.remove();
     expect(adoptedSink!.isConnected, 'disconnect must release the adopted document sink').to.be
       .false;
-    expect(adoptedAssertiveSink!.isConnected).to.be.false;
   } finally {
     el.remove();
     frame.remove();
@@ -1380,104 +1381,13 @@ it('detaches and freezes both legend visibility event snapshots', () => {
   expect(proposed.detail.hiddenDatasets === committed.detail.hiddenDatasets).to.equal(false);
 });
 
-it('keeps a controlled hidden dataset hidden when its show proposal is canceled', async () => {
-  const el = (await fixture(html`<lr-chart
-    type="bar"
-    .hiddenDatasets=${[0]}
-    .labels=${['A']}
-    .datasets=${[{ label: 'Revenue', data: [1] }]}
-  ></lr-chart>`)) as LyraChart;
-  await waitUntil(() => (el as any).chart != null);
-  const chart = (el as any).chart;
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  const proposed: unknown[] = [];
-  let commits = 0;
-  const veto = (event: Event) => {
-    proposed.push((event as CustomEvent).detail);
-    event.preventDefault();
-  };
-  el.addEventListener('lr-legend-visibility-change-request', veto);
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  try {
-    button.click();
-    await el.updateComplete;
-
-    expect(proposed).to.deep.equal([{ datasetIndex: 0, visible: true, hiddenDatasets: [] }]);
-    expect(commits).to.equal(0);
-    expect(el.hiddenDatasets).to.deep.equal([0]);
-    expect(chart.isDatasetVisible(0)).to.be.false;
-    expect(button.getAttribute('aria-pressed')).to.equal('false');
-  } finally {
-    el.removeEventListener('lr-legend-visibility-change-request', veto);
-  }
-});
-
-it('fires one canonical legend-visibility request and no removed before-alias', async () => {
-  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Revenue', data: [1] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  const requests: CustomEvent[] = [];
-  let removedAliasEvents = 0;
-  let commits = 0;
-  el.addEventListener('lr-legend-visibility-change-request', (event) =>
-    requests.push(event as CustomEvent),
-  );
-  el.addEventListener('lr-before-legend-visibility-change', () => removedAliasEvents++);
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(requests.length).to.equal(1);
-  expect(removedAliasEvents).to.equal(0);
-  expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
-  expect(requests[0]?.cancelable).to.equal(true);
-  expect(commits).to.equal(1);
-});
-
-it('vetoes the legend toggle when only the canonical -request name is canceled', async () => {
-  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Revenue', data: [1] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  let commits = 0;
-  el.addEventListener('lr-legend-visibility-change-request', (event) => event.preventDefault());
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(commits).to.equal(0);
-  expect(el.hiddenDatasets).to.equal(undefined);
-});
-
-it('does not dispatch the removed legend veto alias or let its listener veto', async () => {
-  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Revenue', data: [1] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  let removedAliasEvents = 0;
-  let commits = 0;
-  el.addEventListener('lr-before-legend-visibility-change', (event) => {
-    removedAliasEvents++;
-    event.preventDefault();
-  });
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(removedAliasEvents).to.equal(0);
-  expect(commits).to.equal(1);
-  expect(el.hiddenDatasets).to.deep.equal([0]);
+testLegendVisibilityEvents('chart', async (controlledHidden = false) => {
+  const element = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  element.labels = ['A'];
+  element.datasets = [{ label: 'Revenue', data: [1] }];
+  element.hiddenDatasets = controlledHidden ? [0] : undefined;
+  await element.updateComplete;
+  return element;
 });
 
 it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
@@ -3031,6 +2941,7 @@ it('coalesces a burst of theme attribute writes into a single redraw', async () 
     refreshes++;
     realRefresh();
   };
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(4, 5, 6)');
   el.setAttribute('data-theme', 'a');
   el.setAttribute('data-color-scheme', 'b');
   await aTimeout(0);
@@ -7078,6 +6989,18 @@ describe('bounded chart fallback paths', () => {
     expect((el as any).featureWarningMessages()).to.deep.equal([]);
   });
 
+  it('updates a drawn chart when an ancestor changes its motion preference', async () => {
+    const parent = await fixture<HTMLDivElement>(html`<div><lr-chart></lr-chart></div>`);
+    const el = parent.querySelector('lr-chart') as LyraChart;
+    el.datasets = [{ label: 'x', data: [1, 2] }];
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    parent.setAttribute('data-lr-motion', 'reduce');
+    await waitUntil(() => (el as any).chart?.options.animation === false);
+    parent.removeAttribute('data-lr-motion');
+    await waitUntil(() => (el as any).chart?.options.animation !== false);
+  });
+
   it('resolves empty-palette series fallbacks and both forced-color array index modes', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     (el as any).forcedColorPattern = (index: number, color: string) => `${index}:${color}`;
@@ -7460,18 +7383,7 @@ describe('bidi isolation of formatted labels', () => {
   const BIDI_CONTROLS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
   const rate = (value: number) => `${value} MiB/s`;
 
-  function renderedBox(root: Element, needle: string): DOMRect {
-    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
-      const index = node.data.indexOf(needle);
-      if (index < 0) continue;
-      const range = root.ownerDocument.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + needle.length);
-      return range.getBoundingClientRect();
-    }
-    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
-  }
+
 
   interface RuntimeScale {
     position: string;
@@ -8004,4 +7916,21 @@ describe('chart-bidi helpers', () => {
       expect(paint(isolateCanvasText(label, 'ltr'), 'ltr') === reference).to.equal(true);
     });
   });
+});
+
+
+it('preserves five full data series through the bounded raw configuration snapshot', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const datasets = Array.from({ length: 5 }, (_, index) => ({
+    label: `Series ${index}`, data: Array.from({ length: 10_000 }, (_, point) => point),
+  }));
+  el.config = { data: { datasets }, options: { responsive: false } };
+  const retained = el.config!.data!.datasets!;
+  expect(retained.length).to.equal(5);
+  for (const dataset of retained) {
+    expect(dataset.data!.length).to.equal(10_000);
+    expect(dataset.data![9_999]).to.equal(9_999);
+  }
+  expect((el.config!.options as { responsive: boolean }).responsive).to.equal(false);
+  expect(datasets[4]!.data.length).to.equal(10_000);
 });

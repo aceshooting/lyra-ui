@@ -1,5 +1,5 @@
 import type { DocxImageMetadata } from './image-bytes.js';
-import { inspectDocxImage, withoutJpegApp1 } from './image-bytes.js';
+import { inspectDocxImageForInsertion } from './image-bytes.js';
 import { isDocxXmlText } from './xml-text.js';
 import type { DocxInsertImageOptions, DocxResult } from './types.js';
 
@@ -102,22 +102,15 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
     if (bufferResizable && apply(bufferResizable, buffer, [])) return invalid();
     const view = new NativeBytes(buffer, offset, length);
     if (length < 1 || length > 4 * 1024 * 1024) return { ok: false, code: 'resource-limit' };
-    let bytes = new NativeBytes(length); apply(byteSet, bytes, [view]);
-    let metadata = inspectDocxImage(bytes);
-    if (!metadata.ok) return metadata;
-    if (metadata.value.hasJpegApp1) {
-      // Camera metadata (including location) is dropped rather than embedded in the document.
-      const stripped = withoutJpegApp1(bytes);
-      if (!stripped) return { ok: false, code: 'unsupported' };
-      bytes = stripped; metadata = inspectDocxImage(bytes);
-      if (!metadata.ok) return metadata;
-      if (metadata.value.hasJpegApp1) return { ok: false, code: 'unsupported' };
-    }
+    const copied = new NativeBytes(length); apply(byteSet, copied, [view]);
+    const inspected = inspectDocxImageForInsertion(copied);
+    if (!inspected.ok) return inspected;
+    const { bytes, metadata } = inspected.value;
     const final = validate(); if (!final.ok) return final;
     if (normalized.signal && imageInsertionAborted(normalized.signal)) return { ok: false, code: 'aborted' };
     return { ok: true, value: Object.freeze({ options: copiedOptions, source: Object.freeze({ bytes,
       widthPoints: input.widthPoints as number, heightPoints: input.heightPoints as number,
-      title: input.title as string, description: input.description as string, metadata: Object.freeze({ ...metadata.value }) }) }) };
+      title: input.title as string, description: input.description as string, metadata: Object.freeze({ ...metadata }) }) }) };
   } catch {
     const authority = validate();
     return authority.ok ? invalid() : authority;

@@ -17,16 +17,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(packageDir, 'src');
 
-function walk(dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    return entry.isDirectory() ? walk(full) : [full];
-  });
-}
 
 const sources = walk(sourceRoot).filter((file) => file.endsWith('.ts'));
 const stylesheets = [path.join(packageDir, 'theme.css'), path.join(sourceRoot, 'theme.css')].filter((file) =>

@@ -17,7 +17,8 @@
  *   typing. `keyCode === 229` is the defense-in-depth fallback for engines that report
  *   `isComposing` inconsistently on the `compositionend`-adjacent keydown.
  * - **A vetoed keydown stays vetoed.** A listener above this one (an autocomplete panel committing
- *   a selection, a consumer's own shortcut) already claimed the keystroke.
+ *   a selection, a consumer's own shortcut) already claimed the keystroke. Bubbling host and
+ *   ancestor listeners can also veto before submission runs.
  * - **The submitter is resolved, not skipped.** The form's *default button* is the first submit
  *   control in `form.elements`; a submission that ignores it loses `SubmitEvent.submitter`, and
  *   with it the button's own `name`/`value` entry and its `formaction`/`formmethod`/
@@ -81,6 +82,7 @@ const BLOCKING_INPUT_TYPES: ReadonlySet<string> = new Set([
 const BUTTON_TYPES: ReadonlySet<string> = new Set(['button', 'submit', 'reset']);
 
 const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
+const pendingEnterEvents = new WeakSet<KeyboardEvent>();
 
 type NativeButtonKind = 'button' | 'input';
 
@@ -252,8 +254,8 @@ export function submitFormImplicitly(
 /**
  * Performs the implicit form submission a native `<input>` would perform for this keystroke.
  *
- * Returns `true` when a submission was actually requested, so a caller can branch on it (and so a
- * test can assert the decision rather than only its side effect). Does not call
+ * Returns `true` when a submission was requested or queued after a dispatched keydown. Bubbling
+ * listeners may still veto a queued submission. Does not call
  * `event.preventDefault()`: the keystroke has no default action to cancel here — the internal
  * input has no form owner — and cancelling it would suppress unrelated handlers downstream.
  *
@@ -268,5 +270,19 @@ export function submitOnEnter(
   if (!isImplicitSubmission(event)) return false;
   const form = resolveFormOwner(host);
   if (!form) return false;
-  return submitFormImplicitly(form, options);
+  if (event.eventPhase === Event.NONE) return submitFormImplicitly(form, options);
+  if (pendingEnterEvents.has(event)) return false;
+  pendingEnterEvents.add(event);
+  const ownerDocument = host.ownerDocument;
+  const control = host as HTMLElement & { readonly?: boolean; readOnly?: boolean };
+  const decide = (): void => {
+    pendingEnterEvents.delete(event);
+    if (!isImplicitSubmission(event) || !host.isConnected || !form.isConnected ||
+        host.ownerDocument !== ownerDocument || resolveFormOwner(host) !== form ||
+        isInert(host) || control.readonly === true || control.readOnly === true) return;
+    submitFormImplicitly(form, options);
+  };
+  if (ownerDocument.defaultView) ownerDocument.defaultView.setTimeout(decide, 0);
+  else setTimeout(decide, 0);
+  return true;
 }

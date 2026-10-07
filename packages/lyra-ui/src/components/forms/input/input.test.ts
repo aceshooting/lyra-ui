@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { resolvedColorToken } from '../../../../test/color-contrast.js';
 import './input.js';
@@ -56,16 +58,7 @@ describe('lr-input', () => {
 
   it('emits one cancelable lr-invalid for a failed check and stays silent once valid', async () => {
     const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
-    const aliases: CustomEvent[] = [];
-    el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
-
-    expect(el.checkValidity()).to.be.false;
-    expect(aliases).to.have.lengthOf(1);
-    const alias = aliases[0];
-    if (!alias) throw new Error('The invalid alias was not emitted.');
-    expect(alias.target === el).to.equal(true);
-    expect(alias.bubbles && alias.composed).to.be.true;
-    expect(alias.cancelable).to.be.true;
+    const aliases = assertInvalidAlias(el, { native: 'ignore' });
 
     el.value = 'Ada';
     expect(el.checkValidity()).to.be.true;
@@ -73,35 +66,13 @@ describe('lr-input', () => {
   });
 
   it('forwards preventDefault() on lr-invalid to the native invalid event', async () => {
-    // The alias is only a real veto point if cancelling it cancels the event it aliases -- the
-    // native `invalid` is what the platform reads for its own validation bubble and for
-    // reportValidity()'s focus/scroll, and it is dispatched by the platform, so cancelling a copy
-    // can only mean cancelling the original. The host's own alias listener is installed in the
-    // constructor, so it runs before the recorder registered here and its preventDefault() is
-    // already visible on the event this listener receives.
     const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
-    el.addEventListener('lr-invalid', (event) => event.preventDefault());
-    const natives: Event[] = [];
-    el.addEventListener('invalid', (event) => natives.push(event));
-
-    expect(el.checkValidity()).to.be.false;
-    expect(natives).to.have.lengthOf(1);
-    const native = natives[0];
-    if (!native) throw new Error('The native invalid event was not emitted.');
-    expect(native.cancelable, 'the native invalid event is cancelable').to.be.true;
-    expect(native.defaultPrevented).to.be.true;
+    assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled', nativeCancelable: true });
   });
 
   it('leaves the native invalid event alone when the alias is not cancelled', async () => {
     const el = (await fixture(html`<lr-input required aria-label="Name"></lr-input>`)) as LyraInput;
-    const natives: Event[] = [];
-    el.addEventListener('invalid', (event) => natives.push(event));
-
-    expect(el.checkValidity()).to.be.false;
-    expect(natives).to.have.lengthOf(1);
-    const native = natives[0];
-    if (!native) throw new Error('The native invalid event was not emitted.');
-    expect(native.defaultPrevented).to.be.false;
+    assertInvalidAlias(el, { alias: 'ignore' });
   });
 
   it('bars constraint validation while disabled, fieldset-disabled or readonly', async () => {
@@ -1867,9 +1838,7 @@ describe('lr-input setCustomValidity()', () => {
 
 describe('lr-input implicit form submission', () => {
   const enterOn = (el: LyraInput, init: KeyboardEventInit = {}) =>
-    (el.shadowRoot!.querySelector('input') as HTMLInputElement).dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
-    );
+    dispatchEnterKeyAndSettle(el.shadowRoot!.querySelector('input') as HTMLInputElement, init);
 
   it('submits the ancestor form when Enter is pressed in the field', async () => {
     const form = (await fixture(html`
@@ -1878,7 +1847,7 @@ describe('lr-input implicit form submission', () => {
     const el = form.querySelector('lr-input') as LyraInput;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -1889,7 +1858,7 @@ describe('lr-input implicit form submission', () => {
     const el = form.querySelector('lr-input') as LyraInput;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(0);
     expect(el.validity.valueMissing).to.be.true;
   });
@@ -1903,8 +1872,8 @@ describe('lr-input implicit form submission', () => {
     `)) as HTMLFormElement;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(form.querySelector('#d') as LyraInput);
-    enterOn(form.querySelector('#r') as LyraInput);
+    await enterOn(form.querySelector('#d') as LyraInput);
+    await enterOn(form.querySelector('#r') as LyraInput);
     expect(submits).to.equal(0);
   });
 
@@ -1915,17 +1884,17 @@ describe('lr-input implicit form submission', () => {
     const el = form.querySelector('lr-input') as LyraInput;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener('keydown', veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener('keydown', veto, true);
     expect(submits).to.equal(0);
 
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -1945,7 +1914,7 @@ describe('lr-input implicit form submission', () => {
       // name proves the button was activated rather than the form being submitted behind it.
       submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
     });
-    enterOn(form.querySelector('lr-input') as LyraInput);
+    await enterOn(form.querySelector('lr-input') as LyraInput);
     expect(submits).to.equal(1);
     expect(submitterName, 'the lr-button was the submitter').to.equal('action');
   });
@@ -1963,10 +1932,10 @@ describe('lr-input implicit form submission', () => {
       e.preventDefault();
       submitters.push(((e as SubmitEvent).submitter as HTMLElement | null)?.id ?? '');
     });
-    enterOn(form.querySelector('lr-input') as LyraInput);
+    await enterOn(form.querySelector('lr-input') as LyraInput);
     expect(submitters).to.deep.equal(['go']);
     form.querySelector<HTMLButtonElement>('#go')!.disabled = true;
-    enterOn(form.querySelector('lr-input') as LyraInput);
+    await enterOn(form.querySelector('lr-input') as LyraInput);
     expect(submitters, 'a disabled default button blocks Enter rather than handing it to the next button').to
       .deep.equal(['go']);
   });
@@ -1978,18 +1947,18 @@ describe('lr-input implicit form submission', () => {
     const el = form.querySelector('lr-input') as LyraInput;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
     expect(submits).to.equal(0);
-    enterOn(el);
+    await enterOn(el);
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 
   it('leaves a form-less input alone and ignores non-Enter keys', async () => {
     const el = (await fixture(html`<lr-input value="hi" aria-label="Query"></lr-input>`)) as LyraInput;
-    enterOn(el);
+    await enterOn(el);
     const form = (await fixture(html`
       <form><lr-input name="q" value="hi" aria-label="Query"></lr-input></form>
     `)) as HTMLFormElement;

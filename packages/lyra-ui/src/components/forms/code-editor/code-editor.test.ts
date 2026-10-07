@@ -1,5 +1,6 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 import { styles } from './code-editor.styles.js';
@@ -1648,26 +1649,8 @@ it('emits a cancelable lr-invalid alias whose cancellation reaches the native in
   const el = (await fixture(
     html`<lr-code-editor required></lr-code-editor>`,
   )) as LyraCodeEditor;
-  const aliases: CustomEvent[] = [];
-  el.addEventListener('lr-invalid', (event) =>
-    aliases.push(event as CustomEvent),
-  );
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = aliases[0];
-  if (!alias) throw new Error('The invalid alias was not emitted.');
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
-
-  el.addEventListener('lr-invalid', (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener('invalid', (event) => natives.push(event));
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { native: 'ignore' });
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled' });
 });
 
 // -- size: parity with lr-textarea's own six-step ladder (see textarea.test.ts's identical

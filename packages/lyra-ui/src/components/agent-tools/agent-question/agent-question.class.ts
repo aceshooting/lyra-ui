@@ -8,6 +8,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormValue } from '../tool-param-form/tool-param-form.class.js';
 import { snapshotFormValue } from '../tool-param-form/tool-param-snapshot.js';
 import { styles } from './agent-question.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -77,7 +78,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
 
   protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze(['lr-question-input', 'lr-question-response']);
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
   /** Correlation identity. Blank identities disable all responses. */
   @property({ attribute: 'request-id' }) requestId = '';
   /** Server or agent name shown as request provenance. Supply it for MCP elicitation. */
@@ -229,7 +230,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
         .disabled=${this.inactive} @lr-input=${(event: CustomEvent<{ value: ToolParamFormValue }>) => this.input(event, requestId)}></lr-tool-param-form>`
         : html`<p part="error">${this.localize('agentQuestionUnsupported')}</p>`}
       <div part="actions">${(['accept', 'decline', 'cancel'] as const).map((action) => html`<button
-        part="action" type="button" data-action=${action} ?disabled=${this.inactive || (action === 'accept' && !this.supportedSchema)}
+        part="action" type="button" data-action=${action} data-agent-action=${action === 'accept' ? 'brand' : 'neutral'} ?disabled=${this.inactive || (action === 'accept' && !this.supportedSchema)}
         @click=${() => this.respond(action, requestId)}>${this.localize(action === 'accept' ? 'agentQuestionAccept' : action === 'decline' ? 'agentQuestionDecline' : 'cancel')}</button>`)}</div>
       ${this.status === 'submitted' ? html`<p part="status">${this.localize('agentQuestionSubmitted')}</p>` : nothing}
     </div>`;

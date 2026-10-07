@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -163,8 +164,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: 0;
     padding: 0;
     border: 0;
@@ -204,8 +204,7 @@ export const styles = css`
     );
   }
   [part='cluster']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   @media (forced-colors: active) {

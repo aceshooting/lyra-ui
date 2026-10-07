@@ -81,6 +81,32 @@ test('a plural override replaces the complete parent message without merging its
   assert.deepEqual(new Map(inventory.catalogs.get('de')).get('key1'), {one: 'One item', other: '{count} items'});
 });
 
+test('flat pt-PT slices must match the nonpublished regional authoring map', async (t) => {
+  const { root, put } = await fixture(t);
+  const translations = path.join(root, 'src/translations');
+  for (const tag of ['pt-BR', 'pt-PT']) {
+    await mkdir(path.join(translations, tag), { recursive: true });
+    await put(`${tag}.ts`, `import './${tag}/forms.js';\nimport './${tag}/layout.js';`);
+    for (const family of ['forms', 'layout']) {
+      const source = await readFile(path.join(translations, `de/${family}.ts`), 'utf8');
+      await put(`${tag}/${family}.ts`, source.replaceAll("'de'", `'${tag}'`)
+        .replace('Message 0', tag === 'pt-PT' ? 'European message' : 'Message 0'));
+    }
+  }
+  const overrideFile = path.join(root, 'scripts/fixtures/pt-PT-overrides.ts');
+  await mkdir(path.dirname(overrideFile), { recursive: true });
+  await writeFile(overrideFile, "const strings = { key0: 'European message' };\n");
+  const inventory = await readTranslationCatalogInventory({ packageDir: root });
+  assert.equal(new Map(inventory.catalogs.get('pt-PT')).get('key0'), 'European message');
+  const formsFile = path.join(translations, 'pt-PT/forms.ts');
+  const forms = await readFile(formsFile, 'utf8');
+  await writeFile(formsFile, forms.replace('European message', 'Unreviewed drift'));
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /generated message key0 differs/u);
+  await writeFile(formsFile, forms);
+  await writeFile(overrideFile, "const strings = { key0: 'Message 0' };\n");
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /duplicates its base value/u);
+});
+
 test('enforces the runtime parent-depth limit even when every earlier parent was already resolved', async (t) => {
   const { root, entries, put } = await fixture(t);
   const tag = (index) => `x-depth-${String(index).padStart(2, '0')}`;

@@ -103,3 +103,17 @@ export const overlaySurface = css`
   ${overlaySurfaceFill}
   border-radius: var(--lr-overlay-radius, var(--lr-radius-container));
 `;
+
+/** Small anchored preview panel shared by inline citation and entity controls. */
+export const anchoredPreviewPanel = css`
+  position: fixed;
+  z-index: var(--lr-layer-dropdown);
+  box-sizing: border-box;
+  max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-22rem));
+  padding: var(--lr-space-s) var(--lr-space-m);
+  ${overlaySurface}
+  box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
+  font-size: var(--lr-font-size-sm);
+  line-height: var(--lr-line-height-1-4);
+  color: var(--lr-color-text);
+`;

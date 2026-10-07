@@ -273,7 +273,7 @@ describe('graph rendered interaction contracts', () => {
     }
     expect(bluePixels, 'Visible nodes were painted').to.be.greaterThan(0);
     expect(redPixels).to.equal(0);
-    expect(root.querySelectorAll('[part="cursor-item"]').length).to.equal(2);
+    expect(root.querySelectorAll('[part="cursor-item"]').length).to.equal(1);
     expect(graph.edges.length).to.equal(1);
     expect(root.querySelector('[part="data-list"]')!.textContent).to.include(
       'Link from Alpha to Beta'
@@ -329,7 +329,14 @@ describe('graph activation and selection state', () => {
       await graph.updateComplete;
       const part = renderer === 'svg' ? 'node' : 'cursor-item';
       const items = [...graph.shadowRoot!.querySelectorAll(`[part="${part}"]`)].slice(0, 2);
-      expect(items.map((item) => item.getAttribute('aria-current'))).to.deep.equal(['true', null]);
+      if (renderer === 'canvas') {
+        expect(items[0]!.getAttribute('aria-current')).to.equal('true');
+        items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        await graph.updateComplete;
+        expect(items[0]!.getAttribute('aria-current')).to.equal(null);
+      } else {
+        expect(items.map((item) => item.getAttribute('aria-current'))).to.deep.equal(['true', null]);
+      }
     });
   }
 

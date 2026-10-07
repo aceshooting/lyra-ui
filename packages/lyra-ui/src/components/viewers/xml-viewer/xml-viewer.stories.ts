@@ -34,6 +34,10 @@ export const ExpandDepth: Story = {
   render: () => html`<lr-xml-viewer name="feed.rss" .xml=${FEED} expand-depth="2"></lr-xml-viewer>`,
 };
 
+export const RenderLimit: Story = {
+  render: () => html`<lr-xml-viewer name="large.xml" .xml=${`<root>${'<item/>'.repeat(5_005)}</root>`}></lr-xml-viewer>`,
+};
+
 export const RightToLeftCollapsed: Story = {
   render: () => html`<div dir="rtl">
     <lr-xml-viewer name="feed.rss" .xml=${FEED} expand-depth="1"></lr-xml-viewer>

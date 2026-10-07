@@ -1,40 +1,36 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { tag } from '../../../internal/prefix.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_checkboxRequired, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without importing
@@ -293,9 +289,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `assignedNodes` (not `assignedElements`) is checked — the common case is
   // a bare slotted text label, e.g. `<lr-checkbox>Accept terms</lr-checkbox>`.
   @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasHelpTextSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   /** Whether the user has acted on this control yet, which gates `user-valid`/`user-invalid`, the
    *  `data-invalid` hook and intrinsic `aria-invalid`: a toggle is an interaction the instant it
    *  happens, and so is interactive validation — `reportValidity()` and a submission attempt alike,
@@ -304,13 +301,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   @state() private hasInteracted = false;
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
-  // `slotchange` cannot report mutations inside an already-assigned node. The observer also binds
-  // externally flattened nodes from forwarding slots because those nodes are not descendants of
-  // this host and therefore are outside a host-only subtree observation.
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [], () => this.recomputeHasLabelSlot(), ['slot'],
+  );
   private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private _defaultChecked = false;
   private _checkedDirty = false;
@@ -402,6 +398,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
     this.updateValidity();
@@ -415,11 +413,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) {
-      this.setAttribute('name', this._name);
-    } else {
-      this.removeAttribute('name');
-    }
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -454,16 +448,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like toggling or a blur; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.syncFormState();
   }
 
@@ -494,55 +484,22 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
     this.updateValidity();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.bindLabelObserverTargets();
-          this.recomputeHasLabelSlot();
-        })
-      : undefined;
     this.addEventListener('slotchange', this.onLabelSlotChange);
-    this.bindLabelObserverTargets();
     if (this.hasUpdated) {
       // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
       this.recomputeHasLabelSlot();
-      this.refreshNamedSlotState();
     } else {
       // Browser-only mounts still seed before their first paint. During hydration the base helper
       // defers this browser-only light-DOM sample until the server render has been reproduced.
       this.seedFirstRenderState(() => {
         this.recomputeHasLabelSlot();
-        this.refreshNamedSlotState();
       });
     }
   }
 
-  /**
-   * Whether a direct light-DOM child carries `slot="name"` -- the same structural check
-   * {@link refreshNamedSlotState} always relied on for the connect/reconnect pass, and now also
-   * what the hint/help-text/error slotchange handlers use. `HTMLSlotElement.assignedElements()` is
-   * a live re-derivation of the browser's *current* slot-assignment computation, and WebKit has
-   * been observed reporting it transiently empty for an unrelated forwarding-slot chain nested
-   * inside the assigned element (a deeply forwarded node's own `characterData` mutating can fire a
-   * spurious `slotchange` on this outer named slot, with `assignedElements()` reporting zero for
-   * that one notification) -- even though the assigned child's own `slot` attribute never changed.
-   * Reading the light-DOM attribute directly is immune to that: it does not depend on the engine's
-   * live slot-assignment snapshot at all.
-   */
-  private hasLightDomChildWithSlot(name: string): boolean {
-    const children = (this as unknown as { children?: HTMLCollection }).children;
-    if (!children) return false;
-    return Array.from(children).some((element) => element.getAttribute('slot') === name);
-  }
-
-  private refreshNamedSlotState(): void {
-    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
-    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
-    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.labelTextObserver.adopted();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
   }
@@ -550,8 +507,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
     super.disconnectedCallback();
   }
 
@@ -650,7 +605,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this._checkedDirty = false;
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.updateValidity();
     this.requestUpdate();
   }
@@ -668,14 +626,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   };
 
   checkValidity(): boolean {
-    this.updateValidity();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.updateValidity());
   }
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.updateValidity();
     // Marked explicitly rather than left to the `installInteractionOnInvalid()` listener: that
     // listener only fires when the check actually fails, but a `reportValidity()` call on an
@@ -789,18 +743,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
-  private onHintSlotChange = (): void => {
-    this.hasHintSlot = this.hasLightDomChildWithSlot('hint');
-  };
-
-  private onHelpTextSlotChange = (): void => {
-    this.hasHelpTextSlot = this.hasLightDomChildWithSlot('help-text');
-  };
-
-  private onErrorSlotChange = (): void => {
-    this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
-  };
-
   private isDefaultLabelNode(node: Node): boolean {
     if (node.nodeType !== 1) return true;
     const slotName = (node as Element).getAttribute('slot');
@@ -815,32 +757,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     });
   }
 
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-label', 'class', 'hidden', 'inert', 'slot', 'style'],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    for (const slot of this.labelForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) this.observeLabelNode(assigned);
-    }
-  }
-
   private handleLabelSlotChange(event: Event): void {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -848,7 +764,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
       target.getRootNode() !== this.renderRoot &&
       !this.labelForwardingSlots().includes(target as HTMLSlotElement)
     ) return;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.bind();
     this.recomputeHasLabelSlot();
   }
 
@@ -952,17 +868,16 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
           </span>
         </span>
         <div id="checkbox-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
         <div id="checkbox-hint" part="hint form-control-help-text" ?hidden=${!hasHint}>
-          ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot
-          ><slot name="help-text" @slotchange=${this.onHelpTextSlotChange}></slot>
+          ${this.hint || this.helpText}<slot name="hint"></slot
+          ><slot name="help-text"></slot>
         </div>
       </div>
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

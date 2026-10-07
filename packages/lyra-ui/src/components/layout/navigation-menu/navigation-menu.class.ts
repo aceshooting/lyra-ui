@@ -10,6 +10,8 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { composedContains, deepActiveElement } from '../../../internal/nonmodal-overlay-manager.js';
 import { finiteDuration, finiteRange } from '../../../internal/numbers.js';
@@ -45,7 +47,10 @@ export interface LyraNavigationMenuExpandedChangeDetail {
 }
 
 export interface LyraNavigationMenuEventMap {
+  /** @deprecated Use `lr-toggle`; same expanded and source detail. */
   'lr-expanded-change': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
+  'lr-toggle-request': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
+  'lr-toggle': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
 }
 
 const PANEL_ANCHOR = literalSetConverter<LyraNavigationMenuPanelAnchor>(['menu', 'item'], 'menu');
@@ -117,6 +122,9 @@ function isAnchorWithHref(value: EventTarget): boolean {
  *   inert and `aria-hidden`.
  * @event lr-expanded-change - A change to `expanded` rendered. Not cancelable.
  *   `detail: { expanded: boolean, source: 'user' | 'programmatic' }`.
+ * @event lr-toggle-request - Cancelable user proposal to change the collapsed-layout list's expanded state.
+ * @event lr-toggle - Accepted list state change with `detail: { expanded, source }`; item toggles
+ *   remain their own composed child events, distinguishable by `event.target`.
  * @csspart base - The `nav` landmark.
  * @csspart list - The `role="list"` row, or column while collapsed.
  * @csspart toggle - The collapsed-layout toggle button, rendered only while collapsed.
@@ -165,6 +173,8 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint?: string;
 
   private _expanded = false;
+  private readonly expansionWriteGuard = new VetoWriteGuard();
+  private expansionNotificationSequence = 0;
 
   /**
    * Whether the item list shows in the collapsed layout. Kept while the bar layout is active and
@@ -176,6 +186,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     return this._expanded;
   }
   set expanded(next: boolean) {
+    markVetoGuardWrite(this.expansionWriteGuard);
     this.setExpanded(Boolean(next), this.hasUpdated ? 'programmatic' : null);
   }
 
@@ -338,6 +349,16 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
       listHides ? { focusTarget: this.toggleElement } : {},
     );
     this.setExpanded(false, 'programmatic');
+  }
+
+  /** Expands the collapsed-layout list. In the bar layout this preserves the controlled expanded state. */
+  show(): void {
+    this.setExpanded(true, 'programmatic');
+  }
+
+  /** Alias of `close()` for the common overlay control vocabulary. */
+  hide(): void {
+    this.close();
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
@@ -911,11 +932,29 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
 
   // Collapse ---------------------------------------------------------------------------------
 
+  private requestingExpansion = false;
   private setExpanded(
     next: boolean,
     source: LyraNavigationMenuExpandedChangeSource | null,
   ): void {
     if (next === this._expanded) return;
+    if (source === 'user') {
+      if (this.requestingExpansion) return;
+      const previous = this._expanded;
+      this.requestingExpansion = true;
+      try {
+        let accepted = false;
+        requestThenCommit({
+          requestDetail: { expanded: next, source },
+          emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-toggle-request', detail, init),
+          guard: this.expansionWriteGuard,
+          commit: () => { accepted = this._expanded === previous; },
+        });
+        if (!accepted) return;
+      } finally {
+        this.requestingExpansion = false;
+      }
+    }
     if (!next && this.collapsedLayout) {
       // The list is about to hide: move focus out of it first so it never falls to the body.
       const list = this.listElement;
@@ -927,10 +966,14 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     }
     const old = this._expanded;
     this._expanded = next;
+    const notificationSequence = ++this.expansionNotificationSequence;
     this.requestUpdate('expanded', old);
     if (source !== null) {
       void this.updateComplete.then(() => {
+        if (!this.isConnected || this._expanded !== next || this.expansionNotificationSequence !== notificationSequence) return;
         this.emit('lr-expanded-change', { expanded: next, source });
+        if (!this.isConnected || this._expanded !== next || this.expansionNotificationSequence !== notificationSequence) return;
+        this.emit('lr-toggle', { expanded: next, source });
       });
     }
   }

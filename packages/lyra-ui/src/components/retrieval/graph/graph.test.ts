@@ -13,6 +13,25 @@ type D3SimulationNodeDatum = graphSupport.D3SimulationNodeDatum;
 const typeWitness: [GraphSimulationNode, GraphSimulationLink, LyraGraph, LyraGraphEdge, LyraGraphNode, LyraGraphNodeLabelsMode, D3SimulationLinkDatum<GraphSimulationNode>, D3SimulationNodeDatum] | null = null;
 void typeWitness;
 
+it('discloses both public graph collection limits with source and retained counts', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  const previousWarn = console.warn;
+  console.warn = () => undefined;
+  try {
+    el.nodes = Array.from({ length: 10_001 }, () => ({ id: '' }));
+    el.edges = Array.from({ length: 10_002 }, () => ({ source: '', target: '' }));
+  } finally {
+    console.warn = previousWarn;
+  }
+  await el.updateComplete;
+  const notices = [...el.shadowRoot!.querySelectorAll('[part="limit"]')].map((notice) => notice.textContent);
+  expect(notices).to.deep.equal(['Showing 10,000 of 10,001 nodes.', 'Showing 10,000 of 10,002 links.']);
+  el.nodes = [];
+  el.edges = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+});
+
 it('uses the same canvas-height token as the pre-upgrade reservation', async () => {
   const el = (await fixture(html`
     <lr-graph style="--lr-canvas-reserved-height: 275px"></lr-graph>
@@ -804,7 +823,7 @@ it('keeps zero-width and fully transparent links non-operable while retaining to
   });
   expect(
     el.shadowRoot!.querySelectorAll('[part="cursor-item"]').length
-  ).to.equal(3);
+  ).to.equal(1);
   expect(
     (el as unknown as { navigableLinks: () => unknown[] }).navigableLinks()
       .length
@@ -917,17 +936,7 @@ it('emits lr-edge-activate with the source/target ids when a link is activated',
 });
 
 it('exposes resolved node coordinates for click-anchored overlays', async () => {
-  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
-  el.nodes = nodes;
-  el.edges = links;
-  await el.updateComplete;
-  await waitUntil(
-    () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-    undefined,
-    {
-      timeout: NODE_COUNT_TIMEOUT,
-    }
-  );
+  const el = await graphSupport.mountGraphPair(7);
 
   const position = el.getNodePosition('a');
   expect(position).to.exist;
@@ -972,17 +981,7 @@ describe('hover events', () => {
   });
 
   it('emits lr-edge-enter/lr-edge-leave with source/target ids and toggles data-hovered on the link element', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
 
     let enterDetail: { sourceNodeId: string; targetNodeId: string } | undefined;
@@ -1000,17 +999,7 @@ describe('hover events', () => {
   });
 
   it('suppresses hover events and the data-hovered attribute while a drag is in progress', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
 
     (el as unknown as { isDragging: boolean }).isDragging = true;
@@ -1022,17 +1011,7 @@ describe('hover events', () => {
   });
 
   it('suppresses hover events while panning', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
 
     (el as unknown as { isPanning: boolean }).isPanning = true;

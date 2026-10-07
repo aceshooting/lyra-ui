@@ -1,3 +1,5 @@
+import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
+import { assertCodeBlockLineKeyboard, assertCodeBlockSelection } from '../../../../test/contracts/code-block-interactions.js';
 import {
   fixture,
   expect,
@@ -807,86 +809,7 @@ describe("anchor-target (line-range)", () => {
 });
 
 describe("text selection (lr-text-select)", () => {
-  it("emits lr-text-select for a text selection spanning code lines", async () => {
-    const el = (await fixture(
-      html`<lr-code-block-core
-        code=${"alpha\nbeta\ngamma"}
-      ></lr-code-block-core>`
-    )) as LyraCodeBlockCore;
-    await el.updateComplete;
-    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
-    const line1 = el.shadowRoot!.querySelector('[data-line="1"]')!;
-    const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
-    // Lit inserts a static per-expression marker comment before the dynamic text node it commits,
-    // so the real Text node is not reliably `firstChild` -- find it directly instead of assuming a
-    // fixed sibling position (same precedent as terminal.test.ts's identical selection test).
-    const textNodeOf = (line: Element): Node =>
-      line.querySelector(".line-source")!.firstChild!;
-    const range = document.createRange();
-    range.setStart(textNodeOf(line1), 0);
-    range.setEnd(textNodeOf(line2), 2);
-    // `ShadowRoot.getSelection` is a Chromium-only extension -- same precedent the component
-    // itself documents for onBodyMouseUp(). Falls back to window.getSelection() otherwise.
-    const shadowSelection = (
-      el.shadowRoot as unknown as { getSelection?: () => Selection | null }
-    ).getSelection?.();
-    const selection = shadowSelection ?? window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
-    // WebKit rejects a programmatic Selection whose endpoints live in a shadow tree. Its native
-    // drag selection is exposed through getComposedRanges(), so provide that same range shape when
-    // the setup was rejected and restore the browser global in finally.
-    const needsSelectionFacade =
-      selection.rangeCount === 0 || selection.isCollapsed;
-    const ownGetSelectionDescriptor = Object.getOwnPropertyDescriptor(
-      window,
-      "getSelection"
-    );
-    if (needsSelectionFacade) {
-      const composedRange = {
-        startContainer: range.startContainer,
-        startOffset: range.startOffset,
-        endContainer: range.endContainer,
-        endOffset: range.endOffset,
-      } as StaticRange;
-      const facade = {
-        getComposedRanges: () => [composedRange],
-      } as unknown as Selection;
-      Object.defineProperty(window, "getSelection", {
-        configurable: true,
-        value: () => facade,
-      });
-    }
-    try {
-      const listener = oneEvent(el, "lr-text-select");
-      body.dispatchEvent(
-        new MouseEvent("mouseup", { bubbles: true, composed: true })
-      );
-      const event = (await listener) as CustomEvent<{
-        text: string;
-        anchor: unknown;
-      }>;
-      expect(event.detail.anchor).to.deep.equal({
-        kind: "line-range",
-        start: 1,
-        end: 2,
-      });
-      expect(event.detail.text.length).to.be.greaterThan(0);
-    } finally {
-      selection.removeAllRanges();
-      if (needsSelectionFacade) {
-        if (ownGetSelectionDescriptor) {
-          Object.defineProperty(
-            window,
-            "getSelection",
-            ownGetSelectionDescriptor
-          );
-        } else {
-          Reflect.deleteProperty(window, "getSelection");
-        }
-      }
-    }
-  });
+  assertCodeBlockSelection('lr-code-block-core');
 
   it("does not emit lr-text-select when there is no active selection on mouseup", async () => {
     const el = (await fixture(
@@ -1091,107 +1014,7 @@ describe("activatable-lines", () => {
     ).to.equal(0);
   });
 
-  it("moves focus with ArrowUp, jumps with Home/End, and activates on Enter and Space", async () => {
-    const el = (await fixture(
-      html`<lr-code-block-core
-        code=${"a\nb\nc\nd"}
-        line-numbers
-        activatable-lines
-      ></lr-code-block-core>`
-    )) as LyraCodeBlockCore;
-    await el.updateComplete;
-
-    const line3 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="3"]'
-    ) as HTMLButtonElement;
-    line3.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "ArrowUp",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="2"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line2 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="2"]'
-    ) as HTMLButtonElement;
-    line2.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "End",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="4"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line4 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="4"]'
-    ) as HTMLButtonElement;
-    line4.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Home",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-
-    const line1 = el.shadowRoot!.querySelector(
-      '[part~="line-button"][data-line="1"]'
-    ) as HTMLButtonElement;
-    let listener = oneEvent(el, "lr-line-activate");
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    let event = (await listener) as CustomEvent<{ line: number }>;
-    expect(event.detail).to.deep.equal({ line: 1 });
-
-    listener = oneEvent(el, "lr-line-activate");
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: " ",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    event = (await listener) as CustomEvent<{ line: number }>;
-    expect(event.detail).to.deep.equal({ line: 1 });
-
-    // Home while already on line 1 is a no-op (next === line) -- must not move focus or throw.
-    line1.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Home",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    await el.updateComplete;
-    expect(
-      el
-        .shadowRoot!.querySelector('[part~="line-button"][data-line="1"]')!
-        .getAttribute("tabindex")
-    ).to.equal("0");
-  });
+  assertCodeBlockLineKeyboard('lr-code-block-core');
 
   it("marks a highlighted line as both line-button and line-highlight when activatable-lines and highlight-lines are combined", async () => {
     const el = (await fixture(
@@ -1249,53 +1072,10 @@ describe("copy button", () => {
   });
 
   it("uses the adopted owner clipboard and timer and fails closed while ownerless", async () => {
-    const frame = document.createElement("iframe");
-    document.body.append(frame);
-    const frameDocument = frame.contentDocument!;
-    const frameWindow = frame.contentWindow!;
-    const ownerlessDocument =
-      document.implementation.createHTMLDocument("ownerless");
-    const mainClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    const frameClipboard = Object.getOwnPropertyDescriptor(
-      frameWindow.navigator,
-      "clipboard"
-    );
-    const nativeFrameSetTimeout = frameWindow.setTimeout.bind(frameWindow);
-    const nativeFrameClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
+    const probe = adoptedClipboardProbe();
+    const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
     const nativeMainSetTimeout = window.setTimeout;
-    let mainWrites = 0;
-    const frameWrites: string[] = [];
-    let frameTimers = 0;
     let ownerlessMainTimers = 0;
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: () => {
-          mainWrites++;
-          return Promise.resolve();
-        },
-      },
-    });
-    Object.defineProperty(frameWindow.navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: (text: string) => {
-          frameWrites.push(text);
-          return Promise.resolve();
-        },
-      },
-    });
-    frameWindow.setTimeout = ((
-      handler: TimerHandler,
-      timeout?: number,
-      ...args: unknown[]
-    ) => {
-      frameTimers++;
-      return nativeFrameSetTimeout(handler, timeout, ...args);
-    }) as typeof frameWindow.setTimeout;
     const el = (await fixture(
       html`<lr-code-block-core
         .code=${"const owner = true;"}
@@ -1306,15 +1086,15 @@ describe("copy button", () => {
     ) as HTMLButtonElement;
 
     try {
-      frameDocument.body.append(frameDocument.adoptNode(el));
+      probe.frameDocument.body.append(probe.frameDocument.adoptNode(el));
       await el.updateComplete;
       const copied = oneEvent(el, "lr-copy");
       button.click();
       await copied;
       await el.updateComplete;
-      expect(mainWrites).to.equal(0);
-      expect(frameWrites).to.deep.equal(["const owner = true;"]);
-      expect(frameTimers).to.be.greaterThan(0);
+      expect(probe.mainWrites).to.equal(0);
+      expect(probe.frameWrites).to.deep.equal(["const owner = true;"]);
+      expect(probe.frameTimers).to.be.greaterThan(0);
 
       el.remove();
       ownerlessDocument.adoptNode(el);
@@ -1328,25 +1108,13 @@ describe("copy button", () => {
       }) as typeof window.setTimeout;
       button.click();
       await Promise.resolve();
-      expect(mainWrites).to.equal(0);
-      expect(frameWrites).to.have.length(1);
+      expect(probe.mainWrites).to.equal(0);
+      expect(probe.frameWrites).to.have.length(1);
       expect(ownerlessMainTimers).to.equal(0);
     } finally {
       el.remove();
       window.setTimeout = nativeMainSetTimeout;
-      frameWindow.setTimeout = nativeFrameSetTimeout;
-      frameWindow.clearTimeout = nativeFrameClearTimeout;
-      if (mainClipboard)
-        Object.defineProperty(navigator, "clipboard", mainClipboard);
-      else Reflect.deleteProperty(navigator, "clipboard");
-      if (frameClipboard)
-        Object.defineProperty(
-          frameWindow.navigator,
-          "clipboard",
-          frameClipboard
-        );
-      else Reflect.deleteProperty(frameWindow.navigator, "clipboard");
-      frame.remove();
+      probe.close();
     }
   });
 

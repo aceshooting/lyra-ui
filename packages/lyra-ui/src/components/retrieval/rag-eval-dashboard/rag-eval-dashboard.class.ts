@@ -3,6 +3,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
@@ -165,6 +166,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   private metricsCache?: { source: unknown; value: LyraRagEvaluationMetric[] };
   private runsCache?: { source: unknown; value: LyraRagEvaluationRun[] };
+  private rovingRunId = '';
 
   private get normalizedMetrics(): LyraRagEvaluationMetric[] {
     if (this.metricsCache?.source !== this.metrics)
@@ -269,6 +271,17 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     this.emit('lr-run-change', { run });
   }
 
+  private onRunKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const buttons = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="run"]');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons?.[next]?.focus();
+  }
+
   private renderSlices(
     slices: readonly string[]
   ): TemplateResult | typeof nothing {
@@ -354,6 +367,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     // `filtered` set below; only the chart/run-history DOM node count is bounded here.
     const runsTruncated = filtered.length > MAX_RENDERED_RUNS;
     const renderedRuns = filtered.slice(-MAX_RENDERED_RUNS);
+    const rovingRunId = renderedRuns.some((run) => run.id === this.rovingRunId)
+      ? this.rovingRunId : renderedRuns[0]?.id;
     return html`
       <section
         part="base"
@@ -416,10 +431,13 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         >
           <div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('ragEvalDashboardRuns')}</div>
           ${renderedRuns.map(
-            (run) => html`
+            (run, index) => html`
               <button
                 part="run"
                 type="button"
+                tabindex=${run.id === rovingRunId ? '0' : '-1'}
+                @focus=${() => { this.rovingRunId = run.id; this.requestUpdate(); }}
+                @keydown=${(event: KeyboardEvent) => this.onRunKeyDown(event, index, renderedRuns.length)}
                 @click=${() => this.activateRun(run)}
               >
                 <span>${run.label}</span>

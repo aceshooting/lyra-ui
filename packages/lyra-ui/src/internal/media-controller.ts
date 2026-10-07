@@ -29,7 +29,7 @@ const USER_SELECTABLE_TRACK_KINDS = new Set(['subtitles', 'captions', 'descripti
 const SOURCE_ATTRIBUTES = ['type', 'media'] as const;
 const TRACK_ATTRIBUTES = ['srclang', 'label'] as const;
 
-export interface NativeTextTrackPreference {
+interface NativeTextTrackPreference {
   index: number;
   kind: string;
   label: string;
@@ -58,6 +58,8 @@ export interface NativeMediaControllerOptions {
   events?: readonly string[];
   /** Events re-dispatched from `target`. Defaults to `NATIVE_MEDIA_RELAY_EVENTS`. */
   relayEvents?: readonly string[];
+  /** Custom caption overlays keep their selected track hidden from the native renderer. */
+  selectedTrackMode?: 'showing' | 'hidden';
   onEvent?: (event: Event, controller: NativeMediaController) => void;
 }
 
@@ -224,6 +226,7 @@ export class NativeMediaController {
   #preferences: NativeMediaPreferences = {};
   #hasPreferences = false;
   #onEvent?: NativeMediaControllerOptions['onEvent'];
+  #selectedTrackMode: 'showing' | 'hidden';
 
   constructor(
     private readonly target: EventTarget,
@@ -233,6 +236,7 @@ export class NativeMediaController {
     this.#eventNames = new Set(options.events ?? CONTROLLER_EVENT_NAMES);
     for (const name of this.#relayEvents) this.#eventNames.add(name);
     this.#onEvent = options.onEvent;
+    this.#selectedTrackMode = options.selectedTrackMode ?? 'showing';
   }
 
   get element(): HTMLMediaElement | undefined {
@@ -443,9 +447,17 @@ export class NativeMediaController {
     if (isValidPlaybackRate(media.playbackRate)) preferences.playbackRate = media.playbackRate;
 
     const tracks = textTracks(media);
-    const showingIndex = tracks.findIndex((track) => track.mode === 'showing');
-    preferences.textTrack = showingIndex >= 0 && tracks[showingIndex]
-      ? textTrackPreference(tracks[showingIndex], showingIndex)
+    let selectedIndex = tracks.findIndex((track) =>
+      USER_SELECTABLE_TRACK_KINDS.has(track.kind) && track.mode === this.#selectedTrackMode);
+    if (selectedIndex < 0 && this.#selectedTrackMode === 'hidden') {
+      // A native default description track can still be showing before the custom caption
+      // overlay binds. Carry that selection and render it hidden on the next video.
+      selectedIndex = tracks.findIndex((track) =>
+        USER_SELECTABLE_TRACK_KINDS.has(track.kind) && track.mode === 'showing');
+    }
+    const selectedTrack = selectedIndex >= 0 ? tracks[selectedIndex] : undefined;
+    preferences.textTrack = selectedTrack
+      ? textTrackPreference(selectedTrack, selectedIndex)
       : null;
     return preferences;
   }
@@ -497,7 +509,7 @@ export class NativeMediaController {
     if (!selected) return;
     for (const track of tracks) {
       if (USER_SELECTABLE_TRACK_KINDS.has(track.kind)) {
-        track.mode = track === selected ? 'showing' : 'disabled';
+        track.mode = track === selected ? this.#selectedTrackMode : 'disabled';
       }
     }
     this.#preferences.textTrack = textTrackPreference(selected, tracks.indexOf(selected));

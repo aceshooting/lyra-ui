@@ -14,7 +14,7 @@ import '../transcript-feed/transcript-feed.class.js';
 import '../../overlays/badge/badge.class.js';
 import { styles } from './realtime-session.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings.generated.js';
@@ -150,8 +150,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     target: 'connection' | 'mute';
     origin: Element;
   };
-  private statusAnnouncementSink?: AnnouncementSink;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private suppressNextStateAnnouncement = true;
 
   constructor() {
@@ -162,28 +161,8 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     this.requestUpdate('voiceState', undefined);
   }
 
-  private syncAnnouncementSinks(): void {
-    if (!this.isConnected) return;
-    if (
-      this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
-      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument
-    )
-      return;
-    this.statusAnnouncementSink?.release();
-    this.errorAnnouncementSink?.release();
-    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSinks();
     if (this.hasUpdated) {
       // The state visible when a session reconnects is context, even if its write was queued while
       // detached and Lit has not processed that update yet.
@@ -194,11 +173,12 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.statusAnnouncementSink?.release();
-    this.errorAnnouncementSink?.release();
-    this.statusAnnouncementSink = undefined;
-    this.errorAnnouncementSink = undefined;
     this.suppressNextStateAnnouncement = true;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -235,9 +215,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
       // ordinary connection lifecycle transitions use only the polite sink, so no change is spoken
       // twice and no shadow-root live region is involved.
       if (this.state === 'error') {
-        this.errorAnnouncementSink?.announce(this.localize('realtimeSessionConnectionFailed'));
+        this.announcements.announceAssertive(this.localize('realtimeSessionConnectionFailed'));
       } else {
-        this.statusAnnouncementSink?.announce(this.stateLabel());
+        this.announcements.announcePolite(this.stateLabel());
       }
     }
     const pending = this.transferActionFocus;

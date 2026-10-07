@@ -10,10 +10,7 @@ import {
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -351,10 +348,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   private objectUrl?: string;
   private objectUrlFile?: File;
 
-  /** Handle on the shared light-DOM assertive region an upload failure announces through -- a
-   *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
-   *  one outright), so `[part="status-text"]` is plain visible text and carries no live role. */
-  private sink?: AnnouncementSink;
+  /** Owns the shared assertive light-DOM region used for upload failures. */
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
 
   // Last-resort id, generated once per instance -- see the class doc's
   // "Identifying which attachment..." section.
@@ -439,31 +434,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectedStatusTransition = false;
-    // Acquired on connect, not on the first failure: assistive tech has to have been observing a
-    // live region *before* text arrives for the change to be announced at all.
-    this.syncAnnouncementSink();
     if (this.hasUpdated) this.requestUpdate();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseAnnouncementSink();
-    this.syncAnnouncementSink();
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.sink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.sink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.sink?.release();
-    this.sink = undefined;
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -476,7 +452,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     // from the transition rather than from rendered text, so a retry that fails the same way twice
     // is read twice instead of the second failure being a silent no-op.
     if (this.isConnected && this.hasUpdated && this.connectedStatusTransition && this.status === 'error') {
-      this.sink?.announce(this.localizedUploadFailedLabel);
+      this.announcements.announceAssertive(this.localizedUploadFailedLabel);
     }
     this.connectedStatusTransition = false;
     // Prepare or revoke the non-reactive cache before render. This keeps URL
@@ -495,7 +471,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.revokeObjectUrl();
-    this.releaseAnnouncementSink();
   }
 
   /** The localized upload-failure message. Same override-wins-verbatim rule as `untitledLabel`;

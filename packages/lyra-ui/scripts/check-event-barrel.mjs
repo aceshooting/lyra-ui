@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 
 import {
   collectPublicSupportTypes,
@@ -19,12 +20,6 @@ const componentsDir = path.join(packageDir, 'src', 'components');
 const rootBarrelPath = path.join(packageDir, 'src', 'lyra.ts');
 const allowlistPath = path.join(packageDir, 'src', 'internal', 'root-registration-allowlist.ts');
 
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(fullPath) : [fullPath];
-  });
-}
 
 // --- Step 1: retain the direct EventMap census for its duplicate-name invariant. ---
 

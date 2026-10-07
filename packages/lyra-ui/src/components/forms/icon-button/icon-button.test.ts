@@ -1,3 +1,4 @@
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './icon-button.js';
 import '../../media/flag/flag.js';
@@ -98,11 +99,7 @@ it('relays exactly one native focus/blur pair, and never lr-focus/lr-blur', asyn
   el.focus();
   el.blur();
 
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(nativeEvents.every((event) => event.target === el && event.bubbles && event.composed)).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it('keeps the visual glyph independent from the icon button hit target', async () => {

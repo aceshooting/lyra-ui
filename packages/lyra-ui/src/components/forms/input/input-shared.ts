@@ -33,12 +33,7 @@ import {
 } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
-import {
-  acquireAriaDescription,
-  acquireResolvedAriaRelationship,
-  type AriaDescriptionLease,
-  type ResolvedAriaRelationshipLease,
-} from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
@@ -445,9 +440,14 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   );
 
   @query('input') private inputEl?: HTMLInputElement;
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-  private requiredDescriptionLease?: AriaDescriptionLease;
-  private requiredDescriptionTarget?: HTMLInputElement;
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.inputEl ?? null,
+    () => {
+      const description = this.renderRoot.querySelector<HTMLElement>('#input-required');
+      return this.required && description ? [description] : [];
+    },
+  );
 
   /** Id of the internal native `<input>` (and the `for` of its paired `<label>`), so a
    *  shadow-DOM-aware password manager keys its field detection off the same id the consumer put
@@ -468,80 +468,17 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     });
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    // Lit does not schedule another render just because an already-rendered control reconnects.
-    // Recreate the host relationship lease here so its host/root observer belongs to this document.
-    if (this.hasUpdated) {
-      this.syncRequiredDescription();
-      this.syncExternalDescription();
-    }
-  }
-
   override disconnectedCallback(): void {
     // `cancel()`, not `dispose()`: a detached input still fires its timer into a torn-down host
     // without this, but a re-parent (which also runs this) must leave the control able to debounce
     // a later edit -- the same reconnect contract `<lr-filter-bar>`'s own `cancelDebounce()` keeps.
     this.settledDebounce.cancel();
-    this.releaseExternalDescription();
-    this.releaseRequiredDescription();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    this.releaseRequiredDescription();
-    if (this.isConnected && this.hasUpdated) {
-      this.syncRequiredDescription();
-      this.syncExternalDescription();
-    }
-  }
-
-  /** Resolves host-owned descriptions onto the native input without copying labelledby. */
-  private syncExternalDescription(): void {
-    const target = this.inputEl ?? null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (!this.externalDescriptionLease) {
-      this.externalDescriptionLease = acquireResolvedAriaRelationship(
-        this,
-        target,
-        'aria-describedby',
-      );
-      return;
-    }
-    this.externalDescriptionLease.update(target);
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
-
-  /** Owns only localized requiredness text; error and hint remain baseline descriptions. */
-  private syncRequiredDescription(): void {
-    const target = this.inputEl ?? null;
-    const description = this.renderRoot.querySelector<HTMLElement>('#input-required');
-    if (!this.required || !target || !description) {
-      this.releaseRequiredDescription();
-      return;
-    }
-    if (this.requiredDescriptionTarget !== target) {
-      this.releaseRequiredDescription();
-      this.requiredDescriptionTarget = target;
-      this.requiredDescriptionLease = acquireAriaDescription(target, [description]);
-      return;
-    }
-    this.requiredDescriptionLease?.update([description]);
-  }
-
-  private releaseRequiredDescription(): void {
-    this.requiredDescriptionLease?.release();
-    this.requiredDescriptionLease = undefined;
-    this.requiredDescriptionTarget = undefined;
+    this.hostDescription.adopted();
   }
 
   override formResetCallback(): void {
@@ -889,8 +826,6 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     ) {
       this.updateValidity();
     }
-    this.syncRequiredDescription();
-    this.syncExternalDescription();
   }
 
   /** Whether `debounce` is a real, positive delay -- mirrors `<lr-filter-bar>`'s own predicate for

@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -97,8 +99,7 @@ export const styles = css`
     unicode-bidi: isolate;
     text-align: start;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     overflow: auto;
     transition: background-color var(--lr-transition-fast);
@@ -178,7 +179,7 @@ export const styles = css`
   /* Container-query evaluation walks the flat tree, so it crosses the <lr-virtual-list> shadow
      boundary and still resolves against the :host container above -- these narrow-allocation
      ::part() rules keep working. */
-  @container (max-inline-size: 30rem) {
+  @container ${mediumContainerQuery} {
     lr-virtual-list::part(cell) {
       grid-template-columns: 1fr;
     }

@@ -8,7 +8,7 @@ import { styles } from './browser-frame.styles.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { firstByIdentity } from '../collection-identity.js';
@@ -203,24 +203,11 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   private viewportObserverDocument?: Document;
   private viewportObserverTarget?: Element;
   private viewportObserverGeneration = 0;
-  private statusAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private suppressNextStatusAnnouncement = true;
-
-  private syncStatusAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.statusAnnouncementSink?.release();
-    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Mount the light-DOM live region before any transition text arrives. Re-resolving the owner
-    // document also makes adoption into an iframe announce where the component is now displayed.
-    this.syncStatusAnnouncementSink();
     // The viewport observer is torn down on disconnect, and a reattached, already-rendered frame
     // <img> fires no new load event -- re-arm and re-measure here so the content rect keeps
     // tracking resizes after a move within the DOM.
@@ -238,18 +225,14 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resetViewportObserver();
-    this.statusAnnouncementSink?.release();
-    this.statusAnnouncementSink = undefined;
     this.suppressNextStatusAnnouncement = true;
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    // Adoption can happen while already detached, in which case no new disconnectedCallback runs.
-    // Drop all old-realm resources here and let the next connectedCallback bind the destination.
+    // Adoption can happen while detached, without another disconnectedCallback.
     this.resetViewportObserver();
-    this.statusAnnouncementSink?.release();
-    this.statusAnnouncementSink = undefined;
+    this.announcements.adopted();
     this.suppressNextStatusAnnouncement = true;
   }
 
@@ -258,7 +241,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     // The status shown at mount is context, not a user-triggered change. Later lifecycle
     // transitions are infrequent and useful, so announce each one as its own light-DOM addition.
     if (this.hasUpdated && !this.suppressNextStatusAnnouncement && changed.has('phase')) {
-      this.statusAnnouncementSink?.announce(this.localize(STATUS_KEY[this.phase]));
+      this.announcements.announcePolite(this.localize(STATUS_KEY[this.phase]));
     }
   }
 

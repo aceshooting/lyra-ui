@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './copy-button.js';
@@ -8,11 +9,6 @@ import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = sinkElement(politeness);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 /** The clipboard write is awaited before any feedback state is applied, so a click needs one

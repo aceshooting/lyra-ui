@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -76,8 +77,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-m);
     cursor: pointer;
     border: var(--lr-border-width-thin) solid;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part='run-button'] {
     background: var(--lr-graph-query-builder-run-bg, var(--lr-color-brand));
@@ -131,8 +131,7 @@ export const styles = css`
   [part='save-button']:focus-visible,
   [part='saved-load-button']:focus-visible,
   [part='saved-delete-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='saved-queries'] {
@@ -218,8 +217,7 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-space-2xl);
     block-size: var(--lr-space-2xl);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     color: var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet));
     background: none;

@@ -18,6 +18,15 @@ type Story = StoryObj;
 const documentIcon = svg`<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h8l4 4v16H6zM13 3v4h4"></path></svg>`;
 export const Default: Story = { render: () => html`<button @click=${(e: Event) => ((e.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Open command palette</button><lr-command-palette hotkey="mod+k" .commands=${[{ commandId: 'new', label: 'New document', group: 'File', shortcut: '⌘N' }, { commandId: 'search', label: 'Search workspace', group: 'Navigation' }]}></lr-command-palette>` };
 
+export const SearchResultAnnouncements: Story = {
+  parameters: { docs: { description: { story: 'Search for “doc” to hear the localized result count; narrowing to the same two matches does not repeat the announcement.' } } },
+  render: () => html`<button @click=${(event: Event) => ((event.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Search commands</button><lr-command-palette .commands=${[
+    { commandId: 'new', label: 'New document' },
+    { commandId: 'open', label: 'Open document' },
+    { commandId: 'settings', label: 'Settings' },
+  ]}></lr-command-palette>`,
+};
+
 export const OptionalKeywords: Story = {
   name: 'Tolerant optional keywords',
   parameters: {

@@ -1221,4 +1221,16 @@ describe('lr-condition-builder contains the composed controls\' lr-activate', ()
     }
     expect(escaped, "this component owns its own event surface; the child's raw event never escapes").to.equal(0);
   });
+  it('preserves an event raised by consumer content in a slot', async () => {
+    const el = (await fixture(html`<lr-condition-builder .fields=${FIELDS}>
+      <button slot="hint">Help</button>
+    </lr-condition-builder>`)) as LyraConditionBuilder;
+    const button = el.querySelector('button')!;
+    let observed = 0;
+    el.addEventListener('lr-activate', (event) => {
+      if (event.target === button) observed += 1;
+    });
+    button.dispatchEvent(new CustomEvent('lr-activate', { bubbles: true, composed: true }));
+    expect(observed).to.equal(1);
+  });
 });

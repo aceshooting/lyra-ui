@@ -19,5 +19,11 @@
     "sourceMap": false,
     "declarationMap": false
   },
-  "exclude": ["src/**/*.test.ts", "src/**/*.stories.ts", "src/**/fixtures/**"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.stories.ts",
+    "src/**/fixtures/**",
+    "src/components/conversation/markdown/markdown-streaming.ts",
+    "src/internal/strip-host-title.ts"
+  ]
 }

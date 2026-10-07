@@ -1,3 +1,4 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
@@ -1669,11 +1670,6 @@ describe("responsive: 320px allocation", () => {
 describe("per-row copy-button reveal", () => {
   /** Two animation frames -- enough for a pointer move to have been dispatched and the
    *  resulting :hover state to have been applied and painted. */
-  async function nextFrames(): Promise<void> {
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
-  }
 
   async function moveMouseTo(target: HTMLElement): Promise<void> {
     target.scrollIntoView({ block: "center", inline: "center" });
@@ -1980,7 +1976,6 @@ describe("retired collapsed-depth and search aliases", () => {
     expect(await canonical.runSearch("london")).to.be.greaterThan(0);
   });
 });
-
 
 it('keeps sparse snapshot holes undefined despite an inherited numeric getter', async () => {
   const frame = document.createElement('iframe');

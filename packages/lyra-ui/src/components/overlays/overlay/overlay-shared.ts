@@ -12,6 +12,62 @@
 
 import type { VirtualAnchor } from '../../../internal/positioner.js';
 
+/** One realm-bound delayed show/hide request, replaced or cancelled by the next interaction. */
+export class OverlayDelayTimer {
+  private timer?: number;
+  private view?: Window;
+  pendingDirection?: 'show' | 'hide';
+
+  schedule(view: Window, delay: number, direction: 'show' | 'hide', commit: () => void): void {
+    this.cancel();
+    this.pendingDirection = direction;
+    this.view = view;
+    const timer = view.setTimeout(() => {
+      if (this.view !== view || this.timer !== timer) return;
+      this.timer = undefined;
+      this.view = undefined;
+      this.pendingDirection = undefined;
+      commit();
+    }, delay);
+    this.timer = timer;
+  }
+
+  cancel(): void {
+    if (this.timer !== undefined) this.view?.clearTimeout(this.timer);
+    this.timer = undefined;
+    this.view = undefined;
+    this.pendingDirection = undefined;
+  }
+}
+
+/** Runs the common render, placement, motion, and closed-layout phases of an overlay transition.
+ * Each owner supplies its placement failure policy and its own registered animation. */
+export async function settleOverlayTransition(options: {
+  showing: boolean;
+  updateComplete: () => Promise<unknown>;
+  isCurrent: () => boolean;
+  readyToShow: () => Promise<boolean>;
+  animate: () => Promise<void>;
+  afterHide: () => void;
+  settled: () => void;
+}): Promise<void> {
+  await options.updateComplete();
+  if (!options.isCurrent()) return;
+  if (options.showing) {
+    if (!await options.readyToShow() || !options.isCurrent()) return;
+    await options.updateComplete();
+    if (!options.isCurrent()) return;
+  }
+  await options.animate();
+  if (!options.isCurrent()) return;
+  if (!options.showing) {
+    options.afterHide();
+    await options.updateComplete();
+    if (!options.isCurrent()) return;
+  }
+  options.settled();
+}
+
 /**
  * Coalesces a lifecycle request made again from inside its own synchronous preflight event.
  *
@@ -128,4 +184,30 @@ export function observeOverlayAnchorIdentity(host: Node, callback: () => void): 
     subtree: true,
   });
   return () => observer.disconnect();
+}
+
+/** Resolves a trigger id in the host's own root and checks its owning realm. */
+export function resolveOverlayTriggerById(host: Node, id: string): HTMLElement | undefined {
+  if (!id) return undefined;
+  const root = host.getRootNode() as Document | ShadowRoot;
+  const target = root.getElementById?.(id) ?? null;
+  const HTMLElementCtor = target?.ownerDocument.defaultView?.HTMLElement;
+  return target && HTMLElementCtor && target instanceof HTMLElementCtor ? target : undefined;
+}
+
+/** Watches host and external direct-anchor roots as one identity observation. */
+export function observeOverlayAnchorRoots(
+  host: Element,
+  directAnchor: Element | undefined,
+  onIdentityChange: () => void,
+): () => void {
+  // Observe the host's entire root, including a direct anchor that is its sibling rather than a
+  // descendant. Observing only the host subtree would miss that sibling's removal or replacement.
+  const hostRoot = host.getRootNode();
+  const roots = new Set<Node>([hostRoot]);
+  if (directAnchor && directAnchor.getRootNode() !== hostRoot) {
+    roots.add(directAnchor.isConnected ? directAnchor.getRootNode() : directAnchor.ownerDocument);
+  }
+  const cleanups = [...roots].map(root => observeOverlayAnchorIdentity(root, onIdentityChange));
+  return () => { for (const cleanup of cleanups) cleanup(); };
 }

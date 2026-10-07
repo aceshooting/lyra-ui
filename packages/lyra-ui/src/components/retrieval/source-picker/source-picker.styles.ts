@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -42,8 +43,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-size-4px) var(--lr-space-xs);
     /* Per-level indent computed in CSS from the plain depth number the component writes inline,
        not a pre-formatted dimension: that keeps the step a retheme-able token and lets the indent
@@ -66,8 +66,7 @@ export const styles = css`
     place-items: center;
     flex: 0 0 auto;
     inline-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     border-radius: var(--lr-radius-xs);
     background: transparent;

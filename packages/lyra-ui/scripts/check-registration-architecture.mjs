@@ -6,6 +6,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { visitAst } from './lib/ast.mjs';
 
 const components = fileURLToPath(new URL('../src/components/', import.meta.url));
 const sourceRoot = fileURLToPath(new URL('../src/', import.meta.url));
@@ -171,18 +172,6 @@ function literalValue(node) {
   return undefined;
 }
 
-function visitAst(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  if (typeof node.type === 'string') visitor(node);
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'start' || key === 'end') continue;
-    if (Array.isArray(value)) {
-      for (const child of value) visitAst(child, visitor);
-    } else if (value && typeof value === 'object') {
-      visitAst(value, visitor);
-    }
-  }
-}
 
 function defineElementBindings(program) {
   const bindings = new Set();

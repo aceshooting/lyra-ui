@@ -18,7 +18,7 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { formatTimeOfDay, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { LyraVirtualList, LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
@@ -95,19 +95,6 @@ function variantDotPart(variant: LyraVariant): string {
       ? 'variant-dot variant-dot-danger'
       : 'variant-dot variant-dot-neutral';
   return part;
-}
-
-/** `hour:minute` in the component's effective locale -- identical algorithm to
- *  `<lr-chat-message>`'s own `defaultFormatTimestamp`, duplicated locally. Uses the shared
- *  per-locale formatter cache: this runs once per entry on every render of a live feed, and
- *  constructing an `Intl.DateTimeFormat` per call is an ICU locale-data lookup that would
- *  otherwise repeat for every visible row on every appended entry. `effectiveLocale` always
- *  resolves to a non-empty tag (it falls back to `'en'`), so no empty-locale guard is needed. */
-function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
 }
 
 /**
@@ -443,7 +430,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
         const region = this.liveRegion;
         if (region) {
           region.mode = 'polite';
-          region.announce(this.completedStepsSummary(), { force: true });
+          region.announce(this.completedStepsSummary(this.normalizedEntries.length), { force: true });
         }
       }
     }
@@ -630,14 +617,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     this.scrollRafDocument = ownerDocument;
   }
 
-  private completedStepsSummary(): string {
-    const count = this.normalizedEntries.length;
-    const key =
-      getPluralRules(this.effectiveLocale).select(count) === 'one'
-        ? 'activityFeedCompletedStep'
-        : 'activityFeedCompletedSteps';
-    return this.localize(key, undefined, {
+  private completedStepsSummary(count: number): string {
+    return this.localize('activityFeedCompletedSteps', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(count),
+      pluralCount: count,
     });
   }
 
@@ -744,7 +727,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private entryTemplate(entry: ActivityEntry, ownRole: boolean): TemplateResult {
     const ts = this.normalizedTimestamp(entry.timestamp);
-    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
     const variant = entry.variant ?? 'neutral';
     const dotPart = variantDotPart(variant);
     return html`
@@ -752,7 +735,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
         <span part="entry-icon" aria-hidden="true"
           >${entry.icon ? entry.icon : html`<span part=${dotPart} data-variant=${variant}></span>`}</span
         >
-        <span part="entry-text">${this.renderText ? this.renderText(entry) : entry.text}</span>
+        <span part="entry-text" data-lr-virtual-list-link>${this.renderText ? this.renderText(entry) : entry.text}</span>
         ${this.withTimestamps && ts
           ? html`<time part="entry-timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>`
           : nothing}
@@ -764,10 +747,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     const entries = this.normalizedEntries;
     const fallbackLabel = this.localize('activityFeedLabel');
     const label = this.label == null ? fallbackLabel : this.label;
-    const headerText = this.mode === 'live' ? entries[entries.length - 1]?.text ?? '' : this.completedStepsSummary();
+    const headerText = this.mode === 'live' ? entries[entries.length - 1]?.text ?? '' : this.completedStepsSummary(entries.length);
     const listAriaLabel = this.hasAttribute('aria-label') ? this.getAttribute('aria-label') ?? '' : fallbackLabel;
     const headerAriaLabel = `${label} ${headerText}`.trim() ? nothing : fallbackLabel;
-    const virtualized = this.isVirtualized;
+    const virtualized = entries.length > this.effectiveVirtualizeAt;
 
     return html`
       <div part="base">

@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -167,8 +168,7 @@ export const styles = css`
     transform: translate(50%, -50%);
   }
   [part~="thumb"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Hover matches the focus-visible outline a keyboard user gets -- a soft ring, not a recolor,
      since the thumb already carries the indicator's brand color. Gated on

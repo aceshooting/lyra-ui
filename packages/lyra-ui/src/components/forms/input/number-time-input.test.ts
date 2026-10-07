@@ -171,6 +171,23 @@ it('inherits author-first host descriptions and generated error, hint, and requi
   }
 });
 
+it('keeps the required description visually clipped and referenced on the number-input subclass', async () => {
+  const el = await fixture<LyraNumberInput>(html`
+    <lr-number-input label="Quantity" required></lr-number-input>
+  `);
+  const native = el.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+  const required = el.shadowRoot!.querySelector<HTMLElement>('[data-required-description]')!;
+  const style = getComputedStyle(required);
+
+  expect(required.hidden).to.be.false;
+  expect(required.textContent).to.equal('This field is required.');
+  expect(style.position).to.equal('absolute');
+  expect(style.clipPath).to.not.equal('none');
+  expect(required.getBoundingClientRect().width).to.be.at.most(1);
+  expect(describedByIds(native)).to.include(required.id);
+  await expect(el).to.be.accessible();
+});
+
 // -- lr-number-input steppers (8.0) -----------------------------------------
 
 describe('lr-number-input steppers', () => {

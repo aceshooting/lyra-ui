@@ -9,6 +9,7 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { OwnerAnimationFrameWaiter } from '../../../internal/owner-animation-frame.js';
 import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
@@ -23,6 +24,7 @@ import { styles } from './page-rail.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
+export { PageViewerSnapshotController } from './page-viewer-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings.generated.js';
@@ -94,11 +96,7 @@ export interface LyraPageRailEventMap {
 
 type ThumbnailState = 'pending' | 'ready' | 'unavailable';
 
-interface OwnedAnimationFrameWait {
-  owner: Window;
-  handle?: number;
-  resolve(value: boolean): void;
-}
+
 
 /**
  * `<lr-page-rail>` — a virtualized vertical thumbnail rail for page-addressed documents, with
@@ -214,7 +212,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private thumbnailGeneration = 0;
   private resizeObserver?: ResizeObserver;
   private targetObserver?: MutationObserver;
-  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
+  private readonly ownerFrames = new OwnerAnimationFrameWaiter(this);
   private pendingFocusPage: number | null = null;
   private focusRepairPending = false;
   private focusRepairGeneration = 0;
@@ -321,7 +319,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.unbindViewer();
     this.thumbnailGeneration++;
     this.disposeThumbnailHandles();
-    this.cancelPendingAnimationFrames();
+    this.ownerFrames.cancel();
     this.resetDigitBuffer();
     this.pendingFocusPage = null;
     this.focusRepairPending = false;
@@ -335,7 +333,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.resizeObserver = undefined;
     this.targetObserver?.disconnect();
     this.targetObserver = undefined;
-    this.cancelPendingAnimationFrames();
+    this.ownerFrames.cancel();
     this.resetDigitBuffer();
     this.pendingFocusPage = null;
     this.focusRepairPending = false;
@@ -510,28 +508,6 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (generation === this.focusRepairGeneration) this.focusRepairPending = false;
   }
 
-  private waitForOwnerAnimationFrame(): Promise<boolean> {
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || !this.isConnected) return Promise.resolve(false);
-    return new Promise((resolve) => {
-      const pending = { owner, resolve } as OwnedAnimationFrameWait;
-      this.pendingAnimationFrames.add(pending);
-      pending.handle = owner.requestAnimationFrame(() => {
-        if (!this.pendingAnimationFrames.delete(pending)) return;
-        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
-      });
-    });
-  }
-
-  private cancelPendingAnimationFrames(): void {
-    const pendingFrames = [...this.pendingAnimationFrames];
-    this.pendingAnimationFrames.clear();
-    for (const pending of pendingFrames) {
-      if (pending.handle !== undefined) pending.owner.cancelAnimationFrame(pending.handle);
-      pending.resolve(false);
-    }
-  }
-
   private async focusVirtualPage(pageNumber: number, generation: number): Promise<void> {
     const list = this.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'));
     if (!list) {
@@ -555,7 +531,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
     list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
     for (let attempt = 0; attempt < 4; attempt++) {
-      if (!(await this.waitForOwnerAnimationFrame())) return;
+      if (!(await this.ownerFrames.wait())) return;
       await list.updateComplete;
       if (!this.isCurrentFocusRepair(list, generation)) return;
       index = this.focusRepairIndex(pageNumber);

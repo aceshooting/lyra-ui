@@ -1,8 +1,11 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -55,19 +58,8 @@ export const styles = css`
   :host([size="small"]) {
     --_lr-select-expand-size: var(--lr-size-1-25rem);
   }
-  [part="form-control-label"] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked in
-     JS via hasLabelSlot and reflected with hidden -- same fix as [part~='hint']/[part='error']
-     below and lr-combobox. Without it the required-asterisk ::after renders a stray ' *' when label
-     is unset. */
-  [part="form-control-label"][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
 
   /* Pill only retunes the shared radius property, so [part='trigger'] stays the single place a
@@ -125,8 +117,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part="trigger"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and stays exactly as it was, while a halo a consumer
@@ -358,8 +349,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-block: calc(var(--lr-space-2xs) * -1);
     margin-inline-end: calc(var(--lr-space-xs) * -1);
     padding: var(--lr-space-2xs);
@@ -382,8 +372,7 @@ export const styles = css`
     );
   }
   [part~="tag__remove-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~="tag__remove-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
@@ -406,8 +395,7 @@ export const styles = css`
     box-sizing: border-box;
     /* A real, independently-focusable control, so it takes the full shared icon-button hit-area
        floor rather than the capped decorative box [part='expand-icon'] uses. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-2xs);
     border: none;
     border-radius: var(--lr-select-radius, var(--_lr-select-radius));
@@ -438,8 +426,7 @@ export const styles = css`
     );
   }
   [part="clear-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="clear-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
@@ -689,9 +676,7 @@ export const styles = css`
   [part="form-control-label"],
   [part~="hint"],
   [part="error"] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 
   [part="option"] {
@@ -717,23 +702,6 @@ export const styles = css`
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-04em);
     color: var(--lr-color-text-quiet);
-  }
-  [part~="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  /* :empty never matches here either -- same fix as lr-combobox's hint/error. */
-  [part~="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
   }
 
   ${glassScrollLayerStyles}

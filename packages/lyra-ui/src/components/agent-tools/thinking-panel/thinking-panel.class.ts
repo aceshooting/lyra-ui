@@ -5,8 +5,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { formatShortDuration } from '../../../internal/duration.js';
+import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -399,7 +398,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  a literal "NaN ms". A finite negative value clamps to `0` instead of rendering a nonsensical
    *  negative duration. */
   private get safeDurationMs(): number | null {
-    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+    return safeDurationMs(this.durationMs);
   }
 
   private get durationDisplay(): { text: string; pending: boolean } | null {

@@ -5,6 +5,7 @@ import type {
   MessagePartState,
   ToolCallStatus,
 } from '../types.js';
+import { positiveInteger } from '../../internal/numbers.js';
 import {
   createProviderSnapshotBudget,
   resolveProviderSnapshotLimits,
@@ -29,12 +30,6 @@ export const DEFAULT_AI_SDK_ADAPTER_LIMITS: Readonly<AiSdkAdapterLimits> = Objec
 });
 
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
-
-function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
-}
 
 function resolveLimits(limits: Partial<AiSdkAdapterLimits>): Readonly<AiSdkAdapterLimits> {
   const snapshot = resolveProviderSnapshotLimits(limits);

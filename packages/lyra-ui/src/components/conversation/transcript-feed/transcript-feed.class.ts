@@ -3,7 +3,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -122,7 +122,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   private _isFirstUpdate = true;
 
   /** Handle on the shared light-DOM `polite` region every announcement is written to. */
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   /** Ids already spoken (or recorded on the first render), so a caption announces exactly once
    *  however many later updates keep re-rendering the same row. */
   private announcedFinalIds = new Set<string>();
@@ -167,42 +167,9 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     }
     return entries;
   }
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.syncAnnouncementSink();
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.releaseAnnouncementSink();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    // The sink is per-document; an element moved into another document has to stop writing into
-    // the region mounted in the one the user is no longer looking at.
-    this.syncAnnouncementSink();
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  /** Mounts (or remounts) the shared region *ahead of* any text -- assistive tech has to have been
-   *  observing a live region before content arrives, so acquiring it lazily at announce time is
-   *  unreliable. Mirrors `<lr-chat-viewport>`'s identically-shaped helper. */
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -242,7 +209,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
       this._isFirstUpdate || this.sessionChanged || this.pendingSessionBaseline;
     this.pendingSessionBaseline = false;
     if (establishesBaseline) return;
-    const sink = this.announcementSink;
+    const sink = this.announcements.current('polite');
     if (!sink) return;
     for (const text of fresh) {
       const message = text.replace(/\s+/g, ' ').trim();

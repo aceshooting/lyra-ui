@@ -119,6 +119,16 @@ test('intent capture refuses unavailable or reentrantly changed retention and cl
   assert.equal(captureImageToolIntent(status.session), null);
 });
 
+test('image capture binds dimensions and lease to one snapshot', () => {
+  const f = fixture(); let reads = 0;
+  const session = { ...f.session, snapshot: () => {
+    if (++reads === 2) f.change({ revision: { documentId: 'doc', value: 1 }, image: { widthPoints: 12, heightPoints: 7 } });
+    return f.session.snapshot();
+  } } as DocxSession;
+  assert.equal(captureImageToolIntent(session), null);
+  assert.equal(f.releases(), 1);
+});
+
 test('cached metadata refusal is preserved and read-only sessions may read complete metadata', () => {
   const f = fixture(), intent = captureImageToolIntent(f.session)!;
   f.refuseDescription('resource-limit');

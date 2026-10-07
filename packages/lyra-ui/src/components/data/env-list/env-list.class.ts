@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -127,34 +127,11 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   @state() private revealed = new Map<string, boolean>();
 
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.syncAnnouncementSink();
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.releaseAnnouncementSink();
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -192,11 +169,11 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     const outcome = await writeClipboardText(owner, text);
     if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
     if (outcome.ok) {
-      this.announcementSink?.announce(this.localize('copied'));
+      this.announcements.announcePolite(this.localize('copied'));
       this.emit('lr-copy', outcome);
       return;
     }
-    this.announcementSink?.announce(this.localize('copyFailed'));
+    this.announcements.announcePolite(this.localize('copyFailed'));
     this.emit('lr-error');
     this.emit('lr-copy-error', outcome);
   }

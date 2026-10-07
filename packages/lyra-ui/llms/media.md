@@ -1429,8 +1429,10 @@ enabled buttons retain pointer feedback.
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
-**Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
-host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
+**Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
+native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen
+snapshot of the current files and preserves each File identity. Programmatic `files` writes are
+silent (the event pairs still fire while `nonRetaining` is set,
 even though `files` itself is not written in that mode). `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
 rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left
@@ -1638,6 +1640,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 
 **Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live
 range update, and exactly one owner-realm native `change` (`Event`) after a gesture commits.
+Each is followed by `lr-input` or `lr-change` respectively, with `detail: { value: number }`
+containing the current percentage position.
 `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s preserving
 `relatedTarget`; a dirty keyboard edit commits its `change` before `blur`.
 

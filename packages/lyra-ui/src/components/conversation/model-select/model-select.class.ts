@@ -1,40 +1,22 @@
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { activeElementIn } from '../../../internal/active-element.js';
-import {
-  applyComposedFocusRepair,
-  captureComposedFocusRepair,
-  isComposedFocusAvailable,
-  type ComposedFocusRepairSnapshot,
-} from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
+import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './model-select.styles.js';
 import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
-import {
-  attachInternalsSafely,
-  getFormOwner,
-  installCustomErrorProperty,
-  isBarredFromValidation,
-  setFormOwner,
-  type FormOwnerValue,
-} from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
+import { isBarredFromValidation } from '../../../internal/form-associated.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -42,11 +24,12 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelectNoModels, LYRA_DEFAULT_modelSelectRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type { LyraCatalog, LyraCatalogEntry } from '../../../internal/catalog-picker.js';
 
@@ -64,6 +47,7 @@ type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
 export interface LyraModelSelectEventMap {
   'lr-invalid': CustomEvent<null>;
+  'lr-input': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   input: Event;
   change: Event;
@@ -84,8 +68,8 @@ export interface LyraModelSelectEventMap {
  * provider whose live catalog has since changed) is never silently dropped:
  * `effectiveEntries` appends it to the rendered option list as a synthetic,
  * visually-distinct row (dashed border, italic label, "not in catalog"
- * badge — see `model-select.styles.ts`) computed fresh from `catalog` +
- * `value` on every render, without ever mutating the `catalog` property
+ * badge — see `model-select.styles.ts`) derived from `catalog` +
+ * `value` when either changes, without ever mutating the `catalog` property
  * itself.
  *
  * Object-shaped catalog rows can include a literal `icon`, rendered decoratively as the leading
@@ -107,6 +91,7 @@ export interface LyraModelSelectEventMap {
  * catalog array after changing its rows.
  *
  * @customElement lr-model-select
+ * @event lr-input - Typed value edit notification; detail includes `value`.
  * @event lr-change - The selected/typed value changed. `detail: { value: string; inCatalog: boolean }`.
  * @event {Event} change - Owner-realm native event fired alongside `lr-change`, mirroring
  *   `<lr-select>`/`<lr-combobox>`'s value-change pair so native form bindings/framework `v-model`
@@ -183,6 +168,7 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the selected option row.
  * @cssprop [--lr-model-select-option-synthetic-border-style=dashed] - Border style of a synthetic stale-value option row.
  * @cssprop [--lr-model-select-option-synthetic-border-color=var(--lr-color-border)] - Border color of a synthetic stale-value option row.
+ * @cssprop [--lr-model-select-option-synthetic-font-style=italic] - Font style of a synthetic stale-value option row's label.
  * @cssprop [--lr-model-select-option-disabled-opacity=0.5] - Opacity of an option row whose catalog entry sets `disabled`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  *   `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
@@ -202,7 +188,7 @@ export interface LyraModelSelectEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
+export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -305,14 +291,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   private readonly slotPresence = new SlotPresenceController(this);
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
-  /** Whether a host `aria-describedby` was last reflected onto the active control -- see
-   *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
-  private hasSyncedDescribedByElements = false;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -320,16 +303,19 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   // Replacing the currently focused trigger/input during a mode switch fires
   // `blur` synchronously while Lit is rendering. That structural blur must not
   // mutate reactive touched/open state from inside the active update cycle.
-  private suppressControlBlur = false;
-  private modeFocusRepair?: ComposedFocusRepairSnapshot;
-  private focusedModeRepair?: ComposedFocusRepairSnapshot;
-  private focusReturnTarget?: HTMLElement;
+  protected get catalogEditing(): CatalogPickerController<LyraModelCatalogEntry> {
+    return this.catalogPicker;
+  }
+  protected get formInternals(): ElementInternals {
+    return this.internals;
+  }
   private readonly catalogPicker = new CatalogPickerController<LyraModelCatalogEntry>(this, {
     catalog: () => this.catalog,
     allowCustom: () => this.allowCustom,
     isReadonly: () => this.readonly,
     locale: () => this.effectiveLocale,
     searchableFields: (entry) => [entry.id, entry.label],
+    emitInput: (detail) => this.emit('lr-input', detail),
     emitChange: (detail) => this.emit('lr-change', detail),
     onValueChange: (value, oldValue) => {
       this.internals.setFormValue(value);
@@ -351,122 +337,18 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   constructor() {
     super();
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like a blur; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()` so
-    // this listener can tell the silent query apart from every other path that raises the same
-    // `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+
     // Native <input> always has a submission value ("") from construction —
     // without this, a control whose `value` is never touched is entirely
     // absent from FormData instead of present as "" (see form-associated.ts).
     this.internals.setFormValue('');
-  }
-
-  /** Forwards to the internal trigger button (closed-dropdown mode) or combobox input (free-text
-   *  mode) -- mirrors `<lr-button>`'s host `click()` forwarding so a generic form-automation
-   *  helper or another component calling `.click()` on the host element actually opens the
-   *  picker instead of silently doing nothing.
-   *
-   *  Closed-dropdown mode forwards via `.click()` itself, since the trigger is a real
-   *  `<button>` wired to `@click`. Free-text mode forwards `.click()` to the input, then explicitly
-   *  calls `.focus()`: unlike a genuine pointer click, `HTMLElement.click()` never moves focus
-   *  (that's a mousedown side effect the browser applies only to *real* pointer interaction), and
-   *  this control's open behavior for that mode is wired to the input's `focus` event (see
-   *  `onInputFocus`), not a `click` handler on the input itself. */
-  override click(): void {
-    this.catalogPicker.click();
-  }
-
-  /** Focuses the active semantic control in both closed-dropdown and free-text modes. */
-  override focus(options?: FocusOptions): void {
-    this.catalogPicker.focus(options);
-  }
-
-  /** Blurs the active semantic control in both rendering modes. */
-  override blur(): void {
-    this.catalogPicker.blur();
-  }
-
-  /** The native editable input in free-text mode, or `null` in closed-dropdown mode and before render. */
-  get input(): HTMLInputElement | null {
-    return this.catalogPicker.input;
-  }
-
-  get selectionStart(): number | null {
-    return this.input?.selectionStart ?? null;
-  }
-
-  set selectionStart(value: number | null) {
-    if (this.input) this.input.selectionStart = value;
-  }
-
-  get selectionEnd(): number | null {
-    return this.input?.selectionEnd ?? null;
-  }
-
-  set selectionEnd(value: number | null) {
-    if (this.input) this.input.selectionEnd = value;
-  }
-
-  get selectionDirection(): LyraModelSelectSelectionDirection | null {
-    return (this.input?.selectionDirection as LyraModelSelectSelectionDirection | undefined) ?? null;
-  }
-
-  set selectionDirection(value: LyraModelSelectSelectionDirection | null) {
-    if (this.input) this.input.selectionDirection = value;
-  }
-
-  /** Selects all editable text in free-text mode; otherwise a no-op. */
-  select(): void {
-    this.catalogPicker.select();
-  }
-
-  /** Forwards the native selection range in free-text mode; otherwise a no-op. */
-  setSelectionRange(
-    start: number | null,
-    end: number | null,
-    direction?: LyraModelSelectSelectionDirection,
-  ): void {
-    this.catalogPicker.setSelectionRange(start, end, direction);
-  }
-
-  setRangeText(replacement: string): void;
-  setRangeText(replacement: string, start: number, end: number, selectMode?: SelectionMode): void;
-  /**
-   * Applies a silent native range edit in free-text mode and synchronizes the committed value,
-   * form entry, and validity. Closed-dropdown mode and pre-render calls are no-ops.
-   */
-  setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
-    this.catalogPicker.setRangeText(replacement, start, end, selectMode);
-  }
-
-  get form(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  set form(owner: FormOwnerValue) {
-    setFormOwner(this, owner);
-  }
-  /** Returns the browser-resolved owning form, including an external owner selected by `form`. */
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** @internal */
@@ -482,25 +364,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    let modeChanged = false;
-    if (this.hasUpdated) {
-      const renderedControl = this.renderRoot.querySelector<HTMLElement>(
-        '[part="trigger"], [part="combobox-input"]',
-      );
-      const renderedClosedMode = renderedControl?.getAttribute('part') === 'trigger';
-      modeChanged = renderedClosedMode !== this.closedMode;
-      this.suppressControlBlur = modeChanged;
-      this.catalogPicker.suppressControlEvents = modeChanged;
-      this.modeFocusRepair =
-        modeChanged && renderedControl !== null && activeElementIn(this.shadowRoot) === renderedControl
-          ? captureComposedFocusRepair(
-            this,
-            this.modeFocusFallback() ?? renderedControl,
-          ) ?? undefined
-          : modeChanged
-            ? this.focusedModeRepair
-            : undefined;
-    }
+    const modeChanged = this.prepareModeFocus(this.closedMode);
+    this.catalogPicker.suppressControlEvents = modeChanged;
     if (
       this.open &&
       (changed.has('catalog') || changed.has('value') || changed.has('allowCustom'))
@@ -521,17 +386,13 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.modeFocusRepair = undefined;
-    this.focusedModeRepair = undefined;
-    this.focusReturnTarget = undefined;
+    this.clearModeFocus();
     this.catalogPicker.disconnected();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.modeFocusRepair = undefined;
-    this.focusedModeRepair = undefined;
-    this.focusReturnTarget = undefined;
+    this.clearModeFocus();
     this.catalogPicker.adopted();
   }
 
@@ -555,11 +416,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) {
-      this.setAttribute('name', this._name);
-    } else {
-      this.removeAttribute('name');
-    }
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -570,6 +427,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     if (this._disabled) this.hide();
     // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
     // synchronously, for the same reason the attribute is reflected synchronously.
@@ -645,7 +504,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.catalogPicker.restoreState(state);
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     if (disabled) this.hide();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.updateValidity();
@@ -657,13 +519,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.publishValidityStates();
   };
   checkValidity(): boolean {
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
     // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
     // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
@@ -702,9 +561,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   /**
    * `normalizedCatalog` plus, when `value` isn't one of its ids, a synthetic
-   * trailing row for it — recomputed from scratch on every access so it
-   * always reflects the *current* `catalog`/`value`, never a snapshot from
-   * whenever `value` happened to be assigned.
+   * trailing row for it — cached by the controller until `catalog`/`value`
+   * changes, so it always reflects the current selection.
    */
   private get effectiveEntries(): DisplayEntry[] {
     return this.catalogPicker.effectiveEntries;
@@ -728,26 +586,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Reflects the host's own `aria-describedby` (e.g. a form-wide instructions block living
-    // outside this component) onto the active semantic control, alongside the trigger/input's own
-    // hint/error ids already rendered into its literal `aria-describedby` string above -- idrefs
-    // authored on the host never resolve across the shadow boundary on their own, mirroring
-    // `checkbox.class.ts`'s `syncAriaDescribedByElements` usage. Guarded exactly like that
-    // reference: assigning `ariaDescribedByElements = null` unconditionally on every update -- even
-    // when there was never anything to sync -- makes the browser drop the literal hint/error
-    // `aria-describedby` string this same render already set.
-    const hostDescribedBy = this.getAttribute('aria-describedby');
-    if (hostDescribedBy || this.hasSyncedDescribedByElements) {
-      // `querySelector`, not `getElementById`: `renderRoot` is typed `HTMLElement | ShadowRoot`,
-      // and `getElementById` exists only on the `DocumentFragment` half. Matches how
-      // `checkbox.class.ts` resolves its own control for the same helper.
-      const control = this.renderRoot.querySelector<HTMLElement>(`#${CSS.escape(this.controlId)}`);
-      this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
-        this,
-        control ?? undefined,
-        hostDescribedBy,
-      );
-    }
+    this.syncCatalogDescription(this.controlId);
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
@@ -764,58 +603,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     // update, so a control that is never touched still publishes `optional`/`valid` (or
     // `required`/`invalid`) for a consumer's :state() rule to match from the moment it mounts.
     this.publishValidityStates();
-    this.suppressControlBlur = false;
     this.catalogPicker.suppressControlEvents = false;
-    const focusRepair = this.modeFocusRepair;
-    this.modeFocusRepair = undefined;
-    if (focusRepair) {
-      this.scheduleAfterUpdate(() => {
-        const replacement = this[VALIDITY_ANCHOR]();
-        const target = replacement && isComposedFocusAvailable(replacement)
-          ? replacement
-          : this.modeFocusFallback();
-        applyComposedFocusRepair(focusRepair, target);
-        if (this.focusedModeRepair === focusRepair) this.focusedModeRepair = undefined;
-      }, 'model-select-mode-focus');
-    }
-  }
-
-  private rememberFocusReturn(event: FocusEvent): void {
-    const related = event.relatedTarget;
-    if (related && (related as Node).nodeType === 1 && isComposedFocusAvailable(related as Element)) {
-      this.focusReturnTarget = related as HTMLElement;
-    }
-  }
-
-  private captureModeFocus(event: FocusEvent): void {
-    this.rememberFocusReturn(event);
-    const control = event.currentTarget;
-    if (!control || (control as Node).nodeType !== 1) return;
-    this.focusedModeRepair = captureComposedFocusRepair(
-      this,
-      this.modeFocusFallback() ?? control as HTMLElement,
-    ) ?? undefined;
-  }
-
-  private retireModeFocusAfterBlur(event: FocusEvent): void {
-    const destination = event.relatedTarget;
-    if (destination && (destination as Node).nodeType === 1) {
-      this.focusedModeRepair = undefined;
-      return;
-    }
-    queueMicrotask(() => {
-      if (!this.suppressControlBlur && !this.effectiveDisabled && !this.hasAttribute('inert')) {
-        this.focusedModeRepair = undefined;
-      }
-    });
-  }
-
-  private modeFocusFallback(): HTMLElement | null {
-    if (this.focusReturnTarget && isComposedFocusAvailable(this.focusReturnTarget)) {
-      return this.focusReturnTarget;
-    }
-    const owner = this.renderRoot.querySelector<HTMLElement>('[part="form-control"]');
-    return owner && isComposedFocusAvailable(owner) ? owner : null;
+    this.finishModeFocus('model-select-mode-focus');
   }
 
   // -- Closed-dropdown mode (trigger button) --------------------------------
@@ -921,12 +710,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
    *  identically in both closed-dropdown and free-text mode. */
   private renderHintError(hasError: boolean, hasHint: boolean): TemplateResult {
     return html`
-      <div id="model-select-error" part="error" ?hidden=${!hasError}>
-        ${this.errorText}<slot name="error"></slot>
-      </div>
-      <div id="model-select-hint" part="hint" ?hidden=${!hasHint}>
-        ${this.hint}<slot name="hint"></slot>
-      </div>
+      ${renderFormControlHintError({ idPrefix: 'model-select', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
     `;
   }
 

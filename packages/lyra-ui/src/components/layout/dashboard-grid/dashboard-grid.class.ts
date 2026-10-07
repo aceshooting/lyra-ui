@@ -27,10 +27,7 @@ import {
   finiteRange,
 } from '../../../internal/numbers.js';
 import { styles } from './dashboard-grid.styles.js';
-import {
-  type LyraDashboardCell,
-  type LyraDashboardCollisionPolicy,
-} from './layout.js';
+import type { LyraDashboardCell, LyraDashboardCollisionPolicy } from './layout.js';
 import {
   clampDashboardCandidate,
   createDashboardSpatialIndex,

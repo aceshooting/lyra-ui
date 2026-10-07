@@ -4354,7 +4354,13 @@
         }
       ],
       "defaults": [],
-      "detailChanges": [],
+      "detailChanges": [
+        {
+          "tag": "lr-flow-canvas",
+          "event": "lr-edge-activate",
+          "summary": "Use sourceNodeId and targetNodeId; source and target remain deprecated aliases carrying the same node ids during migration."
+        }
+      ],
       "reviews": [
         {
           "tag": "lr-approval-queue",
@@ -7580,6 +7586,176 @@
           "removedIn": "24.0.0"
         }
       ]
+    },
+    {
+      "origin": "lyra-v25",
+      "fromMajor": 25,
+      "toMajor": 26,
+      "aliasRemovalMajor": 28,
+      "renames": [
+        {
+          "tag": "lr-agent-eval-dashboard",
+          "kind": "event",
+          "from": "lr-metric-change",
+          "to": "lr-metric-change-request"
+        },
+        {
+          "tag": "lr-agent-run",
+          "kind": "event",
+          "from": "lr-cancel",
+          "to": "lr-run-cancel"
+        },
+        {
+          "tag": "lr-background-runs",
+          "kind": "event",
+          "from": "lr-run-open",
+          "to": "lr-run-activate"
+        },
+        {
+          "tag": "lr-change-review",
+          "kind": "event",
+          "from": "lr-change-decision",
+          "to": "lr-change-decision-request"
+        },
+        {
+          "tag": "lr-community-card",
+          "kind": "event",
+          "from": "lr-entity-activate",
+          "to": "lr-entity-select"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "event",
+          "from": "lr-collapse-change",
+          "to": "lr-toggle"
+        },
+        {
+          "tag": "lr-dock-panel",
+          "kind": "event",
+          "from": "lr-collapse-request",
+          "to": "lr-toggle-request"
+        },
+        {
+          "tag": "lr-navigation-menu",
+          "kind": "event",
+          "from": "lr-expanded-change",
+          "to": "lr-toggle"
+        },
+        {
+          "tag": "lr-path-strip",
+          "kind": "event",
+          "from": "lr-entity-activate",
+          "to": "lr-entity-select"
+        },
+        {
+          "tag": "lr-rag-eval-dashboard",
+          "kind": "event",
+          "from": "lr-metric-change",
+          "to": "lr-metric-change-request"
+        },
+        {
+          "tag": "lr-rag-eval-dashboard",
+          "kind": "event",
+          "from": "lr-slice-change",
+          "to": "lr-slice-change-request"
+        },
+        {
+          "tag": "lr-source-picker",
+          "kind": "event",
+          "from": "lr-sources-change",
+          "to": "lr-selection-change"
+        },
+        {
+          "tag": "lr-subagent-panel",
+          "kind": "event",
+          "from": "lr-cancel",
+          "to": "lr-run-cancel"
+        }
+      ],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [
+        {
+          "tag": "lr-app-rail-item",
+          "kind": "slot",
+          "name": "icon"
+        },
+        {
+          "tag": "lr-chunk-inspector",
+          "kind": "event",
+          "name": "lr-chunk-toggle"
+        },
+        {
+          "tag": "lr-entity-dossier",
+          "kind": "event",
+          "name": "lr-entity-activate"
+        },
+        {
+          "tag": "lr-flow-node",
+          "kind": "slot",
+          "name": "icon"
+        },
+        {
+          "tag": "lr-memory-panel",
+          "kind": "event",
+          "name": "lr-entity-activate"
+        },
+        {
+          "tag": "lr-memory-panel",
+          "kind": "event",
+          "name": "lr-memory-toggle"
+        },
+        {
+          "tag": "lr-provenance-panel",
+          "kind": "event",
+          "name": "lr-entity-activate"
+        },
+        {
+          "tag": "lr-rag-eval-dashboard",
+          "kind": "event",
+          "name": "lr-run-change"
+        },
+        {
+          "tag": "lr-retrieval-results",
+          "kind": "event",
+          "name": "lr-select"
+        },
+        {
+          "tag": "lr-retrieval-trace",
+          "kind": "event",
+          "name": "lr-stage-toggle"
+        },
+        {
+          "tag": "lr-source-card",
+          "kind": "event",
+          "name": "lr-expand"
+        },
+        {
+          "tag": "lr-tool-call-chip",
+          "kind": "slot",
+          "name": "icon"
+        },
+        {
+          "tag": "lr-widget",
+          "kind": "event",
+          "name": "lr-collapse-change"
+        },
+        {
+          "tag": "lr-widget",
+          "kind": "event",
+          "name": "lr-collapse-request"
+        },
+        {
+          "tag": "lr-widget",
+          "kind": "slot",
+          "name": "icon"
+        }
+      ],
+      "slotContent": [],
+      "moduleReviews": [],
+      "propertyChanges": [],
+      "retiredEvents": [],
+      "detailFields": []
     }
   ]
 }

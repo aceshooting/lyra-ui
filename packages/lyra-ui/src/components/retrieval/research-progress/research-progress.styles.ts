@@ -1,3 +1,5 @@
+import { progressTrackPaint, progressIndicatorPaint } from '../../../internal/progress-track.styles.js';
+import { panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,8 +35,9 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border-radius: var(--lr-radius-xs);
-    background: var(--lr-color-surface-raised);
+    --_progress-radius: var(--lr-radius-xs);
+    --_progress-track-color: var(--lr-color-surface-raised);
+    ${progressTrackPaint}
     color: var(--lr-color-text);
   }
 
@@ -43,7 +46,8 @@ export const styles = css`
     inset-block: 0;
     inset-inline-start: 0;
     inline-size: calc(var(--_progress-value, 0) * 1%);
-    background: var(--lr-color-brand-quiet);
+    --_lr-progress-indicator-variant-color: var(--lr-color-brand-quiet);
+    ${progressIndicatorPaint}
     content: '';
   }
 
@@ -64,14 +68,10 @@ export const styles = css`
   }
 
   [part='step'] {
-    display: grid;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${panelListItem}
+
     grid-template-columns: minmax(0, 1fr) minmax(0, auto);
-    gap: var(--lr-space-s);
-    align-items: center;
-    padding-block: var(--lr-space-s);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+
   }
 
   [part='step-copy'] {

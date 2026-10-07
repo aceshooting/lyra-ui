@@ -290,3 +290,35 @@ describe('SlotPresenceController', () => {
     }
   });
 });
+
+class ConditionalSlotPresenceFixture extends LyraElement {
+  readonly slots = new SlotPresenceController(this, { observeLightDom: true });
+  override render(): TemplateResult {
+    return html`${this.slots.has('error') ? html`<slot name="error"></slot>` : html`<span>Default error</span>`}`;
+  }
+}
+defineElement('conditional-slot-presence-fixture', ConditionalSlotPresenceFixture);
+
+it('discovers conditional slot content added after the first render and on reconnect', async () => {
+  const host = document.createElement(tag('conditional-slot-presence-fixture')) as ConditionalSlotPresenceFixture;
+  document.body.append(host);
+  try {
+    await host.updateComplete;
+    expect(host.slots.has('error')).to.equal(false);
+    const error = document.createElement('span');
+    error.slot = 'error';
+    host.append(error);
+    await Promise.resolve();
+    await host.updateComplete;
+    expect(host.slots.has('error')).to.equal(true);
+    expect(host.shadowRoot!.querySelector('slot[name="error"]') !== null).to.equal(true);
+    host.remove();
+    error.remove();
+    document.body.append(host);
+    await host.updateComplete;
+    expect(host.slots.has('error')).to.equal(false);
+    expect(host.shadowRoot!.querySelector('slot[name="error"]') === null).to.equal(true);
+  } finally {
+    host.remove();
+  }
+});

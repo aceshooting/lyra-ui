@@ -24,8 +24,6 @@ import {
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
 import {
-  boundedSelectionRects,
-  boundedSelectionText,
   normalizeQuoteText,
   scopeFromItems,
   buildQuoteAnchor,
@@ -40,6 +38,7 @@ import {
 } from '../../../internal/text-quote.js';
 import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import { PageViewerSnapshotController } from '../page-rail/page-viewer-snapshot.js';
 import type {
   LyraPageViewerSnapshot,
   LyraPageViewerStateChangeDetail,
@@ -58,8 +57,10 @@ import {
   type PdfViewportApi,
 } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { wrapTextRangeInMarks, unwrapTextMark, type TextMarkPaintBudget } from '../../../internal/text-highlights.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings.generated.js';
@@ -323,143 +324,9 @@ function boundedPdfCanvas(
   });
 }
 
-/** `Node.contains()` never crosses a shadow boundary -- it walks plain light-DOM `parentNode` links,
- *  so `hostEl.contains(nodeInsideHostsOwnShadowRoot)` is `false` even though the node is visually and
- *  logically part of that host. This walks the composed tree instead: from `node`, follow `parentNode`
- *  as usual, and whenever that reaches a `ShadowRoot`, continue from its `.host` -- the same traversal
- *  `getRootNode({ composed: true })` performs internally, exposed here as a containment test against a
- *  specific `ancestor` rather than the top-level document. */
-function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
-  let current: Node | null = node;
-  while (current) {
-    if (current === ancestor) return true;
-    current = current.nodeType === 11 && 'host' in current
-      ? (current as ShadowRoot).host
-      : current.parentNode;
-  }
-  return false;
-}
-
-interface PdfPaintWorkBudget {
-  traversalNodes: number;
-  codeUnits: number;
-  marks: number;
-}
-
-function nextPdfPaintNode(node: Node, root: Node): Node | null {
-  if (node.firstChild) return node.firstChild;
-  let cursor: Node | null = node;
-  while (cursor && cursor !== root) {
-    if (cursor.nextSibling) return cursor.nextSibling;
-    cursor = cursor.parentNode;
-  }
-  return null;
-}
-
-/** Wraps only the text portions of a range, with shared traversal/code-unit ceilings. */
-function wrapPdfSearchRange(
-  range: Range,
-  part: string,
-  budget: PdfPaintWorkBudget,
-): HTMLElement[] {
+function wrapPdfSearchRange(range: Range, part: string, budget: TextMarkPaintBudget): HTMLElement[] {
   const doc = range.startContainer.ownerDocument;
-  if (!doc || budget.marks <= 0) return [];
-  const textNodeType = doc.defaultView?.Node.TEXT_NODE ?? 3;
-  if (range.startContainer === range.endContainer && range.startContainer.nodeType === textNodeType) {
-    const textNode = range.startContainer as Text;
-    // `splitText()` copies the retained head/tail, so charge the complete source node rather than
-    // only the selected slice; a tiny match inside a hostile multi-megabyte node is still large work.
-    if (budget.traversalNodes <= 0 || budget.codeUnits <= 0) return [];
-    const inspectedLength = textNode.data.length;
-    if (inspectedLength > budget.codeUnits) {
-      budget.codeUnits = 0;
-      return [];
-    }
-    budget.traversalNodes--;
-    budget.codeUnits -= inspectedLength;
-    let target = textNode;
-    if (range.endOffset < target.data.length) target.splitText(range.endOffset);
-    if (range.startOffset > 0) target = target.splitText(range.startOffset);
-    if (!target.data) return [];
-    const mark = doc.createElement('mark');
-    mark.setAttribute('part', part);
-    target.parentNode?.insertBefore(mark, target);
-    mark.appendChild(target);
-    budget.marks--;
-    return [mark];
-  }
-  const ancestor = range.commonAncestorContainer;
-  const covered: Text[] = [];
-  let node: Node | null = ancestor;
-  while (node && budget.traversalNodes > 0 && budget.codeUnits > 0) {
-    budget.traversalNodes--;
-    if (node.nodeType === textNodeType) {
-      const textNode = node as Text;
-      if (textNode.data.length > budget.codeUnits) {
-        budget.codeUnits = 0;
-        break;
-      }
-      budget.codeUnits -= textNode.data.length;
-      try {
-        if (textNode.data.length > 0 && range.intersectsNode(textNode)) {
-          // Fail closed before mutating the DOM when one logical match alone would exceed the
-          // remaining aggregate mark budget. Returning a prefix would visually misquote it.
-          if (covered.length >= budget.marks) return [];
-          covered.push(textNode);
-        }
-      } catch {
-        return [];
-      }
-    }
-    node = nextPdfPaintNode(node, ancestor);
-  }
-  if (node) return [];
-  const marks: HTMLElement[] = [];
-  for (const textNode of covered) {
-    const start = textNode === range.startContainer ? range.startOffset : 0;
-    const end = textNode === range.endContainer ? range.endOffset : textNode.data.length;
-    let target = textNode;
-    if (end < target.data.length) target.splitText(end);
-    if (start > 0) target = target.splitText(start);
-    if (!target.data) continue;
-    const mark = doc.createElement('mark');
-    mark.setAttribute('part', part);
-    target.parentNode?.insertBefore(mark, target);
-    mark.appendChild(target);
-    marks.push(mark);
-  }
-  budget.marks -= marks.length;
-  return marks;
-}
-
-/** Rejoins only the Text nodes split by `wrapPdfSearchRange`; unlike `parent.normalize()`, this
- * never recursively walks an entire text layer once per mark. */
-function unwrapPdfSearchMark(mark: Element): void {
-  const parent = mark.parentNode;
-  if (!parent) return;
-  const textNodeType = mark.ownerDocument.defaultView?.Node.TEXT_NODE ?? 3;
-  const before = mark.previousSibling;
-  const after = mark.nextSibling;
-  const first = mark.firstChild;
-  while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-  parent.removeChild(mark);
-
-  if (before?.nodeType === textNodeType && first?.nodeType === textNodeType) {
-    (before as Text).appendData((first as Text).data);
-    first.parentNode?.removeChild(first);
-    if (after?.nodeType === textNodeType) {
-      (before as Text).appendData((after as Text).data);
-      after.parentNode?.removeChild(after);
-    }
-    return;
-  }
-  if (first?.nodeType === textNodeType && after?.nodeType === textNodeType) {
-    (first as Text).appendData((after as Text).data);
-    after.parentNode?.removeChild(after);
-  } else if (!first && before?.nodeType === textNodeType && after?.nodeType === textNodeType) {
-    (before as Text).appendData((after as Text).data);
-    after.parentNode?.removeChild(after);
-  }
+  return doc ? wrapTextRangeInMarks(range, doc, budget, (mark) => mark.setAttribute('part', part)) : [];
 }
 
 type PdfLoadState =
@@ -621,7 +488,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and render as a PDF document. */
   @property() src = '';
@@ -662,13 +529,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   override readonly anchorKinds = ['page', 'text-quote', 'region'] as const;
 
   @state() private loadState: PdfLoadState = { kind: 'idle' };
-  private pageViewerIdentity = 0;
-  private pageViewerSnapshotValue: LyraPageViewerSnapshot = Object.freeze({
-    identity: 0,
-    status: 'idle',
-    page: 1,
-    pageCount: 0,
-  });
+  private readonly pageViewerState = new PageViewerSnapshotController();
   /** True while `page` was last set by the user scrolling the page list rather than by
    *  `nextPage()`/`previousPage()`/an explicit `page` assignment. `renderBody()` withholds
    *  `activeItemId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
@@ -717,7 +578,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    * distinguishes same-count document replacements.
    */
   get pageViewerSnapshot(): LyraPageViewerSnapshot {
-    return this.pageViewerSnapshotValue;
+    return this.pageViewerState.value;
   }
   /** Intentionally inert -- `pageViewerSnapshot` is always the atomic state the last load/page
    *  transaction published. A getter with no setter throws (in strict-mode module code, which
@@ -878,13 +739,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.thumbnailRenderVersions.clear();
     this.destroyLoadedDoc();
     this.loadState = { kind: 'idle' };
-    this.pageViewerIdentity++;
-    this.pageViewerSnapshotValue = Object.freeze({
-      identity: this.pageViewerIdentity,
-      status: 'idle',
-      page: 1,
-      pageCount: 0,
-    });
+    this.pageViewerState.reset();
   }
 
   override adoptedCallback(): void {
@@ -918,20 +773,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     status: LyraPageViewerSnapshot['status'],
     pageCount: number,
   ): void {
-    const snapshot = Object.freeze({
-      identity: this.pageViewerIdentity,
-      status,
-      page: status === 'ready' ? this.clampPage(this.page) : 1,
-      pageCount: status === 'ready' ? finiteCount(pageCount, 0, MAX_PAGE_COUNT) : 0,
-    });
-    const previous = this.pageViewerSnapshotValue;
-    if (
-      previous.identity === snapshot.identity
-      && previous.status === snapshot.status
-      && previous.page === snapshot.page
-      && previous.pageCount === snapshot.pageCount
-    ) return;
-    this.pageViewerSnapshotValue = snapshot;
+    const snapshot = this.pageViewerState.publish(status, this.clampPage(this.page), finiteCount(pageCount, 0, MAX_PAGE_COUNT));
+    if (!snapshot) return;
     if (this.isConnected) this.emit('lr-page-viewer-state-change', { snapshot });
   }
 
@@ -954,7 +797,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
-    this.pageViewerIdentity++;
+    this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
     this.destroyLoadedDoc();
     if (!this.src) {
@@ -1076,7 +919,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return super.scrollToAnchor(target);
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (this.loadState.kind !== 'ready') return false;
     const doc = this.loadState.doc;
     const operation = this.anchorOperationGeneration;
@@ -1274,7 +1117,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   // -- anchor-target: selection -> anchor ------------------------------------------------------------
 
-  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+  protected override computeSelectionAnchor(range: Range): LyraAnchor | null {
     const pageNumber = this.pageForNode(range.startContainer);
     if (pageNumber == null) return null;
     const container = this.textLayerContainers.get(pageNumber);
@@ -1293,112 +1136,16 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     return null;
   }
 
-  /** Overrides `DocumentAnchorTarget`'s default selection binding. Page content renders inside
-   *  `<lr-virtual-list>`'s own nested shadow root (virtualization adds a second shadow boundary
-   *  below this viewer's own render root), one level deeper than the mixin's default composed-range
-   *  lookup resolves. Left unresolved, a selection ending inside a page's text layer retargets to the
-   *  boundary of `<lr-virtual-list>` itself, which has no light-DOM text of its own -- the resulting
-   *  range stringifies to nothing and the selection is silently dropped. This override adds the
-   *  virtual list's own shadow root to the lookup so the resolved range still reaches the actual
-   *  selected text, then follows the same selection-end/rAF-debounced-`selectionchange` shape the
-   *  default binding uses -- with one more adjustment: the default binding's own containment check
-   *  (`contentRoot.contains(range.commonAncestorContainer)`) can't see past a shadow boundary either
-   *  (`Node.contains()` only walks light-DOM `parentNode` links), so it's replaced here with
-   *  `containsAcrossShadowBoundaries()`, which also follows a `ShadowRoot`'s `.host` link. */
-  protected bindTextSelection(contentRoot: Element): void {
-    this.textSelectionCleanup?.();
-    const ownerDocument = contentRoot.ownerDocument;
-    const view = ownerDocument.defaultView;
-    if (!view) {
-      this.textSelectionCleanup = undefined;
-      return;
-    }
+  protected override selectionShadowRoots(contentRoot: Element): ShadowRoot[] {
+    const roots = super.selectionShadowRoots(contentRoot);
+    const nested = this.shadowRoot?.querySelector(tag('virtual-list'))?.shadowRoot;
+    if (nested && !roots.includes(nested)) roots.push(nested);
+    return roots;
+  }
 
-    const resolveSelectionRange = (): Range | null => {
-      const hostShadowRoot = this.shadowRoot;
-      const listShadowRoot = this.shadowRoot?.querySelector(tag('virtual-list'))?.shadowRoot ?? null;
-      const globalSelection = view.getSelection() as
-        | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
-        | null;
-
-      if (globalSelection?.getComposedRanges && hostShadowRoot) {
-        const shadowRoots = listShadowRoot ? [hostShadowRoot, listShadowRoot] : [hostShadowRoot];
-        const [composed] = globalSelection.getComposedRanges({ shadowRoots });
-        if (!composed) return null;
-        if (composed.startContainer === composed.endContainer && composed.startOffset === composed.endOffset) return null;
-        const range = ownerDocument.createRange();
-        range.setStart(composed.startContainer, composed.startOffset);
-        range.setEnd(composed.endContainer, composed.endOffset);
-        return range;
-      }
-
-      const nestedSelection = (listShadowRoot as unknown as { getSelection?: () => Selection | null } | null)?.getSelection?.();
-      const selection = nestedSelection ?? globalSelection;
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
-      return selection.getRangeAt(0);
-    };
-
-    // Shared cadence: report each settled selection once, never mid-drag.
-    let pointerSelecting = false;
-    let reported: readonly [Node, number, Node, number] | undefined;
-
-    const onSelectionEnd = (): void => {
-      const range = resolveSelectionRange();
-      if (
-        !range
-        || (!containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot)
-      ) {
-        reported = undefined;
-        return;
-      }
-      if (
-        reported
-        && reported[0] === range.startContainer && reported[1] === range.startOffset
-        && reported[2] === range.endContainer && reported[3] === range.endOffset
-      ) return;
-      const text = boundedSelectionText(range);
-      if (!text) return;
-      reported = [range.startContainer, range.startOffset, range.endContainer, range.endOffset];
-      const anchor = this.computeSelectionAnchor(range);
-      const rects = boundedSelectionRects(range);
-      this.emit('lr-text-select', { text, anchor, rects });
-    };
-
-    let debounceHandle: number | undefined;
-    const onSelectionChange = (): void => {
-      if (pointerSelecting) return;
-      if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
-      debounceHandle = view.requestAnimationFrame(() => {
-        debounceHandle = undefined;
-        onSelectionEnd();
-      });
-    };
-    const onPointerDown = (event: PointerEvent): void => {
-      if (event.isPrimary && event.button === 0) pointerSelecting = true;
-    };
-    // Document-level, so a drag released outside the content root still ends its selection.
-    const onPointerRelease = (): void => {
-      if (!pointerSelecting) return;
-      pointerSelecting = false;
-      onSelectionEnd();
-    };
-
-    contentRoot.addEventListener('pointerup', onSelectionEnd);
-    contentRoot.addEventListener('keyup', onSelectionEnd);
-    ownerDocument.addEventListener('selectionchange', onSelectionChange);
-    ownerDocument.addEventListener('pointerdown', onPointerDown, true);
-    ownerDocument.addEventListener('pointerup', onPointerRelease, true);
-    ownerDocument.addEventListener('pointercancel', onPointerRelease, true);
-
-    this.textSelectionCleanup = () => {
-      contentRoot.removeEventListener('pointerup', onSelectionEnd);
-      contentRoot.removeEventListener('keyup', onSelectionEnd);
-      ownerDocument.removeEventListener('selectionchange', onSelectionChange);
-      ownerDocument.removeEventListener('pointerdown', onPointerDown, true);
-      ownerDocument.removeEventListener('pointerup', onPointerRelease, true);
-      ownerDocument.removeEventListener('pointercancel', onPointerRelease, true);
-      if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
-    };
+  protected override bindTextSelection(contentRoot: Element): void {
+    super.bindTextSelection(contentRoot);
+    this.textSelectionCleanup = () => this.unbindTextSelection();
   }
 
   // -- text/thumbnail exposure -------------------------------------------------------------------------
@@ -1976,7 +1723,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const containers: Iterable<HTMLElement> = container ? [container] : this.textLayerContainers.values();
     for (const target of containers) {
       target.querySelectorAll('mark[part~="search-match"]').forEach((mark) => {
-        unwrapPdfSearchMark(mark);
+        unwrapTextMark(mark as HTMLElement);
       });
       for (const cached of this.mountedPageTextIndexes.values()) {
         if (cached.container === target) cached.mappingDirty = true;
@@ -2030,7 +1777,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       if (range) ranges.push({ matchIndex, match, range });
     }
     ranges.sort((a, b) => b.match.start - a.match.start);
-    const budget: PdfPaintWorkBudget = {
+    const budget: TextMarkPaintBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
       marks: this.remainingSearchMarkBudget(container),

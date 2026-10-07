@@ -5,7 +5,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, Announcer, type AnnouncementSink } from '../../../internal/announcer.js';
-import { announceSearchResult } from '../../../internal/viewer-search.js';
+import { advanceViewerSearchIndex, announceSearchResult, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
@@ -668,7 +668,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  view, first expanding any `contextLines` fold currently hiding it. `end` is not consulted
    *  here -- it only widens what a covering `highlights` entry paints; the scroll target is
    *  always `start`. */
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'line-range') return false;
     const index = anchor.start;
     if (!Number.isInteger(index) || index < 0 || index >= this.diffOps.length) return false;
@@ -729,12 +729,9 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.emit('lr-search-change', viewerSearchDetail(
+      this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex,
+    ));
     announceSearchResult(
       (key, fallback, values) => this.localize(key, fallback, values),
       this.searchAnnouncer,
@@ -790,7 +787,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  `LyraTextViewerTarget` search contract declares. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
     this.emitSearchChange();
     await this.scrollOpIndexIntoView(this.searchMatches[this.searchActiveIndex]!.opIndex);
     return true;
@@ -800,7 +797,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  active match moved, `false` when there are no matches. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
     this.emitSearchChange();
     await this.scrollOpIndexIntoView(this.searchMatches[this.searchActiveIndex]!.opIndex);
     return true;

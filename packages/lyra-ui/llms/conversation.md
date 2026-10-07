@@ -1507,6 +1507,7 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Events:**
 
+- `lr-input` (`detail: { value: string }`) — typed value edit notification.
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -1577,6 +1578,7 @@ configured once instead of per component. It is additive: the focus outline is t
 answer to focus and is never replaced by it. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
+`--lr-model-select-option-synthetic-font-style` (default `italic`) styles its label.
 `--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
 hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback at the point of
 use, not on `:host`, so it isn't tied to `size`. The selected row
@@ -1943,7 +1945,8 @@ generated framework members are removed rather than retained as aliases.
 
 - `status: GenerationMetricsStatus = 'idle'` (`'idle' | 'running' | 'complete'`, reflected) —
   generation lifecycle. `idle` is never-started/reset; `running` ticks and is the only state that
-  exposes Stop; `complete` freezes the final metrics. Invalid attribute or property writes normalize
+  exposes Stop; `complete` freezes the final metrics. Shared success spellings `success`, `done`,
+  and `completed` normalize to `complete`. Invalid attribute or property writes normalize
   to `idle`.
 - `startedAt?: number` (attribute `started-at`) — epoch-ms timestamp of when generation began.
   Optional — when unset, or set to a value that fails to parse as a finite number (e.g. an ISO-8601
@@ -3295,7 +3298,7 @@ lr-thread-list::part(row-actions) {
 `--lr-thread-list-excerpt-highlight-color` (default `inherit`),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
-internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
+internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
 
 **Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
@@ -3802,7 +3805,8 @@ mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`
 `input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
 before the input renders.
 
-**Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
+**Events:** `lr-input` — typed value edit notification with `detail: { value }`.
+`lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
@@ -3865,6 +3869,13 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-trigger-height` — An _exact_ trigger/combobox height that both floors and caps
   the control, for pixel-matching a sibling field in the same toolbar row. Takes precedence over
   `--lr-voice-picker-trigger-min-height`. Unset by default.
+- `--lr-voice-picker-trigger-padding` — Trigger/combobox padding shorthand. Default:
+  `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`.
+- `--lr-voice-picker-font-size` — Trigger/combobox text size. Default:
+  `var(--lr-form-control-font-size)`.
+- `--lr-voice-picker-expand-size` — Decorative chevron box size. Default:
+  `var(--lr-size-1-75rem)`; compact `size` tiers reduce it, and `--lr-icon-button-size`
+  bounds the rendered box.
 - The `[part="preview-button"]` action follows whichever of those two names is in play, not just
   the exact height: `.control-row` is `align-items: stretch`, and stretch never applies to an item
   with a definite cross size, so an action that tracked only `--lr-voice-picker-trigger-height`
@@ -3923,6 +3934,11 @@ grounding, and context state: transcript + composer in the main pane, and a deta
 `lr-agent-run`, `lr-tool-timeline`, `lr-retrieval-results`, `lr-grounding-summary`, and
 `lr-context-inspector`. Performs no network requests, model calls, retrieval, or persistence —
 assign new data to the properties as the host receives updates.
+
+`components/conversation/agent-workspace/agent-workspace-register.js` registers the conversation
+shell and its ordinary message/composer children. Import the run, timeline, retrieval-results,
+grounding-summary and context-inspector entries too when those panels can receive data. The default
+entry registers them all.
 
 This is the single component that binds the most of the provider-neutral vocabulary exported from
 `@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,
@@ -3988,6 +4004,22 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `composerPlaceholder?: string` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
+- `composerSubmitDisabled: boolean = false` (`composer-submit-disabled`) gates Send while leaving
+  editing and the busy Stop action available; `composerWithoutStop: boolean = false`
+  (`composer-without-stop`) shows a disabled Send action instead of Stop while busy; and
+  `composerWithoutEnterSubmit: boolean = false` (`composer-without-enter-submit`) makes plain Enter
+  insert a newline.
+- `composerReadOnly: boolean = false` (`composer-readonly`), `composerMinLength?: number`
+  (`composer-minlength`) and `composerMaxLength?: number` (`composer-maxlength`) forward the native
+  textarea's editing constraints.
+- `composerSpellcheck: boolean = true` (`composer-spellcheck`, string-aware true default),
+  `composerAutocapitalize: string = ''` (`composer-autocapitalize`),
+  `composerAutocorrect: boolean = true` (`composer-autocorrect`, accepts `off`/`false` writes),
+  `composerWrap: 'hard' | 'soft' | 'off' = 'soft'` (`composer-wrap`),
+  `composerAutocomplete: string = ''` (`composer-autocomplete`),
+  `composerInputMode: string = ''` (`composer-inputmode`) and
+  `composerEnterKeyHint: string = ''` (`composer-enterkeyhint`) forward native editing hints to the
+  built-in composer. A slotted composer remains independently configured.
 - `label?: string` — accessible name and visible heading; omission uses the localized default and an explicit empty string suppresses it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host-level accessible-name
   override for the internal `role="region"` root
@@ -4263,6 +4295,10 @@ upload, retrieval, or model call. It is deliberately not form-associated: the co
 state includes attachments, source scope, model, voice, and queued turns rather than one successful
 string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the submission
 request. `label` names the prompt section; it is not generic field chrome.
+
+`components/conversation/prompt-input/prompt-input-register.js` registers the composer, attachments
+and mention popover. Import model-select, voice-picker, source-picker and prompt-queue entries when
+their corresponding data can be supplied. The default entry registers all children.
 
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`

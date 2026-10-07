@@ -1,12 +1,14 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { DebounceController } from '../../../internal/debounce-controller.js';
+import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import {
   activateNonmodalOverlay, composedContains, deepActiveElement, type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
@@ -23,8 +25,6 @@ import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings.genera
 export interface LyraMenubarEventMap {
   'lr-select': CustomEvent<MenuItemSelectDetail>;
 }
-
-const TYPE_AHEAD_RESET_MS = 500;
 
 /**
  * Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and
@@ -73,10 +73,8 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   private expandedItem: LyraMenubarItem | null = null;
   private overlayHandle?: OverlayHandle;
   private itemObserver?: MutationObserver;
-  private typeAheadBuffer = '';
+  private readonly typeBuffer = new TypeAheadBuffer(this);
   private focusedItem: LyraMenubarItem | null = null;
-  private readonly typeAheadReset = new DebounceController<void>(TYPE_AHEAD_RESET_MS,
-    () => { this.typeAheadBuffer = ''; }, () => this.ownerDocument.defaultView);
   private readonly owner: MenubarItemOwner = {
     menuStateChanged: (item, open) => this.menuStateChanged(item as LyraMenubarItem, open),
     itemStateChanged: () => this.syncItemState(),
@@ -104,7 +102,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
 
   override disconnectedCallback(): void {
     this.collapse();
-    this.typeAheadReset.cancel(); this.typeAheadBuffer = '';
+    this.typeBuffer.clear();
     this.itemObserver?.disconnect(); this.itemObserver = undefined;
     this.ownerDocument.removeEventListener('focusin', this.onDocumentFocus, true);
     for (const item of this.items) item[menubarItemOwner](null, this.owner);
@@ -120,8 +118,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   }
 
   private isNavigable(item: LyraMenubarItem): boolean {
-    return !item.disabled && !item.hidden && item.getAttribute('aria-hidden') !== 'true' &&
-      !item.inert && !item.closest('[inert]');
+    return isRovingTargetAvailable(item);
   }
 
   private observeItems(): void {
@@ -262,8 +259,8 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   private onKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey) return;
     const found = this.eventItem(event); if (!found) return;
-    const { item, path, inMenu } = found;
-    if (path.some(node => isHtmlElement(node) && (['input', 'textarea', 'select'].includes(node.localName) || node.isContentEditable))) return;
+    const { item, inMenu } = found;
+    if (keyEventOwnedByInnerControl(event, { container: item })) return;
     if (inMenu) {
       if (!isHtmlElement(event.target) || ![tag('menu-item'), tag('dropdown-item')].includes(event.target.localName)) return;
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
@@ -271,23 +268,22 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     const navigable = this.items.filter(candidate => this.isNavigable(candidate));
     if (!navigable.length) return;
     const index = navigable.indexOf(item);
-    const nextKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
     let next: LyraMenubarItem | undefined;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      next = navigable[(index + (event.key === nextKey ? 1 : -1) + navigable.length) % navigable.length];
-    } else if (event.key === 'Home') next = navigable[0];
-    else if (event.key === 'End') next = navigable[navigable.length - 1];
+    const nextIndex = resolveListMove(event, {
+      count: navigable.length,
+      current: index,
+      orientation: 'horizontal',
+      direction: this.effectiveDirection,
+    });
+    if (nextIndex !== null) next = navigable[nextIndex];
     else if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
       if (item.hasMenu) { event.preventDefault(); this.open(item, event.key === 'ArrowUp' ? 'last' : 'first'); }
       else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); item.click(); }
       return;
-    } else if (event.key.length === 1) {
-      this.typeAheadBuffer += event.key.toLocaleLowerCase(this.effectiveLocale);
-      if (this.ownerDocument.defaultView) this.typeAheadReset.push(undefined);
-      for (let step = 1; step <= navigable.length; step++) {
-        const candidate = navigable[(index + step) % navigable.length];
-        if (candidate?.textLabel.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) { next = candidate; break; }
-      }
+    } else if (this.typeBuffer.accepts(event)) {
+      this.typeBuffer.add(event.key, this.effectiveLocale);
+      const match = this.typeBuffer.match(navigable, index, item => item.textLabel, this.effectiveLocale);
+      if (match !== null) next = navigable[match];
     }
     if (next) { event.preventDefault(); this.move(next); }
   };

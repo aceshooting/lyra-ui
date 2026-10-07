@@ -416,6 +416,13 @@ describe('lr-poll-status', () => {
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('١:٠٥');
   });
 
+  it('uses an hour field for countdowns longer than an hour', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status lang="en-US" next-in-ms="3661000"></lr-poll-status>`,
+    )) as LyraPollStatus;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('1:01:01');
+  });
+
   it('accepts active="false" as a plain-HTML attribute string, not just a JS property binding', async () => {
     // Regression test: `active`'s default Boolean converter can never distinguish a plain
     // active="false" attribute from the attribute being absent altogether, so the countdown kept
@@ -428,6 +435,7 @@ describe('lr-poll-status', () => {
 
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
+    // wait-reason: Outlive the 40 ms deadline to catch a tick from the false attribute.
     await aTimeout(150); // outlives the 40ms deadline
     expect(fired, 'active="false" as a plain attribute should suppress the ticker just like the JS property').to.be
       .false;

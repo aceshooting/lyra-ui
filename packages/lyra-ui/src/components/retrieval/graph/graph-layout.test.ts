@@ -629,17 +629,7 @@ describe('nodeLabels', () => {
 
 describe('expand affordance', () => {
   it('dblclick on a node emits exactly one lr-node-expand after two lr-node-activate events, and stops propagation', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let clickCount = 0;
     let expandDetail: { nodeId: string } | undefined;
@@ -691,17 +681,7 @@ describe('expand affordance', () => {
   });
 
   it('double-Enter within 500ms on the same focused node emits lr-node-expand; outside the window it does not', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     let expandCount = 0;
     el.addEventListener('lr-node-expand', () => expandCount++);
@@ -1152,17 +1132,7 @@ describe('selection', () => {
   }
 
   it('defaults selectionMode to none: no aria-pressed/data-selected, no lr-selection-change on click', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     expect(nodeEl.hasAttribute('aria-pressed')).to.be.false;
     let fired = false;
@@ -1695,10 +1665,15 @@ describe('community hulls', () => {
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
     ] as HTMLButtonElement[];
-    expect(items.length, '3 nodes + 1 link + 1 hull').to.equal(5);
-    expect(
-      items.slice(0, 3).map((item) => item.getAttribute('aria-label'))
-    ).to.deep.equal(['A', 'B', 'C']);
+    expect(items.length).to.equal(1);
+    expect(items[0]!.parentElement!.getAttribute('aria-setsize')).to.equal('5');
+    const names = [items[0]!.getAttribute('aria-label')];
+    for (let i = 0; i < 2; i++) {
+      items[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await el.updateComplete;
+      names.push(items[0]!.getAttribute('aria-label'));
+    }
+    expect(names).to.deep.equal(['A', 'B', 'C']);
 
     const live = () =>
       el.shadowRoot!.querySelector('[part="live-region"]')!.textContent ?? '';
@@ -1707,22 +1682,22 @@ describe('community hulls', () => {
     );
     await el.updateComplete;
     expect(
-      items[4]!.getAttribute('tabindex'),
+      items[0]!.parentElement!.getAttribute('aria-posinset'),
       'End lands on the last hull'
-    ).to.equal('0');
+    ).to.equal('5');
     expect(
       live(),
       'and announces it as the community, not a node or link'
     ).to.include('Team One');
 
-    items[4]!.dispatchEvent(
+    items[0]!.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })
     );
     await el.updateComplete;
     expect(
-      items[3]!.getAttribute('tabindex'),
+      items[0]!.parentElement!.getAttribute('aria-posinset'),
       'one step back is the link segment'
-    ).to.equal('0');
+    ).to.equal('4');
   });
 
   it('renders no hull when communities is empty', async () => {

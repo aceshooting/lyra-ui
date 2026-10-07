@@ -1,4 +1,6 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 
 export const styles = css`
   :host {
@@ -11,18 +13,7 @@ export const styles = css`
        it -- as lr-json-viewer's --lr-json-viewer-font. Raw args are code, not prose, so the editor
        gets that viewer's monospace treatment. */
     --_lr-tool-approval-dialog-mono-font: var(--lr-font-mono);
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
-    /* Neutralizes the user-agent popover styles of the open, top-layer host. */
-    margin: 0;
-    border: none;
-    background: transparent;
-    color: inherit;
-    overflow: visible;
-    inline-size: auto;
-    block-size: auto;
+    ${modalHostStyles}
     align-items: center;
     justify-content: center;
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
@@ -112,8 +103,7 @@ export const styles = css`
     line-height: var(--lr-line-height-normal);
   }
   [part="args-editor"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The mouse-side counterpart of the :focus-visible ring above, mirroring lr-textarea's
      [part='textarea']:hover. Gated on :host(:not([pending-action])), not :not(:disabled): this raw

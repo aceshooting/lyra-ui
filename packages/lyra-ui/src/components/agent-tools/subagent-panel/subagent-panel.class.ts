@@ -10,7 +10,7 @@ import {
 } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
@@ -20,6 +20,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './subagent-panel.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -151,7 +152,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
@@ -189,23 +190,12 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
    * keystroke (`onKeyDown`) and every render.
    */
   private orderedRunsCache: OrderedRuns = { rows: [], truncated: false };
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private previousLimitText = '';
   private suppressNextLimitAnnouncement = true;
 
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.announcementSink?.release();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     if (this.hasUpdated) {
       this.suppressNextLimitAnnouncement = true;
       this.requestUpdate();
@@ -214,9 +204,12 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.suppressNextLimitAnnouncement = true;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   private statusLabel(status: AgentStatusKind): string {
@@ -326,7 +319,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     super.updated(_changed);
     const limitText = this.renderRoot.querySelector('[part="limit"]')?.textContent?.trim() ?? '';
     if (!this.suppressNextLimitAnnouncement && limitText && limitText !== this.previousLimitText) {
-      this.announcementSink?.announce(limitText);
+      this.announcements.announcePolite(limitText);
     }
     this.previousLimitText = limitText;
     this.suppressNextLimitAnnouncement = false;
@@ -462,6 +455,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
             ${ACTIVE.has(run.status)
               ? html`<button
                   part="cancel"
+                  data-agent-action="inline"
                   type="button"
                   tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
@@ -474,6 +468,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
             ${run.status === 'error' || run.status === 'cancelled'
               ? html`<button
                   part="retry"
+                  data-agent-action="inline"
                   type="button"
                   tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}

@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -37,8 +39,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
@@ -93,31 +94,31 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  [part='evidence-metadata'] {
+  [part~='evidence-metadata'] {
     display: grid;
     grid-template-columns: max-content 1fr;
     gap: var(--lr-space-2xs) var(--lr-space-s);
     margin: 0;
     font-size: var(--lr-font-size-xs);
   }
-  [part='evidence-metadata-row'] {
+  [part~='evidence-metadata-row'] {
     display: contents;
   }
-  [part='evidence-metadata-key'] {
+  [part~='evidence-metadata-key'] {
     margin: 0;
     color: var(--lr-color-text-quiet);
   }
-  [part='evidence-metadata-value'] {
+  [part~='evidence-metadata-value'] {
     margin: 0;
     color: var(--lr-color-text);
     word-break: break-word;
   }
 
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='evidence-toggle'] {
       font-size: var(--lr-font-size-xs);
     }
-    [part='evidence-metadata'] {
+    [part~='evidence-metadata'] {
       grid-template-columns: 1fr;
     }
   }

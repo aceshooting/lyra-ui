@@ -1,4 +1,6 @@
 import { optionalLiteralSetConverter } from './converters.js';
+import { LYRA_SIZE_VALUES } from './variant-values.js';
+export { LYRA_SIZE_VALUES, LYRA_VARIANT_VALUES } from './variant-values.js';
 
 /**
  * The library's shared styling vocabulary.
@@ -66,17 +68,7 @@ export function normalizeSize(size: LyraSize): LyraSizeStep {
  *
  * The value list is also the runtime parse guard, so it cannot drift from `LyraSize` above.
  */
-export const optionalSizeConverter = optionalLiteralSetConverter<LyraSize>([
-  '2xs',
-  'xs',
-  's',
-  'm',
-  'l',
-  'xl',
-  'small',
-  'medium',
-  'large',
-]);
+export const optionalSizeConverter = optionalLiteralSetConverter<LyraSize>(LYRA_SIZE_VALUES);
 
 /**
  * Normalizes a write to an opt-in `size` and keeps an already-present attribute in step with it,

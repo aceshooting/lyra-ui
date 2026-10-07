@@ -14,11 +14,25 @@ import {
   findNulByteLines,
   findUnboundAnnouncementSinks,
   findImplicitShadowLiveComponents,
+  findAllInlineTypeBlocks,
   findShadowLiveRegionMarkup,
   isSafeIntlLocaleExpression,
 } from './check-source-policy.mjs';
 
 const packageDir = path.resolve(import.meta.dirname, '..');
+
+test('all-inline type blocks use type-only declarations', () => {
+  const source = [
+    "import { type First, type Second as Alias } from './one.js';",
+    "export { type Third } from './two.js';",
+    "import { type Fourth, runtime } from './three.js';",
+    "import type { Fifth } from './four.js';",
+  ].join('\n');
+  assert.deepEqual(findAllInlineTypeBlocks(source), [
+    { line: 1, kind: 'import' },
+    { line: 2, kind: 'export' },
+  ]);
+});
 
 test('internal helpers receive localize-fallback and physical-CSS policy coverage', () => {
   const localizeFindings = collectSourcePolicyFindings({

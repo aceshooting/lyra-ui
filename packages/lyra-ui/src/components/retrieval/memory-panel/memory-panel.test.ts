@@ -1,6 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './memory-panel.js';
 import type { LyraMemoryPanel, LyraMemoryItem } from './memory-panel.js';
 import type { LyraConfirmBar } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
@@ -59,6 +60,20 @@ async function populated(): Promise<LyraMemoryPanel> {
   await el.updateComplete;
   return el;
 }
+
+it('roves each section primary action while preserving secondary row buttons', async () => {
+  const el = await populated();
+  const short = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="short-term"] [part="add-button"]')];
+  const long = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="long-term"] [part="remove-button"]')];
+  expect(short.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  expect(long.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  await focusByKeyboard(short[0]!);
+  short[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  expect(el.shadowRoot!.activeElement === short[1]).to.equal(true);
+  await el.updateComplete;
+  expect(short.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+  expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')!.tabIndex).to.equal(0);
+});
 
 // Locale/numbering fixtures intentionally use English fallback text.
 expectLocaleFallback('ar-u-nu-arab', [
@@ -276,11 +291,14 @@ describe('lr-memory-panel', () => {
     ) as HTMLButtonElement;
 
     const listener = oneEvent(el, 'lr-memory-toggle');
+    const toggles: unknown[] = [];
+    el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
     toggle.click();
     const event = await listener;
     expect(event.detail.memoryId).to.equal('l1');
     expect(event.detail.scope).to.equal('long-term');
     expect(event.detail.expanded).to.equal(true);
+    expect(toggles).to.deep.equal([{ itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true }]);
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
     const body = withProvenance.querySelector(
@@ -619,7 +637,7 @@ describe('lr-memory-panel', () => {
     expect(section.querySelectorAll('lr-confirm-bar').length).to.equal(0);
   });
 
-  it('re-emits child events unmodified (lr-toggle bubbles up from a nested lr-provenance-panel)', async () => {
+  it('re-emits one contextual lr-toggle from a nested provenance panel', async () => {
     const el = await populated();
     (
       el.shadowRoot!.querySelector(
@@ -635,6 +653,7 @@ describe('lr-memory-panel', () => {
     ).click();
     const event = await listener;
     expect(event.detail.section).to.equal('entities');
+    expect(event.detail.memoryId).to.equal('l1');
   });
 
   it('reports an opened provenance chunk as its own lr-chunk-open carrying the owning memory', async () => {

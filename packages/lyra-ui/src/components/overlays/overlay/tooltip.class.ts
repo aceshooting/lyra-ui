@@ -54,8 +54,12 @@ import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
   observeOverlayAnchorIdentity,
+  observeOverlayAnchorRoots,
+  OverlayDelayTimer,
   OverlayTransitionGate,
   resolveOverlayAnchor,
+  resolveOverlayTriggerById,
+  settleOverlayTransition,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
 import { tooltipStyles } from './overlay.styles.js';
@@ -416,9 +420,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private cleanup?: DeferredOperationHandle;
   /** True only while the deferred runtime intentionally conceals an otherwise-open popup. */
   private placementPending = false;
-  private timer?: number;
-  private timerView?: Window;
-  private pendingDirection?: 'show' | 'hide';
+  private readonly delayTimer = new OverlayDelayTimer();
   private restoreFocusOnClose = false;
   /** Focus restoration after Escape is synchronous. Suppress only that focus event so returning
    * to the trigger does not immediately reopen the tooltip; a later genuine focus still opens. */
@@ -435,6 +437,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private descriptionProxy?: HTMLSpanElement;
   private focusDescribesTrigger = false;
   private contentObserver?: MutationObserver;
+  private contentSnapshot?: TooltipContentSnapshot;
   private triggerSyncGeneration = 0;
   private stopLabelReferenceIdentityObservation?: () => void;
   private readonly contentSlotListeners = new Set<HTMLSlotElement>();
@@ -517,8 +520,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (lostDirectAnchorProperty && this.open && !this.resolveAnchor()) {
       void this.forceClose();
     }
-    if (changed.has('showDelay') && this.pendingDirection === 'show') this.requestTransition(true);
-    if (changed.has('hideDelay') && this.pendingDirection === 'hide') this.requestTransition(false);
+    if (changed.has('showDelay') && this.delayTimer.pendingDirection === 'show') this.requestTransition(true);
+    if (changed.has('hideDelay') && this.delayTimer.pendingDirection === 'hide') this.requestTransition(false);
     if (changed.has('for')) this.syncInteractionTrigger();
     // `anchorPositioned` gates `?data-hidden`, keeping the popup invisible until Floating UI has
     // actually placed it. Its close-path reset used to live in `updated()`, where flipping a
@@ -590,6 +593,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
           this.syncInteractionTrigger();
+          if (this.contentSnapshot) this.bindContentObservation(this.contentSnapshot);
         }
       } else if (changed.has('interactiveContent') && this.open && this.isConnected) {
         if (this.requiresOverlayManager) this.activateTooltipOverlay();
@@ -616,6 +620,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           this.updateInteractiveContent();
         })
       : undefined;
+    // The light-DOM description proxy is consumed while closed: a focused trigger must already
+    // have its current accessible description before any delayed show. Keep this one bounded
+    // content pass (the shared text walk caps nodes and characters), while the observer below
+    // watches content only until focus/open and never wakes on ancestor theme/scroll writes.
     this.updateInteractiveContent();
     this.syncInteractionTrigger();
     // A cross-document move can connect before the adopted shadow slot has redistributed. Refresh
@@ -718,23 +726,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       }
       if (nextAnchor !== this.positionedAnchor) this.position();
     };
-    const observedRoots = new Set<Node>([this]);
-    if (directAnchor && directAnchor.getRootNode() !== this.getRootNode()) {
-      observedRoots.add(directAnchor.isConnected ? directAnchor : directAnchor.ownerDocument);
-    }
-    const cleanups = [...observedRoots].map((root) =>
-      observeOverlayAnchorIdentity(root, onIdentityChange));
-    this.stopAnchorIdentityObservation = () => {
-      for (const cleanup of cleanups) cleanup();
-    };
+    this.stopAnchorIdentityObservation = observeOverlayAnchorRoots(this, directAnchor, onIdentityChange);
   }
 
   private resolveForTrigger(): HTMLElement | undefined {
-    if (!this.for) return undefined;
-    const root = this.getRootNode() as Document | ShadowRoot;
-    const target = root.getElementById?.(this.for) ?? null;
-    const HTMLElementCtor = target?.ownerDocument.defaultView?.HTMLElement;
-    return target && HTMLElementCtor && target instanceof HTMLElementCtor ? target : undefined;
+    return resolveOverlayTriggerById(this, this.for);
   }
 
   private syncInteractionTrigger(): void {
@@ -900,48 +896,46 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * `lr-after-*` event. A disabled registration retains the lifecycle without native motion. */
   private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     const token = ++this.transitionToken;
-    await this.updateComplete;
-    if (this.transitionToken !== token) return;
-    if (event === 'lr-after-show') {
-      const positioned = await waitForDeferredPlacement(() => this.cleanup);
-      if (this.transitionToken !== token || !this.open) return;
-      if (!positioned) {
-        await this.forceClose();
-        return;
-      }
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    if (this.isConnected) {
-      const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
-      const showing = event === 'lr-after-show';
-      const animation = popup
-        ? animateRegistered(
-            this,
-            popup,
-            `tooltip.${showing ? 'show' : 'hide'}`,
-            this.effectiveDirection,
-            {
-              keyframes: showing ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
-              durationProperties: ['--lr-transition-fast', '--lr-duration-fast'],
-              easingProperties: ['--lr-easing-standard'],
-            },
-          )
-        : undefined;
-      this.transitionAnimation = animation;
-      await animation?.finished.catch(() => undefined);
-      if (this.transitionToken !== token) return;
-      this.cancelTransitionAnimation();
-    }
-    if (event === 'lr-after-hide') {
-      this.removeAttribute('data-closing');
-      // Settled closed: remove the popup from layout now that its exit transition has finished
-      // playing, so a stale placed box can no longer inflate an ancestor's scrollable overflow.
-      this.popupHidden = true;
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    this.emit(event);
+    const showing = event === 'lr-after-show';
+    return settleOverlayTransition({
+      showing,
+      updateComplete: () => this.updateComplete,
+      isCurrent: () => this.transitionToken === token,
+      readyToShow: async () => {
+        const positioned = await waitForDeferredPlacement(() => this.cleanup);
+        if (this.transitionToken !== token || !this.open) return false;
+        if (!positioned) {
+          await this.forceClose();
+          return false;
+        }
+        return this.anchorPositioned && !this.placementPending;
+      },
+      animate: async () => {
+        if (!this.isConnected) return;
+        const popup = this.renderRoot.querySelector<HTMLElement>('[part~="popup"]');
+        const animation = popup
+          ? animateRegistered(
+              this,
+              popup,
+              `tooltip.${showing ? 'show' : 'hide'}`,
+              this.effectiveDirection,
+              {
+                keyframes: showing ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }],
+                durationProperties: ['--lr-transition-fast', '--lr-duration-fast'],
+                easingProperties: ['--lr-easing-standard'],
+              },
+            )
+          : undefined;
+        this.transitionAnimation = animation;
+        await animation?.finished.catch(() => undefined);
+        if (this.transitionToken === token) this.cancelTransitionAnimation();
+      },
+      afterHide: () => {
+        this.removeAttribute('data-closing');
+        this.popupHidden = true;
+      },
+      settled: () => { this.emit(event); },
+    });
   }
 
   /** Resolves what the popup is positioned against: an explicit virtual anchor first, then the
@@ -1042,22 +1036,12 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       else this.hide();
       return;
     }
-    this.pendingDirection = next ? 'show' : 'hide';
     const view = this.ownerDocument.defaultView;
-    if (!view) {
-      this.pendingDirection = undefined;
-      return;
-    }
-    this.timerView = view;
-    const timer = view.setTimeout(() => {
-      if (this.timerView !== view || this.timer !== timer) return;
-      this.timer = undefined;
-      this.timerView = undefined;
-      this.pendingDirection = undefined;
+    if (!view) return;
+    this.delayTimer.schedule(view, delay, next ? 'show' : 'hide', () => {
       if (next) this.show();
       else this.hide();
-    }, delay);
-    this.timer = timer;
+    });
   }
   private interactionDelay(showing: boolean): number {
     const value = showing ? this.showDelay : this.hideDelay;
@@ -1070,10 +1054,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     return token && !token.rest ? finiteDuration(token.ms, fallback) : fallback;
   }
   private cancelPendingTransition(): void {
-    if (this.timer !== undefined) this.timerView?.clearTimeout(this.timer);
-    this.timer = undefined;
-    this.timerView = undefined;
-    this.pendingDirection = undefined;
+    this.delayTimer.cancel();
   }
   private bindTrigger(trigger: HTMLElement): void {
     trigger.addEventListener('mouseenter', this.onEnter);
@@ -1153,9 +1134,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private onEnter = (event: Event): void => {
     if (this.disabled) return;
     if (event.type === 'focusin') {
+      this.updateInteractiveContent();
       // Any focus inside the trigger describes it; only keyboard focus opens it, and a
       // non-keyboard focus neither starts a show nor cancels a pending hide.
       if (this.opensOn('focus')) this.focusDescribesTrigger = true;
+      if (this.contentSnapshot) this.bindContentObservation(this.contentSnapshot);
       this.syncTriggerA11y();
       if (this.suppressTriggerFocusOpen || !this.opensOn('focus')) return;
       if (!isKeyboardFocusEvent(event)) return;
@@ -1181,6 +1164,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     }
     if (event.type === 'focusout') {
       this.focusDescribesTrigger = false;
+      if (this.contentSnapshot) this.bindContentObservation(this.contentSnapshot);
       this.syncTriggerA11y();
     }
     if (this.interactiveContent && this.isPopupTarget(next)) return;
@@ -1407,7 +1391,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       attributes: true,
       attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
     };
-    for (const ancestor of snapshot.composedAncestors) {
+    for (const ancestor of this.open || this.focusDescribesTrigger ? snapshot.composedAncestors : []) {
       if (
         ancestor === this
         || ancestor.getRootNode() === this.renderRoot
@@ -1421,12 +1405,14 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // engines while another engine's walk keeps climbing; observed on WebKit for
     // tooltip.test.ts's forwarded-content coverage). Re-observing an already-observed node with
     // the same options is a harmless no-op, so this only ever adds coverage.
-    for (
-      let ancestor = composedParentElement(this), hops = 0;
-      ancestor && hops < 64;
-      ancestor = composedParentElement(ancestor), hops++
-    ) {
-      this.contentObserver.observe(ancestor, ancestorFilter);
+    if (this.open || this.focusDescribesTrigger) {
+      for (
+        let ancestor = composedParentElement(this), hops = 0;
+        ancestor && hops < 64;
+        ancestor = composedParentElement(ancestor), hops++
+      ) {
+        this.contentObserver.observe(ancestor, ancestorFilter);
+      }
     }
     this.observeContentNode(this);
     for (const root of snapshot.externalRoots) this.observeContentNode(root);
@@ -1436,6 +1422,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private updateInteractiveContent(fromShadowContentScan = false): void {
     if (!fromShadowContentScan) this.shadowContentScanAttempts = 0;
     const snapshot = this.inspectContent();
+    this.contentSnapshot = snapshot;
     this.interactiveContent = snapshot.actionable;
     this.syncContentSlotListeners(snapshot.forwardingSlots);
     this.bindContentObservation(snapshot);

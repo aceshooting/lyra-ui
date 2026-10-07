@@ -1,3 +1,4 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { nothing } from "lit";
@@ -33,12 +34,6 @@ function renderedThreadIds(el: LyraThreadList): string[] {
 function renderedGroupLabels(el: LyraThreadList): string[] {
   return renderedItems(el).flatMap((item) =>
     item.kind === "group" ? [item.label] : []
-  );
-}
-
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
   );
 }
 
@@ -4682,4 +4677,22 @@ it('uses size m by default and forwards explicit size tiers to data rows', async
   const rows = dataRows(el);
   expect(rows.length).to.be.greaterThan(0);
   expect(rows.map(row => row.size)).to.deep.equal(rows.map(() => 'l'));
+});
+
+it('keeps its projected rows on same-source rebinds and refreshes when a new collection is assigned', async () => {
+  const source = [{ id: 'stable', title: 'Original' }];
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list grouping="none" style="block-size:400px" .threads=${source}></lr-thread-list>`);
+  await nextFrame();
+  const snapshot = el.threads;
+  const items = renderedItems(el);
+  source[0]!.title = 'Updated';
+  el.threads = source;
+  await el.updateComplete;
+  expect(el.threads === snapshot).to.equal(true);
+  expect(renderedItems(el) === items).to.equal(true);
+  el.threads = [...source];
+  await el.updateComplete;
+  await nextFrame();
+  expect(el.threads === snapshot).to.equal(false);
+  expect(dataRows(el)[0]!.label).to.equal('Updated');
 });

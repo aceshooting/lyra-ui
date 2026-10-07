@@ -271,3 +271,38 @@ assert.ok(
 );
 
 console.log('Hit-area checker self-tests passed.');
+
+const sharedHitTarget = `
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+export const styles = css\`
+  [part='toggle'] { \${iconHitTarget} }
+\`;
+`;
+assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget]).errors.length, 0,
+  'the imported shared target floor satisfies both axes');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget + `
+  [part='toggle']:where([data-small]) { min-inline-size: 1px; }
+`]).errors.length > 0, 'a later undersized override still fails the shared floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('internal/interactive-control.styles.js', 'unrelated.styles.js')]).errors.length > 0,
+  'an unrelated declaration with the same identifier does not satisfy the floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('import { iconHitTarget }', '// import { iconHitTarget }')]).errors.length > 0,
+  'a commented import cannot authorize a shared floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('import { iconHitTarget }', 'import { iconHitTarget as other }')]).errors.length > 0,
+  'an alias does not bind the original local identifier');
+assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('import { iconHitTarget }', 'import { iconHitTarget as floor }').replace('${iconHitTarget}', '${floor}')]).errors.length, 0,
+  'an imported alias is recognized at its real interpolation');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('export const styles = css`', 'function nested(iconHitTarget) { return css`') + '}']).errors.length > 0,
+  'a shadowed parameter does not inherit the top-level import binding');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  `const note = "import { iconHitTarget } from '../../../internal/interactive-control.styles.js';";\n` +
+  sharedHitTarget.slice(sharedHitTarget.indexOf('export const styles')),
+]).errors.length > 0, 'a string-literal fake import cannot authorize the floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  sharedHitTarget.replace('${iconHitTarget}', '${iconHitTarget} min-inline-size: 1px;'),
+]).errors.length > 0, 'an undersized override inside the same rule still fails the shared floor');
+assert.ok(checkStaticHitAreaFixture(compactIconClass, [
+  sharedHitTarget.replace('${iconHitTarget}', '${iconHitTarget} min-inline-size: 1px'),
+]).errors.length > 0, 'a final semicolonless override still fails the shared floor');
+
+assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('../../../internal/interactive-control.styles.js', './interactive-control.styles.js')]).errors.length, 0,
+  'internal styles resolve the same imported hit-target declaration');

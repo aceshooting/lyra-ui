@@ -1,3 +1,4 @@
+import { resolvedColorIn } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
 import "./combobox.js";
@@ -2058,11 +2059,7 @@ describe("selected-state theming tokens", () => {
     const brand = getComputedStyle(el)
       .getPropertyValue("--lr-color-brand")
       .trim();
-    const probe = document.createElement("span");
-    probe.style.color = brand;
-    document.body.appendChild(probe);
-    const expected = getComputedStyle(probe).color;
-    document.body.removeChild(probe);
+    const expected = resolvedColorIn(el.ownerDocument.body, brand);
     expect(getComputedStyle(selected).color).to.equal(expected);
   });
 });

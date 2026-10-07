@@ -5,6 +5,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type {
   LyraAnchor,
@@ -22,8 +23,9 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './image-viewer.styles.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
+import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight } from '../../../internal/default-strings.generated.js';
@@ -48,7 +50,7 @@ const MIN_REGION_PERCENT = 2;
 const ARROW_STEP_PERCENT = 2;
 /** Maximum region buttons projected at once. An active region beyond the leading window replaces
  * the final entry so anchor identity remains reachable without making an unbounded tab/DOM list. */
-export const IMAGE_VIEWER_HIGHLIGHT_LIMIT = 200;
+export { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
 function normalizeImageRotation(value: unknown): LyraImageRotation {
   const degrees = typeof value === 'number' ? finiteNumber(value, 0) : 0;
   const steps = Math.round(degrees / 90);
@@ -236,6 +238,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
+  );
   protected static override collectionSupport = collectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-annotation-create',
@@ -303,7 +308,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @state() private revealTarget: SafePercentRect | null = null;
   @state() private highlightFocusId: string | null = null;
   @state() private mediaLayoutSize: { width: number; height: number } | null = null;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
   private geometryObserver?: ResizeObserver;
   private observedWrapper?: HTMLElement;
   private geometryFrame?: number;
@@ -364,7 +369,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.rotation = ((this.rotation + 90) % 360) as LyraImageRotation;
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'region' || !this.hasOperableContent) return false;
     const rect = normalizeImageRegionRect(anchor.rect);
     if (!rect) return false;
@@ -405,16 +410,15 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncErrorAnnouncementSink();
     // A plain DOM move schedules no update, and disconnect released the observer.
     if (this.hasUpdated) this.syncGeometryObserver();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.disconnectGeometryObserver();
-    this.releaseErrorAnnouncementSink();
-    this.syncErrorAnnouncementSink();
+    this.announcements.adopted();
     this.scheduleAfterUpdate(() => this.syncGeometryObserver());
   }
 
@@ -464,23 +468,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.geometryObserver.observe(wrapper);
   }
 
-  private syncErrorAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseErrorAnnouncementSink();
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseErrorAnnouncementSink(): void {
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-  }
-
   private announceLoadError(): void {
-    this.errorAnnouncementSink?.announce(this.localize('imageViewerFailedToLoad'));
+    this.announcements.announceAssertive(this.localize('imageViewerFailedToLoad'));
   }
 
   private onFrameZoomChange = (event: CustomEvent<{ zoom: number }>): void => {
@@ -862,7 +851,6 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   override disconnectedCallback(): void {
     this.cancelPointerDraft();
     this.disconnectGeometryObserver();
-    this.releaseErrorAnnouncementSink();
     super.disconnectedCallback();
   }
 }

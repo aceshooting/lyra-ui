@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -94,7 +95,7 @@ export const styles = css`
     padding: var(--lr-space-xs) 0;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  /* Pressed, here and on [part='file'] / [part='copy-button'] below, pushes the hovered tint a
+  /* Pressed, here and on [part='file'] below, pushes the hovered tint a
      further --lr-color-mix-active toward --lr-color-mix-partner, which follows the text colour, so
      it reads as a distinctly deeper step than hover in both themes. */
   [part='files-toggle']:hover {
@@ -104,8 +105,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='files-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='file'] {
     box-sizing: border-box;
@@ -142,28 +142,14 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='file']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='copy-button'] {
-    font: inherit;
     font-size: var(--lr-font-size-xs);
-    background: none;
-    color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    --_lr-agent-action-fill: transparent;
+    --_lr-agent-action-hover-base: var(--lr-color-brand-quiet);
+    --_lr-agent-action-radius: var(--lr-radius-xs);
+    --_lr-agent-action-padding-inline: var(--lr-space-xs);
   }
-  [part='copy-button']:hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  [part='copy-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-  [part='copy-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
+  [part='limit'] { margin: var(--lr-space-s) 0 0; color: var(--lr-color-text-quiet); }
 `;

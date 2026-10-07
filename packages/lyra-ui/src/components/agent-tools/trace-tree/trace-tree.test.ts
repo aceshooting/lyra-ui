@@ -195,6 +195,24 @@ describe('lr-trace-tree', () => {
     expect(search.getAttribute('aria-setsize')).to.equal('2');
   });
 
+  it('refreshes the hierarchy after mutating and reassigning the same span array', async () => {
+    const spans: LyraSpan[] = [{ id: 'root', name: 'Before', kind: 'agent', startMs: 0, status: 'running' }];
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${spans}></lr-trace-tree>`);
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+    spans[0]!.name = 'After';
+    el.spans = spans;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
+  });
+
+  it('keeps an absent provider status pending while an explicit foreign status is unknown', () => {
+    const projection = normalizeLyraSpans([
+      { id: 'missing', name: 'Missing', kind: 'tool', startMs: 0 },
+      { id: 'foreign', name: 'Foreign', kind: 'tool', startMs: 1, status: 'provider-specific' },
+    ]);
+    expect(projection.spans.map((span) => span.status)).to.deep.equal(['pending', 'unknown']);
+  });
+
   it('treats a span with an unresolvable parentId as a root instead of dropping it', async () => {
     const orphan: LyraSpan[] = [{ id: 'x', parentId: 'missing', name: 'orphan', kind: 'other', startMs: 0, status: 'pending' }];
     const el = (await fixture(html`<lr-trace-tree .spans=${orphan}></lr-trace-tree>`)) as LyraTraceTree;
@@ -537,10 +555,10 @@ describe('lr-trace-tree', () => {
 
     const row = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
     expect(row.querySelector('[part="icon"] svg') !== null).to.equal(true);
-    expect(row.querySelector('[part="status-text"]')!.getAttribute('data-status')).to.equal('pending');
-    expect(row.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
+    expect(row.querySelector('[part="status-text"]')!.getAttribute('data-status')).to.equal('unknown');
+    expect(row.querySelector('[part="status-text"]')!.textContent).to.equal('Unknown');
     expect(row.getAttribute('aria-label')).to.include('Other');
-    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Pending');
+    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Unknown');
   });
 
   it('shows and announces an incomplete span as Incomplete, not Pending', async () => {

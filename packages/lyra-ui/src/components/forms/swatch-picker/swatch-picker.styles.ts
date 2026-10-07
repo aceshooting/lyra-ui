@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -187,8 +188,7 @@ export const styles = css`
     transform: scale(1.2);
   }
   [part~="swatch"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~="swatch"][aria-checked="true"] [part="swatch-fill"],
   [part~="swatch"][aria-checked="true"] [part="swatch-icon"] {

@@ -10,13 +10,17 @@ import type {
 } from '../../../ai/types.js';
 import {
   getOwnDataDescriptor,
+  projectFrozenRows,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { projectGroundedClaim } from '../grounded-claim-projection.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -45,11 +49,14 @@ export interface LyraClaimEvidenceEventMap {
 
 type CitationEventName = 'lr-citation-select' | 'lr-citation-open';
 
-const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
+type DisplayClaimStatus = GroundedClaimStatus | 'unknown';
+
+const STATUS_VARIANT: Record<DisplayClaimStatus, BadgeVariant> = {
   supported: 'success',
   'partially-supported': 'warning',
   unsupported: 'danger',
   contradicted: 'danger',
+  unknown: 'neutral',
 };
 
 const MAX_PROJECTED_CLAIM_EVIDENCE_ROWS = 10_000;
@@ -85,13 +92,6 @@ const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
   []
 );
 
-function descriptorValue(
-  value: object,
-  property: PropertyKey
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
-
 function valueOfDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>
 ): unknown | undefined {
@@ -109,99 +109,14 @@ function hasUnsafeDescriptor(
   );
 }
 
-function projectCitationIds(value: unknown): readonly string[] | undefined {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return undefined;
-
-    const ids: string[] = [];
-    const length = Math.min(
-      lengthDescriptor.value,
-      MAX_PROJECTED_CLAIM_EVIDENCE_ROWS
-    );
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
-      if (
-        descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
-        typeof descriptor.value === 'string'
-      )
-        ids.push(descriptor.value);
-    }
-    return Object.freeze(ids);
-  } catch {
-    return undefined;
-  }
-}
-
-function projectClaim(value: unknown): CanonicalClaim | undefined {
-  try {
-    if (value === null || typeof value !== 'object' || Array.isArray(value))
-      return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const textDescriptor = descriptorValue(value, 'text');
-    const statusDescriptor = descriptorValue(value, 'status');
-    const citationIdsDescriptor = descriptorValue(value, 'citationIds');
-    const confidenceDescriptor = descriptorValue(value, 'confidence');
-    const explanationDescriptor = descriptorValue(value, 'explanation');
-    if (
-      hasUnsafeDescriptor([
-        idDescriptor,
-        textDescriptor,
-        statusDescriptor,
-        citationIdsDescriptor,
-        confidenceDescriptor,
-        explanationDescriptor,
-      ])
-    )
-      return undefined;
-
-    const id = valueOfDescriptor(idDescriptor);
-    const text = valueOfDescriptor(textDescriptor);
-    const citationIds = projectCitationIds(valueOfDescriptor(citationIdsDescriptor));
-    if (
-      typeof id !== 'string' ||
-      id.trim().length === 0 ||
-      typeof text !== 'string' ||
-      citationIds === undefined
-    )
-      return undefined;
-
-    const status = valueOfDescriptor(statusDescriptor);
-    const confidence = valueOfDescriptor(confidenceDescriptor);
-    const explanation = valueOfDescriptor(explanationDescriptor);
-    return Object.freeze({
-      source: value as GroundedClaim,
-      id,
-      text,
-      status: typeof status === 'string' ? status : 'unsupported',
-      citationIds,
-      ...(typeof confidence === 'number' && Number.isFinite(confidence)
-        ? { confidence }
-        : {}),
-      ...(typeof explanation === 'string' ? { explanation } : {}),
-    });
-  } catch {
-    return undefined;
-  }
-}
-
 function projectCitation(value: unknown): CanonicalCitation | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
       return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const sourceIdDescriptor = descriptorValue(value, 'sourceId');
-    const labelDescriptor = descriptorValue(value, 'label');
-    const quoteDescriptor = descriptorValue(value, 'quote');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
+    const labelDescriptor = getOwnDataDescriptor(value, 'label');
+    const quoteDescriptor = getOwnDataDescriptor(value, 'quote');
     if (
       hasUnsafeDescriptor([
         idDescriptor,
@@ -234,44 +149,10 @@ function projectRows<T extends { readonly id: string }>(
   project: (entry: unknown) => T | undefined,
   empty: readonly T[]
 ): readonly T[] {
-  try {
-    if (!Array.isArray(value)) return empty;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return empty;
-
-    const rows: T[] = [];
-    const seen = new Set<string>();
-    const length = Math.min(
-      lengthDescriptor.value,
-      MAX_PROJECTED_CLAIM_EVIDENCE_ROWS
-    );
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      )
-        continue;
-      const row = project(descriptor.value);
-      // A malformed duplicate must never reserve its public identity ahead of a valid later row.
-      if (!row || seen.has(row.id)) continue;
-      seen.add(row.id);
-      rows.push(row);
-    }
-    return Object.freeze(rows);
-  } catch {
-    return empty;
-  }
+  return projectFrozenRows(value, project, MAX_PROJECTED_CLAIM_EVIDENCE_ROWS, empty, (row) => row.id);
 }
 
-function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
+function normalizedClaimStatus(status: unknown): DisplayClaimStatus {
   switch (status) {
     case 'supported':
     case 'partially-supported':
@@ -279,14 +160,15 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
     case 'contradicted':
       return status;
     default:
-      return 'unsupported';
+      return 'unknown';
   }
 }
 
 /**
  * `<lr-claim-evidence>` — a controlled claim-by-claim grounding audit. It relates generated
  * claims to complete citation records, exposes assessment status/confidence, and tolerates
- * missing citation ids without fabricating evidence.
+ * missing citation ids without fabricating evidence. An unrecognized runtime claim status
+ * appears as a neutral localized unknown state, never as an unsupported verdict.
  *
  * Public collection sequences are bounded, frozen snapshots. Admitted claim and citation source
  * identities remain opaque while descriptor-safe projections copy the fields used for display and
@@ -325,6 +207,18 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
+  private rovingClaimId = '';
+
+  private onClaimKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const buttons = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="claim-trigger"]');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons?.[next]?.focus();
+  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -425,7 +319,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     return this.canonicalRowsFor(
       this.claims,
       this.canonicalClaimsBySource,
-      projectClaim,
+      projectGroundedClaim,
       EMPTY_CANONICAL_CLAIMS
     );
   }
@@ -439,7 +333,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     );
   }
 
-  private statusLabel(status: GroundedClaimStatus): string {
+  private statusLabel(status: DisplayClaimStatus): string {
     switch (status) {
       case 'supported':
         return this.localize('claimEvidenceSupported');
@@ -449,6 +343,8 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
         return this.localize('claimEvidenceUnsupported');
       case 'contradicted':
         return this.localize('claimEvidenceContradicted');
+      case 'unknown':
+        return this.localize('statusUnknown');
     }
   }
 
@@ -474,17 +370,27 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
 
   private renderClaim(
     claim: CanonicalClaim,
-    byId: ReadonlyMap<string, { citation: CanonicalCitation; index: number }>
+    byId: ReadonlyMap<string, { citation: CanonicalCitation; index: number }>,
+    index: number,
+    count: number,
+    rovingClaimId: string | undefined,
   ): TemplateResult {
     const selected = claim.id === this.selectedClaimId;
     const citations = this.resolvedCitations(claim, byId);
     const status = normalizedClaimStatus(claim.status);
+    if (status === 'unknown') devWarnOnce(
+      'lr-claim-evidence:unknown-status',
+      `<lr-claim-evidence>: unknown claim status ${JSON.stringify(claim.status.slice(0, 80))}; rendering a neutral status.`
+    );
     const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
       <li part=${claimPart} aria-current=${selected ? 'true' : 'false'}>
         <button
           part="claim-trigger"
           type="button"
+          tabindex=${claim.id === rovingClaimId ? '0' : '-1'}
+          @focus=${() => { this.rovingClaimId = claim.id; this.requestUpdate(); }}
+          @keydown=${(event: KeyboardEvent) => this.onClaimKeyDown(event, index, count)}
           aria-pressed=${selected ? 'true' : 'false'}
           @click=${() => this.emit('lr-claim-select', { claim: claim.source })}
         >
@@ -552,6 +458,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
 
   override render(): TemplateResult {
     const claims = this.normalizedClaims;
+    const renderedClaims = claims.slice(0, MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS);
+    const rovingClaimId = renderedClaims.some((claim) => claim.id === this.rovingClaimId)
+      ? this.rovingClaimId : renderedClaims[0]?.id;
     const byId = this.lookupCitations(this.normalizedCitations);
     const label = retrievalSemanticLabel(
       this,
@@ -566,9 +475,8 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
       >
         ${claims.length
           ? html`<ol part="list">
-              ${claims
-                .slice(0, MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS)
-                .map((claim) => this.renderClaim(claim, byId))}
+              ${renderedClaims
+                .map((claim, index) => this.renderClaim(claim, byId, index, renderedClaims.length, rovingClaimId))}
             </ol>
             ${claims.length > MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS
               ? html`<p part="limit" role="note">${this.localize(

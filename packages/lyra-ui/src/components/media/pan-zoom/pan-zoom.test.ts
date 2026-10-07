@@ -8,6 +8,23 @@ ignoreResizeObserverLoopErrors(
   'changing the zoom under an open overlay rewrites its compensating zoom inside the positioner resize callback',
 );
 
+it('projects a host description onto the focusable viewport', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="pan-zoom-help">Use the arrow keys to pan</p>
+    <lr-pan-zoom aria-describedby="pan-zoom-help"></lr-pan-zoom>
+  </div>`);
+  const host = wrapper.querySelector<LyraPanZoom>('lr-pan-zoom')!;
+  const help = wrapper.querySelector<HTMLElement>('#pan-zoom-help')!;
+  const viewport = host.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const described = (): boolean =>
+    viewport.ariaDescribedByElements?.includes(help) === true ||
+    (viewport.getAttribute('aria-describedby')?.split(/\s+/).includes(help.id) ?? false);
+  expect(described()).to.equal(true);
+  host.removeAttribute('aria-describedby');
+  await waitUntil(() => !described());
+});
+
 it('preserves the former zoomable-frame slotted pan/zoom contract under lr-pan-zoom', async () => {
   const el = await fixture<LyraPanZoom>(html`
     <lr-pan-zoom zoom="2" aria-label="Map preview">

@@ -1,3 +1,5 @@
+import { resolvedColorIn, resolvedInShadow } from '../../../../test/shadow-style.js';
+import { measureListboxRow, settlePointerStyle as settle } from '../../../../test/row-style.js';
 import { fixture, expect, oneEvent, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './select.js';
@@ -36,12 +38,7 @@ function resolved(
   property: string,
   declaration: string
 ): string {
-  const probe = document.createElement("span");
-  probe.setAttribute("style", `${property}: ${declaration}`);
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return value;
+  return resolvedInShadow(el, `${property}: ${declaration}`, property);
 }
 
 
@@ -1091,11 +1088,7 @@ describe("selected-state theming tokens", () => {
       .getPropertyValue("--lr-color-brand")
       .trim();
     // Resolve the brand token through a probe element so we compare like-for-like rgb() values.
-    const probe = document.createElement("span");
-    probe.style.color = brand;
-    document.body.appendChild(probe);
-    const expected = getComputedStyle(probe).color;
-    document.body.removeChild(probe);
+    const expected = resolvedColorIn(el.ownerDocument.body, brand);
     expect(getComputedStyle(selected).color).to.equal(expected);
   });
 });
@@ -1110,15 +1103,6 @@ describe("row state feedback on the already-selected option", () => {
     ];
   };
 
-  /** Polls a pointer-driven condition for up to 500ms, reporting whether it ever held. Pointer
-   *  state lands a variable number of frames after the mouse command resolves, per engine. */
-  const settle = async (holds: () => boolean): Promise<boolean> => {
-    for (let attempt = 0; attempt < 25; attempt++) {
-      if (holds()) return true;
-      await aTimeout(20);
-    }
-    return holds();
-  };
 
   const arrow = (el: LyraSelect, key: "ArrowDown" | "ArrowUp"): void => {
     trigger(el).dispatchEvent(
@@ -1167,34 +1151,8 @@ describe("row state feedback on the already-selected option", () => {
     ).to.equal("rgb(1, 2, 3)");
   });
 
-  /** Hovers and presses one row of a freshly opened listbox, returning both computed backgrounds
-   *  (or null when the engine never put the pointer over the row). One fixture per row on purpose:
-   *  releasing the button over an option commits that option and closes the listbox. */
-  const measureRow = async (
-    pick: (rows: HTMLElement[]) => HTMLElement
-  ): Promise<{ hover: string; press: string } | null> => {
-    const el = await openWithSelectedMiddleRow();
-    const row = pick(
-      Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]'))
-    );
-    const resting = getComputedStyle(row).backgroundColor;
-    try {
-      await sendMouse({ type: "move", position: centerOf(row) });
-      // Earlier pointer tests in this file can leave Firefox with no document hover state at all
-      // until a real pointer entry; an unverified reading would report the fixed cascade as
-      // broken again, so report "no pointer" rather than a background.
-      if (!(await settle(() => row.matches(":hover")))) return null;
-      await settle(() => getComputedStyle(row).backgroundColor !== resting);
-      const hover = getComputedStyle(row).backgroundColor;
-      await sendMouse({ type: "down" });
-      await settle(() => getComputedStyle(row).backgroundColor !== hover);
-      return { hover, press: getComputedStyle(row).backgroundColor };
-    } finally {
-      await sendMouse({ type: "up" });
-      await resetMouse();
-      el.remove();
-    }
-  };
+  const measureRow = (pick: (rows: HTMLElement[]) => HTMLElement) =>
+    measureListboxRow(openWithSelectedMiddleRow, pick);
 
   it("hovers and presses the selected row exactly like an unselected one", async function () {
     const control = await measureRow(

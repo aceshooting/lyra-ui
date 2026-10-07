@@ -155,17 +155,21 @@ export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
  * ships its own copy. Two consequences worth knowing: a consumer that reveals a `.sr-only`
  * element on focus resets `clip-path: none` rather than `clip: auto`, and `clip-path` (unlike
  * `clip`) establishes a containing block for absolutely-positioned descendants. */
+export const visuallyHidden = css`
+  position: absolute;
+  inline-size: var(--lr-size-1px);
+  block-size: var(--lr-size-1px);
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+`;
+
 export const srOnly = css`
   .sr-only {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
+    ${visuallyHidden}
     margin-inline: calc(-1 * var(--lr-size-1px));
     margin-block: calc(-1 * var(--lr-size-1px));
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
   }
 `;

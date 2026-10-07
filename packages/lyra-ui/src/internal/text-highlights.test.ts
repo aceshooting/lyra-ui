@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { supportsCustomHighlights, acquireHighlightHandle } from './text-highlights.js';
+import { supportsCustomHighlights, acquireHighlightHandle, wrapTextRangeInMarks, unwrapTextMark } from './text-highlights.js';
 import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 
 function makeContent(html: string): HTMLElement {
@@ -56,6 +56,54 @@ class FakeHighlight extends Set<Range> {
 describe('supportsCustomHighlights', () => {
   it('returns a boolean without throwing', () => {
     expect(typeof supportsCustomHighlights()).to.equal('boolean');
+  });
+});
+
+describe('bounded text marks', () => {
+  it('paints and restores a match across inline nodes without changing the text', () => {
+    const root = makeContent('<p>one <em>two</em> three</p>');
+    try {
+      const first = findTextNode(root, 'one ');
+      const last = findTextNode(root, ' three');
+      const range = document.createRange();
+      range.setStart(first, 2);
+      range.setEnd(last, 3);
+      const original = root.textContent;
+      const marks = wrapTextRangeInMarks(range, document, {
+        traversalNodes: 20,
+        codeUnits: 100,
+        marks: 3,
+      }, (mark) => mark.setAttribute('part', 'search-match'));
+      expect(marks).to.have.length(3);
+      expect(marks.map((mark) => mark.textContent).join('')).to.equal('e two th');
+      expect(root.textContent).to.equal(original);
+      for (const mark of marks) unwrapTextMark(mark);
+      expect(root.querySelectorAll('mark')).to.have.length(0);
+      expect(root.textContent).to.equal(original);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('does not paint a partial match when its mark budget is exhausted', () => {
+    const root = makeContent('<p>one <em>two</em> three</p>');
+    try {
+      const first = findTextNode(root, 'one ');
+      const last = findTextNode(root, ' three');
+      const range = document.createRange();
+      range.setStart(first, 2);
+      range.setEnd(last, 3);
+      const marks = wrapTextRangeInMarks(range, document, {
+        traversalNodes: 20,
+        codeUnits: 100,
+        marks: 2,
+      }, () => {});
+      expect(marks).to.have.length(0);
+      expect(root.querySelectorAll('mark')).to.have.length(0);
+      expect(root.textContent).to.equal('one two three');
+    } finally {
+      root.remove();
+    }
   });
 });
 

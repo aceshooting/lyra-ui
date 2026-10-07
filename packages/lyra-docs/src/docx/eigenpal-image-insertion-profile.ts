@@ -3,6 +3,7 @@ import type { OoxmlElement, OoxmlNode, OoxmlPackage, OoxmlPart } from '@docx-edi
 import { imageCandidatesInPackage } from './eigenpal-images.js';
 import { inspectDocxImage } from './image-bytes.js';
 import { isDocxXmlText } from './xml-text.js';
+import { CONTENT_TYPE_NS as CT, OFFICE_REL_NS as R, PACKAGE_REL_NS as REL, WORD_NS as W } from './ooxml.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 export interface ImageInsertionProfileDependencies {
@@ -16,11 +17,7 @@ interface ImageInsertionBudget {
   readonly titleLength: number;
   readonly descriptionLength: number;
 }
-const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const W14 = 'http://schemas.microsoft.com/office/word/2010/wordml';
-const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-const REL = 'http://schemas.openxmlformats.org/package/2006/relationships';
-const CT = 'http://schemas.openxmlformats.org/package/2006/content-types';
 const XML = 'http://www.w3.org/XML/1998/namespace';
 const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';

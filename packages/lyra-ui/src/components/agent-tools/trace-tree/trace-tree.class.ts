@@ -9,7 +9,7 @@ import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './trace-tree.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
@@ -91,6 +91,7 @@ const STATUS_LABEL_KEY: Record<LyraSpan['status'], string> = {
   error: 'statusError',
   denied: 'statusDenied',
   incomplete: 'statusIncomplete',
+  unknown: 'statusUnknown',
 };
 
 export interface LyraTraceTreeEventMap {
@@ -233,35 +234,20 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private previousStatuses = new Map<string, LyraSpan['status']>();
   private pendingAnnouncements: string[] = [];
-  private limitAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
   private renderedProjectionTruncated = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.renderedProjectionTruncated;
   }
 
-  override disconnectedCallback(): void {
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    super.disconnectedCallback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    this.syncLimitAnnouncementSink();
-  }
-
-  private syncLimitAnnouncementSink(): void {
-    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.announcements.adopted();
   }
 
   private hierarchyKey?: readonly unknown[];
@@ -595,7 +581,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       for (const text of texts) this.liveRegion?.announce(text);
     }
     if (this.limitAnnouncementInitialized && this.renderedProjectionTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.localize('spanProjectionLimit', undefined, {
+      this.announcements.announcePolite(this.localize('spanProjectionLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),
       }));
     }

@@ -1,8 +1,11 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -137,18 +140,8 @@ export const styles = css`
     --_lr-combobox-tag-padding: var(--lr-size-0-25rem) var(--lr-size-0-625rem);
     --_lr-combobox-tag-font-size: var(--lr-font-size-m);
   }
-  [part="form-control-label"] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked by
-     SlotPresenceController and reflected with hidden -- same fix as [part='hint']/[part='error']
-     below. Without it the required-asterisk ::after renders a stray ' *' when label is unset. */
-  [part="form-control-label"][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
 
   /* min-block-size is a border-box floor, so it sets the height only while the row's content stays
@@ -297,8 +290,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: calc((var(--lr-icon-button-size) - var(--lr-size-1rem)) / -2);
     border: none;
     background: none;
@@ -408,8 +400,7 @@ export const styles = css`
   }
   [part="clear-button"]:focus-visible,
   [part="tag__remove-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part="listbox"][hidden] {
@@ -628,31 +619,12 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
   }
   ${dataStateRetryStyles}
-  [part="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  /* :empty never matches (the part always holds a literal slot child), so emptiness is tracked by
-     SlotPresenceController and reflected with hidden -- same fix as lr-stat's icon/caption. */
-  [part="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
-  }
+
   [part="form-control"],
   [part="form-control-label"],
   [part="hint"],
   [part="error"] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 
   ${glassScrollLayerStyles}

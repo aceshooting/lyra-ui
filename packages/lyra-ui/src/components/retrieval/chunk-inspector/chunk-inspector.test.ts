@@ -1,3 +1,5 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './chunk-inspector.js';
@@ -35,6 +37,24 @@ it('sorts descending by score by default', async () => {
   await el.updateComplete;
   const titles = [...el.shadowRoot!.querySelectorAll('[part="title"]')].map((t) => t.textContent);
   expect(titles[0]).to.include('curie-bio.pdf');
+});
+
+it('names each open control by its sorted ordinal and supports a containing list override', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
+  el.chunks = chunks;
+  await el.updateComplete;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="open-button"]')];
+  expect(buttons[0]!.getAttribute('aria-label')).to.include('Result 1 of 3');
+  expect(buttons[1]!.getAttribute('aria-label')).to.include('Result 2 of 3');
+  el.chunks = [chunks[0]!];
+  el.ordinalIndex = 4;
+  el.ordinalTotal = 8;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Result 4 of 8');
+  el.ordinalIndex = undefined;
+  el.ordinalTotal = undefined;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Result 1 of 1');
 });
 
 it('omits blank and later-duplicate chunk ids before sorting, current state, and actions', async () => {
@@ -126,10 +146,13 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
   el.chunks = chunks;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
+  const toggles: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
   const listener = oneEvent(el, 'lr-chunk-toggle');
   toggle.click();
   const event = await listener;
   expect(event.detail).to.deep.equal({ chunkId: chunks[0]!.id, expanded: true });
+  expect(toggles).to.deep.equal([{ itemId: chunks[0]!.id, expanded: true }]);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded')).to.equal('true');
 
@@ -295,14 +318,6 @@ it('renders explicit true and false aria-current values for the stateful chunk s
 });
 
 describe('current-chunk cssprop escape hatch', () => {
-  function resolvedInShadow(el: LyraChunkInspector, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function current(style = ''): Promise<{ el: LyraChunkInspector; chunk: HTMLElement }> {
     const wrapper = (await fixture(
@@ -360,18 +375,6 @@ describe('current-chunk cssprop escape hatch', () => {
 // `<lr-virtual-list>`'s `renderItem` and is committed inside *that* component's shadow root, one
 // boundary further in. Every assertion below runs against both.
 describe('row styling across both rendering paths', () => {
-  async function nextFrame(): Promise<void> {
-    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-  }
-
-  function resolvedInShadow(el: LyraChunkInspector, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   // v0 scores 0.2 (low -> danger tone) and is the current chunk; the rest score 0.9 (high ->
   // success). `sort="none"` keeps v0 first so the current row is always the rendered one.

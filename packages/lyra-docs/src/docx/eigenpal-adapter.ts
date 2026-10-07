@@ -426,11 +426,22 @@ export async function openEigenpalDocument(
         if (!normalized.ok) return normalized;
         command = normalized.value;
         if (nativeDispatching()) return { ok: false, code: 'busy' };
-        if (isDocxImageAction(command)) {
+        const editReadiness = (): DocxResult<void> => {
           if (saving || executingGuarded) return { ok: false, code: 'busy' };
           if (composing) return { ok: false, code: 'composing' };
           if (operation.readOnly) return { ok: false, code: 'read-only' };
           if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+          return { ok: true, value: undefined };
+        };
+        const guardedSettlement = (): DocxResult<void> => {
+          if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          return validateSettled?.() ?? { ok: false, code: 'unsupported' };
+        };
+        if (isDocxImageAction(command)) {
+          const ready = editReadiness();
+          if (!ready.ok) return ready;
           if (!validateSettled) return { ok: false, code: 'unsupported' };
           const active = current(), epoch = selectionEpoch;
           const retained = token ? pins.get(token) : undefined;
@@ -443,10 +454,7 @@ export async function openEigenpalDocument(
           executingGuarded = true;
           suppressSelection++;
           const validate = (): DocxResult<void> => {
-            if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
-            if (fault) return { ok: false, code: 'engine-failed' };
-            if (composing) return { ok: false, code: 'composing' };
-            const facade = validateSettled();
+            const facade = guardedSettlement();
             if (!facade.ok) return facade;
             if (editor !== active || epoch !== selectionEpoch || !intent.valid() || (token && !pins.has(token))) return { ok: false, code: 'stale-selection' };
             if (!image?.supported) return { ok: false, code: 'unsupported' };
@@ -474,10 +482,8 @@ export async function openEigenpalDocument(
           } finally { suppressSelection--; executingGuarded = false; }
         }
         if (isDocxTableAction(command)) {
-          if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
-          if (composing) return { ok: false, code: 'composing' };
-          if (operation.readOnly) return { ok: false, code: 'read-only' };
-          if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
+          const ready = editReadiness();
+          if (!ready.ok) return ready;
           if (!module.tableReaders || !validateSettled) return { ok: false, code: 'unsupported' };
           if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
           executingGuarded = true;
@@ -495,10 +501,7 @@ export async function openEigenpalDocument(
             const qualified = qualifyTableCommand(active, module.tableReaders, command);
             if (!qualified.ok) return qualified;
             const validate = (): DocxResult<void> => {
-              if (!owned() || destroyed) return { ok: false, code: 'destroyed' };
-              if (fault) return { ok: false, code: 'engine-failed' };
-              if (composing) return { ok: false, code: 'composing' };
-              const facade = validateSettled();
+              const facade = guardedSettlement();
               if (!facade.ok) return facade;
               if (editor !== active || epoch !== selectionEpoch || !qualified.value.valid() ||
                 (token && !pins.has(token))) return { ok: false, code: 'stale-selection' };
@@ -532,6 +535,15 @@ export async function openEigenpalDocument(
         const active = current(), surface = active.surface, epoch = selectionEpoch;
         if (!surface) return { ok: false, code: 'unsupported' };
         const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+        const validateOwner = (expectedEpoch: number): DocxResult<void> => {
+          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (editor !== active || active.surface !== surface || surface.session !== session ||
+            active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== expectedEpoch)
+            return { ok: false, code: 'stale-selection' };
+          return { ok: true, value: undefined };
+        };
         const original = captureImageIntent(active, image);
         const readSelection = () => {
           const state = surface.state(), drawing = surface.drawingSelectionIntent();
@@ -545,13 +557,8 @@ export async function openEigenpalDocument(
         suppressSelection++;
         try {
           const target = selectImageTarget(active, image?.id ?? null, direction);
-          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
-          if (fault) return { ok: false, code: 'engine-failed' };
-          if (composing) return { ok: false, code: 'composing' };
-          if (editor !== active || active.surface !== surface || surface.session !== session ||
-            active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== epoch) {
-            return { ok: false, code: 'stale-selection' };
-          }
+          const afterTarget = validateOwner(epoch);
+          if (!afterTarget.ok) return afterTarget;
           if (!target.ok) return target;
           if (target.value.unchanged) return original?.valid() && original.paragraphId === target.value.paragraphId ?
             { ok: true, value: undefined } : { ok: false, code: 'stale-selection' };
@@ -559,12 +566,9 @@ export async function openEigenpalDocument(
           const layout: DocxResult<void> = published.revision === revision ? qualifyImageLayout(published, target.value) :
             { ok: false, code: 'unsupported' };
           const beforeSelection = readSelection();
-          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
-          if (fault) return { ok: false, code: 'engine-failed' };
-          if (composing) return { ok: false, code: 'composing' };
-          if (editor !== active || active.surface !== surface || surface.session !== session ||
-            active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== epoch ||
-            beforeSelection.some((value, index) => value !== initialSelection[index])) {
+          const afterLayout = validateOwner(epoch);
+          if (!afterLayout.ok) return afterLayout;
+          if (beforeSelection.some((value, index) => value !== initialSelection[index])) {
             return { ok: false, code: 'stale-selection' };
           }
           if (!layout.ok) return layout;
@@ -591,13 +595,8 @@ export async function openEigenpalDocument(
           }
           const selectedPosition = { ...surface.state().selection.anchor };
           const validateSelected = (expectedEpoch: number): DocxResult<void> => {
-            if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
-            if (fault) return { ok: false, code: 'engine-failed' };
-            if (composing) return { ok: false, code: 'composing' };
-            if (editor !== active || active.surface !== surface || surface.session !== session ||
-              active.mountGeneration !== generation || session.packageRevision() !== revision || selectionEpoch !== expectedEpoch) {
-              return { ok: false, code: 'stale-selection' };
-            }
+            const owner = validateOwner(expectedEpoch);
+            if (!owner.ok) return owner;
             const state = surface.state(), drawing = surface.drawingSelectionIntent();
             if (surface.storyScope().kind !== 'body' || state.cellSelection !== null ||
               state.selection.anchor.paragraphId !== target.value.paragraphId ||

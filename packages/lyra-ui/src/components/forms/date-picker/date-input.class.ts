@@ -1,3 +1,5 @@
+import { setNativeRangeText } from '../../../internal/native-text-control.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import {
@@ -19,10 +21,13 @@ import {
 } from '../../../internal/anchored-validity.js';
 import {
   deferredPlaceReady as place,
+  settlePopupTransition,
+  PopupTransitionWaiters,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -39,7 +44,12 @@ import {
 import { setCustomState } from '../../../internal/custom-states.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  localeDateOrder,
+  normalizeLocaleDigits,
+  stripBidiFormattingMarks,
+  type LocaleDateField,
+} from '../../../internal/locale-date.js';
 import {
   dateTimeFormat,
   parseISO,
@@ -85,34 +95,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_openCalendar } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** Determines the locale's day/month/year field order from a real formatted
- *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
- *  distinguishable), instead of relying on Date.parse()'s implementation-defined
- *  (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated date. */
-function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
-  try {
-    const parts = dateTimeFormat(locale, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date(2026, 0, 2));
-    const order = parts
-      .filter(
-        (
-          p
-        ): p is Intl.DateTimeFormatPart & { type: 'day' | 'month' | 'year' } =>
-          p.type === 'day' || p.type === 'month' || p.type === 'year'
-      )
-      .map((p) => p.type);
-    return order.length === 3 ? order : ['month', 'day', 'year'];
-  } catch {
-    return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
-  }
-}
-
-const BIDI_FORMATTING_MARKS = /[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-
-type DateField = 'day' | 'month' | 'year';
+type DateField = LocaleDateField;
 type DateFields = Partial<Record<DateField, string>>;
 /** Field owners: 0 = both endpoints, 1 = range start, 2 = range end. */
 type DatePattern = { regex: RegExp; fields: [0 | 1 | 2, DateField][] };
@@ -139,7 +122,7 @@ function compileDatePattern(parts: readonly FormatPart[]): DatePattern | null {
       fields.push([part.source === 'startRange' ? 1 : part.source === 'endRange' ? 2 : 0, part.type]);
       pieces.push('(\\d{1,4})');
     } else {
-      pieces.push(literalPattern(part.value.replace(BIDI_FORMATTING_MARKS, '')));
+      pieces.push(literalPattern(stripBidiFormattingMarks(part.value)));
     }
   }
   // Each endpoint needs exactly one day, month and year.
@@ -222,22 +205,7 @@ function hasForeignLetters(text: string, letters: string): boolean {
 
 /** Normalizes the locale digits and bidi marks the component itself can render before parsing. */
 function normalizeLocalizedDateText(raw: string, locale: string): string {
-  let normalized = raw.replace(BIDI_FORMATTING_MARKS, '');
-  try {
-    const formatter = getNumberFormat(locale || undefined, {
-      useGrouping: false,
-    });
-    for (let digit = 0; digit <= 9; digit++) {
-      const localized = formatter
-        .format(digit)
-        .replace(BIDI_FORMATTING_MARKS, '');
-      if (localized && localized !== String(digit))
-        normalized = normalized.split(localized).join(String(digit));
-    }
-  } catch {
-    // Malformed runtime locale: ASCII input remains available.
-  }
-  return normalized.trim();
+  return normalizeLocaleDigits(raw, locale).trim();
 }
 
 const monthsConverter: ComplexAttributeConverter<1 | 2> = {
@@ -366,6 +334,8 @@ export interface LyraDateInputEventMap {
   'lr-hide': CustomEvent<null>;
   'lr-after-hide': CustomEvent<null>;
   'lr-clear': CustomEvent<null>;
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -400,6 +370,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * its local error and hint guidance, and follow target replacement, reconnect, and adoption.
  *
  * @customElement lr-date-input
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event {InputEvent} input - Fired on edits as a bubbling, composed, non-cancelable native event.
  * @event {Event} change - Fired on committed date transitions as a bubbling, composed,
  *   non-cancelable native event.
@@ -745,8 +717,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private inputRelayedSinceCommit = false;
 
   private cleanupFn?: DeferredOperationHandle;
-  private pointerListenerDocument?: Document;
-  private pointerListener?: (event: PointerEvent) => void;
+  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
   private visibilityListenerDocument?: Document;
   private visibilityListener?: () => void;
   private overlayHandle?: OverlayHandle;
@@ -762,10 +733,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  positioned the popup, one render after `popupHidden` clears. */
   @state() private popupPositioned = false;
   private transitionToken = 0;
-  private transitionWaiters = new Map<
-    'lr-after-show' | 'lr-after-hide',
-    Set<() => void>
-  >();
+  private readonly transitionWaiters = new PopupTransitionWaiters<'lr-after-show' | 'lr-after-hide'>();
   private interactionListeners = new Map<string, EventListener>();
   private daySlotObserver?: MutationObserver;
   private disabledDateKeysCache?: [unknown, ReadonlySet<string>];
@@ -826,11 +794,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // `form-control-label` too: the required-asterisk `::after` attaches to
   // that box, so leaving it always-visible orphans a stray ' *' when no
   // `label` is set.
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasStartSlot = false;
-  @state() private hasEndSlot = false;
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasStartSlot(): boolean { return this.slotPresence.has('start'); }
+  private get hasEndSlot(): boolean { return this.slotPresence.has('end'); }
   @state() private validityRevision = 0;
 
   private _mode: 'single' | 'range' = 'single';
@@ -1352,23 +1321,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      this.hasHintSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'hint'
-      );
-      this.hasErrorSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'error'
-      );
-      this.hasLabelSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'label'
-      );
-      this.hasStartSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'start'
-      );
-      this.hasEndSlot = Array.from(this.children ?? []).some(
-        (el) => el.getAttribute('slot') === 'end'
-      );
-    }
     if (changed.has('open')) {
       if (this.open && this.isConnected) {
         this.bindDocumentPointer();
@@ -1392,8 +1344,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       return Promise.resolve();
     const request = this.emit('lr-show', null, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
-    this.resolveTransitionWaiters('lr-after-hide');
-    const settled = this.waitForTransition('lr-after-show');
+    this.transitionWaiters.resolve('lr-after-hide');
+    const settled = this.transitionWaiters.wait('lr-after-show');
     this.open = true;
     void this.settleTransition('lr-after-show');
     return settled;
@@ -1403,8 +1355,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (!this.open) return Promise.resolve();
     const request = this.emit('lr-hide', null, { cancelable: !this.forcingClose });
     if (request.defaultPrevented) return Promise.resolve();
-    this.resolveTransitionWaiters('lr-after-show');
-    const settled = this.waitForTransition('lr-after-hide');
+    this.transitionWaiters.resolve('lr-after-show');
+    const settled = this.transitionWaiters.wait('lr-after-hide');
     this.restorePopupFocusOnClose ||= restoreFocus;
     this.open = false;
     void this.settleTransition('lr-after-hide');
@@ -1425,38 +1377,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   private bindDocumentPointer(): void {
-    if (!this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (this.pointerListenerDocument === ownerDocument && this.pointerListener)
-      return;
-    this.unbindDocumentPointer();
-    const listener = (event: PointerEvent): void => {
-      if (
-        this.pointerListener !== listener ||
-        this.pointerListenerDocument !== ownerDocument ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onDocPointer(event);
-    };
-    this.pointerListenerDocument = ownerDocument;
-    this.pointerListener = listener;
-    // Capture phase: an outside stopPropagation() must not keep the calendar open.
-    ownerDocument.addEventListener('pointerdown', listener, true);
+    if (this.isConnected) this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener(
-        'pointerdown',
-        this.pointerListener,
-        true
-      );
-    }
-    this.pointerListenerDocument = undefined;
-    this.pointerListener = undefined;
+    this.pointer.unbind();
   }
 
   private reconnectOpenPopup(): void {
@@ -1498,60 +1423,26 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     event: 'lr-after-show' | 'lr-after-hide'
   ): Promise<void> {
     const token = ++this.transitionToken;
-    await this.updateComplete;
-    if (this.transitionToken !== token) return;
-    if (event === 'lr-after-show') {
-      const positioned = await waitForDeferredPlacement(() => this.cleanupFn);
-      if (this.transitionToken !== token || !this.open) return;
-      if (!positioned) {
-        this.resolveTransitionWaiters('lr-after-show');
-        this.open = false;
-        return;
-      }
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    if (this.isConnected) {
-      const view = this.ownerDocument.defaultView;
-      if (view)
-        await new Promise<void>((resolve) =>
-          view.requestAnimationFrame(() => resolve())
-        );
-      if (this.transitionToken !== token) return;
-      const popup = this.renderRoot.querySelector('[part="popup"]');
-      const animations = popup?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(
-        animations.map((animation) => animation.finished.catch(() => undefined))
-      );
-      if (this.transitionToken !== token) return;
-    }
-    if (event === 'lr-after-hide') {
-      this.popupHidden = true;
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    this.emit(event);
-    this.resolveTransitionWaiters(event);
-  }
-
-  private waitForTransition(
-    event: 'lr-after-show' | 'lr-after-hide'
-  ): Promise<void> {
-    return new Promise<void>((resolve) => {
-      const waiters =
-        this.transitionWaiters.get(event) ?? new Set<() => void>();
-      waiters.add(resolve);
-      this.transitionWaiters.set(event, waiters);
+    await settlePopupTransition({
+      host: this,
+      popup: () => this.renderRoot.querySelector('[part="popup"]'),
+      isCurrent: () => this.transitionToken === token,
+      waitForPosition: event === 'lr-after-show' ? async () => {
+        const positioned = await waitForDeferredPlacement(() => this.cleanupFn);
+        if (this.transitionToken !== token || !this.open) return false;
+        if (!positioned) {
+          this.transitionWaiters.resolve('lr-after-show');
+          this.open = false;
+          return false;
+        }
+        return true;
+      } : undefined,
+      conceal: event === 'lr-after-hide' ? () => { this.popupHidden = true; } : undefined,
+      onSettled: () => {
+        this.emit(event);
+        this.transitionWaiters.resolve(event);
+      },
     });
-  }
-
-  private resolveTransitionWaiters(
-    event: 'lr-after-show' | 'lr-after-hide'
-  ): void {
-    const waiters = this.transitionWaiters.get(event);
-    if (!waiters) return;
-    this.transitionWaiters.delete(event);
-    for (const resolve of waiters) resolve();
   }
 
   override connectedCallback(): void {
@@ -1606,7 +1497,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.value = '';
     this.inputRelayedSinceCommit = false;
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
+    this.emit('lr-input', { value: '' });
     dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { value: '' });
     this.emit('lr-clear');
   }
 
@@ -1721,8 +1614,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.unbindDocumentPointer();
     this.disconnectValidatorAttributeObserver();
     this.restorePopupFocusOnClose = false;
-    this.resolveTransitionWaiters('lr-after-show');
-    this.resolveTransitionWaiters('lr-after-hide');
+    this.transitionWaiters.resolve('lr-after-show');
+    this.transitionWaiters.resolve('lr-after-hide');
     for (const [name, listener] of this.interactionListeners)
       this.removeEventListener(name, listener);
     this.interactionListeners.clear();
@@ -1950,11 +1843,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.enterCommittedText = null;
     const committed = this.applyTypedText(raw);
     if (committed) {
+      const value = this.value;
       if (!this.inputRelayedSinceCommit) {
         dispatchNativeInputEvent(this, { inputType: 'insertReplacementText' });
+        this.emit('lr-input', { value });
       }
       this.inputRelayedSinceCommit = false;
       relayNativeEvent(this, e);
+      this.emit('lr-change', { value });
     } else {
       this.inputRelayedSinceCommit = false;
     }
@@ -1964,14 +1860,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     event.stopPropagation();
     if (this.liveDisabled) return;
     this.inputRelayedSinceCommit = true;
+    const value = this.value;
     relayNativeEvent(this, event);
+    this.emit('lr-input', { value });
   };
 
   /** Three digit groups in the locale's day/month/year order; a 4-digit first group is the year. */
   private numericDate(groups: readonly string[]): Date | null {
     if (groups.length !== 3) return null;
     const order: DateField[] =
-      groups[0]!.length === 4 ? ['year', 'month', 'day'] : localeDateOrder(this.effectiveLocale);
+      groups[0]!.length === 4
+        ? ['year', 'month', 'day']
+        : localeDateOrder(this.effectiveLocale, 'gregory');
     const fields: DateFields = {};
     order.forEach((type, index) => {
       fields[type] = groups[index];
@@ -2088,13 +1988,16 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (input && input.value !== this.displayText) {
       const raw = input.value;
       if (this.applyTypedText(raw)) {
+        const value = this.value;
         if (!this.inputRelayedSinceCommit) {
           dispatchNativeInputEvent(this, {
             inputType: 'insertReplacementText',
           });
+          this.emit('lr-input', { value });
         }
         this.inputRelayedSinceCommit = false;
         dispatchNativeEvent(this, 'change');
+        this.emit('lr-change', { value });
       } else {
         this.inputRelayedSinceCommit = false;
       }
@@ -2165,11 +2068,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   ): void {
     const input = this.inputElement;
     if (!input) return;
-    if (start === undefined || end === undefined) {
-      input.setRangeText(replacement);
-    } else {
-      input.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(input, replacement, start, end, selectMode);
     // Mirrors onInputChange's parse-or-revert contract for a programmatic
     // edit of the same underlying text -- keeps value/validity in sync
     // without emitting input/change (programmatic assignments stay silent).
@@ -2202,36 +2101,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.syncCustomStates();
   }
 
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
   // The nested picker's `input` event isn't wired anywhere else, so without
   // this listener it bubbles+composes straight through this shadow boundary
   // (LyraElement.emit always dispatches bubbles:true, composed:true) and
@@ -2246,7 +2115,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // committing, and clears it on a hand-pick, so both halves of the contract carry across.
     this._appliedPreset = picker.appliedPreset;
     this.inputRelayedSinceCommit = false;
+    const value = this.value;
     relayNativeEvent(this, e);
+    this.emit('lr-input', { value });
   };
 
   private onPickerChange = (e: Event): void => {
@@ -2255,7 +2126,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const picker = e.target as LyraDatePicker;
     this.value = picker.value;
     this._appliedPreset = picker.appliedPreset;
+    const value = this.value;
     relayNativeEvent(this, e);
+    this.emit('lr-change', { value });
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right
     // moment to close, in either mode.
@@ -2289,13 +2162,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
               <span part="label"
                 >${this.label}<slot
                   name="label"
-                  @slotchange=${this.onLabelSlotChange}
                 ></slot
               ></span>
             </label>
             <div part="input-wrapper">
               <span part="start" ?hidden=${!this.hasStartSlot}>
-                <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+                <slot name="start"></slot>
               </span>
               <span part="form-control-input">
                 <span part="segment">
@@ -2349,7 +2221,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                   </button>`
                 : nothing}
               <span part="end" ?hidden=${!this.hasEndSlot}>
-                <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+                <slot name="end"></slot>
               </span>
               <button
                 part="expand-button"
@@ -2407,6 +2279,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
                 .presets=${this.presets}
                 exportparts="presets, preset-button"
+                @lr-input=${(event: Event) => event.stopPropagation()}
+                @lr-change=${(event: Event) => event.stopPropagation()}
                 @input=${this.onPickerInput}
                 @change=${this.onPickerChange}
                 @lr-focus-day=${(event: Event) => event.stopPropagation()}
@@ -2425,13 +2299,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             <div id="date-input-error" part="error" ?hidden=${!hasError}>
               ${this.errorText}<slot
                 name="error"
-                @slotchange=${this.onErrorSlotChange}
               ></slot>
             </div>
             <div id="date-input-hint" part="hint" ?hidden=${!hasHint}>
               ${this.hint}<slot
                 name="hint"
-                @slotchange=${this.onHintSlotChange}
               ></slot>
             </div>
           </div>

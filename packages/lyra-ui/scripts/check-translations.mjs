@@ -33,12 +33,13 @@ import { isMainModule } from './is-main-module.mjs';
 // declared entry onward every catalog must be declared or this fails.
 
 import { existsSync } from 'node:fs';
+import { sideEffectsCover } from './side-effects-patterns.mjs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSync } from 'oxc-parser';
+import { parseProgram, visitAst } from './lib/ast.mjs';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
-import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
+import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
 import { readTranslationReviews } from './translation-review-source.mjs';
 
@@ -54,27 +55,7 @@ const upstreamTagsPath = join(packageRoot, 'scripts/fixtures/upstream-tags.json'
 /** The complete CLDR plural category set; a catalog may not invent a seventh. */
 const PLURAL_CATEGORIES = ['zero', 'one', 'two', 'few', 'many', 'other'];
 
-function parseProgram(file, source) {
-  const result = parseSync(file, source);
-  if (result.errors.length > 0) {
-    const details = result.errors.map((error) => error.message ?? String(error)).join('\n');
-    throw new SyntaxError(`${file} could not be parsed:\n${details}`);
-  }
-  return result.program;
-}
 
-function visitAst(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  if (typeof node.type === 'string') visitor(node);
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'start' || key === 'end') continue;
-    if (Array.isArray(value)) {
-      for (const child of value) visitAst(child, visitor);
-    } else if (value && typeof value === 'object') {
-      visitAst(value, visitor);
-    }
-  }
-}
 
 function propertyName(property) {
   if (property.type !== 'Property' || property.computed) return undefined;
@@ -198,6 +179,23 @@ export function readTranslationCatalogModule(source, file) {
   validateMeta(file, registration.meta, errors);
   if (errors.length) throw new Error(errors.join('\n'));
   return { registration, entries, imports: bareImportSpecifiers(program) };
+}
+
+/** Authored regional differences live outside `src` so published pt-PT slices stay independent.
+ * The generator resolves this literal map against pt-BR before emitting ordinary full modules. */
+export async function readPortugueseRegionalOverrides(packageDir) {
+  const file = 'scripts/fixtures/pt-PT-overrides.ts';
+  const source = await readFile(join(packageDir, file), 'utf8');
+  const program = parseProgram(file, source);
+  const object = namedObjectLiteral(program, 'strings');
+  if (!object) throw new Error(`${file}: strings must be a literal object`);
+  const errors = [];
+  const entries = messageEntries(object, file, errors);
+  if (errors.length) throw new Error(errors.join('\n'));
+  const values = new Map(entries);
+  const raw = catalogEntries(source, file, 'strings');
+  if (values.size !== raw.size) throw new Error(`${file}: duplicate or invalid message key`);
+  return { values, raw };
 }
 
 /**
@@ -386,6 +384,31 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     return entries;
   }
   for (const module of modules) resolve(module.locale);
+
+  if (catalogs.has('pt-PT')) {
+    if (modulesByLocale.get('pt-PT')?.parent) {
+      errors.push('pt-PT: published family slices must be standalone full catalogs');
+    }
+    const base = new Map(catalogs.get('pt-BR') ?? []);
+    if (base.size === 0) errors.push('pt-PT: missing pt-BR authoring base');
+    else {
+      const { values } = await readPortugueseRegionalOverrides(packageDir);
+      validateOwnOrder([...values], 'pt-PT overrides');
+      for (const [key, value] of values) {
+        if (!base.has(key)) errors.push(`pt-PT overrides: unknown base message ${key}`);
+        else if (JSON.stringify(base.get(key)) === JSON.stringify(value)) {
+          errors.push(`pt-PT overrides: ${key} duplicates its base value`);
+        }
+      }
+      const expected = new Map([...base, ...values]);
+      const actual = new Map(catalogs.get('pt-PT'));
+      for (const key of englishOrder) {
+        if (JSON.stringify(actual.get(key)) !== JSON.stringify(expected.get(key))) {
+          errors.push(`pt-PT: generated message ${key} differs from its authored regional override`);
+        }
+      }
+    }
+  }
 
   const pseudoRoot = join(translationsRoot, 'pseudo');
   const pseudoModules = [];
@@ -725,8 +748,8 @@ export async function runTranslationCatalogCheck() {
       const distEntry = `./dist/translations/${base}.js`;
       requiredSideEffects.push(srcEntry, distEntry);
       if (anyCatalogDeclared) {
-        if (!declaredSideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-        if (!declaredSideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+        if (!sideEffectsCover(declaredSideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
+        if (!sideEffectsCover(declaredSideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
       }
       summaries.push(`${tag} (${entries.length} keys, plural categories: ${categories.join('/')})`);
       continue;
@@ -805,8 +828,8 @@ export async function runTranslationCatalogCheck() {
       const distEntry = `./dist/translations/${base}/${sliceName}.js`;
       requiredSideEffects.push(srcEntry, distEntry);
       if (anyCatalogDeclared) {
-        if (!declaredSideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-        if (!declaredSideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+        if (!sideEffectsCover(declaredSideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
+        if (!sideEffectsCover(declaredSideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
       }
     }
     if (!tag) continue; // every slice already reported its own error above
@@ -836,10 +859,10 @@ export async function runTranslationCatalogCheck() {
     const distAggregateEntry = `./dist/translations/${base}.js`;
     requiredSideEffects.push(srcAggregateEntry, distAggregateEntry);
     if (anyCatalogDeclared) {
-      if (!declaredSideEffects.has(srcAggregateEntry)) {
+      if (!sideEffectsCover(declaredSideEffects, srcAggregateEntry)) {
         errors.push(`package.json#sideEffects is missing "${srcAggregateEntry}"`);
       }
-      if (!declaredSideEffects.has(distAggregateEntry)) {
+      if (!sideEffectsCover(declaredSideEffects, distAggregateEntry)) {
         errors.push(`package.json#sideEffects is missing "${distAggregateEntry}"`);
       }
     }

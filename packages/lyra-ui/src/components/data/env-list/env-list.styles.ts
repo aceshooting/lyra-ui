@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -69,8 +70,7 @@ export const styles = css`
   }
   [part='reveal-button']:focus-visible,
   [part='copy-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='reveal-button'][data-revealed] {
     background: var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet));

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
@@ -20,20 +21,20 @@ export const styles = css`
      fill to a dark surface would otherwise flash the stock light --lr-color-surface-raised on
      hover, so the resting hook could not be used coherently on its own. The fallback is the
      pre-existing token, so an unretuned panel paints exactly as before. */
-  [part='run-trigger']:hover, [part='cancel']:hover, [part='retry']:hover {
+  [part='run-trigger']:hover {
     background: var(--lr-subagent-panel-hover-bg, var(--lr-color-surface-raised));
   }
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour -- a distinctly deeper step in both light and dark themes. It
      mixes from the hover hook, not the raw token, so a retuned hover keeps its deeper press. */
-  [part='run-trigger']:active, [part='cancel']:active, [part='retry']:active {
+  [part='run-trigger']:active {
     background: color-mix(
       in oklab,
       var(--lr-subagent-panel-hover-bg, var(--lr-color-surface-raised)),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part='run-trigger']:focus-visible, [part='cancel']:focus-visible, [part='retry']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
+  [part='run-trigger']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='label'], [part='task'], [part='model'] { min-inline-size: 0; overflow-wrap: break-word; }
   [part='task'], [part='model'] { grid-column: 1 / -1; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='progress'] {
@@ -49,7 +50,12 @@ export const styles = css`
     background: var(--lr-subagent-panel-progress-fill, var(--lr-color-brand));
   }
   [part='actions'] { display: flex; }
-  [part='cancel'], [part='retry'] { min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size); padding: var(--lr-space-xs); border: 0; border-inline-start: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); background: var(--lr-subagent-panel-bg, var(--lr-color-surface)); color: var(--lr-color-text); font: inherit; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
+  [part='cancel'], [part='retry'] {
+    --_lr-agent-action-fill: var(--lr-subagent-panel-bg, var(--lr-color-surface));
+    --_lr-agent-action-hover-base: var(--lr-subagent-panel-hover-bg, var(--lr-color-surface-raised));
+    --_lr-agent-action-separator-color: var(--lr-subagent-panel-border-color, var(--lr-color-border));
+    --_lr-agent-action-padding-inline: var(--lr-space-xs);
+  }
   /* Density escape -- same convention as lr-task-list/lr-stack-trace/lr-thinking-panel/
      lr-terminal's dense size tier. Values sit behind inline var() fallbacks, not :host declarations that
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every
@@ -75,7 +81,7 @@ export const styles = css`
      lr-terminal's dense size tier. Values sit behind inline var() fallbacks, not :host declarations that
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every
      embedded panel at once. */
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-s)); }
     [part='run-trigger'] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     [part='status'] { min-inline-size: 0; max-inline-size: 100%; }

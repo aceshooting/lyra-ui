@@ -5,6 +5,7 @@ import type { LyraAppRailItem } from "./app-rail-item.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { resolvedInShadowUnshrunk as resolvedInShadow } from '../../../../test/shadow-style.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -665,27 +666,6 @@ describe("tooltip", () => {
 });
 
 describe("current-state cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live (they are declared on `:host`, so a light-DOM probe would
-   *  see none of them). Used to assert the unset defaults byte-for-byte against the tokens they fall
-   *  back to. */
-  function resolvedInShadow(
-    el: LyraAppRailItem,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
-    // which makes anything appended to this shadow root a flex item -- including this probe. Left
-    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
-    probe.style.flexShrink = "0";
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   async function themed(style: string): Promise<LyraAppRailItem> {
     const wrapper = (await fixture(
       html`<div style=${style}>
@@ -804,23 +784,6 @@ describe('active (removed 16.0.0; no longer an alias for current)', () => {
 });
 
 describe('current-indicator part', () => {
-  function resolvedInShadow(
-    el: LyraAppRailItem,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
-    // which makes anything appended to this shadow root a flex item -- including this probe. Left
-    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
-    probe.style.flexShrink = '0';
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   it('is absent when the item is not current', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>`
@@ -1025,23 +988,6 @@ describe('current-ring token', () => {
 });
 
 describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
-  function resolvedInShadow(
-    el: LyraAppRailItem,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    // :host is a flex row (so [part="meta"]/[part="end"] can sit beside the item's own control),
-    // which makes anything appended to this shadow root a flex item -- including this probe. Left
-    // shrinkable it reports the squeezed width rather than the token it was asked to resolve.
-    probe.style.flexShrink = '0';
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   it('renders min-block-size/padding/gap/icon-size byte-identical to their prior hard-wired values when unset', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home"

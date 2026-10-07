@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -57,8 +58,7 @@ export const styles = css`
     align-items: center;
     gap: var(--segment-gap, var(--lr-space-xs));
     inline-size: fit-content;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     box-sizing: border-box;
     overflow-inline: auto;

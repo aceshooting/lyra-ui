@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './schema-viewer.js';
 import type {
@@ -17,15 +18,6 @@ it('registers as lr-json-schema-viewer, freeing the generic lr-schema-viewer tag
   expect(el.constructor.name).to.equal('LyraJsonSchemaViewer');
   expect(customElements.get('lr-schema-viewer')).to.be.undefined;
 });
-
-function sinkTexts(): string[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>(
-      `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`
-    ),
-    (node) => node.textContent ?? ''
-  );
-}
 
 const schema = {
   type: 'object',

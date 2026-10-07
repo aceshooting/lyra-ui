@@ -1,17 +1,23 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
-  type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { chevronIcon, closeIcon } from '../../../internal/icons.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import {
+  archiveIcon,
+  chevronIcon,
+  closeIcon,
+  pinIcon,
+  trashIcon,
+} from '../../../internal/icons.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type {
   LyraVirtualList,
@@ -82,8 +88,8 @@ export interface LyraThreadListEventMap {
   /** The built-in `[part='retry-button']` was activated, only rendered while `error` is set.
    *  Cancelable: the default action clears `error`; `preventDefault()` leaves it set instead. */
   'lr-retry-request': CustomEvent<null>;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 
 export type ThreadBucketKey =
@@ -117,45 +123,6 @@ interface ThreadListModel {
   visible: readonly LyraChatThread[];
   items: ThreadListItem[];
   groups?: LyraVirtualListGroup[];
-}
-
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-// Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
-// chevronIcon()/closeIcon()/etc.) without adding pin/archive/trash glyphs to that module -- so
-// these one-off icons still read as part of the same visual language as the rest of the library's
-// inline icons. Same approach lr-conversation-item's own local pencil glyph takes for the
-// identical reason.
-function pinIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <path d="M12 17v5"></path>
-      <path d="M9 3h6l1 6 3 3v2H5v-2l3-3Z"></path>
-    </svg>
-  `;
-}
-
-function archiveIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <rect x="3" y="4" width="18" height="4" rx="1"></rect>
-      <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
-      <line x1="10" y1="13" x2="14" y2="13"></line>
-    </svg>
-  `;
-}
-
-function trashIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <path d="M4 7h16"></path>
-      <path d="M10 11v6"></path>
-      <path d="M14 11v6"></path>
-      <path d="M6 7l1 14h10l1-14"></path>
-      <path d="M9 7V4h6v3"></path>
-    </svg>
-  `;
 }
 
 function defaultFilter(
@@ -336,10 +303,10 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   `collapsedGroupIds`. A host that already listens here and reassigns `collapsedGroupIds` itself
  *   keeps working unchanged: this component's own write, when it happens, always precedes that
  *   listener in the same synchronous event dispatch, so the host's own assignment simply wins last.
- * @event blur - `searchable`: re-dispatched from the internal search `<input>`'s own `blur` --
+ * @event {FocusEvent} blur - `searchable`: re-dispatched from the internal search `<input>`'s own `blur` --
  *   bubbling and composed (unlike the native event, which is neither), so a listener above the
  *   shadow boundary can observe it.
- * @event focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
+ * @event {FocusEvent} focus - `searchable`: re-dispatched from the internal search `<input>`'s own `focus`,
  *   for the same reason as `blur`.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  *   The built-in `[part='retry-button']` was activated, only rendered while
@@ -479,8 +446,17 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
+  protected static override readonly immutableSourceCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
    *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
@@ -1045,12 +1021,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // boundary, so a host listening for focus/blur on the custom element itself is never notified
   // without this bridge -- same convention as `<lr-textarea>`'s/`<lr-chat-composer>`'s own
   // onFocus/onBlur.
-  private onSearchFocus = (): void => {
-    this.emit('focus', null);
+  private onSearchFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
-  private onSearchBlur = (): void => {
-    this.emit('blur', null);
+  private onSearchBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   /** The rendered `<lr-conversation-item>` for one thread's `conversationId` -- a data-mode
@@ -1453,7 +1429,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
             >`
           : nothing}
         ${this.renderExcerpt
-          ? html`<span slot="excerpt" part="row-excerpt" inert
+          ? html`<span slot="excerpt" part="row-excerpt" data-lr-virtual-list-mark inert
               >${this.renderExcerpt(source)}</span
             >`
           : nothing}

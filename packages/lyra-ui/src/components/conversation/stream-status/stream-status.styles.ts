@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -123,8 +124,7 @@ export const styles = css`
   [part='resume'] {
     --_lr-stream-status-resume-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
     --_lr-stream-status-resume-active-bg: color-mix(in oklab, var(--_lr-stream-status-resume-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

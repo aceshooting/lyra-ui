@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { sendKeys } from '@web/test-runner-commands';
 import {
@@ -1115,21 +1116,6 @@ it("defines distinct active-plus-pressed and forced-color current-row paint", ()
 });
 
 describe("active-command cssprop", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
-   *  the token it falls back to. */
-  function resolvedInShadow(
-    el: LyraCommandPalette,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themed(style: string): Promise<LyraCommandPalette> {
     const wrapper = (await fixture(html`
@@ -1675,20 +1661,6 @@ it("leaves the resting (non-highlighted) command row background transparent (uns
 });
 
 describe("pressed feedback on the keyboard-highlighted row", () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(
-    el: LyraCommandPalette,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   /** Each native state transition retains the existing input-arrival budget. */
   const POINTER_STATE_TIMEOUT = 15_000;
@@ -1982,7 +1954,6 @@ describe('RTL', () => {
   });
 });
 
-
 it('ignores a removed hotkey and key-less autofill keydown events', async () => {
   const el = await fixture<LyraCommandPalette>(html`<lr-command-palette hotkey="mod+k"></lr-command-palette>`);
   const errors: string[] = []; const record = (event: ErrorEvent) => errors.push(event.message);
@@ -2089,6 +2060,34 @@ it('announces when a query matches no command', async () => {
     () => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent?.includes('No matching commands.') === true,
     'the empty result was never announced',
   );
+  el.close();
+});
+
+it('announces localized positive result counts once per changed result, including formatted counts', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette lang="en-US"></lr-command-palette>`);
+  el.strings = { commandPaletteResultCount: { one: '{count} action', other: '{count} actions' } };
+  el.commands = [
+    { commandId: 'a', label: 'Item A' },
+    { commandId: 'b', label: 'Item B' },
+  ];
+  const priorAnnouncements = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.childElementCount ?? 0;
+  el.openPalette();
+  await el.updateComplete;
+  expect(document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.childElementCount ?? 0).to.equal(priorAnnouncements);
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  input.value = 'item';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  expect(sink.lastElementChild?.textContent).to.equal('2 actions');
+  const firstCount = sink.children.length;
+  input.value = 'ite';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  expect(sink.children.length).to.equal(firstCount);
+  el.commands = Array.from({ length: 1001 }, (_, index) => ({ commandId: `item-${index}`, label: `Item ${index}` }));
+  await el.updateComplete;
+  expect(sink.lastElementChild?.textContent).to.equal('1,001 actions');
   el.close();
 });
 

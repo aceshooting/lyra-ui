@@ -1,15 +1,17 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { GIT_STATUSES, type GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -45,6 +47,7 @@ const GIT_STATUS_LETTER: Partial<Record<GitStatus, string>> = {
 };
 
 const MAX_DATE_EPOCH_MS = 8_640_000_000_000_000;
+const MAX_RENDERED_FILES = 500;
 
 /** The letters above are terse visual shorthand with no meaning to a screen reader, so each one
  *  also carries a localized expansion as its accessible name. Reuses `<lr-file-tree>`'s shared
@@ -109,6 +112,7 @@ export interface LyraCommitCardEventMap {
  *   accessible name, so the bare letter never reaches assistive tech on its own.
  * @csspart file-additions - A file row's additions count.
  * @csspart file-deletions - A file row's deletions count.
+ * @csspart limit - Visible notice when the expanded file list exceeds the render cap.
  * @csspart copy-button - The hash copy button, not rendered while `without-copy-button`.
  * @csspart actions - The `actions` slot wrapper.
  * @cssprop [--lr-commit-card-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
@@ -156,7 +160,23 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
+
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const truncated = this.filesExpanded && this.normalizedFiles.length > MAX_RENDERED_FILES;
+    if (this.limitAnnouncementInitialized && truncated && !this.previouslyTruncated) {
+      this.limitAnnouncements.announcePolite(this.localize('commitCardFilesLimit', undefined, {
+        count: this.formatCount(MAX_RENDERED_FILES),
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = truncated;
+  }
 
   @property() hash = '';
   /** Commit subject and optional body. Removing the attribute clears both displayed sections. */
@@ -208,6 +228,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.limitAnnouncements.adopted();
     // Adoption can occur while already disconnected, so retire the exact window that owns the
     // timer even when no further disconnected callback is delivered.
     this.resetCopyFeedback();
@@ -353,6 +374,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
           ${!this.withoutCopyButton && this.hash
             ? html`<button
                 part="copy-button"
+                data-agent-action="neutral"
                 type="button"
                 data-copy-status=${this.copyStatus}
                 aria-label=${this.copyStatus === 'success'
@@ -384,7 +406,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                   : this.localize('commitCardShowFiles', undefined, { count: this.formatCount(files.length) })}
               </button>
               ${this.filesExpanded
-                ? files.map((f) => {
+                ? files.slice(0, MAX_RENDERED_FILES).map((f) => {
                     const additions = finiteCount(f.additions);
                     const deletions = finiteCount(f.deletions);
                     return html`
@@ -408,6 +430,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                       </button>
                     `;
                   })
+                : nothing}
+              ${this.filesExpanded && files.length > MAX_RENDERED_FILES
+                ? html`<p part="limit" role="note">${this.localize('commitCardFilesLimit', undefined, {
+                    count: this.formatCount(MAX_RENDERED_FILES),
+                  })}</p>`
                 : nothing}
             `
           : nothing}

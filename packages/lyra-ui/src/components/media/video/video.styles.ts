@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -90,8 +92,7 @@ export const styles = css`
 
   [part='poster-play-button'] {
     position: relative;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     display: inline-grid;
     place-items: center;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -197,8 +198,7 @@ export const styles = css`
 
   [part='controls'] button,
   [part='controls'] select {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid transparent;
     border-radius: var(--lr-radius-xs);
     background: transparent;
@@ -368,7 +368,7 @@ export const styles = css`
     pointer-events: none;
   }
 
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     :host(:not([controls='none'])) [part~='video-wrapper'] {
       aspect-ratio: auto;
       display: grid;

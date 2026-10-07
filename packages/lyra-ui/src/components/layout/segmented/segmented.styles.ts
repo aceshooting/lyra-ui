@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -114,8 +115,7 @@ export const styles = css`
     );
   }
   [part="segment"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Inline var() fallbacks, not :host-declared properties: :host is re-declared per size tier and
      would shadow any value a consumer sets on an ancestor, which is exactly what these hooks

@@ -31,9 +31,12 @@ export function prepareSourceContractBaseline(census, baseline, request) {
     assert.ok(!actual.has(key), `Relocated source-contract owner remains live ${key}`);
     assert.ok(!documented.has(targetKey) && !legacy.has(targetKey), `Relocation target is already enrolled ${targetKey}`);
     assert.equal(owner.fingerprint, relocation.expectedFingerprint, `Stale source-contract fingerprint preimage ${key}`);
-    assert.equal(contract.fingerprint, owner.fingerprint, `Relocation changed source-contract signature ${key}`);
+    assert.equal(contract.fingerprint, relocation.expectedTargetFingerprint ?? owner.fingerprint,
+      relocation.expectedTargetFingerprint === undefined ? `Relocation changed source-contract signature ${key}`
+        : `Reviewed relocation target fingerprint changed ${key}`);
     assert.deepEqual(owner.routes.slice().sort(), contract.routes, `Relocation changed source-contract routes ${key}`);
     owner.module = contract.module;
+    owner.fingerprint = contract.fingerprint;
     documented.delete(key);
     documented.set(targetKey, owner);
   }

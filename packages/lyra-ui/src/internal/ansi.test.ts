@@ -11,6 +11,23 @@ function flat(segments: AnsiSegment[]): { text: string; fg?: string; bg?: string
 }
 
 describe('createAnsiParser', () => {
+  it('keeps supported erase-in-line controls ordered across split CSI chunks', () => {
+    const parser = createAnsiParser();
+    expect(parser.push('before\x1b[').map((segment) => segment.text)).to.deep.equal(['before']);
+    const segments = parser.push('Kafter\x1b[1Kmiddle\x1b[2Kend\x1b[3Kkept');
+    expect(segments.map(({ text, eraseLine }) => ({ text, eraseLine }))).to.deep.equal([
+      { text: '', eraseLine: 0 },
+      { text: 'after', eraseLine: undefined },
+      { text: '', eraseLine: 1 },
+      { text: 'middle', eraseLine: undefined },
+      { text: '', eraseLine: 2 },
+      { text: 'end', eraseLine: undefined },
+      { text: 'kept', eraseLine: undefined },
+    ]);
+    expect(parser.push('\x1b[?2K\x1b[1;2K\x1b[999999999999999999999Ksafe')
+      .map((segment) => segment.text).join('')).to.equal('safe');
+  });
+
   it('passes plain text through unchanged with default (unstyled) styles', () => {
     const parser = createAnsiParser();
     const segments = parser.push('hello world');
@@ -80,7 +97,7 @@ describe('createAnsiParser', () => {
 
   it('strips a non-SGR CSI sequence (cursor move) without emitting it as text', () => {
     const parser = createAnsiParser();
-    const segments = parser.push('before\x1b[2Kafter');
+    const segments = parser.push('before\x1b[2Aafter');
     expect(segments.map((s) => s.text).join('')).to.equal('beforeafter');
   });
 

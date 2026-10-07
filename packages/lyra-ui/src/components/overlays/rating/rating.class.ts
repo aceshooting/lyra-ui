@@ -1,3 +1,5 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import {
   html,
   svg,
@@ -15,16 +17,13 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { clampSteppedValue } from '../../../internal/step-value.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import {
-  AnchoredValidityController,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import {
@@ -33,23 +32,18 @@ import {
   type LyraSizeStep,
 } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
-import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import {
-  EXTERNAL_LABEL_HOST_SEMANTICS,
   installFormControlLabelSupport,
+  EXTERNAL_LABEL_HOST_SEMANTICS,
   type ExternalLabelHostSemanticOperation,
 } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../../forms/form-validator.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
@@ -86,7 +80,9 @@ export type LyraRatingSymbolRenderer = (
 ) => unknown;
 
 export interface LyraRatingEventMap {
+  input: Event;
   change: Event;
+  'lr-input': CustomEvent<{ value: number }>;
   'lr-change': CustomEvent<{ value: number }>;
   'lr-activate': CustomEvent<{ value: number }>;
   'lr-hover': CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>;
@@ -137,6 +133,7 @@ function starSolid(): SVGTemplateResult {
  * Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
  *
  * @customElement lr-rating
+ * @event lr-input - Typed value edit notification; detail includes `value`.
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
@@ -298,7 +295,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   @state() private hovering = false;
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private _value = 0;
@@ -330,26 +327,12 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
 
   constructor() {
     super();
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init)
-    );
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like rating or blurring; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
-    // Shares the mixin's attach-or-degrade helper so both paths handle a missing *and* a throwing
-    // `attachInternals()` (SSR/test DOMs, partial polyfills) without breaking construction.
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(
-      this,
-      this.internals,
-      () => this[VALIDITY_ANCHOR]()
-    );
-    installCustomErrorProperty(
-      this,
-      () => this.validityController.customValidityMessage
-    );
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.internals.setFormValue('0');
     // Retain `focusout` as an interaction signal for delegated/synthetic integration flows. The
     // host's own native `blur` listener below marks real focus transitions directly. Registered
@@ -484,8 +467,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -510,6 +492,8 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // Reflected synchronously: `:disabled` and constraint-validation barring are both driven by
     // the live host attribute, which same-tick form APIs read.
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     if (this._disabled) this.resetHover();
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
@@ -550,15 +534,11 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   checkValidity(): boolean {
-    this.updateValidity();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.updateValidity());
   }
 
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.updateValidity();
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction here too. (A submission
@@ -622,7 +602,10 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   formDisabledCallback(fieldsetDisabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = fieldsetDisabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     if (fieldsetDisabled) this.resetHover();
     this.updateValidity();
     this.requestUpdate();
@@ -739,8 +722,9 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     const clamped = clampSteppedValue(next, 0, this.safeMax, this.safePrecision);
     if (clamped !== this.value) {
       this.value = clamped;
-      dispatchNativeEvent(this, 'change');
-      this.emit('lr-change', { value: this.value });
+      const detail = { value: this.value };
+      emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+      emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
     }
     // Every interactive commit reports, including the re-commit of the current rating that
     // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.

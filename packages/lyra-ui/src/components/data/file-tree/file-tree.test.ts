@@ -324,6 +324,22 @@ describe('lr-file-tree', () => {
     el.nodes = [{ path: 'a' }, { path: 'a' }];
     await el.updateComplete;
     expect(el.dataTruncated).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  });
+
+  it('shows a localized notice when the source listing exceeds its snapshot', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
+    el.nodes = Array.from({ length: 10_001 }, (_, index) => ({ path: `file-${index}` }));
+    await el.updateComplete;
+    expect(el.dataTruncated).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
+      'Only the first 10,000 items are shown.',
+    );
+    el.strings = { treeLimit: 'Showing {count} items only.' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
+      'Showing 10,000 items only.',
+    );
   });
 
   it('keeps the inner tree events inside the component', async () => {

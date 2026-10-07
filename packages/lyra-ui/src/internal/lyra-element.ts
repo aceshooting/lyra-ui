@@ -9,13 +9,22 @@ import { property } from 'lit/decorators.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
-import { warnUnknownAttributes } from './dev-mode-attribute-warning.js';
-import {
-  deprecatedAliasForAttribute,
-  syncDeprecatedAlias,
-  warnAuthoredAliasAttribute,
-  type LyraDeprecatedAliases,
-} from './deprecated-aliases.js';
+import { devWarnOnce, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
+import type { LyraDeprecatedAliases } from './deprecated-aliases.js';
+
+type DeprecatedAliasSyncHook = (host: LyraElement<any>, name: PropertyKey | undefined, oldValue: unknown) => void;
+type DeprecatedAliasAttributeHook = (host: LyraElement<any>, attribute: string) => (() => void) | undefined;
+let deprecatedAliasSyncHook: DeprecatedAliasSyncHook | undefined;
+let deprecatedAliasAttributeHook: DeprecatedAliasAttributeHook | undefined;
+
+/** @internal Installed only by classes that declare deprecated alias tables. */
+export function registerDeprecatedAliasSupport(
+  sync: DeprecatedAliasSyncHook,
+  attribute: DeprecatedAliasAttributeHook,
+): void {
+  deprecatedAliasSyncHook = sync;
+  deprecatedAliasAttributeHook = attribute;
+}
 
 // `LyraElement<any>`, not the generic-defaulted `LyraElement`: the hook is invoked from inside the
 // class's own constructor/attachInternals(), where `this` is `LyraElement<Events>` for whatever
@@ -270,6 +279,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   protected static readonly identityCollectionProperties: readonly PropertyKey[] =
     Object.freeze([]);
 
+  /** Identity collections whose documented updates require a new source collection. */
+  protected static readonly immutableSourceCollectionProperties: readonly PropertyKey[] =
+    Object.freeze([]);
+
   /** Exact opaque-object exceptions; unlike item-identity lists, no sequence claim is made. */
   protected static readonly identityCollectionObjectProperties: readonly PropertyKey[] =
     Object.freeze([]);
@@ -312,6 +325,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       ]),
     ];
     this.collectionSupport?.installProperties(this);
+    if (Object.hasOwn(this, 'deprecatedAliases') && this.deprecatedAliases && !deprecatedAliasSyncHook) {
+      devWarnOnce(`lyra-deprecated-alias-installer:${this.name}`,
+        `${this.name} declares deprecatedAliases; call installDeprecatedAliases() in a static block.`);
+    }
     return attributes;
   }
 
@@ -529,7 +546,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // Forward every argument: standard (TC39) decorators pass `useNewValue`/`newValue` because a
     // private `accessor` cannot be read back through `this[name]`.
     super.requestUpdate(...args);
-    syncDeprecatedAlias(this as unknown as Parameters<typeof syncDeprecatedAlias>[0], args[0], args[1]);
+    deprecatedAliasSyncHook?.(this, args[0], args[1]);
   }
 
   protected override performUpdate(): void {
@@ -564,10 +581,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       );
     if (directionHostAttribute)
       queueInheritedDirectionChange(this, name === 'slot');
-    const alias = oldValue !== value ? deprecatedAliasForAttribute(this, name) : undefined;
-    const aliasBefore = alias ? (this as unknown as Record<string, unknown>)[alias] : undefined;
+    const finishAliasWarning = oldValue !== value ? deprecatedAliasAttributeHook?.(this, name) : undefined;
     super.attributeChangedCallback(name, oldValue, value);
-    if (alias) warnAuthoredAliasAttribute(this, alias, aliasBefore);
+    finishAliasWarning?.();
     if (
       oldValue !== value &&
       REACTIVE_HOST_ATTRIBUTES.includes(

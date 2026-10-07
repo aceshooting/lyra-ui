@@ -6,8 +6,9 @@ import { join } from 'node:path';
 // overload, declaration inference expands the source-only overload into every adopting class's
 // private `*_base` declaration. Rebuild that compiler-generated base type with one exact construct
 // signature: the mapped static side keeps public statics, while ConstructorParameters/InstanceType
-// preserve the caller's constructor and instance surface without publishing `any`.
-const TARGET_BASE = /declare const ([A-Za-z_$][\w$]*): typeof ([A-Za-z_$][\w$]*) & \(new \(\.\.\.args: any\[\]\) => (import\("[^"]+"\)\.(?:LyraAnchorTarget|LyraTextViewerTarget) & \{\s*renderAnchorLiveRegion\(\): unknown;\s*\})\);/gu;
+// preserve the caller's constructor and instance surface without publishing `any`. Named protected
+// hook intersections are retained verbatim so overrides and super calls keep their visibility.
+const TARGET_BASE = /declare const ([A-Za-z_$][\w$]*): typeof ([A-Za-z_$][\w$]*) & \(new \(\.\.\.args: any\[\]\) => (import\("[^"]+"\)\.(?:LyraAnchorTarget|LyraTextViewerTarget)(?: & import\("[^"]+"\)\.(?:DocumentAnchorTargetHooks|TextViewerTargetHooks))? & \{\s*renderAnchorLiveRegion\(\): unknown;\s*\})\);/gu;
 const LEAKED_TARGET_BASE = /new \(\.\.\.args: any\[\]\)[\s\S]{0,400}?\b(?:LyraAnchorTarget|LyraTextViewerTarget)\b/u;
 
 export function normalizeMixinDeclarationText(source) {

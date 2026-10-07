@@ -1,4 +1,6 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -126,8 +128,7 @@ export const styles = css`
     }
   }
   [part='jump-pill']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='jump-pill']:hover {
     background: var(--lr-color-brand-quiet);
@@ -135,7 +136,7 @@ export const styles = css`
   [part='jump-pill']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part='jump-pill'] {
       max-inline-size: calc(100% - 2 * var(--lr-space-s));
     }

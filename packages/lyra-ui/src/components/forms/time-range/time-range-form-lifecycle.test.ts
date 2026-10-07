@@ -1,3 +1,5 @@
+import { stubTimeRangePointerGeometry } from '../../../../test/contracts/time-range-pointer.js';
+import { withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
 import "./time-range.js";
@@ -8,21 +10,7 @@ function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   const startHandle = el.shadowRoot!.querySelector<HTMLElement>(
     '[part="handle-start"]'
   )!;
-  startHandle.setPointerCapture = () => {};
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 200,
-      bottom: 0,
-      width: 200,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubTimeRangePointerGeometry(base, startHandle);
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, pointerId, clientX: 40 })
   );
@@ -107,18 +95,13 @@ it("dims with opacity/not-allowed cursor when disabled purely via an ancestor fi
 
 describe("ElementInternals availability", () => {
   it("does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
-    delete HTMLElement.prototype.attachInternals;
-    try {
+    withUnavailableInternals(() => {
       let el: LyraTimeRange | undefined;
       expect(() => {
         el = document.createElement("lr-time-range") as LyraTimeRange;
       }).to.not.throw();
       expect(el!.disabled).to.be.false;
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    });
   });
 });
 

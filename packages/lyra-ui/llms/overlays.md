@@ -3234,6 +3234,8 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
+- `lr-input` — `detail: { value }` after the native `input` event when an interactive commit
+  changes the value. Programmatic writes and unchanged commits are silent.
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted
   when a user commits a genuinely new value. It fires immediately before `lr-change`; read the
   numeric score from `event.target.value`. Programmatic `value`/`defaultValue` writes, reset/state

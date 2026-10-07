@@ -90,3 +90,34 @@ export const formControlRequiredMarker = css`
 export const formControlFocusHalo = css`
   box-shadow: var(--_lr-form-control-focus-shadow, none);
 `;
+
+
+/** Supporting form text, using part tokens so compatibility aliases retain the same styling. */
+export const formControlSupportingText = css`
+  [part~='hint'], [part~='error'] {
+    margin-block-start: var(--lr-space-xs);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part~='hint'] { color: var(--lr-color-text-quiet); }
+  [part~='error'] { color: var(--lr-color-danger); }
+  [part~='hint'][hidden], [part~='error'][hidden] { display: none; }
+`;
+
+/** Field label and supporting text; component-specific layout remains in the adopting sheet. */
+export const formControlChrome = css`
+  [part~='form-control-label'] {
+    display: block;
+    margin-block-end: var(--lr-space-xs);
+    font-size: var(--lr-font-size-md-sm);
+    font-weight: var(--lr-font-weight-semibold);
+  }
+  [part~='form-control-label'][hidden] { display: none; }
+  ${formControlSupportingText}
+`;
+
+/** Allow form chrome to shrink and wrap within its allocated inline space. */
+export const formControlTextWrap = css`
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+`;

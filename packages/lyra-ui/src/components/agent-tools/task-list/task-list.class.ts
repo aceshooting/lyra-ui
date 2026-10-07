@@ -15,6 +15,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -218,6 +219,7 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @csspart item-label - The item's `label` text.
  * @csspart item-detail - The item's optional `detail` text.
  * @csspart item-children - The nested `role="list"` wrapper around a top-level item's children.
+ * @csspart limit - Visible notice when the plan exceeds the shared render cap.
  * @cssprop [--lr-task-list-spin=var(--lr-transition-ambient)] - Running-status icon spin
  *   animation duration/timing.
  * @cssprop [--lr-task-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
@@ -331,6 +333,9 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  carry (mirrors `<lr-chat-message>`'s identical `isMounting` gate for its own status-change
    *  announcement). */
   private isMounting = true;
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private previouslyTruncated = false;
+  private renderedTasksTruncated = false;
 
   /** Last-seen status per item id, one level deep (top-level items plus their direct children) --
    *  diffed against the incoming `items` on every update to decide what to announce. */
@@ -361,6 +366,12 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
       this.diffAndAnnounce(wasMounting);
       this.confirmPendingReorder();
     }
+    if (!wasMounting && this.renderedTasksTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncements.announcePolite(this.localize('taskListLimit', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TASKS),
+      }));
+    }
+    this.previouslyTruncated = this.renderedTasksTruncated;
   }
 
   override disconnectedCallback(): void {
@@ -376,6 +387,28 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     this.previousStatusById.clear();
     super.connectedCallback();
     if (reconnecting) this.requestUpdate('items');
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncements.adopted();
+  }
+
+  private renderedTaskItems(items: readonly TaskItem[]): TaskItem[] {
+    const rendered: TaskItem[] = [];
+    let remaining = MAX_RENDERED_TASKS;
+    let truncated = false;
+    for (const item of items) {
+      if (remaining === 0) { truncated = true; break; }
+      remaining--;
+      const children = validTaskItems(item.children);
+      const visibleChildren = children.slice(0, remaining);
+      remaining -= visibleChildren.length;
+      if (visibleChildren.length < children.length) truncated = true;
+      rendered.push(visibleChildren.length === children.length ? item : { ...item, children: visibleChildren });
+    }
+    this.renderedTasksTruncated = truncated;
+    return rendered;
   }
 
   private flattenOneLevel(items: readonly TaskItem[]): TaskItem[] {
@@ -608,7 +641,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const completed = items.filter((item) => normalizeTaskStatus(item.status) === 'success').length;
     // Bounds the actual DOM node count for a very large plan; the summary above still counts every
     // item in `items`, not just this rendered subset. See MAX_RENDERED_TASKS.
-    const renderedItems = items.slice(0, MAX_RENDERED_TASKS);
+    const renderedItems = this.renderedTaskItems(items);
     const canReorder = this.canReorderItems();
     const number = getNumberFormat(this.effectiveLocale);
     const summary = this.localize('taskListCompletedOfTotal', undefined, {
@@ -652,6 +685,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
               )
             : renderedItems.map((item) => this.renderItem(item, 0, null, canReorder))}
         </div>
+        ${this.renderedTasksTruncated
+          ? html`<p part="limit" role="note">${this.localize('taskListLimit', undefined, {
+              count: number.format(MAX_RENDERED_TASKS),
+            })}</p>`
+          : nothing}
         <lr-live-region></lr-live-region>
       </div>
     `;

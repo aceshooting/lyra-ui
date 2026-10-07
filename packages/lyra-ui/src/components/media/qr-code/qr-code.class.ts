@@ -13,7 +13,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
 import { styles } from './qr-code.styles.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings.generated.js';
@@ -298,8 +298,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
-  private errorAnnouncementSink?: AnnouncementSink;
-  private statusAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive', 'polite'] });
   private pendingLoadingAnnouncement = false;
   private readonly accessibilityInternals?: ElementInternals;
 
@@ -340,7 +339,6 @@ export class LyraQrCode extends LyraElement {
     if (this.value && this.loadState.kind === 'empty') this.transitionTo({ kind: 'loading' });
     else this.setAttribute('aria-busy', this.loadState.kind === 'loading' ? 'true' : 'false');
     super.connectedCallback();
-    this.syncAnnouncementSinks();
     this.bindVisibilityObserver();
     // If an in-flight peer result settled while detached, generate() correctly discarded it at
     // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
@@ -360,7 +358,6 @@ export class LyraQrCode extends LyraElement {
     this.visible = false;
     this.visibilityKnown = false;
     this.pendingLoadingAnnouncement = false;
-    this.releaseAnnouncementSinks();
     super.disconnectedCallback();
   }
 
@@ -369,8 +366,7 @@ export class LyraQrCode extends LyraElement {
     this.clearVisibilityObserver();
     this.visible = false;
     this.visibilityKnown = false;
-    this.releaseAnnouncementSinks();
-    this.syncAnnouncementSinks();
+    this.announcements.adopted();
   }
 
   /** Binds visibility to the current owner realm. A valid observer entry is required before
@@ -447,30 +443,6 @@ export class LyraQrCode extends LyraElement {
     if (this.isConnected) this.draw();
   }
 
-  private syncAnnouncementSinks(): void {
-    if (!this.isConnected) return;
-    if (
-      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
-      this.statusAnnouncementSink?.element.ownerDocument === this.ownerDocument
-    ) return;
-    this.releaseAnnouncementSinks();
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.statusAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSinks(): void {
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-    this.statusAnnouncementSink?.release();
-    this.statusAnnouncementSink = undefined;
-  }
-
   private transitionTo(next: QrCodeState): void {
     const announcesLoading =
       next.kind === 'loading' &&
@@ -496,7 +468,7 @@ export class LyraQrCode extends LyraElement {
     this.syncSemanticOwner();
     if (this.pendingLoadingAnnouncement) {
       this.pendingLoadingAnnouncement = false;
-      this.statusAnnouncementSink?.announce(this.localize('loading'));
+      this.announcements.announcePolite(this.localize('loading'));
     }
     if (changed.has('value') || changed.has('errorCorrection') || changed.has('image') || !this.hasUpdated) {
       this.scheduleAfterUpdate(() => {
@@ -548,7 +520,7 @@ export class LyraQrCode extends LyraElement {
       if (generation !== this.generation || !this.isConnected) return;
       if (!api) {
         this.transitionTo({ kind: 'error', key: 'qrCodeMissingLibrary' });
-        this.errorAnnouncementSink?.announce(this.localize('qrCodeMissingLibrary'));
+        this.announcements.announceAssertive(this.localize('qrCodeMissingLibrary'));
         return;
       }
       const imageSource = safeMediaSrc(this.image);
@@ -566,7 +538,7 @@ export class LyraQrCode extends LyraElement {
     } catch {
       if (generation !== this.generation || !this.isConnected) return;
       this.transitionTo({ kind: 'error', key: 'qrCodeGenerationFailed' });
-      this.errorAnnouncementSink?.announce(this.localize('qrCodeGenerationFailed'));
+      this.announcements.announceAssertive(this.localize('qrCodeGenerationFailed'));
     }
   }
 

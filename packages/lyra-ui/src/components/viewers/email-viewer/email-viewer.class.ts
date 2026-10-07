@@ -18,6 +18,7 @@ import { getDateTimeFormat, getListFormat, getNumberFormat } from '../../../inte
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/file-size.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -296,9 +297,10 @@ function foldHtmlQuotes(
   // unfolded is the safe deterministic fallback until the element connects to a browser document.
   if (!doc) return html;
   // Message markup must not impersonate the toggles and blocks marked below.
-  for (const forged of doc.body.querySelectorAll('[data-quote-toggle], [data-quote-index]')) {
+  for (const forged of doc.body.querySelectorAll('[data-quote-toggle], [data-quote-index], [data-email-chrome]')) {
     forged.removeAttribute('data-quote-toggle');
     forged.removeAttribute('data-quote-index');
+    forged.removeAttribute('data-email-chrome');
   }
   const blocks = doc.body.querySelectorAll(QUOTE_SELECTOR);
   blocks.forEach((block, index) => {
@@ -309,6 +311,7 @@ function foldHtmlQuotes(
     const button = doc.createElement('button');
     button.type = 'button';
     button.setAttribute('part', 'quote-toggle');
+    button.setAttribute('data-email-chrome', 'quote-toggle');
     button.setAttribute('aria-expanded', String(expanded));
     button.setAttribute('data-quote-toggle', String(index));
     button.textContent = localize(expanded ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted');
@@ -435,7 +438,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
   /** Display name associated with the message. Used as the accessible name
@@ -449,7 +452,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
    *  preserves today's exact body rendering. */
   @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
-  /** Shared text search and anchor-target API for message headers/body text. Searching for text
+  /** Shared text search and anchor-target API for message body text. Searching for text
    * inside a folded quote reveals matching quotes before navigating the active match, using the
    * same bounded Unicode/whitespace normalization and locale matching as the shared text index. */
   override async search(query: string): Promise<number> {
@@ -511,8 +514,13 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     result: string;
   } | null = null;
 
-  protected textContentRoot(): Element | null {
-    return this.renderRoot.querySelector('[data-email-text-content]');
+  protected override textContentRoot(): Element | null {
+    return this.renderRoot.querySelector('[part="body"]');
+  }
+
+  protected override buildTextScope(root: Element): ReturnType<typeof scopeFromElement> {
+    return scopeFromElement(root, undefined, (element) =>
+      this.foldQuotes && element.localName === 'button' && element.getAttribute('data-email-chrome') === 'quote-toggle');
   }
 
   override connectedCallback(): void {
@@ -718,6 +726,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       <button
         type="button"
         part="quote-toggle"
+        data-email-chrome="quote-toggle"
         aria-expanded=${this.textQuoteExpanded ? 'true' : 'false'}
         @click=${() => { this.textQuoteExpanded = !this.textQuoteExpanded; }}
       >${this.localize(this.textQuoteExpanded ? 'emailViewerHideQuoted' : 'emailViewerShowQuoted')}</button>
@@ -772,7 +781,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div data-email-text-content>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
+      case 'loaded': return html`<div>${this.renderHeaders(this.fetchState.email, this.fetchState.fromAddress, this.fetchState.toAddresses)}<div part="body">${this.fetchState.email.bodyHtml !== null ? html`<div part="body-html" @click=${this.onBodyClick}>${unsafeHTML(this.foldQuotes ? this.getFoldedHtml(this.fetchState.email.bodyHtml) : this.fetchState.email.bodyHtml)}</div>` : this.renderTextBody(this.fetchState.email.bodyText ?? '')}</div></div>${this.renderAttachments(this.fetchState.email.attachments)}`;
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeEmail') })}</p>`;

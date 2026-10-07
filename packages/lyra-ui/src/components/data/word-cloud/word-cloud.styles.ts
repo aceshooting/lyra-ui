@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -26,8 +27,7 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     block-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
   }
   svg:hover {
@@ -35,8 +35,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   svg:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='word'] {
     pointer-events: none;

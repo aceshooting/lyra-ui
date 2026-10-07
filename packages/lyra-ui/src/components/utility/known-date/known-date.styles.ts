@@ -1,3 +1,7 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
+import {
+  formControlSupportingText,
+} from '../../../internal/form-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -170,8 +174,7 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   [part="field-input"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* --lr-known-date-invalid-border-color rethemes just this component's invalid-field border; the
      bare --lr-color-danger token would repaint every other component reading it. */
@@ -186,22 +189,13 @@ export const styles = css`
     cursor: not-allowed;
   }
 
+  ${formControlSupportingText}
   [part="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
   }
-  [part="hint"][hidden] {
-    display: none;
-  }
+
   [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
     overflow-wrap: anywhere;
   }
-  [part="error"][hidden] {
-    display: none;
-  }
+
 `;

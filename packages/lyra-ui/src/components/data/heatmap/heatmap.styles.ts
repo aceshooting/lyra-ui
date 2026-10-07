@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -140,8 +141,7 @@ export const styles = css`
     color: transparent;
     cursor: pointer;
     pointer-events: auto;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid

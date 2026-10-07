@@ -13,6 +13,8 @@ import {
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { styles } from './responsive-panel.styles.js';
+import { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
+export { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings.generated.js';
@@ -61,22 +63,6 @@ export interface LyraResponsivePanelEventMap {
   'lr-close-request': CustomEvent<LyraResponsivePanelCloseDetail>;
   'lr-close': CustomEvent<LyraResponsivePanelCloseDetail>;
   'lr-mode-change': CustomEvent<LyraResponsivePanelModeChangeDetail>;
-}
-
-/**
- * Pure resolution of the `mode` prop + current viewport into the actual
- * presentation. Kept separate from the allocation observer wiring below so
- * it's independently unit-testable, and so the live allocation-response logic
- * can be exercised in tests by calling it (or the instance method that wraps
- * it) directly instead of needing control over the real browser window,
- * which `@web/test-runner` doesn't give.
- */
-export function resolveResponsivePanelEffectiveMode(
-  mode: LyraResponsivePanelMode,
-  belowBreakpoint: boolean
-): LyraResponsivePanelEffectiveMode {
-  if (mode === 'inline' || mode === 'overlay') return mode;
-  return belowBreakpoint ? 'overlay' : 'inline';
 }
 
 /**
@@ -582,6 +568,16 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     }
     this.open = false;
     this.emit('lr-close', { reason });
+  }
+
+  /** Opens either presentation through the same `open` property as a controlled host write. */
+  show(): void {
+    this.open = true;
+  }
+
+  /** Alias of `close('api')`; the existing cancelable close request still applies. */
+  hide(): void {
+    this.close();
   }
 
   private onBackdropClick = (): void => {

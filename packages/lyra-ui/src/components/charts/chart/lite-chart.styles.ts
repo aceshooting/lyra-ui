@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 export const styles = css`
@@ -116,8 +118,7 @@ export const styles = css`
   }
   [part='bar']:focus-visible,
   [part='point']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :where(.mark-hit-group):has([part='bar']:focus-visible, [part='point']:focus-visible)
     [data-mark-hit-target] {
@@ -221,7 +222,7 @@ export const styles = css`
       minmax(0, 1fr)
       minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
   }
-  @container (max-width: 479px) {
+  @container ${mediumContainerQuery} {
     [part='base']:where([data-legend-position='inline-start']),
     [part='base']:where([data-legend-position='inline-end']) {
       grid-template-areas:
@@ -265,7 +266,7 @@ export const styles = css`
       'table-toggle table-toggle'
       'table table';
   }
-  @container (max-width: 479px) {
+  @container ${mediumContainerQuery} {
     [part='base']:where([data-table-toggle][data-legend-position='inline-start']),
     [part='base']:where([data-table-toggle][data-legend-position='inline-end']) {
       grid-template-areas:
@@ -281,8 +282,7 @@ export const styles = css`
     align-self: flex-start;
     font: inherit;
     font-size: var(--lr-font-size-xs);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

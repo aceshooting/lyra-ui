@@ -1,18 +1,10 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
     display: block;
     --_lr-pdf-viewer-height: var(--lr-size-24rem);
-  }
-  [part="base"] {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    overflow: hidden;
   }
   [part="toolbar"] {
     display: flex;
@@ -28,8 +20,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     border-radius: var(--lr-radius);
     background: transparent;

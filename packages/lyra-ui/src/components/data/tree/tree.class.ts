@@ -172,6 +172,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
   declaredChildrenAtPath: ReadonlyMap<string, number>;
   declaredRootCount: number;
   truncated: boolean;
+  limitReached: boolean;
 } {
   if (!Array.isArray(input)) {
     return {
@@ -179,6 +180,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
       declaredChildrenAtPath: new Map(),
       declaredRootCount: 0,
       truncated: input != null,
+      limitReached: false,
     };
   }
 
@@ -187,6 +189,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
   const created: MutableTreeNodeData[] = [];
   const rootLength = arrayLength(input);
   let truncated = false;
+  let limitReached = false;
   let accepted = 0;
   let inspected = 0;
   const seenIds = new Set<string>();
@@ -210,6 +213,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
     }
     if (accepted >= TREE_MAX_RENDER_NODES || inspected >= TREE_MAX_INSPECTED_POSITIONS) {
       truncated = true;
+      limitReached = accepted >= TREE_MAX_RENDER_NODES;
       break;
     }
     const raw = ownValue(job.source, String(job.index++));
@@ -315,6 +319,7 @@ function normalizeTreeData(input: unknown, previous: readonly LyraTreeNodeData[]
     declaredChildrenAtPath,
     declaredRootCount: identityFilteredCollections.has(root) ? root.length : rootLength,
     truncated,
+    limitReached,
   };
 }
 
@@ -405,6 +410,7 @@ function isInertWithin(node: Element, root: Element): boolean {
  * @csspart base - Compatibility name for the root wrapper; `tree` is the component-specific alias.
  * @csspart tree - The tree's root wrapper (`role="tree"`). It is the same node as `base`.
  * @csspart empty - The empty-state message shown when neither child model has any items.
+ * @csspart limit - Localized notice when the object model exceeds its 1,000-item projection.
  * @slot - Top-level `<lr-tree-item>` elements, each nesting its own children — the declarative child model. Leave it empty and assign `data` instead for the object model.
  * @slot expand-icon - Default icon shown by expanded items; an item-level slot takes precedence.
  * @slot collapse-icon - Default icon shown by collapsed items; an item-level slot takes precedence.
@@ -446,6 +452,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private declaredChildrenAtPath: ReadonlyMap<string, number> = new Map();
   private declaredRootCount = 0;
   private _dataTruncated = false;
+  private _limitReached = false;
 
   /** Clone-owned/frozen object child model. Normalization retains at most 1,000 nodes over 64
    * descendant levels and inspects at most 10,000 root/child array positions in depth-first order.
@@ -473,6 +480,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.declaredChildrenAtPath = normalized.declaredChildrenAtPath;
     this.declaredRootCount = normalized.declaredRootCount;
     this._dataTruncated = normalized.truncated;
+    this._limitReached = normalized.limitReached;
     this.requestUpdate('data', previous);
   }
 
@@ -1779,6 +1787,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         <slot name="expand-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
         <slot name="collapse-icon" hidden @slotchange=${this.onChildrenChanged}></slot>
       </div>
+      ${this._limitReached
+        ? html`<div part="limit">${this.localize('treeLimit', undefined, {
+            count: this.formatCount(TREE_MAX_RENDER_NODES),
+          })}</div>`
+        : nothing}
       ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;
   }

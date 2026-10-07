@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -74,8 +76,7 @@ export const styles = css`
   }
 
   [part="cell"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   /* box-sizing does not cross the slot boundary, so a slotted tile keeps the outer tree's value
@@ -129,8 +130,7 @@ export const styles = css`
     inset-inline-end: 0;
     inline-size: var(--lr-space-l);
     block-size: var(--lr-space-l);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     background: transparent;
@@ -160,7 +160,7 @@ export const styles = css`
   /* Below the breakpoint the two-dimensional grid becomes a single stacked column: authored
      x/y/w/h stop driving placement and document flow takes over, but cells still render in
      row-major spatial DOM order, so reading order matches what the grid would have shown. */
-  @container (max-inline-size: 40rem) {
+  @container ${wideContainerQuery} {
     [part="base"] {
       display: flex;
       flex-direction: column;

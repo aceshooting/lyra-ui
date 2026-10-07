@@ -1,3 +1,4 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -12,9 +13,6 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 
 /** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
  *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
-async function nextFrames(): Promise<void> {
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-}
 
 expectLocaleFallback('ar-u-nu-arab', ['timeline']);
 

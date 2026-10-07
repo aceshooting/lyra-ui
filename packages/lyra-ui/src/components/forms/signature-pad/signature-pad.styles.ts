@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -40,8 +41,7 @@ export const styles = css`
   }
   [part='surface']:focus-visible,
   [part='clear-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host(:state(user-invalid)) [part='surface'] {
     border-color: var(--lr-color-danger);
@@ -85,8 +85,7 @@ export const styles = css`
 
   [part='clear-button'] {
     justify-self: end;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding-inline: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

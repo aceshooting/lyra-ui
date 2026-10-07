@@ -1,3 +1,4 @@
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 // Focused interaction and event contracts cases. Test bodies and titles were moved intact from the prior suite.
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, fixture, expect, html, elementUpdated, oneEvent } from "@open-wc/testing";
@@ -1148,18 +1149,7 @@ it("blurs the active range thumb and relays exactly one native pair, never lr-fo
   el.blur();
 
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-    "focus",
-    "blur",
-  ]);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(
-    nativeEvents.every(
-      (event) => event.target === el && event.bubbles && event.composed
-    )
-  ).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it("forwards host click() to the internal thumb control", async () => {

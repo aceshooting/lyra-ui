@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
@@ -18,5 +19,5 @@ export const styles = css`
   [part='error'] { margin: 0; padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-danger); background: var(--lr-color-danger-quiet); color: var(--lr-color-text); }
   [part='capture'] { align-self: center; }
   [part='transcript'] { min-block-size: var(--lr-size-8rem); min-inline-size: 0; }
-  @container (max-inline-size: 20rem) { [part='header'] { grid-template-columns: 1fr; } [part='controls'] { justify-content: flex-start; } }
+  @container ${compactContainerQuery} { [part='header'] { grid-template-columns: 1fr; } [part='controls'] { justify-content: flex-start; } }
 `;

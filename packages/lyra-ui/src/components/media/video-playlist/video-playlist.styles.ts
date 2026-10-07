@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -38,8 +40,7 @@ export const styles = css`
 
   [part='playlist-item'] {
     inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     display: grid;
     grid-template-columns: var(--lr-size-7rem) minmax(0, 1fr);
     gap: var(--lr-space-s);
@@ -155,7 +156,7 @@ export const styles = css`
     line-height: var(--lr-line-height-normal);
   }
 
-  @container (max-inline-size: 40rem) {
+  @container ${wideContainerQuery} {
     [part~='video-playlist'] {
       grid-template-columns: minmax(0, 1fr);
     }

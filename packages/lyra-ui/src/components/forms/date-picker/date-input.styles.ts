@@ -1,9 +1,12 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -70,19 +73,8 @@ export const styles = css`
     --_lr-date-input-border-color: var(--lr-color-brand);
     --_lr-date-input-fill: var(--lr-color-brand-quiet);
   }
-  [part="form-control-label"] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches -- the part always contains a literal slot child -- so emptiness is
-     tracked in JS (hasLabelSlot) and reflected via hidden, as for [part='hint']/[part='error']
-     below. Otherwise the required-asterisk ::after here renders a stray ' *' when label is
-     unset. */
-  [part="form-control-label"][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
   [part='input-wrapper'] {
     display: flex;
@@ -235,8 +227,7 @@ export const styles = css`
   }
   [part="clear-button"]:focus-visible,
   [part="expand-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="popup"][hidden] {
     display: none;
@@ -278,32 +269,12 @@ export const styles = css`
       transition: none !important;
     }
   }
-  [part="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  /* :empty never matches -- the part always contains a literal slot child -- so emptiness is
-     tracked in JS (hasHintSlot/hasErrorSlot) and reflected via hidden; same fix as lr-stat's
-     icon/caption. */
-  [part="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
-  }
+
   [part="form-control"],
   [part="form-control-label"],
   [part="hint"],
   [part="error"] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 
   ${glassScrollLayerStyles}

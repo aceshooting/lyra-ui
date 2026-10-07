@@ -20,6 +20,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { renderRegionHighlightLayer } from '../region-highlight-layer.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -349,43 +350,9 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     regionHighlights: ResolvedRegionHighlight[],
     interactive: boolean,
   ): TemplateResult | typeof nothing {
-    if (!regionHighlights.length) return nothing;
-    // Region rects are physical percent-of-render coordinates and the rendered SVG never
-    // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
-    // overlay under RTL while the render underneath stays put.
-    return html`<div part="highlight-layer">
-      ${regionHighlights.map(
-        (h, index) => html`
-          ${interactive ? html`<button
-            part="region-highlight-target"
-            data-highlight-id=${h.id}
-            style=${styleMap({
-              left: `calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%)`,
-              top: `calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%)`,
-              width: `max(${h.anchor.rect.width}%, var(--lr-icon-button-size))`,
-              height: `max(${h.anchor.rect.height}%, var(--lr-icon-button-size))`,
-            })}
-            type="button"
-            role="button"
-            aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
-            @click=${() => this.emit('lr-highlight-activate', { highlightId: h.id })}
-          ></button>` : nothing}
-          <div
-            part="region-highlight"
-            data-id=${h.id}
-            data-tone=${h.tone ?? 'accent'}
-            ?data-active=${h.id === this.activeHighlightId}
-            aria-hidden="true"
-            style=${styleMap({
-              left: `${h.anchor.rect.x}%`,
-              top: `${h.anchor.rect.y}%`,
-              width: `${h.anchor.rect.width}%`,
-              height: `${h.anchor.rect.height}%`,
-            })}
-          ></div>
-        `,
-      )}
-    </div>`;
+    return renderRegionHighlightLayer(regionHighlights, this.activeHighlightId, interactive,
+      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
+      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
   }
 
   private renderHighlightActions(
@@ -432,7 +399,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
    *  retry-worthy transient state of its own here) when nothing is loaded yet or no region
    *  matches -- the mixin's own retry loop covers the case where `anchor`/`scrollToAnchor()` is
    *  called before `src` has finished loading. */
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'region' || this.fetchState.kind !== 'loaded') return false;
     const highlight = this.highlights.find((h) => h.anchor === anchor || sameRegionAnchor(h.anchor, anchor));
     if (!highlight) return false;

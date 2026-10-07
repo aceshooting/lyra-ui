@@ -1,20 +1,9 @@
+import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 
 const CATALOG = ['aria', 'nova'];
-
-/** Resolves what `expression` computes to *inside this component's shadow root*, where the `--lr-*`
- *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none of them). */
-function resolvedInShadow(el: LyraVoicePicker, expression: string): string {
-  const probe = document.createElement('span');
-  probe.style.position = 'absolute';
-  probe.style.maxInlineSize = expression;
-  el.shadowRoot!.append(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
 
 function trigger(el: LyraVoicePicker): HTMLElement {
   return el.shadowRoot!.querySelector<HTMLElement>('[part~="trigger"]')!;
@@ -60,6 +49,27 @@ describe('lr-voice-picker host width cap', () => {
 });
 
 describe('lr-voice-picker trigger height hooks', () => {
+  it('exposes independent padding, font and chevron size hooks in both modes', async () => {
+    const el = await fixture<LyraVoicePicker>(
+      html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
+    );
+    el.style.setProperty('--lr-voice-picker-trigger-padding', '7px 11px');
+    el.style.setProperty('--lr-voice-picker-font-size', '21px');
+    el.style.setProperty('--lr-voice-picker-expand-size', '18px');
+    const control = trigger(el);
+    const chevron = el.shadowRoot!.querySelector<HTMLElement>('[part="expand-icon"]')!;
+    expect(getComputedStyle(control).paddingBlockStart).to.equal('7px');
+    expect(getComputedStyle(control).paddingInlineStart).to.equal('11px');
+    expect(getComputedStyle(control).fontSize).to.equal('21px');
+    expect(getComputedStyle(chevron).minInlineSize).to.equal('18px');
+
+    el.allowCustom = true;
+    await el.updateComplete;
+    const combobox = el.shadowRoot!.querySelector<HTMLElement>('[part="combobox"]')!;
+    expect(getComputedStyle(combobox).paddingBlockStart).to.equal('7px');
+    expect(getComputedStyle(combobox).fontSize).to.equal('21px');
+  });
+
   it('keeps the shared form-control height as a floor only when nothing is set (unset regression)', async () => {
     const el = await fixture<LyraVoicePicker>(
       html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`,
@@ -69,8 +79,7 @@ describe('lr-voice-picker trigger height hooks', () => {
       resolvedInShadow(el, 'var(--lr-form-control-height)'),
     );
     const baselineBlockSize = getComputedStyle(control).blockSize;
-    // Grown through the shared ladder knob this control already reads; voice-picker deliberately
-    // gains no padding token of its own in this change.
+    // Grown through the shared ladder knob that backs the picker-specific padding hook.
     el.style.setProperty('--lr-form-control-padding-block', '2rem');
     expect(parseFloat(getComputedStyle(control).blockSize) > parseFloat(baselineBlockSize)).to.equal(
       true,

@@ -52,6 +52,7 @@ export interface ComposedAccessibilityTextOptions {
 
 export interface ComposedAccessibilityTextResult {
   labelReferenceRoots: ReadonlySet<Document | ShadowRoot>;
+  labelReferenceIds: ReadonlySet<string>;
   referencedElements: ReadonlySet<Element>;
   text: string;
   /** Open roots actually entered by the bounded walk, suitable for live-text observation. */
@@ -221,6 +222,18 @@ export function bindAccessibleTextObserver(
   for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
     for (const assigned of slot.assignedNodes({ flatten: true })) {
       observeAccessibleTextNode(observer, assigned, extraAttributes);
+      // A forwarding slot can assign content from outside the host's own subtree. Its composed
+      // ancestors can change that content's visibility without mutating the assigned node.
+      let ancestor = assigned.nodeType === 1
+        ? composedParentElement(assigned as Element)
+        : assigned.parentElement;
+      while (ancestor) {
+        if (ancestor !== host && !host.contains(ancestor) && ancestor.getRootNode() !== host.shadowRoot) {
+          observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
+          baseline?.set(ancestor, ancestorVisibilityKey(ancestor));
+        }
+        ancestor = composedParentElement(ancestor);
+      }
     }
   }
   // Walk only consumer content. Entering the owner's own shadow root would observe its rendered
@@ -300,6 +313,7 @@ interface AccessibilityTextContext {
    *  the bounded external-render check below, which only bypasses `requireRendered` under this. */
   ignoreInheritedVisibility: boolean;
   labelReferenceRoots: Set<Document | ShadowRoot>;
+  labelReferenceIds: Set<string>;
   maxCharacters: number;
   maxDepth: number;
   maxNodes: number;
@@ -586,6 +600,7 @@ function labelledByElements(
   let sawSerializedToken = false;
   for (const id of asciiWhitespaceTokens(value, () => consumeNodeWork(context))) {
     sawSerializedToken = true;
+    context.labelReferenceIds.add(id);
     if (!consumeNodeWork(context)) return { authoritative: true, elements: serializedReferences };
     const reference = canResolveSerialized ? root.getElementById(id) : null;
     if (reference) serializedReferences.push(reference);
@@ -905,6 +920,7 @@ export function composedAccessibilityTextResult(
     ignoreInheritedVisibility:
       resolved.skipRootAncestorValidation === true || resolved.ignoreInheritedVisibility === true,
     labelReferenceRoots: new Set<Document | ShadowRoot>(),
+    labelReferenceIds: new Set<string>(),
     maxCharacters: resolved.maxCharacters,
     maxDepth: resolved.maxDepth,
     maxNodes: resolved.maxNodes,
@@ -927,6 +943,7 @@ export function composedAccessibilityTextResult(
     context.reasons.add('nodes');
     return {
       labelReferenceRoots: context.labelReferenceRoots,
+      labelReferenceIds: context.labelReferenceIds,
       referencedElements: context.referencedElements,
       text: '',
       traversedShadowRoots: context.traversedShadowRoots,
@@ -974,6 +991,7 @@ export function composedAccessibilityTextResult(
 
   return {
     labelReferenceRoots: context.labelReferenceRoots,
+    labelReferenceIds: context.labelReferenceIds,
     referencedElements: context.referencedElements,
     text: context.output.join(''),
     traversedShadowRoots: context.traversedShadowRoots,

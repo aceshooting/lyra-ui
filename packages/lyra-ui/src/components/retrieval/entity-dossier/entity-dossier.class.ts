@@ -62,7 +62,7 @@ export interface LyraEntityDossierConfidence {
 
 export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
-    LyraChunkInspectorEventMap,
+    Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
     Omit<LyraProvenancePanelEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
@@ -84,7 +84,8 @@ export interface LyraEntityDossierEventMap
  * lr-entity-select`, `lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-chunk-toggle`,
  * `lr-toggle`, `lr-tab-show`, plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
  * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
- * shadow boundary with no re-dispatch needed).
+ * shadow boundary with no re-dispatch needed), except direct chunk-inspector `lr-toggle` events,
+ * which gain `section: 'chunks'`, and tab changes, which expose the dossier's `tabId`.
  *
  * `chunks`/`thresholds` (the "supporting chunks" tab) and `provenance` (the "Provenance" tab) are
  * deliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks
@@ -98,8 +99,8 @@ export interface LyraEntityDossierEventMap
  * new dossier-specific keys, so a translated locale only has to cover each string once and the tab
  * strip and the panel underneath it always agree.
  *
- * This component emits no events of its own. Its EventMap and `@event` documentation name the
- * composed events that bubble through so host listeners remain typed and discoverable;
+ * Its EventMap and `@event` documentation name the composed events surfaced to the host so
+ * listeners remain typed and discoverable;
  * `lr-tab-show` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same "pure
  * projection + event conduit" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s
  * internal `lr-tab-group` already establish.
@@ -118,8 +119,9 @@ export interface LyraEntityDossierEventMap
  *   `detail: { chunkId, sourceId, anchor? }`.
  * @event lr-chunk-toggle - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, expanded }`.
- * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
- *   `detail: { section, expanded }`.
+ * @event lr-toggle - A section or chunk disclosure changed. Direct supporting-chunk toggles
+ *   gain `section: 'chunks'`; provenance-panel toggles pass through unchanged.
+ *   `detail: { section, expanded, itemId? }`.
  * @event lr-entity-open - Surfaced unchanged from an entity chip inside the embedded provenance
  *   panel. `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from a community card inside the embedded provenance panel.
@@ -207,6 +209,9 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   };
   /** Forwarded to `lr-provenance-panel`'s own `provenance`. */
   @property({ attribute: false }) provenance: Readonly<LyraProvenance> | null = null;
+  /** Accessible name for the overall dossier, separate from accessibleLabel's tab-strip name.
+   *  A host aria-label takes precedence; the default is localized Details. */
+  @property() label: string | null = null;
   /** JS-only accessible name for the internal `lr-tab-group` strip while no host `aria-label` is
    *  authored. A host label independently names the dossier and is not cloned onto the strip. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -238,9 +243,22 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
     e.stopPropagation();
   };
 
+  private onSupportingChunkToggle = (event: LyraChunkInspectorEventMap['lr-toggle']): void => {
+    if (event.composedPath()[0] !== event.currentTarget) return;
+    event.stopPropagation();
+    this.emit('lr-toggle', {
+      section: 'chunks',
+      expanded: event.detail.expanded,
+      itemId: event.detail.itemId,
+    });
+  };
+
   override render(): TemplateResult {
+    const label = this.hasAttribute('aria-label')
+      ? this.getAttribute('aria-label')!
+      : this.label ?? this.localize('details');
     if (!this.entity) {
-      return html`<div part="base">
+      return html`<div part="base" role="group" aria-label=${label}>
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>
       </div>`;
     }
@@ -256,7 +274,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
       : this.accessibleLabel ?? nothing;
 
     return html`
-      <div part="base">
+      <div part="base" role="group" aria-label=${label}>
         <div part="header">
           <lr-entity-card
             part="entity-card"
@@ -308,6 +326,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
               part="chunk-inspector"
               .chunks=${this.chunks}
               .thresholds=${this.thresholds}
+              @lr-toggle=${this.onSupportingChunkToggle}
             ></lr-chunk-inspector>
           </lr-tab-panel>
           <lr-tab-panel name="provenance">

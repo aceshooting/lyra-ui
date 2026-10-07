@@ -1,3 +1,5 @@
+import { panelListItem } from '../../../internal/layout-fragments.styles.js';
+import { focusRing, panelFrame } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -8,13 +10,7 @@ export const styles = css`
   }
 
   [part='base'] {
-    box-sizing: border-box;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    margin: 0;
-    padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    ${panelFrame}
   }
 
   [part='legend'] {
@@ -33,14 +29,10 @@ export const styles = css`
   }
 
   [part='rule'] {
-    display: grid;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${panelListItem}
+
     grid-template-columns: minmax(0, 1fr) minmax(var(--lr-size-8rem), auto);
-    gap: var(--lr-space-s);
-    align-items: center;
-    padding-block: var(--lr-space-s);
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+
   }
 
   [part='rule-copy'] {
@@ -86,8 +78,7 @@ export const styles = css`
   }
 
   [part='decision']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='decision']:disabled {

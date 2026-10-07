@@ -4,6 +4,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
+import {
+  LYRA_AVATAR_SHAPE_VALUES,
+  LYRA_SIZE_VALUES,
+  LYRA_VARIANT_VALUES,
+} from '../../../internal/variant-values.js';
 import { styles } from './avatar.styles.js';
 
 export type LyraAvatarShape = 'circle' | 'rounded' | 'square';
@@ -161,35 +166,15 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
       this.loading !== 'lazy'
     )
       this.loading = 'eager';
-    if (
-      changed.has('size') &&
-      this.size !== '2xs' &&
-      this.size !== 'xs' &&
-      this.size !== 's' &&
-      this.size !== 'm' &&
-      this.size !== 'l' &&
-      this.size !== 'xl' &&
-      this.size !== 'small' &&
-      this.size !== 'medium' &&
-      this.size !== 'large'
-    )
+    if (changed.has('size') && !(LYRA_SIZE_VALUES as readonly string[]).includes(this.size))
       this.size = 'm';
     if (
       changed.has('shape') &&
-      this.shape !== 'circle' &&
-      this.shape !== 'rounded' &&
-      this.shape !== 'square'
+      !(LYRA_AVATAR_SHAPE_VALUES as readonly string[]).includes(this.shape)
     ) {
       this.shape = 'circle';
     }
-    if (
-      changed.has('variant') &&
-      this.variant !== 'neutral' &&
-      this.variant !== 'brand' &&
-      this.variant !== 'success' &&
-      this.variant !== 'warning' &&
-      this.variant !== 'danger'
-    )
+    if (changed.has('variant') && !(LYRA_VARIANT_VALUES as readonly string[]).includes(this.variant))
       this.variant = 'neutral';
     if (changed.has('image')) {
       this.failedSrc = undefined;

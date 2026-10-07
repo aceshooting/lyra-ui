@@ -231,7 +231,7 @@ export class LyraFunnel extends LyraElement {
 
   private changeText(change: number): string {
     if (change === 0) return this.localize('trendUnchanged');
-    return this.localize(change > 0 ? 'statTrendIncreased' : 'statTrendDecreased', undefined, {
+    return this.localize(change > 0 ? 'funnelDropoffIncreased' : 'funnelDropoffDecreased', undefined, {
       value: this.formatShare(Math.abs(change)),
     });
   }
@@ -254,9 +254,9 @@ export class LyraFunnel extends LyraElement {
         ${comparisonShare === null
           ? nothing
           : html`<span part="comparison-value"
-              >${this.localize('contextMeterLabeledSummary', undefined, {
+              >${this.localize('funnelComparisonShare', undefined, {
                 label: comparisonName,
-                summary: this.formatShare(comparisonShare),
+                value: this.formatShare(comparisonShare),
               })}</span
             >`}
       </span>

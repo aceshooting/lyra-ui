@@ -4,7 +4,7 @@ import { isMainModule } from './is-main-module.mjs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseSync } from 'oxc-parser';
+import { parseProgram, visitAst } from './lib/ast.mjs';
 
 // Measured, not aspirational (see docs/agents/ci-and-gates.md on budgets that are red on day one):
 // the number of `localize()` call sites whose key this script cannot resolve to a set today. It is
@@ -34,27 +34,7 @@ const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url))
 const localizationFile = fileURLToPath(new URL('../src/internal/localization.ts', import.meta.url));
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 
-function parseProgram(file, source) {
-  const result = parseSync(file, source);
-  if (result.errors.length > 0) {
-    const details = result.errors.map((error) => error.message ?? String(error)).join('\n');
-    throw new SyntaxError(`${file} could not be parsed:\n${details}`);
-  }
-  return result.program;
-}
 
-function visitAst(node, visitor) {
-  if (!node || typeof node !== 'object') return;
-  if (typeof node.type === 'string') visitor(node);
-  for (const [key, value] of Object.entries(node)) {
-    if (key === 'start' || key === 'end') continue;
-    if (Array.isArray(value)) {
-      for (const child of value) visitAst(child, visitor);
-    } else if (value && typeof value === 'object') {
-      visitAst(value, visitor);
-    }
-  }
-}
 
 function literalString(node) {
   if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;

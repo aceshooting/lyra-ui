@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./time-range.js";
@@ -644,21 +645,6 @@ it("is accessible with presets set", async () => {
 });
 
 describe("active-preset cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
-   *  the tokens they fall back to. */
-  function resolvedInShadow(
-    el: LyraTimeRange,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const overrides =
     "--lr-time-range-preset-active-bg: rgb(0, 51, 102);" +
@@ -920,20 +906,6 @@ it("exposes the native label and validation surface of its form association", as
 });
 
 describe("active-preset pointer feedback", () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(
-    el: LyraTimeRange,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themed(): Promise<LyraTimeRange> {
     const wrapper = (await fixture(html`

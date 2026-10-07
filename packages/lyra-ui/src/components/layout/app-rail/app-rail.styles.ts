@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -23,8 +24,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     font: inherit;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -79,8 +79,7 @@ export const styles = css`
     color: var(--lr-app-rail-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part="backdrop"] {
@@ -140,8 +139,7 @@ export const styles = css`
     inset-block: 0;
     inset-inline-end: calc(var(--lr-icon-button-size) * -0.5);
     inline-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -170,8 +168,7 @@ export const styles = css`
     );
   }
   [part="resizer"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part="panel"] {
@@ -289,8 +286,7 @@ export const styles = css`
     justify-content: center;
     font: inherit;
     /* Same shared WCAG 2.5.8 floor [part="toggle"] takes. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: 0;
     border-radius: var(--lr-radius);
@@ -318,8 +314,7 @@ export const styles = css`
     color: var(--lr-app-rail-collapse-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="collapse-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* icons.ts ships one right-pointing chevron and asks callers to rotate the WRAPPING element --
      never a second mirrored glyph. Expanded, the control points at the edge the rail collapses

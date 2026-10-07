@@ -30,6 +30,13 @@ async function settleInitialAnnouncement(
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-rag-answer', 'error');
 describe('lr-rag-answer', () => {
+  it('shows a localized idle message only when no answer or evidence is present', async () => {
+    const el = (await fixture(html`<lr-rag-answer .strings=${{ ragAnswerEmpty: 'Waiting for an answer' }}></lr-rag-answer>`)) as LyraRagAnswer;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('Waiting for an answer');
+    el.answer = 'Ready';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="empty"]') === null).to.equal(true);
+  });
   it('renders answer evidence and sources', async () => {
     const el = (await fixture(
       html`<lr-rag-answer

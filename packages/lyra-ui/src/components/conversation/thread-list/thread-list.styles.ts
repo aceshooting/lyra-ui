@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing, nativeControlSurface } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 
@@ -59,14 +60,14 @@ export const styles = css`
       --lr-thread-list-search-padding-block,
       var(--_lr-thread-list-search-padding-block)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    ${nativeControlSurface}
     border-radius: var(
       --lr-thread-list-search-radius,
       var(--_lr-thread-list-search-radius)
     );
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
+
+
+
     /* Follows the font shorthand deliberately: the shorthand pins every other font longhand to the
        inherited value, and this one declaration then re-points only the size. With neither the
        public hook nor a size tier set, both names are undefined, the declaration is invalid at
@@ -78,8 +79,7 @@ export const styles = css`
     );
   }
   [part='search-input']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* no-pressed-state: [part='search-input'] is a text field -- a press is answered by focus raising
      the focus ring, which is stronger than any momentary pressed tint and outlasts the mouse
@@ -106,8 +106,7 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
     block-size: var(--lr-thread-list-search-clear-size, var(--lr-size-1-5rem));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: 0;
     border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
@@ -132,8 +131,7 @@ export const styles = css`
     color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part='clear-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='list'] {
     flex: 1 1 auto;
@@ -149,6 +147,10 @@ export const styles = css`
      shipped block-size: 24rem on [part='base'] into its *flex-basis*: it fills a bounded pane,
      shrinks below 24rem in a short one, and falls back to 24rem in an auto-height container. */
   lr-virtual-list {
+    --lr-virtual-list-row-mark-bg: var(--lr-thread-list-excerpt-highlight-bg, var(--lr-color-warning-quiet));
+    --lr-virtual-list-row-mark-color: var(--lr-thread-list-excerpt-highlight-color, inherit);
+    --lr-virtual-list-row-mark-radius: var(--lr-thread-list-excerpt-highlight-radius, var(--lr-radius-xs));
+    --lr-virtual-list-row-mark-padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
     flex: 1 1 auto;
     min-block-size: 0;
     display: flex;
@@ -216,8 +218,7 @@ export const styles = css`
     );
   }
   lr-virtual-list::part(group-toggle):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   lr-virtual-list::part(group-icon) {
     display: inline-flex;
@@ -251,8 +252,7 @@ export const styles = css`
     /* Compact glyph in an interactive box at the shared minimum target size. */
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: 0;
     border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
@@ -295,8 +295,7 @@ export const styles = css`
     );
   }
   lr-virtual-list::part(row-action):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   lr-virtual-list::part(pin-glyph) {
     display: inline-flex;

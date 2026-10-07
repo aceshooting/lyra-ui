@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -183,8 +184,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: 0;
     border-radius: var(--lr-radius);
@@ -265,8 +265,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     box-sizing: border-box;
     /* WCAG 2.5.8, matching the interactive legend rows above. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     min-width: 0;
     max-inline-size: 100%;
     border: none;
@@ -292,8 +291,7 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   button[part='legend-disclosure']:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The shared icon set ships one right-pointing chevron and asks callers to rotate the WRAPPING
      part, never the svg. Collapsed points along the reading direction; expanded points down in
@@ -373,8 +371,7 @@ export const styles = css`
     /* WCAG 2.5.8: a legend row is ~18px tall on its own, so the toggle carries the shared
        icon-button floor in both axes. The panel's own max-block-size + overflow:auto above
        contains the taller list. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     min-width: 0;
     max-inline-size: 100%;
     border: none;
@@ -399,8 +396,7 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   button[part~='legend-toggle']:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Opacity dims only the decorative, aria-hidden swatch; the label re-colors through the quiet
      text token instead. Opacity on the whole button would drop the label below 4.5:1. */
@@ -552,8 +548,7 @@ export const styles = css`
   .maplibregl-ctrl-group button {
     display: grid;
     place-items: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs);
     border: 0;
     border-radius: inherit;

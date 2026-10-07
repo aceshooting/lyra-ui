@@ -1,8 +1,8 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { promoteToTopLayer } from '../../../internal/top-layer-escape.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -22,6 +22,7 @@ import {
 import { styles } from './command-palette.styles.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
@@ -227,8 +228,8 @@ export interface LyraCommandPaletteEventMap {
   'lr-show': CustomEvent<null>;
   'lr-close-request': CustomEvent<LyraCommandPaletteCloseDetail>;
   'lr-close': CustomEvent<LyraCommandPaletteCloseDetail>;
-  focus: CustomEvent<null>;
-  blur: CustomEvent<null>;
+  focus: FocusEvent;
+  blur: FocusEvent;
 }
 
 /** `<lr-command-palette>` — searchable application command menu with keyboard navigation.
@@ -250,10 +251,10 @@ export interface LyraCommandPaletteEventMap {
  * closed.
  * @event lr-close-request - Cancelable proposal before dismissal, with `{ reason }` detail.
  * @event lr-close - Non-cancelable notification after closing, with `{ reason }` detail.
- * @event focus - Re-dispatched when the search input receives focus. Native `focus` neither
+ * @event {FocusEvent} focus - Re-dispatched when the search input receives focus. Native `focus` neither
  * bubbles nor crosses the shadow boundary, so a host listener on `<lr-command-palette>` itself
  * never sees it otherwise.
- * @event blur - Re-dispatched when the search input loses focus.
+ * @event {FocusEvent} blur - Re-dispatched when the search input loses focus.
  * @csspart backdrop - Modal backdrop.
  * @csspart dialog - Palette dialog.
  * @csspart search - The search row wrapping the leading icon and the `input`.
@@ -365,11 +366,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     onCancel: () => { if (this.overlay?.isTopmost()) this.close('escape'); },
     onUnexpectedClose: () => {
       this.close('escape');
-      if (this.open) this.nativeModal.show();
+      if (this.open) this.modalSurface.show();
     },
   });
-  private focusReturnOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
+  private readonly modalSurface = new ModalSurfaceController(
+    this,
+    this.nativeModal,
+    () => this.renderRoot.querySelector<HTMLElement>('[part="backdrop"]'),
+  );
   private activeCommandId?: string;
   private listResizeObserver?: ResizeObserver;
   private observedList?: HTMLElement;
@@ -397,8 +401,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private resultModelCache?: CommandResultModel;
   private openRequestTarget?: boolean;
   private panelPressed = false;
-  private resultsSink?: AnnouncementSink;
-  private announcedEmpty = false;
+  private readonly announcements = new AnnouncementSinkController(this);
+  private announcedResultText?: string;
+  private completedInitialUpdate = false;
 
   /** Canonical command collection consumed by search, focus, rendering, and activation. Keeping
    *  the first valid occurrence makes duplicate handling deterministic while retaining caller
@@ -439,27 +444,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     super.willUpdate(changed);
     if (changed.has('open')) {
       if (this.open) {
-        this.deferredFocusReturn.cancel();
-        this.focusReturnOpener = captureFocusReturnOpener(this);
-        this.nativeModal.prepare();
-        this.activateOverlay();
+        this.modalSurface.open(() => this.activateOverlay());
       } else {
         const hadOverlay = this.overlay !== undefined;
         this.releaseResultsSink();
-        this.nativeModal.hide();
-        this.overlay?.deactivate();
-        this.overlay = undefined;
-        // The synchronous return keeps the established timing whenever the opener can already
-        // take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.focusReturnOpener;
-        this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
+        this.modalSurface.close(hadOverlay, () => {
+          this.overlay?.deactivate();
+          this.overlay = undefined;
+        }, () => !this.open);
       }
     }
     const rows = this.filtered;
@@ -493,14 +485,20 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     // moves activeIndex/aria-activedescendant correctly but leaves the highlighted row scrolled
     // out of view. Mirrors lr-combobox's identical fix for the same shape of listbox.
     if (changed.has('activeIndex')) this.scrollActiveIntoView();
-    if (this.open && changed.get('queryText') !== undefined) {
-      const empty = this.filtered.length === 0;
-      if (empty && !this.announcedEmpty) {
-        this.resultsSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-        this.resultsSink.announce(this.localize('commandPaletteEmpty'));
+    if (this.open && this.queryText.trim() !== '') {
+      const count = this.filtered.length;
+      const resultText = count === 0
+        ? this.localize('commandPaletteEmpty')
+        : this.localize('commandPaletteResultCount', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(count),
+            pluralCount: count,
+          });
+      if (this.completedInitialUpdate && resultText !== this.announcedResultText) {
+        this.announcements.announcePolite(resultText);
       }
-      this.announcedEmpty = empty;
-    }
+      this.announcedResultText = resultText;
+    } else if (this.queryText.trim() === '') this.announcedResultText = undefined;
+    this.completedInitialUpdate = true;
     const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
     this.observeList(list ?? undefined);
   }
@@ -641,9 +639,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       unregisterHotkeyOwner(view, this);
       view.removeEventListener('keydown', this.onGlobalKeyDown);
     }
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
     this.releaseResultsSink();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
@@ -662,14 +659,17 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
 
   private releaseResultsSink(): void {
-    this.resultsSink?.release();
-    this.resultsSink = undefined;
-    this.announcedEmpty = false;
+    this.announcements.releaseChannel('polite');
+    this.announcedResultText = undefined;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   private enterTopLayer(): void {
-    const backdrop = this.renderRoot.querySelector<HTMLElement>('[part="backdrop"]');
-    if (!this.nativeModal.show() && backdrop) promoteToTopLayer(backdrop);
+    this.modalSurface.show();
   }
 
   private activateOverlay(): void {
@@ -859,11 +859,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   // Native focus/blur neither bubble nor cross the shadow boundary, so a host listener on
   // <lr-command-palette> itself never hears them without this -- mirrors
   // <lr-tool-param-form>'s identical native-input focus/blur bridge.
-  private onSearchFocus = (): void => {
-    this.emit('focus');
+  private onSearchFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
-  private onSearchBlur = (): void => {
-    this.emit('blur');
+  private onSearchBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   private get resultModel(): CommandResultModel {

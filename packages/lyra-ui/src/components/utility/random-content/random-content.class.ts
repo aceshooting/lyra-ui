@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
+import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -31,6 +32,7 @@ export interface LyraRandomContentEventMap {
 
 interface SelectionAnnouncementSnapshot {
   readonly labelReferenceRoots: ReadonlySet<Document | ShadowRoot>;
+  readonly labelReferenceIds: ReadonlySet<string>;
   readonly referencedElements: ReadonlySet<Element>;
   readonly text: string;
   readonly traversedShadowRoots: ReadonlySet<ShadowRoot>;
@@ -199,6 +201,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private readonly authorState = new WeakMap<Element, { hiddenAttribute: string | null; ariaHidden: string | null }>();
   private authorStateObserver?: MutationObserver;
   private announcementContentObserver?: MutationObserver;
+  private labelRootReleases: Array<() => void> = [];
   private authorStateObserverPauseDepth = 0;
   private focusWithin = false;
   private announcementSink?: AnnouncementSink;
@@ -500,12 +503,14 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     selected: readonly Element[],
   ): SelectionAnnouncementSnapshot {
     const labelReferenceRoots = new Set<Document | ShadowRoot>();
+    const labelReferenceIds = new Set<string>();
     const referencedElements = new Set<Element>();
     const traversedShadowRoots = new Set<ShadowRoot>();
     const content = selected
       .map((item) => {
         const result = composedAccessibilityTextResult(item);
         for (const root of result.labelReferenceRoots) labelReferenceRoots.add(root);
+        for (const id of result.labelReferenceIds) labelReferenceIds.add(id);
         for (const reference of result.referencedElements) referencedElements.add(reference);
         for (const root of result.traversedShadowRoots) traversedShadowRoots.add(root);
         return result.text.replace(/\s+/g, ' ').trim();
@@ -515,7 +520,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const context = this.getAttribute('aria-label')?.trim() ?? '';
     let text = content;
     if (context && context !== content) text = content ? `${context}: ${content}` : context;
-    return { labelReferenceRoots, referencedElements, text, traversedShadowRoots };
+    return { labelReferenceRoots, labelReferenceIds, referencedElements, text, traversedShadowRoots };
   }
 
   private selectionAnnouncement(selected: readonly Element[]): string {
@@ -548,13 +553,43 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.announcementContentObserver?.observe(node, this.announcementObservationOptions());
   }
 
-  private observeLabelReferenceRoot(root: Document | ShadowRoot): void {
-    this.announcementContentObserver?.observe(root, {
-      attributes: true,
-      attributeFilter: ['id'],
+  private observeLabelReferenceRoot(root: Document | ShadowRoot, snapshot: SelectionAnnouncementSnapshot): void {
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    const release = subscribeInheritedAttributes(root, Observer, {
+      attributes: ['id'],
       childList: true,
-      subtree: true,
+      changed: (records) => {
+        const relevant = records.some((record) => {
+          if (record.type === 'attributes') {
+            const target = record.target as Element;
+            return snapshot.referencedElements.has(target) || snapshot.labelReferenceIds.has(target.id);
+          }
+          const affects = (node: Node): boolean => {
+            if (node.nodeType !== 1) return false;
+            const element = node as Element;
+            if (snapshot.referencedElements.has(element) || snapshot.labelReferenceIds.has(element.id)) return true;
+            for (const reference of snapshot.referencedElements) if (element.contains(reference)) return true;
+            const pending: Element[] = [element];
+            let visited = 0;
+            while (pending.length) {
+              if (++visited > 4096) return true;
+              const descendant = pending.pop()!;
+              if (snapshot.labelReferenceIds.has(descendant.id)) return true;
+              for (const child of descendant.children) {
+                if (pending.length > 4096) return true;
+                pending.push(child);
+              }
+            }
+            return false;
+          };
+          return [...record.addedNodes, ...record.removedNodes].some(affects);
+        });
+        if (!relevant) return;
+        const next = this.observeAnnouncementContent();
+        this.announceCurrentSelectionIfChanged(next.text);
+      },
     });
+    if (release) this.labelRootReleases.push(release);
   }
 
   private observeAnnouncementContent(): SelectionAnnouncementSnapshot {
@@ -562,6 +597,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const observer = this.announcementContentObserver;
     if (!observer) return snapshot;
     observer.disconnect();
+    for (const release of this.labelRootReleases) release();
+    this.labelRootReleases = [];
     this.observeAnnouncementNode(this);
     for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
       if (slot.assignedNodes().length === 0) continue;
@@ -569,7 +606,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
         this.observeAnnouncementNode(assigned);
       }
     }
-    for (const root of snapshot.labelReferenceRoots) this.observeLabelReferenceRoot(root);
+    if (snapshot.labelReferenceIds.size)
+      for (const root of snapshot.labelReferenceRoots) this.observeLabelReferenceRoot(root, snapshot);
     for (const reference of snapshot.referencedElements) this.observeAnnouncementNode(reference);
     for (const root of snapshot.traversedShadowRoots) this.observeAnnouncementNode(root);
     return snapshot;
@@ -589,6 +627,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private stopAnnouncementContentObserver(): void {
     this.announcementContentObserver?.disconnect();
     this.announcementContentObserver = undefined;
+    for (const release of this.labelRootReleases) release();
+    this.labelRootReleases = [];
   }
 
   private announceCurrentSelectionIfChanged(

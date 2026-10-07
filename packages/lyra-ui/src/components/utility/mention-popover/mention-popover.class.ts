@@ -1,5 +1,5 @@
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
-import { maxCssTime } from '../../../internal/css-motion-time.js';
+import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import {
   html,
   nothing,
@@ -14,18 +14,18 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './mention-popover.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const MAX_VISIBLE_MENTION_ITEMS = 50;
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface LyraMentionItem {
@@ -462,16 +462,16 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // assigning a cross-root relationship to the native textarea.
   @state() private _ownsFocus = false;
   private filteredMemo?: [readonly Readonly<LyraMentionItem>[], string, LyraMentionFilter | null, string, readonly Readonly<LyraMentionItem>[]];
+  private visibleMemo?: [readonly Readonly<LyraMentionItem>[], readonly Readonly<LyraMentionItem>[]];
   private _focusOwnerPredicate?: () => boolean;
   private _focusTransferGeneration = 0;
   private anchorRelationship?: AnchorRelationship;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private announcedResultCount?: string;
   private announcedResultPosition?: string;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     this.announceResultState();
   }
 
@@ -504,7 +504,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       this._ownsFocus &&
       this.open &&
       candidatesChanged &&
-      this.filteredItems.length === 0
+      this.visibleItems.length === 0
     ) {
       // Move focus before render removes the active option, and clear ownership in this same
       // pre-render pass so the empty listbox never commits a stale tabindex="0".
@@ -588,8 +588,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   override disconnectedCallback(): void {
     this._focusTransferGeneration += 1;
     this.resetResultAnnouncements();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     if (this._ownsFocus && this.callFocusOwner(this._focusOwnerPredicate)) this.restoreAnchorFocus();
     this._ownsFocus = false;
     this._focusOwnerPredicate = undefined;
@@ -617,24 +615,12 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     super.adoptedCallback();
     this._focusTransferGeneration += 1;
     this.resetResultAnnouncements();
-    this.syncAnnouncementSink();
+    this.announcements.adopted();
     if (this._ownsFocus && this.callFocusOwner(this._focusOwnerPredicate)) this.restoreAnchorFocus();
     this._ownsFocus = false;
     this._focusOwnerPredicate = undefined;
     this.detachAnchorRelationship();
     this.open = false;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (this.announcementSink?.element?.ownerDocument === this.ownerDocument)
-      return;
-    this.announcementSink?.release();
-    this.announcementSink = this.isConnected
-      ? acquireAnnouncementSink('polite', {
-          document: this.ownerDocument,
-          source: this,
-        })
-      : undefined;
   }
 
   private resetResultAnnouncements(): void {
@@ -643,7 +629,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private announceResultState(): void {
-    if (!this.open || !this.announcementSink) return;
+    if (!this.open) return;
     const rows = this.filteredItems;
     const resultState = rows.length === 0
       ? this.localize('noMatches')
@@ -664,7 +650,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       return;
     }
     if (resultState !== this.announcedResultCount) {
-      this.announcementSink.announce(resultState);
+      this.announcements.announcePolite(resultState);
       this.announcedResultCount = resultState;
     }
     if (position === undefined) {
@@ -672,7 +658,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       return;
     }
     if (position !== this.announcedResultPosition) {
-      this.announcementSink.announce(position);
+      this.announcements.announcePolite(position);
       this.announcedResultPosition = position;
     }
   }
@@ -925,10 +911,21 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     return rows;
   }
 
+  /** The bounded rows that can receive focus or selection; diagnostics retain all matches. */
+  private get visibleItems(): readonly Readonly<LyraMentionItem>[] {
+    const filtered = this.filteredItems;
+    if (this.visibleMemo?.[0] === filtered) return this.visibleMemo[1];
+    const visible = filtered.length > MAX_VISIBLE_MENTION_ITEMS
+      ? filtered.slice(0, MAX_VISIBLE_MENTION_ITEMS)
+      : filtered;
+    this.visibleMemo = [filtered, visible];
+    return visible;
+  }
+
   /** The internal id of the currently highlighted row, for same-tree consumers only. */
   get activeDescendantId(): string | null {
     if (!this.open) return null;
-    const idx = this.clampedIndex(this.filteredItems);
+    const idx = this.clampedIndex(this.visibleItems);
     return idx >= 0 ? this.rowId(idx) : null;
   }
 
@@ -1078,7 +1075,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    */
   handleKeyDown(e: KeyboardEvent): boolean {
     if (!this.open || e.isComposing || e.keyCode === 229) return false;
-    const rows = this.filteredItems;
+    const rows = this.visibleItems;
     switch (e.key) {
       case 'ArrowDown':
         // Nothing to navigate -- let the key fall through to the host's own
@@ -1210,35 +1207,12 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const token = ++this.listboxHideToken;
     await this.updateComplete;
     if (token !== this.listboxHideToken || this.open) return;
-    const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
-    const view = this.ownerDocument.defaultView;
-    if (listbox && view && !prefersReducedMotion(this)) {
-      const computed = view.getComputedStyle(listbox);
-      const durationMs =
-        maxCssTime(computed.transitionDuration) +
-        maxCssTime(computed.transitionDelay);
-      if (durationMs > 0) {
-        await new Promise<void>((resolve) => {
-          let settled = false;
-          let timeout: number | undefined;
-          const finish = (): void => {
-            if (settled) return;
-            settled = true;
-            if (timeout !== undefined) view.clearTimeout(timeout);
-            listbox.removeEventListener('transitionend', onEnd);
-            listbox.removeEventListener('transitioncancel', onEnd);
-            resolve();
-          };
-          const onEnd = (event: Event): void => {
-            if (event.target === listbox) finish();
-          };
-          listbox.addEventListener('transitionend', onEnd);
-          listbox.addEventListener('transitioncancel', onEnd);
-          timeout = view.setTimeout(finish, durationMs + 50);
-        });
-        if (token !== this.listboxHideToken || this.open) return;
-      }
-    }
+    await waitForTransitionSettle(
+      this.renderRoot.querySelector('[part="listbox"]'),
+      this,
+      { reducedMotion: prefersReducedMotion(this) },
+    ).finished;
+    if (token !== this.listboxHideToken || this.open) return;
     this.listboxHidden = true;
   }
 
@@ -1284,7 +1258,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
     const index = Number(optionEl?.dataset['index']);
     if (!Number.isInteger(index) || index < 0) return;
-    const item = this.filteredItems[index];
+    const item = this.visibleItems[index];
     if (item) this.commit(item);
   };
 
@@ -1337,7 +1311,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   override render(): TemplateResult {
-    const rows = this.filteredItems;
+    const rows = this.visibleItems;
+    const remaining = this.filteredItems.length - rows.length;
     const idx = this.clampedIndex(rows);
     const activeId = idx >= 0 ? this.rowId(idx) : '';
 
@@ -1347,6 +1322,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         ?hidden=${this.listboxHidden}
         id=${this._listId}
         role="listbox"
+        aria-describedby=${remaining > 0 ? `${this._listId}-more` : nothing}
         tabindex=${this._ownsFocus && rows.length === 0 ? '0' : '-1'}
         aria-label=${this.effectiveLabel}
         @mousedown=${this.onListboxMouseDown}
@@ -1357,6 +1333,12 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         ${rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`
           : rows.map((item, i) => this.renderRow(item, i, activeId))}
+        ${remaining > 0 ? html`<div part="more-results" id=${`${this._listId}-more`}>
+          ${this.localize('mentionMoreResults', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(remaining),
+            pluralCount: remaining,
+          })}
+        </div>` : nothing}
       </div>
     `;
   }

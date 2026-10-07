@@ -1,3 +1,4 @@
+import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import './test-results.js';
@@ -33,6 +34,21 @@ describe('lr-test-results', () => {
   it('accepts without-auto-expand-failures as a plain-HTML presence attribute', async () => {
     const el = (await fixture(html`<lr-test-results without-auto-expand-failures></lr-test-results>`)) as LyraTestResults;
     expect(el.withoutAutoExpandFailures).to.be.true;
+  });
+
+  it('updates nested test fields when the same suite array is reassigned after mutation', async () => {
+    const source: TestSuiteResult[] = [{
+      id: 'suite',
+      name: 'Suite',
+      tests: [{ id: 'test', name: 'Before', status: 'passed' }],
+    }];
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${source}></lr-test-results>`);
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent).to.equal('Before');
+
+    source[0]!.tests[0]!.name = 'After';
+    el.suites = source;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent).to.equal('After');
   });
 
   it('rebinds its bounded-result announcement sink after adoption', async () => {
@@ -857,6 +873,23 @@ describe('lr-test-results', () => {
       expect(getComputedStyle(pressed).color).to.equal('rgb(70, 80, 90)');
     });
 
+    it('keeps selected fill independent of resting fill while honoring the shared pointer override', async () => {
+      const el = await pressedFixture();
+      el.style.setProperty('--lr-button-fill', 'rgb(90, 100, 110)');
+      el.style.setProperty('--lr-test-results-filter-active-bg', 'rgb(10, 20, 30)');
+      el.style.setProperty('--lr-button-hover-bg', 'rgb(40, 50, 60)');
+      el.style.setProperty('--lr-transition-interactive', 'none');
+      const pressed = el.shadowRoot!.querySelector<HTMLElement>('[part="filter-toggle"][aria-pressed="true"]')!;
+      expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+      try {
+        await hoverUntilMatched(pressed, 'selected filter never received pointer hover');
+        expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(40, 50, 60)');
+      } finally {
+        await resetMouse();
+      }
+      expect(getComputedStyle(pressed).backgroundColor).to.equal('rgb(10, 20, 30)');
+    });
+
     it('renders byte-identically to the token defaults when unset', async () => {
       const el = await pressedFixture();
       const pressed = el.shadowRoot!.querySelector('[part="filter-toggle"][aria-pressed="true"]') as HTMLElement;
@@ -954,19 +987,6 @@ describe('lr-test-results', () => {
 });
 
 const isWebKit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
-
-function glyphRect(root: Node, needle: string): DOMRect {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const index = (node as Text).data.indexOf(needle);
-    if (index === -1) continue;
-    const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + needle.length);
-    return range.getClientRects()[0] ?? range.getBoundingClientRect();
-  }
-  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
-}
 
 it('reads each failure-message line in its own direction under RTL', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px">

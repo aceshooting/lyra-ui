@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./conversation-item.js";
@@ -1200,18 +1201,6 @@ describe("active-state cssprop escape hatch", () => {
   // Resolves what `declaration` computes to *inside this component's shadow root*, where the
   // `--lr-*` design tokens are declared (a light-DOM probe would see none of them) -- used to
   // assert the unset defaults byte-for-byte against the tokens they fall back to.
-  function resolvedInShadow(
-    el: LyraConversationItem,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function activeItem(style = ""): Promise<LyraConversationItem> {
     const wrapper = (await fixture(html`

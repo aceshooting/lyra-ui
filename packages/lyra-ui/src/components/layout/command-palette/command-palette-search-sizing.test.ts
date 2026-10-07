@@ -1,3 +1,4 @@
+import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './command-palette.js';
 import type { LyraCommand, LyraCommandPalette } from './command-palette.js';
@@ -7,23 +8,6 @@ const COMMANDS: LyraCommand[] = [
   { commandId: 'save', label: 'Save file' },
 ];
 
-function resolveInShadow(
-  el: HTMLElement,
-  declarations: readonly (readonly [string, string])[]
-): Record<string, string> {
-  const probe = document.createElement('div');
-  for (const [property, value] of declarations) {
-    probe.style.setProperty(property, value);
-  }
-  el.shadowRoot!.append(probe);
-  const computed = getComputedStyle(probe);
-  const resolved: Record<string, string> = {};
-  for (const [property] of declarations) {
-    resolved[property] = computed.getPropertyValue(property);
-  }
-  probe.remove();
-  return resolved;
-}
 
 async function openPalette(): Promise<LyraCommandPalette> {
   const el = (await fixture(

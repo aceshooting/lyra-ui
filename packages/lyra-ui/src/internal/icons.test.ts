@@ -1,6 +1,23 @@
 import { expect } from '@open-wc/testing';
 import { render } from 'lit';
-import { chevronIcon, closeIcon, playIcon, pauseIcon, calendarIcon, expandIcon, menuIcon } from './icons.js';
+import {
+  archiveIcon,
+  chevronIcon,
+  closeIcon,
+  playIcon,
+  pauseIcon,
+  calendarIcon,
+  expandIcon,
+  menuIcon,
+  pencilIcon,
+  pinIcon,
+  regenerateIcon,
+  retryIcon,
+  sendIcon,
+  stopIcon,
+  thumbIcon,
+  trashIcon,
+} from './icons.js';
 
 function renderIcon(tpl: ReturnType<typeof chevronIcon>): SVGElement {
   const container = document.createElement('div');
@@ -19,6 +36,13 @@ const icons = {
   calendarIcon,
   expandIcon,
   menuIcon,
+  archiveIcon,
+  pencilIcon,
+  pinIcon,
+  regenerateIcon,
+  retryIcon,
+  sendIcon,
+  trashIcon,
 };
 
 for (const [name, fn] of Object.entries(icons)) {
@@ -47,6 +71,22 @@ it('menuIcon draws the hamburger as three full-width horizontal lines', () => {
   expect(lines).to.deep.equal(['4 7 20 7', '4 12 20 12', '4 17 20 17']);
   expect(svg.getAttribute('stroke-linecap')).to.equal('round');
   expect(svg.getAttribute('focusable')).to.equal('false');
+});
+
+it('stopIcon renders the filled square with a non-stroked current-color fill', () => {
+  const svg = renderIcon(stopIcon());
+  expect(svg.getAttribute('fill')).to.equal('currentColor');
+  expect(svg.getAttribute('stroke')).to.equal('none');
+  expect(svg.querySelector('rect')?.getAttribute('rx')).to.equal('1.5');
+});
+
+it('thumbIcon uses fill only for the selected rating state', () => {
+  const unselected = renderIcon(thumbIcon('up', false));
+  const selected = renderIcon(thumbIcon('down', true));
+  expect(unselected.getAttribute('fill')).to.equal('none');
+  expect(selected.getAttribute('fill')).to.equal('currentColor');
+  expect(unselected.querySelectorAll('path')).to.have.length(2);
+  expect(selected.querySelectorAll('path')).to.have.length(2);
 });
 
 it('every icon shares the same viewBox and stroke-width for visual consistency', () => {

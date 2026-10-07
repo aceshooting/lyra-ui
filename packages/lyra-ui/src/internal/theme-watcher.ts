@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { flattenedThemeParent, THEME_ATTRIBUTES } from './theme-observation.js';
+import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 export type LyraThemeRoot = Document | ShadowRoot | Element;
 
@@ -34,13 +35,7 @@ const BASE_MEDIA_QUERIES = [
   '(prefers-contrast: more)',
   '(forced-colors: active)',
 ];
-const OBSERVED_MUTATIONS: MutationObserverInit = {
-  attributes: true,
-  attributeFilter: [...THEME_ATTRIBUTES, 'media', 'href', 'rel', 'disabled'],
-  childList: true,
-  characterData: true,
-  subtree: true,
-};
+const OBSERVED_ATTRIBUTES = [...THEME_ATTRIBUTES, 'media', 'href', 'rel', 'disabled'];
 
 function realmFor(root?: LyraThemeRoot): BrowserRealm | undefined {
   const fallbackDocument = typeof document === 'undefined' ? undefined : document;
@@ -359,7 +354,7 @@ interface ThemeBinding {
 interface RootObservation {
   readonly root: ObservedRoot;
   readonly bindings: Set<ThemeBinding>;
-  observer?: MutationObserver;
+  releaseObserver?: () => void;
   /** Media queries this root's stylesheets declare; cleared whenever those stylesheets change. */
   mediaQueries?: ReadonlySet<string>;
   rebindQueued: boolean;
@@ -485,13 +480,16 @@ function observeRoot(registry: ThemeRegistry, root: ObservedRoot, binding: Theme
     root.addEventListener('load', created.onLoad, true);
     root.addEventListener('slotchange', created.onSlotChange, true);
   }
-  if (!observation.observer) {
+  if (!observation.releaseObserver) {
     const Observer = registry.realm.MutationObserver;
-    const target = root.nodeType === DOCUMENT_NODE ? (root as Document).documentElement : root;
-    if (Observer && target) {
+    if (Observer) {
       const current = observation;
-      observation.observer = new Observer((records) => onRootMutations(registry, current, records));
-      observation.observer.observe(target, OBSERVED_MUTATIONS);
+      observation.releaseObserver = subscribeInheritedAttributes(root, Observer, {
+        attributes: OBSERVED_ATTRIBUTES,
+        childList: true,
+        characterData: true,
+        changed: (records) => onRootMutations(registry, current, records),
+      });
     }
   }
   observation.bindings.add(binding);
@@ -502,7 +500,7 @@ function releaseRoot(registry: ThemeRegistry, root: ObservedRoot, binding: Theme
   if (!observation) return;
   observation.bindings.delete(binding);
   if (observation.bindings.size > 0) return;
-  observation.observer?.disconnect();
+  observation.releaseObserver?.();
   root.removeEventListener('load', observation.onLoad, true);
   root.removeEventListener('slotchange', observation.onSlotChange, true);
   registry.roots.delete(root);

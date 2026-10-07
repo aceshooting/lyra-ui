@@ -31,9 +31,22 @@ export interface ZipArchiveGuardOptions {
   description: string;
   maxEntries: number;
   maxUncompressedBytes: number;
+  maxEntryBytes?: number;
+  verifyCrc?: boolean;
   allowNonZip?: boolean;
   signal?: AbortSignal;
   createInspector?: (entry: ZipEntryInfo) => ZipEntryInspector | undefined;
+}
+
+const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  return value >>> 0;
+});
+
+function updateCrc32(crc: number, chunk: Uint8Array): number {
+  for (const byte of chunk) crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ byte) & 255]!;
+  return crc >>> 0;
 }
 
 interface ParsedZipEntry extends ZipEntryInfo {
@@ -360,6 +373,9 @@ function parseZipArchiveMetadata(
       throw new LyraResourceLimitError(`The ${options.description} archive is malformed or uses ZIP64.`);
     }
     declaredBytes += uncompressedBytes;
+    if (options.maxEntryBytes !== undefined && uncompressedBytes > options.maxEntryBytes) {
+      throw new LyraResourceLimitError(`The ${options.description} archive contains an oversized entry.`);
+    }
     if (declaredBytes > options.maxUncompressedBytes) {
       throw new LyraResourceLimitError(`The expanded ${options.description} archive is too large.`);
     }
@@ -518,9 +534,11 @@ export async function assertZipArchiveWithinLimits(
     const { dataOffset } = entry;
     const dataEnd = dataOffset + entry.compressedBytes;
     const inspector = options.createInspector?.(entry);
+    const crc = { value: 0xffffffff };
     let actualBytes: number;
     if (entry.compression === ZIP_COMPRESSION_STORE) {
       const chunk = new Uint8Array(source, dataOffset, entry.compressedBytes);
+      if (options.verifyCrc) crc.value = updateCrc32(crc.value, chunk);
       inspector?.write(chunk);
       inspector?.close();
       actualBytes = entry.compressedBytes;
@@ -529,10 +547,11 @@ export async function assertZipArchiveWithinLimits(
         source,
         dataOffset,
         dataEnd,
-        options.maxUncompressedBytes - measuredBytes,
+        Math.min(options.maxUncompressedBytes - measuredBytes, options.maxEntryBytes ?? Number.POSITIVE_INFINITY),
         options.description,
         options.signal,
         inspector,
+        options.verifyCrc ? crc : undefined,
       );
       throwIfAborted(options.signal);
     } else {
@@ -545,6 +564,9 @@ export async function assertZipArchiveWithinLimits(
     if (actualBytes !== entry.uncompressedBytes) {
       throw new LyraResourceLimitError(`The ${options.description} archive has inconsistent entry sizes.`);
     }
+    if (options.verifyCrc && ((crc.value ^ 0xffffffff) >>> 0) !== entry.crc) {
+      throw new LyraResourceLimitError(`The ${options.description} archive has an invalid entry checksum.`);
+    }
   }
 }
 
@@ -556,6 +578,7 @@ async function measureDeflateOutput(
   description: string,
   signal: AbortSignal | undefined,
   inspector: ZipEntryInspector | undefined,
+  crc?: { value: number },
 ): Promise<number> {
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
@@ -585,6 +608,7 @@ async function measureDeflateOutput(
         throw new LyraResourceLimitError(`The expanded ${description} archive is too large.`);
       }
       inspector?.write(result.value);
+      if (crc) crc.value = updateCrc32(crc.value, result.value);
     }
   } catch (error) {
     if (error instanceof LyraResourceLimitError || isAbortError(error)) throw error;

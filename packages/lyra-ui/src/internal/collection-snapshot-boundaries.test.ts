@@ -1,3 +1,4 @@
+import { snapshotStructuredData, admitSnapshotArray, projectSnapshotArray } from './structured-snapshot.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { property } from 'lit/decorators.js';
 import {
@@ -145,6 +146,51 @@ describe('public collection truncation is reported and can keep the newest rows'
 });
 
 describe('public collection snapshots at hostile input boundaries', () => {
+  it('keeps a bounded nested prefix only for callers that opt in', () => {
+    const source = [{ data: Array.from({ length: 5 }, (_, index) => index) }, { data: [9] }];
+    const ordinary = snapshotPublicCollection(source, undefined, { limits: { entries: 3 } }) as unknown[];
+    expect(ordinary).to.deep.equal([]);
+
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const retained = snapshotPublicCollection(source, undefined, {
+      limits: { entries: 3 },
+      nestedArrayPrefix: true,
+      onResult: (result) => results.push(result),
+    }) as Array<{ data: readonly number[] }>;
+    expect(retained[0]?.data).to.deep.equal([0, 1, 2]);
+    expect(retained[1]).to.deep.equal({ data: [9] });
+    expect(Object.isFrozen(retained[0]?.data)).to.equal(true);
+    expect(results).to.deep.equal([{ invalid: false, truncated: true }]);
+  });
+
+  it('supports bounded structural policy without invoking an accessor', () => {
+    let reads = 0;
+    const value: Record<string, unknown> = { safe: 1, opaque: new URL('https://example.test/') };
+    Object.defineProperty(value, 'danger', { enumerable: true, get() { reads += 1; return 3; } });
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const snapshot = snapshotPublicCollection(value, undefined, {
+      recordKey: (key) => key === 'opaque' ? 'preserve' : 'copy',
+      onResult: (result) => results.push(result),
+    }) as Record<string, unknown>;
+    expect(snapshot.safe).to.equal(1);
+    expect(snapshot.opaque).to.equal(value.opaque);
+    expect('danger' in snapshot).to.equal(false);
+    expect(reads).to.equal(0);
+    expect(results).to.deep.equal([{ invalid: true, truncated: false }]);
+  });
+
+  it('reports a tighter depth ceiling without changing the ordinary default', () => {
+    const source = [{ nested: { deeper: { value: 1 } } }, { value: 2 }];
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const limited = snapshotPublicCollection(source, undefined, {
+      limits: { depth: 2 },
+      onResult: (result) => results.push(result),
+    }) as unknown[];
+    expect(limited).to.deep.equal([]);
+    expect(results).to.deep.equal([{ invalid: false, truncated: true }]);
+    expect(snapshotPublicCollection(source)).to.deep.equal(source);
+  });
+
   it('discards a record whose property enumeration fails without discarding later rows', () => {
     const hostile = new Proxy({ label: 'unreadable' }, {
       ownKeys() { throw new Error('unreadable record'); },
@@ -254,4 +300,80 @@ describe('event-only collection support', () => {
     expect(warnings).to.have.length(1);
     expect(warnings[0]).to.contain('collectionSupport');
   });
+});
+
+
+describe('structured collection policies', () => {
+  it('shares JSON value ownership while reporting omitted and bounded branches independently', () => {
+    const source = { safe: { nested: [1, 2] }, invalid: () => undefined, long: new Array(10_001) };
+    const result = snapshotStructuredData(source, { profile: 'form', structure: { shape: 'record', depth: 0 } });
+    const snapshot = result.value as typeof source;
+    expect(result.invalid).to.equal(true);
+    expect(result.truncated).to.equal(true);
+    expect(Object.hasOwn(snapshot, 'invalid')).to.equal(false);
+    expect(snapshot.long.length).to.equal(10_000);
+    expect(snapshot.safe === source.safe).to.equal(false);
+    expect(Object.isFrozen(snapshot.safe.nested)).to.equal(true);
+  });
+
+  it('keeps the schema sparse-array policy separate from the public array ceiling', () => {
+    const source: unknown[] = new Array(50_001);
+    source[49_999] = { type: 'string' };
+    const schema = snapshotStructuredData(source, { profile: 'schema' }).value as unknown[];
+    const collection = snapshotPublicCollection(source) as unknown[];
+    expect(schema.length).to.equal(50_000);
+    expect(49_999 in schema).to.equal(true);
+    expect(0 in schema).to.equal(false);
+    expect(collection.length).to.equal(10_000);
+  });
+
+  it('reclaims aliases from failed branches without revisiting a retained sibling', () => {
+    const shared = { value: 'before' };
+    const failed = new Proxy({ shared, broken: true }, {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'broken') {
+          shared.value = 'after';
+          throw new Error('unreadable descriptor');
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const result = snapshotStructuredData({ failed, shared }, { profile: 'form' });
+    const snapshot = result.value as { shared: { value: string } };
+    expect(result.invalid).to.equal(true);
+    expect(Object.hasOwn(snapshot, 'failed')).to.equal(false);
+    expect(snapshot.shared.value).to.equal('after');
+    expect(Object.isFrozen(snapshot.shared)).to.equal(true);
+  });
+
+  it('contains revocation during array admission and never calls an entry accessor', () => {
+    let revoke: () => void;
+    const revocable = Proxy.revocable(['value'], {
+      getOwnPropertyDescriptor(target, key) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+        if (key === 'length') revoke();
+        return descriptor;
+      },
+    });
+    revoke = revocable.revoke;
+    const admitted = admitSnapshotArray(revocable.proxy);
+    expect(projectSnapshotArray(admitted, value => value, { missing: null })).to.equal(undefined);
+    let reads = 0;
+    const source = Object.defineProperty([0], '0', { get: () => { reads += 1; return 1; } });
+    expect(projectSnapshotArray(admitSnapshotArray(source), value => value, { missing: null })).to.deep.equal([null]);
+    expect(reads).to.equal(0);
+  });
+});
+
+
+it('keeps same-source identity collection assignments as explicit refreshes unless opted out', () => {
+  const el = document.createElement(tag('truncation-log-test')) as TruncationLog;
+  const source = [{ label: 'Before' }];
+  el.items = source;
+  const first = el.items;
+  source[0]!.label = 'After';
+  el.items = source;
+  expect(el.items === first).to.equal(false);
+  expect(el.items[0] === source[0]).to.equal(true);
+  expect((el.items[0] as { label: string }).label).to.equal('After');
 });

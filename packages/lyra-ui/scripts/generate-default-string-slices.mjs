@@ -655,7 +655,12 @@ function withoutGeneratedBlocks(source) {
       `${CLASS_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n?`,
     'g',
   );
-  return source.replace(importPattern, '').replace(classPattern, '');
+  // A class block at the opening brace owns its separator; a displaced block after an authored
+  // member must leave one newline or removing it joins that member to the next one.
+  return source.replace(importPattern, '').replace(classPattern, (_block, offset) => {
+    const previous = source[offset - 1];
+    return previous === '{' || previous === '\n' || previous === undefined ? '' : '\n';
+  });
 }
 
 function constantName(key) {

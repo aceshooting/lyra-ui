@@ -361,7 +361,7 @@
   },
   "noCounterpart": {},
   "unaliasedEvents": {
-    "wa-data-grid wa-data-request": "Lyra deliberately exposes the same server-request detail under the native `request` event and does not dispatch a prefixed alias."
+    "wa-data-grid wa-data-request": "Lyra exposes the same server-request detail through the preferred `lr-request` event and retains `request` as a deprecated compatibility event. It does not dispatch `wa-data-request`."
   },
   "attributeRenames": [
     {

@@ -3,6 +3,10 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
+  getInheritedPropertyDescriptor,
+  readOwnDataValue,
+  projectFrozenRows,
+  projectStringList,
 } from './data-descriptors.js';
 
 describe('getOwnDataDescriptor', () => {
@@ -93,5 +97,60 @@ describe('getOwnDataDescriptor', () => {
     expect(getOwnDataDescriptor(value, 'hostile')).to.equal(
       UNSAFE_OWN_DATA_DESCRIPTOR
     );
+  });
+});
+
+describe('getInheritedPropertyDescriptor', () => {
+  it('finds inherited data descriptors and lets an accessor shadow farther prototypes', () => {
+    let getterCalls = 0;
+    const ancestor = { action() {} };
+    const middle = Object.create(ancestor) as object;
+    Object.defineProperty(middle, 'shadowed', {
+      get() {
+        getterCalls += 1;
+        return 'must-not-run';
+      },
+    });
+    const value = Object.create(middle) as object;
+
+    expect(getInheritedPropertyDescriptor(value, 'action')?.value).to.equal(ancestor.action);
+    const shadowed = getInheritedPropertyDescriptor(value, 'shadowed');
+    expect(shadowed !== undefined && Object.hasOwn(shadowed, 'get')).to.be.true;
+    expect(getInheritedPropertyDescriptor(value, 'missing')).to.equal(undefined);
+    expect(getterCalls).to.equal(0);
+  });
+
+  it('contains hostile prototype descriptor reflection', () => {
+    const value = new Proxy({}, {
+      getOwnPropertyDescriptor() {
+        throw new Error('descriptor reflection failed');
+      },
+    });
+    expect(() => getInheritedPropertyDescriptor(value, 'action')).not.to.throw();
+    expect(getInheritedPropertyDescriptor(value, 'action')).to.equal(undefined);
+  });
+});
+
+describe('descriptor-safe projections', () => {
+  it('does not invoke accessors and keeps valid later duplicate identities', () => {
+    let calls = 0;
+    const unsafe = {} as { id: string; label: string };
+    Object.defineProperty(unsafe, 'id', { get() { calls += 1; return 'a'; } });
+    const rows = projectFrozenRows([unsafe, { id: 'a', label: 'retained' }], (value) => {
+      if (!value || typeof value !== 'object') return undefined;
+      const id = readOwnDataValue(value, 'id');
+      const label = readOwnDataValue(value, 'label');
+      return typeof id === 'string' && typeof label === 'string' ? { id, label } : undefined;
+    }, 10, Object.freeze([]), (row) => row.id);
+    expect(rows.map((row) => row.label)).to.deep.equal(['retained']);
+    expect(Object.isFrozen(rows)).to.equal(true);
+    expect(calls).to.equal(0);
+  });
+
+  it('keeps sparse string-list semantics separate from strict keyword semantics', () => {
+    const sparse = ['a', 2, 'b'];
+    expect(projectStringList(sparse, 3)).to.deep.equal(['a', 'b']);
+    expect(projectStringList(sparse, 3, { strict: true })).to.equal(undefined);
+    expect(projectStringList(['a', 'b'], 1, { rejectOversized: true })).to.equal(undefined);
   });
 });

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
 import { compactManifest } from './manifest-compact.mjs';
 import { renderSurfaceFor } from './manifest-render-reachability.mjs';
@@ -19,12 +20,6 @@ const REVIEWED_NONCANONICAL_ATTRIBUTES = new Set([
   'lr-video\0currentTime',
 ]);
 
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(fullPath) : [fullPath];
-  });
-}
 
 function namesFromJSDoc(source) {
   return [...source.matchAll(/@csspart\s+([A-Za-z0-9_-]+)/g)].map((match) => match[1]);

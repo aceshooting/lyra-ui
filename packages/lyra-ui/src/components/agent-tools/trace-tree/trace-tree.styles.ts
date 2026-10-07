@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -167,8 +169,7 @@ export const styles = css`
     font: inherit;
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -189,8 +190,7 @@ export const styles = css`
     );
   }
   [part='toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='toggle'][hidden] {
     display: inline-flex;
@@ -242,7 +242,7 @@ export const styles = css`
   [part='status-text'][data-status='running'] {
     color: var(--lr-trace-tree-running-color, var(--lr-color-brand));
   }
-  [part='status-text']:is([data-status='pending'], [data-status='incomplete']) {
+  [part='status-text']:is([data-status='pending'], [data-status='incomplete'], [data-status='unknown']) {
     color: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
   }
 
@@ -268,7 +268,7 @@ export const styles = css`
   [part='bar'][data-status='denied'] {
     background: var(--lr-trace-tree-denied-color, var(--lr-color-warning));
   }
-  [part='bar']:is([data-status='pending'], [data-status='incomplete']) {
+  [part='bar']:is([data-status='pending'], [data-status='incomplete'], [data-status='unknown']) {
     background: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
   }
   [part='bar'][data-status='running'] {
@@ -322,7 +322,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
 
-  @container (max-inline-size: 479.98px) {
+  @container ${mediumContainerQuery} {
     [part='tokens-in'],
     [part='tokens-out'],
     [part='cost'],

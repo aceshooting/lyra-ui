@@ -1,24 +1,8 @@
+import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './node-palette.js';
 import type { LyraNodePalette } from './node-palette.js';
 
-function resolveInShadow(
-  el: HTMLElement,
-  declarations: readonly (readonly [string, string])[]
-): Record<string, string> {
-  const probe = document.createElement('div');
-  for (const [property, value] of declarations) {
-    probe.style.setProperty(property, value);
-  }
-  el.shadowRoot!.append(probe);
-  const computed = getComputedStyle(probe);
-  const resolved: Record<string, string> = {};
-  for (const [property] of declarations) {
-    resolved[property] = computed.getPropertyValue(property);
-  }
-  probe.remove();
-  return resolved;
-}
 
 function fieldGeometry(el: LyraNodePalette): Record<string, string> {
   const computed = getComputedStyle(
@@ -95,5 +79,44 @@ describe('lr-node-palette search-field sizing', () => {
     expect(fieldGeometry(el)['min-block-size']).to.equal(
       floor['min-block-size']
     );
+  });
+});
+
+
+describe('shared search theme', () => {
+  it('uses shared input geometry and lets component aliases override it', async () => {
+    const el = await palette();
+    el.style.setProperty('--lr-input-control-min-height', '53px');
+    el.style.setProperty('--lr-input-padding-inline', '17px');
+    el.style.setProperty('--lr-input-font-size', '19px');
+    el.style.setProperty('--lr-input-radius', '7px');
+    const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+    expect(getComputedStyle(field).minBlockSize).to.equal('53px');
+    expect(getComputedStyle(field).paddingInlineStart).to.equal('17px');
+    expect(getComputedStyle(field).fontSize).to.equal('19px');
+    expect(getComputedStyle(field).borderStartStartRadius).to.equal('7px');
+    el.style.setProperty('--lr-node-palette-search-min-height', '59px');
+    el.style.setProperty('--lr-node-palette-search-padding-inline', '23px');
+    expect(getComputedStyle(field).minBlockSize).to.equal('59px');
+    expect(getComputedStyle(field).paddingInlineStart).to.equal('23px');
+  });
+
+  it('uses icon-button paint hooks on the native clear action', async () => {
+    const el = await palette();
+    const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+    field.value = 'query';
+    field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    el.style.setProperty('--lr-icon-button-bg', 'rgb(12, 34, 56)');
+    el.style.setProperty('--lr-icon-button-color', 'rgb(65, 43, 21)');
+    el.style.setProperty('--lr-icon-button-radius', '11px');
+    const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+    expect(getComputedStyle(clear).backgroundColor).to.equal('rgb(12, 34, 56)');
+    expect(getComputedStyle(clear).color).to.equal('rgb(65, 43, 21)');
+    expect(getComputedStyle(clear).borderStartStartRadius).to.equal('11px');
+    clear.click();
+    expect(field.value).to.equal('');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.equal(true);
   });
 });

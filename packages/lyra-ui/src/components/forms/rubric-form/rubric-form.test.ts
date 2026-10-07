@@ -14,6 +14,20 @@ import { VALIDITY_ANCHOR } from "../../../internal/anchored-validity.js";
 
 expectLocaleFallback('ar-EG', ['rangeEnd', 'rangeStart', 'rubricSubmit']);
 
+it('uses shared button size and radius tokens on the native rubric actions', async () => {
+  const keys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment' }];
+  const el = await fixture<LyraRubricForm>(html`
+    <lr-rubric-form skippable .keys=${keys}
+      style="--lr-button-size-m: 44px; --lr-button-radius: 13px; --lr-button-accent-fill: rgb(10, 20, 30);"
+    ></lr-rubric-form>
+  `);
+  const submit = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="submit"]')!;
+  const skip = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="skip"]')!;
+  expect(getComputedStyle(submit).minBlockSize).to.equal('44px');
+  expect(getComputedStyle(skip).borderTopLeftRadius).to.equal('13px');
+  expect(getComputedStyle(submit).backgroundColor).to.equal('rgb(10, 20, 30)');
+});
+
 it("contains long field and action content at 320px in LTR and RTL", async () => {
   const label =
     "InternationalizedRubricContentWithoutAnyNaturalBreakOpportunity";

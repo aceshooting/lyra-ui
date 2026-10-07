@@ -3,7 +3,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatTimeOfDay, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -13,7 +13,7 @@ import type { LyraDetailsToggleDetail } from '../../layout/details/details.class
 import { styles } from './tool-timeline.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import type { ApprovalAction } from '../approval-state.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -236,12 +236,6 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
     : { invocationId: entry.id, sourceKey };
 }
 
-/** `hour:minute` in the component's effective locale -- identical algorithm to
- *  `<lr-checkpoint>`'s own `defaultFormatTimestamp`, duplicated locally. */
-function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
-}
-
 /**
  * `<lr-tool-timeline>` — a chronological list of an agent run's tool/function calls, each
  * rendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-tool-result-view>`
@@ -399,36 +393,22 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   @state() private approvalPending: ToolTimelineApprovalPending = null;
   @state() private openedEntryIds = new Set<string>();
   private projectedEntriesCache: CanonicalToolTimelineEntry[] = [];
+  private sortedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private projectionTruncated = false;
   private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactedToolDetail>();
-  private limitAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.projectionTruncated;
   }
 
-  override disconnectedCallback(): void {
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    super.disconnectedCallback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    this.syncLimitAnnouncementSink();
-  }
-
-  private syncLimitAnnouncementSink(): void {
-    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.announcements.adopted();
   }
 
   /** The approval/denial action held after a listener vetoes `lr-tool-approval-decide-request`, or `null`
@@ -463,7 +443,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.localize('toolTimelineLimit', undefined, {
+      this.announcements.announcePolite(this.localize('toolTimelineLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),
       }));
     }
@@ -503,10 +483,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     }
     this.projectedEntriesCache = projected;
     this.projectionTruncated = seen.size > projected.length;
-  }
-
-  private get sortedEntries(): CanonicalToolTimelineEntry[] {
-    return this.projectedEntriesCache
+    this.sortedEntriesCache = projected
       .map((entry, index) => ({ entry, index }))
       .sort((a, b) => {
         const ak = Number.isFinite(a.entry.startedAt) ? a.entry.startedAt! : Number.POSITIVE_INFINITY;
@@ -514,6 +491,10 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         return ak !== bk ? ak - bk : a.index - b.index;
       })
       .map(({ entry }) => entry);
+  }
+
+  private get sortedEntries(): CanonicalToolTimelineEntry[] {
+    return this.sortedEntriesCache;
   }
 
   private get reviewingEntry(): CanonicalToolTimelineEntry | undefined {
@@ -687,7 +668,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     const retryCount = finiteCount(entry.retryCount ?? 0);
     const redactedFields = entry.redactedFields ?? [];
     const pendingApproval = entry.needsApproval === true && entry.approved === undefined;
-    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
     const detailsOpened = this.openedEntryIds.has(entryIdentity(entry));
 
     return html`

@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -46,8 +47,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     /* Derived from the published indent, not a repeated --lr-space-s, so the advertised value and
        the rendered offset cannot drift: the label starts exactly --lr-radio-label-indent from the
@@ -60,8 +60,7 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
   }
   [part~="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* :host(:disabled), not :host([disabled]): a form-associated custom element
      (static formAssociated = true) matches :disabled/:enabled like a native control, from its own

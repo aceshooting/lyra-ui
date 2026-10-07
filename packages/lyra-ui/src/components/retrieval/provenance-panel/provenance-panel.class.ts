@@ -50,6 +50,7 @@ export interface LyraProvenance {
 }
 
 type Section = 'entities' | 'relationships' | 'communities' | 'chunks';
+const MAX_SECTION_ROWS = 500;
 
 function deriveSections(p: Readonly<LyraProvenance> | null) {
   return {
@@ -84,7 +85,7 @@ export interface LyraProvenancePanelEventMap
   extends Omit<LyraCommunityCardEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
     Omit<LyraEntityChipEventMap, 'lr-entity-select'>,
     Omit<LyraPathStripEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
-    LyraChunkInspectorEventMap {
+    Omit<LyraChunkInspectorEventMap, 'lr-toggle'> {
   /** "The user picked this entity", surfaced unchanged from an embedded entity chip, community
    *  card or relationship path strip; only the path strip carries `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{
@@ -96,7 +97,7 @@ export interface LyraProvenancePanelEventMap
     entityId: string;
     occurrenceIndex?: number;
   }>;
-  'lr-toggle': CustomEvent<{ section: Section; expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>;
 }
 
 /**
@@ -109,7 +110,9 @@ export interface LyraProvenancePanelEventMap
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-provenance-panel
- * @event lr-toggle - A section header was toggled. `detail: { section, expanded }`.
+ * @event lr-toggle - A section header changed (`{ section, expanded }`) or a chunk
+ *   inside it changed (`{ section: 'chunks', expanded, itemId }`).
+ * @csspart limit - Localized notice when a section contains more than 500 rows.
  * @event lr-entity-select - Surfaced unchanged from an embedded entity chip, community card or
  *   relationship path strip. `detail: { entityId, occurrenceIndex? }`; only the path strip sets
  *   `occurrenceIndex`.
@@ -198,6 +201,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   private sectionsCache?: {
     source: unknown;
     value: ReturnType<typeof deriveSections>;
+    limitedChunks: readonly LyraChunk[];
   };
 
   private toggleSection(section: Section): void {
@@ -210,7 +214,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     section: Section,
     titleKey: LyraMessageKey,
     count: number,
-    body: TemplateResult
+    body: () => TemplateResult
   ) {
     if (count === 0) return nothing;
     const expanded = this.expandedSections[section];
@@ -229,17 +233,24 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
             >${getNumberFormat(this.effectiveLocale).format(count)}</span
           >
         </button>
-        <div part="body" id=${bodyId} ?hidden=${!expanded}>${body}</div>
+        <div part="body" id=${bodyId} ?hidden=${!expanded}>
+          ${expanded ? body() : nothing}
+          ${expanded && count > MAX_SECTION_ROWS ? html`<p part="limit" role="note">${this.localize('provenancePanelLimit', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(MAX_SECTION_ROWS),
+          })}</p>` : nothing}
+        </div>
       </div>
     `;
   }
 
   override render(): TemplateResult {
     const p = this.provenance;
-    if (this.sectionsCache?.source !== p)
-      this.sectionsCache = { source: p, value: deriveSections(p) };
-    const { entities, relationships, communities, chunks } =
-      this.sectionsCache.value;
+    if (this.sectionsCache?.source !== p) {
+      const value = deriveSections(p);
+      this.sectionsCache = { source: p, value, limitedChunks: value.chunks.slice(0, MAX_SECTION_ROWS) };
+    }
+    const sections = this.sectionsCache;
+    const { entities, relationships, communities, chunks } = sections.value;
     const typeLabels = new Map(
       firstByRetrievalIdentity(this.types, (type) => type?.id).map((type) => [
         type.id,
@@ -280,8 +291,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'entities',
           'provenanceEntities',
           entities.length,
-          html`<div part="entity-row" class="entity-row">
-            ${entities.map((entity) => {
+          () => html`<div part="entity-row" class="entity-row">
+            ${entities.slice(0, MAX_SECTION_ROWS).map((entity) => {
               const typeLabel =
                 typeLabels.get(entity.type as string) ?? entity.type ?? '';
               return html`<lr-entity-chip
@@ -297,8 +308,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'relationships',
           'provenanceRelationships',
           relationships.length,
-          html`<div>
-            ${relationships.map(
+          () => html`<div>
+            ${relationships.slice(0, MAX_SECTION_ROWS).map(
               (r) => html`<lr-path-strip .path=${r.path}></lr-path-strip>`
             )}
           </div>`
@@ -307,8 +318,8 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'communities',
           'provenanceCommunities',
           communities.length,
-          html`<div>
-            ${communities.map(
+          () => html`<div>
+            ${communities.slice(0, MAX_SECTION_ROWS).map(
               (c) =>
                 html`<lr-community-card
                   size="s"
@@ -321,10 +332,14 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'chunks',
           'provenanceChunks',
           chunks.length,
-          html`<lr-chunk-inspector
+          () => html`<lr-chunk-inspector
             size="s"
-            .chunks=${chunks}
+            .chunks=${sections.limitedChunks}
             .thresholds=${this.thresholds}
+            @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
+              event.stopPropagation();
+              this.emit('lr-toggle', { section: 'chunks', ...event.detail });
+            }}
           ></lr-chunk-inspector>`
         )}
       </div>

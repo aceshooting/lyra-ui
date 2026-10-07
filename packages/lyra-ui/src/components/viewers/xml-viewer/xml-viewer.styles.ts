@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -25,6 +26,11 @@ export const styles = css`
   }
   [part='tree'] {
     padding: var(--lr-space-xs);
+  }
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
   }
   .row {
     display: flex;
@@ -85,8 +91,7 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='highlight-action'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-inline-start: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -159,8 +164,7 @@ export const styles = css`
        chevron. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;

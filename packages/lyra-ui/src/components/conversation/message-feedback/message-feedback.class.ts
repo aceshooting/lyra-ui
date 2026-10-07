@@ -1,21 +1,23 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
   nothing,
-  svg,
   type PropertyDeclaration,
   type PropertyValues,
-  type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { thumbIcon } from '../../../internal/icons.js';
 import { nextId } from '../../../internal/a11y.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { composedContains } from '../../../internal/overlay-stack.js';
 import {
   getOwnDataDescriptor,
+  isObjectValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -30,6 +32,7 @@ import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
+import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings.generated.js';
@@ -65,38 +68,8 @@ export interface LyraMessageFeedbackEventMap {
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
   'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
   'lr-toolbar-actions-change': Event;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
-}
-
-// A one-off thumb glyph, sharing internal/icons.ts's 24x24 viewBox / 1em sizing / stroke-width
-// conventions so it reads as part of the same visual language as the rest of the library's inline
-// icons, without adding a feedback-specific shape to that shared, general-purpose module. Same
-// approach several sibling chat components' own local glyphs take for the identical reason.
-// `filled` swaps the fill so the pressed state is never conveyed by aria-pressed/color alone.
-function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTemplateResult {
-  const cuff =
-    direction === 'up'
-      ? 'M7 11v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3Z'
-      : 'M17 13V4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v8h4Z';
-  const hand =
-    direction === 'up'
-      ? 'M7 11l3.5-7A2 2 0 0 1 12 3a1 1 0 0 1 1 1v6h4.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 16.3 21H9a2 2 0 0 1-2-2v-8Z'
-      : 'M17 13l-3.5 7A2 2 0 0 1 12 21a1 1 0 0 1-1-1v-6H6.5a2 2 0 0 1-2-2.3l1.2-7A2 2 0 0 1 7.7 3H15a2 2 0 0 1 2 2v8Z';
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill=${filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d=${cuff}></path><path d=${hand}></path></svg>
-  `;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 
 const MAX_PROJECTED_FEEDBACK_REASONS = 10_000;
@@ -110,10 +83,6 @@ const EMPTY_FEEDBACK_DETAIL_PROJECTION: FeedbackDetailProjection = Object.freeze
   reasons: Object.freeze([]),
   commentable: false,
 });
-
-function isObjectValue(value: unknown): value is object {
-  return value !== null && (typeof value === 'object' || typeof value === 'function');
-}
 
 function isArrayValue(value: unknown): value is readonly unknown[] {
   try {
@@ -234,11 +203,11 @@ interface PendingMessageFeedbackSubmission {
  *   `revertPendingSubmit(submissionId)` after it fails. The legacy no-argument settle form works
  *   only for this instance's first never-invalidated transaction; later calls fail closed. An
  *   uncanceled submit retains the synchronous close/announce/focus behavior.
- * @event blur - Re-dispatched from the comment `<textarea>`'s own native `blur` -- bubbling and
+ * @event {FocusEvent} blur - Re-dispatched from the comment `<textarea>`'s own native `blur` -- bubbling and
  *   composed (unlike the native event, which is neither), so a listener above the shadow boundary
  *   can observe it. Mirrors `<lr-model-select>`'s identical re-dispatch for its own free-text
  *   `<input>`.
- * @event focus - Re-dispatched from the comment `<textarea>`'s own native `focus`, for the same
+ * @event {FocusEvent} focus - Re-dispatched from the comment `<textarea>`'s own native `focus`, for the same
  *   reason as `blur`.
  * @event lr-toolbar-actions-change - No-detail coordination event emitted when the logical
  *   toolbar actions exposed by this provider change availability or order.
@@ -365,21 +334,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   private createToolbarAction(direction: MessageFeedbackRating): LyraToolbarAction {
     const host = this;
     const button = () => direction === 'up' ? host.upButtonEl : host.downButtonEl;
-    let leasedButton: HTMLButtonElement | undefined;
-    let authoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
-    const releaseTabIndex = (): void => {
-      const target = leasedButton;
-      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (authoredTabIndex === null) target.removeAttribute('tabindex');
-        else target.setAttribute('tabindex', authoredTabIndex);
-      }
-      leasedButton = undefined;
-      authoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
-    };
+    const tabIndexLease = leaseTabIndex();
     return {
       id: direction,
       get disabled() {
@@ -389,28 +344,9 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         button()?.focus(options);
       },
       setTabIndex(tabIndex) {
-        const target = button();
-        if (!target) {
-          releaseTabIndex();
-          return;
-        }
-        if (leasedButton !== target) {
-          releaseTabIndex();
-          leasedButton = target;
-          authoredTabIndex = target.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null &&
-            target.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        target.tabIndex = tabIndex;
-        lastManagedTabIndex = target.getAttribute('tabindex');
+        tabIndexLease.set(button(), tabIndex);
       },
-      releaseTabIndex,
+      releaseTabIndex: () => tabIndexLease.release(),
       matchesEventPath(path) {
         const target = button();
         return target !== undefined && path.includes(target);
@@ -638,12 +574,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   // re-dispatched (bubbling + composed, via this.emit()) so a host-level listener on
   // <lr-message-feedback> can observe them, mirroring <lr-model-select>'s identical bridge for
   // its own free-text <input>.
-  private onCommentFocus = (): void => {
-    this.emit('focus', null);
+  private onCommentFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
-  private onCommentBlur = (): void => {
-    this.emit('blur', null);
+  private onCommentBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   private setPending(pending: boolean): void {
@@ -899,11 +835,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                           placeholder=${this.localize('feedbackCommentPlaceholder')}
                           spellcheck=${this.spellcheck}
                           autocapitalize=${this.autocapitalize || nothing}
-                          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-                            ? this.autocorrect
-                              ? 'on'
-                              : 'off'
-                            : nothing}
+                          autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
                           wrap=${this.wrap}
                           .value=${this.commentDraft}
                           ?disabled=${this.disabled || this.pending}

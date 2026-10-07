@@ -267,6 +267,8 @@ export interface DataGridSelectionDetail<Row = Record<string, unknown>> {
 export interface LyraDataGridEventMap<Row = Record<string, unknown>> {
   focus: FocusEvent;
   blur: FocusEvent;
+  'lr-request': CustomEvent<LyraEventDetailSnapshot<DataGridRequest>>;
+  /** Mirrored request event; `lr-request` carries equivalent detail. */
   request: CustomEvent<LyraEventDetailSnapshot<DataGridRequest>>;
   'lr-cell-click': CustomEvent<DataGridCellDetail<Row>>;
   'lr-cell-contextmenu': CustomEvent<DataGridCellContextMenuDetail<Row>>;

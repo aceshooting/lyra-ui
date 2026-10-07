@@ -1,24 +1,20 @@
+import { RangeDragController, rangePointerRatio, nearestRangeEnd, RANGE_PAGE_STEP_MULTIPLIER } from '../../../internal/range-drag.js';
+import type { RangeDragState } from '../../../internal/range-drag.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import {
-  attachInternalsSafely,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
-import { literalSetConverter } from '../../../internal/converters.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
+import { falseDefaultBooleanConverter, literalSetConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -41,16 +37,12 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** PageUp/PageDown move by a larger increment than a single Arrow step,
- *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
- *  (and native `<input type=range>`). Mirrors lr-time-range's identical
- *  constant. */
-const PAGE_STEP_MULTIPLIER = 10;
 
 /** Upper bound on the number of `step` intervals `with-markers` will draw.
  *  A legitimate fractional step (`step="1e-7"` over `[0, 1]`) implies ten
@@ -58,11 +50,6 @@ const PAGE_STEP_MULTIPLIER = 10;
  *  the page while it built the nodes — beyond this ceiling the tick grid is
  *  dropped entirely rather than half-drawn. */
 const MAX_MARKER_INTERVALS = 100;
-
-/** Presence boolean that also accepts the explicit HTML spelling `="false"`. */
-const falseDefaultBooleanConverter = {
-  fromAttribute: (value: string | null): boolean => value !== null && value !== 'false',
-};
 
 /** Shadow-root-scoped id of the rendered hint region, referenced by each
  *  handle's `aria-describedby`. Ids are scoped per shadow root, so a fixed
@@ -122,21 +109,7 @@ export interface LyraSliderEventMap {
   'lr-invalid': CustomEvent<null>;
 }
 
-interface SliderDragState {
-  handle: SliderHandle;
-  changed: boolean;
-  captureTarget: HTMLElement;
-  /** `[part="track"]`'s rect and the resolved direction, snapshotted once per
-   *  gesture rather than re-read on every pointermove:
-   *  getBoundingClientRect()/getComputedStyle() in a window-level pointermove
-   *  handler force a synchronous layout/style flush interleaved with the
-   *  previous move's own style writes, and neither value changes from this
-   *  component's own updates mid-drag (the drag only moves the thumb and
-   *  indicator, never the track's box). Re-measured at every gesture start,
-   *  so any between-gesture layout change is always picked up. */
-  rect: DOMRect | null;
-  rtl: boolean;
-}
+type SliderDragState = RangeDragState<SliderHandle>;
 
 class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
 
@@ -341,7 +314,7 @@ export class LyraSlider extends LyraSliderBase {
   size: LyraSize = 'm';
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Caller-supplied constraint-validation message.
    * @default null */
   declare customError: string | null;
@@ -384,24 +357,16 @@ export class LyraSlider extends LyraSliderBase {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(
-      this,
-      this.internals,
-      () => this[VALIDITY_ANCHOR](),
-    );
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.internals.setFormValue('0', '0');
     this.addEventListener('input', this.markInteracted);
     this.addEventListener('change', this.markInteracted);
     this.addEventListener('focusout', this.markFocusoutInteracted);
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like editing or blurring; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
     this.syncValidityStates();
   }
 
@@ -471,8 +436,7 @@ export class LyraSlider extends LyraSliderBase {
   set name(next: string | null) {
     const old = this._name;
     this._name = next || null;
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.syncFormValue();
     this.requestUpdate('name', old);
   }
@@ -500,6 +464,8 @@ export class LyraSlider extends LyraSliderBase {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     if (this._disabled) {
       this.pendingKeyHandle = null;
       this.abortActiveDrags();
@@ -738,17 +704,16 @@ export class LyraSlider extends LyraSliderBase {
    * row without including its text in the control's accessible name. */
   @property({ attribute: 'value-placement' }) valuePlacement: SliderValuePlacement = 'inline';
 
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasReferenceSlot = false;
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint') || this.slotPresence.has('help-text'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasReferenceSlot(): boolean { return this.slotPresence.has('reference'); }
 
-  // Keyed by pointerId (a Map, not a single scalar) so two concurrent drags
-  // — a two-finger touch, one per range handle — each keep tracking their
-  // own handle instead of the second pointerdown hijacking the first.
-  private drags = new Map<number, SliderDragState>();
-  /** Exact realm carrying shared drag listeners, retained across adoption for symmetric cleanup. */
-  private dragWindow?: Window;
+  private readonly dragController = new RangeDragController<SliderHandle>(
+    this, (event) => this.onPointerMove(event), (event) => this.onPointerUp(event),
+  );
+  private get drags() { return this.dragController.active; }
   /** The owner realm and handle of the pending autofocus frame, if any. */
   private autofocusFrame?: { owner: Window; handle: number };
   /** The handle whose keyboard interaction has an uncommitted change pending,
@@ -811,16 +776,6 @@ export class LyraSlider extends LyraSliderBase {
     if (!this._minValueDirty) this._minValue = this.clampValue(this._defaultMinValue);
     if (!this._maxValueDirty) this._maxValue = this.clampValue(this._defaultMaxValue);
     this.sanitizeHandles();
-    if (this.hasUpdated) {
-      // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
-      this.syncSupportSlotFlags();
-    } else {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => this.syncSupportSlotFlags());
-    }
     this.syncFormValue();
     this.updateValidity();
     this.syncInteractionStates();
@@ -906,7 +861,6 @@ export class LyraSlider extends LyraSliderBase {
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
     this.syncInteractionStates();
-    this.teardownDragWindow();
     this.cancelAutofocusFrame();
   }
 
@@ -922,7 +876,6 @@ export class LyraSlider extends LyraSliderBase {
     this.pendingKeyHandle = null;
     this.focusedHandle = null;
     this.syncInteractionStates();
-    this.teardownDragWindow();
     this.cancelAutofocusFrame();
   }
 
@@ -953,7 +906,10 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   formDisabledCallback(fieldsetDisabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = fieldsetDisabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     if (fieldsetDisabled) {
       this.pendingKeyHandle = null;
       this.abortActiveDrags();
@@ -970,14 +926,11 @@ export class LyraSlider extends LyraSliderBase {
   }
 
   checkValidity(): boolean {
-    // Silent query: must never mark a pristine slider as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
 
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.markInteracted();
     return this.internals.reportValidity();
   }
@@ -1337,8 +1290,8 @@ export class LyraSlider extends LyraSliderBase {
     };
     if (e.key === forwardKey || e.key === 'ArrowUp') move(this.directionalStep(current, 1));
     else if (e.key === backwardKey || e.key === 'ArrowDown') move(this.directionalStep(current, -1));
-    else if (e.key === 'PageUp') move(this.directionalStep(current, PAGE_STEP_MULTIPLIER));
-    else if (e.key === 'PageDown') move(this.directionalStep(current, -PAGE_STEP_MULTIPLIER));
+    else if (e.key === 'PageUp') move(this.directionalStep(current, RANGE_PAGE_STEP_MULTIPLIER));
+    else if (e.key === 'PageDown') move(this.directionalStep(current, -RANGE_PAGE_STEP_MULTIPLIER));
     else if (e.key === 'Home') move(bounds.min);
     else if (e.key === 'End') move(bounds.max);
   };
@@ -1364,23 +1317,14 @@ export class LyraSlider extends LyraSliderBase {
    *  inset-inline-start, so 0% sits at the visual right edge); the block axis
    *  never does, and runs bottom-to-top so "up" always means "more". */
   private ratioFromPointer(e: PointerEvent, rect: DOMRect, rtl: boolean): number {
-    if (this.orientation === 'vertical') {
-      const raw = rect.height === 0 ? 0 : (e.clientY - rect.top) / rect.height;
-      return Math.min(1, Math.max(0, 1 - raw));
-    }
-    const raw = rect.width === 0 ? 0 : (e.clientX - rect.left) / rect.width;
-    return Math.min(1, Math.max(0, rtl ? 1 - raw : raw));
+    return rangePointerRatio(e.clientX, e.clientY, rect, rtl, this.orientation === 'vertical');
   }
 
   /** Which range handle a track click should grab: the nearer one, breaking a
    *  tie (including both handles sitting on the same value) in favour of the
    *  handle that can actually travel toward the click. */
   private nearestHandle(target: number): SliderHandle {
-    const toMin = Math.abs(target - this.minValue);
-    const toMax = Math.abs(target - this.maxValue);
-    if (toMin < toMax) return 'min';
-    if (toMax < toMin) return 'max';
-    return target < this.minValue ? 'min' : 'max';
+    return nearestRangeEnd(target, this.minValue, this.maxValue) === 0 ? 'min' : 'max';
   }
 
   /** Start tracking `pointerId` as a drag of `handle`, transferring pointer
@@ -1389,31 +1333,17 @@ export class LyraSlider extends LyraSliderBase {
    *  that starts elsewhere on the track (see `onBasePointerDown`), so both
    *  gestures continue identically from here on. */
   private beginDrag(
-    pointerId: number,
+    event: PointerEvent,
     handle: SliderHandle,
     captureTarget: HTMLElement,
     rect: DOMRect | null,
     rtl: boolean,
   ): SliderDragState | undefined {
-    const dragWindow = captureTarget.ownerDocument.defaultView;
-    if (!this.isConnected || !dragWindow) return undefined;
-    const firstDrag = this.drags.size === 0;
-    if (!firstDrag && this.dragWindow !== dragWindow) return undefined;
-    captureTarget.setPointerCapture(pointerId);
-    const drag: SliderDragState = { handle, changed: false, captureTarget, rect, rtl };
-    this.drags.set(pointerId, drag);
-    if (firstDrag) {
-      this.dragWindow = dragWindow;
-      dragWindow.addEventListener('pointermove', this.onPointerMove);
-      dragWindow.addEventListener('pointerup', this.onPointerUp);
-      dragWindow.addEventListener('pointercancel', this.onPointerUp);
-      dragWindow.addEventListener('lostpointercapture', this.onPointerUp);
+    const drag = this.dragController.begin(event, { handle, changed: false, captureTarget, rect, rtl });
+    if (drag) {
+      this.syncInteractionStates();
+      this.requestUpdate();
     }
-    // A drag can end without a pointerup: a system gesture / palm rejection
-    // can fire `pointercancel`, and losing capture (e.g. element removed)
-    // fires `lostpointercapture` — both need the same teardown as pointerup.
-    this.syncInteractionStates();
-    this.requestUpdate();
     return drag;
   }
 
@@ -1424,7 +1354,7 @@ export class LyraSlider extends LyraSliderBase {
 
   private onPointerDown = (handle: SliderHandle, e: PointerEvent): void => {
     if (!this.interactive || e.button !== 0) return;
-    this.beginDrag(e.pointerId, handle, e.target as HTMLElement, this.trackRect(), isRtl(this));
+    this.beginDrag(e, handle, e.target as HTMLElement, this.trackRect(), isRtl(this));
   };
 
   /** A pointerdown anywhere on `[part="base"]` other than a thumb itself (the
@@ -1447,7 +1377,7 @@ export class LyraSlider extends LyraSliderBase {
     const handle: SliderHandle = this.range ? this.nearestHandle(target) : 'value';
     const thumb = this.handleElement(handle) ?? thumbs[0];
     if (!thumb) return;
-    const drag = this.beginDrag(e.pointerId, handle, thumb, rect, rtl);
+    const drag = this.beginDrag(e, handle, thumb, rect, rtl);
     if (!drag) return;
     if (this.setValueFor(handle, target, false)) drag.changed = true;
     // Keyboard interaction (arrow keys, Home/End, ...) can continue
@@ -1480,42 +1410,16 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {
-    const drag = this.drags.get(pointerId);
-    if (drag === undefined) return;
-    this.drags.delete(pointerId);
+    const drag = this.dragController.end(pointerId);
+    if (!drag) return;
     if (commit && drag.changed) this.emitChange(drag.handle);
-    // Only the last concurrent drag to end tears down the shared window
-    // listeners — an overlapping second pointer may still be down.
-    if (this.drags.size === 0) {
-      this.teardownDragWindow();
-    }
     this.syncInteractionStates();
     this.requestUpdate();
   }
 
-  private teardownDragWindow(): void {
-    const dragWindow = this.dragWindow;
-    this.dragWindow = undefined;
-    dragWindow?.removeEventListener('pointermove', this.onPointerMove);
-    dragWindow?.removeEventListener('pointerup', this.onPointerUp);
-    dragWindow?.removeEventListener('pointercancel', this.onPointerUp);
-    dragWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
-  }
-
   private abortActiveDrags(): void {
-    const activeDrags = [...this.drags.entries()];
-    if (activeDrags.length === 0) return;
-    this.drags.clear();
-    this.teardownDragWindow();
-    for (const [pointerId, drag] of activeDrags) {
-      try {
-        if (drag.captureTarget.hasPointerCapture(pointerId)) {
-          drag.captureTarget.releasePointerCapture(pointerId);
-        }
-      } catch {
-        // The browser may already have released capture while replacing or disconnecting a thumb.
-      }
-    }
+    if (this.drags.size === 0) return;
+    this.dragController.abort();
     this.syncInteractionStates();
   }
 
@@ -1539,36 +1443,6 @@ export class LyraSlider extends LyraSliderBase {
       this.requestUpdate();
     }
     relayNativeEvent(this, event);
-  }
-
-  private onSlotChange = (event: Event): void => {
-    const slot = event.target as HTMLSlotElement;
-    if (slot.name === 'hint' || slot.name === 'help-text') {
-      this.hasHintSlot = this.slotsHaveContent(['hint', 'help-text']);
-    }
-    if (slot.name === 'error') this.hasErrorSlot = this.slotsHaveContent(['error']);
-    if (slot.name === 'label') this.hasLabelSlot = this.slotsHaveContent(['label']);
-    if (slot.name === 'reference') this.hasReferenceSlot = this.slotsHaveContent(['reference']);
-  };
-
-  /** The one-time connect-time light-DOM sample `connectedCallback()` seeds (directly on a
-   *  reconnect, deferred through `seedFirstRenderState()` on a hydrating first connect); ongoing
-   *  changes are handled by {@link onSlotChange}. */
-  private syncSupportSlotFlags(): void {
-    const slots = Array.from(this.children ?? [], (child) => child.getAttribute('slot'));
-    this.hasHintSlot = slots.some((slot) => slot === 'hint' || slot === 'help-text');
-    this.hasErrorSlot = slots.includes('error');
-    this.hasLabelSlot = slots.includes('label');
-    this.hasReferenceSlot = slots.includes('reference');
-  }
-
-  private slotsHaveContent(names: readonly string[]): boolean {
-    return names.some((name) => {
-      const slot = this.renderRoot.querySelector<HTMLSlotElement>(`slot[name="${name}"]`);
-      return slot?.assignedNodes({ flatten: true }).some((node) =>
-        node.nodeType === 1 || Boolean(node.textContent?.trim()),
-      ) ?? false;
-    });
   }
 
   private formatValue(value: number): string {
@@ -1723,7 +1597,7 @@ export class LyraSlider extends LyraSliderBase {
     const markers = this.markerPercents();
     const label = html`
       <div id=${LABEL_ID} part="label form-control-label" ?hidden=${!hasLabel}>
-        ${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>
+        ${this.label}<slot name="label"></slot>
       </div>`;
     const value = this.withValue
       ? html`<span part="value" aria-hidden="true"
@@ -1734,7 +1608,7 @@ export class LyraSlider extends LyraSliderBase {
     return html`
       ${labelValue ? html`<div part="label-row">${label}${value}</div>` : label}
       <div part="references" ?hidden=${!hasReference}>
-        <slot name="reference" @slotchange=${this.onSlotChange}></slot>
+        <slot name="reference"></slot>
       </div>
       <div
         part="base slider form-control form-control-input input control"
@@ -1763,11 +1637,11 @@ export class LyraSlider extends LyraSliderBase {
       </div>
       ${labelValue ? nothing : value}
       <div id=${ERROR_ID} part="error" ?hidden=${!hasError}>
-        ${this.hasErrorSlot ? nothing : this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot>
+        ${this.hasErrorSlot ? nothing : this.errorText}<slot name="error"></slot>
       </div>
       <div id=${HINT_ID} part="hint form-control-help-text" ?hidden=${!hasHint}>
-        ${this.hint || this.helpText}<slot name="hint" @slotchange=${this.onSlotChange}></slot
-        ><slot name="help-text" @slotchange=${this.onSlotChange}></slot>
+        ${this.hint || this.helpText}<slot name="hint"></slot
+        ><slot name="help-text"></slot>
       </div>
     `;
   }

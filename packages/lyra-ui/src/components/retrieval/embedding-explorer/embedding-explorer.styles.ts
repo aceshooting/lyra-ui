@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -125,7 +126,7 @@ export const styles = css`
 
   /* A floor, never a fixed size: min-block-size only ever raises the resolved block-size, so a
      taller height still wins at narrow allocations. */
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='plot'] {
       min-block-size: var(--lr-size-12rem);
     }

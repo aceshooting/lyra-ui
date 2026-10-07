@@ -1,3 +1,4 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
@@ -12,6 +13,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import type { ChatMessageRole } from '../../conversation/chat-message/chat-message.class.js';
 import { styles } from './prompt-studio.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -51,8 +53,8 @@ export interface PromptStudioMessageReorderDetail {
   readonly toIndex: number;
 }
 export interface LyraPromptStudioEventMap {
-  focus: CustomEvent<null>;
-  blur: CustomEvent<null>;
+  focus: FocusEvent;
+  blur: FocusEvent;
   'lr-change-request': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<PromptStudioState>>;
   /** Cancelable request to reorder messages, fired before the order changes. */
@@ -98,9 +100,9 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * @event lr-run - The current prompt was requested for execution.
  * @event lr-save - The current prompt was requested for persistence.
  * @event lr-version-select - A complete saved version was activated.
- * @event focus - Re-dispatched when the message role selector, textarea, or a variable input receives focus,
+ * @event {FocusEvent} focus - Re-dispatched when the message role selector, textarea, or a variable input receives focus,
  *   since native focus neither bubbles nor crosses the shadow boundary.
- * @event blur - Re-dispatched when the message textarea or a variable input loses focus.
+ * @event {FocusEvent} blur - Re-dispatched when the message textarea or a variable input loses focus.
  * @csspart base - The named studio region.
  * @csspart toolbar - Save/run controls.
  * @csspart editor - Messages and variables workspace.
@@ -160,7 +162,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['messages', 'variables', 'versions']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-change-request',
     'lr-change',
@@ -200,6 +202,12 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   /** Native `<textarea>` wrapping mode. Variable `<input>` controls do not support `wrap`. */
   @property() wrap: PromptStudioWrap = 'soft';
+  private normalizedMessageSource?: readonly PromptStudioMessage[];
+  private normalizedMessageCache: PromptStudioMessage[] = [];
+  private previewMessageSource?: readonly PromptStudioMessage[];
+  private previewVariableSource?: readonly PromptStudioVariable[];
+  private previewResult?: string[] | null;
+  private previewRows = new Map<string, { text: string; substitutions: number; memoLength: number }>();
   /** The moved row's next usable action. Lit retains keyed rows but native button focus is not
    * preserved when their position changes, so restore it after the new boundary state renders. */
   private pendingMessageMoveFocus?: { messageId: string; part: PromptStudioMessageMovePart };
@@ -240,8 +248,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private uniqueMessages(source: unknown = this.messages): PromptStudioMessage[] {
+    if (source === this.messages && this.normalizedMessageSource === this.messages) return this.normalizedMessageCache;
     const seen = new Set<string>();
-    return this.messageItems(source)
+    const messages = this.messageItems(source)
       .filter((message) => {
         if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
         seen.add(message.id);
@@ -254,6 +263,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       // throws inside this component's own render() and blanks the whole panel instead of just the
       // one malformed message.
       .map((message) => (typeof message.content === 'string' ? message : { ...message, content: '' }));
+    if (source === this.messages) {
+      this.normalizedMessageSource = this.messages;
+      this.normalizedMessageCache = messages;
+    }
+    return messages;
   }
 
   private uniqueVersions(): PromptStudioVersion[] {
@@ -282,8 +296,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     // pattern below: a listener may hold, persist, or alter its own copy without mutating the
     // component's accepted next state behind the veto point.
     const proposal: PromptStudioState = {
-      messages: messages.map((message) => ({ ...message })),
-      variables: this.variableItems(variables).map((variable) => ({ ...variable })),
+      messages: [...messages],
+      variables: [...this.variableItems(variables)],
     };
     this.changeRequestPending = true;
     try {
@@ -413,6 +427,23 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     messages: readonly PromptStudioMessage[],
     variableItems: readonly PromptStudioVariable[],
   ): string[] | null {
+    if (this.previewMessageSource === this.messages && this.previewVariableSource === this.variables) {
+      return this.previewResult!;
+    }
+    const previousRows = this.previewVariableSource === this.variables ? this.previewRows : new Map();
+    // Carry only rows in the accepted snapshot into the next edit. Bound retained key and output
+    // text together; old editor revisions must not accumulate in a long-lived studio.
+    this.previewRows = new Map();
+    let retainedLength = 0;
+    const remember = (content: string, row: { text: string; substitutions: number; memoLength: number }): void => {
+      const size = content.length + row.text.length;
+      if (!this.previewRows.has(content) && retainedLength + size <= PREVIEW_MAX_TEXT_LENGTH) {
+        this.previewRows.set(content, row);
+        retainedLength += size;
+      }
+    };
+    this.previewMessageSource = this.messages;
+    this.previewVariableSource = this.variables;
     const variables = new Map<string, string>();
     for (const variable of variableItems) {
       if (variable.name !== '' && !variables.has(variable.name)) variables.set(variable.name, variable.value);
@@ -423,6 +454,22 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const previews: string[] = [];
 
     for (const message of messages) {
+      const cached = this.previewRows.get(message.content) ?? previousRows.get(message.content);
+      if (cached) {
+        if (
+          substitutions + cached.substitutions > PREVIEW_MAX_SUBSTITUTIONS ||
+          memoLength + cached.memoLength > PREVIEW_MAX_TEXT_LENGTH ||
+          outputLength + cached.text.length > PREVIEW_MAX_TEXT_LENGTH
+        ) return (this.previewResult = null);
+        substitutions += cached.substitutions;
+        memoLength += cached.memoLength;
+        outputLength += cached.text.length;
+        previews.push(cached.text);
+        remember(message.content, cached);
+        continue;
+      }
+      const substitutionsBefore = substitutions;
+      const memoLengthBefore = memoLength;
       // Each message keeps its own cycle context, preserving literal cyclic placeholders even
       // when different messages enter the same cycle through different variable names.
       const resolved = new Map<string, string>();
@@ -469,18 +516,23 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         return next;
       };
       const preview = resolveText(message.content, () => PREVIEW_MAX_TEXT_LENGTH - outputLength);
-      if (preview === null) return null;
+      if (preview === null) return (this.previewResult = null);
       outputLength += preview.length;
       previews.push(preview);
+      remember(message.content, {
+        text: preview,
+        substitutions: substitutions - substitutionsBefore,
+        memoLength: memoLength - memoLengthBefore,
+      });
     }
-    return previews;
+    return (this.previewResult = previews);
   }
 
   // Native focus/blur events don't bubble and don't cross the shadow boundary on their own, so
   // the message textarea and variable inputs need an explicit bridge to make host-level
   // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all.
-  private onFocus = (): void => { this.emit('focus'); };
-  private onBlur = (): void => { this.emit('blur'); };
+  private onFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
+  private onBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
   private renderMessage = (
     message: PromptStudioMessage,
@@ -527,6 +579,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
             <div part="message-actions">
               <button
                 part="move-message-up"
+                data-agent-action="neutral"
                 type="button"
                 ?disabled=${this.disabled || index === 0}
                 aria-label=${this.localize('moveUp')}
@@ -536,6 +589,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
               </button>
               <button
                 part="move-message-down"
+                data-agent-action="neutral"
                 type="button"
                 ?disabled=${this.disabled || index === messageCount - 1}
                 aria-label=${this.localize('moveDown')}
@@ -553,6 +607,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private renderRemoveMessage(id: string): TemplateResult {
     return html`<button
       part="remove-message"
+      data-agent-action="neutral"
       type="button"
       ?disabled=${this.disabled}
       aria-label=${this.localize('promptStudioRemoveMessage')}
@@ -600,11 +655,12 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       <section part="base" aria-label=${overallSemanticLabel(this, label) ?? nothing}>
         <header part="toolbar">
           ${this.renderHeading(heading)}
-          <button part="save" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-save', this.state())}>
+          <button part="save" data-agent-action="neutral" type="button" ?disabled=${this.disabled} @click=${() => this.emit('lr-save', this.state())}>
             ${this.localize('promptStudioSave')}
           </button>
           <button
             part="run"
+            data-agent-action="brand"
             type="button"
             ?disabled=${this.disabled || this.running}
             @click=${() => this.emit('lr-run', this.state())}
@@ -619,7 +675,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
               (message) => message.id,
               (message, index) => this.renderMessage(message, index, messages.length),
             )}</ol>
-            <button part="add-message" type="button" ?disabled=${this.disabled} @click=${this.addMessage}>
+            <button part="add-message" data-agent-action="neutral" type="button" ?disabled=${this.disabled} @click=${this.addMessage}>
               ${this.localize('promptStudioAddMessage')}
             </button>
           </section>

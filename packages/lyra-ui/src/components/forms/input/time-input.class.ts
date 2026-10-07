@@ -1,3 +1,4 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import type { Placement } from '@floating-ui/dom';
 import {
@@ -12,12 +13,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import {
-  acquireAriaDescription,
-  acquireResolvedAriaRelationship,
-  type AriaDescriptionLease,
-  type ResolvedAriaRelationshipLease,
-} from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { finiteNumber } from '../../../internal/numbers.js';
@@ -64,7 +60,6 @@ import { currentValidityValidator, type LyraFormValidator } from '../form-valida
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 export type LyraTimeInputHourFormat = TimeHourFormat;
 export type LyraTimeInputStep = number | 'any';
@@ -397,12 +392,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   @state() private activeSegment: SegmentName = 'hour';
   @state() private touched = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasStartSlot = false;
-  @state() private hasEndSlot = false;
-  @state() private hasFooterSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
+  private get hasStartSlot(): boolean { return this.slotPresence.has('start'); }
+  private get hasEndSlot(): boolean { return this.slotPresence.has('end'); }
+  private get hasFooterSlot(): boolean { return this.slotPresence.has('footer'); }
   /** Removes the settled-closed picker popup from layout (`[hidden]{display:none}`) so its stale
    *  last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
    *  synchronously in `willUpdate()` before `place()` measures the popup, so the first
@@ -447,9 +443,14 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private errorId = nextId('time-input-error');
   private requiredDescriptionId = nextId('time-input-required');
   private popupId = nextId('time-input-popup');
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-  private requiredDescriptionLease?: AriaDescriptionLease;
-  private requiredDescriptionTarget?: HTMLElement;
+  private readonly hostDescription = new HostDescriptionController(
+    this,
+    () => this.renderRoot.querySelector<HTMLElement>('[part~="input"]'),
+    () => {
+      const description = this.renderRoot.querySelector<HTMLElement>(`#${this.requiredDescriptionId}`);
+      return this.required && description ? [description] : [];
+    },
+  );
   /** Clock seam for deterministic local-time tests. */
   private now = (): Date => new Date();
 
@@ -459,14 +460,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) {
-      this.syncRequiredDescription();
-      this.syncExternalDescription();
-    }
   }
 
   /** Whether the column picker is open.
@@ -1237,19 +1230,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.emit('lr-change', { value: this.value });
   };
 
-  private updateSlotState(event: Event): void {
-    const slot = event.currentTarget as HTMLSlotElement;
-    const present = slot.assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType === Node.ELEMENT_NODE || (node.textContent ?? '').trim().length > 0,
-    );
-    if (slot.name === 'label') this.hasLabelSlot = present;
-    else if (slot.name === 'hint') this.hasHintSlot = present;
-    else if (slot.name === 'error') this.hasErrorSlot = present;
-    else if (slot.name === 'start') this.hasStartSlot = present;
-    else if (slot.name === 'end') this.hasEndSlot = present;
-    else if (slot.name === 'footer') this.hasFooterSlot = present;
-  }
-
   protected updateValidity(): void {
     // Every barring condition, not just `readonly`: an own/fieldset-cascaded `disabled` (and any
     // platform condition `willValidate` folds in) bars constraint validation exactly as `readonly`
@@ -1324,21 +1304,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => {
-        const slots = Array.from(this.children ?? []).map((element) => element.getAttribute('slot'));
-        this.hasLabelSlot = slots.includes('label');
-        this.hasHintSlot = slots.includes('hint');
-        this.hasErrorSlot = slots.includes('error');
-        this.hasStartSlot = slots.includes('start');
-        this.hasEndSlot = slots.includes('end');
-        this.hasFooterSlot = slots.includes('footer');
-      });
-    }
     if (this.open && this.effectiveDisabled) this.forceClose(false);
     const order = this.segmentOrder;
     const orderKey = order.join('|');
@@ -1381,8 +1346,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     }
     this.syncComponentStates();
     this.toggleAttribute('data-invalid', this.touched && !this.validity.valid);
-    this.syncRequiredDescription();
-    this.syncExternalDescription();
     const pendingSegmentFocus = this.pendingSegmentFocus;
     this.pendingSegmentFocus = undefined;
     if (pendingSegmentFocus && !this.effectiveDisabled) {
@@ -1397,8 +1360,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   override disconnectedCallback(): void {
     this.popupHidden = true;
-    this.releaseExternalDescription();
-    this.releaseRequiredDescription();
     this.transitionToken++;
     this.forceClose(false);
     this.teardownPopup();
@@ -1409,58 +1370,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    this.releaseRequiredDescription();
-    if (this.isConnected && this.hasUpdated) {
-      this.syncRequiredDescription();
-      this.syncExternalDescription();
-    }
-  }
-
-  /** Resolves host-owned descriptions before the semantic group's generated descriptions. */
-  private syncExternalDescription(): void {
-    const target = this.renderRoot.querySelector<HTMLElement>('[part~="input"]');
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (!this.externalDescriptionLease) {
-      this.externalDescriptionLease = acquireResolvedAriaRelationship(
-        this,
-        target,
-        'aria-describedby',
-      );
-      return;
-    }
-    this.externalDescriptionLease.update(target);
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
-
-  /** Owns only requiredness text; the rendered hint and error IDs remain the baseline owners. */
-  private syncRequiredDescription(): void {
-    const target = this.renderRoot.querySelector<HTMLElement>('[part~="input"]');
-    const description = this.renderRoot.querySelector<HTMLElement>(`#${this.requiredDescriptionId}`);
-    if (!this.required || !target || !description) {
-      this.releaseRequiredDescription();
-      return;
-    }
-    if (this.requiredDescriptionTarget !== target) {
-      this.releaseRequiredDescription();
-      this.requiredDescriptionTarget = target;
-      this.requiredDescriptionLease = acquireAriaDescription(target, [description]);
-      return;
-    }
-    this.requiredDescriptionLease?.update([description]);
-  }
-
-  private releaseRequiredDescription(): void {
-    this.requiredDescriptionLease?.release();
-    this.requiredDescriptionLease = undefined;
-    this.requiredDescriptionTarget = undefined;
+    this.hostDescription.adopted();
   }
 
   private renderSegment(name: SegmentName, invalid: boolean): TemplateResult {
@@ -1652,11 +1562,11 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return html`
       <div part="form-control">
         <label id=${this.labelId} part="form-control-label label" ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.updateSlotState}></slot>
+          ${this.label}<slot name="label"></slot>
         </label>
         <div part="base time-input input-wrapper form-control-input">
           <span part="start" ?hidden=${!this.hasStartSlot}>
-            <slot name="start" @slotchange=${this.updateSlotState}></slot>
+            <slot name="start"></slot>
           </span>
           <div
             id=${this.inputId}
@@ -1682,7 +1592,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
               `
             : nothing}
           <span part="end" ?hidden=${!this.hasEndSlot}>
-            <slot name="end" @slotchange=${this.updateSlotState}></slot>
+            <slot name="end"></slot>
           </span>
           <button
             type="button"
@@ -1707,7 +1617,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
             ${this.popupHidden ? nothing : this.segmentOrder.map((name) => this.renderColumn(name))}
           </div>
           ${this.hasFooterSlot
-            ? html`<slot name="footer" @slotchange=${this.updateSlotState}></slot>`
+            ? html`<slot name="footer"></slot>`
             : this.withNow
               ? html`<button
                   type="button"
@@ -1715,13 +1625,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
                   ?disabled=${this.effectiveDisabled || this.readonly}
                   @click=${this.onNow}
                 >${this.localize('timeInputNow')}</button>`
-              : html`<slot name="footer" @slotchange=${this.updateSlotState}></slot>`}
+              : html`<slot name="footer"></slot>`}
         </div>
         <div id=${this.errorId} part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.updateSlotState}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
         <div id=${this.hintId} part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.updateSlotState}></slot>
+          ${this.hint}<slot name="hint"></slot>
         </div>
         <span
           id=${this.requiredDescriptionId}

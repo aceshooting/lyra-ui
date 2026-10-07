@@ -1,3 +1,4 @@
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./button.js";
 import type { LyraButton } from "./button.class.js";
@@ -165,18 +166,7 @@ describe("lr-button", () => {
     el.focus();
     el.blur();
 
-    expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-      "focus",
-      "blur",
-    ]);
-    expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be
-      .true;
-    expect(
-      nativeEvents.every(
-        (event) => event.target === el && event.bubbles && event.composed
-      )
-    ).to.be.true;
-    expect(aliases).to.deep.equal([]);
+    assertNativeFocusBlurPair(el, nativeEvents, aliases);
   });
 
   it("never fires click while disabled or loading (native disabled button semantics)", async () => {

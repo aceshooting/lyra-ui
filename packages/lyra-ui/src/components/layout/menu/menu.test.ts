@@ -1,3 +1,4 @@
+import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   aTimeout,
   expect,
@@ -1179,18 +1180,6 @@ it('closes a submenu after a pointerleave delay once focus has moved elsewhere',
 
 // -- Width hooks -------------------------------------------------------------
 
-/** Resolves what `expression` computes to *inside this menu's shadow root*, where the `--lr-*`
- *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
-function resolvedInShadow(el: LyraMenu, expression: string): string {
-  const probe = document.createElement('span');
-  probe.style.position = 'absolute';
-  probe.style.maxInlineSize = expression;
-  el.shadowRoot!.append(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
 /* `:host`'s cap is `min(clamp, hook, 100%)`, and Chromium leaves a `min()` carrying a percentage
    unresolved in the computed `max-inline-size` string -- so every assertion below reads the USED
    `inline-size` of a menu whose content is far wider than any cap under test. */
@@ -1481,7 +1470,6 @@ describe('collecting already-slotted items without relying on the initial slotch
     }
   });
 });
-
 
 it('keeps ordinary submenus beside their parent with the menubar attachment option unset', async () => {
   const menu = await fixture<LyraMenu>(nested());

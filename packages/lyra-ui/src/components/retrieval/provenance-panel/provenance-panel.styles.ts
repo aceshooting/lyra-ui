@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -14,8 +15,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     inline-size: 100%;
     padding: var(--lr-space-xs) 0;
     border: none;

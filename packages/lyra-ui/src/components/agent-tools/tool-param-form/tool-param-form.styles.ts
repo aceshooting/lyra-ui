@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -60,8 +61,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   input.control:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   input.control:where(:hover):where(:not(:disabled)) {
     border-color: var(--lr-color-brand);

@@ -165,19 +165,54 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  embeddings. */
   @property({ type: Boolean, attribute: 'without-bars' }) withoutBars = false;
 
+  private projectionSource?: readonly LyraSpan[];
+  private projectionActiveSpanId: string | null = null;
+  private projectionCache?: ReturnType<typeof normalizeLyraSpans>;
+  private filteredSource?: readonly LyraSpan[];
+  private filteredKinds?: readonly LyraSpan['kind'][];
+  private filteredCache: LyraSpan[] = [];
+  private presentKindsSource?: readonly LyraSpan[];
+  private presentKindsCache: LyraSpan['kind'][] = [];
+  private handoffsSource?: readonly LyraSpan[];
+  private handoffsCache: LyraSpan[] = [];
+  private legendKinds?: readonly LyraSpan['kind'][];
+  private legendLabels: string[] = [];
+  private legendTypes: LyraNodeTypeStyle[] = [];
+
+  private projectedSpans(): ReturnType<typeof normalizeLyraSpans> {
+    if (this.projectionSource !== this.spans || this.projectionActiveSpanId !== this.activeSpanId) {
+      this.projectionSource = this.spans;
+      this.projectionActiveSpanId = this.activeSpanId;
+      this.projectionCache = normalizeLyraSpans(this.spans, this.activeSpanId);
+    }
+    return this.projectionCache!;
+  }
+
   private presentKinds(spans: readonly LyraSpan[]): LyraSpan['kind'][] {
-    const present = new Set(spans.map((s) => s.kind));
-    return KIND_ORDER.filter((k) => present.has(k));
+    if (this.presentKindsSource !== spans) {
+      this.presentKindsSource = spans;
+      const present = new Set(spans.map((span) => span.kind));
+      this.presentKindsCache = KIND_ORDER.filter((kind) => present.has(kind));
+    }
+    return this.presentKindsCache;
   }
 
   private filteredSpans(spans: readonly LyraSpan[]): LyraSpan[] {
-    if (this.hiddenKinds.length === 0) return [...spans];
-    const hidden = new Set(this.hiddenKinds);
-    return spans.filter((span) => !hidden.has(span.kind));
+    if (this.filteredSource !== spans || this.filteredKinds !== this.hiddenKinds) {
+      this.filteredSource = spans;
+      this.filteredKinds = this.hiddenKinds;
+      const hidden = new Set(this.hiddenKinds);
+      this.filteredCache = hidden.size === 0 ? [...spans] : spans.filter((span) => !hidden.has(span.kind));
+    }
+    return this.filteredCache;
   }
 
   private handoffSpans(spans: readonly LyraSpan[]): LyraSpan[] {
-    return spans.filter((span) => span.kind === 'agent');
+    if (this.handoffsSource !== spans) {
+      this.handoffsSource = spans;
+      this.handoffsCache = spans.filter((span) => span.kind === 'agent');
+    }
+    return this.handoffsCache;
   }
 
   /** The handed-off-from agent's name, resolved against the full (unfiltered) `spans` array so a
@@ -226,12 +261,17 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   private renderFilter(spans: readonly LyraSpan[]): TemplateResult | typeof nothing {
     const kinds = this.presentKinds(spans);
     if (kinds.length === 0) return nothing;
-    const types: LyraNodeTypeStyle[] = kinds.map((k) => ({ id: k, label: this.localize(KIND_LABEL_KEY[k]) }));
+    const labels = kinds.map((kind) => this.localize(KIND_LABEL_KEY[kind]));
+    if (this.legendKinds !== kinds || labels.some((label, index) => label !== this.legendLabels[index])) {
+      this.legendKinds = kinds;
+      this.legendLabels = labels;
+      this.legendTypes = kinds.map((kind, index) => ({ id: kind, label: labels[index]! }));
+    }
     return html`
       <lr-graph-legend
         part="filter"
         .label=${this.localize('agentTraceFilterLabel')}
-        .types=${types}
+        .types=${this.legendTypes}
         .hiddenTypes=${this.hiddenKinds}
         @lr-visibility-change-request=${this.onVisibilityChangeProposal}
         @lr-visibility-change=${this.onVisibilityChange}
@@ -263,7 +303,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   }
 
   override render(): TemplateResult {
-    const projection = normalizeLyraSpans(this.spans, this.activeSpanId);
+    const projection = this.projectedSpans();
     const filteredSpans = this.filteredSpans(projection.spans);
     return html`
       <div part="base">

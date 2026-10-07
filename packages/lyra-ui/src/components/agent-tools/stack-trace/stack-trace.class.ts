@@ -3,11 +3,12 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { styles } from './stack-trace.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type StackGroup } from './stack-trace-parse.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   writeClipboardText,
@@ -147,7 +148,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
 
   /** The raw stack trace text to parse and render. Removing the attribute clears its displayed text. */
   @property() trace = '';
@@ -205,20 +206,17 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   private copyTimer?: { owner: Window; handle: number; generation: number };
   private copyGeneration = 0;
-  private limitAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.parseTruncated;
   }
 
   override disconnectedCallback(): void {
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
     this.resetCopyFeedback();
     super.disconnectedCallback();
   }
@@ -227,15 +225,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     super.adoptedCallback();
     // A disconnected node can be adopted without another disconnect notification.
     this.resetCopyFeedback();
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    this.syncLimitAnnouncementSink();
-  }
-
-  private syncLimitAnnouncementSink(): void {
-    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.announcements.adopted();
   }
 
   private cancelCopyTimer(): void {
@@ -264,7 +254,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.limitAnnouncementInitialized && this.parseTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.localize('stackTraceLimit'));
+      this.announcements.announcePolite(this.localize('stackTraceLimit'));
     }
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.parseTruncated;
@@ -397,7 +387,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
         })()}
       >
         ${!this.withoutCopyButton
-          ? html`<button part="copy-button" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
+          ? html`<button part="copy-button" data-agent-action="neutral" type="button" data-copy-status=${this.copyStatus} @click=${this.onCopy}>
               ${this.copyStatus === 'success'
                 ? this.localize('copied')
                 : this.copyStatus === 'error'

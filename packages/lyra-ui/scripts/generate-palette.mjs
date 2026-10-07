@@ -1,5 +1,5 @@
-// Generates `src/internal/tokens/palette.styles.ts`: a numeric OKLCH colour ramp plus the semantic
-// grid built on top of it.
+// Generates `src/internal/tokens/palette.styles.ts`: the semantic grid resolved from a numeric
+// OKLCH ramp retained in canonical design-token data.
 // WHY A RAMP AT ALL. Before this, the library had 15 flat semantic colours and nothing underneath
 // them. Every shade a component wanted that wasn't one of the 15 had to be invented on the spot --
 // a `color-mix`, a `filter: brightness()`, a hand-picked hex -- so "slightly quieter brand" meant
@@ -17,7 +17,7 @@
 // and commit the result. `scripts/check-contrast.mjs` then asserts the guarantees the grid claims.
 
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { assertCanonicalPalette, readCanonicalPalette } from './palette-canonical.mjs';
+import { assertCanonicalPalette, readCanonicalPalette, srgbToLinear, toSrgbHex } from './palette-canonical.mjs';
 import { readStyleModel, defaultStyleInputs, replaceStyleFallbacks } from './style-axes-model.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,11 +28,8 @@ const styleModel = readStyleModel(packageDir);
 const defaultInputs = defaultStyleInputs(styleModel);
 
 // --- colour maths -------------------------------------------------------------------------------
-// sRGB <-> OKLab per Björn Ottosson's published derivation. Kept inline and dependency-free: this
-// runs at build time in a package that ships no colour library, and the transforms are short.
-
-const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-const linearToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
+// sRGB <-> OKLab per Björn Ottosson's published derivation. The inverse conversion and gamut fit
+// live in palette-canonical.mjs so all three palette solvers use identical maths.
 
 function hexToRgb(hex) {
   const value = hex.replace('#', '');
@@ -53,38 +50,6 @@ function rgbToOklch([r, g, b]) {
   let H = (Math.atan2(bb, a) * 180) / Math.PI;
   if (H < 0) H += 360;
   return { L, C, H };
-}
-
-function oklchToRgb({ L, C, H }) {
-  const hRad = (H * Math.PI) / 180;
-  const a = C * Math.cos(hRad);
-  const b = C * Math.sin(hRad);
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-  return [
-    linearToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-    linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-    linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-  ];
-}
-
-/**
- * Reduces chroma until the colour fits inside sRGB. A high-chroma OKLCH triple at an extreme
- * lightness has no sRGB representation, and naively clamping each channel shifts the HUE, which is
- * how a "red" ramp ends up with an orange step. Walking chroma down instead keeps the hue exact and
- * gives up only saturation, which is the channel a consumer is least likely to notice.
- */
-function toSrgbHex({ L, C, H }) {
-  let chroma = C;
-  for (let i = 0; i < 200; i += 1) {
-    const rgb = oklchToRgb({ L, C: chroma, H });
-    if (rgb.every((channel) => channel >= -0.0001 && channel <= 1.0001)) {
-      return `#${rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('')}`;
-    }
-    chroma *= 0.98;
-  }
-  return '#000000';
 }
 
 // --- ramp definition ----------------------------------------------------------------------------
@@ -166,9 +131,7 @@ const SLOTS = {
   },
 };
 
-const stepName = (variant, step) => `--lr-ramp-${variant}-${String(step).padStart(2, '0')}`;
-
-/** Which ramp step `onColor` picked, so the grid can point at the ramp rather than restate a hex. */
+/** Which ramp step `onColor` picked for the semantic grid. */
 function onStep(background, ramps) {
   const dark = ramps.neutral[0];
   const light = ramps.neutral[ramps.neutral.length - 1];
@@ -178,14 +141,10 @@ function onStep(background, ramps) {
 /**
  * Build the grid.
  *
- * `resolve` decides what a slot's fallback looks like. Inside the component stylesheet the ramp is
- * declared on the same `:host`, so a slot points at `var(--lr-ramp-…)` -- that indirection is the
- * whole reason the ramp exists: swap the ramp and all 45 slots move with it, with no stylesheet
- * touched. `theme.css` is a *document* stylesheet where the ramp is not in scope, so its copy
- * resolves to the literal hex instead. Both produce identical computed colours; only the
- * indirection differs.
+ * The numeric ramps remain in canonical token data for tooling. Runtime hosts receive only the
+ * resolved semantic grid, which avoids declaring 55 unused ramp properties per element.
  */
-function buildGrid(ramps, mode, { resolve = (variant, step) => `var(${stepName(variant, step)})` } = {}) {
+function buildGrid(ramps, mode, { resolve = (variant, step) => ramps[variant].find((entry) => entry.step === step).hex } = {}) {
   const stepHex = (variant, step) => ramps[variant].find((entry) => entry.step === step).hex;
   const lines = [];
   for (const variant of Object.keys(VARIANTS)) {
@@ -212,37 +171,15 @@ function buildGrid(ramps, mode, { resolve = (variant, step) => `var(${stepName(v
 
 const ramps = Object.fromEntries(Object.entries(VARIANTS).map(([name, spec]) => [name, ramp(spec)]));
 
-const rampLines = Object.entries(ramps)
-  .map(([variant, steps]) =>
-    steps
-      .map(({ step, hex }) => `      --lr-ramp-${variant}-${String(step).padStart(2, '0')}: ${hex};`)
-      .join('\n'),
-  )
-  .join('\n\n');
-
 const output = `// GENERATED by scripts/generate-palette.mjs -- do not edit by hand.
-// The numeric OKLCH ramp and the 45-slot semantic grid built on it. See the generator for why the
-// ramp is in OKLCH (perceptual lightness: an even numeric step is an even *perceived* step, for
-// every hue) and why it is computed rather than hand-picked.
-// Two layers, and the distinction matters:
-//   --lr-ramp-<variant>-<step>   the raw ramp. 5 variants x 11 steps. A component must NEVER
-//                                reference one of these directly -- that is what re-creates the
-//                                "every stylesheet invents its own shade" problem the ramp exists
-//                                to remove, and it hard-codes a light-mode choice into a component.
-//   --lr-color-<variant>-<role>-<emphasis>
-//                                the semantic grid: {brand,success,warning,danger,neutral} x
-//                                {fill,border,on} x {quiet,normal,loud} = 45 slots. THIS is the
-//                                layer components consume. Its shape is identical in light and
-//                                dark; only which ramp step each slot points at changes, so a
-//                                component written against it is mode-independent for free.
+// The 45-slot semantic grid is resolved from the numeric OKLCH ramp retained in canonical token
+// data for design tooling. Components consume only --lr-color-* semantic slots, never raw steps.
 // Every slot chains through a --lr-theme-* hook, so a consumer can retheme one slot without
 // forking the ramp, exactly like every other token in the library.
 import { css } from 'lit';
 
 export const palette = css\`
   :host {
-${rampLines}
-
 ${buildGrid(ramps, 'light')}
   }
 
@@ -324,4 +261,3 @@ console.log(
   `Wrote ${outputPath.replace(`${packageDir}/`, '')}: ` +
     `${Object.keys(VARIANTS).length} ramps x ${STEPS.length} steps, ${slots} semantic slots per mode.`,
 );
-

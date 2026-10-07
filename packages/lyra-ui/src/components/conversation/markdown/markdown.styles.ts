@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -324,8 +325,7 @@ export const styles = css`
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]) {
     margin-inline-start: auto;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     display: inline-flex;
     align-items: center;
     justify-content: center;

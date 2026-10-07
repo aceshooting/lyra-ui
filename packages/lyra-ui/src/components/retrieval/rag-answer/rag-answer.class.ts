@@ -24,6 +24,7 @@ import {
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import '../../overlays/empty/empty.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
@@ -383,6 +384,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               @click=${() => this.emit('lr-retry')}
               >${this.localize('ragAnswerRetry')}</lr-button
             >`
+        : nothing}
+      ${state === 'idle' && citations.length === 0 && sources.length === 0 && !this.hasSlot('sources') && assessment === null
+        ? html`<lr-empty part="empty" heading=${this.localize('ragAnswerEmpty')}></lr-empty>`
         : nothing}
       ${this.answer || this.hasSlot('answer')
         ? html`<div part="answer">

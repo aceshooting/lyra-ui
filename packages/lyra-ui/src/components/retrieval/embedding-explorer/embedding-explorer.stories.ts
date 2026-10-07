@@ -45,7 +45,7 @@ const denseLongLabelPoints: EmbeddingPoint[] = [
   { id: '12', x: -0.6, y: -0.4, label: 'unbrokenidentifierstringusedtoexercisenarrowallocationwrapping', cluster: 'reference' },
 ];
 
-export const Default: Story = { render: () => html`<lr-embedding-explorer .points=${points} .selectedPointId=${'3'}></lr-embedding-explorer>` };
+export const Default: Story = { render: () => html`<lr-embedding-explorer label="Document embeddings" .points=${points} .selectedPointId=${'3'}></lr-embedding-explorer>` };
 export const Empty: Story = { render: () => html`<lr-embedding-explorer></lr-embedding-explorer>` };
 
 /** `height` sizes the plot through `--lr-embedding-explorer-height`. */

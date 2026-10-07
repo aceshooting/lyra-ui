@@ -1,4 +1,5 @@
 import { isMainModule } from './is-main-module.mjs';
+import { isSuppressed, stripJsComments } from './lib/source-text.mjs';
 
 // Source policy checker: fast, dependency-free static rules over src/components (plus
 // src/internal where noted) that guard the library's i18n/RTL invariants and two frozen
@@ -49,6 +50,8 @@ import { isMainModule } from './is-main-module.mjs';
 //                           pin `direction: ltr`, or at explicitly suppressed declarations.
 //   shipped-review-token    Private C-###/O-### review identifiers must not ship in source
 //                           comments or package documentation; use a public technical rationale.
+//   type-only-import-form   An all-inline-type import/export block emits an empty runtime import
+//                           under verbatim module syntax; use import type/export type instead.
 // Suppressions (pointercancel-pairing / rtl-arrow-keys / physical-css only): a comment on the
 // flagged line, or in the contiguous comment block immediately above it, of the form
 //   policy-allow(rule-id): specific reason
@@ -98,54 +101,6 @@ const rel = (file) => path.relative(packageDir, file).replaceAll('\\', '/');
  * reference but a mention in prose does not. Template `${}` holes are tracked so a brace inside
  * one doesn't end the template early.
  */
-function stripJsComments(source) {
-  const out = source.split('');
-  let state = 'code';
-  const templateStack = [];
-  for (let i = 0; i < source.length; i++) {
-    const c = source[i];
-    const pair = source.slice(i, i + 2);
-    if (state === 'code') {
-      if (pair === '//') {
-        state = 'line';
-        out[i] = ' ';
-      } else if (pair === '/*') {
-        state = 'block';
-        out[i] = ' ';
-      } else if (c === "'") state = 'single';
-      else if (c === '"') state = 'double';
-      else if (c === '`') state = 'template';
-      else if (c === '{' && templateStack.length > 0) templateStack[templateStack.length - 1]++;
-      else if (c === '}' && templateStack.length > 0) {
-        if (--templateStack[templateStack.length - 1] === 0) {
-          templateStack.pop();
-          state = 'template';
-        }
-      }
-    } else if (state === 'line') {
-      if (c === '\n') state = 'code';
-      else out[i] = ' ';
-    } else if (state === 'block') {
-      if (pair === '*/') {
-        state = 'code';
-        out[i] = ' ';
-        out[i + 1] = ' ';
-        i++;
-      } else if (c !== '\n') out[i] = ' ';
-    } else if (state === 'single' || state === 'double') {
-      if (c === '\\') i++;
-      else if ((state === 'single' && c === "'") || (state === 'double' && c === '"')) state = 'code';
-    } else if (state === 'template') {
-      if (c === '\\') i++;
-      else if (pair === '${') {
-        templateStack.push(1);
-        state = 'code';
-        i++;
-      } else if (c === '`') state = 'code';
-    }
-  }
-  return out.join('');
-}
 
 const lineOf = (source, index) => source.slice(0, index).split('\n').length;
 
@@ -257,16 +212,6 @@ export function findLiteralTagNames(source, file = '<source>') {
  * content in the raw source but nothing left after comment-stripping is pure comment, which
  * handles `//` runs and multi-line block comments alike.
  */
-function isSuppressed(rawLines, strippedLines, flaggedLine, ruleId) {
-  const marker = `policy-allow(${ruleId}):`;
-  if (rawLines[flaggedLine - 1]?.includes(marker)) return true;
-  for (let i = flaggedLine - 2; i >= 0; i--) {
-    const isCommentLine = rawLines[i].trim() !== '' && strippedLines[i].trim() === '';
-    if (!isCommentLine) return false;
-    if (rawLines[i].includes(marker)) return true;
-  }
-  return false;
-}
 
 // ---------------------------------------------------------------------------
 // Rule 1: localize-fallback
@@ -1218,6 +1163,18 @@ function findLocalizedOutputCoverageFindings(file, source, testSource) {
  * The two exclusions are low-level implementation boundaries, not directory-wide exemptions:
  * intl-cache.ts constructs the cached Intl formatters, and announcer.ts implements the sink API.
  */
+export function findAllInlineTypeBlocks(source) {
+  const stripped = stripJsComments(source);
+  const blocks = [];
+  for (const match of stripped.matchAll(/\b(import|export)\s*\{([^{}]*)\}\s*from\s*['"][^'"]+['"]/gu)) {
+    const specifiers = match[2].split(',').map((part) => part.trim()).filter(Boolean);
+    if (specifiers.length > 0 && specifiers.every((part) => /^type\s+[\w$]+(?:\s+as\s+[\w$]+)?$/u.test(part))) {
+      blocks.push({ line: lineOf(source, match.index), kind: match[1] });
+    }
+  }
+  return blocks;
+}
+
 export function collectSourcePolicyFindings({
   file,
   source,
@@ -1248,6 +1205,9 @@ export function collectSourcePolicyFindings({
   }
 
   const stripped = stripJsComments(source);
+  for (const { line, kind } of findAllInlineTypeBlocks(source)) {
+    findings.push(`${rel(file)}:${line} [type-only-import-form] use ${kind} type for an all-type block`);
+  }
   checkLocalizeFallback(file, stripped, knownKeys, findings);
   if (!skipIntlOutsideCache) checkIntlOutsideCache(file, stripped, findings);
   checkUnsafeIntlLocale(file, stripped, findings);
@@ -1349,6 +1309,13 @@ export function runSourcePolicy() {
         `${rel(file)}:${match.line} [shipped-review-token] replace private ${match.token} bookkeeping ` +
           'with a public technical rationale',
       );
+    }
+  }
+
+  for (const file of shippedSourceFiles.filter((candidate) => candidate.endsWith('.ts') && !candidate.startsWith(componentsRoot) && !candidate.startsWith(internalRoot))) {
+    const source = fs.readFileSync(file, 'utf8');
+    for (const { line, kind } of findAllInlineTypeBlocks(source)) {
+      findings.push(`${rel(file)}:${line} [type-only-import-form] use ${kind} type for an all-type block`);
     }
   }
 

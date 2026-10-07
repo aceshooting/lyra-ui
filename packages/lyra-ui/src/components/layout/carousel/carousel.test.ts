@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
@@ -894,15 +895,6 @@ it('keeps the pre-hook scroll-container hover outline when each scoped property 
   const scrollContainer = el.shadowRoot!.querySelector<HTMLElement>(
     '[part~="scroll-container"]'
   )!;
-
-  function resolvedInShadow(declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const expectedWidth = resolvedInShadow(
     'outline-width: var(--lr-border-width-thin)',
@@ -2228,21 +2220,6 @@ it("gives the keyboard-focusable viewport matching hover feedback", () => {
 });
 
 describe("indicator current-state cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
-   *  the tokens they fall back to. */
-  function resolvedInShadow(
-    el: LyraCarousel,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const overrides =
     "--lr-carousel-indicator-current-bg: rgb(0, 51, 102); --lr-carousel-indicator-current-border-color: rgb(0, 102, 51);";

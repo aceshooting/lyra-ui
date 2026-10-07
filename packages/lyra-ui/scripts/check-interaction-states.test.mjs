@@ -270,7 +270,13 @@ test('a :hover rule that itself sets cursor: pointer is not a finding', () => {
   assert.equal(result.pointerParts, 0, 'the hover rule is the answer, not the claim');
 });
 
-test('a cursor value other than pointer makes no claim', () => {
+test('resize cursors owe hover affordances but neutral cursors do not', () => {
+  for (const cursor of ['col-resize', 'row-resize', 'nwse-resize']) {
+    const result = hoverContract(`[part='handle'] { cursor: ${cursor}; }`);
+    assert.equal(result.pointerParts, 1);
+    assert.match(result.findings[0].message, new RegExp(`cursor: ${cursor}`));
+    assert.deepEqual(messages(hoverContract(`[part='handle'] { cursor: ${cursor}; } [part='handle']:hover { background: red; }`)), []);
+  }
   assert.equal(hoverContract("[part='viewport'] { cursor: grab; }").pointerParts, 0);
   assert.equal(hoverContract("[part='row'] { cursor: default; }").pointerParts, 0);
 });

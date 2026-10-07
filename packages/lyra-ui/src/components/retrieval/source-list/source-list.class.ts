@@ -4,7 +4,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import { isElement } from '../../../internal/rendered-tree-traversal.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -13,6 +14,8 @@ import { LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-s
 
 export interface SourceListToggleDetail {
   expanded: boolean;
+  /** Present only when a slotted source card was toggled. */
+  itemId?: string;
 }
 
 export interface LyraSourceListEventMap {
@@ -48,8 +51,8 @@ export interface LyraSourceListEventMap {
  * @slot - `<lr-source-card>` elements, neutral `<div>`/`<span>` wrappers, or
  * author-owned list items. Other semantic children remain as authored and
  * disable the list semantics.
- * @event lr-toggle - The header was activated, expanding or collapsing the
- * list. `detail: { expanded }`.
+ * @event lr-toggle - The header changed (`{ expanded }`) or a slotted source
+ * card changed (`{ expanded, itemId }`).
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`) toggling `expanded`.
  * @csspart toggle - The chevron indicator inside the header.
@@ -317,6 +320,16 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     this.emit('lr-toggle', { expanded: this.expanded });
   };
 
+  private onCardToggle = (event: CustomEvent<{ expanded: boolean; itemId: string }>): void => {
+    const origin = event.composedPath()[0] as Node | undefined;
+    const detail = event.detail;
+    if (!origin || !isElement(origin) || origin.localName !== tag('source-card') ||
+      !this.contains(origin) || !detail || typeof detail.expanded !== 'boolean' ||
+      typeof detail.itemId !== 'string' || detail.itemId !== (origin as Element & { sourceId?: unknown }).sourceId) return;
+    event.stopPropagation();
+    this.emit('lr-toggle', { expanded: detail.expanded, itemId: detail.itemId });
+  };
+
   override render(): TemplateResult {
     const requestedHeaderText =
       this.labelPlural ||
@@ -340,7 +353,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
           <span>${headerText}</span>
         </button>
         <div part="list" id=${this.listId} ?hidden=${!this.expanded}>
-          <slot @slotchange=${this.onSlotChange}></slot>
+          <slot @slotchange=${this.onSlotChange} @lr-toggle=${this.onCardToggle}></slot>
         </div>
       </div>
     `;

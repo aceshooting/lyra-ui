@@ -16,6 +16,8 @@ import {
 } from '../../../internal/intl-cache.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth } from '../../../internal/column-resize.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -694,8 +696,9 @@ function normalizedGroupBy(
  * @slot no-results - Content rendered when active search or filters match no rows.
  * @slot error - Replaces the built-in failed-load state, including its retry button, while
  *   `error` is set.
- * @event request - Fired when server data is requested. `detail` contains sort, filter, search,
+ * @event lr-request - Fired when server data is requested. `detail` contains sort, filter, search,
  *   page, page-size, and abort-signal state.
+ * @event request - Mirrored server-data request event with the same detail as `lr-request`.
  * @event lr-cell-click - Fired when a data cell is activated with canonical `rowKey` and
  *   `columnId` identity.
  *   Clicking a supported interactive descendant, including its inner open-shadow native control,
@@ -822,6 +825,7 @@ function normalizedGroupBy(
  * @csspart toolbar - Search and column controls.
  * @csspart tree-limit - Localized notice rendered when nested input exceeds the 10,000-node or
  *   64-descendant-level projection budget.
+ * @csspart row-limit - Localized notice rendered when flat input exceeds 10,000 rows.
  * @cssprop [--accent-color=var(--lr-color-brand)] - Accent used by focus and active states.
  * @cssprop [--background-color=var(--lr-color-surface)] - Grid background.
  * @cssprop [--border-color=var(--lr-color-border)] - Border color of the grid's controls (search,
@@ -903,6 +907,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-request',
     'request',
     'lr-column-move',
     'lr-data-error',
@@ -912,6 +917,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    *  generic event-detail snapshotter can produce, so their identity is preserved instead of
    *  being walked (which would otherwise omit the whole detail down to `null`). */
   protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-request': Object.freeze(['signal']),
     request: Object.freeze(['signal']),
     'lr-data-error': Object.freeze(['error', 'request']),
   });
@@ -1345,6 +1351,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   );
   private ownsLoadingState = false;
   private resizeSession?: ResizeSession;
+  private readonly resizePointer = new ColumnResizePointerSession(
+    (event) => this.onResizeMove(event),
+    (event) => this.onResizeEnd(event),
+    (event) => this.onResizeCancel(event),
+  );
   private columnDragSession?: ColumnDragSession;
   private columnDragSequence = 0;
   private managedOverlay?: OverlayHandle;
@@ -1447,6 +1458,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.cancelRequestTimer();
     if (this.resizeSession?.moved)
       this.restoreResizeSession(this.resizeSession, false);
+    this.resizePointer.stop();
     this.resizeSession = undefined;
     this.activeResizeColumn = undefined;
     this.activeFilterColumn = null;
@@ -1504,6 +1516,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       !this.columnCanResize(this.resizeSession.columnId)
     ) {
       const session = this.resizeSession;
+      this.resizePointer.stop();
       this.resizeSession = undefined;
       this.activeResizeColumn = undefined;
       if (session.moved) this.restoreResizeSession(session, true);
@@ -2828,6 +2841,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           )
         ),
       });
+    this.emit('lr-request', requestDetail());
     this.emit('request', requestDetail());
     if (!this.dataSource) return;
     this.ownsLoadingState = true;
@@ -4481,6 +4495,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private onResizeStart(event: PointerEvent, id: string): void {
     const entry = this.orderedColumns.find((item) => item.id === id);
     if (!entry || !this.columnCanResize(id)) return;
+    this.resizePointer.stop();
+    if (this.resizeSession?.moved) this.restoreResizeSession(this.resizeSession, true);
     const header = this.renderedColumnElements(id, 'columnheader')[0];
     this.resizeSession = {
       columnId: id,
@@ -4494,11 +4510,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       direction: this.effectiveDirection,
     };
     this.activeResizeColumn = id;
-    try {
-      (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
-    } catch {
-      // Synthetic pointer events and a pointer canceled before this handler may have no active id.
-    }
+    this.resizePointer.start(event, event.currentTarget as HTMLElement);
     event.preventDefault();
   }
 
@@ -4506,15 +4518,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const session = this.resizeSession;
     if (!session || event.pointerId !== session.pointerId) return;
     if (!this.columnCanResize(session.columnId)) {
+      this.resizePointer.stop();
       this.resizeSession = undefined;
       this.activeResizeColumn = undefined;
       if (session.moved) this.restoreResizeSession(session, true);
       return;
     }
-    const direction = session.direction === 'rtl' ? -1 : 1;
+    const { minimum, maximum } = this.columnBounds(this.orderedColumns.find((item) => item.id === session.columnId)!.column);
     this.setColumnWidth(
       session.columnId,
-      session.startWidth + (event.clientX - session.startClientX) * direction,
+      columnResizePointerWidth(session.startWidth, session.startClientX, event.clientX, session.direction === 'rtl', minimum, maximum),
       true,
       false
     );
@@ -4526,13 +4539,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (!session || event.pointerId !== session.pointerId) return undefined;
     this.resizeSession = undefined;
     this.activeResizeColumn = undefined;
-    try {
-      (event.currentTarget as HTMLElement).releasePointerCapture?.(
-        event.pointerId
-      );
-    } catch {
-      // The user agent may already have released capture for pointercancel.
-    }
+    this.resizePointer.stop();
     return session;
   }
 
@@ -4563,29 +4570,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     const width = this.columnWidths.get(session.columnId) ?? session.startWidth;
     // The final width is a proposal, as in `<lr-table>`: a veto discards the live preview.
-    if (!this.requestColumnWidth(session.columnId, width)) {
-      this.restoreResizeSession(session, true);
-      return;
-    }
-    this.emit(
-      'lr-column-resize',
-      Object.freeze({
-        columnId: session.columnId,
-        columnKey: session.columnId,
-        width,
-        finished: true,
-      })
-    );
-  }
-
-  /** Emits the cancelable `lr-column-resize-request`; `false` when a listener vetoed `width`. */
-  private requestColumnWidth(columnIdValue: string, width: number): boolean {
-    const request = this.emit(
-      'lr-column-resize-request',
-      Object.freeze({ columnId: columnIdValue, columnKey: columnIdValue, width }),
-      { cancelable: true }
-    );
-    return !request.defaultPrevented;
+    let committed = false;
+    requestThenCommit({
+      requestDetail: Object.freeze({ columnId: session.columnId, columnKey: session.columnId, width }),
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-column-resize-request', detail, init),
+      commit: () => {
+        committed = true;
+        this.emit('lr-column-resize', Object.freeze({ columnId: session.columnId, columnKey: session.columnId, width, finished: true }));
+      },
+    });
+    if (!committed) this.restoreResizeSession(session, true);
   }
 
   private onResizeCancel(event: PointerEvent): void {
@@ -4610,24 +4604,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (!arrow && !jump) return;
     event.preventDefault();
     const { minimum, maximum } = this.columnBounds(entry.column);
-    let target: number;
-    if (jump) {
-      target = event.key === 'Home' ? minimum : maximum;
-    } else {
-      const logical =
-        (event.key === 'ArrowRight' ? 1 : -1) *
-        (this.effectiveDirection === 'rtl' ? -1 : 1);
-      // Like a pointer drag, start from what is rendered: an auto-sized column is rarely the 7rem
-      // estimate.
-      const current =
-        this.columnWidths.get(id) ??
-        this.renderedColumnWidth(id) ??
-        this.estimatedColumnWidth(entry.column, id);
-      target = current + logical * (event.shiftKey ? 50 : 10);
-    }
-    const width = finiteRange(target, minimum, minimum, maximum);
-    if (!this.requestColumnWidth(id, width)) return;
-    this.setColumnWidth(id, width, true, true);
+    // Like a pointer drag, start from what is rendered: an auto-sized column is rarely the 7rem
+    // estimate.
+    const current = this.columnWidths.get(id) ?? this.renderedColumnWidth(id) ?? this.estimatedColumnWidth(entry.column, id);
+    const width = columnResizeKeyboardWidth(event, current, minimum, maximum, this.effectiveDirection === 'rtl', fromHandle);
+    if (width === undefined) return;
+    requestThenCommit({
+      requestDetail: Object.freeze({ columnId: id, columnKey: id, width }),
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-column-resize-request', detail, init),
+      commit: () => this.setColumnWidth(id, width, true, true),
+    });
   }
 
   private renderedColumnWidth(id: string): number | undefined {
@@ -5138,6 +5124,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           const canMove = this.reorderable || column.movable;
           const resizeBounds = this.columnBounds(column);
           const resizeValue = this.estimatedColumnWidth(column, id);
+          const resizeAria = columnResizeAriaValues(resizeValue, resizeBounds.minimum, resizeBounds.maximum);
           return html`
             <div
               part="header-cell"
@@ -5222,9 +5209,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       aria-label=${this.localize('resizeColumn', undefined, {
                         label: this.columnLabel(column, id),
                       })}
-                      aria-valuemin=${resizeBounds.minimum}
-                      aria-valuemax=${resizeBounds.maximum}
-                      aria-valuenow=${resizeValue}
+                      aria-valuemin=${resizeAria.min}
+                      aria-valuemax=${resizeAria.max}
+                      aria-valuenow=${resizeAria.now}
                       aria-valuetext=${this.localize(
                         'resizeValuePixels',
                         undefined,
@@ -5237,10 +5224,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
                       tabindex="0"
                       @pointerdown=${(event: PointerEvent) =>
                         this.onResizeStart(event, id)}
-                      @pointermove=${this.onResizeMove}
-                      @pointerup=${this.onResizeEnd}
-                      @pointercancel=${this.onResizeCancel}
-                      @lostpointercapture=${this.onResizeCancel}
                       @dblclick=${() => this.autoSizeColumn(id)}
                       @keydown=${(event: KeyboardEvent) =>
                         this.onResizeKey(event, id, true)}
@@ -5853,7 +5836,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           aria-busy=${this.loading ? 'true' : 'false'}
           aria-rowcount=${rowCount}
           aria-colcount=${columnCount}
-          data-tree-truncated=${treeProjection.truncated ? 'true' : nothing}
+          data-tree-truncated=${treeProjection.truncated && this.childRows ? 'true' : nothing}
         >
           ${this.renderHeader()}
           <div
@@ -5866,9 +5849,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           </div>
           ${this.renderFooter()}
         </div>
-        ${treeProjection.truncated
+        ${treeProjection.truncated && this.childRows
           ? html`<div part="tree-limit">
               ${this.localize('dataGridTreeLimitReached')}
+            </div>`
+          : nothing}
+        ${treeProjection.truncated && !this.childRows
+          ? html`<div part="row-limit">
+              ${this.localize('dataGridRowLimit', undefined, {
+                count: getNumberFormat(this.effectiveLocale).format(DATA_GRID_TREE_NODE_LIMIT),
+              })}
             </div>`
           : nothing}
         ${this.loading

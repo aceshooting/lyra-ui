@@ -79,6 +79,12 @@ export const InProgress: Story = {
   render: () => html`<lr-retrieval-trace style="max-width: 40rem" .stages=${runningStages}></lr-retrieval-trace>`,
 };
 
+export const UnknownStage: Story = {
+  render: () => html`<lr-retrieval-trace style="max-width: 40rem"
+    .stages=${[{ id: 'future', kind: 'dedupe', startMs: 0, endMs: 80, status: 'awaiting-review' }] as unknown as RetrievalStage[]}
+  ></lr-retrieval-trace>`,
+};
+
 export const SyncedWithSelection: Story = {
   render: () => {
     let selected: string | null = null;

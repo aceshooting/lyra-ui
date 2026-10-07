@@ -735,10 +735,21 @@ describe('rowTotal / grandTotal', () => {
     el.rowTotal = (r) => r.score * 2;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-row-total]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[data-row-total]')?.getAttribute('aria-label')).to.equal('Total');
     const cells = [...el.shadowRoot!.querySelectorAll('[part="row-total-cell"]')];
     expect(cells.length).to.equal(rows.length);
     expect(cells[0]!.textContent!.trim()).to.equal('6'); // Alpha score 3 * 2
     expect(cells[1]!.textContent!.trim()).to.equal('2'); // Beta score 1 * 2
+  });
+
+  it('uses the caller translation for the row-total column name', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowTotal = (row) => row.score;
+    el.strings = { tableRowTotal: 'Row sum' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-row-total]')?.getAttribute('aria-label')).to.equal('Row sum');
   });
 
   it('renders grandTotal in the footer row only when a column also defines footer', async () => {

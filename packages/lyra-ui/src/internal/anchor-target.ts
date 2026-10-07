@@ -51,6 +51,20 @@ export interface LyraAnchorTarget {
   scrollToAnchor(target: LyraAnchor | string): Promise<boolean>;
 }
 
+/** Protected extension points implemented by the anchor-target mixin. */
+declare class DocumentAnchorTargetHooks {
+  protected anchorRetryIntervalMs: number;
+  protected anchorTimeoutMs: number;
+  protected applyAnchor(anchor: LyraAnchor): Promise<boolean>;
+  protected computeSelectionAnchor(range: Range, text: string): LyraAnchor | null;
+  protected performScrollToAnchor(target: LyraAnchor | string, generation?: number): Promise<boolean>;
+  protected selectionShadowRoots(contentRoot: Element): ShadowRoot[];
+  protected bindTextSelection(contentRoot: Element): void;
+  protected unbindTextSelection(): void;
+}
+
+export type { DocumentAnchorTargetHooks };
+
 /** Returns at most the candidate ceiling, reserving its first slot for an active entry anywhere
  * in the already-owned, globally bounded immutable snapshot. */
 export function prioritizedHighlightCandidates<T extends LyraHighlight>(
@@ -73,19 +87,15 @@ export function prioritizedHighlightCandidates<T extends LyraHighlight>(
   return ordinary;
 }
 
-function selectionRange(root: LyraElement): Range | null {
+function selectionRange(root: LyraElement, shadowRoots: readonly ShadowRoot[]): Range | null {
   const document = root.ownerDocument;
   const view = document.defaultView;
-  const renderRoot = root.renderRoot as unknown as { host?: Element; nodeType?: number };
-  const shadowRoot = renderRoot?.nodeType === 11 && renderRoot.host === root
-    ? renderRoot as unknown as ShadowRoot
-    : undefined;
   const globalSelection = (view?.getSelection() ?? null) as
     | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
     | null;
 
-  if (globalSelection?.getComposedRanges && shadowRoot) {
-    const [composed] = globalSelection.getComposedRanges({ shadowRoots: [shadowRoot] });
+  if (globalSelection?.getComposedRanges && shadowRoots.length > 0) {
+    const [composed] = globalSelection.getComposedRanges({ shadowRoots: [...shadowRoots] });
     if (!composed) return null;
     if (composed.startContainer === composed.endContainer && composed.startOffset === composed.endOffset) return null;
     const range = document.createRange();
@@ -94,10 +104,21 @@ function selectionRange(root: LyraElement): Range | null {
     return range;
   }
 
-  const shadowSelection = (shadowRoot as unknown as { getSelection?: () => Selection | null } | undefined)?.getSelection?.();
+  const shadowSelection = (shadowRoots.at(-1) as { getSelection?: () => Selection | null } | undefined)?.getSelection?.();
   const selection = shadowSelection ?? globalSelection;
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
   return selection.getRangeAt(0);
+}
+
+function containsAcrossShadowBoundaries(ancestor: Node, node: Node): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.nodeType === 11 && 'host' in current
+      ? (current as ShadowRoot).host
+      : current.parentNode;
+  }
+  return false;
 }
 
 /**
@@ -115,29 +136,21 @@ function selectionRange(root: LyraElement): Range | null {
  * root's text via `internal/text-quote.ts` -- a viewer with a narrower/paginated content root, e.g.
  * pdf, overrides this for a page-scoped scope).
  *
- * The return type's trailing `{ renderAnchorLiveRegion(): unknown }` intersection member is the one
- * mixin hook every real adopting viewer calls but none needs to *override* (`applyAnchor`/
- * `computeSelectionAnchor`/`bindTextSelection` are only ever overridden, never called directly by a
- * subclass, so a subclass's own `protected` re-declaration of one of those is a brand-new member as
- * far as this narrowed return type is concerned -- no conflict). Without it, a real subclass's own
- * `render()` calling `this.renderAnchorLiveRegion()` fails to type-check with "property does not
- * exist", since TypeScript can't emit a `.d.ts` declaration for this generic function's *inferred*
- * return type (a class expression with `protected` members, TS4094) and this annotation is what
- * replaces that inference -- narrowed to just the public `LyraAnchorTarget` contract plus this one
- * called-not-overridden method.
+ * Named protected hook declarations keep subclass overrides and super calls visible without
+ * exposing the mixin's private state in its constructor return type.
  */
 /** @internal Source-only overload preserving subclass statics and protected members. */
 export function DocumentAnchorTarget<
   T extends InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap>>,
 >(
   Base: T,
-): T & InternalMixinConstructor<LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }>;
+): T & InternalMixinConstructor<LyraAnchorTarget & DocumentAnchorTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 /** Public, declaration-safe mixin signature. */
 export function DocumentAnchorTarget<
   T extends PublicConstructor<LyraElement<LyraAnchorTargetEventMap>>,
 >(
   Base: T,
-): MixedConstructor<T, LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }>;
+): MixedConstructor<T, LyraAnchorTarget & DocumentAnchorTargetHooks & { renderAnchorLiveRegion(): unknown }>;
 export function DocumentAnchorTarget(
   Base: InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap>>,
 ): InternalMixinConstructor<LyraElement<LyraAnchorTargetEventMap> & LyraAnchorTarget & {
@@ -398,6 +411,15 @@ export function DocumentAnchorTarget(
      *  or after a keyboard/touch change settles. Reads the selection shadow-aware: composed ranges
      *  where `Selection.getComposedRanges()` exists, `ShadowRoot.getSelection()` next, else
      *  `document.getSelection()`. Collapsed selections never fire. */
+    protected selectionShadowRoots(contentRoot: Element): ShadowRoot[] {
+      const view = contentRoot.ownerDocument.defaultView;
+      const ShadowRootCtor = view?.ShadowRoot;
+      if (!ShadowRootCtor) return [];
+      const roots = [this.shadowRoot, contentRoot.getRootNode()];
+      return roots.filter((root, index): root is ShadowRoot =>
+        root instanceof ShadowRootCtor && roots.indexOf(root) === index);
+    }
+
     protected bindTextSelection(contentRoot: Element): void {
       this.unbindTextSelection();
       const document = contentRoot.ownerDocument;
@@ -409,8 +431,8 @@ export function DocumentAnchorTarget(
       let reported: readonly [Node, number, Node, number] | undefined;
 
       const onSelectionEnd = (): void => {
-        const range = selectionRange(this);
-        if (!range || (!contentRoot.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== contentRoot)) {
+        const range = selectionRange(this, this.selectionShadowRoots(contentRoot));
+        if (!range || !containsAcrossShadowBoundaries(contentRoot, range.commonAncestorContainer)) {
           reported = undefined;
           return;
         }
@@ -474,7 +496,5 @@ export function DocumentAnchorTarget(
       this.selectionCleanup = undefined;
     }
   }
-  return DocumentAnchorTargetElement as InternalMixinConstructor<
-    LyraElement<LyraAnchorTargetEventMap> & LyraAnchorTarget & { renderAnchorLiveRegion(): unknown }
-  >;
+  return DocumentAnchorTargetElement;
 }

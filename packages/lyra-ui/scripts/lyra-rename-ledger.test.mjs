@@ -47,6 +47,21 @@ const migratePath = path.join(scriptDir, 'migrate-wa.mjs');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const fixture = (name) => fs.readFileSync(path.join(fixtureDir, name), 'utf8');
 
+test('the v25 profile covers every current 28.0.0 event deprecation without rewriting changed details', () => {
+  const ledger = readRenameLedger();
+  const profile = ledger.profiles.find((entry) => entry.origin === 'lyra-v25');
+  assert.equal(profile?.fromMajor, 25);
+  assert.equal(profile?.toMajor, 26);
+  assert.equal(profile?.aliasRemovalMajor, 28);
+  assert.equal(profile.renames.length, 13);
+  assert.equal(profile.reviews.length, 15);
+  assert.equal(profile.renames.some((entry) => entry.tag === 'lr-data-grid' && entry.from === 'request'), false);
+  assert.equal(profile.reviews.some((entry) => entry.tag === 'lr-widget' && entry.name === 'lr-collapse-change'), true);
+  assert.equal(profile.reviews.some((entry) => entry.tag === 'lr-retrieval-results' && entry.name === 'lr-select'), true);
+  assert.equal(profile.renames.some((entry) => entry.tag === 'lr-retrieval-results' && entry.from === 'lr-select'), false);
+  assert.equal(parseArgs(['--origin=lyra-v25', '--check', 'src']).origin, 'lyra-v25');
+});
+
 function syntheticInventory() {
   const inventory = readJson(path.join(scriptDir, 'fixtures', 'migrate-wa', 'inventory.json'));
   inventory.components.push(...readJson(path.join(fixtureDir, 'components.json')).components);
@@ -344,7 +359,7 @@ test('the checked-in ledger is valid and complete against the checked-in invento
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
-  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22']);
+  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25']);
   assert.ok(!MIGRATION_ORIGINS.includes('lyra-v7') && MIGRATION_ORIGINS.includes('lyra-v21'));
   assert.deepEqual(validateRenameLedger(emptyRenameLedger(), { inventory: checkedInventory }), []);
 });
@@ -576,6 +591,7 @@ test('the migration-coverage gate adds completeness and the prefix polarity rule
   assert.deepEqual(analyzeRenameLedger(ledger, inventory).summary, {
     'lyra-v21': { renames: 12, defaults: 1, detailChanges: 1, propertyChanges: 0, retiredEvents: 0, reviews: 5, slotContent: 1, moduleReviews: 0 },
     'lyra-v22': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
+    'lyra-v25': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
   });
   assertFinding(analyzeRenameLedger(emptyRenameLedger(), inventory).errors, /has no rename or review entry/);
   const undeclared = syntheticLedger();

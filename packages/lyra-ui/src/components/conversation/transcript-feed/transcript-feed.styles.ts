@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -93,8 +94,7 @@ export const styles = [
       inset-block-end: var(--lr-space-s);
       inset-inline-end: var(--lr-space-s);
       padding: var(--lr-space-2xs) var(--lr-space-s);
-      min-inline-size: var(--lr-icon-button-size);
-      min-block-size: var(--lr-icon-button-size);
+      ${iconHitTarget}
       border: var(--lr-border-width-thin) solid var(--lr-color-border);
       border-radius: var(--lr-radius-pill);
       background: var(--lr-color-surface);
@@ -105,8 +105,7 @@ export const styles = [
       transition: background-color var(--lr-transition-fast);
     }
     [part='jump-button']:focus-visible {
-      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-      outline-offset: var(--lr-focus-ring-offset);
+      ${focusRing}
     }
     [part='jump-button']:hover {
       background: var(--lr-color-brand-quiet);

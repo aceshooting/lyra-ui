@@ -1,13 +1,13 @@
+import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
   html,
   nothing,
-  svg,
   type TemplateResult,
-  type SVGTemplateResult,
   type PropertyValues,
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { sendIcon, stopIcon } from '../../../internal/icons.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 import type {
   LyraSelectionDirection,
@@ -21,6 +21,10 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
+import { normalizeChatComposerStatus } from './chat-composer-status.js';
+export { CHAT_COMPOSER_STATUSES, normalizeChatComposerStatus } from './chat-composer-status.js';
+export type { ChatComposerStatus } from './chat-composer-status.js';
+import type { ChatComposerStatus } from './chat-composer-status.js';
 import {
   autocorrectConverter,
   literalSetConverter,
@@ -42,20 +46,6 @@ import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_se
  *  vocabulary for how a *control fills itself*, and using it for container chrome as well made one
  *  property name mean two unrelated things. */
 export type ChatComposerFrame = LyraFrame;
-export type ChatComposerStatus = 'idle' | 'sending' | 'streaming';
-export const CHAT_COMPOSER_STATUSES = Object.freeze([
-  'idle',
-  'sending',
-  'streaming',
-] as const);
-
-/** Resolves untrusted status input to the public literal set. */
-export function normalizeChatComposerStatus(value: unknown): ChatComposerStatus {
-  return typeof value === 'string' &&
-    CHAT_COMPOSER_STATUSES.includes(value as ChatComposerStatus)
-    ? (value as ChatComposerStatus)
-    : 'idle';
-}
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
 export type ChatComposerWrap = LyraTextWrap;
 /** Retained name for the shared native `selectionDirection` vocabulary. */
@@ -69,47 +59,6 @@ const CHAT_COMPOSER_ACTIONS_LAYOUT = literalSetConverter<ChatComposerActionsLayo
   ['inline', 'stacked'],
   'inline'
 );
-
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding
-// send/stop glyphs to that module -- it's off limits here -- so these
-// one-off icons still read as part of the same visual language as the rest
-// of the library's inline icons. Same approach lr-checkbox's and
-// lr-chat-message's own local glyphs take for the identical reason.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function sendIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-  `;
-}
-
-/** A filled square -- the conventional "stop generating" glyph. */
-function stopIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="currentColor"
-      stroke="none"
-      aria-hidden="true"
-      focusable="false"
-    ><rect x="6" y="6" width="12" height="12" rx="1.5"></rect></svg>
-  `;
-}
 
 export interface LyraChatComposerEventMap {
   input: InputEvent;
@@ -459,11 +408,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   ): void {
     const textarea = this.textareaEl;
     if (!textarea) return;
-    if (start === undefined || end === undefined) {
-      textarea.setRangeText(replacement);
-    } else {
-      textarea.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(textarea, replacement, start, end, selectMode);
     this.value = textarea.value;
     this.resizeTextarea();
   }
@@ -869,11 +814,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
               : 'false'}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-              ? this.autocorrect
-                ? 'on'
-                : 'off'
-              : nothing}
+            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             wrap=${this.wrap}
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}

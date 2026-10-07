@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -74,8 +75,7 @@ export const styles = css`
     color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="base"][aria-disabled="true"] {
     opacity: var(--lr-opacity-disabled);
@@ -235,8 +235,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     aspect-ratio: 1;
     padding: 0;
     border: 0;
@@ -266,8 +265,7 @@ export const styles = css`
     color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* icons.ts ships one right-pointing chevron and asks callers to rotate the WRAPPING element.
      Open points down (the content below it), closed points along the reading direction --

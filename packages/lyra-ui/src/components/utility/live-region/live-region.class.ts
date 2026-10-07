@@ -6,9 +6,8 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
   Announcer,
-  acquireAnnouncementSink,
+  AnnouncementSinkController,
   type AnnounceOptions,
-  type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { styles } from './live-region.styles.js';
 
@@ -112,8 +111,7 @@ export class LyraLiveRegion extends LyraElement {
   private regionEl?: HTMLElement;
   // The shared light-DOM region this element currently holds a reference on,
   // and the politeness it was acquired for.
-  private sink?: AnnouncementSink;
-  private sinkPoliteness?: LyraLiveRegionMode;
+  private readonly announcementController = new AnnouncementSinkController(this);
   // A flush can land before `firstUpdated()` has ever run -- e.g. a
   // consumer that creates+appends the element and calls `announce()`
   // synchronously right after, mirroring how `toaster.ts` mounts a region
@@ -176,33 +174,18 @@ export class LyraLiveRegion extends LyraElement {
     super.disconnectedCallback();
     this.announcer.cancel();
     this.pendingWrite = undefined;
-    this.releaseSink();
+    this.announcementController.setExclusiveChannel(undefined);
   }
 
-  /** Point `this.sink` at the shared region for the current `mode` in the current owner document,
-   *  releasing whichever one it held before. Cheap and idempotent when nothing changed. */
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcementController.adopted();
+  }
+
+  /** Keep the shared region aligned with the current mode. */
   private syncSink(): void {
-    if (!this.isConnected) return;
     const politeness = this.mode === 'assertive' ? 'assertive' : 'polite';
-    const held =
-      this.sink !== undefined &&
-      this.sinkPoliteness === politeness &&
-      // Adoption into another document (an iframe) has to re-target: the region the user's
-      // assistive tech is watching is the one in the document the element now lives in.
-      this.sink.element.ownerDocument === this.ownerDocument;
-    if (held) return;
-    this.releaseSink();
-    this.sinkPoliteness = politeness;
-    this.sink = acquireAnnouncementSink(politeness, {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseSink(): void {
-    this.sink?.release();
-    this.sink = undefined;
-    this.sinkPoliteness = undefined;
+    this.announcementController.setExclusiveChannel(politeness);
   }
 
   /**
@@ -224,7 +207,7 @@ export class LyraLiveRegion extends LyraElement {
     // The announcement is an *addition* to the shared region: an identical repeat is a second
     // child node, which assistive tech reads again -- no clear-then-restore dance, and no stale
     // text left sitting in a region for focus to return to.
-    this.sink?.announce(text);
+    this.announcementController.current(this.mode)?.announce(text);
     // The shadow mirror is a styling/inspection surface only (`aria-hidden`), and it is the one
     // piece that has to wait for a render.
     if (!this.regionEl) {

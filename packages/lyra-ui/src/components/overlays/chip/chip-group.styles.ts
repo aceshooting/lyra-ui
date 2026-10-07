@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -31,8 +32,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     justify-content: center;
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
     border: var(--lr-border-width-thin) dashed var(--lr-color-border);
@@ -67,8 +67,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='overflow-indicator']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The :where() zeroes the [aria-expanded='true'] qualifier, holding this at (0,1,0) -- below
      the (0,2,0) :hover and :active rules above, so pointer feedback still reads while the picker

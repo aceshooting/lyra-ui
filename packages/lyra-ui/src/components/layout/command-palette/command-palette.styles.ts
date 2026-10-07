@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 export const styles = css`
@@ -75,8 +76,7 @@ export const styles = css`
     font-size: var(--lr-command-palette-search-font-size, inherit);
   }
   [part="input"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     border-radius: var(--lr-radius-xs);
   }
   [part="input"]::placeholder {
@@ -96,8 +96,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     border-radius: var(--lr-radius-xs);
     background: transparent;

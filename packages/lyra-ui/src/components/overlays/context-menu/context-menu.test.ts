@@ -105,10 +105,14 @@ function touch(
   return event;
 }
 
-async function hold(target: Element, init: PointerEventInit = {}): Promise<PointerEvent> {
+async function hold(target: Element, init: PointerEventInit = {}, eventName: 'lr-show' | 'lr-hide' | null = 'lr-show'): Promise<PointerEvent> {
   const [x, y] = center(target);
+  const menu = target.closest('lr-context-menu');
+  if (!menu) throw new Error('Long-press target has no context menu');
+  const observed = eventName ? oneEvent(menu, eventName) : null;
   const down = touch('pointerdown', target, x, y, init);
-  await aTimeout(HOLD_MS);
+  if (observed) await observed;
+  else await aTimeout(HOLD_MS);
   return down;
 }
 
@@ -762,6 +766,25 @@ describe('<lr-context-menu>', () => {
   });
 
   describe('long-press', () => {
+    it('honors the normal press duration before opening', async () => {
+      const el = await basic();
+      const menu = customElements.get('lr-context-menu') as typeof LyraContextMenu;
+      const previous = menu.longPressDelayMs;
+      const events = record(el);
+      const area = byId(el, 'area');
+      menu.longPressDelayMs = 500;
+      try {
+        touch('pointerdown', area, ...center(area));
+        // wait-reason: observe before the normal product timer expires, then await the actual event.
+        await aTimeout(150);
+        expect(events.count('lr-show')).to.equal(0);
+        await waitUntil(() => events.count('lr-show') === 1, 'normal long-press timer opened', { timeout: 1500 });
+        release(area);
+      } finally {
+        menu.longPressDelayMs = previous;
+      }
+    });
+
     it('opens after a touch hold with the press point and path', async () => {
       const el = await basic();
       const events = record(el);
@@ -1086,7 +1109,7 @@ describe('<lr-context-menu>', () => {
 
       const veto = (event: Event): void => event.preventDefault();
       el.addEventListener('lr-hide', veto);
-      await hold(byId(el, 'btn'));
+      await hold(byId(el, 'btn'), {}, 'lr-hide');
       release(byId(el, 'btn'));
       expect(events.count('lr-hide')).to.equal(2);
       expect(events.count('lr-show')).to.equal(1);
@@ -1179,7 +1202,7 @@ describe('<lr-context-menu>', () => {
         window.removeEventListener('keydown', onKey);
       }
       expect(keyPrevented).to.equal(true);
-      await hold(byId(inner, 'inner-row'));
+      await hold(byId(inner, 'inner-row'), {}, null);
       release(byId(inner, 'inner-row'));
       expect(outerEvents.count('lr-show')).to.equal(0);
       expect(innerEvents.count('lr-show')).to.equal(1);

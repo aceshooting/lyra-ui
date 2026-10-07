@@ -101,10 +101,6 @@ function replaceWithContents(element: Element): void {
   element.remove();
 }
 
-function isSvgElement(element: Element): boolean {
-  return element.namespaceURI === 'http://www.w3.org/2000/svg';
-}
-
 function elementsIncludingTemplateContents(root: ParentNode): Element[] {
   const elements = [...root.querySelectorAll('*')];
   for (let index = 0; index < elements.length; index++) {
@@ -122,12 +118,12 @@ function elementsIncludingTemplateContents(root: ParentNode): Element[] {
  * resource, navigation, form, CSS, shadow-part styling and custom-element sinks according to the
  * viewer context.
  */
-export function sanitizePassiveMarkup(
+export function sanitizePassiveMarkupFragment(
   sanitizer: HtmlSanitizer,
   raw: string,
   ownerDocument: Document,
   profile: PassiveMarkupProfile = 'passive-document',
-): string {
+): DocumentFragment {
   const purified = String(sanitizer.sanitize(
     raw,
     profile === 'passive-svg'
@@ -221,5 +217,18 @@ export function sanitizePassiveMarkup(
     }
   }
 
+  return template.content;
+}
+
+/** Serializes passive markup for callers that retain a string-backed rendering path. */
+export function sanitizePassiveMarkup(
+  sanitizer: HtmlSanitizer,
+  raw: string,
+  ownerDocument: Document,
+  profile: PassiveMarkupProfile = 'passive-document',
+): string {
+  const template = ownerDocument.createElement('template');
+  template.content.append(sanitizePassiveMarkupFragment(sanitizer, raw, ownerDocument, profile));
   return template.innerHTML;
 }
+import { isSvgElement } from '../../internal/dom-guards.js';

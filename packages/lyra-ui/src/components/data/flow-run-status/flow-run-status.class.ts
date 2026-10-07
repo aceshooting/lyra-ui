@@ -7,8 +7,7 @@ import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import {
   Announcer,
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { FlowRunDecorations } from '../flow-canvas/flow-types.js';
@@ -118,14 +117,14 @@ export class LyraFlowRunStatus extends LyraElement {
   @state() private liveText = '';
   private readonly announcer = new Announcer({
     onFlush: (text) => {
-      this.sink?.announce(text);
+      this.announcementController.announcePolite(text);
       this.liveText = text;
     },
   });
   /** Handle on the shared light-DOM live region every flush actually announces through -- a region
    *  rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores one
    *  outright), so `[part="live-region"]` is only an `aria-hidden` mirror. */
-  private sink?: AnnouncementSink;
+  private readonly announcementController = new AnnouncementSinkController(this, { eager: ['polite'] });
   private canvasEl?: FlowCanvasLike;
   private readonly companionController = new FlowCanvasCompanionController<FlowCanvasLike>(
     this,
@@ -143,7 +142,6 @@ export class LyraFlowRunStatus extends LyraElement {
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all.
-    this.syncSink();
     this.companionController.connect();
   }
 
@@ -151,24 +149,14 @@ export class LyraFlowRunStatus extends LyraElement {
     super.disconnectedCallback();
     this.companionController.disconnect();
     this.announcer.cancel();
-    this.sink?.release();
-    this.sink = undefined;
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     const ownerWindow = this.ownerDocument.defaultView;
     if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
-    this.syncSink();
+    this.announcementController.adopted();
     this.companionController.adopt();
-  }
-
-  private syncSink(): void {
-    if (this.sink?.element.ownerDocument === this.ownerDocument) return;
-    this.sink?.release();
-    this.sink = this.isConnected
-      ? acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this })
-      : undefined;
   }
 
   // `announceTransitions()` runs from `willUpdate()`, not `updated()`: it force-flushes into the

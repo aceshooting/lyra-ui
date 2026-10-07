@@ -1,10 +1,10 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { chevronIcon, retryIcon } from '../../../internal/icons.js';
+import { formatTimeOfDay } from '../../../internal/intl-cache.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -29,43 +29,6 @@ export interface ChatMessageToggleDetail {
   /** Whether the message body is shown in the resulting (on `lr-toggle-request`, the proposed)
    *  state. */
   expanded: boolean;
-}
-
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
-// retry glyph to that module -- it's off limits here -- so this one-off icon
-// still reads as part of the same visual language as the rest of the
-// library's inline icons. Same approach lr-checkbox's own local
-// checkmark/indeterminate glyphs take for the identical reason.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function retryIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-  `;
-}
-
-/** `hour:minute` in the component's effective locale; `formatTimestamp`
- *  overrides it when an application needs a different date/time contract.
- *  Uses the shared per-locale formatter cache -- this runs on every render
- *  of every message in a conversation surface, and constructing an
- *  `Intl.DateTimeFormat` per call is an ICU locale-data lookup.
- *  `effectiveLocale` always resolves to a non-empty tag (it falls back to
- *  `'en'`), so no empty-locale guard is needed. */
-function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
@@ -479,7 +442,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
-    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
     // Once the `failure` slot is populated it takes over full responsibility for presenting the
     // failed state -- suppress the built-in status text and retry button so a consumer is never
     // shown both at once (see the class doc's `failure` slot entry).

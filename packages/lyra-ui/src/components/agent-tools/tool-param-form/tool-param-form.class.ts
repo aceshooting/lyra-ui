@@ -1,3 +1,7 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -7,11 +11,8 @@ import {
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
 import {
-  AnchoredValidityController,
   resolveValidityAnchor,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
@@ -27,26 +28,19 @@ import '../../forms/combobox/option.class.js';
 import type { LyraNumberInput } from '../../forms/input/number-input.class.js';
 import '../../forms/input/number-input.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamFormat, LYRA_DEFAULT_toolParamInvalidConstraint, LYRA_DEFAULT_toolParamInvalidSelection, LYRA_DEFAULT_toolParamMaxItems, LYRA_DEFAULT_toolParamMaxLength, LYRA_DEFAULT_toolParamMaximum, LYRA_DEFAULT_toolParamMinItems, LYRA_DEFAULT_toolParamMinLength, LYRA_DEFAULT_toolParamMinimum, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-
 
 /** A single-choice selection error names its choices only up to this many. */
 const MAX_LISTED_CHOICES = 10;
@@ -58,8 +52,11 @@ export interface LyraToolParamFormEventMap {
     readonly errors: Readonly<Record<string, string>>;
   }>>;
   'lr-input': CustomEvent<LyraEventDetailSnapshot<{ readonly value: ToolParamFormValue }>>;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  'lr-change': CustomEvent<LyraEventDetailSnapshot<{ readonly value: ToolParamFormValue }>>;
+  input: Event;
+  change: Event;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 /**
  * `<lr-tool-param-form>` — renders one form control per top-level property
@@ -137,15 +134,18 @@ export interface LyraToolParamFormEventMap {
  * matching native controls' separation between reset state and custom errors.
  *
  * @customElement lr-tool-param-form
+ * @event {Event} input - Native notification after a user edits the aggregate value.
+ * @event {Event} change - Native notification after a user commits an aggregate value edit.
+ * @event lr-change - A user committed an edit; detail is `{ value }` with the complete value snapshot.
  * @event lr-input - A field's value changed. `detail: { value }` — the
  * full current value object (every property, defaults resolved), not just
  * the field that changed.
  * @event lr-validity-change - Effective native validity or errors changed. The frozen
  * `detail: { valid, errors }` includes custom errors and own/fieldset validation barring.
- * @event focus - Re-dispatched when a generated native `'string'` text input receives focus.
+ * @event {FocusEvent} focus - Re-dispatched when a generated native `'string'` text input receives focus.
  * Composed controls (`<lr-select>`, `<lr-number-input>`) already expose their own bubbling,
  * composed bridge.
- * @event blur - Re-dispatched when a generated native `'string'` text input loses focus.
+ * @event {FocusEvent} blur - Re-dispatched when a generated native `'string'` text input loses focus.
  * @event lr-invalid - The complete parameter form failed a validity check. Cancelable;
  * preventing it also prevents the native `invalid` event's default validation UI.
  * @csspart base - The outer wrapper around all fields.
@@ -228,6 +228,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-validity-change',
     'lr-input',
+    'lr-change',
   ]);
 
   static override properties = {
@@ -253,7 +254,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   @state() private touchedFields = new Set<string>();
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private baseId = nextId('tool-param-form');
@@ -293,17 +294,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init),
-    );
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like editing or leaving a field; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.syncFormState();
   }
 
@@ -529,11 +525,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) {
-      this.setAttribute('name', this._name);
-    } else {
-      this.removeAttribute('name');
-    }
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -544,6 +536,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the published validity and `:state()` hooks change
     // even though the value did not.
     this.applyValidity();
@@ -707,12 +701,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
-    this.syncFormState();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.syncFormState());
   }
 
   /**
@@ -722,6 +711,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // A reportValidity() call is what a submit attempt runs, so it counts as interaction for the
     // `user-valid`/`user-invalid` states — set before syncFormState(), which is what republishes
     // them. (A real submission attempt never calls this method -- it drives `ElementInternals`
@@ -793,7 +783,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.applyValue(restored);
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.applyValidity();
     this.requestUpdate();
   }
@@ -952,12 +945,14 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     return visible;
   }
 
-  private setFieldValue(key: string, val: unknown): void {
+  private setFieldValue(key: string, val: unknown, committed = false): void {
     if (this.effectiveDisabled) return;
     // Set before the `value` assignment, whose setter republishes the custom states.
     this.hasInteracted = true;
     this.applyValue({ ...this.value, [key]: val });
-    this.emit('lr-input', { value: this.effectiveValue });
+    const detail = { value: this.effectiveValue };
+    emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+    if (committed) emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
   }
 
   private markTouched(key: string): void {
@@ -970,6 +965,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   private onTextInput(key: string, e: Event): void {
+    e.stopPropagation();
     this.setFieldValue(key, (e.target as HTMLInputElement).value);
   }
 
@@ -985,7 +981,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private onSelectChange(key: string, e: Event): void {
     e.stopPropagation();
-    this.setFieldValue(key, (e.target as LyraSelect).value);
+    this.setFieldValue(key, (e.target as LyraSelect).value, true);
   }
 
   private onBooleanSelectChange(key: string, e: Event): void {
@@ -1001,11 +997,18 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         Reflect.deleteProperty(next, key);
         this.applyValue(next);
       }
-      this.emit('lr-input', { value: this.effectiveValue });
+      const detail = { value: this.effectiveValue };
+      emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+      emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
       return;
     }
-    this.setFieldValue(key, value === 'true');
+    this.setFieldValue(key, value === 'true', true);
   }
+
+  private onValueCommit = (event: Event): void => {
+    event.stopPropagation();
+    if (!this.effectiveDisabled) emitValueEvents(this, 'change', { value: this.effectiveValue }, detail => this.emit('lr-change', detail));
+  };
 
   private stopNestedControlEvent = (e: Event): void => {
     e.stopPropagation();
@@ -1015,11 +1018,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   // listener on <lr-tool-param-form> itself never hears them without this --
   // mirrors <lr-tool-approval-dialog>'s/<lr-tool-select-dialog>'s identical
   // native-input focus/blur bridge.
-  private onFieldFocus = (): void => {
-    this.emit('focus');
+  private onFieldFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
-  private onFieldBlur = (): void => {
-    this.emit('blur');
+  private onFieldBlur = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   private renderControl(
@@ -1077,6 +1080,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         ?disabled=${this.effectiveDisabled}
         ?readonly=${prop.const !== undefined}
         @input=${(e: Event) => this.onTextInput(key, e)}
+        @change=${this.onValueCommit}
         @focus=${this.onFieldFocus}
         @blur=${this.onFieldBlur}
       />`;
@@ -1097,7 +1101,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .readonly=${prop.const !== undefined}
         @input=${(e: Event) => this.onNumberInput(key, e)}
         @lr-input=${this.stopNestedControlEvent}
-        @change=${this.stopNestedControlEvent}
+        @change=${this.onValueCommit}
         @lr-change=${this.stopNestedControlEvent}
       ></lr-number-input>`;
     }
@@ -1203,7 +1207,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     </div>`;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

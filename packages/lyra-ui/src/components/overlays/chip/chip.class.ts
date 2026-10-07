@@ -1,9 +1,7 @@
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
-  accessibleTextRecordsMatter,
-  bindAccessibleTextObserver,
   composedAccessibilityText,
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
@@ -293,19 +291,19 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // The server cannot inspect assigned nodes. Keep its first render on the empty-label fallback,
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
-  private labelObserver?: MutationObserver;
-  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.labelObserver) return;
-    this.bindLabelObserverTargets();
-    this.recomputeLabelText();
-  });
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [''], () => {
+      this.syncHostActionRole();
+      this.updateBrowserDerivedState(() => this.recomputeLabelText());
+    }, ['slot', 'role'], false,
+  );
   private managedActionGroupRole = false;
   private pendingControlFocusRepair?: ComposedFocusRepairSnapshot;
   private readonly onLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (!this.tracksActionLabel) return;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.bind();
     this.updateBrowserDerivedState(() => this.recomputeLabelText());
   };
 
@@ -330,38 +328,22 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private syncLabelObservation(): void {
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    this.labelObserver = undefined;
-    if (!this.isConnected || !this.tracksActionLabel) return;
-    const MutationObserverCtor = (this.ownerDocument as Document | undefined)
-      ?.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor((records, observer) => {
-          if (!accessibleTextRecordsMatter(observer, records)) return;
-          this.bindLabelObserverTargets();
-          this.syncHostActionRole();
-          this.updateBrowserDerivedState(() => this.recomputeLabelText());
-        })
-      : undefined;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.setEnabled(this.tracksActionLabel);
   }
 
   // `'slot'` widens the shared content-node filter: only the default slot's content names this
   // chip's actions, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name.
-  private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['slot', 'role'], this.labelUpgrades);
-  }
-
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    this.labelObserver = undefined;
     this.releaseHostActionRole();
     this.pendingControlFocusRepair = undefined;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.labelTextObserver.adopted();
   }
 
   // Only the default slot's own content counts toward the remove/toggle button's accessible name --

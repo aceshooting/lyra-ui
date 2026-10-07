@@ -970,8 +970,18 @@ describe('table row budget', () => {
     const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Many" .rows=${many} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
     expect(element.rows.length).to.equal(10_000);
     expect(element.rowsTruncated).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim()).to.equal(
+      'Only the first 10,000 rows are shown.',
+    );
+    element.strings = { tableRowLimit: 'Showing {count} rows only.' };
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim()).to.equal(
+      'Showing 10,000 rows only.',
+    );
     element.rows = many.slice(0, 5);
     expect(element.rowsTruncated).to.equal(false);
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]') === null).to.equal(true);
   });
 });
 
@@ -1031,4 +1041,3 @@ describe('table render-time derived work', () => {
     }
   });
 });
-

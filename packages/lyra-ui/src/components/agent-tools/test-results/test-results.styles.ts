@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -25,50 +26,19 @@ export const styles = css`
     padding-block-end: var(--lr-space-s);
   }
   [part='filter-toggle'] {
-    font: inherit;
     font-size: var(--lr-font-size-xs);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    padding: var(--lr-space-2xs) var(--lr-space-s);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    --_lr-agent-action-hover-base: var(--lr-color-brand-quiet);
+    --_lr-agent-action-selected-fill: var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet));
+    --_lr-agent-action-selected-border: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
+    --_lr-agent-action-selected-color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
   }
-  [part='filter-toggle']:hover {
+  [part='test-name']:focus-visible {
+    ${focusRing}
+  }
+  [part='test-name']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='filter-toggle'][aria-pressed='true'] {
-    background: var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
-    color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
-  }
-  [part='filter-toggle']:where([aria-pressed='true']):hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-  }
-  /* The hovered tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner (which
-     follows the text colour), so the press reads deeper than hover. It must stay after the
-     [aria-pressed='true'] rule: both are (0,2,0), so source order alone decides whether pressing
-     an already-selected filter shows any feedback. */
-  [part='filter-toggle']:where([aria-pressed='true']):active {
-    background: color-mix(in oklab, var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-  }
-  [part='filter-toggle']:focus-visible,
-  [part='test-name']:focus-visible,
-  [part='test-expand-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part='test-name']:hover,
-  [part='test-expand-toggle']:hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  [part='test-name']:active,
-  [part='test-expand-toggle']:active {
+  [part='test-name']:active {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='suite'] + [part='suite'] {
@@ -123,15 +93,9 @@ export const styles = css`
   }
   [part='test-expand-toggle'] {
     flex: 0 0 auto;
-    font: inherit;
     font-size: var(--lr-font-size-xs);
-    background: none;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
-    color: var(--lr-color-text-quiet);
-    cursor: pointer;
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    --_lr-agent-action-hover-base: var(--lr-color-brand-quiet);
+    --_lr-agent-action-padding-inline: var(--lr-space-xs);
   }
   [part='failure'] {
     flex-basis: 100%;

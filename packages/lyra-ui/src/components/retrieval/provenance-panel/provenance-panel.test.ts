@@ -169,6 +169,18 @@ it('surfaces an embedded chunk inspector lr-chunk-toggle, without its retired lr
   expect(seen).to.deep.equal([`lr-chunk-toggle:${detail}`]);
 });
 
+it('re-emits one contextual toggle for an embedded chunk', async () => {
+  const el = await fixture<LyraProvenancePanel>(html`<lr-provenance-panel .provenance=${provenance}></lr-provenance-panel>`);
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as HTMLElement & { size: string; updateComplete: Promise<unknown> };
+  inspector.size = 'm';
+  await inspector.updateComplete;
+  const seen: CustomEvent[] = [];
+  el.addEventListener('lr-toggle', (event) => seen.push(event as CustomEvent));
+  (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
+  expect(seen.map((event) => event.detail)).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(seen[0]!.target === el).to.equal(true);
+});
+
 it('all four sections start expanded, and toggling one emits lr-toggle without collapsing the others', async () => {
   const el = (await fixture(
     html`<lr-provenance-panel></lr-provenance-panel>`
@@ -186,6 +198,25 @@ it('all four sections start expanded, and toggling one emits lr-toggle without c
   await el.updateComplete;
   expect(headers[0]!.getAttribute('aria-expanded')).to.equal('false');
   expect(headers[1]!.getAttribute('aria-expanded')).to.equal('true');
+  const body = el.shadowRoot!.querySelector('[part="body"]')!;
+  expect(body.id).to.equal(headers[0]!.getAttribute('aria-controls'));
+  expect(body.children.length).to.equal(0);
+});
+
+it('caps a section at 500 rows with a localized notice and restores rows after disclosure', async () => {
+  const entities = Array.from({ length: 501 }, (_unused, index) => ({ id: `entity-${index}`, label: `Entity ${index}` }));
+  const el = (await fixture(html`<lr-provenance-panel .provenance=${{ entities }}
+    .strings=${{ provenancePanelLimit: 'First {count} entries shown' }}></lr-provenance-panel>`)) as LyraProvenancePanel;
+  expect(el.shadowRoot!.querySelectorAll('lr-entity-chip').length).to.equal(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('First 500 entries shown');
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
+  header.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-entity-chip').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="body"]')!.id).to.equal(header.getAttribute('aria-controls'));
+  header.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-entity-chip').length).to.equal(500);
 });
 
 it('re-emits child events unmodified (lr-chunk-open bubbles through)', async () => {

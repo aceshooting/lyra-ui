@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -61,8 +62,7 @@ export const styles = css`
     font: inherit;
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -162,8 +162,7 @@ export const styles = css`
     padding: var(--lr-size-0-1875rem) var(--lr-space-xs);
   }
   [part='toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Trailing header slot. It follows the copy control, which already claimed the auto margin, so
      this only needs its own gap. */
@@ -295,8 +294,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: end;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: 0;
     margin-inline-end: var(--lr-space-s);
     padding: 0;

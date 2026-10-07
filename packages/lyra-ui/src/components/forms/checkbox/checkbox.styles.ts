@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -37,12 +38,10 @@ export const styles = css`
     /* The visible box starts at the same inline origin as label-indent. The larger transparent
        target can extend beneath the label without shifting the box into its text. */
     justify-content: flex-start;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   .checkbox-owner:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host(:disabled) .checkbox-layout {
     cursor: not-allowed;

@@ -168,6 +168,14 @@ must remain identical. Only the existing row's `module` changes; documentation l
 and order are preserved. Relocation source and target owners cannot overlap any other requested
 operation. Any additional census drift still fails the complete validation.
 
+If an extraction also changes the fingerprint, a relocation may explicitly pin
+`expectedTargetFingerprint` to the reviewed live census hash. Dependency ownership participates in
+the fingerprint, so moving a declaration can change it even when its text is identical. Review the
+old and new declarations and their dependency changes before supplying this field. The exact old
+preimage and new target hash must both match; the target hash must differ from the old hash. Public
+routes, documentation locators and metadata remain unchanged, and unrelated census drift still
+fails. The updater records the fingerprint derived by the live scanner only after these checks.
+
 **Composable styling and the token grammar.** Author shared theme inputs in
 `tokens/canonical-tokens.json`, looks in `tokens/looks/*.json`, and the density and glass treatments
 in `tokens/density.json` and `tokens/surfaces/glass.json`. `pnpm run style-axes` generates the

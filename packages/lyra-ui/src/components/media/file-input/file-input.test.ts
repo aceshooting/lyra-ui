@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -13,18 +14,10 @@ import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { sendKeys } from "@web/test-runner-commands";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
-
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
   );
-}
-
-function sinkTexts(politeness: "polite" | "assertive"): string[] {
-  const element = sinkElement(politeness);
-  return element
-    ? Array.from(element.children).map((child) => child.textContent ?? "")
-    : [];
 }
 
 function makeFile(name: string, type: string): File {
@@ -4496,7 +4489,6 @@ it('draws selected-file rows in the subtle border tier while the dropzone stays 
     'the resting dropzone border left the control-grade --lr-color-border',
   );
 });
-
 
 it('ignores retired compact inputs and isolates small-size overrides from other tiers', async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input label="Attachments"></lr-file-input>`);

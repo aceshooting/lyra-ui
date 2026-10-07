@@ -970,6 +970,78 @@ it('does not re-snapshot the unchanged variables when a message is edited', asyn
   expect(el.variables === before).to.equal(true);
 });
 
+it('reuses unchanged message previews while editing a different message', async () => {
+  const longContent = 'Hello {{audience}}. '.repeat(40);
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      .messages=${[
+        { id: 'long', role: 'system', content: longContent },
+        { id: 'short', role: 'user', content: 'Hi {{audience}}' },
+      ]}
+      .variables=${[{ name: 'audience', value: 'team' }]}
+    ></lr-prompt-studio>
+  `);
+  const original = RegExp.prototype.exec;
+  let placeholderScans = 0;
+  RegExp.prototype.exec = function (text: string): RegExpExecArray | null {
+    if (this.source.includes('([^{}]+)')) placeholderScans++;
+    return original.call(this, text);
+  };
+  try {
+    el.heading = 'Updated heading';
+    await el.updateComplete;
+    expect(placeholderScans).to.equal(0);
+
+    const short = el.shadowRoot!.querySelectorAll<HTMLTextAreaElement>('[part="message-content"]')[1]!;
+    short.value = 'Updated {{audience}}';
+    short.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(placeholderScans).to.be.lessThan(10);
+    expect(el.shadowRoot!.querySelectorAll('[part="preview"] pre')[0]!.textContent).to.include('Hello team.');
+    expect(el.shadowRoot!.querySelectorAll('[part="preview"] pre')[1]!.textContent).to.equal('Updated team');
+  } finally {
+    RegExp.prototype.exec = original;
+  }
+});
+
+it('retires previews from older accepted edits instead of retaining the editing history', async () => {
+  const content = 'Hello {{audience}}. '.repeat(40);
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio .messages=${[{ id: 'one', role: 'user', content }]}
+      .variables=${[{ name: 'audience', value: 'team' }]}></lr-prompt-studio>
+  `);
+  const original = RegExp.prototype.exec;
+  let scans = 0;
+  RegExp.prototype.exec = function (text: string): RegExpExecArray | null {
+    if (this.source.includes('([^{}]+)')) scans++;
+    return original.call(this, text);
+  };
+  try {
+    for (const next of ['Changed once', 'Changed twice', content]) {
+      el.messages = [{ id: 'one', role: 'user', content: next }];
+      await el.updateComplete;
+    }
+    expect(scans).to.be.greaterThan(40);
+    expect(el.shadowRoot!.querySelector('[part="preview"] pre')!.textContent).to.include('Hello team.');
+  } finally {
+    RegExp.prototype.exec = original;
+  }
+});
+
+it('keeps the shared substitution ceiling when identical message previews are reused', async () => {
+  const content = '{{x}}'.repeat(6_000);
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      .messages=${[
+        { id: 'first', role: 'system', content },
+        { id: 'second', role: 'user', content },
+      ]}
+      .variables=${[{ name: 'x', value: 'a' }]}
+    ></lr-prompt-studio>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="preview"]')?.textContent).to.include('Preview unavailable');
+});
+
 it('keeps an explicitly empty heading verbatim instead of the localized default', async () => {
   const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading=""></lr-prompt-studio>`);
   expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.firstElementChild!.textContent!.trim()).to.equal('');

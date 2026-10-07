@@ -65,7 +65,7 @@ it('paints a keyboard edge halo while preserving roving focus and activation', a
   element.nodes = [{ id: 'a', label: 'First', color: '#00ff00' }, { id: 'b', label: 'Second', color: '#00ff00' }];
   element.edges = [{ id: 'edge', source: 'a', target: 'b', color: '#0000ff' }];
   await element.updateComplete;
-  await waitUntil(() => element.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 3);
+  await waitUntil(() => element.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 1);
   const canvas = element.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;
   const first = element.shadowRoot!.querySelector<HTMLElement>('[part="cursor-item"]')!;
   await focusByKeyboard(first);
@@ -87,7 +87,7 @@ it('paints the focused community outline when the virtual cursor reaches its hul
     { id: 'b', label: 'Second', communityId: 'team', color: '#00ff00' }];
   element.communities = [{ id: 'team', label: 'Research team', memberIds: ['a', 'b'], color: '#0000ff' }];
   await element.updateComplete;
-  await waitUntil(() => element.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 3);
+  await waitUntil(() => element.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 1);
   const first = element.shadowRoot!.querySelector<HTMLElement>('[part="cursor-item"]')!;
   const canvas = element.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;
   await focusByKeyboard(first);

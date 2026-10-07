@@ -6,9 +6,9 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { tag } from '../../../internal/prefix.js';
 import {
-  composedParentElement,
   hasRealContent,
   isAccessibilityVisible,
   nextId,
@@ -491,80 +491,18 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
    *  node is collapsed (the `children` slot is not rendered then), nor a label edited in place — a
    *  childList observer sees both, and is the same mechanism `<lr-tab-group>` uses for its own
    *  light-DOM child model. */
-  private childObserver?: MutationObserver;
-
-  private observeLabelNode(node: Node): void {
-    if (!this.childObserver) return;
-    if (node.nodeType === 3) {
-      this.childObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.childObserver.observe(node, {
-      attributes: true,
-      attributeFilter: [
-        'alt',
-        'aria-hidden',
-        'aria-label',
-        'aria-labelledby',
-        'class',
-        'hidden',
-        'id',
-        'inert',
-        'open',
-        'slot',
-        'style',
-      ],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  private composedParentForLabelNode(node: Node): Element | null {
-    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
-    if (assignedSlot) return assignedSlot;
-    if (node.parentElement) return node.parentElement;
-    const root = node.getRootNode() as Document | ShadowRoot;
-    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
-  }
-
-  private observeLabelAncestors(node: Node): void {
-    const observer = this.childObserver;
-    if (!observer) return;
-    let ancestor = this.composedParentForLabelNode(node);
-    while (ancestor) {
-      // Preserve the full host-subtree registration while also watching consumer-owned composed
-      // ancestors whose class/style can retheme an assigned root through `::slotted()` CSS.
-      if (ancestor !== this && !this.contains(ancestor)) {
-        observer.observe(ancestor, {
-          attributes: true,
-          attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'],
-        });
-      }
-      ancestor = composedParentElement(ancestor);
-    }
-  }
-
-  private bindChildObserverTargets(): void {
-    if (!this.childObserver) return;
-    this.childObserver.disconnect();
-    this.observeLabelNode(this);
-    for (const slot of this.labelForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) {
-        this.observeLabelNode(assigned);
-        this.observeLabelAncestors(assigned);
-      }
-    }
-  }
+  private readonly labelTextObserver = new AccessibleTextController(this, [], () => {
+    this.assignChildSlots();
+    this.requestUpdate();
+    if (this._loading && this.actualChildItems().length > 0) this.finishLazyLoad(this.lazyGeneration);
+  }, ['slot']);
 
   private handleLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (target.getRootNode() !== this.renderRoot && !this.labelForwardingSlots().includes(target as HTMLSlotElement))
       return;
-    this.bindChildObserverTargets();
+    this.labelTextObserver.bind();
     this.requestUpdate();
   };
 
@@ -589,14 +527,11 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     // The observer is intentionally absent while detached. A reconnect must therefore sample once
     // before relying on future mutations; first connections remain hydration-aware in willUpdate().
     if (this.hasUpdated) this.sampleLightDomState();
-    this.rebuildChildObserver();
     this.addEventListener('slotchange', this.handleLabelSlotChange);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.handleLabelSlotChange);
-    this.childObserver?.disconnect();
-    this.childObserver = undefined;
     this.lifecycleGeneration++;
     this.lazyGeneration++;
     this.cancelLifecycleTimer();
@@ -607,38 +542,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     super.disconnectedCallback();
   }
 
-  /**
-   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
-   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
-   * through that window's microtask queue even after this element is adopted into a different
-   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
-   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
-   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
-   * observer here rather than only lazily on the next connect, the same realm-follows-adoption
-   * treatment this file's own lifecycle timer already gives the owner realm in
-   * `scheduleAfterEvent()`.
-   */
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.rebuildChildObserver();
-  }
-
-  /** Tears down and reconstructs `childObserver` bound to the current `ownerDocument`'s realm, then
-   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
-  private rebuildChildObserver(): void {
-    this.childObserver?.disconnect();
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.childObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
-          this.assignChildSlots();
-          this.bindChildObserverTargets();
-          this.requestUpdate();
-          if (this._loading && this.actualChildItems().length > 0) {
-            this.finishLazyLoad(this.lazyGeneration);
-          }
-        })
-      : undefined;
-    this.bindChildObserverTargets();
+    this.labelTextObserver.adopted();
   }
 
   private actualChildItems(): LyraTreeItem[] {

@@ -43,16 +43,47 @@ describe('lr-research-progress', () => {
     expect(step.querySelector('[part="status"]')!.textContent).to.equal('Inachevé');
   });
 
-  it('keeps a step with an unrecognised status, shown as pending, instead of dropping it', async () => {
-    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress
+  it('keeps a step with an unrecognised status, shown as localized unknown, instead of dropping it', async () => {
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-research-progress:unknown-status');
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+    let el: LyraResearchProgress;
+    try {
+      el = await fixture<LyraResearchProgress>(html`<lr-research-progress
       .steps=${[
         { id: 'a', label: 'A', status: 'completed' },
-        { id: 'b', label: 'B', status: 'cancelled' },
+        { id: 'b', label: 'B', status: 'provider-specific' },
       ] as unknown as ResearchStep[]}
-    ></lr-research-progress>`);
+      ></lr-research-progress>`);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.some((warning) => warning.includes('provider-specific'))).to.equal(true);
     const step = el.shadowRoot!.querySelector('[data-step-id="b"]') as HTMLElement;
-    expect(step.getAttribute('data-status')).to.equal('pending');
+    expect(step.getAttribute('data-status')).to.equal('unknown');
+    expect(step.querySelector('[part="status"]')?.textContent).to.equal('Unknown');
     expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuenow')).to.equal('50');
+    el.strings = { statusUnknown: 'Inconnu' };
+    await el.updateComplete;
+    expect(step.querySelector('[part="status"]')?.textContent).to.equal('Inconnu');
+  });
+
+  it('accepts shared terminal spellings while preserving research-specific labels and counts', async () => {
+    const aliases: ResearchStep[] = [
+      { id: 'a', label: 'A', status: 'success' },
+      { id: 'b', label: 'B', status: 'done' },
+      { id: 'c', label: 'C', status: 'complete' },
+      { id: 'd', label: 'D', status: 'error' },
+      { id: 'e', label: 'E', status: 'cancelled' },
+    ];
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${aliases}></lr-research-progress>`);
+    const rows = [...el.shadowRoot!.querySelectorAll('[part="step"]')];
+    expect(rows.map((row) => row.getAttribute('data-status'))).to.deep.equal(['completed', 'completed', 'completed', 'failed', 'incomplete']);
+    expect(el.shadowRoot!.querySelector('[part="progress"]')?.getAttribute('aria-valuenow')).to.equal('60');
+    el.strings = { researchProgressStatusCompleted: 'Fini' };
+    await el.updateComplete;
+    expect(rows[0]?.querySelector('[part="status"]')?.textContent).to.equal('Fini');
   });
 
   it('keeps first valid identities, caps mounted rows, owns the assigned snapshot, and updates on replacement', async () => {
@@ -144,4 +175,20 @@ describe('lr-research-progress heading level', () => {
     await el.updateComplete;
     expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
+});
+
+
+it('shares progress paint hooks and the locale-formatted accessible percentage', async () => {
+  const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${steps}></lr-research-progress>`);
+  el.style.setProperty('--lr-progress-track-color', 'rgb(12, 34, 56)');
+  el.style.setProperty('--lr-progress-indicator-color', 'rgb(65, 43, 21)');
+  el.style.setProperty('--lr-progress-track-radius', '9px');
+  const progress = el.shadowRoot!.querySelector<HTMLElement>('[part="progress"]')!;
+  expect(getComputedStyle(progress).backgroundColor).to.equal('rgb(12, 34, 56)');
+  expect(getComputedStyle(progress, '::before').backgroundColor).to.equal('rgb(65, 43, 21)');
+  expect(getComputedStyle(progress).borderStartStartRadius).to.equal('9px');
+  expect(progress.getAttribute('aria-valuetext')).to.equal(
+    el.shadowRoot!.querySelector('[part="progress-label"]')!.textContent
+  );
+  expect(progress.getAttribute('aria-valuenow')).to.equal('25');
 });

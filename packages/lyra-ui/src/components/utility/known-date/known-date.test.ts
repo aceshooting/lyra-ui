@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import { render, type PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
@@ -85,6 +86,16 @@ it('renders month, day, year order for en-US and year, month, day for ja-JP', as
   const jp = (await fixture(html`<lr-known-date locale="ja-JP"></lr-known-date>`)) as LyraKnownDate;
   await jp.updateComplete;
   expect(fieldOrder(jp)).to.deep.equal(['year', 'month', 'day']);
+});
+
+it('recomputes field order when the locale property is reassigned', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  expect(fieldOrder(el)).to.deep.equal(['month', 'day', 'year']);
+
+  el.locale = 'en-GB';
+  await el.updateComplete;
+  expect(fieldOrder(el)).to.deep.equal(['day', 'month', 'year']);
 });
 
 it('lets an explicit locale property override an inherited lang ancestor', async () => {
@@ -1330,6 +1341,17 @@ it('accepts Arabic-Indic and Persian digits and canonicalizes them to ISO ASCII'
   expect(persian.value).to.equal('2007-03-27');
 });
 
+it('accepts Unicode decimal digits from a non-locale script and strips bidi marks', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
+  typeInto(fieldFor(el, 'day'), '०९\u200f');
+  typeInto(fieldFor(el, 'month'), '०३');
+  typeInto(fieldFor(el, 'year'), '२००७');
+  await el.updateComplete;
+
+  expect(el.value).to.equal('2007-03-09');
+  expect(fieldFor(el, 'day').value).to.equal('09');
+});
+
 it('forwards host click() to the first field in locale order', async () => {
   const el = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
   let clicks = 0;
@@ -1557,15 +1579,7 @@ it('focus() activates the first field in locale order and blur() releases it', a
 
 describe('lr-known-date implicit form submission', () => {
   const enterOn = (el: LyraKnownDate, init: KeyboardEventInit = {}) =>
-    fields(el)[0]!.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-        ...init,
-      }),
-    );
+    dispatchEnterKeyAndSettle(fields(el)[0]!, init);
 
   it('submits the ancestor form when Enter is pressed in a date field', async () => {
     const form = (await fixture(html`
@@ -1582,7 +1596,7 @@ describe('lr-known-date implicit form submission', () => {
       submits += 1;
       submittedValue = new FormData(form).get('bday') as string | null;
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submittedValue).to.equal('2007-03-27');
   });
@@ -1605,7 +1619,7 @@ describe('lr-known-date implicit form submission', () => {
     }
     await el.updateComplete;
     expect(el.value, 'the three fields resolve to a real date').to.equal('2007-03-27');
-    enterOn(el);
+    await enterOn(el);
     expect(order.join(','), 'change is flushed ahead of the submission').to.equal('change,submit');
   });
 
@@ -1625,7 +1639,7 @@ describe('lr-known-date implicit form submission', () => {
       submits += 1;
       submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submitterName, 'the lr-button was the submitter').to.equal('action');
   });
@@ -1643,28 +1657,28 @@ describe('lr-known-date implicit form submission', () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener('keydown', veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener('keydown', veto, true);
     expect(submits).to.equal(0);
 
     el.readonly = true;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, 'a readonly control never submits').to.equal(0);
 
     el.readonly = false;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });

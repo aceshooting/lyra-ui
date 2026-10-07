@@ -1,4 +1,6 @@
+import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import type { PropertyValues } from "lit";
 import "./token-input.js";
 import "../button/button.js";
@@ -1353,31 +1355,18 @@ it("does not focus the still-rendered draft in the same task that fieldset disab
 
 describe("ElementInternals availability", () => {
   it("does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
-    delete HTMLElement.prototype.attachInternals;
-    try {
+    withUnavailableInternals(() => {
       let el: LyraTokenInput | undefined;
       expect(() => {
         el = document.createElement("lr-token-input") as LyraTokenInput;
       }).to.not.throw();
       expect(el!.checkValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    });
   });
 
   it("falls back to no-op internals when attachInternals() throws (e.g. already attached)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    HTMLElement.prototype.attachInternals =
-      function attachInternals(): ElementInternals {
-        throw new DOMException(
-          "ElementInternals for the specified element was already attached",
-          "InvalidStateError"
-        );
-      };
-    try {
+    withUnavailableInternals(() => {
       let el: LyraTokenInput | undefined;
       expect(() => {
         el = document.createElement("lr-token-input") as LyraTokenInput;
@@ -1385,34 +1374,17 @@ describe("ElementInternals availability", () => {
       expect(el!.checkValidity()).to.be.true;
       expect(el!.reportValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    }, () => new DOMException(
+      'ElementInternals for the specified element was already attached',
+      'InvalidStateError'
+    ));
   });
 });
 
 it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-  const proto = LyraElement.prototype as unknown as {
-    willUpdate: (changed: PropertyValues) => void;
-  };
-  const original = proto.willUpdate;
-  let called = false;
-  proto.willUpdate = function (
-    this: LyraElement,
-    changed: PropertyValues
-  ): void {
-    called = true;
-    original.call(this, changed);
-  };
-  try {
-    const el = (await fixture(
-      html`<lr-token-input></lr-token-input>`
-    )) as LyraTokenInput;
-    await el.updateComplete;
-    expect(called).to.be.true;
-  } finally {
-    proto.willUpdate = original;
-  }
+  await assertCallsBaseWillUpdate('lr-token-input', async () =>
+    (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput
+  );
 });
 
 it("calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
@@ -2916,15 +2888,7 @@ describe("lr-token-input implicit form submission", () => {
   const draftInput = (el: LyraTokenInput): HTMLInputElement =>
     el.shadowRoot!.querySelector("#input") as HTMLInputElement;
   const enterOn = (el: LyraTokenInput, init: KeyboardEventInit = {}) =>
-    draftInput(el).dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-        ...init,
-      })
-    );
+    dispatchEnterKeyAndSettle(draftInput(el), init);
   async function typeDraft(el: LyraTokenInput, text: string): Promise<void> {
     const input = draftInput(el);
     input.value = text;
@@ -2945,7 +2909,7 @@ describe("lr-token-input implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -2961,7 +2925,7 @@ describe("lr-token-input implicit form submission", () => {
       submits += 1;
     });
     await typeDraft(el, "alpha");
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
     expect(el.value.join(","), "the draft became a token").to.equal("alpha");
     expect(submits, "committing a token is not implicit submission").to.equal(
@@ -2969,7 +2933,7 @@ describe("lr-token-input implicit form submission", () => {
     );
 
     // The draft is empty again, so the next Enter is a submission.
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -2990,7 +2954,7 @@ describe("lr-token-input implicit form submission", () => {
       submitterName =
         ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? "";
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submitterName, "the lr-button was the submitter").to.equal("action");
   });
@@ -3006,21 +2970,21 @@ describe("lr-token-input implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener("keydown", veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener("keydown", veto, true);
     expect(submits).to.equal(0);
 
-    enterOn(el);
+    await enterOn(el);
     expect(submits, "a bare Enter still submits").to.equal(1);
   });
 });

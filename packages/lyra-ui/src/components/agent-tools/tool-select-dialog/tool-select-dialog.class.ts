@@ -1,4 +1,6 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -7,7 +9,6 @@ import { property, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import {
@@ -78,8 +79,8 @@ export interface LyraToolSelectDialogEventMap {
   'lr-change-request': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
   'lr-change': CustomEvent<LyraEventDetailSnapshot<ToolSelectionChangeDetail>>;
   'lr-close': CustomEvent<LyraToolSelectDialogCloseDetail>;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 
 const UNCATEGORIZED = null;
@@ -323,8 +324,8 @@ interface ToolProjection {
  * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
  * `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
  * full list of emitters and the `event.target !== event.currentTarget` guard.
- * @event focus - Re-dispatched when the internal search input receives focus.
- * @event blur - Re-dispatched when the internal search input loses focus.
+ * @event {FocusEvent} focus - Re-dispatched when the internal search input receives focus.
+ * @event {FocusEvent} blur - Re-dispatched when the internal search input loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself.
  * @csspart header - The wrapper around the title/subtitle.
@@ -469,9 +470,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       this.close('api');
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private overlay?: OverlayHandle;
-  private focusReturnOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private canonicalToolsCache?: readonly CanonicalTool[];
   private canonicalSelectedToolIdsCache?: readonly string[];
   private canonicalSelectedToolIdsSource?: readonly string[];
@@ -500,26 +500,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     if (changed.has('open')) {
       if (this.open) {
         this.renderedWindow = undefined;
-        this.deferredFocusReturn.cancel();
-        this.focusReturnOpener = captureFocusReturnOpener(this);
-        this.nativeModal.prepare();
-        this.activateOverlay();
+        this.modalSurface.open(() => this.activateOverlay());
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.leaveTopLayer();
-        this.overlay?.deactivate();
-        this.overlay = undefined;
-        // The synchronous return keeps the established timing whenever the opener can already
-        // take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.focusReturnOpener;
-        this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
+        this.modalSurface.close(hadOverlay, () => {
+          this.overlay?.deactivate();
+          this.overlay = undefined;
+        }, () => !this.open);
         // Otherwise a long-lived instance reopens still showing whatever
         // search filter/collapsed-category state the previous session left
         // behind, rather than the fresh, unfiltered list a reopen implies.
@@ -544,7 +531,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.open) {
-      this.nativeModal.prepare();
+      this.modalSurface.prepare();
       this.requestUpdate();
       this.activateOverlay();
       // The shadow panel survives a same-document reparent, so restore focus before the pending
@@ -560,29 +547,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
   private enterTopLayer(): void {
-    if (!this.isConnected || this.nativeModal.show()) return;
-    this.popover = 'manual';
-    try {
-      if (!this.matches(':popover-open')) this.showPopover();
-    } catch {
-      // No popover support: the z-index fallback applies.
-    }
-  }
-
-  private leaveTopLayer(): void {
-    this.nativeModal.hide();
-    try {
-      if (this.matches(':popover-open')) this.hidePopover();
-    } catch {
-      // Never promoted.
-    }
+    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.leaveTopLayer();
+    this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
   }
 
   private activateOverlay(): void {
@@ -667,8 +638,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.renderedToolLimit = MAX_RENDERED_TOOLS;
     e.stopPropagation();
   };
-  private onSearchFocus = (): void => { this.emit('focus'); };
-  private onSearchBlur = (): void => { this.emit('blur'); };
+  private onSearchFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
+  private onSearchBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
   // The native `::-webkit-search-cancel-button` reset below removes the browser's own clear
   // affordance with no replacement -- this button, and the search input's refocus afterward,

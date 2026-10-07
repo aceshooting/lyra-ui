@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -63,8 +64,7 @@ export const styles = css`
     text-decoration: underline;
   }
   [part='clear-selection']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='table'] {
     min-inline-size: 0;
@@ -89,7 +89,6 @@ export const styles = css`
     text-decoration: underline;
   }
   [part='table']::part(document-name):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 `;

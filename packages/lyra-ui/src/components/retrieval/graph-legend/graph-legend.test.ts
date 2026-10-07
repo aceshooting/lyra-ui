@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -13,12 +14,6 @@ import {
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
-  );
-}
-
-function sinkTexts(): string[] {
-  return Array.from(sinkElement()?.children ?? []).map(
-    (child) => child.textContent ?? ''
   );
 }
 

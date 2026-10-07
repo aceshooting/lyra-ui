@@ -1,3 +1,4 @@
+import { progressPercent, formatProgressPercent } from '../../../internal/progress-value.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -6,6 +7,8 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
+import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import {
   retrievalSemanticLabel,
@@ -24,27 +27,32 @@ export interface ResearchStep {
   id: string;
   label: string;
   description?: string;
-  status: ResearchStepStatus;
+  status: ResearchStepStatus | 'success' | 'done' | 'complete' | 'error' | 'cancelled';
   sources?: number;
 }
 
 const MAX_RENDERED_STEPS = 100;
 const STATUSES: readonly ResearchStepStatus[] = ['pending', 'running', 'completed', 'failed', 'incomplete'];
-const STATUS_LABEL_KEY: Record<ResearchStepStatus, string> = {
+type DisplayStep = Omit<ResearchStep, 'status'> & { status: ResearchStepStatus | 'unknown' };
+const STATUS_LABEL_KEY: Record<DisplayStep['status'], string> = {
   pending: 'researchProgressStatusPending',
   running: 'researchProgressStatusRunning',
   completed: 'researchProgressStatusCompleted',
   failed: 'researchProgressStatusFailed',
   incomplete: 'statusIncomplete',
+  unknown: 'statusUnknown',
 };
 
 /**
  * `<lr-research-progress>` — an ordered, read-only view of host-owned research steps with a
  * completion summary. It does not run searches or infer step state. Assigned steps are detached
  * snapshots; blank ids and duplicate ids are omitted, and no more than 100 rows render. A step
- * whose `status` is not one of `pending`, `running`, `completed`, `failed` or `incomplete` is kept
- * and rendered as `pending` (it is not dropped); `incomplete` is a step that stopped without
+ * whose `status` is not recognized after shared terminal spelling normalization is kept
+ * and rendered as a neutral unknown state (it is not dropped); `incomplete` is a step that stopped without
  * finishing (a cancelled run) and is not counted as completed.
+ *
+ * The progress track and fill honor the shared progress track color/radius and indicator color
+ * tokens while preserving this summary's compact labeled geometry.
  *
  * @customElement lr-research-progress
  * @csspart base - The named component group.
@@ -98,12 +106,18 @@ export class LyraResearchProgress extends LyraElement {
   /** Semantic level of the heading; `none` keeps the visible text without heading semantics. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
 
-  private get normalizedSteps(): ResearchStep[] {
-    const valid: ResearchStep[] = [];
+  private get normalizedSteps(): DisplayStep[] {
+    const valid: DisplayStep[] = [];
     for (const step of Array.isArray(this.steps) ? this.steps : []) {
       try {
         if (step && typeof step.label === 'string') {
-          valid.push(STATUSES.includes(step.status) ? step : { ...step, status: 'pending' });
+          const terminal = normalizeAgentTerminalStatus(step.status);
+          const status = terminal === 'success' ? 'completed' : terminal === 'error' ? 'failed' : terminal === 'cancelled' ? 'incomplete' : step.status;
+          if (!(STATUSES as readonly string[]).includes(status)) devWarnOnce(
+            'lr-research-progress:unknown-status',
+            `<lr-research-progress>: unknown step status ${JSON.stringify(typeof step.status === 'string' ? step.status.slice(0, 80) : typeof step.status)}; rendering a neutral status.`
+          );
+          valid.push({ ...step, status: (STATUSES as readonly string[]).includes(status) ? status as ResearchStepStatus : 'unknown' });
         }
       } catch {
         // A malformed row cannot suppress later valid steps.
@@ -112,7 +126,7 @@ export class LyraResearchProgress extends LyraElement {
     return firstByRetrievalIdentity(valid, (step) => step.id);
   }
 
-  private renderStep(step: ResearchStep): TemplateResult {
+  private renderStep(step: DisplayStep): TemplateResult {
     const hasSources = typeof step.sources === 'number' && Number.isFinite(step.sources) && step.sources >= 0;
     const sources = hasSources ? finiteCount(step.sources!) : undefined;
     return html`
@@ -138,7 +152,8 @@ export class LyraResearchProgress extends LyraElement {
     const groupLabel = retrievalSemanticLabel(this, visibleLabel);
     const level = resolveHeadingLevel(this.headingLevel);
     const completed = steps.filter((step) => step.status === 'completed').length;
-    const percent = steps.length === 0 ? 0 : Math.round((completed / steps.length) * 100);
+    const percent = steps.length === 0 ? 0 : Math.round(progressPercent(completed, steps.length));
+    const formattedPercent = formatProgressPercent(this.effectiveLocale, percent);
     return html`
       <section part="base" role=${retrievalSemanticRole(this, 'group') ?? nothing} aria-label=${groupLabel ?? nothing}>
         <div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
@@ -152,12 +167,10 @@ export class LyraResearchProgress extends LyraElement {
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow=${String(percent)}
+                aria-valuetext=${formattedPercent}
                 style=${styleMap({ '--_progress-value': String(percent) })}
               >
-                <span part="progress-label">${getNumberFormat(this.effectiveLocale, {
-                  style: 'percent',
-                  maximumFractionDigits: 0,
-                }).format(percent / 100)}</span>
+                <span part="progress-label">${formattedPercent}</span>
               </div>
               <ol part="list">${steps.slice(0, MAX_RENDERED_STEPS).map((step) => this.renderStep(step))}</ol>
             `}

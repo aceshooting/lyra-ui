@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
@@ -47,8 +48,7 @@ export const styles = css`
     align-self: flex-start;
     gap: var(--lr-space-xs);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: 0;
     padding-block: 0;
     padding-inline: var(--lr-space-m);

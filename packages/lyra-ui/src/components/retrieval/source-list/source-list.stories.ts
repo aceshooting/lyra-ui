@@ -61,7 +61,7 @@ export const Interactive: Story = {
         style="max-width: 32rem;"
         @lr-toggle=${(e: Event) => {
           const log = document.getElementById('source-list-log');
-          if (log) log.textContent = `lr-toggle: expanded=${(e as CustomEvent).detail.expanded}`;
+          if (log) log.textContent = `lr-toggle: ${JSON.stringify((e as CustomEvent).detail)}`;
         }}
       >
         <lr-source-card source-id="doc-1" heading="annual_report.pdf" page="12">

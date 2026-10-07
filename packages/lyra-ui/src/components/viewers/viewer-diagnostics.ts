@@ -3,6 +3,7 @@ export type LyraViewerDiagnosticSeverity = 'warning' | 'error';
 
 /** Stable diagnostic codes currently emitted by viewer integrations. */
 export type LyraViewerDiagnosticCode =
+  | 'delimited-parse-diagnostic'
   | 'docx-conversion-message'
   | 'pptx-slide-render-error'
   | 'pptx-node-render-error'
@@ -17,7 +18,7 @@ export interface LyraViewerDiagnostic {
   readonly code: LyraViewerDiagnosticCode;
   readonly severity: LyraViewerDiagnosticSeverity;
   readonly fatal: boolean;
-  readonly source: 'mammoth' | 'pptx-renderer';
+  readonly source: 'mammoth' | 'papaparse' | 'pptx-renderer';
   readonly cause: unknown;
   readonly page?: number;
   readonly nodeId?: string;

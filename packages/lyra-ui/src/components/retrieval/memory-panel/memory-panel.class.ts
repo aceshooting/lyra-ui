@@ -6,11 +6,13 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
+  projectFrozenRows,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
 import type {
   LyraProvenance,
   LyraProvenancePanelEventMap,
@@ -80,12 +82,6 @@ const EMPTY_CANONICAL_MEMORIES: readonly CanonicalMemoryItem[] = Object.freeze(
   []
 );
 
-function descriptorValue(
-  value: object,
-  property: PropertyKey
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
 
 function valueOfDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>
@@ -100,10 +96,10 @@ function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
       return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const textDescriptor = descriptorValue(value, 'text');
-    const confidenceDescriptor = descriptorValue(value, 'confidence');
-    const provenanceDescriptor = descriptorValue(value, 'provenance');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const textDescriptor = getOwnDataDescriptor(value, 'text');
+    const confidenceDescriptor = getOwnDataDescriptor(value, 'confidence');
+    const provenanceDescriptor = getOwnDataDescriptor(value, 'provenance');
     if (
       [
         idDescriptor,
@@ -143,39 +139,8 @@ function projectMemory(value: unknown): CanonicalMemoryItem | undefined {
 }
 
 function projectMemories(value: unknown): readonly CanonicalMemoryItem[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_CANONICAL_MEMORIES;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return EMPTY_CANONICAL_MEMORIES;
-
-    const memories: CanonicalMemoryItem[] = [];
-    const seen = new Set<string>();
-    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_MEMORY_ITEMS);
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      )
-        continue;
-      const memory = projectMemory(descriptor.value);
-      // Validation deliberately precedes identity reservation, so a malformed duplicate cannot
-      // hide a later valid row with the same public id.
-      if (!memory || seen.has(memory.id)) continue;
-      seen.add(memory.id);
-      memories.push(memory);
-    }
-    return Object.freeze(memories);
-  } catch {
-    return EMPTY_CANONICAL_MEMORIES;
-  }
+  return projectFrozenRows(value, projectMemory, MAX_PROJECTED_MEMORY_ITEMS,
+    EMPTY_CANONICAL_MEMORIES, (item) => item.id);
 }
 
 interface ItemPending {
@@ -206,10 +171,10 @@ export interface LyraMemoryExpandDetail {
   expanded: boolean;
 }
 
-/** The embedded provenance panel's other events cross this host unchanged; the owning
+/** The embedded provenance panel's non-toggle events cross this host unchanged; the owning
  *  `[part="item"]` (`data-id`, `data-scope`) is on the event's `composedPath()`. */
 export interface LyraMemoryPanelEventMap
-  extends Omit<LyraProvenancePanelEventMap, 'lr-chunk-open'> {
+  extends Omit<LyraProvenancePanelEventMap, 'lr-chunk-open' | 'lr-toggle'> {
   'lr-chunk-open': CustomEvent<
     LyraEventDetailSnapshot<{
       memoryId: string;
@@ -222,8 +187,9 @@ export interface LyraMemoryPanelEventMap
   'lr-add': CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
   'lr-forget': CustomEvent<null>;
-  /** A memory item's provenance disclosure changed its expanded state. */
+  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
   'lr-memory-toggle': CustomEvent<LyraMemoryExpandDetail>;
+  'lr-toggle': CustomEvent<{ expanded: boolean; itemId?: string; memoryId?: string; scope?: MemoryScope; section?: 'entities' | 'relationships' | 'communities' | 'chunks' }>;
 }
 
 type Tier = 'high' | 'medium' | 'low';
@@ -303,8 +269,9 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @event lr-forget - The pending "forget all long-term memories" action was approved. No detail.
  * @event lr-memory-toggle - A memory item's provenance disclosure was toggled, expanding or
  * collapsing it. `detail: { memoryId, scope, expanded }`.
- * @event lr-toggle - Surfaced unchanged from an expanded item's provenance panel (a section
- * header). `detail: { section, expanded }`.
+ * @event lr-toggle - A memory item or one of its nested provenance disclosures changed.
+ *   Item changes carry `{ expanded, itemId, memoryId, scope }`; nested changes retain
+ *   their `section` and carry the owning `memoryId` and `scope`.
  * @event lr-entity-select - Surfaced unchanged from an expanded item's provenance panel.
  * `detail: { entityId, occurrenceIndex? }`.
  * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it.
@@ -351,6 +318,20 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @since 4.1.0
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
+  private readonly rovingActionByScope = new Map<MemoryScope, string>();
+
+  private onPrimaryKeyDown(event: KeyboardEvent): void {
+    const list = (event.currentTarget as HTMLElement).closest('[part="list"]');
+    const buttons = [...(list?.querySelectorAll<HTMLButtonElement>('[data-roving-primary]') ?? [])];
+    const current = buttons.indexOf(event.currentTarget as HTMLButtonElement);
+    const next = resolveListMove(event, {
+      count: buttons.length, current, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons[next]?.focus();
+  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -619,6 +600,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     else next.delete(key);
     this.expandedIds = next;
     this.emit('lr-memory-toggle', { memoryId: item.id, scope, expanded });
+    this.emit('lr-toggle', { itemId: item.id, memoryId: item.id, scope, expanded });
   }
 
   private startItemPending(
@@ -754,7 +736,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private renderItem(
     item: CanonicalMemoryItem,
     scope: MemoryScope,
-    index: number
+    index: number,
+    rovingActionKey: string | undefined,
   ): TemplateResult {
     const itemPending =
       this.pending &&
@@ -801,6 +784,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                       <button
                         part="add-button"
                         type="button"
+                        data-roving-primary
+                        tabindex=${itemKey === rovingActionKey ? '0' : '-1'}
+                        @focus=${() => { this.rovingActionByScope.set(scope, itemKey); this.requestUpdate(); }}
+                        @keydown=${this.onPrimaryKeyDown}
                         aria-label=${this.localize(
                           'memoryPanelAddWithContext',
                           undefined,
@@ -816,6 +803,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                 <button
                   part="remove-button"
                   type="button"
+                  ?data-roving-primary=${scope === 'long-term'}
+                  tabindex=${scope === 'long-term' ? itemKey === rovingActionKey ? '0' : '-1' : '0'}
+                  @focus=${scope === 'long-term' ? () => { this.rovingActionByScope.set(scope, itemKey); this.requestUpdate(); } : nothing}
+                  @keydown=${scope === 'long-term' ? this.onPrimaryKeyDown : nothing}
                   aria-label=${this.localize('removeWithContext', undefined, {
                     label: item.text,
                   })}
@@ -836,6 +827,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                       @lr-chunk-open=${(event: CustomEvent<{ chunkId: string; sourceId: string; anchor?: NonNullable<LyraChunk['anchor']> }>) => {
                         event.stopPropagation();
                         this.emit('lr-chunk-open', { memoryId: item.id, scope, ...event.detail });
+                      }}
+                      @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId?: string; section: 'entities' | 'relationships' | 'communities' | 'chunks' }>) => {
+                        event.stopPropagation();
+                        this.emit('lr-toggle', { ...event.detail, memoryId: item.id, scope });
                       }}
                     ></lr-provenance-panel>`
                   : nothing}
@@ -894,6 +889,13 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   ): TemplateResult {
     const headingId = `${this.idBase}-${scope}-heading`;
     const level = resolveHeadingLevel(this.headingLevel);
+    const renderedItems = items.slice(0, MAX_RENDERED_MEMORY_ITEMS);
+    const eligibleItems = renderedItems.filter((item) =>
+      !(this.pending && this.pending.kind !== 'forget-all' && this.pending.scope === scope && this.pending.item === item)
+    );
+    const remembered = this.rovingActionByScope.get(scope);
+    const rovingActionKey = eligibleItems.some((item) => this.itemKey(item, scope) === remembered)
+      ? remembered : eligibleItems[0] ? this.itemKey(eligibleItems[0], scope) : undefined;
     return html`
       <section part="section" data-scope=${scope}>
         <div part="section-header">
@@ -909,9 +911,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
               heading=${this.localize('noData')}
             ></lr-empty>`
           : html`<div part="list" role="list" aria-labelledby=${headingId}>
-              ${items
-                .slice(0, MAX_RENDERED_MEMORY_ITEMS)
-                .map((item, index) => this.renderItem(item, scope, index))}
+              ${renderedItems
+                .map((item, index) => this.renderItem(item, scope, index, rovingActionKey))}
             </div>
             ${items.length > MAX_RENDERED_MEMORY_ITEMS
               ? html`<p part="limit" role="note">${this.localize(

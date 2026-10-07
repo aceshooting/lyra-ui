@@ -6,10 +6,16 @@ import './histogram.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
+import { LazyChartSyncController } from './chart-sync-lazy.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 
 type SyncChart = LyraChart | LyraLiteChart;
+function hasSyncStyles(root: ShadowRoot): boolean {
+  return [...(root.adoptedStyleSheets ?? [])].some((sheet) =>
+    [...sheet.cssRules].some((rule) => rule.cssText.includes('sync-crosshair'))
+  ) || [...root.querySelectorAll('style')].some((style) => style.textContent?.includes('sync-crosshair'));
+}
 function tooltip(chart: SyncChart): string {
   if (chart.localName === 'lr-lite-chart') return chart.shadowRoot!.querySelector('[part="sync-tooltip"]')?.textContent ?? '';
   const runtime = (chart as LyraChart).chart as unknown as {
@@ -23,6 +29,9 @@ function crosshair(chart: SyncChart): boolean { return !!chart.shadowRoot!.query
 async function ready(chart: SyncChart): Promise<void> {
   await waitUntil(() => chart.shadowRoot!.querySelectorAll('[part="bar"], [part="point"], canvas').length > 0);
   if (chart.localName !== 'lr-lite-chart') await waitUntil(() => !!(chart as LyraChart).chart);
+  if (typeof chart.syncGroup === 'string' && chart.syncGroup.trim() &&
+      (chart.localName === 'lr-lite-chart' || (chart as any).syncCompatible()))
+    await waitUntil(() => (chart as any).chartSync.enabled);
   await chart.updateComplete;
 }
 async function hoverMark(chart: LyraLiteChart, index: number): Promise<void> {
@@ -32,6 +41,72 @@ async function hoverMark(chart: LyraLiteChart, index: number): Promise<void> {
 
 describe('chart synchronization', () => {
   afterEach(async () => { await resetMouse(); });
+
+  it('loads sync styles only for a group and rebinds them after adoption', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const chart = await fixture<LyraLiteChart>(html`<lr-lite-chart
+      .labels=${['A']} .datasets=${[{ label: 'Series', data: [1] }]}
+    ></lr-lite-chart>`);
+    expect(hasSyncStyles(chart.shadowRoot!)).to.equal(false);
+    chart.syncGroup = 'styles';
+    await ready(chart);
+    expect(hasSyncStyles(chart.shadowRoot!)).to.equal(true);
+    frame.contentDocument!.body.appendChild(frame.contentDocument!.adoptNode(chart));
+    await chart.updateComplete;
+    await waitUntil(() => (chart as any).chartSync.enabled);
+    expect(hasSyncStyles(chart.shadowRoot!)).to.equal(true);
+    chart.syncGroup = '';
+    await chart.updateComplete;
+    expect(hasSyncStyles(chart.shadowRoot!)).to.equal(false);
+  });
+
+  it('can retry a rejected controller import', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    let attempts = 0;
+    const controller = new LazyChartSyncController(
+      host,
+      () => undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => {
+        attempts += 1;
+        return attempts === 1
+          ? Promise.reject(new Error('temporary module failure'))
+          : import('./chart-sync.js');
+      },
+    );
+    try {
+      controller.update('shared', true);
+      await waitUntil(() => attempts === 1);
+      await aTimeout(0);
+      controller.update('shared', true);
+      await waitUntil(() => controller.enabled);
+      controller.disconnect();
+      expect(controller.enabled).to.equal(false);
+    } finally {
+      controller.disconnect();
+      host.remove();
+    }
+  });
+
+  it('uses the latest group after asynchronous controller attachment', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div style="width:600px">
+      <lr-lite-chart height="8rem" .labels=${['A']} .datasets=${[{ label: 'Source', data: [1] }]}></lr-lite-chart>
+      <lr-lite-chart height="8rem" sync-group="latest" .labels=${['A']} .datasets=${[{ label: 'Peer', data: [2] }]}></lr-lite-chart>
+    </div>`);
+    const [source, peer] = [...host.querySelectorAll<LyraLiteChart>('lr-lite-chart')];
+    source!.syncGroup = 'obsolete';
+    source!.syncGroup = 'latest';
+    await ready(source!);
+    await ready(peer!);
+    await hoverMark(source!, 0);
+    await waitUntil(() => crosshair(peer!));
+    source!.syncGroup = '';
+    await source!.updateComplete;
+    await waitUntil(() => !crosshair(peer!));
+  });
 
   it('renders inherited histogram synchronization with a styled crosshair inside its plot', async () => {
     const host = await fixture<HTMLDivElement>(html`<div style="width:600px">

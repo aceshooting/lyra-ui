@@ -11,6 +11,8 @@ const internalTokenDefinitionFiles = new Set([
   join(internalRoot, 'specialist-tokens.styles.ts'),
   join(internalRoot, 'tokens.styles.ts'),
   join(internalRoot, 'tokens', 'palette.styles.ts'),
+  // Container queries cannot consume CSS variables, so shared thresholds stay literal here.
+  join(internalRoot, 'container-breakpoints.styles.ts'),
 ]);
 
 // Web Awesome's public data-grid variables intentionally retain their unprefixed spelling so a

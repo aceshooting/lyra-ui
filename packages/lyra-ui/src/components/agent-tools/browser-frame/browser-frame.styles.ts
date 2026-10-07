@@ -1,4 +1,6 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -75,8 +77,7 @@ export const styles = css`
   }
   [part='take-over-button']:focus-visible,
   [part='stop-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='viewport'] {
     position: relative;
@@ -127,7 +128,7 @@ export const styles = css`
   [part='ping'][data-kind='move'] {
     border-color: var(--lr-browser-frame-ping-move-color, var(--lr-color-text-quiet));
   }
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part='url'] {
       flex-basis: 100%;
     }

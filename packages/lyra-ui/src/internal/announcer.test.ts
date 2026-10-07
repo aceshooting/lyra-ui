@@ -1,19 +1,52 @@
+import { sinkTexts } from '../../test/announcements.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { getActiveNativeModal } from './native-modal-context.js';
 import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
+  AnnouncementSinkController,
   Announcer,
   acquireAnnouncementSink,
   type AnnouncementPoliteness,
 } from './announcer.js';
 
+it('keeps announcement channels silent on mount and releases them on disconnect', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const controller = new AnnouncementSinkController(host, { register: false, eager: ['polite'] });
+  try {
+    controller.connect();
+    controller.transition('load', 'loading', 'Initial loading');
+    expect(sinkTexts('polite')).to.deep.equal([]);
+    controller.transition('load', 'ready');
+    controller.transition('load', 'loading', 'Later loading');
+    expect(sinkTexts('polite')).to.deep.equal(['Later loading']);
+    controller.disconnect();
+    expect(sinkElement('polite')).to.equal(null);
+  } finally {
+    controller.disconnect();
+    host.remove();
+  }
+});
+
+it('switches a dynamic channel without retaining the previous sink', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const controller = new AnnouncementSinkController(host, { register: false });
+  try {
+    controller.setExclusiveChannel('polite');
+    expect(controller.current('polite')?.politeness).to.equal('polite');
+    controller.setExclusiveChannel('assertive');
+    expect(sinkElement('polite')).to.equal(null);
+    controller.announceAssertive('Changed urgency');
+    expect(sinkTexts('assertive')).to.deep.equal(['Changed urgency']);
+  } finally {
+    controller.disconnect();
+    host.remove();
+  }
+});
+
 function sinkElement(politeness: AnnouncementPoliteness, doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(politeness: AnnouncementPoliteness, doc: Document = document): string[] {
-  const element = sinkElement(politeness, doc);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 /** Real-timer throttle window used across these tests -- generous enough that
@@ -678,7 +711,6 @@ it('falls back to the default ttl for a NaN/negative messageTtlMs instead of swe
   }
 });
 
-
 it('routes modal announcements inside the native modal and suppresses native-inert background sources', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`<div><button>Background</button><dialog><button>Modal</button></dialog></div>`);
   const dialog = wrapper.querySelector('dialog')!;
@@ -700,7 +732,6 @@ it('routes modal announcements inside the native modal and suppresses native-ine
     dialog.close();
   }
 });
-
 
 it('detects the topmost native modal by backdrop hit testing when focus is cleared', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`<div><dialog><button>Later opened</button></dialog><dialog><button>Earlier opened</button></dialog></div>`);

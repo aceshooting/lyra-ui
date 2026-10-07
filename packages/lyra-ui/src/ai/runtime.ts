@@ -6,6 +6,7 @@ import type {
   MessagePartInterruption,
   ToolInvocation,
 } from './types.js';
+import { positiveInteger } from '../internal/numbers.js';
 import {
   createProviderSnapshotBudget,
   snapshotProviderValue,
@@ -125,12 +126,6 @@ const PART_STATES = new Set(['streaming', 'complete', 'interrupted']);
 // Equal to TOOL_CALL_STATUSES in components/agent-tools/tool-status.ts (the `ToolCallStatus` union a
 // `ToolInvocation` carries); kept local so this runtime layer imports nothing from the component tree.
 const TOOL_STATUSES = new Set(['pending', 'running', 'success', 'error', 'denied', 'incomplete']);
-
-function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
-}
 
 function resolveLimits(limits: Partial<AgentStreamLimits>): Readonly<AgentStreamLimits> {
   const resolved = Object.fromEntries(

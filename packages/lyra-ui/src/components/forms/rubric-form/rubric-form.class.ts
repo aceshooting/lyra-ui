@@ -1,18 +1,20 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { styles } from './rubric-form.styles.js';
+import { agentActionButtonStyles } from '../../agent-tools/agent-action-button.styles.js';
 import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
 import type { LyraSelect } from '../select/select.class.js';
 import '../../layout/segmented/segmented.class.js';
@@ -24,22 +26,18 @@ import '../checkbox-group/checkbox-group.class.js';
 import '../textarea/textarea.class.js';
 import {
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
@@ -364,6 +362,9 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
 export interface LyraRubricFormEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<Readonly<{ value: RubricValue }>>;
+  'lr-change': CustomEvent<Readonly<{ value: RubricValue }>>;
+  input: Event;
+  change: Event;
   'lr-validity-change': CustomEvent<{
     readonly valid: boolean;
     readonly errors: Readonly<Record<string, string>>;
@@ -420,6 +421,9 @@ export interface LyraRubricFormEventMap {
  * @slot hint - Aggregate supporting text rendered after all fields.
  * @slot error - Aggregate validation text; supplements `errorText` or the current custom error.
  * @slot actions - Extra host controls rendered in the footer beside Submit/Skip.
+ * @event {Event} input - Native notification after a user edits the aggregate value.
+ * @event {Event} change - Native notification after a user commits an aggregate value edit.
+ * @event lr-change - A user committed an edit; detail is `{ value }` with the complete value snapshot.
  * @event lr-input - `detail: { value }` — any control changed; the full current value object.
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
  * @event lr-submit - `detail: { value, itemId }` — Submit clicked or Ctrl/Cmd+Enter, after validity passes.
@@ -498,7 +502,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static formAssociated = true;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, agentActionButtonStyles, styles];
 
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
@@ -525,17 +529,13 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   @state() private _errors: Record<string, string> = {};
   @state() private touchedFields = new Set<string>();
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  // The aggregate label/hint/error slots -- read once from `firstUpdated()` in addition to their
-  // own `@slotchange` listener; see `collectInitialSlotAssignment`'s own doc.
-  @query('slot[name="label"]') private aggregateLabelSlotEl?: HTMLSlotElement;
-  @query('slot[name="hint"]') private aggregateHintSlotEl?: HTMLSlotElement;
-  @query('slot[name="error"]') private aggregateErrorSlotEl?: HTMLSlotElement;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private baseId = nextId('rubric-form');
@@ -570,50 +570,14 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   constructor() {
     super();
-    this.internals = this.safeAttachInternals();
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like visiting a field; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.addEventListener('keydown', this.onFormKeyDown as EventListener);
     this.syncFormState();
-  }
-
-  /** `attachInternals()` throws in any environment without a real `ElementInternals`
-   *  implementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing
-   *  (or importing) this component must not hard-crash there. Falls back to an inert stand-in:
-   *  form participation and validity reporting are unavailable in that environment (there is no
-   *  polyfillable substitute), but rendering and every non-form-associated feature keep working.
-   *  Mirrors lr-graph-query-builder's identical guard. */
-  private safeAttachInternals(): ElementInternals {
-    if (typeof (globalThis as { ElementInternals?: unknown }).ElementInternals === 'undefined') {
-      return this.inertInternals();
-    }
-    try {
-      return this.attachInternals();
-    } catch {
-      return this.inertInternals();
-    }
-  }
-
-  private inertInternals(): ElementInternals {
-    return {
-      form: null,
-      labels: [] as unknown as NodeList,
-      validity: {} as ValidityState,
-      validationMessage: '',
-      willValidate: false,
-      setFormValue: () => {},
-      setValidity: () => {},
-      checkValidity: () => true,
-      reportValidity: () => true,
-      states: new Set<string>(),
-    } as unknown as ElementInternals;
   }
 
   get form(): HTMLFormElement | null {
@@ -748,8 +712,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -760,6 +723,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the published validity and `:state()` hooks change
     // even though the value did not. The guard covers a setter call that lands before the
     // constructor body under a DOM shim.
@@ -924,12 +889,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   /** Resynchronizes validity without revealing inline errors. */
   checkValidity(): boolean {
-    this.syncFormState();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.syncFormState());
   }
 
   /**
@@ -938,6 +898,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
    * mirroring a native `<form>`'s `reportValidity()`.
    */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.syncFormState();
     if (Object.keys(this._errors).length > 0) {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
@@ -992,7 +953,10 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     this.setLiveValue(restored, true);
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.syncFormState();
     this.requestUpdate();
   }
@@ -1004,37 +968,24 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
   };
 
-  private setFieldValue(key: string, val: number | string | string[]): void {
+  private setFieldValue(key: string, val: number | string | string[], committed = true): void {
     if (this.effectiveDisabled) return;
     this.setLiveValue({ ...this._value, [key]: val }, true);
-    this.emit('lr-input',
-      Object.freeze({ value: cloneRubricValue(this._value) })
-    );
+    const detail = Object.freeze({ value: cloneRubricValue(this._value) });
+    emitValueEvents(this, 'input', detail, detail => this.emit('lr-input', detail));
+    if (committed) emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
   }
+
+  private onValueCommit = (event: Event): void => {
+    event.stopPropagation();
+    if (!this.effectiveDisabled) {
+      emitValueEvents(this, 'change', Object.freeze({ value: cloneRubricValue(this._value) }), detail => this.emit('lr-change', detail));
+    }
+  };
 
   private stopChildEvent = (event: Event): void => {
     event.stopPropagation();
   };
-
-  private onAggregateSlotChange = (event: Event): void => {
-    this.applyAggregateSlotAssignment(event.target as HTMLSlotElement);
-  };
-  /**
-   * Reads one aggregate label/hint/error slot's currently assigned content and applies it --
-   * wired as the `slotchange` handler (via `onAggregateSlotChange`) for every later mutation, and
-   * called once more from `firstUpdated()` (see `collectInitialSlotAssignment`) to cover an
-   * environment, or a real-browser timing race, where the slot's initial assignment never fires
-   * `slotchange`. Idempotent: re-deriving the same boolean from the same assigned-node set
-   * produces the same result on a second call.
-   */
-  private applyAggregateSlotAssignment(slot: HTMLSlotElement): void {
-    const populated = slot.assignedNodes({ flatten: true }).some(
-      (node) => node.nodeType === Node.ELEMENT_NODE || Boolean(node.textContent?.trim()),
-    );
-    if (slot.name === 'label') this.hasLabelSlot = populated;
-    else if (slot.name === 'hint') this.hasHintSlot = populated;
-    else if (slot.name === 'error') this.hasErrorSlot = populated;
-  }
 
   private markTouched(key: string): void {
     if (this.effectiveDisabled || this.touchedFields.has(key)) return;
@@ -1120,30 +1071,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncExternalDescription();
-  }
-
-  protected override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
-    // `collectInitialSlotAssignment`'s own doc -- so an aggregate label/hint/error child already
-    // slotted at connect (the ordinary "render once data is ready" Lit pattern) would otherwise
-    // leave `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` at their `false` default, hiding real
-    // slotted content behind `?hidden` and omitting it from `aria-describedby`. Collect once here
-    // too; re-deriving the same boolean from the same assigned-node set is trivially idempotent
-    // against a real browser also firing the initial event.
-    // Deferred a microtask, mirroring `<lr-select>`'s identical `firstUpdated()` collection:
-    // these are reactive `@state` fields, so writing them synchronously here -- after this same
-    // update has already been marked complete -- trips Lit's dev "scheduled an update after an
-    // update completed" warning. A real slotchange fires from outside the update cycle entirely;
-    // queuing a microtask reproduces that same timing instead of writing from inside the cycle.
-    const labelSlot = this.aggregateLabelSlotEl;
-    const hintSlot = this.aggregateHintSlotEl;
-    const errorSlot = this.aggregateErrorSlotEl;
-    queueMicrotask(() => {
-      collectInitialSlotAssignment(labelSlot, (slot) => this.applyAggregateSlotAssignment(slot));
-      collectInitialSlotAssignment(hintSlot, (slot) => this.applyAggregateSlotAssignment(slot));
-      collectInitialSlotAssignment(errorSlot, (slot) => this.applyAggregateSlotAssignment(slot));
-    });
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -1290,10 +1217,10 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       ?required=${Boolean(k.required)}
       @input=${this.stopChildEvent}
       @change=${this.stopChildEvent}
-      @lr-change=${this.stopChildEvent}
+      @lr-change=${this.onValueCommit}
       @lr-input=${(e: CustomEvent<{ value: string }>) => {
         e.stopPropagation();
-        this.setFieldValue(k.key, e.detail.value);
+        this.setFieldValue(k.key, e.detail.value, false);
       }}
     >
       <span slot="label" part="label">${label}</span>
@@ -1366,7 +1293,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
             part="aggregate-label form-control-label"
             ?hidden=${!hasLabel}
           >
-            ${this.label}<slot name="label" @slotchange=${this.onAggregateSlotChange}></slot>
+            ${this.label}<slot name="label"></slot>
           </div>
           <div part="fields form-control-input">
             ${this._keys.length === 0
@@ -1389,25 +1316,25 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
             part="aggregate-hint form-control-help-text"
             ?hidden=${!hasHint}
           >
-            ${this.hint}<slot name="hint" @slotchange=${this.onAggregateSlotChange}></slot>
+            ${this.hint}<slot name="hint"></slot>
           </div>
           <div
             id=${this.aggregateErrorId}
             part="aggregate-error form-control-error"
             ?hidden=${!hasError}
           >
-            ${aggregateError}<slot name="error" @slotchange=${this.onAggregateSlotChange}></slot>
+            ${aggregateError}<slot name="error"></slot>
           </div>
         </div>
         ${this._keys.length > 0
           ? html`<div part="footer">
               <slot name="actions"></slot>
               ${this._skippable
-                ? html`<button part="skip" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.skip()}>
+                ? html`<button part="skip" data-agent-action="neutral" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.skip()}>
                     ${this.localize('rubricSkip')}
                   </button>`
                 : nothing}
-              <button part="submit" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.submit()}>
+              <button part="submit" data-agent-action="brand" type="button" ?disabled=${this.effectiveDisabled} @click=${() => this.submit()}>
                 ${this.localize(this._hasNext ? 'rubricSubmitAndNext' : 'rubricSubmit')}
               </button>
             </div>`

@@ -1,8 +1,10 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -25,6 +27,9 @@ export const styles = css`
     --_lr-voice-picker-gap-default: var(--lr-space-xs);
     --_lr-voice-picker-radius-default: var(--lr-form-control-radius);
     --_lr-voice-picker-trigger-min-height-default: var(--lr-form-control-height);
+    --_lr-voice-picker-trigger-padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
+    --_lr-voice-picker-font-size: var(--lr-form-control-font-size);
+    --_lr-voice-picker-expand-size: var(--lr-size-1-75rem);
     /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
        undeclared -- only this private copy of it is declared -- so a value set on :root or any
        ancestor still reaches this trigger, while the halo itself is painted in one place for every
@@ -34,17 +39,16 @@ export const styles = css`
   :host(:disabled) {
     cursor: not-allowed;
   }
+  :host([size='2xs']),
+  :host([size='xs']) { --_lr-voice-picker-expand-size: var(--lr-size-1rem); }
+  :host([size='s']),
+  :host([size='small']) { --_lr-voice-picker-expand-size: var(--lr-size-1-25rem); }
 
+  ${formControlChrome}
   [part='form-control-label'] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
   }
-  [part='form-control-label'][hidden] {
-    display: none;
-  }
+
   /* required plus a visible label, marked like every other field; the [hidden] rule above keeps
      the marker from orphaning a stray glyph when no label is set. */
   ${formControlRequiredMarker}
@@ -74,7 +78,7 @@ export const styles = css`
     );
     block-size: var(--lr-voice-picker-trigger-height, auto);
     box-sizing: border-box;
-    padding: var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline);
+    padding: var(--lr-voice-picker-trigger-padding, var(--_lr-voice-picker-trigger-padding));
     /* Resting fill and edge, each an inline var() fallback rather than a :host declaration, so an
        ancestor or :root value still wins -- the same shape as lr-select's own trigger, which had
        the identical hardcoded pair before its own fix. */
@@ -84,7 +88,7 @@ export const styles = css`
     background: var(--lr-voice-picker-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;
-    font-size: var(--lr-form-control-font-size);
+    font-size: var(--lr-voice-picker-font-size, var(--_lr-voice-picker-font-size));
   }
   [part='trigger'] {
     cursor: pointer;
@@ -93,23 +97,16 @@ export const styles = css`
   [part='combobox'] {
     cursor: text;
   }
-  /* --lr-voice-picker-trigger-hover-border-color falls back to the same brand literal this rule
-     always painted, so an unset consumer sees no change; the pressed rule below reads the SAME
-     token as its own fallback base, so overriding hover keeps the pressed edge consistent with it
-     rather than leaving press hardcoded to brand while hover moved. */
-  [part='trigger']:hover:not(:disabled) {
-    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-color-brand));
+  :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-brand-quiet);
+    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-voice-picker-trigger-border-color, var(--lr-color-border)));
   }
-  /* Hover recolors the border; the press also fills the trigger, mixing its resting surface toward
-     the text color, so it escalates hover rather than restating it. */
-  [part='trigger']:active:not(:disabled) {
-    border-color: var(--lr-voice-picker-trigger-hover-border-color, var(--lr-color-brand));
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  :where([part='trigger']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='trigger']:focus-visible,
   [part='combobox']:focus-within {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
      lr-select and lr-model-select): the outline above is the accessibility answer to keyboard
@@ -176,8 +173,8 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    min-inline-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
-    min-block-size: min(var(--lr-icon-button-size), var(--lr-form-control-height));
+    min-inline-size: min(var(--lr-icon-button-size), var(--lr-voice-picker-expand-size, var(--_lr-voice-picker-expand-size)));
+    min-block-size: min(var(--lr-icon-button-size), var(--lr-voice-picker-expand-size, var(--_lr-voice-picker-expand-size)));
     line-height: var(--lr-line-height-none);
   }
   [part='expand-icon'] svg {
@@ -206,8 +203,7 @@ export const styles = css`
     /* Compact picker chrome may be smaller than the WCAG interaction floor; the independent
        preview action never is -- the floor stays below the hook, so pinning a short field cannot
        shrink this hit area. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     background: var(--lr-color-surface);
@@ -228,8 +224,7 @@ export const styles = css`
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
   [part='preview-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='preview-button']:disabled {
     opacity: var(--lr-opacity-disabled);
@@ -388,8 +383,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border-radius: var(--lr-voice-picker-radius, var(--_lr-voice-picker-radius-default));
     color: var(--lr-color-text-quiet);
     cursor: pointer;
@@ -416,22 +410,11 @@ export const styles = css`
   }
 
   [part='hint'] {
-    margin-block-start: var(--lr-space-xs);
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
   }
-  [part='hint'][hidden] {
-    display: none;
-  }
+
   [part='error'] {
-    margin-block-start: var(--lr-space-xs);
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part='error'][hidden] {
-    display: none;
   }
 
   ${glassScrollLayerStyles}

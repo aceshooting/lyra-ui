@@ -3,6 +3,7 @@ import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./grounding-summary.js";
 import type { LyraGroundingSummary } from "./grounding-summary.js";
 import type { Citation, GroundingAssessment } from "../../../ai/types.js";
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -146,6 +147,30 @@ it("renders claim-level evidence when claims are supplied and allows it to be hi
   el.withoutClaims = true;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector("lr-claim-evidence") == null).to.be.true;
+});
+
+it('keeps an unknown claim neutral when projected through the summary', async () => {
+  (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-claim-evidence:unknown-status');
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraGroundingSummary;
+  try {
+    el = await fixture<LyraGroundingSummary>(html`<lr-grounding-summary
+      .assessment=${{
+        supportedClaims: 0,
+        unsupportedClaims: 0,
+        coverage: 0,
+        claims: [{ id: 'c1', text: 'Needs review', status: 'future-status', citationIds: [] }],
+      } as unknown as GroundingAssessment}
+    ></lr-grounding-summary>`);
+    const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as HTMLElement & { updateComplete: Promise<unknown> };
+    await claims.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+  const badge = el.shadowRoot!.querySelector('lr-claim-evidence')!.shadowRoot!.querySelector('lr-badge[part="status"]') as HTMLElement & { variant: string };
+  expect(badge.textContent?.trim()).to.equal('Unknown');
+  expect(badge.variant).to.equal('neutral');
 });
 
 it("exposes the bubbled lr-claim-select contract with the complete claim detail", async () => {
@@ -308,6 +333,20 @@ it("omits the evidence section when citations is empty, and renders one lr-citat
   expect(badges[0]!.getAttribute("source-id")).to.equal("doc-1");
   expect(badges[1]!.getAttribute("index")).to.equal("2");
   expect(badges[1]!.getAttribute("source-id")).to.equal("doc-2");
+});
+
+it('roves the evidence badge buttons through one tab stop', async () => {
+  const el = (await fixture(html`<lr-grounding-summary .assessment=${ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`)) as LyraGroundingSummary;
+  const badges = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="evidence-list"] lr-citation-badge')];
+  await Promise.all(badges.map((badge) => (badge as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete));
+  const buttons = badges.map((badge) => badge.shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!);
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  await focusByKeyboard(buttons[0]!);
+  buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  expect(badges[1]!.shadowRoot!.activeElement === buttons[1]).to.equal(true);
+  await el.updateComplete;
+  await (badges[1] as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
 });
 
 it("renders a citation's label and formatted span next to its badge, omitting evidence-span when span is unset", async () => {

@@ -1,3 +1,7 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraLocaleLoader } from '../../../internal/locale-loader.js';
@@ -5,19 +9,19 @@ import { acquireNativeControlDescription, type NativeControlDescriptionLease } f
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import {
   deferredPlace as place,
+  awaitPopupAnimations,
   syncTopLayerRelease,
   topLayerPlacement,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { getDisplayNames, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -38,22 +42,17 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { autocorrectConverter, declaredDefaultConverter, spellcheckConverter } from '../../../internal/converters.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
@@ -464,7 +463,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private searchFocusGeneration = 0;
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private listId = nextId('locale-picker-list');
@@ -499,17 +498,14 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
 
   constructor() {
     super();
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like a blur; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()` so
-    // this listener can tell the silent query apart from every other path that raises the same
-    // `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+
     this.internals.setFormValue('');
   }
 
@@ -619,6 +615,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.closeSettleToken++;
     this.clearSearch();
     this.cancelLocaleLoad();
     this.loadAnnouncements?.release();
@@ -690,11 +687,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) {
-      this.setAttribute('name', this._name);
-    } else {
-      this.removeAttribute('name');
-    }
+    reflectFormName(this, this._name);
     this.requestUpdate('name', old);
   }
 
@@ -708,6 +701,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     // Reflected before the recomputation below, because `internals.willValidate` answers from the
     // live host attribute rather than from this field.
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     if (this._disabled) this.hide();
     // Disabling bars constraint validation, so the intrinsic violation and the `invalid`/
     // `user-invalid` states go with it — synchronously, so a same-tick `checkValidity()` answers
@@ -836,6 +831,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.value = typeof state === 'string' ? state : '';
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
     if (disabled) this.cancelLocaleLoad();
     this._fieldsetDisabled = disabled;
     if (disabled) this.hide();
@@ -847,13 +843,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.requestUpdate();
   }
   checkValidity(): boolean {
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
     // `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
@@ -1092,15 +1085,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  in-flight wait -- see `updated()`'s `open`-driven caller. */
   private async settleClosedLayout(): Promise<void> {
     const token = ++this.closeSettleToken;
-    if (this.isConnected) {
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
-      if (this.closeSettleToken !== token) return;
-      const listbox = this.renderRoot.querySelector('[part="listbox"]');
-      const animations = listbox?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-      if (this.closeSettleToken !== token) return;
-    }
+    if (!await awaitPopupAnimations(
+      this,
+      () => this.renderRoot.querySelector('[part="listbox"]'),
+      () => this.closeSettleToken === token,
+    )) return;
     this.listboxHidden = true;
   }
 
@@ -1181,10 +1170,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         this.hide();
         setLyraLocale(tag);
         const committed = Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) });
-        dispatchNativeEvent(this, 'input');
-        this.emit('lr-input', committed);
-        dispatchNativeEvent(this, 'change');
-        this.emit('lr-change', committed);
+        emitValueEvents(this, 'input', committed, detail => this.emit('lr-input', detail));
+        emitValueEvents(this, 'change', committed, detail => this.emit('lr-change', detail));
         if (searchFocus && this.isConnected && this.searchable && activeElementIn(this.shadowRoot) === searchFocus) this.focus();
       };
       if (loader === undefined) {
@@ -1298,25 +1285,16 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  matching Arrow-key nav); while closed it commits immediately, matching `<lr-select>`'s
    *  identical closed-state type-ahead. */
   private typeAhead(char: string): void {
-    const buffer = this.typeBuffer.add(char, this.effectiveLocale);
+    this.typeBuffer.add(char, this.effectiveLocale);
 
     const rows = this.normalizedEntries;
     if (!rows.length) return;
     const currentTag = this.open ? rows[this.activeIndex]?.tag : this.previewTag;
     const currentIndex = rows.findIndex((r) => r.tag === currentTag);
-    const n = rows.length;
-    for (let step = 1; step <= n; step++) {
-      const idx = (currentIndex + step + n) % n;
-      const row = rows[idx]; // modulo n keeps idx in-bounds; guard satisfies the checker
-      if (row && row.label.toLocaleLowerCase(this.effectiveLocale).startsWith(buffer)) {
-        if (this.open) {
-          this.setActiveIndex(idx);
-        } else {
-          this.commit(row.tag);
-        }
-        return;
-      }
-    }
+    const match = this.typeBuffer.match(rows, currentIndex, row => row.label, this.effectiveLocale);
+    if (match === null) return;
+    if (this.open) this.setActiveIndex(match);
+    else this.commit(rows[match]!.tag);
   }
 
   /** Updates active-descendant ownership and keeps the resulting row visible after render. */
@@ -1347,17 +1325,25 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.liveDisabled || e.isComposing || e.keyCode === 229) return;
     const rows = this.visibleEntries;
+    const move = (): number | null => resolveListMove(e, {
+      count: rows.length,
+      current: this.activeIndex,
+      orientation: 'vertical',
+      wrap: false,
+      clamp: true,
+      backwardFromMissing: 'first',
+    });
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         if (!this.open) return this.show();
-        this.setActiveIndex(Math.min(rows.length - 1, this.activeIndex + 1));
+        this.setActiveIndex(move() ?? -1);
         this.queueSearchFocus();
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (!this.open) return this.show();
-        this.setActiveIndex(Math.max(0, this.activeIndex - 1));
+        this.setActiveIndex(move() ?? -1);
         this.queueSearchFocus();
         break;
       case 'Enter':
@@ -1386,17 +1372,17 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       case 'Home':
         if (this.open) {
           e.preventDefault();
-          this.setActiveIndex(0);
+          this.setActiveIndex(move() ?? -1);
         }
         break;
       case 'End':
         if (this.open) {
           e.preventDefault();
-          this.setActiveIndex(rows.length - 1);
+          this.setActiveIndex(move() ?? -1);
         }
         break;
       default:
-        if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (this.typeBuffer.accepts(e)) {
           if (this.searchable) {
             e.preventDefault();
             this.show();
@@ -1547,12 +1533,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
               @focus=${this.searchable ? this.onTriggerFocus : nothing}
               @blur=${this.searchable ? this.onTriggerBlur : nothing}>${this.localize('retry')}</button>` : nothing}
           </div>` : nothing}
-        <div id="locale-picker-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div id="locale-picker-hint" part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint"></slot>
-        </div>
+        ${renderFormControlHintError({ idPrefix: 'locale-picker', hint: this.hint, errorText: this.errorText, hasHint, hasError })}
       </div>
     `;
   }

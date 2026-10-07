@@ -219,6 +219,22 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
     required.add(`./dist/${relPath}`);
   }
 
+  // These families are uniform import-time registration modules. A glob keeps the same source
+  // and published coverage while avoiding hundreds of repeated manifest entries. Tiny synthetic
+  // fixtures retain exact entries so their missing-file behavior remains easy to inspect.
+  const groups = [
+    { pattern: './src/translations/**/*.ts', match: /^\.\/src\/translations\/.*\.ts$/u },
+    { pattern: './dist/translations/**/*.js', match: /^\.\/dist\/translations\/.*\.js$/u },
+    { pattern: './src/components/lr-*.ts', match: /^\.\/src\/components\/lr-[^/]+\.ts$/u },
+    { pattern: './dist/components/lr-*.js', match: /^\.\/dist\/components\/lr-[^/]+\.js$/u },
+  ];
+  for (const { pattern, match } of groups) {
+    const entries = [...required].filter((entry) => match.test(entry));
+    if (entries.length < 16) continue;
+    for (const entry of entries) required.delete(entry);
+    required.add(pattern);
+  }
+
   return [...required].sort();
 }
 

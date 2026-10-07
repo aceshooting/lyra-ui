@@ -27,7 +27,7 @@ export const RecoverableParserDiagnostics: Story = {
     docs: {
       description: {
         story:
-          'PapaParse diagnostics emit `lr-render-error` even when a recoverable partial table remains visible.',
+          'PapaParse diagnostics emit `lr-viewer-diagnostic` while a recoverable partial table remains visible.',
       },
     },
   },

@@ -7,7 +7,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFrameSrc } from '../../../internal/safe-url.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
 import { purposeAccessibleLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -273,8 +273,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   @state() private frameHeight = 320;
   private frameGeneration = 0;
   @query('iframe') private frame?: HTMLIFrameElement;
-  private loadingAnnouncementSink?: AnnouncementSink;
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private suppressNextResourceAnnouncement = true;
   /** Secret bound to the currently loaded document. It never crosses a navigation. */
   private frameNonce?: string;
@@ -301,28 +300,8 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.framePort = undefined;
   }
 
-  private syncAnnouncementSinks(): void {
-    if (!this.isConnected) return;
-    const heldDocument = this.loadingAnnouncementSink?.element.ownerDocument;
-    if (
-      heldDocument === this.ownerDocument &&
-      this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument
-    ) return;
-    this.loadingAnnouncementSink?.release();
-    this.errorAnnouncementSink?.release();
-    this.loadingAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSinks();
     if (this.hasUpdated) {
       // Snapshot the resource already present at reconnect before announcing later replacements.
       // This also suppresses a resource write queued while the element was detached.
@@ -333,10 +312,6 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
 
   override disconnectedCallback(): void {
     this.invalidateFrame();
-    this.loadingAnnouncementSink?.release();
-    this.errorAnnouncementSink?.release();
-    this.loadingAnnouncementSink = undefined;
-    this.errorAnnouncementSink = undefined;
     this.suppressNextResourceAnnouncement = true;
     super.disconnectedCallback();
   }
@@ -344,7 +319,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.invalidateFrame();
-    this.syncAnnouncementSinks();
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -362,8 +337,8 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         // Every valid resource replacement starts a fresh frame load. An unavailable transition is
         // assertive, while the ordinary loading state is polite; neither resting state announces on
         // initial mount.
-        if (isAvailable) this.loadingAnnouncementSink?.announce(this.localize('mcpAppLoading'));
-        else if (wasAvailable) this.errorAnnouncementSink?.announce(this.localize('mcpAppUnavailable'));
+        if (isAvailable) this.announcements.announcePolite(this.localize('mcpAppLoading'));
+        else if (wasAvailable) this.announcements.announceAssertive(this.localize('mcpAppUnavailable'));
       }
       this.loaded = false;
       this.closeFramePort();

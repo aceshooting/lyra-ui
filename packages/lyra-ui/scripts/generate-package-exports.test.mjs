@@ -755,6 +755,7 @@ try {
   for (const helper of productionModule.ACKNOWLEDGED_INTERNAL_HELPER_MODULES)
     write(helper);
   for (const utility of CURATED_UTILITY_MODULES) write(utility);
+  write('src/internal/docx-zip-admission.ts');
 
   assert.deepEqual(checkPackageExports(fixtureRoot).findings, [
     'package.json still exposes ./components/*',
@@ -792,6 +793,10 @@ try {
     undefined
   );
   assert.equal(pkg.exports['./ai'], './dist/ai/index.js');
+  assert.deepEqual(pkg.exports['./utils/docx-zip-admission.js'], {
+    types: './dist/internal/docx-zip-admission.d.ts',
+    default: './dist/internal/docx-zip-admission.js',
+  });
   assert.equal(
     pkg.exports['./components/forms/alpha/alpha.class.js'],
     './dist/components/forms/alpha/alpha.class.js'

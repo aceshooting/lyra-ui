@@ -776,6 +776,22 @@ describe('getHeadingTree', () => {
     }
   });
 
+  it('keeps the sanitized heading nodes mounted through an unrelated render', async () => {
+    const { el, restore } = await loadWithMarkup('<h1>Title</h1><p>Body.</p>');
+    try {
+      const heading = el.shadowRoot!.querySelector('h1');
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p');
+      expect(heading?.id).to.equal('title');
+      el.name = 'Renamed document';
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('h1') === heading).to.equal(true);
+      expect(el.shadowRoot!.querySelector('[part="content"] p') === paragraph).to.equal(true);
+      expect(el.getHeadingTree()).to.deep.equal([{ id: 'title', label: 'Title', level: 1 }]);
+    } finally {
+      restore();
+    }
+  });
+
   it('getHeadingTree() returns a fresh array each call -- mutating the result cannot corrupt internal state', async () => {
     const { el, restore } = await loadWithMarkup('<h1>Title</h1>');
     try {
@@ -2155,21 +2171,14 @@ describe('search', () => {
   });
 
   it('re-derives fresh ranges from the current DOM on repaint, tolerating offsets that no longer resolve to any text node', async () => {
-    // A long filler prefix (containing no "cat" substring) pushes both matches' stored offsets well
-    // past the handful of whitespace-only text characters Lit's own `[part="content"]` template
-    // wrapper contributes around `${unsafeHTML(...)}` -- so once the <p> is shrunk below, those
-    // offsets can't coincidentally still resolve inside that ambient whitespace.
+    // A long filler prefix puts stored matches beyond the text remaining after the paragraph shrinks.
     const filler = 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore. ';
     const { el, restore } = await loadWithMarkup(`<p>${filler}The cat sat on the mat, said the cat.</p>`);
     try {
       expect(await el.search('cat')).to.equal(2);
       expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.be.greaterThan(0);
 
-      // Simulate the rendered content changing out from under the stored match offsets --
-      // paintSearchMatches() always re-derives fresh Ranges from the *current* DOM and must
-      // tolerate offsets that no longer resolve to any text node instead of throwing. Mutating the
-      // inner <p> (rather than the [part="content"] wrapper Lit itself manages via unsafeHTML) keeps
-      // this a plain, safe DOM change.
+      // Repaint must tolerate stored offsets that no longer resolve in the current paragraph.
       el.shadowRoot!.querySelector('[part="content"] p')!.textContent = 'x';
 
       expect(await el.searchNext()).to.be.true;

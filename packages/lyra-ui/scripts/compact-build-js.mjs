@@ -12,8 +12,8 @@ const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev
 const esbuild = requireFromLoaderHost('esbuild');
 
 // These self-contained functions are serialized with Function#toString for the pre-paint script.
-// Compact their local bindings before the ordinary module pass, which deliberately preserves
-// readable identifiers elsewhere. A script transform (no module format) retains each declaration
+// Compact their local bindings before the ordinary module pass. A script transform (no module
+// format) retains each declaration
 // name and free identifier, so surrounding imports/exports and callback defaults stay intact.
 const serializedFunctions = new Map([
   ['theme/theme.js', new Set(['applyStoredThemeBeforePaint', 'applyStoredStyleBeforePaint', 'styleTokenAllowed', 'styleMaterial'])],
@@ -21,14 +21,48 @@ const serializedFunctions = new Map([
   ['theme/style-ownership.js', new Set(['readStyleOwnership'])],
 ]);
 
-// esbuild prints pure annotations only with whitespace kept, so restore the one that lets a
-// consumer's bundler drop the pre-paint bootstrap string (and the generators it references).
-const pureInitializers = new Map([['theme/theme.js', ['lyraThemeBootstrap=createLyraThemeBootstrap()']]]);
+// The public export names survive identifier minification; local variable/function names do not.
+// Restore only the reviewed zero-argument initializer after resolving both public bindings.
+const pureInitializers = new Map([['theme/theme.js', [
+  { exported: 'lyraThemeBootstrap', callee: 'createLyraThemeBootstrap' },
+]]]);
+
+function exportedBindings(program) {
+  const bindings = new Map();
+  for (const node of program.body) {
+    if (node.type !== 'ExportNamedDeclaration' || node.source) continue;
+    if (node.declaration?.id) bindings.set(node.declaration.id.name, node.declaration.id.name);
+    for (const declaration of node.declaration?.declarations ?? []) {
+      if (declaration.id.type === 'Identifier') bindings.set(declaration.id.name, declaration.id.name);
+    }
+    for (const specifier of node.specifiers) {
+      bindings.set(specifier.exported.name ?? specifier.exported.value, specifier.local.name);
+    }
+  }
+  return bindings;
+}
 
 function restorePureAnnotations(code, relativePath) {
-  for (const initializer of pureInitializers.get(relativePath.split(path.sep).join('/')) ?? []) {
-    if (!code.includes(initializer)) throw new Error(`${relativePath}: pure initializer inventory changed`);
-    code = code.replace(initializer, initializer.replace('=', '=/* @__PURE__ */'));
+  const inventory = pureInitializers.get(relativePath.split(path.sep).join('/'));
+  if (!inventory) return code;
+  const parsed = parseSync(relativePath, code);
+  if (parsed.errors.length) throw new Error(`${relativePath}: cannot parse pure initializer inventory`);
+  const bindings = exportedBindings(parsed.program);
+  const declarations = parsed.program.body.flatMap(node =>
+    (node.type === 'ExportNamedDeclaration' ? node.declaration : node)?.declarations ?? []);
+  const positions = [];
+  for (const { exported, callee } of inventory) {
+    const matches = declarations.filter(node => node.id.type === 'Identifier' && node.id.name === bindings.get(exported));
+    const initializer = matches[0]?.init;
+    if (matches.length !== 1 || initializer?.type !== 'CallExpression' || initializer.optional ||
+      initializer.callee.type !== 'Identifier' || !bindings.has(callee) ||
+      initializer.callee.name !== bindings.get(callee) || initializer.arguments.length !== 0) {
+      throw new Error(`${relativePath}: pure initializer inventory changed`);
+    }
+    positions.push(initializer.start);
+  }
+  for (const position of positions.sort((a, b) => b - a)) {
+    code = code.slice(0, position) + '/* @__PURE__ */' + code.slice(position);
   }
   return code;
 }
@@ -38,8 +72,25 @@ async function compactSerializedFunctions(source, relativePath) {
   if (!names) return source;
   const parsed = parseSync(relativePath, source);
   if (parsed.errors.length) throw new Error(`${relativePath}: cannot parse serialized bootstrap functions`);
-  const declarations = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
-    .filter(node => node?.type === 'FunctionDeclaration' && names.has(node.id?.name));
+  const functions = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
+    .filter(node => node?.type === 'FunctionDeclaration');
+  const bindings = exportedBindings(parsed.program);
+  // A repeated pass sees esbuild's short local names and its keepNames calls. Those calls retain
+  // each original function name, including private serialized functions with no public export.
+  for (const node of parsed.program.body) {
+    const call = node.type === 'ExpressionStatement' ? node.expression : null;
+    if (call?.type !== 'CallExpression' || call.arguments.length !== 2) continue;
+    const [binding, name] = call.arguments;
+    if (binding.type === 'Identifier' && typeof name.value === 'string' && names.has(name.value) &&
+      functions.some(declaration => declaration.id?.name === binding.name)) {
+      if (bindings.has(name.value) && bindings.get(name.value) !== binding.name) {
+        throw new Error(`${relativePath}: ambiguous serialized bootstrap function`);
+      }
+      bindings.set(name.value, binding.name);
+    }
+  }
+  const declarations = functions.filter(node =>
+    names.has(node.id?.name) || [...names].some(name => bindings.get(name) === node.id?.name));
   if (declarations.length !== names.size) throw new Error(`${relativePath}: serialized bootstrap function inventory changed`);
   for (const declaration of declarations.reverse()) {
     const compact = await esbuild.transform(source.slice(declaration.start, declaration.end), {
@@ -61,11 +112,9 @@ async function javascriptFiles(directory) {
   return nested.flat();
 }
 
-/** Removes comments and redundant syntax/whitespace from shipped JavaScript only. Declaration
- * comments remain intact for IDE documentation, class/property names remain readable, and no
- * source map is produced. Keeping the package as unbundled ESM preserves every granular export
- * and tree-shaking boundary while avoiding publishing the same authored prose in both `.js` and
- * `.d.ts`. */
+/** Compacts shipped JavaScript while preserving exported bindings and class/function `.name`.
+ * Local identifiers may be shortened; properties are never mangled. Declaration documentation
+ * stays in `.d.ts`, and the unbundled ESM tree keeps every granular export boundary. */
 export async function compactBuildJavaScript(directory) {
   const files = await javascriptFiles(directory);
   let beforeBytes = 0;
@@ -78,7 +127,8 @@ export async function compactBuildJavaScript(directory) {
       format: 'esm',
       legalComments: 'none',
       loader: 'js',
-      minifyIdentifiers: false,
+      minifyIdentifiers: true,
+      keepNames: true,
       minifySyntax: true,
       minifyWhitespace: true,
       // ES modules are UTF-8; esbuild's default ASCII charset would rewrite every non-ASCII

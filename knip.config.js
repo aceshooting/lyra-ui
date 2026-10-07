@@ -3,6 +3,8 @@ export default {
     '.': {
       entry: [
         '.storybook/{main,preview,manager,story-theme}.js',
+        // The upgrade script invokes this peer synchronizer directly.
+        'scripts/sync-docx-engine-peer.mjs',
         // TypeScript resolves this declaration as the authored contract for theme-contract.js.
         '.storybook/theme-contract.d.ts',
         '.storybook/**/*.mdx',
@@ -33,6 +35,8 @@ export default {
     'packages/lyra-ui': {
       // Edge startup diagnostics probe the hosted runner's OS-installed channel executable.
       ignoreBinaries: ['microsoft-edge'],
+      // The duplication checker spawns the pinned CLI from node_modules/.bin.
+      ignoreDependencies: ['jscpd'],
       entry: [
         'src/**/*.test.ts',
         'src/**/*.stories.ts',

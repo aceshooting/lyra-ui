@@ -6,7 +6,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { resolveCanvasColor } from '../../../internal/canvas-color.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { DEFAULT_CANVAS_COLOR, resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './audio-visualizer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -67,11 +68,6 @@ function readIntersectionState(entries: unknown, target: Element): boolean | und
     // A hostile entries container is no more useful than an absent observer callback.
   }
   return undefined;
-}
-
-interface OwnedAnimationFrame {
-  owner: Window;
-  handle: number;
 }
 
 /**
@@ -171,7 +167,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private dprChangeListener?: (event: MediaQueryListEvent) => void;
   private stopMotionWatch?: () => void;
   private reducedMotion = false;
-  private drawFrameRequest?: OwnedAnimationFrame;
+  private readonly drawFrameRequest = new OwnedFrame(this);
   private lastAmbientDrawMs = 0;
   private generatedAriaLabel?: string;
   /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
@@ -543,18 +539,11 @@ export class LyraAudioVisualizer extends LyraElement {
 
   private scheduleDraw = (): void => {
     if (!this.visibilityKnown || !this.visible) return;
-    if (this.drawFrameRequest) return;
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || !this.isConnected) return;
-    const request: OwnedAnimationFrame = { owner, handle: 0 };
-    request.handle = owner.requestAnimationFrame((nowMs) => this.drawFrame(request, nowMs));
-    this.drawFrameRequest = request;
+    if (this.drawFrameRequest.pending) return;
+    this.drawFrameRequest.schedule((nowMs) => this.drawFrame(nowMs));
   };
 
-  private drawFrame(request: OwnedAnimationFrame, nowMs: number): void {
-    if (this.drawFrameRequest !== request) return;
-    this.drawFrameRequest = undefined;
-    if (!this.isConnected || this.ownerDocument.defaultView !== request.owner) return;
+  private drawFrame(nowMs: number): void {
     // Belt-and-suspenders alongside `scheduleDraw()`'s own gate: `IntersectionObserver` callbacks
     // are asynchronously batched, so a frame already in flight when visibility flips off could
     // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
@@ -577,9 +566,7 @@ export class LyraAudioVisualizer extends LyraElement {
   }
 
   private cancelDrawFrame(): void {
-    const request = this.drawFrameRequest;
-    if (request) request.owner.cancelAnimationFrame(request.handle);
-    this.drawFrameRequest = undefined;
+    this.drawFrameRequest.cancel();
   }
 
   private barsFromTimeDomain(data: Uint8Array, barCount: number): number[] {
@@ -657,12 +644,12 @@ export class LyraAudioVisualizer extends LyraElement {
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     const active = cs?.getPropertyValue('--lr-audio-visualizer-color').trim()
       || cs?.getPropertyValue('--_lr-audio-visualizer-color-default').trim()
-      || '#0969da';
+      || DEFAULT_CANVAS_COLOR;
     const quiet = cs?.getPropertyValue('--lr-audio-visualizer-quiet-color').trim()
       || cs?.getPropertyValue('--_lr-audio-visualizer-quiet-color-default').trim()
       || '#ddf4ff';
     return {
-      active: resolveCanvasColor(this, active, '#0969da'),
+      active: resolveCanvasColor(this, active, DEFAULT_CANVAS_COLOR),
       quiet: resolveCanvasColor(this, quiet, '#ddf4ff'),
     };
   }

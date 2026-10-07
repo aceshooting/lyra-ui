@@ -1,3 +1,5 @@
+import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
   fixture,
@@ -1215,6 +1217,31 @@ it("toggles collapsed on collapse-button click and emits lr-collapse-change", as
   expect(detail).to.deep.equal({ collapsed: true });
   expect(el.shadowRoot!.querySelector('[part="body"]')!.hasAttribute("hidden"))
     .to.be.true;
+});
+
+it('emits canonical toggle with expanded polarity and guards request reentry', async () => {
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
+  const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+  const seen: boolean[] = [];
+  el.addEventListener('lr-toggle-request', (event) => {
+    seen.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+    button.click();
+  });
+  el.addEventListener('lr-toggle', (event) => seen.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded));
+  button.click();
+  expect(el.collapsed).to.equal(true);
+  expect(seen).to.deep.equal([false, false]);
+});
+
+it('does not overwrite an identical host collapsed write made in a toggle request', async () => {
+  const el = (await fixture(html`<lr-widget label="x" collapsible>content</lr-widget>`)) as LyraWidget;
+  const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+  let accepted = 0;
+  el.addEventListener('lr-toggle-request', () => { el.collapsed = false; });
+  el.addEventListener('lr-toggle', () => { accepted += 1; });
+  button.click();
+  expect(el.collapsed).to.equal(false);
+  expect(accepted).to.equal(0);
 });
 
 it("emits a cancelable collapse request before the committed event and keeps direct assignments silent", async () => {
@@ -2620,21 +2647,6 @@ describe("storage-key persistence", () => {
 });
 
 describe("view-toggle active-state cssprops", () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
-   *  the tokens they fall back to. */
-  function resolvedInShadow(
-    el: LyraWidget,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const overrides =
     "--lr-widget-view-toggle-active-bg: rgb(0, 51, 102); --lr-widget-view-toggle-active-color: rgb(255, 255, 255); --lr-widget-view-toggle-active-border-color: rgb(10, 20, 30);";
@@ -2941,26 +2953,6 @@ it("actually renders no mask under forced colors, in both LTR and RTL, while onl
 });
 
 describe("view-toggle pressed feedback", () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(
-    el: LyraWidget,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
-  async function nextFrames(): Promise<void> {
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
-  }
 
   async function moveMouseTo(target: HTMLElement): Promise<void> {
     target.scrollIntoView({ block: "center", inline: "center" });

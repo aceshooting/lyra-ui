@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -95,8 +96,7 @@ export const styles = css`
     );
   }
   [part='base'][href]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='icon'] {
     color: var(--lr-color-text-quiet);
@@ -143,8 +143,7 @@ export const styles = css`
      (stat.class.ts), so they need their own visible focus ring. */
   [part='value']:focus-visible,
   [part='row-value']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Mouse twin of the :focus-visible rule above: only the [tabindex] state (exactValue/
      row.exactValue set, so there is a tooltip to reveal) gets a hover affordance; a value with

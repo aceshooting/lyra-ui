@@ -1,5 +1,8 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -65,15 +68,8 @@ export const styles = css`
   :host([pill]) {
     --_lr-input-radius-default: var(--lr-radius-pill);
   }
-  [part='form-control-label'] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  [part='form-control-label'][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
   [part~='input-wrapper'] {
     display: flex;
@@ -241,35 +237,16 @@ export const styles = css`
     );
   }
   [part='password-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='clear-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
-  [part~='hint'] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  [part~='hint'][hidden] {
-    display: none;
-  }
-  [part='error'] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part='error'][hidden] {
-    display: none;
-  }
+
   [part='form-control'],
   [part='form-control-label'],
   [part~='hint'],
   [part='error'] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 `;

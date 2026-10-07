@@ -1,3 +1,4 @@
+import { glyphRect } from '../../../../test/geometry.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
 import './tool-result-view.js';
@@ -589,19 +590,6 @@ it('registers and upgrades the copy button it renders, through its own entry poi
 });
 
 const isWebKit = /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent);
-
-function glyphRect(root: Node, needle: string): DOMRect {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const index = (node as Text).data.indexOf(needle);
-    if (index === -1) continue;
-    const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + needle.length);
-    return range.getClientRects()[0] ?? range.getBoundingClientRect();
-  }
-  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
-}
 
 it('gives each fallback-text line its own first-strong direction under RTL', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 360px">

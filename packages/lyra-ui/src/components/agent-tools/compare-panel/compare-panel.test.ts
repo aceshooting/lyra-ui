@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
@@ -477,16 +478,6 @@ describe('lr-compare-panel', () => {
 });
 
 describe('selected vote-button pointer feedback', () => {
-  /** Resolves what a `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens live. */
-  function resolvedInShadow(el: LyraComparePanel, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themed(): Promise<LyraComparePanel> {
     const el = (await fixture(html`

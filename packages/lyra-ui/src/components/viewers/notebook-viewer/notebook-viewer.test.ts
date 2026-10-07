@@ -1,3 +1,4 @@
+import { glyphRect } from '../../../../test/geometry.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -2238,19 +2239,6 @@ describe('template whitespace', () => {
     expect(renderedTemplateWhitespace(el.shadowRoot!)).to.deep.equal([]);
   });
 });
-
-function glyphRect(root: Node, needle: string): DOMRect {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const index = (node as Text).data.indexOf(needle);
-    if (index === -1) continue;
-    const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + needle.length);
-    return range.getClientRects()[0] ?? range.getBoundingClientRect();
-  }
-  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
-}
 
 it('keeps a raw cell source LTR-isolated and start-aligned under RTL', async () => {
   const wrapper = await fixture<HTMLElement>(

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { crc32, deflateSync } from 'node:zlib';
-import { inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature, withoutJpegApp1 } from './image-bytes.js';
+import { inspectDocxImage, inspectDocxImageForInsertion, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
 
 const invalid = { ok: false, code: 'invalid-document' };
 const signature = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
@@ -123,16 +123,21 @@ test('copies GIF logical screen dimensions without APP1 metadata', () => {
     pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: false } });
 });
 
-test('strips APP1 camera metadata before the first scan and leaves every other byte in place', () => {
-  for (const placement of ['none', 'before'] as const) {
-    const bytes = markerJpeg(placement), stripped = withoutJpegApp1(bytes)!;
-    assert.deepEqual(stripped, markerJpeg('none'));
-    assert.deepEqual(inspectDocxImage(stripped), { ok: true, value: { mimeType: 'image/jpeg', pixelWidth: 3, pixelHeight: 2, pixels: 6, hasJpegApp1: false } });
+test('insertion inspection strips early APP1 and refuses metadata after a scan', () => {
+  const plain = markerJpeg('none');
+  const plainResult = inspectDocxImageForInsertion(plain);
+  assert.equal(plainResult.ok, true);
+  if (plainResult.ok) assert.deepEqual(plainResult.value.bytes, plain);
+  const early = inspectDocxImageForInsertion(markerJpeg('before'));
+  assert.equal(early.ok, true);
+  if (early.ok) {
+    assert.deepEqual(early.value.bytes, markerJpeg('none'));
+    assert.equal(early.value.metadata.hasJpegApp1, false);
   }
-  // Metadata after a scan is not rewritten; callers re-inspect and refuse what remains.
-  const between = inspectDocxImage(withoutJpegApp1(markerJpeg('between'))!);
-  assert.equal(between.ok && between.value.hasJpegApp1, true);
-  for (const malformed of [Uint8Array.of(1, 2, 3), Uint8Array.of(255, 216, 255, 225, 0, 99), Uint8Array.of(255, 216, 0, 0, 0, 0)]) assert.equal(withoutJpegApp1(malformed), null);
+  assert.deepEqual(inspectDocxImageForInsertion(markerJpeg('between')), { ok: false, code: 'unsupported' });
+  for (const malformed of [Uint8Array.of(1, 2, 3), Uint8Array.of(255, 216, 255, 225, 0, 99), Uint8Array.of(255, 216, 0, 0, 0, 0)]) {
+    assert.equal(inspectDocxImageForInsertion(malformed).ok, false);
+  }
 });
 
 test('trailing bytes after the end marker are admitted only on request', () => {

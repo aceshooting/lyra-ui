@@ -1,3 +1,5 @@
+import { extent } from '../../../internal/numbers.js';
+
 export interface HullPoint {
   x: number;
   y: number;
@@ -60,13 +62,8 @@ export function hullCentroidX(hull: HullPoint[]): number {
  * `Math.min(...hull.map(...))` -- spreading a large array as call arguments throws `RangeError:
  * Maximum call stack size exceeded` once the engine's argument-list limit is exceeded (verified at
  * ~150k+ elements). Hull-vertex counts are practically bounded by `lr-graph`'s own ~5,000-node
- * ceiling, but this mirrors heatmap-scale.ts's `minMax()` precedent for consistency.
+ * ceiling; the shared `extent()` helper keeps this scan consistent with other geometry paths.
  */
 export function hullTopY(hull: HullPoint[]): number {
-  if (!hull.length) return 0;
-  let top = hull[0]!.y;
-  for (let i = 1; i < hull.length; i++) {
-    if (hull[i]!.y < top) top = hull[i]!.y;
-  }
-  return top;
+  return extent(hull, (point) => point.x, (point) => point.y)?.minY ?? 0;
 }

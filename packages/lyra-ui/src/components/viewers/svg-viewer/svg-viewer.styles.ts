@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -75,8 +76,7 @@ export const styles = css`
     pointer-events: auto;
     cursor: pointer;
     transform: translate(-50%, -50%);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     background: transparent;
   }
@@ -141,8 +141,7 @@ export const styles = css`
     inline-size: 100%;
   }
   [part="region-highlight-action"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     color: var(--lr-color-text);

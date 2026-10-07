@@ -2,6 +2,7 @@ import type {
   LyraWidgetDocument,
   LyraWidgetNode,
 } from '../../components/conversation/widget-renderer/resolve.js';
+import { positiveInteger } from '../../internal/numbers.js';
 import {
   createProviderSnapshotBudget,
   resolveProviderSnapshotLimits,
@@ -46,12 +47,6 @@ export const DEFAULT_A2UI_ADAPTER_LIMITS: Readonly<A2UiAdapterLimits> = Object.f
   maxOutputNodes: 5_000,
   maxChildrenPerComponent: 1_000,
 });
-
-function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
-}
 
 function resolveLimits(limits: Partial<A2UiAdapterLimits>): Readonly<A2UiAdapterLimits> {
   const snapshot = resolveProviderSnapshotLimits({

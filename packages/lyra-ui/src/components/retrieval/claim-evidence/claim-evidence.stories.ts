@@ -60,3 +60,10 @@ export const Default: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderClaimEvidence()}</div>`,
 };
+
+export const UnknownStatus: Story = {
+  render: () => html`<lr-claim-evidence .claims=${[{
+    id: 'review', text: 'Assessment is awaiting a newer provider status.',
+    status: 'awaiting-review', citationIds: [],
+  }] as unknown as GroundedClaim[]}></lr-claim-evidence>`,
+};

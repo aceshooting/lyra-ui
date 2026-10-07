@@ -11,15 +11,41 @@ const runs: BackgroundRun[] = [
 ];
 
 describe('lr-background-runs', () => {
+  it('uses the shared button fill and radius for row actions', async () => {
+    const el = await fixture<LyraBackgroundRuns>(html`
+      <lr-background-runs
+        .runs=${runs}
+        style="--lr-button-fill: rgb(10, 20, 30); --lr-button-radius: 13px;"
+      ></lr-background-runs>
+    `);
+    const open = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="open"]')!;
+    const cancel = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel"]')!;
+    expect(getComputedStyle(open).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(cancel).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(open).borderTopLeftRadius).to.equal('13px');
+  });
   it('shows the shared agent status spellings (done/success/error) as completed or failed instead of dropping the run', async () => {
     const shared = [
       { id: 'a', label: 'A', status: 'done' },
       { id: 'b', label: 'B', status: 'success' },
       { id: 'c', label: 'C', status: 'error' },
+      { id: 'd', label: 'D', status: 'complete' },
     ] as BackgroundRun[];
     const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${shared}></lr-background-runs>`);
     const status = (id: string): string | undefined => el.shadowRoot!.querySelector(`[data-run-id="${id}"] [part="status"]`)?.textContent?.trim();
-    expect([status('a'), status('b'), status('c')]).to.deep.equal(['Completed', 'Completed', 'Failed']);
+    expect([status('a'), status('b'), status('c'), status('d')]).to.deep.equal(['Completed', 'Completed', 'Failed', 'Completed']);
+  });
+
+  it('keeps a foreign status as a neutral localized row with no cancel action', async () => {
+    const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs
+      .runs=${[{ id: 'foreign', label: 'Foreign', status: 'waiting-on-host' } as unknown as BackgroundRun]}
+    ></lr-background-runs>`);
+    const row = el.shadowRoot!.querySelector('[data-run-id="foreign"]')!;
+    expect(row.querySelector('[part="status"]')?.textContent?.trim()).to.equal('Unknown');
+    expect(row.querySelector('[part="cancel"]') === null).to.equal(true);
+    el.strings = { statusUnknown: 'Inconnu' };
+    await el.updateComplete;
+    expect(row.querySelector('[part="status"]')?.textContent?.trim()).to.equal('Inconnu');
   });
 
   it('keeps a row\'s buttons on their own run when the host prepends a run', async () => {

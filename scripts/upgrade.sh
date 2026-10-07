@@ -136,6 +136,10 @@ echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 pnpm install --no-prod --no-frozen-lockfile
 
 echo
+echo "==> Synchronizing the exact DOCX engine peer documentation and shipped notices"
+node scripts/sync-docx-engine-peer.mjs
+
+echo
 echo "==> Synchronizing peer-compatibility current versions"
 node scripts/check-peer-compatibility.mjs --write-current-versions
 

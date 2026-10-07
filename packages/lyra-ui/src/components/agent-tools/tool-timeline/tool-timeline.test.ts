@@ -431,6 +431,21 @@ it('renders one [part="entry"] per input entry, sorted chronologically by starte
   expect(rows.map((r) => chipIn(r).name)).to.deep.equal(['first', 'second', 'third']);
 });
 
+it('refreshes canonical fields and chronological order after same-array reassignment', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'first', name: 'Before', startedAt: 1000 }),
+    makeEntry({ id: 'second', name: 'Second', startedAt: 2000 }),
+  ];
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`);
+  expect(entriesEl(el).map((row) => chipIn(row).name)).to.deep.equal(['Before', 'Second']);
+
+  entries[0]!.name = 'After';
+  entries[0]!.startedAt = 3000;
+  el.entries = entries;
+  await el.updateComplete;
+  expect(entriesEl(el).map((row) => chipIn(row).name)).to.deep.equal(['Second', 'After']);
+});
+
 it('sorts entries with no startedAt after every timed entry, preserving their relative input order', async () => {
   const entries: ToolTimelineEntry[] = [
     makeEntry({ id: 'c-untimed-a', name: 'untimed-a' }),

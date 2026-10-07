@@ -4,6 +4,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -817,16 +818,6 @@ it('gives the enabled range slider a pointer cursor and rendered hover and press
 });
 
 describe('play-button pressed paint', () => {
-  /** Resolves a declaration in the playback shadow root, where the design tokens are available. */
-  function resolvedInShadow(el: LyraSequencePlayback, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   async function press(button: HTMLElement): Promise<void> {
     await hoverUntilMatched(button, 'the play button never reported :hover');
     await sendMouse({ type: 'down' });

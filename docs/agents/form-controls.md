@@ -8,7 +8,7 @@ question — not every item applies to every component, but a gap in an applicab
 a missing feature.
 
 - **Label/hint/error chrome.** Any form-associated control (the `FormAssociated` mixin, or a
-  hand-rolled `ElementInternals` attachment like `lr-select`/`lr-combobox`) ships
+  shared `FormControlController` with a local value adapter like `lr-select`/`lr-combobox`) ships
   `label`/`hint`/`errorText` props, matching `label`/`hint`/`error` named slots, and
   `form-control`/`form-control-label`/`hint`/`error` CSS parts — mirroring `lr-select`'s template
   structure (required-asterisk `::after`; `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` tracked in
@@ -18,6 +18,13 @@ a missing feature.
   genuinely incompatible with a generic label/hint/error frame (e.g. a chat composer is a composite input, not a labeled
   field) — silence isn't an exception on its own; a component relying on this carve-out states it
   explicitly in its class doc comment the next time it's touched.
+- **Reuse form chrome.** `formControlChrome` and `formControlSupportingText` in
+  `src/internal/form-control.styles.ts` own matching label/hint/error rules; `formControlTextWrap`
+  supplies the shared shrink/wrap declarations. Preserve component-specific tokens and layout
+  overrides. `renderFormControlHintError()` in `src/internal/form-control-template.ts` preserves
+  supporting-text ids and optional `help-text` compatibility slots. Use `SlotPresenceController`
+  for generic slot presence; reserve local handlers for option membership or accessible-text
+  observation. Conditional passthrough slots can opt into light-DOM observation.
 - **The required marker is one shared sheet, never a re-typed `::after`.** A control that accepts
   `required` and renders a `form-control-label` part gets its asterisk from
   `formControlRequiredMarker` (`src/internal/form-control.styles.ts`), interpolated into the
@@ -56,8 +63,12 @@ a missing feature.
 - **Editing-assistance and event-bridging passthrough.** Any component with an internal native
   `<input>`/`<textarea>` forwards `spellcheck`/`autocapitalize`/`autocorrect`/`wrap` (whichever
   apply to that input's `type`), and re-dispatches the internal element's `blur`/`focus` as
-  bubbling, composed events via `this.emit('blur')`/`this.emit('focus')` — native `blur`/`focus`
-  neither bubble nor cross a shadow boundary, so a host-level listener never sees them otherwise.
+  bubbling, composed native `FocusEvent`s via `relayNativeEvent(this, event)`, preserving
+  `relatedTarget`. The helper stops the source event so composed focus is not observed twice
+  at the host. Do not use `emit()` for native focus or blur events.
+  Reuse `setNativeRangeText()` and `nativeAutocorrectAttribute()` from
+  `src/internal/native-text-control.ts` for matching native overload dispatch and authored-hint
+  forwarding. Keep each control's converters, defaults, and post-edit value/validity hooks local.
 - **Disabled visual state uses `:host(:disabled)`, never `:host([disabled])`.** `:disabled` is
   the native FACE pseudo-class the UA sets from *both* the component's own `disabled` and
   fieldset-cascaded disablement — i.e. it tracks `effectiveDisabled`; `[disabled]` only ever
@@ -83,3 +94,8 @@ a missing feature.
   `attachInternals()`, and explicit `closest('form')?.requestSubmit()`/`.reset()` handling,
   matching `lr-button`. Exposing the property without the wiring gives consumers an attribute
   that silently does nothing.
+
+Range controls share `RangeDragController` for concurrent pointer state and capture cleanup,
+backed by the same owner-window controller used for separators. Keep each control's value model,
+keyboard dirty state, validation, and commit policy local. Abort before discarding gesture state
+on disablement, disconnection, or adoption; cancellation never emits a committed change.

@@ -1,3 +1,5 @@
+import { isHtmlElement } from './dom-guards.js';
+
 /** Parsed keyboard chord shared by global shortcut owners. */
 export interface ParsedHotkey {
   readonly key: string;
@@ -54,6 +56,51 @@ export function isEditableKeyEventTarget(event: Event): boolean {
   if (!target || target.nodeType !== 1) return false;
   return target.localName === 'textarea' || target.isContentEditable ||
     (target.localName === 'input' && TEXT_ENTRY_TYPES.has((target as HTMLInputElement).type));
+}
+
+const INNER_WIDGET_KEY_SELECTOR =
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
+  '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
+  '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], ' +
+  '[role="radio"], [role="radiogroup"], [role="grid"], [role="gridcell"], ' +
+  '[role="tree"], [role="treeitem"], [role="tab"], [role="tablist"], [role="scrollbar"]';
+const INNER_WIDGET_BUTTON_SELECTOR =
+  'a[href], button, label, [role="button"], [role="link"], [role="checkbox"], [role="switch"]';
+
+/** Options for the widget that owns the key event. */
+export interface InnerControlKeyOptions {
+  /** Stop at this container; only its inner composed-path targets can own the key. */
+  readonly container: Element;
+  /** Also treat links, buttons and button-like roles as key owners. */
+  readonly ownsButtons?: boolean;
+  /** Also treat custom elements outside the container's shadow tree as key owners. */
+  readonly ownsCustomElements?: boolean;
+  /** Custom-element roots that remain part of the containing widget's own key surface. */
+  readonly ignoreCustomElements?: ReadonlySet<Element>;
+  /** Treat a particular custom-element tag as an owner, even when the general rule is off. */
+  readonly ownerTag?: string;
+}
+
+/** Whether an inner editor or widget owns this key instead of the surrounding shortcut surface. */
+export function keyEventOwnedByInnerControl(
+  event: Event,
+  options: InnerControlKeyOptions,
+): boolean {
+  for (const target of event.composedPath()) {
+    if (!isHtmlElement(target)) continue;
+    if (target === options.container) return false;
+    if (target.localName === options.ownerTag || target.matches(INNER_WIDGET_KEY_SELECTOR)) return true;
+    if (options.ownsButtons && target.matches(INNER_WIDGET_BUTTON_SELECTOR)) return true;
+    if (
+      options.ownsCustomElements &&
+      target.localName.includes('-') &&
+      !options.ignoreCustomElements?.has(target) &&
+      target.getRootNode() !== options.container.shadowRoot
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 interface HotkeyOwner {

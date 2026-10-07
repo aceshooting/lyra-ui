@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './breadcrumb-item.js';
 import './breadcrumb.js';
@@ -268,17 +269,6 @@ it('is accessible', async () => {
 });
 
 describe('current-state cssprop', () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
-   *  the token it falls back to. */
-  function resolvedInShadow(el: LyraBreadcrumbItem, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function themedItem(style: string): Promise<LyraBreadcrumbItem> {
     const wrapper = (await fixture(html`

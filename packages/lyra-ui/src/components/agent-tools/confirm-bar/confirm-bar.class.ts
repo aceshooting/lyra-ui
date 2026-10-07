@@ -1,6 +1,7 @@
 import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { renderApproveAction, renderDenyAction } from '../approval-action-buttons.js';
 import type { LyraFrame, LyraVariant, LyraSize } from '../../../internal/variants.js';
 import { hasRealContent, hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -704,25 +705,17 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
           ${decided
             ? nothing
             : html`
-                <lr-button
-                  part="deny-button"
-                  variant="neutral"
-                  appearance="outlined"
-                  type="button"
-                  ?loading=${this.pendingAction === 'deny'}
-                  ?disabled=${this.disabled || this.pendingAction === 'approve'}
-                  exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
-                  @click=${() => this.decide('denied')}
-                >${this.localize('deny')}</lr-button>
-                <lr-button
-                  part="approve-button"
-                  variant=${this.variant === 'danger' ? 'danger' : 'brand'}
-                  type="button"
-                  ?loading=${this.pendingAction === 'approve'}
-                  ?disabled=${this.disabled || this.pendingAction === 'deny'}
-                  exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
-                  @click=${() => this.decide('approved')}
-                >${this.localize('approve')}</lr-button>
+                ${renderDenyAction({
+                  label: this.localize('deny'), loading: this.pendingAction === 'deny',
+                  disabled: this.disabled || this.pendingAction === 'approve',
+                  onClick: () => this.decide('denied'),
+                })}
+                ${renderApproveAction({
+                  label: this.localize('approve'), loading: this.pendingAction === 'approve',
+                  disabled: this.disabled || this.pendingAction === 'deny',
+                  variant: this.variant === 'danger' ? 'danger' : 'brand',
+                  onClick: () => this.decide('approved'),
+                })}
               `}
         </div>
         <div part="status" tabindex="-1">

@@ -39,6 +39,7 @@ describe('the semantic grid is live, not inert', () => {
 
   it('preserves the default palette when an unused ramp changes and accepts a public slot override', async () => {
     const el = await probe();
+    expect(read(el, '--lr-ramp-brand-50')).to.equal('');
     const before = read(el, '--lr-color-brand-fill-loud');
     el.style.setProperty('--lr-ramp-brand-50', 'rgb(1, 2, 3)');
     expect(read(el, '--lr-color-brand-fill-loud')).to.equal(before);

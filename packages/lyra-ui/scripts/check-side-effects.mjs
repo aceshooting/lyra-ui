@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, discoverComponentSideEffectModules } from './generate-side-effects.mjs';
+import { sideEffectsCover } from './side-effects-patterns.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
@@ -98,8 +99,8 @@ for (const component of inventory.components) {
 
   const srcEntry = `./${component.registrationModule.replaceAll('\\', '/')}`;
   const distEntry = srcEntry.replace(/^\.\/src\//, './dist/').replace(/\.ts$/, '.js');
-  if (!sideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-  if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+  if (!sideEffectsCover(sideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
+  if (!sideEffectsCover(sideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
 }
 
 // The other side-effect-only module shapes, which have no `*.class.ts` and so are never reached by
@@ -119,8 +120,8 @@ for (const component of inventory.components) {
 for (const relPath of discoverComponentSideEffectModules(componentsRoot)) {
   const srcEntry = `./src/components/${relPath}`;
   const distEntry = `./dist/components/${relPath.replace(/\.ts$/, '.js')}`;
-  if (!sideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-  if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+  if (!sideEffectsCover(sideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
+  if (!sideEffectsCover(sideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
 }
 
 // The compatibility entries (`src/all.ts` / `dist/all.js`, and their server-only `ssr/all`

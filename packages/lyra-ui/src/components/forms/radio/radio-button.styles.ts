@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 const buttonChromeStyles = css`
@@ -116,8 +117,7 @@ const buttonChromeStyles = css`
   }
   :host(:focus-visible) [part~="button"],
   [part~="button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     /* The ring must not be painted under the overlapping neighbour's border. */
     position: relative;
     z-index: var(--lr-layer-content);

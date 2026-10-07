@@ -26,8 +26,8 @@ import { isMainModule } from './is-main-module.mjs';
 //
 // Three rules, each pitched at the precision its signal actually supports:
 //
-//   1. Pointer-target rule (per part). A rule that targets a part and declares `cursor: pointer`
-//      is the author's own explicit claim that this box is a click target, so it owes a hover
+//   1. Pointer-target rule (per part). A rule that targets a part and declares a click or resize
+//      cursor is the author's own explicit claim that this box is interactive, so it owes a hover
 //      affordance. That affordance does NOT have to sit on the part itself — the pointer lands on
 //      one element and any ancestor of it is equally hovered — so the rule is satisfied by a
 //      :hover on the same part, a host-level :hover (`:host(:hover) [part='base']`, which covers
@@ -650,7 +650,8 @@ export function hoverContract(styleSource, templateSources = []) {
     // A rule that *is* the hover already answers the pointer; only a resting-state declaration
     // makes the "this is a click target" claim that can go unanswered.
     if (/:hover/.test(rule.selector)) continue;
-    if (!/(?:^|[;{\s])cursor\s*:\s*pointer/.test(rule.body)) continue;
+    const cursor = rule.body.match(/(?:^|[;{\s])cursor\s*:\s*(pointer|col-resize|row-resize|nwse-resize)\b/);
+    if (!cursor) continue;
     for (const part of styledParts(rule.selector)) {
       pointerParts += 1;
       if (!rule.optedOut && !hasHoverAffordance(part, coverage, containment)) {
@@ -659,12 +660,15 @@ export function hoverContract(styleSource, templateSources = []) {
           line: rule.line,
           part,
           message:
-            `\`${rule.selector}\` declares cursor: pointer on [part='${part}'] but nothing gives it ` +
+            `\`${rule.selector}\` declares cursor: ${cursor[1]} on [part='${part}'] but nothing gives it ` +
             'a :hover affordance -- a mouse user gets no "this is interactive" signal',
         });
       }
       // The transition rule, on the same pointer targets: only a part that actually repaints has
       // a state change that can flicker.
+      // Resize grips move continuously; their hover affordance is mandatory, but the click
+      // transition rule does not determine whether animating the drag paint is appropriate.
+      if (cursor[1] !== 'pointer') continue;
       const repaints = repainted.get(part);
       if (!repaints) continue;
       repaintedPointerParts += 1;
@@ -1022,7 +1026,7 @@ if (isMainModule(import.meta.url)) {
 
   if (checked === 0 || pointerParts === 0 || repaintedPointerParts === 0 || focusVisibleSheets === 0) {
     console.error(
-      'Interaction-state contract matched ZERO hover rules, cursor: pointer parts, repainted ' +
+      'Interaction-state contract matched ZERO hover rules, click/resize cursor parts, repainted ' +
         'pointer parts or focus-visible stylesheets -- the file shape changed.',
     );
     process.exitCode = 1;
@@ -1043,7 +1047,7 @@ if (isMainModule(import.meta.url)) {
   } else {
     console.log(
       `Interaction-state contract passed: ${checked} hovered part(s) all have a pressed state, ` +
-        `${pointerParts} cursor: pointer part(s) all have a hover affordance, ` +
+        `${pointerParts} click/resize cursor part(s) all have a hover affordance, ` +
         `${repaintedPointerParts} repainting pointer part(s) all transition that repaint ` +
         `(${PRE_TOKEN_TRANSITION_GAPS.size} still on the pre-token list), and all ` +
         `${focusVisibleSheets} focus-visible stylesheet(s) style the pointer path too ` +

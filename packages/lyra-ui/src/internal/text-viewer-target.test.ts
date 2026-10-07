@@ -73,6 +73,7 @@ type Internals = {
   textScopeBuildCount(): number;
   textQuoteScanCount(): number;
   highlightPaintedRangeCount(): number;
+  computeSelectionAnchor(range: Range, text: string): { kind: string; quote?: string; prefix?: string } | null;
 };
 
 function internals(el: StubTextViewer): Internals {
@@ -377,6 +378,24 @@ describe('TextViewerTarget mixin', () => {
   });
 
   describe('paintRanges()/updated() search-handle lifecycle', () => {
+    it('builds selection quotes from the same bounded body scope used by search', async () => {
+      const el = await stubFixture();
+      el.bodyText = 'First match and second match';
+      await el.updateComplete;
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+      const textNode = body.querySelector('p')!.firstChild!;
+      const range = document.createRange();
+      range.setStart(textNode, 23);
+      range.setEnd(textNode, 28);
+      await el.search('match');
+      const builds = internals(el).textScopeBuildCount();
+      const anchor = internals(el).computeSelectionAnchor(range, 'match');
+      expect(anchor?.kind).to.equal('text-quote');
+      expect(anchor?.quote).to.equal('match');
+      expect(anchor?.prefix).to.equal('First match and second');
+      expect(internals(el).textScopeBuildCount()).to.equal(builds);
+    });
+
     it('reuses one scope across highlight/search/active-only updates', async () => {
       const el = await stubFixture();
       await el.search('fox');

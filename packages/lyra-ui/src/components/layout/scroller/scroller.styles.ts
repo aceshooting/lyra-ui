@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -140,8 +141,7 @@ export const styles = css`
     place-items: center;
     inline-size: var(--lr-scroller-control-size, var(--lr-size-2rem));
     block-size: var(--lr-scroller-control-size, var(--lr-size-2rem));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
@@ -152,16 +152,19 @@ export const styles = css`
   }
 
   [part~="control"]:hover:not(:disabled) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet));
   }
 
   /* Held down, the control scrolls repeatedly, so the press is the long-lived state here rather
      than an instant -- the deeper mix of the same brand-quiet fill marks it for its duration. */
   [part~="control"]:active:not(:disabled) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-scroller-control-active-bg,
+      color-mix(
+        in oklab,
+        var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
   }
 
@@ -190,8 +193,7 @@ export const styles = css`
      per-rendered-element. */
   [part~="previous"],
   [part~="next"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
 
   [part~="control"]:disabled {
@@ -201,8 +203,7 @@ export const styles = css`
 
   [part~="control"]:focus-visible,
   [part="viewport"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   :host(:dir(rtl)) [part="previous-glyph"],

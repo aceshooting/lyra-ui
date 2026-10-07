@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { aTimeout, fixture, expect, html, waitUntil } from "@open-wc/testing";
 import "./heatmap.js";
 import '../../../translations/de/data.js';
@@ -55,13 +56,6 @@ function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
   );
-}
-
-function sinkTexts(doc: Document = document): string[] {
-  const sink = sinkElement(doc);
-  return sink
-    ? Array.from(sink.children, (child) => child.textContent ?? "")
-    : [];
 }
 
 async function settleLayout(): Promise<void> {
@@ -1946,7 +1940,7 @@ describe("per-cell hover/focus/click + accessible values", () => {
         sinkElement() === null,
         "the original document must release the adopted heatmap"
       ).to.be.true;
-      expect(sinkTexts(frameDocument)).to.deep.equal(["Row a, Col x: 9"]);
+      expect(sinkTexts('polite', frameDocument)).to.deep.equal(["Row a, Col x: 9"]);
     } finally {
       el.remove();
       iframe.remove();

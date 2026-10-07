@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { isAccessibilitySubtreeExcluded } from '../../../internal/a11y.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
@@ -45,7 +46,10 @@ export class LyraMenubarItem extends LyraElement {
   private owner: MenubarItemOwner | null = null;
   private generation = 0;
   private inertGeneration = 0;
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(this, [], (records) => {
+    if (records.some(record => !this.panel || !this.panel.contains(record.target) ||
+      (record.target === this.panel && record.type === 'attributes'))) this.syncLabel();
+  }, ['label', 'slot']);
   private label = '';
   private readonly ownedName: OwnedAriaLabel = { owns: false, value: null };
   private panelName: OwnedAriaLabel = { owns: false, value: null };
@@ -81,17 +85,6 @@ export class LyraMenubarItem extends LyraElement {
     super.connectedCallback();
     if (this.tabIndex !== 0) this.tabIndex = -1;
     this.syncLabel(false);
-    const Observer = this.ownerDocument.defaultView?.MutationObserver;
-    if (Observer) {
-      this.labelObserver = new Observer(records => {
-        if (records.some(record => !this.panel || !this.panel.contains(record.target) ||
-          (record.target === this.panel && record.type === 'attributes'))) this.syncLabel();
-      });
-      this.labelObserver.observe(this, {
-        childList: true, subtree: true, characterData: true, attributes: true,
-        attributeFilter: ['aria-label', 'aria-labelledby', 'label', 'hidden', 'aria-hidden', 'inert', 'slot'],
-      });
-    }
     if (this.hasUpdated) {
       const generation = ++this.generation;
       void this.updateComplete.then(() => {
@@ -104,13 +97,17 @@ export class LyraMenubarItem extends LyraElement {
     ++this.generation;
     ++this.inertGeneration;
     this.cancelPendingFocusout();
-    this.labelObserver?.disconnect(); this.labelObserver = undefined;
     if (this.panel && this.attached) this.panel[submenuPanelController].detach(this);
     this.expanded = false;
     this.attached = false;
     this.setInert(true);
     this.restoreIgnoredElements();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.labelTextObserver.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {

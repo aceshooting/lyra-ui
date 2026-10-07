@@ -24,6 +24,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
+import { parseProgram } from './lib/ast.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoots = [
@@ -164,12 +166,6 @@ export function findMeasuredHitAreaViolations(targets) {
   return findings;
 }
 
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(fullPath) : [fullPath];
-  });
-}
 
 // Block comments are blanked char-for-char (not removed) so every later byte
 // offset -- and therefore every line number computed from it -- still lines
@@ -722,6 +718,53 @@ function hasPositiveFlexGrow(body) {
 // contextual override); every matching block's declared sizes are checked,
 // so a later, more specific rule that shrinks the box below the floor is
 // still caught even when an earlier base rule is compliant.
+const iconHitTargetDeclarations = fs.readFileSync(
+  path.join(packageDir, 'src/internal/interactive-control.styles.ts'), 'utf8',
+).match(/export const iconHitTarget = css`([\s\S]*?)`;/)?.[1];
+
+function expandHitTarget(source) {
+  if (!iconHitTargetDeclarations || !source.includes('iconHitTarget')) return source;
+  let program;
+  try {
+    program = parseProgram('styles.ts', source);
+  } catch {
+    // Plain CSS fixtures cannot import a declaration fragment.
+    return source;
+  }
+  const bindings = new Set();
+  for (const statement of program.body) {
+    if (statement.type !== 'ImportDeclaration' || statement.importKind === 'type' ||
+        !/^(?:(?:\.\.\/)+internal\/|\.\/)interactive-control\.styles\.js$/.test(statement.source.value)) continue;
+    for (const specifier of statement.specifiers) {
+      if (specifier.type === 'ImportSpecifier' && specifier.importKind !== 'type' &&
+          specifier.imported.name === 'iconHitTarget') bindings.add(specifier.local.name);
+    }
+  }
+  const replacements = [];
+  for (const statement of program.body) {
+    const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
+    if (declaration?.type !== 'VariableDeclaration') continue;
+    for (const variable of declaration.declarations) {
+      const template = variable.init;
+      if (template?.type !== 'TaggedTemplateExpression' || template.tag.type !== 'Identifier' || template.tag.name !== 'css') continue;
+      for (const expression of template.quasi.expressions) {
+        if (expression.type !== 'Identifier' || !bindings.has(expression.name)) continue;
+        let start = expression.start;
+        let end = expression.end;
+        while (/\s/.test(source[start - 1] ?? '') && start > 0) start--;
+        while (/\s/.test(source[end] ?? '') && end < source.length) end++;
+        if (source.slice(start - 2, start) === '${' && source[end] === '}') {
+          replacements.push({ start: start - 2, end: end + 1 });
+        }
+      }
+    }
+  }
+  for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+    source = source.slice(0, replacement.start) + iconHitTargetDeclarations + source.slice(replacement.end);
+  }
+  return source;
+}
+
 function guardResultForPart(styleSources, partName) {
   const blocks = [];
   for (const css of styleSources) {
@@ -740,17 +783,12 @@ function guardResultForPart(styleSources, partName) {
   let sawInline = false;
   let sawBlock = false;
   for (const block of blocks) {
-    const inlineMatch = block.body.match(/(?:^|;)\s*min-inline-size\s*:\s*([^;]+);/);
-    const blockMatch = block.body.match(/(?:^|;)\s*min-block-size\s*:\s*([^;]+);/);
-    if (inlineMatch) {
-      sawInline = true;
-      const resolved = resolveLength(inlineMatch[1], localVars);
-      if (!isCompliant(resolved)) offending.push({ selector: block.selector.trim(), property: 'min-inline-size', raw: inlineMatch[1].trim(), resolved });
-    }
-    if (blockMatch) {
-      sawBlock = true;
-      const resolved = resolveLength(blockMatch[1], localVars);
-      if (!isCompliant(resolved)) offending.push({ selector: block.selector.trim(), property: 'min-block-size', raw: blockMatch[1].trim(), resolved });
+    for (const match of block.body.matchAll(/(?:^|;)\s*(min-inline-size|min-block-size)\s*:\s*([^;]+)(?=;|$)/g)) {
+      const property = match[1];
+      if (property === 'min-inline-size') sawInline = true;
+      else sawBlock = true;
+      const resolved = resolveLength(match[2], localVars);
+      if (!isCompliant(resolved)) offending.push({ selector: block.selector.trim(), property, raw: match[2].trim(), resolved });
     }
   }
   return { found: true, offending, sawInline, sawBlock };
@@ -885,7 +923,7 @@ export function checkStaticHitAreaFixture(
 ) {
   const strippedSource = stripComments(rawSource);
   const rawLines = rawSource.split('\n');
-  const styleSources = rawStyleSources.map(stripComments);
+  const styleSources = rawStyleSources.map((source) => stripComments(expandHitTarget(source)));
   const candidates = findCandidates(strippedSource, styleSources);
   const errors = [];
   let exemptCount = 0;

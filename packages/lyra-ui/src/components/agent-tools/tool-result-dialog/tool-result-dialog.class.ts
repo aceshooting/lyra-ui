@@ -1,4 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import {
   html,
@@ -11,13 +12,10 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolGlyph, toolStatusIcon } from '../tool-status.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-result-dialog.styles.js';
@@ -242,9 +240,8 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
       this.close('api');
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private overlay?: OverlayHandle;
-  private focusReturnOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private readonly titleId = nextId('tool-result-dialog-title');
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -254,25 +251,10 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     }
     if (changed.has('open')) {
       if (this.open) {
-        this.deferredFocusReturn.cancel();
-        this.focusReturnOpener = captureFocusReturnOpener(this);
-        this.nativeModal.prepare();
-        this.activateOverlay();
+        this.modalSurface.open(() => this.activateOverlay());
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.leaveTopLayer();
-        this.deactivateOverlay();
-        // The synchronous return keeps the established timing whenever the opener can already
-        // take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.focusReturnOpener;
-        this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
+        this.modalSurface.close(hadOverlay, () => this.deactivateOverlay(), () => !this.open);
       }
     }
   }
@@ -294,7 +276,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     // synchronously with no update in between, so willUpdate never reruns to
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
     if (this.hasUpdated && this.open) {
-      this.nativeModal.prepare();
+      this.modalSurface.prepare();
       this.requestUpdate();
       if (this.overlay?.isActive()) {
         this.overlay.resume();
@@ -314,29 +296,13 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
   private enterTopLayer(): void {
-    if (!this.isConnected || this.nativeModal.show()) return;
-    this.popover = 'manual';
-    try {
-      if (!this.matches(':popover-open')) this.showPopover();
-    } catch {
-      // No popover support: the z-index fallback applies.
-    }
-  }
-
-  private leaveTopLayer(): void {
-    this.nativeModal.hide();
-    try {
-      if (this.matches(':popover-open')) this.hidePopover();
-    } catch {
-      // Never promoted.
-    }
+    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.leaveTopLayer();
+    this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
   }
 
   // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -415,12 +381,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   }
 
   private localizedDuration(ms: number): string {
-    const duration = durationMessageValue(ms);
-    return this.localize(duration.key, undefined, {
-      value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
-      }).format(duration.value),
-    });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`
@@ -429,7 +390,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    *  than rendering a literal "NaN ms". A finite negative value clamps to `0` instead of
    *  rendering a nonsensical negative duration. */
   private get safeDurationMs(): number | null {
-    return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
+    return safeDurationMs(this.durationMs);
   }
 
   override render(): TemplateResult {

@@ -1,5 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -48,10 +49,7 @@ import '../../overlays/overlay/popover.class.js';
 import '../../forms/input/input.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
@@ -111,22 +109,17 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   'lr-pin-change': CustomEvent<
     LyraEventDetailSnapshot<{ pinnedNodeIds: string[] }>
   >;
-  /** The user typed in the toolbar's search box. `detail: { query, matchCount, matchCountExact }`
+  /** The user typed in the toolbar's search box. `detail: LyraSearchChangeDetail`
    *  -- `query` is the canonical `LyraSearchChangeDetail` field name
    *  (`internal/text-viewer-target.ts`). `matchCount` is the same live node-filter total the
    *  search-result list and its own live-region announcement already compute (`0` while `query`
    *  is empty). `matchCountExact` is always `true`: unlike a paginated text-search viewer, this
    *  component's node filter has no ceiling, so it can never truncate. This is a live node
-   *  FILTER, not a cursor-based text search -- it deliberately never carries the canonical
-   *  `activeIndex` field, since it has no `searchNext`/`searchPrevious` active-match cursor to
-   *  report. The component has already applied the query to its own `query` before
+   *  FILTER, not a cursor-based text search, so `activeIndex` is always `-1`. The component
+   *  has already applied the query to its own `query` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change` follows, so reassigning it
    *  back is optional and a direct host assignment stays silent. */
-  'lr-search-change': CustomEvent<{
-    query: string;
-    matchCount: number;
-    matchCountExact: boolean;
-  }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   /** A node type's visibility changed via the composed legend. `detail: { hiddenTypes }` -- the
    *  complete updated array. This component already applies it to its own `hiddenTypes` before
    *  emitting, the same self-toggle-then-emit contract `lr-pin-change`/`lr-search-change` follow,
@@ -214,9 +207,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-path-request - `detail: { sourceNodeId, targetNodeId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-search-change - The user typed in the toolbar's search box. `detail:
- *   { query, matchCount, matchCountExact }`. `query` is the canonical `LyraSearchChangeDetail`
+ *   { query, matchCount, matchCountExact, activeIndex }`. `query` is the canonical `LyraSearchChangeDetail`
  *   name; `matchCountExact` is always `true` since this component's node filter has no truncating
- *   ceiling. No `activeIndex` -- this is a live node filter, not a cursor-based search.
+ *   ceiling. `activeIndex` is always `-1` because this is a live node filter.
  *   Direct host assignments do not emit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
@@ -238,6 +231,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   50 rows sharing one tab stop (ArrowUp/ArrowDown/Home/End); the announced count covers every match.
  * @csspart search-result - One search-match row (`role="listitem"`, wrapping a `<button>`).
  * @csspart search-empty - The "no matches" message, shown when `query` is non-empty but no node matches.
+ * @csspart search-limit - Localized shown/total notice when search matches exceed the 50-row list.
  * @csspart pinned - The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty.
  * @csspart pinned-heading - The pinned-nodes row's leading label.
  * @csspart path - The composed `lr-path-strip`, only rendered while `path` is non-empty.
@@ -395,7 +389,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     readonly LyraNodeTypeStyle[],
     readonly LyraGraphCommunity[]
   ];
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private activationFrameId?: number;
   private activationFrameOwner?: Window;
   private activationFrameDocument?: Document;
@@ -437,21 +431,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     if (this.hasUpdated) this.resumePresetActivation();
-  }
-
-  private syncAnnouncementSink(): void {
-    if (
-      !this.isConnected ||
-      this.announcementSink?.element.ownerDocument === this.ownerDocument
-    )
-      return;
-    this.announcementSink?.release();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -495,7 +475,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         changed.has('locale') ||
         changed.has('strings'))
     ) {
-      this.announcementSink?.announce(this.searchResultAnnouncement());
+    this.announcements.announcePolite(this.searchResultAnnouncement());
     }
   }
 
@@ -656,20 +636,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.pendingNodeId = undefined;
     this.trackedNodeEl = undefined;
     this.hoveredNodeId = null;
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.invalidateActivation();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-    if (this.isConnected) {
-      this.syncAnnouncementSink();
-      this.resumePresetActivation();
-    }
+    this.announcements.adopted();
+    if (this.isConnected) this.resumePresetActivation();
   }
 
   private rebuildDerivedCollections(): void {
@@ -871,7 +845,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
         label: this.nodeLabel(id),
       }
     );
-    this.announcementSink?.announce(this.pinLiveText);
+    this.announcements.announcePolite(this.pinLiveText);
     this.emit('lr-pin-change', { pinnedNodeIds: next });
   }
 
@@ -915,6 +889,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       query: value,
       matchCount: this.matchingNodes()?.length ?? 0,
       matchCountExact: true,
+      activeIndex: -1,
     });
   };
 
@@ -1166,6 +1141,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                       `
                     )}
               </div>
+              ${matches.length > SEARCH_RESULT_LIMIT ? html`<p part="search-limit" role="note">${this.localize('graphExplorerSearchLimit', undefined, {
+                shown: getNumberFormat(this.effectiveLocale).format(SEARCH_RESULT_LIMIT),
+                total: getNumberFormat(this.effectiveLocale).format(matches.length),
+              })}</p>` : nothing}
               <div class="sr-only" aria-hidden="true">
                 ${this.searchResultAnnouncement(matches)}
               </div>

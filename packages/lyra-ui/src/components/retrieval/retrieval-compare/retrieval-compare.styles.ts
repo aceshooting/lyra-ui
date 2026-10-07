@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -44,8 +46,7 @@ export const styles = css`
     gap: var(--lr-space-xs) var(--lr-space-s);
     inline-size: 100%;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -63,8 +64,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part~='chunk']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~='chunk-selected'] {
     border-color: var(--lr-retrieval-compare-selected-border, var(--lr-color-brand));
@@ -104,7 +104,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='sets'] {
       grid-auto-columns: minmax(var(--lr-size-14rem), 100%);
     }

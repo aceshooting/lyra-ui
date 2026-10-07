@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -6,13 +7,7 @@ import type {
   LyraExportButton,
   LyraExportFormatDescriptor,
 } from './export-button.js';
-import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
-}
 
 const rows = [{ id: 'a', name: 'Alpha' }];
 const columns = [

@@ -1,3 +1,5 @@
+import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
+import { settleEnterSubmission } from '../../../../test/contracts/enter-submit.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import {
@@ -1775,6 +1777,7 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     let submits = 0;
     form.addEventListener('submit', (event) => { event.preventDefault(); submits += 1; });
     key(segment(el, 'hour'), 'Enter');
+    await settleEnterSubmission();
     expect(submits, 'Enter with the popup closed submits the ancestor form').to.equal(1);
 
     const readonlyForm = await fixture<HTMLFormElement>(html`
@@ -1784,6 +1787,7 @@ describe('lr-time-input popup and lifecycle edge cases', () => {
     let readonlySubmits = 0;
     readonlyForm.addEventListener('submit', (event) => { event.preventDefault(); readonlySubmits += 1; });
     key(segment(readonlyEl, 'hour'), 'Enter');
+    await settleEnterSubmission();
     expect(readonlySubmits, 'readonly never submits on Enter').to.equal(0);
   });
 
@@ -2154,17 +2158,6 @@ describe('valueAsNumber / valueAsDate assignment', () => {
 // -- Control height hooks ----------------------------------------------------
 
 describe('lr-time-input control height hooks', () => {
-  /** Resolves what `expression` computes to *inside this field's shadow root*, where the `--lr-*`
-   *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
-  function resolvedInShadow(el: LyraTimeInput, expression: string): string {
-    const probe = document.createElement('span');
-    probe.style.position = 'absolute';
-    probe.style.maxInlineSize = expression;
-    el.shadowRoot!.append(probe);
-    const value = getComputedStyle(probe).maxInlineSize;
-    probe.remove();
-    return value;
-  }
 
   function row(el: LyraTimeInput): HTMLElement {
     return el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;

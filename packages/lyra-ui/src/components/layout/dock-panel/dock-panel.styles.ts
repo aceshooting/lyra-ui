@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -98,12 +99,29 @@ export const styles = css`
       )
     );
   }
-  /* Transparent hit-slop widening the draggable/tappable box along the resize axis only, leaving
-     the handle's visible 3px thickness -- same technique as lr-multi-split's divider. */
+  /* Keep the target inside the clipped panel while leaving its visible line thin. */
   [part="handle"]::before {
     content: "";
     position: absolute;
-    inset: var(--lr-size-neg-6px);
+    inline-size: max(var(--lr-icon-button-size), var(--lr-dock-panel-handle-hit-area, var(--lr-space-m)));
+    block-size: 100%;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+  }
+  :host([placement="start"]) [part="handle"]::before {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+  }
+  :host([placement="top"]) [part="handle"]::before,
+  :host([placement="bottom"]) [part="handle"]::before {
+    inline-size: 100%;
+    block-size: max(var(--lr-icon-button-size), var(--lr-dock-panel-handle-hit-area, var(--lr-space-m)));
+    inset-inline-start: 0;
+    inset-block-start: 0;
+  }
+  :host([placement="top"]) [part="handle"]::before {
+    inset-block-start: auto;
+    inset-block-end: 0;
   }
 
   :host([placement="start"]) [part="handle"] {
@@ -138,8 +156,7 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-icon-button-size);
     block-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -180,8 +197,7 @@ export const styles = css`
     );
   }
   [part="collapse-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   :host([placement="start"]) [part="collapse-toggle"] {

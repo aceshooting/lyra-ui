@@ -22,7 +22,7 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 2446, 'the reviewed package has 2446 live typed exports');
+  assert.equal(entrypoints.length, 2465, 'the reviewed package has 2465 live typed exports');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));

@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { createRef, ref, type Ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DEFAULT_CANVAS_COLOR } from '../../../internal/canvas-color.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -10,16 +11,14 @@ import {
   readResponseArrayBuffer,
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
-import { chevronIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
+  isObjectValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { Announcer } from '../../../internal/announcer.js';
-import { announceSearchResult } from '../../../internal/viewer-search.js';
 import {
   DocumentAnchorTarget,
   prioritizedHighlightCandidates,
@@ -40,6 +39,7 @@ import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { renderViewerPagerButton, viewerPagerStyles } from '../viewer-pager.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
@@ -122,10 +122,6 @@ interface TocWorkBudget {
   positions: number;
   nodes: number;
   readonly seen: WeakSet<object>;
-}
-
-function isObjectValue(value: unknown): value is object {
-  return value !== null && (typeof value === 'object' || typeof value === 'function');
 }
 
 function isArrayValue(value: unknown): value is readonly unknown[] {
@@ -505,7 +501,7 @@ const TONE_FILL_TOKEN: Record<LyraHighlightTone, { token: string; fallback: stri
 /** The active search match's own fill token/fallback -- mirrors `docx-viewer`'s
  *  `search-match-active` treatment (`--lr-color-warning`) rather than any highlight tone. */
 const SEARCH_MATCH_FILL_TOKEN = { token: '--lr-color-warning', fallback: '#9a6700' };
-const ACTIVE_HIGHLIGHT_STROKE_TOKEN = { token: '--lr-focus-ring-color', fallback: '#0969da' };
+const ACTIVE_HIGHLIGHT_STROKE_TOKEN = { token: '--lr-focus-ring-color', fallback: DEFAULT_CANVAS_COLOR };
 
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -567,8 +563,7 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart mount - The stable element epub.js renders into.
  * @csspart spinner - The shared loading treatment.
  * @csspart error - Visible ordinary error text; transitions announce through the shared
- *   document-level assertive region. Search announcements are appended to the shared
- *   document-level polite region, which lives in the host's light DOM and has no part here.
+ *   document-level assertive region. Search state is exposed through `lr-search-change`.
  * @cssprop [--lr-ebook-viewer-max-height=none] - Maximum block size of the mount area epub.js
  *   renders into, before it scrolls internally. Also settable via the `max-height` property.
  * @status stable
@@ -608,7 +603,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerPagerStyles, srOnly, viewerLoadingStyles];
 
   /** URL fetched as an ArrayBuffer and rendered as an EPUB. */
   @property() src = '';
@@ -651,9 +646,6 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private paintedHighlightCfis: string[] = [];
   private searchAnnotationCfi?: string;
   private readonly announcements = new ViewerAnnouncementController(this);
-  private readonly announcer = new Announcer({
-    onFlush: (text) => this.announcements.announcePolite(text),
-  });
 
   constructor() {
     super();
@@ -705,8 +697,6 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     this.announcements.connect();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
@@ -722,7 +712,6 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   override disconnectedCallback(): void {
     this.generation++;
     this.anchorOperationGeneration++;
-    this.announcer.cancel();
     this.announcements.disconnect();
     this.teardown();
     // Reset rather than leaving a stale "ready" state: without this, a
@@ -740,8 +729,6 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    const ownerWindow = this.ownerDocument.defaultView;
-    if (ownerWindow) this.announcer.setTimerHost(ownerWindow);
     this.announcements.adopted();
   }
 
@@ -841,7 +828,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       return;
     }
     if (!factory) {
-      this.failWithLocalizedMessage(this.localize('ebookViewerLoadError'));
+      this.failWithLocalizedMessage(this.localize('ebookViewerMissingLibrary'));
       return;
     }
     const mount = this.mountRef.value;
@@ -1125,7 +1112,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const rendition = this.rendition;
     const operation = this.anchorOperationGeneration;
     const generation = this.generation;
@@ -1520,13 +1507,6 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       matchCountExact: this.searchMatchCountExact,
       activeIndex: this.searchActiveIndex,
     });
-    announceSearchResult(
-      (key, fallback, values) => this.localize(key, fallback, values),
-      this.announcer,
-      this.effectiveLocale,
-      this.searchMatches.length,
-      this.searchActiveIndex,
-    );
   }
 
   /** Resolves a `{ token, fallback }` pair to the mark's `fill` `styles` arg, reading the token's
@@ -1560,12 +1540,8 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
           : nothing}
       >
         <div part="toolbar">
-          <button part="previous-button" type="button" aria-label=${this.localize('ebookViewerPreviousChapter')} ?disabled=${disabled} @click=${this.previous}>
-            <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
-          </button>
-          <button part="next-button" type="button" aria-label=${this.localize('ebookViewerNextChapter')} ?disabled=${disabled} @click=${this.next}>
-            <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
-          </button>
+          ${renderViewerPagerButton('previous', this.localize('ebookViewerPreviousChapter'), disabled, () => this.previous())}
+          ${renderViewerPagerButton('next', this.localize('ebookViewerNextChapter'), disabled, () => this.next())}
         </div>
         <div
           part="mount"

@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -8,8 +9,7 @@ export const styles = css`
     display: block;
   }
   [part='base']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='node'],
   [part='relation'] {
@@ -23,8 +23,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-size-2px) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
@@ -43,8 +42,7 @@ export const styles = css`
   }
   [part='node']:focus-visible,
   [part='relation']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='node']:hover,
   [part='relation']:hover {

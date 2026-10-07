@@ -25,12 +25,8 @@
  * `:state()` matching without a real `ElementInternals` behind it — it degrades to an
  * observable-but-unstyled record of the same state names a browser would expose.
  *
- * Exported for the form-associated controls that still manage `ElementInternals` directly instead
- * of through this mixin -- `<lr-voice-picker>` and friends call `attachInternalsSafely()` below
- * rather than hand-maintaining a second copy of this shape. ("Their value isn't a plain string" was
- * the reason for years and no longer is: the mixin takes a `FormValueAdapter` and carries any value
- * type. Those controls are a migration backlog, frozen shrink-only by rule (f) of
- * `scripts/check-form-associated.mjs`, not a second supported pattern.)
+ * Used by shared form-control plumbing and non-form components that need internals. Native form
+ * participation remains inert in environments without the platform API.
  */
 export function createFallbackInternals(): ElementInternals {
   let flags: ValidityStateFlags = {};

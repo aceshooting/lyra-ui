@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   TextViewerTarget,
@@ -21,10 +22,10 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
-import {
-  type LyraMapGeoJsonDataLayer,
-  type LyraMap,
-  type LyraMapStyleSpecification,
+import type {
+  LyraMapGeoJsonDataLayer,
+  LyraMap,
+  LyraMapStyleSpecification,
 } from '../../media/map/map.class.js';
 import { styles } from './geojson-view.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
@@ -531,6 +532,11 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.mapReady
+      ? this.mapCanvas
+      : this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
+  );
 
   @property() src = '';
   /** Accessible-name fallback for the current region owner: the root in non-map states, or the
@@ -555,6 +561,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
 
   @state() private loadState: GeoJsonViewerState = { kind: 'idle' };
   @state() private mapReady = false;
+  private mapCanvas: HTMLCanvasElement | null = null;
   private pendingFitBounds: GeoBounds | null = null;
   private generation = 0;
   private lastLoadSrc = '';
@@ -565,7 +572,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
    *  uninstall `maplibre-gl` in this test environment. */
   forceMissingMaplibreForTesting = false;
 
-  protected textContentRoot(): Element | null {
+  protected override textContentRoot(): Element | null {
     return this.renderRoot.querySelector('[part="base"]');
   }
 
@@ -573,7 +580,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     event.stopPropagation();
   }
 
-  private onMapCanvasReady(map: LyraMap, _canvas: HTMLCanvasElement): void {
+  private onMapCanvasReady(map: LyraMap, canvas: HTMLCanvasElement): void {
     if (
       !this.isConnected ||
       map !== this.registeredMap ||
@@ -584,12 +591,14 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     )
       return;
     this.mapReady = true;
+    this.mapCanvas = canvas;
     // The callback runs in the same stack that constructs MapLibre's already-semantic canvas.
     // Remove the outer landmark synchronously so no observer can see two named regions before Lit's
     // state-driven render commits the same ownership change.
     const base = this.shadowRoot?.querySelector('[part="base"]');
     base?.removeAttribute('role');
     base?.removeAttribute('aria-label');
+    this.hostDescription.refresh();
   }
 
   private syncMapCanvasReadyCallback(): void {
@@ -620,12 +629,14 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     this.registeredMap = null;
     this.loadState = { kind: 'idle' };
     this.mapReady = false;
+    this.mapCanvas = null;
     this.announcements.disconnect();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.announcements.adopted();
   }
 
@@ -684,6 +695,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
     this.mapReady = false;
+    this.mapCanvas = null;
     if (!this.src) {
       this.loadState = { kind: 'idle' };
       return;

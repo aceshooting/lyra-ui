@@ -45,6 +45,7 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 
 
 const MAX_NODES = 50_000;
+const MAX_RENDERED_ROWS = 5_000;
 const MAX_DEPTH = 256;
 const MAX_SEARCH_MATCHES = 10_000;
 const MAX_PAINTED_HIGHLIGHTS = 100;
@@ -102,6 +103,11 @@ function elementChildren(node: Element): Element[] {
 
 interface PathResolutionBudget {
   remaining: number;
+}
+
+interface RenderBudget {
+  remaining: number;
+  truncated: boolean;
 }
 
 /** Detects the `<parsererror>` document `DOMParser` produces instead of throwing, whose exact
@@ -272,6 +278,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  * @csspart copy-button - A copy-to-clipboard button -- the whole-document one (in `toolbar`) or a
  *   per-node one (only when `copyable`).
  * @csspart tree - The rendered node tree.
+ * @csspart limit - Notice shown when the expanded tree exceeds the rendered-row limit.
  * @csspart node - One element row (`data-active` while it's the resolved anchor target,
  *   `data-match` while any part of it matches the current search, `data-active-match` while it's
  *   the currently active search match, `data-highlight` carrying the tone of a `highlights` entry
@@ -689,7 +696,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     return { matches, tagMatches, attrMatches, textMatches, forceExpand, paths, ordered, matchCountExact };
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'node-path' || this.xmlState.kind !== 'loaded' || !this.xmlState.doc.documentElement) return false;
     const resolved = resolvePath(this.xmlState.doc.documentElement, anchor.path);
     if (!resolved?.element) return false;
@@ -703,7 +710,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     // reassigned (to `null` for a bare element path) so a later element-granularity anchor clears
     // the previous attribute-level distinction instead of leaving it stranded.
     this.activeAttr = resolved.attr ? attrKey(pathKey, resolved.attr) : null;
-    return true;
+    await this.updateComplete;
+    return this.renderRoot.querySelector('[part="node"][data-active]') !== null;
   }
 
   /**
@@ -959,7 +967,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     `;
   }
 
-  private renderNode(el: Element, path: PathSegment[], depth: number): TemplateResult {
+  private renderNode(el: Element, path: PathSegment[], depth: number, budget: RenderBudget): TemplateResult | typeof nothing {
+    if (budget.remaining-- <= 0) {
+      budget.truncated = true;
+      return nothing;
+    }
     const pathKey = JSON.stringify(path);
     const renderedChildren = Array.from(el.childNodes).filter((node) => (
       node.nodeType === Node.ELEMENT_NODE
@@ -977,21 +989,31 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     const toggleLabel = el.tagName;
     let elementIndex = 0;
     // A collapsed node's descendants are never shown, so their rows are not built at all.
-    const childRows = !expanded ? nothing : renderedChildren.map((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        return this.renderNode(node as Element, [...path, elementIndex++], depth + 1);
+    const childRows: Array<TemplateResult | typeof nothing> = [];
+    if (expanded) for (const node of renderedChildren) {
+      if (budget.remaining <= 0) {
+        budget.truncated = true;
+        break;
       }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        childRows.push(this.renderNode(node as Element, [...path, elementIndex++], depth + 1, budget));
+        continue;
+      }
+      budget.remaining--;
       if (node.nodeType === Node.TEXT_NODE) {
-        return html`<div part="text" class="row" style=${indentStyle} ?data-match=${this.searchState.textMatches.has(pathKey)}>${node.textContent}</div>`;
+        childRows.push(html`<div part="text" class="row" style=${indentStyle} ?data-match=${this.searchState.textMatches.has(pathKey)}>${node.textContent}</div>`);
+        continue;
       }
       if (node.nodeType === Node.COMMENT_NODE) {
-        return html`<div part="comment" class="row" style=${indentStyle}>&lt;!--${node.textContent}--&gt;</div>`;
+        childRows.push(html`<div part="comment" class="row" style=${indentStyle}>&lt;!--${node.textContent}--&gt;</div>`);
+        continue;
       }
       if (node.nodeType === Node.CDATA_SECTION_NODE) {
-        return html`<div part="cdata" class="row" style=${indentStyle}>&lt;![CDATA[${node.textContent}]]&gt;</div>`;
+        childRows.push(html`<div part="cdata" class="row" style=${indentStyle}>&lt;![CDATA[${node.textContent}]]&gt;</div>`);
+        continue;
       }
-      return html`<div part="pi" class="row" style=${indentStyle}>&lt;?${(node as ProcessingInstruction).target} ${node.textContent}?&gt;</div>`;
-    });
+      childRows.push(html`<div part="pi" class="row" style=${indentStyle}>&lt;?${(node as ProcessingInstruction).target} ${node.textContent}?&gt;</div>`);
+    }
 
     return html`
       <div
@@ -1061,6 +1083,16 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     `;
   }
 
+  private renderLoadedTree(doc: Document): TemplateResult {
+    const budget: RenderBudget = { remaining: MAX_RENDERED_ROWS, truncated: false };
+    const tree = this.renderNode(doc.documentElement, [], 0, budget);
+    return html`<div part="tree">${tree}</div>${budget.truncated
+      ? html`<p part="limit">${this.localize('xmlViewerLimit', undefined, {
+          count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ROWS),
+        })}</p>`
+      : nothing}`;
+  }
+
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
     const label = viewerSemanticLabel(this, this.name || this.localize('xmlViewerLabel'));
@@ -1091,7 +1123,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
             `
           : nothing}
         ${state.kind === 'loaded' && state.doc.documentElement
-          ? html`<div part="tree">${this.renderNode(state.doc.documentElement, [], 0)}</div>`
+          ? this.renderLoadedTree(state.doc)
           : state.kind === 'loading'
             ? renderViewerLoading(this.localize('loadingDocument'))
             : state.kind === 'error'

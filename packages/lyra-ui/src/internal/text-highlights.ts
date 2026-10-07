@@ -8,7 +8,7 @@ const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default dura
 const FALLBACK_RANGE_LIMIT = 200;
 const FALLBACK_MARK_LIMIT = 200;
 
-interface FallbackPaintBudget {
+export interface TextMarkPaintBudget {
   traversalNodes: number;
   codeUnits: number;
   marks: number;
@@ -156,19 +156,14 @@ function nextNodeWithin(node: Node, root: Node): Node | null {
   return null;
 }
 
-/** Wraps the text covered by `range` in one or more `<mark>` elements. `name` is the highlight's
- *  identity (`lr-highlight-accent|success|...`, `lr-highlight-active`, or `lr-highlight-flash`)
- *  and is written to `data-lr-highlight-name` -- the fallback-path equivalent of the CSS Custom
- *  Highlight API path's separately-registered `Highlight` objects, letting a stylesheet distinguish
- *  an active/flash mark from a genuine `setRanges`-painted one even when they share the same `tone`.
- *  `data-lr-highlight-tone` is kept alongside it so tone-based selection still works. */
-function wrapRangeInMarks(
+/** Wrap a complete bounded text range and let the caller decorate each mark. */
+export function wrapTextRangeInMarks(
   range: Range,
-  name: string,
-  tone: LyraHighlightTone,
   doc: Document,
-  budget: FallbackPaintBudget,
+  budget: TextMarkPaintBudget,
+  decorate: (mark: HTMLElement) => void,
 ): HTMLElement[] {
+  if (budget.marks <= 0) return [];
   const ancestor = range.commonAncestorContainer;
   const view = doc.defaultView;
   const textNodeType = view?.Node.TEXT_NODE ?? 3;
@@ -203,9 +198,7 @@ function wrapRangeInMarks(
     const inRange = splitTextNodeAtRange(range, textNode);
     if (!inRange.data) continue;
     const mark = doc.createElement('mark');
-    mark.setAttribute('data-lr-highlight-tone', tone);
-    mark.setAttribute('data-lr-highlight-name', name);
-    mark.setAttribute('role', 'mark');
+    decorate(mark);
     inRange.parentNode?.insertBefore(mark, inRange);
     mark.appendChild(inRange);
     marks.push(mark);
@@ -215,7 +208,7 @@ function wrapRangeInMarks(
   return marks;
 }
 
-function unwrapMark(mark: HTMLElement): void {
+export function unwrapTextMark(mark: HTMLElement): void {
   const parent = mark.parentNode;
   if (!parent) return;
   const before = mark.previousSibling;
@@ -246,21 +239,25 @@ function acquireFallbackHandle(_owner: object, doc: Document): HighlightHandle {
   const view = doc.defaultView;
 
   function clear(name: string): void {
-    for (const mark of marksByName.get(name) ?? []) unwrapMark(mark);
+    for (const mark of marksByName.get(name) ?? []) unwrapTextMark(mark);
     marksByName.set(name, []);
   }
 
   function paint(name: string, tone: LyraHighlightTone, ranges: Range[]): void {
     clear(name);
     const marks: HTMLElement[] = [];
-    const budget: FallbackPaintBudget = {
+    const budget: TextMarkPaintBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
       marks: FALLBACK_MARK_LIMIT,
     };
     const count = Math.min(ranges.length, FALLBACK_RANGE_LIMIT);
     for (let index = 0; index < count && budget.traversalNodes > 0 && budget.codeUnits > 0 && budget.marks > 0; index++) {
-      marks.push(...wrapRangeInMarks(ranges[index]!, name, tone, doc, budget));
+      marks.push(...wrapTextRangeInMarks(ranges[index]!, doc, budget, (mark) => {
+        mark.setAttribute('data-lr-highlight-tone', tone);
+        mark.setAttribute('data-lr-highlight-name', name);
+        mark.setAttribute('role', 'mark');
+      }));
     }
     marksByName.set(name, marks);
   }

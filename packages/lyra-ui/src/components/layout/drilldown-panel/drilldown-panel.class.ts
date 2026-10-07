@@ -1,10 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -649,13 +646,12 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   private mutationObserver?: MutationObserver;
   private mutationObserverDocument?: Document;
   private mutationObserverGeneration = 0;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private announcementsArmed = false;
   private announcedLimits = new Map<string, string>();
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     this.syncRunsSlot();
     this.armMutationObserver();
   }
@@ -697,7 +693,6 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
   override disconnectedCallback(): void {
     this.resetMutationObserver();
-    this.releaseAnnouncementSink();
     this.announcementsArmed = false;
     this.announcedLimits.clear();
     super.disconnectedCallback();
@@ -706,28 +701,8 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.resetMutationObserver();
-    this.syncAnnouncementSink();
+    this.announcements.adopted();
     this.armMutationObserver();
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) {
-      return;
-    }
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
   }
 
   private resetMutationObserver(): void {
@@ -809,7 +784,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     if (this.announcementsArmed) {
       for (const [key, text] of nextLimits) {
         if (this.announcedLimits.get(key) !== text) {
-          this.announcementSink?.announce(text);
+          this.announcements.announcePolite(text);
         }
       }
     }
@@ -1063,7 +1038,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     const button = (side: string) => this.renderRoot.querySelector<HTMLElement>(`[part="${side}-button"]`);
     if (page === (delta > 0 ? lastPage : 0) && activeElementIn(this.shadowRoot) === button(leaving)) button(staying)?.focus();
     this.categoryPage = page;
-    this.announcementSink?.announce(
+    this.announcements.announcePolite(
       this.rangeSummary(page * ACTIVE_PAGE_SIZE + 1, Math.min(total, (page + 1) * ACTIVE_PAGE_SIZE), total, label)
     );
   }

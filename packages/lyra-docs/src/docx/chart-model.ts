@@ -1,6 +1,6 @@
 import { SaxesParser } from 'saxes';
+import { CHART_NS as C } from './ooxml.js';
 
-const C = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const LIMITS = { bytes: 2 * 1024 * 1024, nodes: 50_000, depth: 64, series: 16, points: 500, text: 256 };
 const BAR = new Set(['barChart', 'bar3DChart']);

@@ -66,6 +66,22 @@ test('eligible historical policy preserves original property and paired attribut
   assert.ok(Object.isFrozen(resolved.policy.replacement));
 });
 
+test('a retired replacement may deprecate only with a supported current successor', () => {
+  const input = options();
+  const current = input.currentInventory.components[0];
+  current.surface.properties[0].deprecated = true;
+  current.surface.properties.push({ name: 'canonicalValue', type: 'boolean', default: false });
+  current.maturity.deprecations.push({ tag: 'lr-alpha', kind: 'property', name: 'value', since: 'unreleased',
+    removalNotBefore: '26.0.0', replacement: { kind: 'property', name: 'canonicalValue', usage: '.canonicalValue' } });
+  const context = assembleCompatibilityContext(input);
+  assert.equal(resolveCompatibilityRecord(context, key).replacementMember.name, 'value');
+  current.maturity.deprecations[0].replacement.name = 'value';
+  assert.throws(() => assembleCompatibilityContext(input), /Missing current supported replacement/u);
+  current.maturity.deprecations[0].replacement.name = 'canonicalValue';
+  current.surface.properties.pop();
+  assert.throws(() => assembleCompatibilityContext(input), /Missing current supported replacement/u);
+});
+
 test('historical evidence never permits early removal or drifting a surviving notice', () => {
   assert.throws(() => assembleCompatibilityContext(options('22.0.0')), /before.*23/u);
   const current = options('22.0.0');

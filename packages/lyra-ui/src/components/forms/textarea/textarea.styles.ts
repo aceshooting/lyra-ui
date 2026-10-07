@@ -1,5 +1,8 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { css } from 'lit';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -69,17 +72,8 @@ export const styles = css`
        grows to fill whatever is left. */
     block-size: 100%;
   }
-  [part="form-control-label"] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches -- the part always holds a literal slot child -- so emptiness is tracked
-     in JS (hasLabelSlot) and reflected as the hidden attribute, as in lr-select. */
-  [part="form-control-label"][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
   /* A column flex box: the native resize grip writes inline width/height onto the <textarea>
      itself, so the wrapper imposes no size and lets the field drive it -- except for the block
@@ -146,22 +140,7 @@ export const styles = css`
   [part="textarea"]::placeholder {
     color: var(--lr-color-text-quiet);
   }
-  [part~="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  [part~="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
-  }
+
   [part="footer"] {
     display: flex;
     justify-content: flex-end;
@@ -177,23 +156,14 @@ export const styles = css`
   /* Inspection mirror only -- the visible [part='count'] carries the same text for sighted users,
      while the spoken copy is appended to the shared light-DOM polite sink. */
   .count-announcement {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
+    ${visuallyHidden}
     margin: var(--lr-size-neg-1px);
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
   }
   [part="form-control"],
   [part="form-control-label"],
   [part~="hint"],
   [part="error"],
   [part="footer"] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 `;

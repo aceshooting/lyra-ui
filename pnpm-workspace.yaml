@@ -92,10 +92,10 @@ minimumReleaseAgeExclude:
   - '@changesets/should-skip-package@1.0.0'
   - '@changesets/types@7.0.0'
   - '@changesets/write@1.0.0'
-  - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0
-  - svelte@5.56.9
+  - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0 || 6.40.0
+  - svelte@5.56.9 || 5.57.2
   - papaparse@5.6.0
-  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0
+  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0
   - '@rolldown/binding-darwin-x64@1.2.5'
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
   - '@types/react@19.3.0'
@@ -124,8 +124,8 @@ minimumReleaseAgeExclude:
   - sharp@0.35.5
   - '@types/d3-zoom@3.0.9'
   - '@types/node@26.6.4'
-  - '@docx-editor.dev/core@2.25.0 || 2.26.0'
-  - '@docx-editor.dev/i18n@2.25.0 || 2.26.0'
+  - '@docx-editor.dev/core@2.25.0 || 2.26.0 || 2.27.0'
+  - '@docx-editor.dev/i18n@2.25.0 || 2.26.0 || 2.27.0'
   - '@pnpm/exe.android-arm64@12.9.1'
   - '@pnpm/exe.android-x64@12.9.1'
   - '@pnpm/exe.darwin-arm64@12.9.1'

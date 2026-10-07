@@ -1,3 +1,4 @@
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   getActiveNativeModal,
   getNativeModalMountTarget,
@@ -188,6 +189,112 @@ export interface AnnouncementSink {
   /** Drop this handle: its still-pending nodes are removed, their sweeps canceled, and the shared
    *  region is unmounted once the last handle releases. Idempotent. */
   release(): void;
+}
+
+/** Owns shared live-region handles for a component, including reconnect and adoption. */
+export class AnnouncementSinkController implements ReactiveController {
+  private readonly sinks = new Map<AnnouncementPoliteness, AnnouncementSink>();
+  private readonly states = new Map<string, string>();
+  private exclusiveChannel?: AnnouncementPoliteness;
+
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly options: { register?: boolean; eager?: readonly AnnouncementPoliteness[] } = {},
+  ) {
+    if (options.register !== false)
+      (host as HTMLElement & Partial<ReactiveControllerHost>).addController?.(this);
+  }
+
+  hostConnected(): void { this.connect(); }
+  hostDisconnected(): void { this.disconnect(); }
+
+  connect(): void {
+    this.states.clear();
+    this.syncSinks();
+    for (const politeness of this.eagerChannels()) this.sink(politeness);
+  }
+
+  disconnect(): void {
+    this.releaseSinks();
+    this.states.clear();
+  }
+
+  /** A host's adoptedCallback calls this when it moves to another document. */
+  adopted(): void { this.syncSinks(); }
+
+  /** First observation is silent; later changed states produce one announcement. */
+  transition(
+    channel: string,
+    state: string,
+    message = '',
+    politeness?: AnnouncementPoliteness,
+  ): void {
+    const fingerprint = `${state}\0${message}`;
+    const previous = this.states.get(channel);
+    this.states.set(channel, fingerprint);
+    if (previous === undefined || previous === fingerprint) return;
+    const resolved = politeness ?? (state === 'loading' ? 'polite' : state === 'error' ? 'assertive' : undefined);
+    if (resolved) this.announce(message, resolved);
+  }
+
+  announce(message: string, politeness: AnnouncementPoliteness = 'polite'): void {
+    if (!message || !this.host.isConnected) return;
+    this.syncSinks();
+    this.sink(politeness).announce(message);
+  }
+
+  announcePolite(message: string): void { this.announce(message, 'polite'); }
+  announceAssertive(message: string): void { this.announce(message, 'assertive'); }
+
+  /** The mounted channel for components that schedule messages through a retained handle. */
+  current(politeness: AnnouncementPoliteness): AnnouncementSink | undefined {
+    if (!this.host.isConnected) return undefined;
+    this.syncSinks();
+    return this.sink(politeness);
+  }
+
+  /** Releases a lazily mounted channel when its interaction ends. */
+  releaseChannel(politeness: AnnouncementPoliteness): void {
+    this.sinks.get(politeness)?.release();
+    this.sinks.delete(politeness);
+  }
+
+  /** Keeps exactly one pre-mounted channel for hosts with a dynamic live setting. */
+  setExclusiveChannel(politeness: AnnouncementPoliteness | undefined): void {
+    if (this.exclusiveChannel === politeness) return;
+    this.exclusiveChannel = politeness;
+    this.releaseSinks();
+    if (politeness && this.host.isConnected) this.sink(politeness);
+  }
+
+  private eagerChannels(): readonly AnnouncementPoliteness[] {
+    return this.exclusiveChannel ? [this.exclusiveChannel] : this.options.eager ?? [];
+  }
+
+  private sink(politeness: AnnouncementPoliteness): AnnouncementSink {
+    let sink = this.sinks.get(politeness);
+    if (!sink) {
+      sink = acquireAnnouncementSink(politeness, { document: this.host.ownerDocument, source: this.host });
+      this.sinks.set(politeness, sink);
+    }
+    return sink;
+  }
+
+  private syncSinks(): void {
+    if (!this.host.isConnected) { this.releaseSinks(); return; }
+    for (const sink of this.sinks.values()) {
+      if (sink.element.ownerDocument !== this.host.ownerDocument) {
+        this.releaseSinks();
+        for (const politeness of this.eagerChannels()) this.sink(politeness);
+        break;
+      }
+    }
+  }
+
+  private releaseSinks(): void {
+    for (const sink of this.sinks.values()) sink.release();
+    this.sinks.clear();
+  }
 }
 
 /**

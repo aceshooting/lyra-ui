@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -55,8 +56,7 @@ export const styles = css`
     );
     color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
   }
   /* :where() zeroes the wrapped selectors' specificity, leaving :hover alone at (0,1,0). Unwrapped,
@@ -108,8 +108,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part~='trigger']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Present alongside 'trigger' after a built-in CSV/JSON export fails, until the next attempt --
      see the matching 'lr-export-error' JSDoc. Paired with a live-region announcement of the same
@@ -191,8 +190,7 @@ export const styles = css`
     gap: var(--lr-size-1px);
     box-sizing: border-box;
     inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     text-align: center;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
@@ -211,8 +209,7 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='menu-item']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='menu-item']:disabled {
     opacity: var(--lr-opacity-disabled);

@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -108,8 +109,7 @@ export const styles = css`
     box-sizing: border-box;
     display: block;
     inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     overflow: hidden;
     text-overflow: ellipsis;

@@ -38,6 +38,22 @@ function abortError(): Error {
 }
 
 describe('lr-include', () => {
+  it('builds selection quote context from its light-DOM content', async () => {
+    const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+    const paragraph = document.createElement('p');
+    paragraph.textContent = 'First match and second match';
+    el.append(paragraph);
+    expect(await el.search('match')).to.equal(2);
+    const textNode = paragraph.firstChild!;
+    const range = document.createRange();
+    range.setStart(textNode, 23);
+    range.setEnd(textNode, 28);
+    const anchor = (el as unknown as { computeSelectionAnchor(range: Range, text: string): { prefix?: string; quote?: string } | null })
+      .computeSelectionAnchor(range, 'match');
+    expect(anchor?.quote).to.equal('match');
+    expect(anchor?.prefix).to.equal('First match and second');
+  });
+
   afterEach(() => {
     __setHtmlSanitizerForTesting(undefined);
     __clearIncludeResourceCacheForTesting();

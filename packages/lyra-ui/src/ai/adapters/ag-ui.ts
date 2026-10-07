@@ -1,5 +1,6 @@
 import { parseJsonPatch, type AgentStreamEvent } from '../runtime.js';
 import type { ChatMessage, ChatMessageRole, ToolInvocation } from '../types.js';
+import { positiveInteger } from '../../internal/numbers.js';
 import {
   createProviderSnapshotBudget,
   resolveProviderSnapshotLimits,
@@ -50,12 +51,6 @@ type EventWithoutCursor = AgentStreamEvent extends infer Event
   : never;
 
 const encoder = new TextEncoder();
-
-function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
-}
 
 function resolveLimits(limits: Partial<AgUiAdapterLimits>): Readonly<AgUiAdapterLimits> {
   return Object.freeze({

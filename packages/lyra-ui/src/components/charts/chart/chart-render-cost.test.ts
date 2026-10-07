@@ -1,10 +1,11 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './line-chart.js';
 import './histogram.js';
 import './box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
 import type { LyraHistogram } from './histogram.class.js';
+import { ChartTokenCache } from './chart-token-cache.js';
 
 interface RuntimeProbe {
   render(): void;
@@ -107,6 +108,93 @@ async function countProbes(root: ShadowRoot, body: () => Promise<void>): Promise
 }
 
 describe('canvas color resolution', () => {
+  it('tracks currentColor, authored CSS variables, and root rem context across theme notifications', async () => {
+    const scope = await fixture<HTMLElement>(html`<div style="color: rgb(1, 2, 3); --chart-accent: rgb(4, 5, 6)"></div>`);
+    const cache = new ChartTokenCache(scope);
+    cache.resolve('currentColor', 'transparent');
+    cache.resolve('var(--chart-accent)', 'transparent');
+    cache.rememberTheme();
+    scope.style.setProperty('--unrelated-layout-size', '42px');
+    expect(cache.hasThemeChanged()).to.equal(false);
+
+    scope.style.color = 'rgb(7, 8, 9)';
+    expect(cache.hasThemeChanged()).to.equal(true);
+    cache.rememberTheme();
+    scope.style.setProperty('--chart-accent', 'rgb(10, 11, 12)');
+    expect(cache.hasThemeChanged()).to.equal(true);
+    cache.rememberTheme();
+
+    cache.beginThemeDraw();
+    cache.resolve('currentColor', 'transparent');
+    cache.rememberTheme();
+    scope.style.setProperty('--chart-accent', 'rgb(13, 14, 15)');
+    expect(cache.hasThemeChanged(), 'retired color variables leave the draw dependency set').to.equal(false);
+
+    cache.beginThemeDraw();
+    cache.resolve('var(--missing-accent, var(--chart-accent))', 'transparent');
+    cache.rememberTheme();
+    scope.style.setProperty('--chart-accent', 'rgb(16, 17, 18)');
+    expect(cache.hasThemeChanged(), 'a fallback variable remains a live dependency').to.equal(true);
+    cache.rememberTheme();
+
+    const root = document.documentElement;
+    const previousFontSize = root.style.fontSize;
+    try {
+      root.style.fontSize = '18px';
+      cache.rememberTheme();
+      root.style.fontSize = '19px';
+      expect(cache.hasThemeChanged()).to.equal(true);
+    } finally {
+      root.style.fontSize = previousFontSize;
+    }
+  });
+
+  it('skips a chart rebuild for ancestor style and class writes with unchanged theme inputs', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <style>.retinted lr-line-chart { --lr-chart-tooltip-bg: rgb(9, 8, 7); }</style>
+      <lr-line-chart without-animation .labels=${['A', 'B']}
+        .datasets=${[{ label: 'x', data: [1, 2] }]}></lr-line-chart>
+    </div>`);
+    const chart = host.querySelector<LyraChart>('lr-line-chart')!;
+    await waitUntil(() => peer(chart) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await aTimeout(0);
+    const updates = countUpdates(peer(chart)!);
+
+    host.style.setProperty('--unrelated-layout-size', '42px');
+    host.classList.add('unrelated-layout');
+    await aTimeout(0);
+    expect(updates.count).to.equal(0);
+
+    host.classList.add('retinted');
+    await aTimeout(0);
+    expect(updates.count).to.equal(1);
+    const tooltip = (peer(chart) as unknown as {
+      options: { plugins: { tooltip: { backgroundColor: string } } };
+    }).options.plugins.tooltip;
+    expect(tooltip.backgroundColor).to.equal('rgb(9, 8, 7)');
+  });
+
+  it('skips a box-plot rebuild for unrelated ancestor writes but redraws on a theme token', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <style>.retinted lr-box-plot { --lr-chart-tooltip-bg: rgb(7, 8, 9); }</style>
+      <lr-box-plot .datasets=${[{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}></lr-box-plot>
+    </div>`);
+    const plot = host.querySelector<LyraBoxPlot>('lr-box-plot')!;
+    const runtime = () => (plot as unknown as { chart?: RuntimeProbe }).chart;
+    await waitUntil(() => runtime() !== undefined, 'box plot did not initialize', { timeout: 5000 });
+    await aTimeout(0);
+    const updates = countUpdates(runtime()!);
+
+    host.style.setProperty('--unrelated-layout-size', '42px');
+    host.classList.add('unrelated-layout');
+    await aTimeout(0);
+    expect(updates.count).to.equal(0);
+
+    host.classList.add('retinted');
+    await aTimeout(0);
+    expect(updates.count).to.equal(1);
+  });
+
   it('does not re-probe theme colors on a data-only lr-chart redraw', async () => {
     const el = await fixture<LyraChart>(html`<lr-line-chart without-animation area
       .labels=${labelsOf(5)} .datasets=${seriesOf(3, 5)}></lr-line-chart>`);

@@ -1,5 +1,7 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
+  formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -131,8 +133,7 @@ export const styles = css`
       --lr-token-input-focus-border-color,
       var(--lr-color-brand)
     );
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     ${formControlFocusHalo}
   }
   /* padding-block: 0 replaces the UA's 1px default, as lr-input does on its [part='input']: the
@@ -203,8 +204,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     padding: 0;
     background: transparent;
@@ -235,8 +235,7 @@ export const styles = css`
     );
   }
   [part="remove"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="remove"][aria-disabled="true"] {
     cursor: default;
@@ -250,8 +249,7 @@ export const styles = css`
      non-focusable text span and its current metrics. */
   [part="token-label"] {
     align-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
     cursor: pointer;
     /* Hover/active below only repaint background, so that is all this needs; without it this
@@ -278,8 +276,7 @@ export const styles = css`
     );
   }
   [part="token-label"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host(:disabled) [part="token-label"] {
     cursor: default;
@@ -320,8 +317,6 @@ export const styles = css`
   [part="form-control-label"],
   [part="hint"],
   [part="error"] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 `;

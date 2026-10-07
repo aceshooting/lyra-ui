@@ -1,8 +1,10 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import './retrieval-compare.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraRetrievalCompare, RetrievalComparisonSet } from './retrieval-compare.js';
 
 function chunk(id: string, score: number, rank?: number): RetrievalChunk {
@@ -86,6 +88,21 @@ it('honors top-k and emits the full selected set/chunk pair', async () => {
   const pending = oneEvent(el, 'lr-chunk-select');
   (el.shadowRoot!.querySelector('[part="chunk"]') as HTMLButtonElement).click();
   expect((await pending).detail).to.deep.equal({ setId: 'baseline', chunk: sets[0]!.chunks[1] });
+});
+
+it('uses one roving tab stop per result set while keeping chunk activation intact', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  const columns = [...el.shadowRoot!.querySelectorAll('[part="set"]')];
+  const first = [...columns[0]!.querySelectorAll<HTMLButtonElement>('[part~="chunk"]')];
+  const second = [...columns[1]!.querySelectorAll<HTMLButtonElement>('[part~="chunk"]')];
+  expect(first.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  expect(second.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
+  await focusByKeyboard(first[0]!);
+  first[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  expect(el.shadowRoot!.activeElement === first[1]).to.equal(true);
+  await el.updateComplete;
+  expect(first.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
+  expect(second.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
 });
 
 it('renders a localized empty state and remains accessible at populated state', async () => {
@@ -318,14 +335,6 @@ it('omits blank and later duplicate set and nested chunk ids before overlap, ren
 });
 
 describe('chunk-selected cssprop escape hatch', () => {
-  function resolvedInShadow(el: LyraRetrievalCompare, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   it('recolors the selected chunk border from --lr-retrieval-compare-selected-border set on the host', async () => {
     const el = (await fixture(

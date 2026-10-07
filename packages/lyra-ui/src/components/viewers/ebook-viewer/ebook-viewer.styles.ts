@@ -22,59 +22,6 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
-  [part="previous-button"],
-  [part="next-button"] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* The shared --lr-icon-button-size floor, as on lr-code-block's [part='toggle']. The toolbar
-       has room (flex, justify-content: space-between), so the button box itself grows rather than
-       relying on invisible hit-slop. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
-  }
-  [part="previous-button"]:hover,
-  [part="next-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  [part="previous-button"]:active,
-  [part="next-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="previous-button"]:disabled,
-  [part="next-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
-  }
-  [part="previous-button"]:focus-visible,
-  [part="next-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part="previous-icon"],
-  [part="next-icon"] {
-    display: inline-flex;
-  }
-  [part="previous-icon"] {
-    transform: rotate(180deg);
-  }
-  :host(:dir(rtl)) [part="previous-icon"] {
-    transform: rotate(0deg);
-  }
-  :host(:dir(rtl)) [part="next-icon"] {
-    transform: rotate(180deg);
-  }
   [part="mount"] {
     flex: 1 1 auto;
     min-block-size: var(--lr-size-10rem);

@@ -1,4 +1,7 @@
+import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 // The disclosure shape (chevron first, rotated when expanded, mirrored only while collapsed under
 // RTL, brand hover) follows lr-thinking-panel, the sibling disclosure in the same message. The
@@ -39,23 +42,15 @@ export const styles = css`
   }
 
   [part='header'] {
-    display: flex;
+    ${disclosureHeader}
     flex-wrap: wrap;
-    align-items: center;
-    gap: var(--lr-space-xs);
-    inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+
+    ${iconHitTarget}
     box-sizing: border-box;
-    padding: var(--lr-space-s) var(--lr-space-m);
-    border: none;
-    background: none;
-    font: inherit;
+
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
-    color: var(--lr-color-text);
-    text-align: start;
-    cursor: pointer;
+
     transition: var(--lr-transition-interactive);
   }
 
@@ -175,7 +170,7 @@ export const styles = css`
     margin: 0;
   }
 
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='header'],
     [part='body'] {
       padding: var(--lr-space-xs) var(--lr-space-s);

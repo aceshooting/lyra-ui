@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { type PropertyValues, type TemplateResult } from 'lit';
+import type { PropertyValues, TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';

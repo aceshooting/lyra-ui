@@ -386,3 +386,15 @@ export const ThemedFilterRow: Story = {
     </div>
   `,
 };
+
+export const ValueEvents: Story = {
+  render: () => html`
+    <div @lr-input=${(event: CustomEvent<{ value: string }>) => {
+      const output = (event.currentTarget as HTMLElement).querySelector('output');
+      if (output) output.textContent = event.detail.value;
+    }}>
+      <lr-date-input label="Date" value="2025-01-02" with-clear></lr-date-input>
+      <output aria-live="polite">2025-01-02</output>
+    </div>
+  `,
+};

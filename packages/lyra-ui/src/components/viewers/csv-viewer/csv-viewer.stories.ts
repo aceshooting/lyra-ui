@@ -14,6 +14,12 @@ const sample = `Name,Role,Notes\nAda Lovelace,Mathematician,"Wrote notes on the 
 const src = `data:text/csv;charset=utf-8,${encodeURIComponent(sample)}`;
 export const QuotedFields: Story = { render: () => html`<lr-csv-viewer src=${src} name="scientists.csv"></lr-csv-viewer>` };
 export const NoHeaderRow: Story = { render: () => html`<lr-csv-viewer src=${src} name="scientists.csv" without-header-row></lr-csv-viewer>` };
+export const SingleColumn: Story = {
+  render: () => html`<lr-csv-viewer
+    src=${`data:text/csv,${encodeURIComponent('Name\nAda\nGrace')}`}
+    name="names.csv"
+  ></lr-csv-viewer>`,
+};
 export const Empty: Story = { render: () => html`<lr-csv-viewer></lr-csv-viewer>` };
 
 /** Baseline narrow-allocation coverage with long cell content and horizontal scrolling. */

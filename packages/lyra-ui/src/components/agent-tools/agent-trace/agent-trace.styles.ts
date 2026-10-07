@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -34,8 +35,7 @@ export const styles = css`
   [part='handoff'] {
     display: block;
     inline-size: 100%;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: 0;
@@ -59,8 +59,7 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='handoff']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='handoff'][data-active] {
     background: var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet));

@@ -1,21 +1,18 @@
 import { Inflate } from 'fflate';
 import { SaxesParser } from 'saxes';
+import { DOCX_ZIP_LIMITS, DocxZipAdmissionError, inspectDocxZip, validDocxZipName, type DocxZipEntry } from '@aceshooting/lyra-ui/utils/docx-zip-admission.js';
 import { CRC32_TABLE, inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
-import { DOCX_LIMITS } from './commands.js';
+import { CONTENT_TYPE_NS as TYPE_NS, OFFICE_REL_NS, PACKAGE_REL_NS as REL_NS, resolveOoxmlSegments, WORD_NS } from './ooxml.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
-const MiB = 1024 * 1024;
 // The input cap matches the largest package the session exports, so a saved document always reopens.
-const LIMITS = { input: DOCX_LIMITS.inputBytes, entries: 2048, entry: 16 * MiB, expanded: 64 * MiB, xml: 16 * MiB, nodes: DOCX_LIMITS.xmlNodes, depth: 128, totalPixels: 64_000_000, images: 256 };
+const LIMITS = { ...DOCX_ZIP_LIMITS, totalPixels: 64_000_000, images: 256 };
 /** External targets the engine records but never fetches: links, Word templates and linked pictures. */
 const INERT_EXTERNAL = new Set(['hyperlink', 'attachedTemplate', 'image']);
 /** Embedded content that can execute or import foreign markup stays refused; fonts and OLE/chart packages are opaque. */
 const ACTIVE_INTERNAL = new Set(['aFChunk', 'control']);
-const REL_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
-const TYPE_NS = 'http://schemas.openxmlformats.org/package/2006/content-types';
-const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const OFFICE_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+const OFFICE_REL = `${OFFICE_REL_NS}/`;
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
 class Refusal extends Error {
@@ -32,85 +29,8 @@ async function checkpoint(signal?: AbortSignal): Promise<void> {
   lastYield = performance.now();
   check(signal);
 }
-interface Entry { name: string; size: number; packed: number; crc: number; method: number; flags: number; offset: number; start: number; end: number }
-function validName(name: string): boolean {
-  return name.length > 0 && name.length <= 512 && !/[\\%\x00-\x20\x7f:?#]/.test(name) &&
-    !name.startsWith('/') && name.split('/').every((part, i, all) => part !== '.' && part !== '..' && (part !== '' || i === all.length - 1));
-}
-function archive(bytes: Uint8Array, signal?: AbortSignal): Entry[] {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const u16 = (at: number) => view.getUint16(at, true);
-  const u32 = (at: number) => view.getUint32(at, true);
-  let eocd = -1;
-  for (let at = bytes.length - 22; at >= Math.max(0, bytes.length - 65557); at--) {
-    if (u32(at) === 0x06054b50 && at + 22 + u16(at + 20) === bytes.length) { eocd = at; break; }
-  }
-  if (eocd < 0) reject();
-  const count = u16(eocd + 10), centralSize = u32(eocd + 12), central = u32(eocd + 16);
-  if (u16(eocd + 4) || u16(eocd + 6) || u16(eocd + 8) !== count || count === 65535 || central === 0xffffffff || centralSize === 0xffffffff) reject();
-  if (count > LIMITS.entries) reject('resource-limit');
-  if (central + centralSize !== eocd) reject();
-  const entries: Entry[] = [], names = new Set<string>();
-  let at = central, expanded = 0;
-  function extra(start: number, size: number, name: string): void {
-    const end = start + size;
-    while (start < end) {
-      if (start + 4 > end) reject();
-      const id = u16(start), length = u16(start + 2);
-      if (id === 1 || id === 0x9901 || start + 4 + length > end) reject();
-      // An Info-ZIP Unicode path is admitted only when it spells exactly the validated UTF-8 name.
-      if (id === 0x7075 && (length < 5 || bytes[start + 4] !== 1 ||
-        decoder.decode(bytes.subarray(start + 9, start + 4 + length)) !== name)) reject();
-      start += 4 + length;
-    }
-  }
-  for (let i = 0; i < count; i++) {
-    check(signal);
-    if (at + 46 > eocd || u32(at) !== 0x02014b50) reject();
-    const flags = u16(at + 8), method = u16(at + 10), crc = u32(at + 16), packed = u32(at + 20), size = u32(at + 24);
-    const nameSize = u16(at + 28), extraSize = u16(at + 30), commentSize = u16(at + 32), offset = u32(at + 42);
-    if ((flags & ~0x080e) || (method !== 0 && method !== 8) || u16(at + 34) || size === 0xffffffff || packed === 0xffffffff || offset === 0xffffffff) reject();
-    if (at + 46 + nameSize + extraSize + commentSize > eocd) reject();
-    const nameBytes = bytes.subarray(at + 46, at + 46 + nameSize);
-    if (!(flags & 0x800) && nameBytes.some(byte => byte > 127)) reject();
-    const name = decoder.decode(nameBytes);
-    if (!validName(name) || names.has(name.toLowerCase()) || (name.endsWith('/') && size !== 0)) reject();
-    names.add(name.toLowerCase());
-    if (size > LIMITS.entry || (expanded += size) > LIMITS.expanded) reject('resource-limit');
-    extra(at + 46 + nameSize, extraSize, name);
-    if (offset + 30 > central || u32(offset) !== 0x04034b50 || u16(offset + 6) !== flags || u16(offset + 8) !== method) reject();
-    const localNameSize = u16(offset + 26), localExtraSize = u16(offset + 28);
-    const start = offset + 30 + localNameSize + localExtraSize;
-    if (start + packed > central || localNameSize !== nameSize || !nameBytes.every((byte, j) => bytes[offset + 30 + j] === byte)) reject();
-    extra(offset + 30 + localNameSize, localExtraSize, name);
-    const descriptor = Boolean(flags & 8);
-    for (const [position, expected] of [[14, crc], [18, packed], [22, size]] as const) {
-      const actual = u32(offset + position);
-      if (actual !== expected && (!descriptor || actual !== 0)) reject();
-    }
-    let end = start + packed;
-    if (descriptor) {
-      if (end + 12 > central) reject();
-      if (u32(end) === 0x08074b50) end += 4;
-      if (end + 12 > central || u32(end) !== crc || u32(end + 4) !== packed || u32(end + 8) !== size) reject();
-      end += 12;
-    }
-    if (method === 0 && packed !== size) reject();
-    entries.push({ name, flags, size, packed, crc, method, offset, start, end });
-    at += 46 + nameSize + extraSize + commentSize;
-  }
-  if (at !== eocd) reject();
-  let end = 0;
-  for (const entry of [...entries].sort((a, b) => a.offset - b.offset)) {
-    if (entry.offset !== end) reject();
-    end = entry.end;
-  }
-  if (end !== central) reject();
-  for (const name of ['[Content_Types].xml', '_rels/.rels', 'word/document.xml']) {
-    if (!entries.some(entry => entry.name === name)) reject();
-  }
-  return entries;
-}
+type Entry = DocxZipEntry;
+
 async function expand(bytes: Uint8Array, entry: Entry, signal?: AbortSignal): Promise<Uint8Array> {
   let size = 0, crc = 0xffffffff;
   const chunks: Uint8Array[] = [];
@@ -144,12 +64,8 @@ function internalTarget(part: string, target: string): string {
   if (target.includes('%') || /[\x00-\x20\x7f]/.test(target)) reject();
   const path = target.split('#')[0]!;
   const source = part === '_rels/.rels' ? [] : part.replace(/_rels\/([^/]+)\.rels$/, '$1').split('/').slice(0, -1);
-  const parts = path.startsWith('/') ? [] : source;
-  for (const segment of path.split('/')) {
-    if (!segment || segment === '.') continue;
-    if (segment === '..') { if (!parts.length) reject(); parts.pop(); }
-    else parts.push(segment);
-  }
+  const parts = resolveOoxmlSegments(source, path);
+  if (!parts) reject();
   return parts.join('/');
 }
 async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, signal?: AbortSignal): Promise<void> {
@@ -180,7 +96,7 @@ async function inspectXml(bytes: Uint8Array, name: string, info: PackageInfo, si
         info.defaults.set(ext, type);
       } else if (node.local === 'Override') {
         const part = attr('PartName');
-        if (!part.startsWith('/') || !validName(part.slice(1)) || info.overrides.has(part.slice(1))) reject();
+        if (!part.startsWith('/') || !validDocxZipName(part.slice(1)) || info.overrides.has(part.slice(1))) reject();
         info.overrides.set(part.slice(1), type);
       } else reject();
     }
@@ -233,7 +149,7 @@ export async function admitDocx(bytes: Uint8Array, signal?: AbortSignal): Promis
     check(signal);
     if (!(bytes instanceof Uint8Array)) reject();
     if (bytes.length > LIMITS.input) reject('resource-limit');
-    const entries = archive(bytes, signal);
+    const entries = inspectDocxZip(bytes, signal);
     await checkpoint(signal);
     const info: PackageInfo = { nodes: 0, defaults: new Map(), overrides: new Map(), names: new Set(entries.map(entry => entry.name)), images: new Set(), officeDocument: false };
     const content = entries.find(entry => entry.name === '[Content_Types].xml')!;
@@ -281,6 +197,6 @@ export async function admitDocx(bytes: Uint8Array, signal?: AbortSignal): Promis
     check(signal);
     return { ok: true, value: undefined };
   } catch (error) {
-    return { ok: false, code: signal?.aborted ? 'aborted' : error instanceof Refusal ? error.code : 'invalid-document' };
+    return { ok: false, code: signal?.aborted ? 'aborted' : error instanceof Refusal || error instanceof DocxZipAdmissionError ? error.code : 'invalid-document' };
   }
 }

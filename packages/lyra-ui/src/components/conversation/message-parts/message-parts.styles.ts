@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -116,11 +118,10 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
 
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='base'] {
       gap: var(--lr-space-xs);
     }
@@ -139,8 +140,7 @@ export const styles = css`
   [part='resume'] {
     --_lr-message-parts-resume-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
     --_lr-message-parts-resume-active-bg: color-mix(in oklab, var(--_lr-message-parts-resume-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

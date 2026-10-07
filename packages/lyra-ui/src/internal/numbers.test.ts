@@ -9,10 +9,25 @@ import {
   finiteMidpoint,
   finiteRatio,
   finiteRange,
+  extent,
+  minMax,
   isArrowKey,
   isSliderKey,
   decimalPlaces,
 } from './numbers.js';
+
+it('scans numeric and point extents in one pass, returning null only for empty input', () => {
+  expect(minMax([])).to.equal(null);
+  expect(minMax([3, -2, 8, 1])).to.deep.equal([-2, 8]);
+  expect(extent([], (point: { x: number }) => point.x, () => 0)).to.equal(null);
+  expect(
+    extent(
+      [{ x: 3, y: 8 }, { x: -2, y: 4 }, { x: 1, y: -5 }],
+      (point) => point.x,
+      (point) => point.y,
+    ),
+  ).to.deep.equal({ minX: -2, maxX: 3, minY: -5, maxY: 8 });
+});
 
 it('normalizes finite ranges without leaking non-finite input', () => {
   expect(finiteRange(Number.NaN, 5, 0, 10)).to.equal(5);

@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -46,8 +47,7 @@ export const styles = css`
   [part="fit-control"],
   [part="rotate-button"],
   [part="annotate-toggle"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -207,8 +207,7 @@ export const styles = css`
      --lr-image-viewer-highlight-*-bg knobs still back each fill. */
   [part="highlight"] {
     position: absolute;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-medium) solid
       var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
     --_lr-image-viewer-highlight-fill: var(

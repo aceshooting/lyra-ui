@@ -448,7 +448,7 @@ export const CanvasLayeredCommunities: Story = {
         </button>
         <output>Hover a node or link</output>
         <lr-graph
-          aria-label="Layered retrieval pipeline"
+          label="Layered retrieval pipeline"
           renderer="canvas"
           layout="layered"
           selection-mode="multiple"
@@ -499,4 +499,14 @@ export const ContainerFit: Story = {
       ></lr-graph>
     </div>
   `,
+};
+
+export const CanvasKeyboardNavigation: Story = {
+  parameters: { docs: { description: { story: 'The screen-reader data list shows 200 entries. Tab to the single virtual cursor, then use arrows, Home or End to reach any of the 300 nodes and 299 links.' } } },
+  render: () => html`<lr-graph
+    renderer="canvas" layout="layered" label="Document relationships"
+    width="520" height="320" style="height:20rem"
+    .nodes=${Array.from({ length: 300 }, (_, index) => ({ id: `n${index}`, label: `Document ${index + 1}` }))}
+    .edges=${Array.from({ length: 299 }, (_, index) => ({ source: `n${index}`, target: `n${index + 1}` }))}
+  ></lr-graph>`,
 };

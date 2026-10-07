@@ -12,6 +12,8 @@ import {
 } from '../../../internal/resource-loader.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { TableViewerScrollController, tableHighlightsForColumn, tableHighlightsForRow } from '../table-viewer-shared.js';
+import { advanceViewerSearchIndex, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import {
   DocumentAnchorTarget,
   prioritizedHighlightCandidates,
@@ -40,6 +42,13 @@ import {
 import { LatestTask } from '../../../internal/latest-task.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
+import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
+export type {
+  LyraViewerDiagnostic,
+  LyraViewerDiagnosticCode,
+  LyraViewerDiagnosticEventDetail,
+  LyraViewerDiagnosticSeverity,
+} from '../viewer-diagnostics.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import {
   viewerSemanticLabel,
@@ -60,11 +69,6 @@ type CsvState =
   | { kind: 'loading' }
   | { kind: 'loaded'; rows: unknown[][] }
   | { kind: 'error'; message: string };
-type OwnedAnimationFrameWait = {
-  owner: Window;
-  handle?: number;
-  resolve: (isCurrent: boolean) => void;
-};
 const MAX_SEARCH_MATCHES = 1_000;
 
 /** A rendered header row shifts every raw-grid (1-based, header row included) row number down by
@@ -90,6 +94,7 @@ interface ResolvedCellHighlight {
 export interface LyraCsvViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -116,8 +121,10 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * with streaming row callbacks and the same limits as a second boundary.
  *
  * @customElement lr-csv-viewer
- * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, the
- *   bounded parse exceeds a resource ceiling, or PapaParse returns recoverable diagnostics.
+ * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, or the
+ *   bounded parse exceeds a resource ceiling.
+ * @event lr-viewer-diagnostic - Structured, non-fatal PapaParse diagnostics when a partial grid
+ *   remains rendered. `detail.diagnostic.cause` contains the bounded diagnostic array.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -210,12 +217,12 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
-  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
+  private readonly tableScroll = new TableViewerScrollController(this);
 
   /** A same-task DOM move keeps the loaded table; a genuine disconnect cancels pending work. */
   private readonly detached = new DeferredTeardown(() => {
     this.loadTask.next();
-    this.cancelPendingAnimationFrames();
+    this.tableScroll.cancel();
   });
 
   override connectedCallback(): void {
@@ -238,31 +245,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.detached.flush();
-    this.cancelPendingAnimationFrames();
+    this.tableScroll.cancel();
     this.announcements.adopted();
-  }
-
-  private waitForOwnerAnimationFrame(): Promise<boolean> {
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || !this.isConnected) return Promise.resolve(false);
-    return new Promise<boolean>((resolve) => {
-      const pending: OwnedAnimationFrameWait = { owner, resolve };
-      this.pendingAnimationFrames.add(pending);
-      pending.handle = owner.requestAnimationFrame(() => {
-        if (!this.pendingAnimationFrames.delete(pending)) return;
-        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
-      });
-    });
-  }
-
-  private cancelPendingAnimationFrames(): void {
-    const pendingFrames = [...this.pendingAnimationFrames];
-    this.pendingAnimationFrames.clear();
-    for (const pending of pendingFrames) {
-      if (pending.handle !== undefined)
-        pending.owner.cancelAnimationFrame(pending.handle);
-      pending.resolve(false);
-    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -358,8 +342,17 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       this.fetchState = { kind: 'loaded', rows: result.data };
       if (this.searchQuery) await this.search(this.searchQuery);
       if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
-      if (result.errors.length)
-        this.emit('lr-render-error', { error: result.errors });
+      if (result.errors.length) {
+        this.emit('lr-viewer-diagnostic', {
+          diagnostic: Object.freeze({
+            code: 'delimited-parse-diagnostic',
+            severity: 'warning',
+            fatal: false,
+            source: 'papaparse',
+            cause: result.errors,
+          } as const),
+        });
+      }
     } catch (error) {
       if (
         isAbortError(error) ||
@@ -384,9 +377,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** `rawRow` is 1-based, including the header row when present -- the same raw-file-grid
    *  addressing convention every `cell-range` anchor uses. */
   private cellHighlightsForRow(rawRow: number): ResolvedCellHighlight[] {
-    return this.cellHighlights.filter(
-      ({ parsed }) => rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
-    );
+    return tableHighlightsForRow(this.cellHighlights, rawRow);
   }
 
   private renderCell(
@@ -395,10 +386,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     rowHighlights: ResolvedCellHighlight[],
     role: 'cell' | 'columnheader'
   ): TemplateResult {
-    const colHighlights = rowHighlights.filter(
-      (entry) =>
-        colIndex >= entry.parsed.startCol && colIndex <= entry.parsed.endCol
-    );
+    const colHighlights = tableHighlightsForColumn(rowHighlights, colIndex);
     if (!colHighlights.length)
       return html`<div part="cell" role=${role}>${cell(value)}</div>`;
     const active = colHighlights.find(
@@ -495,7 +483,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     return this.fetchState === loadedState;
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'cell-range' || anchor.sheet) return false; // csv has no sheets
     const parsed = parseCellRange(anchor.range);
     if (!parsed) return false;
@@ -506,21 +494,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     const list = this.renderRoot.querySelector(tag('virtual-list')) as
       | (HTMLElement & { updateComplete?: Promise<unknown> })
       | null;
-    if (list?.updateComplete) await list.updateComplete;
-    if (!(await this.waitForOwnerAnimationFrame())) return;
-    const row = list?.shadowRoot?.querySelector(
-      '[part="row"][aria-current="true"]'
-    );
-    const target = row?.querySelectorAll('[part~="cell"]')[col] as
-      | HTMLElement
-      | undefined;
-    target?.scrollIntoView({
-      behavior: prefersReducedMotion(this)
-        ? 'auto'
-        : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    await this.tableScroll.scrollColumnIntoView(list, col);
   }
 
   // -- search ---------------------------------------------------------------------------------------
@@ -570,8 +544,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
    *  when there are no matches. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex =
-      (this.searchActiveIndex + 1) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
     this.emitSearchChange();
     const match = this.searchMatches[this.searchActiveIndex]!;
     await this.jumpToCell(match.row, match.col);
@@ -582,9 +555,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
    *  when there are no matches. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex =
-      (this.searchActiveIndex - 1 + this.searchMatches.length) %
-      this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
     this.emitSearchChange();
     const match = this.searchMatches[this.searchActiveIndex]!;
     await this.jumpToCell(match.row, match.col);
@@ -599,21 +570,13 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.activeRowKey = '';
-    this.emit('lr-search-change', {
-      query: '',
-      matchCount: 0,
-      matchCountExact: true,
-      activeIndex: -1,
-    });
+    this.emit('lr-search-change', viewerSearchDetail('', 0, true, -1));
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.emit('lr-search-change', viewerSearchDetail(
+      this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex,
+    ));
   }
 
   private stopInternalEvent = (event: Event): void => {

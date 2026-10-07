@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -37,7 +38,7 @@ export const styles = css`
     background: var(--lr-color-danger-quiet);
   }
 
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='loading'],
     [part='error'] {
       padding: var(--lr-space-s);

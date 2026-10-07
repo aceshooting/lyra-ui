@@ -1,3 +1,5 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './retrieval-results.js';
 import type {
@@ -26,7 +28,8 @@ expectLocaleFallback('ar-u-nu-arab', [
   'chunkInspectorEmpty',
   'chunkInspectorLabel',
   'chunkScore',
-  'retrievalResultsSelectRow',
+  'retrievalResultsSelectRowOrdinal',
+  'chunkInspectorOpenOrdinal',
   'scoreTierMedium',
   'showMore',
   'valueInvalid',
@@ -48,12 +51,6 @@ async function settleInitialAnnouncement(
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
   );
   await el.updateComplete;
-}
-
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
-  );
 }
 
 const chunks: RetrievalChunk[] = [
@@ -1122,6 +1119,31 @@ describe('selection', () => {
     expect(el.selectedChunkIds).to.deep.equal(['c2']);
   });
 
+  it('keeps a normalized selection when a host rebinds the same stale chunk-id array', async () => {
+    const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+    el.chunks = chunks;
+    const hostSelection = ['c1', 'missing'];
+    el.selectedChunkIds = hostSelection;
+    await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal(['c1']);
+
+    let changes = 0;
+    el.addEventListener('lr-selection-change', () => changes++);
+    el.selectedChunkIds = hostSelection;
+    expect(el.isUpdatePending).to.equal(false);
+    expect(el.selectedChunkIds).to.deep.equal(['c1']);
+    expect(changes).to.equal(0);
+
+    el.chunks = [chunks[1]!];
+    await el.updateComplete;
+    expect(changes).to.equal(1);
+    expect(el.selectedChunkIds).to.deep.equal([]);
+
+    el.selectedChunkIds = ['c2'];
+    await el.updateComplete;
+    expect(el.selectedChunkIds).to.deep.equal(['c2']);
+  });
+
   /**
    * Regression: a `chunks` reassignment silently pruning stale selected ids never fired
    * `lr-select`, so a host's own external copy of `selectedChunkIds` diverged from the
@@ -1563,7 +1585,7 @@ it('applies a .strings override for the reused empty-state key', async () => {
 it('localizes the whole row-selection accessible name instead of concatenating translated fragments', async () => {
   const el = (await fixture(html`
     <lr-retrieval-results
-      .strings=${{ retrievalResultsSelectRow: 'Choisir « {label} »' }}
+      .strings=${{ retrievalResultsSelectRowOrdinal: 'Choisir le résultat {index} sur {total}, « {label} »' }}
     ></lr-retrieval-results>
   `)) as LyraRetrievalResults;
   el.chunks = chunks;
@@ -1573,8 +1595,11 @@ it('localizes the whole row-selection accessible name instead of concatenating t
     'lr-checkbox'
   ) as LyraCheckbox;
   expect(checkbox.getAttribute('aria-label')).to.equal(
-    'Choisir « curie-bio.pdf »'
+    'Choisir le résultat 1 sur 3, « curie-bio.pdf »'
   );
+  const inspector = flatRows(el)[0]!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+  await inspector.updateComplete;
+  expect(inspector.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Result 1 of 3');
 });
 
 it('renders and lets selection work under dir="rtl"', async () => {
@@ -1606,18 +1631,6 @@ it('can shrink to a 320px allocation without overflowing its host box', async ()
 });
 
 describe('selected-row cssprop escape hatch', () => {
-  function resolvedInShadow(
-    el: LyraRetrievalResults,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   // Default LTR fixture: the `[part='row-body']` selected indicator is a `border-inline-start-color`,
   // which resolves to the physical left border here.
@@ -1673,18 +1686,6 @@ describe('selected-row cssprop escape hatch', () => {
 // below lives one shadow boundary deeper than this component's own shadow root. The flat path
 // renders the identical template directly into this component's shadow root; both are asserted.
 describe('row styling across both rendering paths', () => {
-  function resolvedInShadow(
-    el: LyraRetrievalResults,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function render(
     path: 'flat' | 'virtualized'

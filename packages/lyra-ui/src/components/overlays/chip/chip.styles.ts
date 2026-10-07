@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -152,8 +153,7 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-chip-accent, var(--_lr-chip-accent)) var(--lr-color-mix-active), var(--_lr-chip-toggle-bg));
   }
   [part='toggle-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   :host([toggleable][selected]:not([removable])) [part='base'] {
     /* Falls back to --lr-chip-bg, so an unset consumer renders byte-identical. A distinct active
@@ -240,8 +240,7 @@ export const styles = css`
   [part='toggle-button'] {
     position: absolute;
     inset: 0;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     border-radius: var(--lr-chip-radius, var(--_lr-chip-radius));
@@ -262,8 +261,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: 0;
     padding: 0;
     border: none;
@@ -287,8 +285,7 @@ export const styles = css`
     background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background)));
   }
   [part='remove-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='remove-button']:disabled {
     cursor: not-allowed;

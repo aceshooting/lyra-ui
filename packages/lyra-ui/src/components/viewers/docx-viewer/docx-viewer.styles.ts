@@ -1,18 +1,9 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
     display: block;
-  }
-
-  [part="base"] {
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    overflow: hidden;
   }
 
   [part="body"] {
@@ -101,8 +92,7 @@ export const styles = css`
   }
 
   [part="highlight-action"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

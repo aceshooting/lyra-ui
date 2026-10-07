@@ -698,6 +698,66 @@ test('relocations require exact fingerprint preimages', () => {
   }
 });
 
+test('relocations can explicitly pin a reviewed target fingerprint', () => {
+  const { request } = relocationFixture();
+  request.relocations[0].expectedTargetFingerprint = fingerprints.current;
+  assert.deepEqual(parse(request), request);
+  for (const value of ['', 'a'.repeat(19), 'a'.repeat(21), 'A'.repeat(20), 'g'.repeat(20), null, 1]) {
+    rejectRelocationRequest(candidate => { candidate.relocations[0].expectedTargetFingerprint = value; });
+  }
+  rejectRelocationRequest(candidate => {
+    candidate.relocations[0].expectedTargetFingerprint = fingerprints.previous;
+  });
+  for (const operation of ['updates', 'enrollments']) {
+    rejectRequest(candidate => { candidate[operation][0].expectedTargetFingerprint = fingerprints.current; });
+  }
+});
+
+function reviewedRelocationFixture() {
+  const data = relocationFixture();
+  data.request.relocations[0].expectedTargetFingerprint = fingerprints.current;
+  data.census.find(record => record.exportName === 'LyraExampleEntry').fingerprint = fingerprints.current;
+  return data;
+}
+
+test('reviewed relocation derives the target fingerprint and preserves all other owner metadata', () => {
+  const data = reviewedRelocationFixture();
+  const before = structuredClone(data);
+  const expected = structuredClone(data.baseline);
+  expected.documented[1].module = data.request.relocations[0].toModule;
+  expected.documented[1].fingerprint = fingerprints.current;
+  deepFreeze(data);
+  assert.deepEqual(prepareSourceContractBaseline(data.census, data.baseline, data.request), expected);
+  assert.deepEqual(data, before);
+});
+
+for (const [name, change, pattern] of [
+  ['a stale old fingerprint', data => {
+    data.request.relocations[0].expectedFingerprint = fingerprints.unexpected;
+  }, /Stale source-contract fingerprint preimage/u],
+  ['a stale target fingerprint', data => {
+    data.request.relocations[0].expectedTargetFingerprint = fingerprints.unexpected;
+  }, /Reviewed relocation target fingerprint changed/u],
+  ['an unreviewed target change', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').fingerprint = fingerprints.unexpected;
+  }, /Reviewed relocation target fingerprint changed/u],
+  ['a changed public route', data => {
+    data.census.find(record => record.exportName === 'LyraExampleEntry').routes.pop();
+  }, /Relocation changed source-contract routes/u],
+  ['unrelated signature drift', data => {
+    data.census.find(record => record.exportName === 'LyraKeeperEntry').fingerprint = fingerprints.unexpected;
+  }, /Candidate source-contract baseline has unresolved gaps/u],
+]) {
+  test(`reviewed relocation rejects ${name} without mutating inputs`, () => {
+    const data = reviewedRelocationFixture();
+    change(data);
+    const before = structuredClone(data);
+    deepFreeze(data);
+    assert.throws(() => prepareSourceContractBaseline(data.census, data.baseline, data.request), pattern);
+    assert.deepEqual(data, before);
+  });
+}
+
 test('both relocation endpoints are reserved against updates and enrollments', () => {
   for (const endpoint of ['module', 'toModule']) {
     for (const operation of ['updates', 'enrollments']) {

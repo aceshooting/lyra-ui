@@ -2,8 +2,9 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { pauseIcon, playIcon, refreshIcon } from '../../../internal/icons.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration } from '../../../internal/numbers.js';
+import { OwnedTimeout } from '../../../internal/owned-timer.js';
+import { formatMediaTime } from '../../../internal/media-time.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
@@ -97,10 +98,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   @state() private remainingMs = 0;
   @state() private due = false;
-  private tickTimer?: number;
-  private tickTimerOwner?: Window;
-  private tickTimerDocument?: Document;
-  private tickerGeneration = 0;
+  private readonly tickTimer = new OwnedTimeout(this);
   private targetAt = 0;
   private deadlineConsumed = false;
   private pausedRemainingMs?: number;
@@ -246,35 +244,17 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (!this.isConnected || !this.active || this.paused || this.nextInMs == null || this.deadlineConsumed) {
       return;
     }
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const generation = this.tickerGeneration;
-    this.scheduleTick(ownerWindow, ownerDocument, generation);
+    this.scheduleTick();
   }
 
-  private scheduleTick(ownerWindow: Window, ownerDocument: Document, generation: number): void {
+  private scheduleTick(): void {
     const remaining = Math.max(0, this.targetAt - Date.now());
     this.remainingMs = remaining;
     const seconds = Math.ceil(remaining / 1000);
     const untilDisplayBoundary = remaining === 0 ? 0 : remaining - Math.max(0, seconds - 1) * 1000;
     const delay = remaining === 0 ? 0 : Math.max(1, Math.min(remaining, untilDisplayBoundary));
-    let handle = 0;
-    handle = ownerWindow.setTimeout(() => {
-      if (
-        this.tickTimer !== handle ||
-        this.tickTimerOwner !== ownerWindow ||
-        this.tickTimerDocument !== ownerDocument ||
-        this.tickerGeneration !== generation ||
-        !this.isConnected ||
-        !this.active ||
-        this.paused ||
-        this.nextInMs == null ||
-        this.deadlineConsumed ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
+    this.tickTimer.schedule(delay, () => {
+      if (!this.active || this.paused || this.nextInMs == null || this.deadlineConsumed) return;
       this.remainingMs = Math.max(0, this.targetAt - Date.now());
       if (this.remainingMs === 0 && !this.due) {
         this.deadlineConsumed = true;
@@ -284,23 +264,13 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.emit('lr-poll-due');
         this.announce(this.localize('pollRefreshingAnnounce'));
       } else {
-        this.tickTimer = undefined;
-        this.scheduleTick(ownerWindow, ownerDocument, generation);
+        this.scheduleTick();
       }
-    }, delay);
-    this.tickTimer = handle;
-    this.tickTimerOwner = ownerWindow;
-    this.tickTimerDocument = ownerDocument;
+    });
   }
 
   private disarmTicker(): void {
-    this.tickerGeneration += 1;
-    if (this.tickTimer !== undefined) {
-      this.tickTimerOwner?.clearTimeout(this.tickTimer);
-    }
-    this.tickTimer = undefined;
-    this.tickTimerOwner = undefined;
-    this.tickTimerDocument = undefined;
+    this.tickTimer.cancel();
   }
 
   private announce(text: string): void {
@@ -327,15 +297,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (this.paused) return this.localize('pollPaused');
     if (this.due) return this.localize('pollRefreshing');
     const totalSeconds = Math.ceil(this.remainingMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const locale = this.effectiveLocale;
-    const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
-    const secondText = getNumberFormat(locale, {
-      minimumIntegerDigits: 2,
-      useGrouping: false,
-    }).format(seconds);
-    return `${minuteText}:${secondText}`;
+    return formatMediaTime(totalSeconds, this.effectiveLocale);
   }
 
   override render(): TemplateResult {

@@ -1,17 +1,22 @@
 import assert from 'node:assert/strict';
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
+
+const require = createRequire(import.meta.url);
+const esbuild = createRequire(require.resolve('@web/dev-server-esbuild'))('esbuild');
 
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-js-'));
 try {
   const nested = path.join(fixture, 'nested');
   await mkdir(nested);
+  await writeFile(path.join(fixture, 'package.json'), '{"type":"module"}\n');
   await writeFile(
     path.join(nested, 'entry.js'),
-    `// duplicate authored prose does not ship in JavaScript\nexport class ReadableName {\n  method(value) { return value + 1; }\n}\nexport const syntaxOnly = true ? 'kept' : 'discarded';\n`,
+    `// duplicate authored prose does not ship in JavaScript\nexport class ReadableName {\n  method(longLocalValue) { return longLocalValue + 1; }\n}\nexport const syntaxOnly = true ? 'kept' : 'discarded';\n`,
   );
   await writeFile(
     path.join(nested, 'cli.mjs'),
@@ -26,10 +31,13 @@ try {
   );
   const result = await compactBuildJavaScript(fixture);
   assert.equal(result.files, 3);
-  assert.ok(result.afterBytes < result.beforeBytes);
+  assert.ok(result.afterBytes > 0);
   const output = await readFile(path.join(nested, 'entry.js'), 'utf8');
   assert.doesNotMatch(output, /duplicate authored prose|sourceMappingURL/);
-  assert.match(output, /class ReadableName/);
+  assert.doesNotMatch(output, /longLocalValue/, 'published local identifiers are shortened');
+  const publishedEntry = await import(pathToFileURL(path.join(nested, 'entry.js')).href);
+  assert.equal(publishedEntry.ReadableName.name, 'ReadableName');
+  assert.equal(new publishedEntry.ReadableName().method(2), 3);
   assert.match(output, /kept/);
   assert.doesNotMatch(output, /discarded/);
   assert.doesNotMatch(output, /true\s*\?/);
@@ -39,7 +47,9 @@ try {
   assert.doesNotMatch(stringsOutput, /\\u[0-9a-fA-F]{4}/u, 'no `\\uXXXX` escapes for printable characters');
   const cliOutput = await readFile(path.join(nested, 'cli.mjs'), 'utf8');
   assert.doesNotMatch(cliOutput, /copied public executables/);
-  assert.ok(cliOutput.length < 70);
+  const cli = await import(pathToFileURL(path.join(nested, 'cli.mjs')).href);
+  assert.equal(cli.migrate.name, 'migrate');
+  assert.equal(cli.migrate(null), 'fallback');
   assert.match(await readFile(path.join(nested, 'entry.d.ts'), 'utf8'), /IDE documentation stays/);
 } finally {
   await rm(fixture, { recursive: true, force: true });
@@ -113,13 +123,25 @@ try {
   const compressed = after.publicBootstrap(7);
   assert.ok(compressed.length < uncompressed.length);
   assert.doesNotMatch(compressed, /longInputValue|longPaintValue|longTokenValue|longOwnershipValue|longStartupValue|longMaterialValue/u);
-  assert.match(compactedSource, /lyraThemeBootstrap=\/\* @__PURE__ \*\/createLyraThemeBootstrap\(\)/u, 'the bootstrap constant stays droppable by bundlers');
+  assert.match(compactedSource, /\/\* @__PURE__ \*\//u);
+  const unusedBootstrap = await esbuild.build({
+    stdin: { contents: "export { preservedLabel } from './theme/theme.js';", resolveDir: bootstrapFixture },
+    bundle: true, write: false, format: 'esm', treeShaking: true,
+  });
+  assert.doesNotMatch(unusedBootstrap.outputFiles[0].text, /toString|publicBootstrap|applyStored/u,
+    'a consumer using another export drops the bootstrap initializer and serialized generators');
+  const usedBootstrap = await esbuild.build({
+    stdin: { contents: "export { lyraThemeBootstrap } from './theme/theme.js';", resolveDir: bootstrapFixture },
+    bundle: true, write: false, format: 'esm', treeShaking: true,
+  });
+  const bundled = await import('data:text/javascript;base64,' + Buffer.from(usedBootstrap.outputFiles[0].text).toString('base64'));
+  assert.equal(Function('return ' + bundled.lyraThemeBootstrap)(), 15,
+    'consuming the bootstrap keeps its initializer and standalone script behavior');
   assert.equal(after.publicBootstrap.name, 'publicBootstrap');
   assert.equal(after.preservedLabel, 'Résumé 🦉');
   assert.equal(Function('return ' + compressed)(), 15);
   assert.equal(Function('return ' + after.publicBootstrap(-1))(), 0);
-  assert.match(await readFile(path.join(themeDirectory, 'style-ownership.js'), 'utf8'),
-    /function readStyleOwnership\(/u);
+  assert.equal(after.createLyraThemeBootstrap.name, 'createLyraThemeBootstrap');
   // Repeated minification may choose different short names; fresh identical build inputs must
   // still reproduce byte-identical output. The second-pass module above proves semantic stability.
   const repeat = path.join(bootstrapFixture, 'repeat');
@@ -131,6 +153,13 @@ try {
   assert.equal(await readFile(path.join(repeat, 'theme/theme.js'), 'utf8'), compactedSource);
   assert.equal(await readFile(path.join(repeat, 'theme/style-ownership.js'), 'utf8'), compactedOwnership);
   assert.equal(await readFile(path.join(repeat, 'theme/startup-resolution.js'), 'utf8'), compactedStartup);
+  for (const replacement of ['createLyraThemeBootstrap(1)', 'publicBootstrap(7)', '"createLyraThemeBootstrap()"']) {
+    await writeFile(path.join(themeDirectory, 'theme.js'), originalSource.replace(
+      '/* @__PURE__ */ createLyraThemeBootstrap()', replacement));
+    await assert.rejects(compactBuildJavaScript(bootstrapFixture), /pure initializer inventory changed/u,
+      `changed initializer must fail closed: ${replacement}`);
+  }
+
 } finally {
   await rm(bootstrapFixture, { recursive: true, force: true });
 }

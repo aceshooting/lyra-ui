@@ -14,7 +14,9 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
-import { DebounceController } from '../../../internal/debounce-controller.js';
+import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -72,11 +74,6 @@ const SUBMENU_OPEN_DELAY = 150;
  *  submenu -- deliberately longer than the open delay, so crossing a *sibling* submenu parent
  *  in transit neither dismisses the open one nor opens the sibling. */
 const SUBMENU_CLOSE_DELAY = 300;
-
-/** How long the type-ahead buffer survives without a keystroke, in ms. Unchanged from the inline
- *  literal this reset used before it moved onto the shared debounce controller, and identical to
- *  `<lr-select>`'s listbox type-ahead. */
-const TYPE_AHEAD_RESET_MS = 500;
 
 function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
   if (!isHtmlElement(value)) return false;
@@ -343,7 +340,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private presentationPositioned = false;
   private placedTopLayer?: boolean;
   private itemStateObserver?: MutationObserver;
-  private pointerDocument?: Document;
+  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
   private menubarAnchored = false;
   private pendingFocus: MenuFocusTarget = 'first';
   private submenuOpenTimer?: OwnedTimeout;
@@ -353,24 +350,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     activate: (item) => this.onOwnedItemSelect(item),
     uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
-  // Standard menu type-ahead, mirroring lr-select's identical listbox
-  // trio: printable keystrokes accumulate into this buffer and reset ~500ms
-  // after the last one, so "d" then "e" narrows to "de" instead of
-  // restarting the search on every keystroke.
-  private typeAheadBuffer = '';
-  /** The buffer's reset debounce. Every printable keystroke restarts it; the buffer clears only
-   *  once the quiet window passes, which is what makes "d" then "e" narrow to "de". Scheduled on
-   *  -- and cancelled through -- the realm this menu lives in at the time, the same ownership the
-   *  submenu hover-intent timers keep through `scheduleOwnedTimeout()`. Supersession is the
-   *  controller's own generation guard, so a callback already queued when a newer keystroke
-   *  restarted the timer arrives inert. */
-  private readonly typeAheadReset = new DebounceController<void>(
-    TYPE_AHEAD_RESET_MS,
-    () => {
-      this.typeAheadBuffer = '';
-    },
-    () => this.ownerDocument.defaultView,
-  );
+  private readonly typeBuffer = new TypeAheadBuffer(this);
 
   /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */
   readonly [submenuPanelController] = this.createSubmenuController();
@@ -667,16 +647,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   private bindDocumentPointer(): void {
-    const owner = this.ownerDocument;
-    if (this.pointerDocument === owner) return;
-    this.unbindDocumentPointer();
-    owner.addEventListener('pointerdown', this.onDocPointer);
-    this.pointerDocument = owner;
+    this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    this.pointerDocument?.removeEventListener('pointerdown', this.onDocPointer);
-    this.pointerDocument = undefined;
+    this.pointer.unbind();
   }
 
   private scheduleOwnedTimeout(
@@ -873,13 +848,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  (or on `<body>`) and every later key press dies. `closest` covers an inert ancestor, which
    *  inerts the item just as completely as the attribute on the item itself. */
   private isNavigable(item: LyraMenuItem): boolean {
-    return (
-      !item.interactionDisabled &&
-      !item.hidden &&
-      item.getAttribute('aria-hidden') !== 'true' &&
-      !item.inert &&
-      !item.closest('[inert]')
-    );
+    return !item.interactionDisabled && isRovingTargetAvailable(item);
   }
 
   private applyDropdownSize(): void {
@@ -1082,7 +1051,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // Everything below is scoped to this menu's own level: a keydown from inside a nested submenu
     // is that submenu's to handle, and driving both menus from one keypress would move two roving
     // highlights (or close two menus) at once.
-    if (this.isForeignEvent(e) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
+    if (this.isForeignEvent(e) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing || e.keyCode === 229) return;
     const isItemTarget = isLyraMenuItemElement(e.target);
     if (e.key === 'Escape' && isItemTarget && !this.hasStandalonePresentation) {
       e.preventDefault();
@@ -1116,33 +1085,18 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         }
         break;
       case 'ArrowDown':
-        e.preventDefault();
-        if (navigable.length) {
-          const next =
-            navigable[
-              (currentNavIndex + 1 + navigable.length) % navigable.length
-            ];
-          if (next) this.setActiveItem(next); // modulo navigable.length keeps the index in-bounds
-        }
-        break;
       case 'ArrowUp':
-        e.preventDefault();
-        if (navigable.length) {
-          const prevIndex =
-            currentNavIndex <= 0 ? navigable.length - 1 : currentNavIndex - 1;
-          const prev = navigable[prevIndex];
-          if (prev) this.setActiveItem(prev); // prevIndex is in [0, navigable.length - 1]
-        }
-        break;
       case 'Home':
+      case 'End': {
         e.preventDefault();
-        if (navigable.length) this.setActiveItem(navigable[0]!); // safe: navigable non-empty
+        const nextIndex = resolveListMove(e, {
+          count: navigable.length,
+          current: currentNavIndex,
+          orientation: 'vertical',
+        });
+        if (nextIndex !== null) this.setActiveItem(navigable[nextIndex]!);
         break;
-      case 'End':
-        e.preventDefault();
-        if (navigable.length)
-          this.setActiveItem(navigable[navigable.length - 1]!); // safe: navigable non-empty
-        break;
+      }
       case 'Enter':
       case ' ':
         // Mirrors lr-tree calling current.select() from its own delegated
@@ -1166,7 +1120,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // "Tab moves within the surface" apart from "Tab leaves the surface". 'Tab'
       // is longer than one character, so the type-ahead default arm ignores it.
       default:
-        if (e.key.length === 1) this.typeAhead(e.key);
+        if (this.typeBuffer.accepts(e)) this.typeAhead(e.key);
         return;
     }
   };
@@ -1321,40 +1275,22 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  accumulated buffer, cycling from just after the currently active item
    *  -- mirrors `<lr-select>`'s identical listbox type-ahead. */
   private typeAhead(char: string): void {
-    this.typeAheadReset.cancel();
-    this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    // A realm-less menu arms nothing at all, exactly as `scheduleOwnedTimeout()` did by returning
-    // `undefined`: the controller would otherwise fall back to the ambient timer queue and clear
-    // the buffer through a document this element does not live in.
-    if (this.ownerDocument.defaultView) this.typeAheadReset.push(undefined);
+    this.typeBuffer.add(char, this.effectiveLocale);
 
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
     const current =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentIndex = current ? navigable.indexOf(current) : -1;
-    const n = navigable.length;
-    for (let step = 1; step <= n; step++) {
-      const candidate = navigable[(currentIndex + step + n) % n];
-      if (!candidate) continue; // modulo n keeps the index in-bounds; guard satisfies the checker
-      if (
-        candidate
-          .getTextLabel()
-          .toLocaleLowerCase(this.effectiveLocale)
-          .startsWith(this.typeAheadBuffer)
-      ) {
-        this.setActiveItem(candidate);
-        return;
-      }
-    }
+    const match = this.typeBuffer.match(navigable, currentIndex, item => item.getTextLabel(), this.effectiveLocale);
+    if (match !== null) this.setActiveItem(navigable[match]!);
   }
 
   /** Discards the buffer and any armed reset. `cancel()`, never `dispose()`: this also runs on
    *  disconnect, which here may be a re-parent, and a disposed controller would refuse every
    *  later keystroke's reset for good. */
   private resetTypeAhead(): void {
-    this.typeAheadReset.cancel();
-    this.typeAheadBuffer = '';
+    this.typeBuffer.clear();
   }
 
   /** Resolves `label`'s effective text: a host-level `aria-label` attribute wins first

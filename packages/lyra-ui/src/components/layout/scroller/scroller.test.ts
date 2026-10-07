@@ -622,7 +622,7 @@ describe("<lr-scroller>", () => {
       <lr-scroller
         controls
         label="Items"
-        style="inline-size: 200px; --lr-color-brand-quiet: rgb(1, 2, 3)"
+        style="inline-size: 200px; --lr-color-brand-quiet: rgb(9, 9, 9); --lr-scroller-control-hover-bg: rgb(1, 2, 3)"
       >
         <div style="inline-size: 800px">wide content</div>
       </lr-scroller>

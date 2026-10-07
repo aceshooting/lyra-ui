@@ -1,9 +1,17 @@
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { variants } from '../../../internal/variants.styles.js';
-import type { LyraAppearance, LyraSize, LyraVariant } from '../../../internal/variants.js';
+import {
+  LYRA_SIZE_VALUES,
+  LYRA_VARIANT_VALUES,
+  type LyraAppearance,
+  type LyraSize,
+  type LyraVariant,
+} from '../../../internal/variants.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
@@ -63,12 +71,12 @@ export interface LyraToggleGroupProjection {
 }
 
 const TOGGLE_VARIANT = literalSetConverter<LyraVariant>(
-  ['neutral', 'brand', 'success', 'warning', 'danger'],
+  LYRA_VARIANT_VALUES,
   'neutral',
 );
 const TOGGLE_APPEARANCE = literalSetConverter<LyraToggleAppearance>(['plain', 'outlined'], 'plain');
 const TOGGLE_SIZE = literalSetConverter<LyraSize>(
-  ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
+  LYRA_SIZE_VALUES,
   'm',
 );
 
@@ -143,6 +151,7 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  *   wins over `aria-label` and the content.
  * @csspart base - The native button; the same node also carries `button`.
  * @csspart button - The native button.
+ * @cssstate pressed - The current pressed state, including silent programmatic writes.
  * @csspart start - Wrapper of the `start` slot.
  * @csspart label - Wrapper of the default slot; a long label ellipsizes.
  * @csspart end - Wrapper of the `end` slot.
@@ -172,6 +181,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
     pressed: { type: Boolean, reflect: true, noAccessor: true },
   };
 
+  private readonly stateInternals = attachInternalsSafely(this);
   private _pressed = false;
   private _variant: LyraVariant = 'neutral';
   private _appearance: LyraToggleAppearance = 'plain';
@@ -200,6 +210,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
   set pressed(next: boolean) {
     const old = this._pressed;
     this._pressed = Boolean(next);
+    setCustomState(this.stateInternals, 'pressed', this._pressed);
     // Unconditional, including a write of the value already held: the guard tracks that a write
     // happened, not that a value differs.
     markVetoGuardWrite(this.pressGuard);

@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
@@ -158,8 +160,7 @@ export const styles = css`
     );
   }
   [part='segment']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     background: var(--lr-time-input-segment-focus-bg, var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet)));
   }
   [part='segment'][data-empty] {
@@ -180,8 +181,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-2xs);
     border: none;
     border-radius: var(--lr-form-control-radius);
@@ -209,8 +209,7 @@ export const styles = css`
   }
   [part='clear-button']:focus-visible,
   [part='expand-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='clear-button']:disabled,
   [part='expand-button']:disabled {
@@ -295,8 +294,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding-inline: var(--lr-space-xs);
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -376,8 +374,7 @@ export const styles = css`
     );
   }
   [part='now-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='hint'],
@@ -399,7 +396,7 @@ export const styles = css`
     display: none;
   }
 
-  @container (max-width: 20rem) {
+  @container ${compactContainerQuery} {
     [part='popup'] {
       max-inline-size: var(--lr-positioner-available-inline-size);
     }

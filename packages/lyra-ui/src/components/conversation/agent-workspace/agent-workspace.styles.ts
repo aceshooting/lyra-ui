@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -158,7 +159,7 @@ export const styles = css`
       border-inline-start: 0;
     }
   }
-  @container (max-inline-size: 30rem) {
+  @container ${mediumContainerQuery} {
     [part='header'],
     [part='composer'] {
       padding-inline: var(--lr-space-s);

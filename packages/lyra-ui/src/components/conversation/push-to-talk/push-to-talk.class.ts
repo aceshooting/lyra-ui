@@ -3,11 +3,12 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
+import { formatMediaTime } from '../../../internal/media-time.js';
 import { styles } from './push-to-talk.styles.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { OwnedFrame, OwnedInterval, OwnedTimeout } from '../../../internal/owned-timer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
@@ -22,16 +23,6 @@ export type PushToTalkAudioConstraints = Omit<MediaTrackConstraints, 'deviceId'>
 const PUSH_TO_TALK_MODE = literalSetConverter<PushToTalkMode>(['hold', 'toggle'], 'hold');
 
 const CANDIDATE_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-
-interface OwnedTimer {
-  owner: Window;
-  handle: number;
-}
-
-interface OwnedAnimationFrame {
-  owner: Window;
-  handle: number;
-}
 
 type PushToTalkWindow = Window & {
   MediaRecorder: typeof MediaRecorder;
@@ -273,12 +264,12 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private recorderStopRequested = false;
   private recorderFailed = false;
   private holdGesture?: CaptureIntent;
-  private tickTimer?: OwnedTimer;
-  private maxDurationTimer?: OwnedTimer;
+  private readonly tickTimer = new OwnedInterval(this);
+  private readonly maxDurationTimer = new OwnedTimeout(this);
   private audioCtx?: AudioContext;
   private analyser?: AnalyserNode;
   private levelData?: Uint8Array<ArrayBuffer>;
-  private levelFrame?: OwnedAnimationFrame;
+  private readonly levelFrame = new OwnedFrame(this);
 
   /** Lit's server DOM intentionally gives custom elements no browser-owned document. */
   private get ownerWindow(): Window | null {
@@ -777,16 +768,13 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private stopRuntimeLoops(): void {
-    if (this.tickTimer) this.tickTimer.owner.clearInterval(this.tickTimer.handle);
-    this.tickTimer = undefined;
-    if (this.maxDurationTimer) this.maxDurationTimer.owner.clearTimeout(this.maxDurationTimer.handle);
-    this.maxDurationTimer = undefined;
+    this.tickTimer.cancel();
+    this.maxDurationTimer.cancel();
     this.stopLevelMeter();
   }
 
   private syncElapsedTimer(owner: PushToTalkWindow, initial = false): void {
-    if (this.tickTimer) this.tickTimer.owner.clearInterval(this.tickTimer.handle);
-    this.tickTimer = undefined;
+    this.tickTimer.cancel();
     const active = this.activeCapture;
     if (
       this.withoutTimer ||
@@ -798,10 +786,8 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       return;
     }
     if (!initial) this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
-    const timer: OwnedTimer = { owner, handle: 0 };
-    timer.handle = owner.setInterval(() => {
+    this.tickTimer.schedule(1000, () => {
       if (
-        this.tickTimer !== timer ||
         this.activeCapture !== active ||
         this._state !== 'recording' ||
         !this.ownsCurrentLifecycle(active.owner)
@@ -809,13 +795,11 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         return;
       }
       this.elapsedMs = owner.performance.now() - this.recordingStartedAt;
-    }, 1000);
-    this.tickTimer = timer;
+    });
   }
 
   private syncMaxDurationTimer(owner: PushToTalkWindow, initial = false): void {
-    if (this.maxDurationTimer) this.maxDurationTimer.owner.clearTimeout(this.maxDurationTimer.handle);
-    this.maxDurationTimer = undefined;
+    this.maxDurationTimer.cancel();
     const active = this.activeCapture;
     if (
       this.maxDurationMs <= 0 ||
@@ -828,19 +812,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
     const duration = finiteDuration(this.maxDurationMs, MAX_TIMEOUT_MS, 1, MAX_TIMEOUT_MS);
     const elapsed = initial ? 0 : Math.max(0, owner.performance.now() - this.recordingStartedAt);
-    const timer: OwnedTimer = { owner, handle: 0 };
-    timer.handle = owner.setTimeout(() => {
+    this.maxDurationTimer.schedule(Math.max(0, duration - elapsed), () => {
       if (
-        this.maxDurationTimer !== timer ||
         this.activeCapture !== active ||
         !this.ownsCurrentLifecycle(active.owner)
       ) {
         return;
       }
-      this.maxDurationTimer = undefined;
       this.stop();
-    }, Math.max(0, duration - elapsed));
-    this.maxDurationTimer = timer;
+    });
   }
 
   private syncLevelMeter(owner: PushToTalkWindow): void {
@@ -894,19 +874,15 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
     const rms = Math.sqrt(sumSquares / this.levelData.length);
     this.emit('lr-level', { level: Math.min(1, rms) });
-    const request: OwnedAnimationFrame = { owner, handle: 0 };
-    request.handle = owner.requestAnimationFrame(() => {
-      if (this.levelFrame !== request || this.activeCapture !== active) return;
-      this.levelFrame = undefined;
+    this.levelFrame.schedule(() => {
+      if (this.activeCapture !== active) return;
       if (!this.ownsCurrentLifecycle(active.owner)) return;
       this.sampleLevel(owner);
     });
-    this.levelFrame = request;
   }
 
   private stopLevelMeter(): void {
-    if (this.levelFrame) this.levelFrame.owner.cancelAnimationFrame(this.levelFrame.handle);
-    this.levelFrame = undefined;
+    this.levelFrame.cancel();
     this.analyser = undefined;
     this.levelData = undefined;
     if (this.audioCtx) {
@@ -916,16 +892,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   private formatElapsed(ms: number): string {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const locale = this.effectiveLocale;
-    const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
-    const secondText = getNumberFormat(locale, {
-      minimumIntegerDigits: 2,
-      useGrouping: false,
-    }).format(seconds);
-    return `${minuteText}:${secondText}`;
+    return formatMediaTime(ms / 1000, this.effectiveLocale);
   }
 
   // -- Pointer (hold mode) ----------------------------------------------

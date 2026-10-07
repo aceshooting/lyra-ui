@@ -9,6 +9,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -320,12 +321,7 @@ export interface LyraJsonViewerEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
-  'lr-search-change': CustomEvent<{
-    query: string;
-    matchCount: number;
-    matchCountExact: boolean;
-    activeIndex: number;
-  }>;
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
 }
 /**
  * `<lr-json-viewer>` — a collapsible, copyable tree view for an arbitrary

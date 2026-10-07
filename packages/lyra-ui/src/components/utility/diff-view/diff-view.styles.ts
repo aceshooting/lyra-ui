@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -149,8 +150,7 @@ export const styles = css`
   [part="line-highlight-action"] {
     display: inline-block;
     margin-inline-start: var(--lr-space-xs);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -185,8 +185,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-s);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
@@ -202,7 +201,6 @@ export const styles = css`
     );
   }
   [part="copy-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 `;

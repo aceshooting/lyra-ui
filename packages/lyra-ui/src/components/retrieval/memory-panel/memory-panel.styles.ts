@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -51,8 +52,7 @@ export const styles = css`
     background: var(--lr-color-surface);
   }
   [part='item']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='item-row'] {
     display: flex;
@@ -86,8 +86,7 @@ export const styles = css`
   [part='expand-toggle'] {
     align-self: flex-start;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     background: transparent;
@@ -98,8 +97,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='expand-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='expand-toggle']:hover {
     text-decoration: underline;
@@ -128,8 +126,7 @@ export const styles = css`
   [part='remove-button'],
   [part='forget-all-button'] {
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -144,8 +141,7 @@ export const styles = css`
   [part='add-button']:focus-visible,
   [part='remove-button']:focus-visible,
   [part='forget-all-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='add-button']:hover,
   [part='remove-button']:hover,

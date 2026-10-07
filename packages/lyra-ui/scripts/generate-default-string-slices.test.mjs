@@ -52,6 +52,20 @@ assert.equal(
   rewritten,
   'marker replacement must be idempotent',
 );
+const displaced = sample.replace('  }\n}', `  }
+  // GENERATED DEFAULT-STRING SLICE: START
+  // old generated block
+  // GENERATED DEFAULT-STRING SLICE: END
+  protected static collectionSupport = true;
+}`);
+const repositioned = rewriteClassSource(
+  displaced,
+  '/repo/src/components/forms/sample/sample.class.ts',
+  '/repo/src/internal/default-strings.generated.ts',
+  ['cancel', 'itemCount'],
+);
+assert.match(repositioned, /  \}\n  protected static collectionSupport = true;/u);
+assert.doesNotMatch(repositioned, /  \}  protected static collectionSupport/u);
 
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slices-'));
 try {

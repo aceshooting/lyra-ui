@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -10,6 +11,21 @@ import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
 } from '../../../internal/overlay-surface.styles.js';
+
+const checkerboard = css`conic-gradient(
+      var(
+          --lr-color-picker-checker-color,
+          var(--_lr-color-picker-checker-color)
+        )
+        0deg 90deg,
+      transparent 90deg 180deg,
+      var(
+          --lr-color-picker-checker-color,
+          var(--_lr-color-picker-checker-color)
+        )
+        180deg 270deg,
+      transparent 270deg 360deg
+    )`;
 
 export const styles = css`
   :host {
@@ -87,20 +103,7 @@ export const styles = css`
   [part~='preview'],
   [part~='swatch'] {
     background-color: var(--lr-color-surface);
-    background-image: conic-gradient(
-      var(
-          --lr-color-picker-checker-color,
-          var(--_lr-color-picker-checker-color)
-        )
-        0deg 90deg,
-      transparent 90deg 180deg,
-      var(
-          --lr-color-picker-checker-color,
-          var(--_lr-color-picker-checker-color)
-        )
-        180deg 270deg,
-      transparent 270deg 360deg
-    );
+    background-image: ${checkerboard};
     background-size: var(
         --lr-color-picker-checker-size,
         var(--_lr-color-picker-checker-size)
@@ -132,8 +135,7 @@ export const styles = css`
   }
   [part~="trigger"] {
     position: relative;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     inline-size: max(
       var(--lr-color-picker-swatch-size, var(--_lr-color-picker-swatch-size)),
       var(--lr-icon-button-size)
@@ -175,20 +177,7 @@ export const styles = css`
       var(--_lr-color-picker-radius)
     );
     background-color: var(--lr-color-surface);
-    background-image: conic-gradient(
-      var(
-          --lr-color-picker-checker-color,
-          var(--_lr-color-picker-checker-color)
-        )
-        0deg 90deg,
-      transparent 90deg 180deg,
-      var(
-          --lr-color-picker-checker-color,
-          var(--_lr-color-picker-checker-color)
-        )
-        180deg 270deg,
-      transparent 270deg 360deg
-    );
+    background-image: ${checkerboard};
     background-size: var(
         --lr-color-picker-checker-size,
         var(--_lr-color-picker-checker-size)
@@ -258,8 +247,7 @@ export const styles = css`
     );
   }
   [part~="trigger"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to keyboard focus and stays unchanged, while a halo a consumer
@@ -443,20 +431,7 @@ export const styles = css`
         --lr-color-picker-opacity-gradient,
         var(--_lr-color-picker-opacity-gradient)
       ),
-      conic-gradient(
-        var(
-            --lr-color-picker-checker-color,
-            var(--_lr-color-picker-checker-color)
-          )
-          0deg 90deg,
-        transparent 90deg 180deg,
-        var(
-            --lr-color-picker-checker-color,
-            var(--_lr-color-picker-checker-color)
-          )
-          180deg 270deg,
-        transparent 270deg 360deg
-      );
+      ${checkerboard};
     background-size: auto,
       var(--lr-color-picker-checker-size, var(--_lr-color-picker-checker-size))
         var(
@@ -514,8 +489,7 @@ export const styles = css`
   }
   [part~="grid-handle"]:where(:focus-visible),
   [part~="slider-handle"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part~="preview"] {
@@ -559,8 +533,7 @@ export const styles = css`
     );
   }
   [part~="input"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part~="format-button"],
@@ -569,8 +542,7 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(
@@ -610,8 +582,7 @@ export const styles = css`
   }
   [part~="format-button"]:where(:focus-visible),
   [part~="eyedropper-button"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part~="swatches"] {
@@ -656,8 +627,7 @@ export const styles = css`
     );
   }
   [part~="swatch"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* A swatch entry declaring its own disabled is non-actionable: it keeps its own painted colour
      (still the datum it always was) but loses every affordance that promises activation -- gated

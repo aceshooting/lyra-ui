@@ -12,6 +12,7 @@ import {
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import { styles } from './artifact-panel.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -118,7 +119,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['versions']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
 
   /** The artifact's title, shown in the header. Optional. Omitting it localizes the default
    *  `artifactPanelLabel` message for the view-toggle group's accessible name (and shows no
@@ -318,6 +319,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                   ${!isLatest
                     ? html`<button
                         part="restore-button"
+                        data-agent-action="neutral"
                         type="button"
                         @click=${() =>
                           // safe: inside the hasVersions branch, `index` is an in-bounds version index
@@ -331,10 +333,10 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
             : nothing}
           <slot name="actions" part="actions"></slot>
           ${this.copyText
-            ? html`<button part="copy-button" type="button" @click=${this.onCopy}>${this.localize('copy')}</button>`
+            ? html`<button part="copy-button" data-agent-action="neutral" type="button" @click=${this.onCopy}>${this.localize('copy')}</button>`
             : nothing}
           ${this.downloadSrc
-            ? html`<button part="download-button" type="button" @click=${this.onDownload}>
+            ? html`<button part="download-button" data-agent-action="neutral" type="button" @click=${this.onDownload}>
                 ${this.localize('download')}
               </button>`
             : nothing}

@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { styles } from './change-review.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -78,7 +79,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   protected static override collectionSupport = collectionSupport;
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
   protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
 
   /** Ordered files with already-separated hunks. Never mutated by the component. */
@@ -127,7 +128,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       <lr-diff-view .oldText=${typeof hunk.before === 'string' ? hunk.before : ''}
         .newText=${typeof hunk.after === 'string' ? hunk.after : ''} layout="unified"></lr-diff-view>
       ${this.readonly ? nothing : html`<div part="actions">
-        ${(['keep', 'discard'] as const).map((next) => html`<button part="decision" type="button"
+        ${(['keep', 'discard'] as const).map((next) => html`<button part="decision" data-agent-action="neutral" type="button"
           data-decision=${next} aria-pressed=${decision === next ? 'true' : 'false'}
           ?disabled=${this.disabled} @click=${() => this.decide(file, hunk, next)}>${this.localize(next === 'keep' ? 'changeReviewKeep' : 'changeReviewDiscard')}</button>`)}
       </div>`}

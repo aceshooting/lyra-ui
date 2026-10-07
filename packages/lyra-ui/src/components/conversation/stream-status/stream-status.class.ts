@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
+import { OwnedTimeout } from '../../../internal/owned-timer.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
@@ -198,10 +199,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   @state() private _stalled = false;
 
   // Only ever set while `phase === 'streaming'` — see armStallTimer()/disarmStallTimer().
-  private stallTimer?: number;
-  private stallTimerOwner?: Window;
-  private stallTimerDocument?: Document;
-  private stallTimerGeneration = 0;
+  private readonly stallTimer = new OwnedTimeout(this);
 
   @state() private hasActionsSlot = false;
 
@@ -357,40 +355,14 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     const threshold = this.stallThresholdMs;
     if (!Number.isFinite(threshold) || threshold <= 0) return;
     const delay = finiteDuration(threshold, threshold, 0, MAX_TIMEOUT_MS);
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const generation = this.stallTimerGeneration;
-    const handle = ownerWindow.setTimeout(() => {
-      if (
-        this.stallTimer !== handle ||
-        this.stallTimerOwner !== ownerWindow ||
-        this.stallTimerDocument !== ownerDocument ||
-        this.stallTimerGeneration !== generation ||
-        !this.isConnected ||
-        this.phase !== 'streaming' ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.stallTimer = undefined;
-      this.stallTimerOwner = undefined;
-      this.stallTimerDocument = undefined;
+    this.stallTimer.schedule(delay, () => {
+      if (this.phase !== 'streaming') return;
       this.markStalled();
-    }, delay);
-    this.stallTimer = handle;
-    this.stallTimerOwner = ownerWindow;
-    this.stallTimerDocument = ownerDocument;
+    });
   }
 
   private disarmStallTimer(): void {
-    this.stallTimerGeneration += 1;
-    if (this.stallTimer !== undefined) {
-      this.stallTimerOwner?.clearTimeout(this.stallTimer);
-    }
-    this.stallTimer = undefined;
-    this.stallTimerOwner = undefined;
-    this.stallTimerDocument = undefined;
+    this.stallTimer.cancel();
   }
 
   private announceTransition(mode: 'assertive' | 'polite', text: string): void {
@@ -421,15 +393,15 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   private get phaseText(): string {
     switch (this.phase) {
       case 'connecting':
-        return this.localize('realtimeSessionConnecting');
+        return this.localize('streamStatusConnecting');
       case 'streaming':
         return this.localize('statusRunning');
       case 'stalled':
-        return this.localize('streamStallAnnounce');
+        return this.localize('streamStatusStalled');
       case 'interrupted':
         return this.localize('streamInterrupted');
       default:
-        return this.localize('audioVisualizerIdle');
+        return this.localize('streamStatusIdle');
     }
   }
 

@@ -37,6 +37,13 @@ export function finiteCount(value: number, fallback = 0, max = Number.MAX_SAFE_I
   return finiteInteger(value, Math.max(0, fallback), 0, max);
 }
 
+/** Returns a positive integer input or the caller's configured fallback. */
+export function positiveInteger(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
+    ? value
+    : fallback;
+}
+
 /** Returns a finite timer duration, capped at the browser timer ceiling. */
 export function finiteDuration(
   value: number,
@@ -112,6 +119,54 @@ export function finiteInterpolate(start: number, end: number, ratio: number): nu
 /** Returns the arithmetic midpoint of two finite values without overflowing their difference. */
 export function finiteMidpoint(start: number, end: number): number {
   return finiteInterpolate(start, end, 0.5);
+}
+
+/** Finds the numeric extent in one pass, returning `null` for an empty input. */
+export function minMax(values: readonly number[]): [number, number] | null {
+  if (values.length === 0) return null;
+  let lo = values[0]!;
+  let hi = values[0]!;
+  for (let i = 1; i < values.length; i++) {
+    const value = values[i]!;
+    if (value < lo) lo = value;
+    if (value > hi) hi = value;
+  }
+  return [lo, hi];
+}
+
+export interface PointExtent {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+/** Scans point coordinates without allocating mapped arrays; returns `null` for an empty input. */
+export function extent<T>(
+  points: Iterable<T>,
+  x: (point: T) => number,
+  y: (point: T) => number,
+): PointExtent | null {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let hasPoint = false;
+  for (const point of points) {
+    const px = x(point);
+    const py = y(point);
+    if (!hasPoint) {
+      minX = maxX = px;
+      minY = maxY = py;
+      hasPoint = true;
+      continue;
+    }
+    if (px < minX) minX = px;
+    if (px > maxX) maxX = px;
+    if (py < minY) minY = py;
+    if (py > maxY) maxY = py;
+  }
+  return hasPoint ? { minX, maxX, minY, maxY } : null;
 }
 
 /** Adds finite values, saturating at the largest representable magnitude on overflow. */

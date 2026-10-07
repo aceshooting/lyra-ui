@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
 import "./retrieval-trace.js";
@@ -127,13 +128,23 @@ describe("lr-retrieval-trace", () => {
   });
 
   it("degrades an unknown runtime stage kind without losing valid neighboring stages", async () => {
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-retrieval-trace:unknown-kind');
     const stages = [
       { id: "good", kind: "retrieve", startMs: 0, endMs: 5, status: "success" },
       { id: "unknown", kind: "dedupe", startMs: 5, endMs: 9, status: "success" },
     ] as unknown as RetrievalStage[];
-    const el = (await fixture(
-      html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
-    )) as LyraRetrievalTrace;
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+    let el: LyraRetrievalTrace;
+    try {
+      el = await fixture<LyraRetrievalTrace>(
+        html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
+      );
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.some((warning) => warning.includes('dedupe'))).to.equal(true);
     const waterfall = el.shadowRoot!.querySelector(
       "lr-span-waterfall"
     ) as LyraSpanWaterfall;
@@ -145,7 +156,19 @@ describe("lr-retrieval-trace", () => {
         bar.getAttribute("data-id")
       )
     ).to.deep.equal(["good", "unknown"]);
-    expect(waterfall.shadowRoot!.textContent).to.include("dedupe");
+    expect(waterfall.shadowRoot!.textContent).to.include("Unknown stage");
+    expect(waterfall.shadowRoot!.textContent).not.to.include("dedupe");
+  });
+
+  it('keeps an explicit unknown runtime stage status neutral in the timeline', async () => {
+    const stages = [{ id: 'future', kind: 'retrieve', startMs: 0, endMs: 5, status: 'awaiting-review' }] as unknown as RetrievalStage[];
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+    const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall') as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    const bar = waterfall.shadowRoot!.querySelector('[part="bar"]')!;
+    expect(bar.getAttribute('data-status')).to.equal('unknown');
+    expect(waterfall.shadowRoot!.textContent).to.include('Unknown');
+    expect(waterfall.shadowRoot!.textContent).not.to.include('awaiting-review');
   });
 
   it("keeps the host name distinct from the timeline's localized purpose", async () => {
@@ -619,12 +642,12 @@ describe("lr-retrieval-trace", () => {
     await el.updateComplete;
     const keys = [
       ...el.shadowRoot!.querySelectorAll(
-        '[data-id="embed"] [part="evidence-metadata-key"]'
+        '[data-id="embed"] [part~="evidence-metadata-key"]'
       ),
     ].map((k) => k.textContent);
     const values = [
       ...el.shadowRoot!.querySelectorAll(
-        '[data-id="embed"] [part="evidence-metadata-value"]'
+        '[data-id="embed"] [part~="evidence-metadata-value"]'
       ),
     ].map((v) => v.textContent?.trim());
     expect(keys).to.deep.equal(["model", "dimensions"]);
@@ -738,6 +761,7 @@ describe("lr-retrieval-trace", () => {
       "lr-span-waterfall"
     ) as LyraSpanWaterfall;
     expect(waterfall.shadowRoot!.querySelector("lr-empty")).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('No retrieval stages');
   });
 
   it("keeps evidence-toggle DOM ids hostile-id-safe and unique across instances, and dedupes duplicate stage entries sharing an id within one instance (bug regression)", async () => {
@@ -787,7 +811,7 @@ describe("lr-retrieval-trace", () => {
     ).click();
     await el.updateComplete;
     const values = [
-      ...el.shadowRoot!.querySelectorAll('[part="evidence-metadata-value"]'),
+      ...el.shadowRoot!.querySelectorAll('[part~="evidence-metadata-value"]'),
     ].map((value) => value.textContent?.trim());
     expect(values).to.include("١٬٥٣٦");
   });
@@ -830,7 +854,7 @@ describe("lr-retrieval-trace", () => {
     ).to.exist;
     expect(
       el.shadowRoot!.querySelector(
-        '[data-id="embed"] [part="evidence-metadata"]'
+        '[data-id="embed"] [part~="evidence-metadata"]'
       )
     ).to.exist;
     await expect(el).to.be.accessible();
@@ -838,18 +862,6 @@ describe("lr-retrieval-trace", () => {
 });
 
 describe("active-evidence cssprop escape hatch", () => {
-  function resolvedInShadow(
-    el: LyraRetrievalTrace,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function activeTrace(
     style = ""
@@ -953,6 +965,8 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
   let leaked = 0;
   el.addEventListener('lr-chunk-toggle', () => leaked++);
   const actions: unknown[] = [];
+  const toggles: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
   el.addEventListener('lr-stage-chunk-action', (event) =>
     actions.push((event as CustomEvent).detail)
   );
@@ -972,6 +986,12 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     },
   ]);
   expect(leaked).to.equal(0);
+  inspector.dispatchEvent(new CustomEvent('lr-toggle', {
+    detail: { itemId: 'c2', expanded: true },
+    bubbles: true,
+    composed: true,
+  }));
+  expect(toggles).to.deep.equal([{ itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
 });
 
 it('falls back to string conversion for non-JSON metadata scalars', async () => {
@@ -988,18 +1008,27 @@ it('falls back to string conversion for non-JSON metadata scalars', async () => 
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="evidence-metadata-value"]')!.textContent?.trim())
+  expect(el.shadowRoot!.querySelector('[part~="evidence-metadata-value"]')!.textContent?.trim())
     .to.equal('1');
+  const metadata = el.shadowRoot!.querySelector('[part~="evidence-metadata"]')!;
+  expect(metadata.getAttribute('part')?.split(' ')).to.include('metadata');
 });
 
-it('degrades an unknown stage.kind to a plain string label instead of crashing the whole timeline', async () => {
+it('degrades an unknown stage.kind to a localized label instead of crashing the whole timeline', async () => {
   const stages = [
     { id: 'good', kind: 'retrieve', startMs: 0, endMs: 5, status: 'success' },
     { id: 's1', kind: 'dedupe', startMs: 5, endMs: 9, status: 'success' },
   ] as unknown as RetrievalStage[];
-  const el = await fixture<LyraRetrievalTrace>(html`
-    <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
-  `);
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  let el: LyraRetrievalTrace;
+  try {
+    el = await fixture<LyraRetrievalTrace>(html`
+      <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
+    `);
+  } finally {
+    console.warn = originalWarn;
+  }
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="timeline"]')).to.exist;
@@ -1011,6 +1040,11 @@ it('degrades an unknown stage.kind to a plain string label instead of crashing t
   ].map((b) => b.getAttribute('data-id'));
   expect(bars).to.include('good');
   expect(bars).to.include('s1');
+  expect(waterfall.shadowRoot!.textContent).to.include('Unknown stage');
+  el.strings = { retrievalStageKindUnknown: 'Étape inconnue' };
+  await el.updateComplete;
+  await waterfall.updateComplete;
+  expect(waterfall.shadowRoot!.textContent).to.include('Étape inconnue');
 });
 
 it('drops a malformed evidence chunk instead of crashing, keeping valid sibling chunks', async () => {
@@ -1104,8 +1138,8 @@ describe("review fixes", () => {
     const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
     el.shadowRoot!.querySelector<HTMLElement>('[part="evidence-toggle"]')!.click();
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelectorAll('[part="evidence-metadata-row"]').length).to.be.at.most(33);
-    const lengths = [...el.shadowRoot!.querySelectorAll('[part="evidence-metadata-value"]')].map((value) => value.textContent!.trim().length);
+    expect(el.shadowRoot!.querySelectorAll('[part~="evidence-metadata-row"]').length).to.be.at.most(33);
+    const lengths = [...el.shadowRoot!.querySelectorAll('[part~="evidence-metadata-value"]')].map((value) => value.textContent!.trim().length);
     expect(Math.max(...lengths)).to.be.lessThan(500);
   });
 });

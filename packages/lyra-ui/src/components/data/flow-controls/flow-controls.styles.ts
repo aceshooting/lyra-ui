@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -55,8 +56,7 @@ export const styles = css`
     font: inherit;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     border-radius: var(--lr-radius);
@@ -91,8 +91,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='base'] button:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='lock'][aria-pressed='true'] {
     color: var(--lr-flow-controls-lock-active-color, var(--lr-color-brand));
@@ -108,8 +107,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding: 0;
     border: none;
@@ -148,7 +146,6 @@ export const styles = css`
     cursor: not-allowed;
   }
   ::slotted(button:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 `;

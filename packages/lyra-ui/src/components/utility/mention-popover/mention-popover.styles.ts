@@ -145,6 +145,14 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  [part='more-results'] {
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
+    overflow-wrap: anywhere;
+  }
+
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}

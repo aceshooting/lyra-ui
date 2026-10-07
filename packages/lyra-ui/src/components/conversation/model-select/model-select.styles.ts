@@ -1,8 +1,10 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -59,17 +61,8 @@ export const styles = css`
     --_lr-model-select-expand-size: var(--lr-size-1-25rem);
   }
 
-  [part="form-control-label"] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches -- the part always contains a slot element -- so visible-label presence
-     is tracked from both the property and named slot, then reflected through hidden. */
-  [part="form-control-label"][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   /* Accepts required and renders a visible label like every other field in the library, so it
      marks it the same way -- the [hidden] rule above keeps the marker from orphaning a stray
      glyph when no label is set. */
@@ -126,8 +119,7 @@ export const styles = css`
   }
   [part="trigger"]:focus-visible,
   [part="combobox"]:focus-within {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible for the trigger (matching
      lr-select): the outline above is the accessibility answer to keyboard focus and stays
@@ -363,7 +355,7 @@ export const styles = css`
     );
   }
   [part="option"][data-synthetic] [part="option-label"] {
-    font-style: italic;
+    font-style: var(--lr-model-select-option-synthetic-font-style, italic);
   }
   [part="option-badge"] {
     flex: 0 0 auto;
@@ -378,26 +370,6 @@ export const styles = css`
     padding: var(--lr-space-m);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
-  }
-
-  [part="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  /* :empty never matches -- the part always contains a literal slot child whatever the assigned
-     or text content -- so emptiness is tracked in JS (hasHintSlot) and reflected via hidden; same
-     fix as lr-select's identical part. */
-  [part="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
   }
 
   ${glassScrollLayerStyles}

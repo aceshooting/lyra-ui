@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 export const styles = css`
   :host { display: block; min-inline-size: 0; max-inline-size: 100%; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-m); }
@@ -55,5 +56,6 @@ export const styles = css`
   [part='run-label'] { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; }
   [part='run-meta'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); align-items: center; justify-content: flex-end; }
   [part='empty'] { color: var(--lr-color-text-quiet); }
-  @container (max-inline-size: 319.98px) { [part='metrics'] { grid-template-columns: 1fr; } [part='run'] { grid-template-columns: 1fr; } [part='run-meta'] { justify-content: flex-start; } }
+  [part='limit'] { margin: 0; color: var(--lr-color-text-quiet); }
+  @container ${compactContainerQuery} { [part='metrics'] { grid-template-columns: 1fr; } [part='run'] { grid-template-columns: 1fr; } [part='run-meta'] { justify-content: flex-start; } }
 `;

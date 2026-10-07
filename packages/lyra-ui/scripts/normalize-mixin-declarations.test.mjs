@@ -47,6 +47,28 @@ test('rewrites text-viewer targets and leaves unrelated mixin declarations alone
   assert.doesNotMatch(result.text, /any\[\].*text-viewer-target/u);
 });
 
+for (const [target, hooks, module] of [
+  ['LyraAnchorTarget', 'DocumentAnchorTargetHooks', 'anchor-target'],
+  ['LyraTextViewerTarget', 'TextViewerTargetHooks', 'text-viewer-target'],
+]) {
+  test(`preserves the named protected hook contract for ${target}`, () => {
+    const added = `import("../../../lyra.js").${target} & ` +
+      `import("../../../internal/${module}.js").${hooks} & {\n` +
+      `    renderAnchorLiveRegion(): unknown;\n` +
+      `}`;
+    const source = `declare const Viewer_base: typeof ViewerBase & ` +
+      `(new (...args: any[]) => ${added});\n`;
+
+    const result = normalizeMixinDeclarationText(source);
+
+    assert.equal(result.replacements, 1);
+    assert.equal(result.text, `declare const Viewer_base: Omit<typeof ViewerBase, 'prototype'> & ` +
+      `(new (...args: ConstructorParameters<typeof ViewerBase>) => ` +
+      `InstanceType<typeof ViewerBase> & ${added});\n`);
+    assert.deepEqual(normalizeMixinDeclarationText(result.text), { text: result.text, replacements: 0 });
+  });
+}
+
 test('fails closed when a target constructor shape changes without being normalized', () => {
   assert.throws(
     () => normalizeMixinDeclarationText(

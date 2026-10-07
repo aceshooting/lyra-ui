@@ -6,9 +6,13 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
+import { loadBoxPlotAndRegister, type BoxPlotModule } from './box-plot-loader.js';
+export { loadBoxPlotAndRegister } from './box-plot-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 import { styles } from './box-plot.styles.js';
+import { chartSurfaceStyles } from './chart-surface.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatChartValue } from './chart-number-format.js';
@@ -25,6 +29,7 @@ import {
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
 import { ChartTokenCache } from './chart-token-cache.js';
+import { chartDataTableVisible, hasSlottedChartDataTable, hasArraySeriesData } from './chart-data-table.js';
 import {
   createForcedColorPattern,
   forcedColorEncoding,
@@ -33,14 +38,7 @@ import {
 } from './chart-forced-colors.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import {
-  resolveOptionalPeerCapability,
-  unwrapOptionalPeerDefault,
-} from '../../../internal/optional-peer-capabilities.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   legendVisibilityDetail,
   normalizeHiddenDatasets,
@@ -92,16 +90,7 @@ export interface LyraBoxPlotSeries {
 type LyraChartFormatterMetadata = Omit<LyraChartFormatterContext, 'surface' | 'value'>;
 
 function isBoxPlotSeries(value: unknown): value is LyraBoxPlotSeries {
-  try {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      !Array.isArray(value) &&
-      Array.isArray((value as { data?: unknown }).data)
-    );
-  } catch {
-    return false;
-  }
+  return hasArraySeriesData(value);
 }
 
 function normalizeBoxPlotSeries(value: unknown): readonly LyraBoxPlotSeries[] {
@@ -117,15 +106,6 @@ function normalizeBoxPlotSeries(value: unknown): readonly LyraBoxPlotSeries[] {
 // chart-colors.ts, shared verbatim with chart.class.ts's identical fallback chain.
 
 type BrowserWindow = Window & typeof globalThis;
-
-interface BoxPlotRegistrationConstructor {
-  new (...args: never[]): object;
-}
-
-interface BoxPlotModule {
-  BoxPlotController: BoxPlotRegistrationConstructor;
-  BoxAndWiskers: BoxPlotRegistrationConstructor;
-}
 
 interface BoxPlotChartConfiguration {
   type: string;
@@ -188,65 +168,6 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
 }
 
 let boxPlotPlugin: Promise<BoxPlotModule | null> | undefined;
-
-function isConstructor(value: unknown): value is BoxPlotRegistrationConstructor {
-  if (typeof value !== 'function') return false;
-  try {
-    Reflect.construct(Object, [], value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function missingBoxPlotCapability(candidate: unknown): string | undefined {
-  if ((typeof candidate !== 'object' && typeof candidate !== 'function') || candidate === null) {
-    return 'module namespace';
-  }
-  const module = candidate as { BoxPlotController?: unknown; BoxAndWiskers?: unknown };
-  if (!isConstructor(module.BoxPlotController)) return 'BoxPlotController';
-  if (!isConstructor(module.BoxAndWiskers)) return 'BoxAndWiskers';
-  return undefined;
-}
-
-function isBoxPlotModule(candidate: unknown): candidate is BoxPlotModule {
-  return missingBoxPlotCapability(candidate) === undefined;
-}
-
-function resolveBoxPlotModule(value: unknown): BoxPlotModule {
-  const module = resolveOptionalPeerCapability(value, isBoxPlotModule);
-  if (module) return module;
-  const candidate = unwrapOptionalPeerDefault(value);
-  const missing = missingBoxPlotCapability(candidate) ?? 'module namespace';
-  throw new Error(
-    'Invalid optional peer `@sgratzl/chartjs-chart-boxplot`: ' +
-      `missing or invalid \`${missing}\` constructor.`,
-  );
-}
-
-/**
- * Loads and validates the box-plot peer before registering its two constructors.
- * @internal
- */
-export async function loadBoxPlotAndRegister(
-  loadChart: () => Promise<ChartJsModule | null> = loadChartJs,
-  importBoxPlot: () => Promise<unknown> = () => import('@sgratzl/chartjs-chart-boxplot'),
-): Promise<BoxPlotModule | null> {
-  try {
-    const [chartMod, imported] = await Promise.all([loadChart(), importBoxPlot()]);
-    if (!chartMod) return null;
-    const boxMod = resolveBoxPlotModule(imported);
-    chartMod.Chart.register(boxMod.BoxPlotController, boxMod.BoxAndWiskers);
-    return boxMod;
-  } catch (error) {
-    console.warn(
-      '<lr-box-plot> needs the optional peer dependency `@sgratzl/chartjs-chart-boxplot` ' +
-        '— install it with `pnpm add @sgratzl/chartjs-chart-boxplot`.',
-      error,
-    );
-    return null;
-  }
-}
 
 /**
  * Lazily loads `@sgratzl/chartjs-chart-boxplot` and registers its controller
@@ -395,7 +316,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     'hiddenDatasets',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles];
+  static override styles = [LyraElement.styles, specialistTokens, chartSurfaceStyles, styles, srOnly, bidiStyles];
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-legend-visibility-change-request',
@@ -405,8 +326,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, () => {
-      this.canvasTokens.clear();
-      if (this.chart) this.refreshTheme();
+      if (this.chart && this.canvasTokens.hasThemeChanged()) this.refreshTheme();
     });
   }
 
@@ -491,8 +411,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   /** Whether the data table is currently visible. Identical to `withDataTable` whenever
    *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
   private get dataTableVisible(): boolean {
-    if (!this.dataTableToggle) return this.withDataTable;
-    return this.dataTableExpandedOverride ?? this.withDataTable;
+    return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }
 
   private toggleDataTable(): void {
@@ -519,8 +438,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   @state() private keyboardDatumAnnouncement = '';
   private intersectionObserver?: IntersectionObserver;
   private intersectionGeneration = 0;
-  private reducedMotionQuery?: MediaQueryList;
-  private reducedMotionWindow?: BrowserWindow;
+  private stopReducedMotionWatch?: () => void;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: BoxPlotChartRuntime;
@@ -530,8 +448,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private descriptionId = nextId('box-plot-description');
   private lastDrawnDirection?: 'ltr' | 'rtl';
   private lastDrawnLocale?: string;
-  private politeAnnouncementSink?: AnnouncementSink;
-  private assertiveAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this);
   private lastDataTruncationAnnouncement = '';
   /** Gates the sampling notice so an initially supplied large dataset is described, not announced. */
   private isMounting = true;
@@ -542,7 +459,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
       this.rebuildAfterAnnotationRegistration()
     );
-    this.syncAnnouncementSinks();
     this.visible = !this.ownerWindow?.IntersectionObserver;
     this.armReducedMotionWatcher();
     const generation = ++this.loadGeneration;
@@ -614,7 +530,6 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     super.disconnectedCallback();
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
-    this.releaseAnnouncementSinks();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.loadGeneration += 1;
@@ -630,54 +545,25 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   override adoptedCallback(): void {
     this.canvasTokens.clear();
     super.adoptedCallback();
-    this.releaseAnnouncementSinks();
-    this.syncAnnouncementSinks();
+    this.announcements.adopted();
+    this.disarmReducedMotionWatcher();
     this.armReducedMotionWatcher();
   }
 
   private readonly onReducedMotionChange = (): void => {
-    if (!this.isConnected || this.ownerWindow !== this.reducedMotionWindow) return;
+    if (!this.isConnected) return;
     this.drawIfVisible();
   };
 
   private armReducedMotionWatcher(): void {
-    const ownerWindow = this.ownerWindow;
-    if (!ownerWindow?.matchMedia) return;
-    if (this.reducedMotionWindow === ownerWindow && this.reducedMotionQuery) return;
+    if (this.stopReducedMotionWatch) return;
     this.disarmReducedMotionWatcher();
-    this.reducedMotionWindow = ownerWindow;
-    this.reducedMotionQuery = ownerWindow.matchMedia('(prefers-reduced-motion: reduce)');
-    this.reducedMotionQuery.addEventListener('change', this.onReducedMotionChange);
+    this.stopReducedMotionWatch = observeReducedMotion(this, this.onReducedMotionChange);
   }
 
   private disarmReducedMotionWatcher(): void {
-    this.reducedMotionQuery?.removeEventListener('change', this.onReducedMotionChange);
-    this.reducedMotionQuery = undefined;
-    this.reducedMotionWindow = undefined;
-  }
-
-  private syncAnnouncementSinks(): void {
-    if (!this.isConnected) return;
-    if (
-      this.politeAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
-      this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument
-    ) return;
-    this.releaseAnnouncementSinks();
-    this.politeAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.assertiveAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSinks(): void {
-    this.politeAnnouncementSink?.release();
-    this.politeAnnouncementSink = undefined;
-    this.assertiveAnnouncementSink?.release();
-    this.assertiveAnnouncementSink = undefined;
+    this.stopReducedMotionWatch?.();
+    this.stopReducedMotionWatch = undefined;
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
@@ -722,21 +608,21 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       changed.get('keyboardDatumAnnouncement') !== undefined &&
       this.keyboardDatumAnnouncement !== ''
     ) {
-      this.politeAnnouncementSink?.announce(this.keyboardDatumAnnouncement);
+      this.announcements.announcePolite(this.keyboardDatumAnnouncement);
     }
     if (
       changed.has('loadFailed') &&
       changed.get('loadFailed') !== undefined &&
       this.loadFailed
     ) {
-      this.assertiveAnnouncementSink?.announce(this.localize('boxPlotMissingLibrary'));
+      this.announcements.announceAssertive(this.localize('boxPlotMissingLibrary'));
     }
     const dataTruncation = this.dataTruncationMessage();
     if (wasMounting) this.lastDataTruncationAnnouncement = dataTruncation;
     if (!this.loading && !this.loadFailed) {
       if (!wasMounting && dataTruncation !== this.lastDataTruncationAnnouncement) {
         this.lastDataTruncationAnnouncement = dataTruncation;
-        if (dataTruncation) this.politeAnnouncementSink?.announce(dataTruncation);
+        if (dataTruncation) this.announcements.announcePolite(dataTruncation);
       }
     }
     this.setAttribute('aria-busy', String(this.loading));
@@ -1040,12 +926,14 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // reusing whenever a chart already exists is always safe here.
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
+    this.canvasTokens.beginThemeDraw();
     const config = this.buildConfig();
     if (this.chart) {
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.applyDatasetVisibility();
       this.chart.update('none');
+      this.canvasTokens.rememberTheme();
       return;
     }
     this.chart = new this.chartJsModule.Chart(
@@ -1056,6 +944,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.applyDatasetVisibility();
       this.chart.update('none');
     }
+    this.canvasTokens.rememberTheme();
   }
 
   private drawIfVisible(): void {
@@ -1476,7 +1365,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   private hasCustomDataTable(): boolean {
-    return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
+    return hasSlottedChartDataTable(this);
   }
 
   private toggleDataset(index: number): void {

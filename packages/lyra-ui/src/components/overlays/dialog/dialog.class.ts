@@ -387,6 +387,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private pendingScrollLockRelease?: () => void;
   private headingObserver?: MutationObserver;
   private headingObserverDocument?: Document;
+  private headingObserverOpen?: boolean;
   private headingObserverGeneration = 0;
   private bodyOverflowObserver?: ResizeObserver;
   private bodyOverflowObservedBody?: HTMLElement;
@@ -427,7 +428,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
+    if (!this.hasUpdated || (changed.has('open') && this.open)) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       this.detectLightDomChrome();
     }
@@ -475,6 +476,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('open')) this.armHeadingObserver();
     this.syncBodyTabIndex();
     this.armBodyOverflowObserver();
     if (changed.has('open') && this.open && this.isConnected && this.modalSurface) {
@@ -569,7 +571,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private armHeadingObserver(): void {
     const ownerDocument = this.ownerDocument;
     if (!this.isConnected) return;
-    if (this.headingObserver && this.headingObserverDocument === ownerDocument) return;
+    if (
+      this.headingObserver &&
+      this.headingObserverDocument === ownerDocument &&
+      this.headingObserverOpen === this.open
+    ) return;
     this.resetHeadingObserver();
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
@@ -586,16 +592,28 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       }
       this.detectLightDomChrome();
       this.syncBodyTabIndex();
+      this.resetHeadingObserver();
+      this.armHeadingObserver();
     });
     this.headingObserver = observer;
     this.headingObserverDocument = ownerDocument;
-    observer.observe(this, {
-      childList: true,
-      characterData: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'inert', 'class', 'style', 'slot'],
-    });
+    this.headingObserverOpen = this.open;
+    observer.observe(this, { childList: true });
+    if (this.open) {
+      for (const child of this.children) {
+        observer.observe(child, { attributes: true, attributeFilter: ['slot'] });
+      }
+      const heading = Array.from(this.children).find(
+        child => child.getAttribute('slot') === null && child.matches(HEADING_SELECTOR),
+      );
+      if (heading) observer.observe(heading, {
+        attributes: true,
+        attributeFilter: ['aria-label', 'aria-labelledby', 'aria-hidden', 'hidden', 'inert', 'class', 'style', 'slot'],
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
+    }
   }
 
   private resetHeadingObserver(): void {
@@ -603,6 +621,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.headingObserver?.disconnect();
     this.headingObserver = undefined;
     this.headingObserverDocument = undefined;
+    this.headingObserverOpen = undefined;
   }
 
   /** Keep the scroll surface in native sequential focus order only while it has scrollable content.

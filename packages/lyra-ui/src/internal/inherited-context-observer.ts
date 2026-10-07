@@ -11,6 +11,7 @@ import {
   flattenedParentElement,
   ownerView,
 } from './composed-tree.js';
+import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
   'locale',
@@ -48,7 +49,7 @@ interface InheritedContextState {
 
 interface RootObservation {
   readonly root: Node;
-  readonly observer: MutationObserver;
+  readonly releaseObserver: () => void;
   readonly localeSubscribers: WeakMap<
     Element,
     Set<InheritedContextSubscription>
@@ -167,67 +168,66 @@ function createRootObservation(
     Set<InheritedContextSubscription>
   >();
   const directionSubscriptions = new Set<InheritedContextSubscription>();
-  let observer: MutationObserver | undefined;
+  let releaseObserver: (() => void) | undefined;
   let slotchange: EventListener | undefined;
   try {
-    observer = new Observer((records) => {
-      let flattenedTreeMoved = false;
-      for (const record of records) {
-        if (record.type === 'childList') {
-          // Only a slot can change a host's flattened ancestry without reconnecting it, and a
-          // removed slot's own slotchange fires outside this root. Ordinary template commits
-          // (rows inserted, moved, removed) re-derive nothing.
-          flattenedTreeMoved ||=
-            someNode(record.addedNodes, containsSlot) ||
-            someNode(record.removedNodes, containsSlot);
-          continue;
-        }
-        if (
-          record.type !== 'attributes' ||
-          (record.target as { nodeType?: number }).nodeType !== 1 ||
-          typeof (record.target as Element).getAttribute !== 'function'
-        )
-          continue;
-        const mutationTarget = record.target as Element;
-        const attribute = record.attributeName;
-        if (attribute === 'locale' || attribute === 'lang') {
-          for (const subscription of subscribersFor(
-            localeSubscribers,
-            mutationTarget
-          ) ?? []) {
-            queueSubscription(subscription, true, false);
-          }
-        }
-        const directionRelevant =
-          attribute === 'dir' ||
-          attribute === 'class' ||
-          attribute === 'style' ||
-          attribute === 'locale' ||
-          attribute === 'lang';
-        const flattenedTreeChanged =
-          attribute === 'slot' || attribute === 'name';
-        if (directionRelevant || flattenedTreeChanged) {
-          for (const subscription of subscribersFor(
-            directionSubscribers,
-            mutationTarget
-          ) ?? []) {
-            queueSubscription(subscription, false, true, flattenedTreeChanged);
-          }
-        }
-      }
-      // Once per callback, not once per record.
-      if (flattenedTreeMoved) {
-        for (const subscription of [...directionSubscriptions]) {
-          queueSubscription(subscription, false, true, true);
-        }
-      }
-    });
-    observer.observe(target, {
-      subtree: true,
-      attributes: true,
+    releaseObserver = subscribeInheritedAttributes(root, Observer, {
+      attributes: INHERITED_CONTEXT_ATTRIBUTES,
       childList: root.nodeType === 11,
-      attributeFilter: [...INHERITED_CONTEXT_ATTRIBUTES],
+      changed: (records) => {
+        let flattenedTreeMoved = false;
+        for (const record of records) {
+          if (record.type === 'childList') {
+            // Only a slot can change a host's flattened ancestry without reconnecting it, and a
+            // removed slot's own slotchange fires outside this root. Ordinary template commits
+            // (rows inserted, moved, removed) re-derive nothing.
+            flattenedTreeMoved ||=
+              someNode(record.addedNodes, containsSlot) ||
+              someNode(record.removedNodes, containsSlot);
+            continue;
+          }
+          if (
+            record.type !== 'attributes' ||
+            (record.target as { nodeType?: number }).nodeType !== 1 ||
+            typeof (record.target as Element).getAttribute !== 'function'
+          )
+            continue;
+          const mutationTarget = record.target as Element;
+          const attribute = record.attributeName;
+          if (attribute === 'locale' || attribute === 'lang') {
+            for (const subscription of subscribersFor(
+              localeSubscribers,
+              mutationTarget
+            ) ?? []) {
+              queueSubscription(subscription, true, false);
+            }
+          }
+          const directionRelevant =
+            attribute === 'dir' ||
+            attribute === 'class' ||
+            attribute === 'style' ||
+            attribute === 'locale' ||
+            attribute === 'lang';
+          const flattenedTreeChanged =
+            attribute === 'slot' || attribute === 'name';
+          if (directionRelevant || flattenedTreeChanged) {
+            for (const subscription of subscribersFor(
+              directionSubscribers,
+              mutationTarget
+            ) ?? []) {
+              queueSubscription(subscription, false, true, flattenedTreeChanged);
+            }
+          }
+        }
+        // Once per callback, not once per record.
+        if (flattenedTreeMoved) {
+          for (const subscription of [...directionSubscriptions]) {
+            queueSubscription(subscription, false, true, true);
+          }
+        }
+      },
     });
+    if (!releaseObserver) return undefined;
     if (root.nodeType === 11) {
       slotchange = () => {
         for (const subscription of [...directionSubscriptions]) {
@@ -238,7 +238,7 @@ function createRootObservation(
     }
   } catch {
     try {
-      observer?.disconnect();
+      releaseObserver?.();
     } catch {
       // Setup already failed; cleanup must not replace that failure or strand earlier roots.
     }
@@ -253,7 +253,7 @@ function createRootObservation(
   }
   const observation: RootObservation = {
     root,
-    observer,
+    releaseObserver,
     localeSubscribers,
     directionSubscribers,
     directionSubscriptions,
@@ -319,7 +319,7 @@ function releaseObservationReference(observation: RootObservation): void {
   observation.subscriberCount -= 1;
   if (observation.subscriberCount !== 0) return;
   try {
-    observation.observer.disconnect();
+    observation.releaseObserver();
   } catch {
     // The registry must still forget an unusable hostile observer.
   }

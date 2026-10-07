@@ -1,3 +1,4 @@
+import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './model-settings-panel.js';
@@ -775,18 +776,6 @@ it('is accessible in compact layout', async () => {
 
 // -- Width hook --------------------------------------------------------------
 
-/** Resolves what `expression` computes to *inside this panel's shadow root*, where the `--lr-*`
- *  design tokens actually live (declared on `:host`, so a light-DOM probe would see none). */
-function resolvedInShadow(el: LyraModelSettingsPanel, expression: string): string {
-  const probe = document.createElement('span');
-  probe.style.position = 'absolute';
-  probe.style.maxInlineSize = expression;
-  el.shadowRoot!.append(probe);
-  const value = getComputedStyle(probe).maxInlineSize;
-  probe.remove();
-  return value;
-}
-
 it('keeps the 28rem default card cap when nothing is set (unset regression)', async () => {
   const el = (await fixture(html`
     <lr-model-settings-panel .catalog=${CATALOG}></lr-model-settings-panel>
@@ -855,4 +844,14 @@ it('uncaps the nested model select by name, so a consumer can re-cap it', async 
   expect(getComputedStyle(select).maxInlineSize).to.equal(
     resolvedInShadow(el, '10rem')
   );
+});
+
+it('contains the model selector typed live input', async () => {
+  const el = await fixture<LyraModelSettingsPanel>(html`<lr-model-settings-panel></lr-model-settings-panel>`);
+  let inputs = 0;
+  el.addEventListener('lr-input', () => inputs++);
+  modelSelect(el).dispatchEvent(new CustomEvent('lr-input', {
+    bubbles: true, composed: true, detail: { value: 'custom', inCatalog: false },
+  }));
+  expect(inputs).to.equal(0);
 });

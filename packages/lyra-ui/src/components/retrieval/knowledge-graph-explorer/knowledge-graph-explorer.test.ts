@@ -382,6 +382,7 @@ describe('lr-knowledge-graph-explorer', () => {
         // This component's matchingNodes() filters the full node set with no ceiling, so it can
         // never truncate.
         matchCountExact: true,
+        activeIndex: -1,
       },
     ]);
     expect(
@@ -399,6 +400,7 @@ describe('lr-knowledge-graph-explorer', () => {
       query: '',
       matchCount: 0,
       matchCountExact: true,
+      activeIndex: -1,
     });
 
     el.query = 'polonium';
@@ -2486,6 +2488,17 @@ it('contains long search results horizontally and suppresses the consumed child 
   expect(getComputedStyle(results).overflowX).to.be.oneOf(['clip', 'hidden']);
   expect(getComputedStyle(button).overflowWrap).to.equal('anywhere');
   expect(leaked).to.equal(0);
+});
+
+it('reports how many matching nodes are omitted from the bounded search list', async () => {
+  const matches = Array.from({ length: 60 }, (_unused, index) => ({ id: `node-${index}`, label: `Node ${index}` }));
+  const el = (await fixture(html`<lr-knowledge-graph-explorer .nodes=${matches}></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+  el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(new CustomEvent('lr-input', {
+    detail: { value: 'Node' }, bubbles: true, composed: true,
+  }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(50);
+  expect(el.shadowRoot!.querySelector('[part="search-limit"]')!.textContent).to.include('50 of 60');
 });
 
 describe('search matching against accessibleLabel', () => {

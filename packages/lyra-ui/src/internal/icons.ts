@@ -132,3 +132,94 @@ export function eyeOffIcon(): SVGTemplateResult {
     <line x1="1" y1="1" x2="23" y2="23"></line>
   `);
 }
+
+/** A pinned conversation glyph. */
+export function pinIcon(): SVGTemplateResult {
+  return icon(svg`
+    <path d="M12 17v5"></path>
+    <path d="M9 3h6l1 6 3 3v2H5v-2l3-3Z"></path>
+  `);
+}
+
+/** An archive box glyph. */
+export function archiveIcon(): SVGTemplateResult {
+  return icon(svg`
+    <rect x="3" y="4" width="18" height="4" rx="1"></rect>
+    <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
+    <line x1="10" y1="13" x2="14" y2="13"></line>
+  `);
+}
+
+/** A trash bin glyph. */
+export function trashIcon(): SVGTemplateResult {
+  return icon(svg`
+    <path d="M4 7h16"></path>
+    <path d="M10 11v6"></path>
+    <path d="M14 11v6"></path>
+    <path d="M6 7l1 14h10l1-14"></path>
+    <path d="M9 7V4h6v3"></path>
+  `);
+}
+
+/** A pencil glyph. */
+export function pencilIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`);
+}
+
+/** A paper-plane send glyph. */
+export function sendIcon(): SVGTemplateResult {
+  return icon(svg`<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>`);
+}
+
+/** A circular regenerate glyph. */
+export function regenerateIcon(): SVGTemplateResult {
+  return icon(svg`
+    <polyline points="23 4 23 10 17 10"></polyline>
+    <polyline points="1 20 1 14 7 14"></polyline>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+  `);
+}
+
+/** A retry glyph. */
+export function retryIcon(): SVGTemplateResult {
+  return icon(svg`<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>`);
+}
+
+/** A filled square stop glyph. */
+export function stopIcon(): SVGTemplateResult {
+  return svg`
+    <svg
+      width="1em"
+      height="1em"
+      viewBox=${VIEW_BOX}
+      fill="currentColor"
+      stroke="none"
+      aria-hidden="true"
+      focusable="false"
+    ><rect x="6" y="6" width="12" height="12" rx="1.5"></rect></svg>
+  `;
+}
+
+/** A conversation feedback thumb, with `filled` reserved for the pressed state. */
+export function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplateResult {
+  const cuff = direction === 'up'
+    ? 'M7 11v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3Z'
+    : 'M17 13V4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v8h4Z';
+  const hand = direction === 'up'
+    ? 'M7 11l3.5-7A2 2 0 0 1 12 3a1 1 0 0 1 1 1v6h4.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 16.3 21H9a2 2 0 0 1-2-2v-8Z'
+    : 'M17 13l-3.5 7A2 2 0 0 1 12 21a1 1 0 0 1-1-1v-6H6.5a2 2 0 0 1-2-2.3l1.2-7A2 2 0 0 1 7.7 3H15a2 2 0 0 1 2 2v8Z';
+  return svg`
+    <svg
+      width="1em"
+      height="1em"
+      viewBox=${VIEW_BOX}
+      fill=${filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      stroke-width=${STROKE_WIDTH}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    ><path d=${cuff}></path><path d=${hand}></path></svg>
+  `;
+}

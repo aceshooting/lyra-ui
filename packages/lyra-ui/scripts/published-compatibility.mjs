@@ -201,6 +201,22 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
     requireThat(policy?.replacement?.kind === 'component' && retirement && compare(packageVersion, retirement.removedIn) >= 0 && components[policy.replacement.name], `Historical owner ${tag} has no current supported replacement`);
     return policy.replacement.name;
   };
+  const hasSupportedMemberSuccessor = (owner, kind, name) => {
+    const seen = new Set();
+    while (true) {
+      const id = compatibilityKey({ scope: 'member', tag: owner, kind, name });
+      if (seen.has(id)) return false;
+      seen.add(id);
+      const currentMember = member(components[owner], kind, name);
+      if (!currentMember) return false;
+      if (!currentMember.deprecated) return true;
+      const replacement = currentRecords[id]?.policy?.replacement;
+      if (!replacement || replacement.kind === 'host-css-property') return false;
+      if (replacement.kind === 'component') owner = replacement.name;
+      kind = replacement.kind;
+      name = replacement.name;
+    }
+  };
   for (const [id, historicalEntry] of Object.entries(historical)) {
     const { key, policy, sources } = historicalEntry;
     const current = currentRecords[id]; const retirement = retirements[id];
@@ -254,7 +270,10 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
         return value && !value.deprecated;
       });
       requireThat(publishedReplacement, `Replacement was not available in the published compatibility window: ${id}`);
-      requireThat(replacementMember && !replacementMember.deprecated, `Missing current supported replacement: ${id}`);
+      const supported = key.scope === 'member' && replacement.kind !== 'host-css-property'
+        ? hasSupportedMemberSuccessor(replacementOwner, replacement.kind, replacement.name)
+        : replacementMember && !replacementMember.deprecated;
+      requireThat(replacementMember && supported, `Missing current supported replacement: ${id}`);
       records[id] = { state: 'retired', key, policy, removedIn: retirement.removedIn,
         sourceComponent, sourceMember,
         sourceOwner: key.tag ?? null, replacementOwner, replacementMember };

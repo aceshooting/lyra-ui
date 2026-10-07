@@ -1,3 +1,4 @@
+import { adoptedClipboardProbe } from '../../../../test/contracts/adopted-clipboard.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
@@ -581,59 +582,7 @@ describe("lr-diff-view", () => {
   });
 
   it("uses and cancels the exact adopted owner clipboard and confirmation timer", async () => {
-    const frame = document.createElement("iframe");
-    document.body.append(frame);
-    const frameDocument = frame.contentDocument!;
-    const frameWindow = frame.contentWindow!;
-    const mainClipboard = Object.getOwnPropertyDescriptor(
-      navigator,
-      "clipboard"
-    );
-    const frameClipboard = Object.getOwnPropertyDescriptor(
-      frameWindow.navigator,
-      "clipboard"
-    );
-    const nativeSetTimeout = frameWindow.setTimeout.bind(frameWindow);
-    const nativeClearTimeout = frameWindow.clearTimeout.bind(frameWindow);
-    let mainWrites = 0;
-    const frameWrites: string[] = [];
-    let confirmationHandle: number | undefined;
-    let confirmationCallback: (() => void) | undefined;
-    const cancelled: number[] = [];
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: () => {
-          mainWrites++;
-          return Promise.resolve();
-        },
-      },
-    });
-    Object.defineProperty(frameWindow.navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: (text: string) => {
-          frameWrites.push(text);
-          return Promise.resolve();
-        },
-      },
-    });
-    frameWindow.setTimeout = ((
-      handler: TimerHandler,
-      timeout?: number,
-      ...args: unknown[]
-    ) => {
-      const handle = nativeSetTimeout(handler, timeout, ...args);
-      if (timeout === 1500) {
-        confirmationHandle = handle;
-        if (typeof handler === "function") confirmationCallback = () => handler(...args);
-      }
-      return handle;
-    }) as typeof frameWindow.setTimeout;
-    frameWindow.clearTimeout = ((handle?: number) => {
-      if (handle !== undefined) cancelled.push(handle);
-      nativeClearTimeout(handle);
-    }) as typeof frameWindow.clearTimeout;
+    const probe = adoptedClipboardProbe(1500);
     const el = (await fixture(
       html`<lr-diff-view
         copyable
@@ -643,20 +592,20 @@ describe("lr-diff-view", () => {
     )) as LyraDiffView;
 
     try {
-      frameDocument.body.append(frameDocument.adoptNode(el));
+      probe.frameDocument.body.append(probe.frameDocument.adoptNode(el));
       await el.updateComplete;
       (
         el.shadowRoot!.querySelector(
           '[part="copy-button"]'
         ) as HTMLButtonElement
       ).click();
-      await waitUntil(() => confirmationHandle !== undefined);
-      expect(mainWrites).to.equal(0);
-      expect(frameWrites).to.deep.equal(["- a\n+ b"]);
-      expect(confirmationHandle).to.be.a("number");
+      await waitUntil(() => probe.confirmationHandle !== undefined);
+      expect(probe.mainWrites).to.equal(0);
+      expect(probe.frameWrites).to.deep.equal(["- a\n+ b"]);
+      expect(probe.confirmationHandle).to.be.a("number");
 
       document.body.append(document.adoptNode(el));
-      expect(cancelled).to.include(confirmationHandle!);
+      expect(probe.cancelled).to.include(probe.confirmationHandle!);
       await el.updateComplete;
       expect(
         el
@@ -675,7 +624,7 @@ describe("lr-diff-view", () => {
             .shadowRoot!.querySelector('[part="copy-button"]')!
             .textContent!.trim() === "Copied!"
       );
-      confirmationCallback?.();
+      probe.confirmationCallback?.();
       await aTimeout(0);
       expect(
         el
@@ -684,22 +633,8 @@ describe("lr-diff-view", () => {
         "the retired iframe callback cannot clear the new owner state"
       ).to.equal("Copied!");
     } finally {
-      if (confirmationHandle !== undefined)
-        nativeClearTimeout(confirmationHandle);
       el.remove();
-      frameWindow.setTimeout = nativeSetTimeout;
-      frameWindow.clearTimeout = nativeClearTimeout;
-      if (mainClipboard)
-        Object.defineProperty(navigator, "clipboard", mainClipboard);
-      else Reflect.deleteProperty(navigator, "clipboard");
-      if (frameClipboard)
-        Object.defineProperty(
-          frameWindow.navigator,
-          "clipboard",
-          frameClipboard
-        );
-      else Reflect.deleteProperty(frameWindow.navigator, "clipboard");
-      frame.remove();
+      probe.close();
     }
   });
 

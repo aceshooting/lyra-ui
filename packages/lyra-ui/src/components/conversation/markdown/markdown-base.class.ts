@@ -1,4 +1,4 @@
-import { type PropertyValues, type TemplateResult } from 'lit';
+import type { PropertyValues, TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -29,6 +29,9 @@ import type {
   LyraAnchorKind,
 } from '../../viewers/document-viewer/anchors.js';
 import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
+import type { MarkdownVariantContext } from './markdown-variant-context.js';
+export { createMarkdownVariantContext } from './markdown-variant-context.js';
+export type { MarkdownVariantContext } from './markdown-variant-context.js';
 import type {
   LyraMarkedParser,
   MarkdownDeps,
@@ -71,7 +74,6 @@ import {
   setCachedHighlight,
   type MarkdownHeadingItem,
   type MarkdownHtmlMode,
-  type MarkdownKatexState,
   type PendingHighlight,
   type ResolvedHighlightRange,
 } from './markdown-shared.js';
@@ -149,33 +151,6 @@ class LyraMarkdownRuntimeElement extends LyraElement<MarkdownRuntimeEventMap> {
     markdownTableRegion: LYRA_DEFAULT_markdownTableRegion,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-}
-
-// Deliberately not tagged internal, and this note deliberately never spells that JSDoc tag out
-// literally either: this TypeScript toolchain's stripInternal pass matches the tag as bare text
-// anywhere in a comment block, not just in tag position, so writing it even to explain its
-// absence re-triggers stripping. The public createMarkdownVariantContext() below references this
-// type in its own signature; stripping this interface would leave that still-public signature
-// naming a type that no longer exists in the shipped .d.ts, breaking the package's own build.
-/** Shared per-tag state. The two concrete tags deliberately keep separate parser defaults,
- * connected-instance sets, and KaTeX resolution state while sharing one lifecycle implementation. */
-export interface MarkdownVariantContext {
-  readonly tag: 'lr-markdown' | 'lr-markdown-core';
-  readonly connectedInstances: Set<MarkdownRuntimeBase>;
-  readonly sharedParser: MarkdownParserController;
-  readonly katexState: MarkdownKatexState;
-}
-
-export function createMarkdownVariantContext(
-  tag: MarkdownVariantContext['tag'],
-  katexState: MarkdownKatexState
-): MarkdownVariantContext {
-  return {
-    tag,
-    connectedInstances: new Set(),
-    sharedParser: new MarkdownParserController(),
-    katexState,
-  };
 }
 
 // Deliberately not tagged internal -- see MarkdownVariantContext's note above. MarkdownRuntimeBase's
@@ -726,7 +701,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return this.renderRoot.querySelector('[part="content"]');
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const root = this.contentRoot();
     if (!root) return false;
     if (anchor.kind === 'fragment') {
@@ -743,7 +718,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return false;
   }
 
-  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+  protected override computeSelectionAnchor(range: Range): LyraAnchor | null {
     const root = this.contentRoot();
     if (!root) return null;
     const anchor = buildQuoteAnchor(range, this.markdownTextIndex(root).scope);

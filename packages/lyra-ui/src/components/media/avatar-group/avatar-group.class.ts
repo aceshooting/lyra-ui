@@ -9,6 +9,11 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
+import {
+  LYRA_AVATAR_SHAPE_VALUES,
+  LYRA_SIZE_VALUES,
+  LYRA_VARIANT_VALUES,
+} from '../../../internal/variant-values.js';
 import { styles } from './avatar-group.styles.js';
 // Type-only import — erased at build. Importing the value module (`avatar.ts`/`avatar.js`) here
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
@@ -179,35 +184,15 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (
-      changed.has('size') &&
-      this.size !== '2xs' &&
-      this.size !== 'xs' &&
-      this.size !== 's' &&
-      this.size !== 'm' &&
-      this.size !== 'l' &&
-      this.size !== 'xl' &&
-      this.size !== 'small' &&
-      this.size !== 'medium' &&
-      this.size !== 'large'
-    )
+    if (changed.has('size') && !(LYRA_SIZE_VALUES as readonly string[]).includes(this.size))
       this.size = 'm';
     if (
       changed.has('shape') &&
-      this.shape !== 'circle' &&
-      this.shape !== 'rounded' &&
-      this.shape !== 'square'
+      !(LYRA_AVATAR_SHAPE_VALUES as readonly string[]).includes(this.shape)
     ) {
       this.shape = 'circle';
     }
-    if (
-      changed.has('variant') &&
-      this.variant !== 'neutral' &&
-      this.variant !== 'brand' &&
-      this.variant !== 'success' &&
-      this.variant !== 'warning' &&
-      this.variant !== 'danger'
-    )
+    if (changed.has('variant') && !(LYRA_VARIANT_VALUES as readonly string[]).includes(this.variant))
       this.variant = 'neutral';
 
     if (!this.hasUpdated) {

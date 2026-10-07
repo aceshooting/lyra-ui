@@ -1,3 +1,5 @@
+import { twoFrames } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './thinking-panel.js';
@@ -17,9 +19,6 @@ expectStaleAttribute('lr-thinking-panel', 'appearance');
 // onContentMutated) -- two nested frames reliably lands after that rAF has
 // run, the same wait idiom lr-virtual-list's own tests already use for an
 // identical rAF-coalesced recompute.
-async function twoFrames(): Promise<void> {
-  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-}
 
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('de-DE', [
@@ -932,17 +931,6 @@ describe('the tabbable scroll region\'s own affordances', () => {
     return { el, body };
   }
 
-  /** Resolves a declaration inside the component's own shadow root, so the expectation is the
-   *  token's real cascaded value rather than a hard-coded px/colour literal. */
-  function resolvedInShadow(el: LyraThinkingPanel, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.append(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   it('draws the shared focus ring on the scroll region while it is keyboard-focused', async () => {
     const { el, body } = await panelBody();
     const expectedWidth = resolvedInShadow(el, 'outline-width: var(--lr-focus-ring-width)', 'outline-width');
@@ -1161,7 +1149,6 @@ describe('header text contrast at rest, hover and press', () => {
     }
   }
 });
-
 
 describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', () => {
   const fill = (el: LyraThinkingPanel): string =>

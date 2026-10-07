@@ -280,7 +280,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   private resourceLease?: ResourceCacheLease<string>;
   private readonly clonePrefix = `include-fragment-${++nextClonePrefix}`;
 
-  protected textContentRoot(): Element | null {
+  protected override textContentRoot(): Element | null {
     return this;
   }
 

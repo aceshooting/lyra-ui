@@ -2,14 +2,13 @@ import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode, OoxmlPackage, OoxmlPart } from '@docx-editor.dev/core/store';
 import { DOCX_LIMITS } from './commands.js';
 import { inspectDocxImage } from './image-bytes.js';
+import { OFFICE_REL_NS as R, resolveOoxmlPart, WORD_NS as W } from './ooxml.js';
 import { isDocxXmlText } from './xml-text.js';
 import type { DocxImageAction, DocxImageContext, DocxImageDescription, DocxResult } from './types.js';
 
-const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
-const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const WP14 = 'http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing';
 const LIMITS = { parts: 128, nodes: 20_000, depth: 64, attributes: 64, drawing: 512 };
 const refused = (code: 'unsupported' | 'resource-limit' | 'stale-selection' | 'no-selection'): DocxResult<never> => ({ ok: false, code });
@@ -100,14 +99,7 @@ function positive(value: string | undefined): number {
   return Number(value);
 }
 function internalTarget(owner: string, value: string): string {
-  if (!value || /[\\%\x00-\x20\x7f:?#]/.test(value) || value.startsWith('//')) reject();
-  const segments = value.startsWith('/') ? [] : owner.split('/').slice(1, -1);
-  for (const segment of value.split('/')) {
-    if (!segment || segment === '.') continue;
-    if (segment === '..') { if (!segments.length) reject(); segments.pop(); }
-    else segments.push(segment);
-  }
-  return '/' + segments.join('/');
+  return resolveOoxmlPart(owner, value) ?? reject();
 }
 /** Conservative visibility proof: styled targets and packages with hidden style rules are refused. */
 function visibleProperties(path: readonly OoxmlElement[], limits: typeof LIMITS): void {

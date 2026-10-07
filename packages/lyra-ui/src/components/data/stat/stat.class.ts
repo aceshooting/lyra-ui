@@ -8,6 +8,7 @@ import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { containsNestedInteractive } from '../../../internal/nested-interactive.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -34,40 +35,6 @@ export interface StatRow {
 }
 
 const MAX_STAT_ROWS = 10_000;
-
-const NESTED_CONTROL_SELECTOR = [
-  'a[href]',
-  'button',
-  'input',
-  'select',
-  'textarea',
-  'summary',
-  'audio[controls]',
-  'video[controls]',
-  'label',
-  '[contenteditable]:not([contenteditable="false"])',
-  '[tabindex]:not([tabindex="-1"])',
-  '[role="button"]',
-  '[role="link"]',
-  '[role="checkbox"]',
-  '[role="switch"]',
-  '[role="radio"]',
-  '[role="menuitem"]',
-  '[role="option"]',
-  '[role="tab"]',
-  '[role="textbox"]',
-  '[role="slider"]',
-  '[role="spinbutton"]',
-].join(',');
-
-function isElementNode(value: EventTarget | undefined): value is Element {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as { nodeType?: unknown }).nodeType === 1 &&
-    typeof (value as { matches?: unknown }).matches === 'function'
-  );
-}
 
 /**
  * `<lr-stat>` — a KPI/stat card. First-party invention consolidating the
@@ -336,10 +303,7 @@ export class LyraStat extends LyraElement {
   };
 
   private onLinkedContentClick = (event: Event): void => {
-    for (const node of event.composedPath()) {
-      if (node === event.currentTarget) break;
-      if (isElementNode(node) && node.matches(NESTED_CONTROL_SELECTOR)) return;
-    }
+    if (containsNestedInteractive(event, event.currentTarget)) return;
     if (event.defaultPrevented) return;
     const anchor = this.shadowRoot?.querySelector<HTMLAnchorElement>('[part="base"][href]');
     const MouseEventConstructor = this.ownerDocument.defaultView?.MouseEvent;

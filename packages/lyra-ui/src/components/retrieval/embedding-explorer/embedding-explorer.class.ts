@@ -11,10 +11,9 @@ import {
   type TemplateResult,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { extent, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
@@ -176,9 +175,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
    * unset, so the plot falls back to `auto` rather than collapsing.
    */
   @property() height = '360px';
-  /** JS-only accessible name for the plot while no host `aria-label` is authored. An authored host
-   *  label governs the plot's name too (including an explicitly empty value), avoiding a competing
-   *  generic plot label while still naming the shadow-internal `listbox` itself. */
+  /** Accessible plot name. A host aria-label takes precedence, including an empty string. */
+  @property() label: string | null = null;
+  /** Compatibility plot name used when label is absent. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
@@ -198,15 +197,12 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       this.renderedPoints = this.validPoints.filter(
         (point) => sample.has(point) || point.id === this.selectedPointId
       );
-      this.bounds = this.validPoints.reduce(
-        (result, point) => ({
-          minX: Math.min(result.minX, point.x),
-          maxX: Math.max(result.maxX, point.x),
-          minY: Math.min(result.minY, point.y),
-          maxY: Math.max(result.maxY, point.y),
-        }),
-        { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
-      );
+      this.bounds = extent(this.validPoints, (point) => point.x, (point) => point.y) ?? {
+        minX: Infinity,
+        maxX: -Infinity,
+        minY: Infinity,
+        maxY: -Infinity,
+      };
       this.clusters = [
         ...new Set(this.validPoints.map((point) => String(point.cluster ?? '').trim())),
       ].sort();
@@ -359,11 +355,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
   override render(): TemplateResult {
     const points = this.validPoints;
-    const hostLabel = hostAriaLabel(this);
-    const label =
-      hostLabel === null
-        ? this.accessibleLabel ?? this.localize('embeddingExplorerLabel')
-        : hostLabel;
+    const label = this.hasAttribute('aria-label')
+      ? this.getAttribute('aria-label')!
+      : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
     if (points.length === 0)
       return html`<div part="base" role="region" aria-label=${label}>
         <p part="empty">${this.localize('embeddingExplorerEmpty')}</p>

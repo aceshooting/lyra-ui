@@ -1,3 +1,5 @@
+import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
+
 /**
  * One logical action contributed to a parent toolbar.
  *
@@ -26,27 +28,10 @@ export interface LyraToolbarActionProvider {
   getToolbarActions(): readonly LyraToolbarAction[];
 }
 
-const MAX_DESCRIPTOR_PROTOTYPES = 100;
-
 function hasCallableDataDescriptor(value: object, key: PropertyKey): boolean {
-  let current: object | null = value;
-  for (let depth = 0; current && depth < MAX_DESCRIPTOR_PROTOTYPES; depth += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(current, key);
-    } catch {
-      return false;
-    }
-    if (descriptor) {
-      return 'value' in descriptor && typeof descriptor.value === 'function';
-    }
-    try {
-      current = Object.getPrototypeOf(current) as object | null;
-    } catch {
-      return false;
-    }
-  }
-  return false;
+  const descriptor = getInheritedPropertyDescriptor(value, key);
+  return descriptor !== undefined && Object.hasOwn(descriptor, 'value') &&
+    typeof descriptor.value === 'function';
 }
 
 /** Realm-neutral structural check for the logical-toolbar provider protocol. */

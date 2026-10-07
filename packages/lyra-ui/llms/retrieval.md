@@ -1,3 +1,13 @@
+## Current event migration
+
+Listen for `lr-entity-select` from community cards and relationship paths. Their
+`lr-entity-activate` compatibility alias still fires immediately afterward, and can be removed
+only after its published deprecation window. Retrieval selection and dashboard events likewise
+retain their documented compatibility aliases; use each component's canonical event for new code.
+Disclosure controls emit `lr-toggle` with `expanded` and, for an item, `itemId`; the older
+component-specific event names remain available. The `lyra-v25` migration profile reports
+detail or event-reach changes that cannot be rewritten mechanically.
+
 ## Breaking changes in 23.0.0
 
 Retrieval components now use only their canonical density and visibility properties: use `size="s"`
@@ -7,8 +17,8 @@ use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headi
 native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
-`lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; their older retrieval alias events are no
-longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains unchanged. Style graph
+`lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; the aliases removed in that release are no
+longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains available. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
 ## Breaking changes in 10.0.0
@@ -33,10 +43,10 @@ and never was an alias, so do **not** rename those listeners.
 (`detail: { run }`, unchanged). Same removal, same reason.
 
 `lr-knowledge-graph-explorer`'s `lr-search-change` detail is now exactly
-`{ query, matchCount, matchCountExact }`. The old `searchQuery` member is replaced by the canonical
+`{ query, matchCount, matchCountExact, activeIndex }`. The old `searchQuery` member is replaced by the canonical
 `query` rather than carried beside it, so the event finally has the `LyraSearchChangeDetail` shape
-the rest of the library's search emitters use — read `e.detail.query`. The detail deliberately has no
-`activeIndex` (this is a live node filter, not a cursor-based search) and `matchCountExact` is always
+the rest of the library's search emitters use — read `e.detail.query`. `activeIndex` is always `-1`
+(this is a live node filter, not a cursor-based search), and `matchCountExact` is always
 `true`, since that filter has no truncating ceiling. The `query` property (formerly `searchQuery`)
 is a different member and is unaffected: the component still applies the query to it before
 emitting, so reassigning it from the handler stays a no-op.
@@ -87,6 +97,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 A zero-width canvas edge paints neither a stroke nor an arrowhead; its relationship remains in the
 nonvisual topology summary.
+
+When a public node or link collection exceeds the snapshot limit, `[part="limit"]` reports the
+retained and supplied counts with localized text. The notice clears after a complete assignment.
 
 In both renderers, roving navigation transfers real focus through nodes, operable edges, then
 community hulls; zero-width, fully transparent, and dangling edges remain outside that focus order.
@@ -159,8 +172,11 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas).
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
+- `label?: string` — optional graph name. Naming precedence is an authored host `aria-label`
+  (including an explicitly empty value), then `label`, then the JS-only compatibility
+  `accessibleLabel`, then the localized graph name/count fallback.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
-  the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
+  the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
   inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
   its localized node/edge-count fallback
@@ -200,8 +216,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), no per-item hover/press tint (hover
   still emits its events and shows the tooltip), and a drawn focus ring instead of a
-  CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
+  CSS one. Keyboard roving/announcements use one stable offscreen `part="cursor-item"`
+  button in a semantic cursor list; `aria-posinset`/`aria-setsize` expose the logical position/count,
+  and arrows/Home/End reach every navigable node, link, and hull beyond the data-list cap. The canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
   only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
@@ -230,7 +247,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 drawn edge label, only rendered when `withEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
+`live-region`, `limit` (shown when node or link snapshots truncate), `data-list` (the first 200 node/link/community data records in original order,
+including inert links, with a localized shown/total notice when capped), `empty`, `error` (neutral visible message shown instead of the graph when
 the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load; that transition is
 announced through a shared assertive light-DOM region — distinct from the empty state, which means
 the peers loaded fine but `nodes` is empty),
@@ -469,7 +487,9 @@ listbox), `group-header`, `item`, `item-icon`, `item-label`, `item-description`,
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The height
 hook can only raise the field — the shared tappable-target minimum stays underneath it, so no tier
 can shrink it past the WCAG floor. The trailing inline gutter is reserved for the overlaid
-`search-clear` button and is not a knob. Everything else is shared tokens.
+`search-clear` button and is not a knob. When a component-specific geometry hook is unset, the
+field also honors the matching `--lr-input-*` and `--lr-form-control-*` hooks. The clear action
+honors the shared `--lr-icon-button-*` paint hooks.
 
 **Optional peer deps:** none.
 
@@ -948,11 +968,15 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 - `label?: string` — fallback name for the populated result group; omission uses the localized
   default and an explicit empty string clears it. A non-empty host `aria-label` makes the host the
   sole overall owner; an explicitly empty host label stays empty
+- `ordinalIndex?: number` / `ordinalTotal?: number` (attribute: false) — optional one-based result
+  position and count supplied by a containing results list. Standalone rows use their position in
+  the sorted inspector list. The open-button name includes this ordinal, title, and score tier.
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
+  toggle was activated, expanding or collapsing it; deprecated alias), and `lr-toggle` (`detail: { expanded, itemId }`)
+for the same disclosure. The internal virtual list's scroll and range
 events stay inside the component.
 
 **Slots:** none.
@@ -1111,7 +1135,8 @@ badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMa
 empties the tree), `error` (a nonempty raw
 payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
-light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
+light-DOM polite sink; positive matches announce a localized count. The shadow messages are visible
+mirrors, never live regions.
 
 **Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
@@ -1186,8 +1211,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
+**Events:** `lr-toggle` carries `{ section, expanded }` for a section header or
+`{ section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
+re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
 part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
 entity chip, a community card member or a path-strip node — only the path strip carries
@@ -1201,7 +1228,8 @@ edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-c
 **Slots:** none.
 
 **CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
-item-count badge), `body` (`hidden` while collapsed), `entity-row` (the wrapping row of entity chips
+full item-count badge), `body` (stable `aria-controls` target; heavy rows mount only while expanded),
+`limit` (localized notice above 500 rows per section), `entity-row` (the wrapping row of entity chips
 inside the entities section), `empty` (shown when every section is empty).
 
 **Themeable custom properties:** `--lr-provenance-panel-entity-justify` (default `flex-start`) —
@@ -1335,7 +1363,9 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   retaining the visible citation number (for example, `"Citation 3, Annual report"`). Authored host
   `aria-label` independently names the component and is not cloned onto that nested button. Host
   naming does not cross the shadow boundary, so the button retains its own localized
-  citation/index/status name
+  citation/index/status name.
+- `rovingTabIndex?: number` (attribute: false) — optional tab index for the internal citation
+  button when a parent owns keyboard movement across a list; unset keeps its normal Tab stop.
 
 **Events:**
 
@@ -1463,8 +1493,8 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
 
-**Events:** `lr-toggle` (`detail: { expanded: boolean }`) — the header was activated, expanding or
-collapsing the list.
+**Events:** `lr-toggle` carries `{ expanded }` for the list header or `{ expanded, itemId }`
+for a slotted source card's disclosure. The list re-emits one card toggle at its boundary.
 
 **Slots:** default — `<lr-source-card>` elements, neutral `<div>`/`<span>` wrappers, or
 author-owned `role="listitem"` entries. When every assigned child is one of those list-compatible
@@ -1535,9 +1565,11 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 **Events:**
 
-- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
+- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`, deprecated alias of `lr-toggle`) — the per-card "Show
   more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
   expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
+- `lr-toggle` (`detail: { expanded, itemId }`) — the same per-card disclosure change, including
+  automatic collapse when the full slot empties.
 - `lr-open` (`detail: { sourceId: string; href?: string }`) — the title was activated. This
   component never navigates on its own (a controlled component, the same convention
   `<lr-tool-call-chip>`'s `lr-tool-call-chip-select` follows); a listener decides what "open"
@@ -1650,16 +1682,19 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
   `lr-entity-card`.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
+- `label?: string` — names the overall dossier group after a host `aria-label`, before the localized
+  Details fallback. It does not rename the tab strip.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
-**Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
+**Events:** composed child events reach the host (`composed: true`), with the direct supporting
+chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
 add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
+expanded }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
+inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip
@@ -1708,6 +1743,8 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   `citation.sourceId ?? ''`; the visible label and span are not repeated in the badge's preview. A
   `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
   citation stays in the list
+  Evidence badges share one Tab stop; ArrowUp/ArrowDown/Home/End move among them. A focused badge
+  still activates and opens its preview with its existing keys.
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,
@@ -1900,7 +1937,8 @@ errorMessage?: string }` (all four types exported here), where
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
 before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
 missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
-names.
+names. Row action triggers stay mounted; their three menu items mount only while the dropdown is
+open and clear after it closes.
 
 **Events:** `lr-source-create` (`detail: null` — nothing exists yet to reference),
 `lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
@@ -1962,7 +2000,7 @@ and search dimming; an explicitly empty value remains empty and later queries wo
 Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
-`query`, `matchCount`, and `matchCountExact`.
+`query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
@@ -2061,7 +2099,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   field name. `matchCount` is the same live node-filter total the result list and its live-region
   announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
   this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
-  There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
+  `activeIndex` is `-1`: this is a live node filter with no search cursor. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-activate`
@@ -2081,7 +2119,8 @@ pin toggle; no effect while `details` is overridden.
 `search` (the search `lr-input`), `legend` (the
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
-`search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
+`search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
+shown/total notice when more than 50 nodes match), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
@@ -2158,6 +2197,8 @@ omitted without hiding later valid memories.
 
 At most 500 items per section render as `item` rows; a section's list past that length renders a
 localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
+The primary Add action in short-term memory and Remove action in long-term memory each rove within
+their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain reachable by Tab.
 
 **Events:**
 
@@ -2169,9 +2210,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
 'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it.
-- The expanded item's `lr-provenance-panel` events cross the panel unchanged and are part of its
-  typed event map: `lr-toggle`, `lr-entity-select`, `lr-entity-activate` (deprecated alias),
+collapsing it; deprecated alias of `lr-toggle`.
+- `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
+  Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
+- The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
+  typed event map: `lr-entity-select`, `lr-entity-activate` (deprecated alias),
   `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
@@ -2478,7 +2521,8 @@ tokens.
   the removable chip label truncates while its remove action remains available.
 - Filter values use a cycle-aware formatter bounded to 128 visited values, six nesting levels,
   32 entries per container and 256 characters per string. Cycles use the localized invalid-value
-  sentinel and budget/depth truncation uses a stable ellipsis in both SSR and browser rendering.
+  sentinel and budget/depth truncation uses the localized `valueTruncated` sentinel in both SSR
+  and browser rendering. Accessor-backed metadata is never invoked.
 
 ---
 
@@ -2499,8 +2543,8 @@ detail?: string; evidence?: RetrievalStageEvidence }` (exported
   default label for `kind`; `detail` is secondary text under the stage name. Pass in any order — the
   timeline sorts by `startMs`. Each stage projects to one `LyraSpan` with `kind` mapped
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
-  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind keeps its literal
-  string as the visible label and uses the generic `'tool'` span kind instead of aborting the trace.
+  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind uses a localized
+  “Unknown stage” label and the generic `'tool'` span kind instead of aborting the trace.
   Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
   omitted first-wins before timeline, evidence, controlled state, counts, or event paths
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
@@ -2519,18 +2563,22 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   distinction
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
+Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
+first time), `lr-toggle` (`{ expanded, itemId }` for a stage or
+`{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
 explicit stage identity.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
+**CSS parts:** `base`, `empty` (an `lr-empty` with a localized heading when there are no stages), `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
+`metadata`, `metadata-entry`, `metadata-term`, `metadata-value` (shared metadata-list parts;
+the existing `evidence-metadata`, `evidence-metadata-row`, `evidence-metadata-key`, and
+`evidence-metadata-value` tokens remain on the same elements),
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 
@@ -2603,7 +2651,8 @@ the Markdown renderer's housekeeping events stay inside.
 source list. Either slot renders from its assigned content without requiring the corresponding
 `answer` or `sources` data property; a slotted answer remains visible while `loading`.
 
-**CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
+**CSS parts:** `base`, `answer`, `empty` (an `lr-empty` with a localized idle heading when no answer or evidence exists),
+`loading`, `error` (neutral visible error message), `retry`,
 `grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.
 
 ## `lr-embedding-explorer`
@@ -2616,8 +2665,9 @@ y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
 `selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
 including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
-`accessibleLabel: string | null = null` (attribute `aria-label`). As a JS-only property with no host
-attribute, it names the plot. An authored host `aria-label` governs the plot name too (including an
+`label?: string` names the plot after an authored host `aria-label` and before the JS-only
+`accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
+attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
 explicitly empty value), so a competing internal generic label is not exposed. Non-finite
 coordinates are omitted.
 Blank point ids and later duplicates are also omitted first-wins before empty state, roving focus,
@@ -2718,11 +2768,13 @@ is clamped to 0–1 for localized percent display. `Citation` is the shared AI c
 
 Claims and citations are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, controlled selection, evidence lookup,
-rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
-the danger treatment instead of producing an empty or misleading badge.
+rendering, or events. An unrecognized runtime claim status renders as localized “Unknown” with
+the neutral treatment instead of asserting that evidence is unsupported.
 
 At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
 `limit` notice after the list rather than mounting an unbounded number of rows.
+Claim selection buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; each claim's
+evidence citation badges keep their own keyboard access.
 
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the
@@ -2772,6 +2824,8 @@ semantics); `label?: string` (fallback name for the overall comparison region; a
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
+Each set's chunk buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; the selected
+chunk remains controlled by `selectedChunkId`.
 
 Set ids and each set's nested chunk ids are canonicalized independently. Malformed/blank rows and
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,
@@ -2815,6 +2869,8 @@ while an explicitly empty host label stays empty on the region);
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
 `LyraRagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+The bounded run-history buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End;
+activation still emits the existing run events.
 
 Metrics and runs are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
@@ -2831,8 +2887,8 @@ corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice shown when the filtered runs
-exceed the 500-run render ceiling), `empty`.
+`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
+filtered runs are shown), `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.
@@ -2855,10 +2911,18 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 
 `lr-research-progress` presents a read-only ordered list of host-owned research steps and an
 aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional
-`description`, a `status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
+`description`. It retains native progress and list markup so a small progress display need not
+load full control components. Its track and fill honor `--lr-progress-track-color`,
+`--lr-progress-track-radius`, and `--lr-progress-indicator-color`; percentage formatting shares the
+progress controls’ locale behavior. Shared row styling and status helpers keep its presentation aligned
+with neighboring agent-work lists. Each step also has a
+`status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
 without finishing, such as a cancelled run; it shows the localized `statusIncomplete` text and is not
-counted as completed; an unrecognized status renders as `pending` rather than dropping the step), and an optional
-nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
+counted as completed; `cancelled` maps to this state), and an optional
+nonnegative finite `sources` count. Source counts are displayed as supplied. The
+shared success spellings `success`, `done`, and `complete` map to `completed`, and `error` maps to
+`failed`. An unrecognized status renders as localized neutral “Unknown” rather than dropping the
+step. The component keeps its research-specific status wording and `.strings` overrides. The
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
 record, and renders at most 100 steps. `label` sets the visible group heading and names the group
@@ -3308,6 +3372,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/retrieval/source-list/source-list.class.js`.
   `SourceListToggleDetail {
     expanded: boolean;
+    itemId?: string;
   }`
 
 - **`components-retrieval-source-picker-source-picker-contracts`** — Supporting data types and helpers for this component family.

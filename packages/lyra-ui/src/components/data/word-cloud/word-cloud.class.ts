@@ -11,7 +11,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
 import {
   layoutWordCloud,
@@ -421,7 +421,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @state() private pressedOriginalIndex: number | null = null;
   @state() private hoveredOriginalIndex: number | null = null;
 
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private readonly warnedSkipCounts = new Set<number>();
   private typographyThemeSignature = '';
   private paletteThemeSignature = '';
@@ -434,18 +434,17 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     new ThemeWatcher(this, this.onThemeInvalidated);
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.syncAnnouncementSink();
-  }
-
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
     this.focusedIndex = null;
     this.liveText = '';
     this.pressedOriginalIndex = null;
     this.hoveredOriginalIndex = null;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
@@ -464,24 +463,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.svgEl as unknown as HTMLElement | undefined,
       describedBy,
     );
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   private fontFamily(): string {
@@ -658,7 +639,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       weight: getNumberFormat(this.effectiveLocale).format(word.weight),
     });
     this.liveText = text;
-    this.announcementSink?.announce(text);
+    this.announcements.announcePolite(text);
   }
 
   private wordIndex(word: PlacedWord): number {

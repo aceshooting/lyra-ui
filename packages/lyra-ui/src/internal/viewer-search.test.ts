@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { Announcer } from './announcer.js';
-import { announceSearchResult } from './viewer-search.js';
+import { advanceViewerSearchIndex, announceSearchResult, sameViewerSearchDetail, viewerSearchDetail } from './viewer-search.js';
 
 /**
  * Mirrors `resolveLyraString()` closely enough to prove which key
@@ -86,5 +86,17 @@ describe('announceSearchResult', () => {
       },
     });
     announceSearchResult(localizeStub, announcer, locale, 1234, 1);
+  });
+});
+
+describe('viewer search state', () => {
+  it('keeps canonical detail fields and wraps the retained match cursor', () => {
+    const initial = viewerSearchDetail('term', 3, false, 0);
+    expect(initial).to.deep.equal({ query: 'term', matchCount: 3, matchCountExact: false, activeIndex: 0 });
+    expect(advanceViewerSearchIndex(2, 3, 1)).to.equal(0);
+    expect(advanceViewerSearchIndex(0, 3, -1)).to.equal(2);
+    expect(advanceViewerSearchIndex(-1, 0, 1)).to.equal(-1);
+    expect(sameViewerSearchDetail(initial, viewerSearchDetail('term', 3, false, 0))).to.equal(true);
+    expect(sameViewerSearchDetail(initial, viewerSearchDetail('term', 3, true, 0))).to.equal(false);
   });
 });

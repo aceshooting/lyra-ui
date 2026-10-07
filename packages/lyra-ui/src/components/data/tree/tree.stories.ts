@@ -156,7 +156,7 @@ export const BoundedLazyProjection: Story = {
     docs: {
       description: {
         story:
-          'The 1,005-child input is intentionally over the 1,000-node budget. Inspect `dataTruncated`, then expand the row to see lazy descendant projection.',
+          'The 1,005-child input is intentionally over the 1,000-node budget. Inspect `dataTruncated` and the localized `limit` notice, then expand the row to see lazy descendant projection.',
       },
     },
   },

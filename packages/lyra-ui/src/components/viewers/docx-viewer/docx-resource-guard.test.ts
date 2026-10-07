@@ -1,67 +1,53 @@
+import { zipWithDeclaredSizes, forgedExpansionZip, expectResourceLimit } from '../../../../test/zip-fixtures.js';
 import { expect } from '@open-wc/testing';
 import JSZip from 'jszip';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
-import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
+import { assertDocxArchiveWithinLimits, createDocxXmlDepthInspector } from './docx-resource-guard.js';
+import { DOCX_ZIP_LIMITS, DocxZipAdmissionError, inspectDocxZip } from '../../../internal/docx-zip-admission.js';
 import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js';
 
-function zipWithDeclaredSizes(sizes: number[]): ArrayBuffer {
-  const names = sizes.map((_size, index) => `e${index}`);
-  const localSize = sizes.reduce((sum, size, index) => sum + 30 + names[index]!.length + size, 0);
-  const directorySize = sizes.reduce((sum, _size, index) => sum + 46 + names[index]!.length, 0);
-  const source = new ArrayBuffer(localSize + directorySize + 22);
-  const view = new DataView(source);
-  let localOffset = 0;
-  let centralOffset = localSize;
-  sizes.forEach((size, index) => {
-    const name = names[index]!;
-    view.setUint32(localOffset, 0x04034b50, true);
-    view.setUint32(localOffset + 18, size, true);
-    view.setUint32(localOffset + 22, size, true);
-    view.setUint16(localOffset + 26, name.length, true);
-    for (let byte = 0; byte < name.length; byte++) view.setUint8(localOffset + 30 + byte, name.charCodeAt(byte));
-    view.setUint32(centralOffset, 0x02014b50, true);
-    view.setUint32(centralOffset + 20, size, true);
-    view.setUint32(centralOffset + 24, size, true);
-    view.setUint16(centralOffset + 28, name.length, true);
-    view.setUint32(centralOffset + 42, localOffset, true);
-    for (let byte = 0; byte < name.length; byte++) view.setUint8(centralOffset + 46 + byte, name.charCodeAt(byte));
-    localOffset += 30 + name.length + size;
-    centralOffset += 46 + name.length;
-  });
-  const endOffset = localSize + directorySize;
-  view.setUint32(endOffset, 0x06054b50, true);
-  view.setUint16(endOffset + 8, sizes.length, true);
-  view.setUint16(endOffset + 10, sizes.length, true);
-  view.setUint32(endOffset + 12, directorySize, true);
-  view.setUint32(endOffset + 16, localSize, true);
-  return source;
-}
 
-async function forgedExpansionZip(): Promise<ArrayBuffer> {
-  const zip = new JSZip();
-  zip.file('word/document.xml', 'x'.repeat(4_096));
-  const source = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
-  const view = new DataView(source);
-  let patched = 0;
-  for (let offset = 0; offset <= source.byteLength - 4; offset++) {
-    if (view.getUint32(offset, true) !== 0x02014b50) continue;
-    if (view.getUint32(offset + 24, true) === 0) continue;
-    const localOffset = view.getUint32(offset + 42, true);
-    view.setUint32(localOffset + 22, 1, true);
-    view.setUint32(offset + 24, 1, true);
-    patched++;
-  }
-  expect(patched).to.be.greaterThan(0);
-  return source;
-}
 
-async function expectResourceLimit(operation: () => void | Promise<void>): Promise<void> {
-  let caught: unknown;
-  try { await operation(); } catch (error) { caught = error; }
-  expect(caught).to.be.instanceOf(LyraResourceLimitError);
-}
 
 describe('DOCX resource guard', () => {
+  it('counts only real XML nesting across chunks and rejects UTF-16 input', () => {
+    const accepted = '<a>'.repeat(128) + '<!-- > </a> --><![CDATA[ > </a> ]]>' + '</a>'.repeat(128);
+    const inspector = createDocxXmlDepthInspector(128);
+    const encoded = new TextEncoder().encode(accepted);
+    for (let offset = 0; offset < encoded.length; offset += 2) inspector.write(encoded.subarray(offset, offset + 2));
+    inspector.close();
+    for (const disguisedClose of ['<!-- > </a> -->', '<![CDATA[ > </a> ]]>']) {
+      const attack = createDocxXmlDepthInspector(128);
+      attack.write(new TextEncoder().encode('<a>'.repeat(128) + disguisedClose));
+      expect(() => attack.write(new TextEncoder().encode('<a>'))).to.throw(LyraResourceLimitError);
+    }
+    const utf16 = createDocxXmlDepthInspector(128);
+    expect(() => utf16.write(new Uint8Array([0x3c, 0, 0x61, 0, 0x2f, 0, 0x3e, 0]))).to.throw(LyraResourceLimitError);
+  });
+  it('accepts the shared entry boundary and rejects one more entry', () => {
+    expect(inspectDocxZip(new Uint8Array(zipWithDeclaredSizes(Array(DOCX_ZIP_LIMITS.entries).fill(0))), undefined, false)).to.have.length(DOCX_ZIP_LIMITS.entries);
+    expect(() => inspectDocxZip(new Uint8Array(zipWithDeclaredSizes(Array(DOCX_ZIP_LIMITS.entries + 1).fill(0))), undefined, false))
+      .to.throw(DocxZipAdmissionError, 'resource-limit');
+  });
+
+  it('requires matching CRCs and bounds XML depth before conversion', async () => {
+    const makeArchive = async (body: string) => assembleZip([
+      await zipEntry('[Content_Types].xml', '<Types/>'),
+      await zipEntry('_rels/.rels', '<Relationships/>'),
+      await zipEntry('word/document.xml', body),
+    ]);
+    const valid = await makeArchive('<a>'.repeat(DOCX_ZIP_LIMITS.depth) + '</a>'.repeat(DOCX_ZIP_LIMITS.depth));
+    await assertDocxArchiveWithinLimits(valid, undefined, undefined, { strictAdmission: true });
+    const tooDeep = await makeArchive('<a>'.repeat(DOCX_ZIP_LIMITS.depth + 1) + '</a>'.repeat(DOCX_ZIP_LIMITS.depth + 1));
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(tooDeep, undefined, undefined, { strictAdmission: true }));
+    const corrupt = valid.slice(0);
+    const bytes = new Uint8Array(corrupt);
+    const marker = new TextEncoder().encode('<a>');
+    const at = bytes.findIndex((_byte, index) => marker.every((part, offset) => bytes[index + offset] === part));
+    expect(at).to.be.greaterThan(0);
+    bytes[at + 1] = 0x62;
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(corrupt, undefined, undefined, { strictAdmission: true }));
+  });
   it('accepts an archive within both ceilings', async () => {
     await assertDocxArchiveWithinLimits(zipWithDeclaredSizes([10, 20]), 2, 30);
   });
@@ -73,7 +59,7 @@ describe('DOCX resource guard', () => {
   });
 
   it('measures deflate output instead of trusting forged uncompressed-size fields', async () => {
-    const source = await forgedExpansionZip();
+    const source = await forgedExpansionZip('word/document.xml');
     await expectResourceLimit(() => assertDocxArchiveWithinLimits(source, 10, 1_000));
   });
 

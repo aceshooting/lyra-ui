@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encodeEvidence, decodeEvidence, gitObjectId, verifyGitEvidence, readPublishedCaptureSync } from './published-compatibility-io.mjs';
+import { validateRenameLedgerShape } from './lyra-rename-ledger.mjs';
 
 const bytes = value => Buffer.from(value);
 function proof() {
@@ -74,4 +75,20 @@ test('the published manifest projection shares one verified capture read and rem
   verified.publishedManifest.modules.length = 0;
   assert.equal(JSON.stringify(verified.facts), facts);
   assert.deepEqual(readPublishedCaptureSync(directory).publishedManifest, manifest);
+});
+
+test('historical published profiles remain bound to their release while current ledgers require every profile', () => {
+  const directory = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/compatibility-history/22.0.0');
+  const verified = readPublishedCaptureSync(directory);
+  assert.deepEqual(verified.publishedMigration.lyraRenames.profiles.map(profile => profile.origin), ['lyra-v21', 'lyra-v22']);
+  assert.deepEqual(validateRenameLedgerShape(verified.publishedMigration.lyraRenames, {
+    projected: true, historicalReleaseMajor: 22,
+  }), []);
+  assert.deepEqual(validateRenameLedgerShape(verified.publishedMigration.lyraRenames, {
+    projected: true, historicalReleaseMajor: 25,
+  }), []);
+  assert.match(validateRenameLedgerShape(verified.publishedMigration.lyraRenames, {
+    projected: true, historicalReleaseMajor: 26,
+  }).join('; '), /lyra-v25/u);
+  assert.match(validateRenameLedgerShape(verified.publishedMigration.lyraRenames, { projected: true }).join('; '), /lyra-v25/u);
 });

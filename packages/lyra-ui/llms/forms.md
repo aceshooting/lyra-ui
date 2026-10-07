@@ -133,8 +133,8 @@ contract is maintained once at its owning destination.
 ## `lr-combobox` / `lr-option`
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
-`<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
-shared `FormAssociated` mixin — see gotchas).
+`<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
+single/multiple value and option synchronization.
 
 Consumer writes on mounted options immediately update the owning picker and its submission,
 without changing the reset default or emitting picker input/change events. Owner synchronization
@@ -495,9 +495,9 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
-clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
-followed by a prefixed `lr-input` alias, the same shape of `change`, then a prefixed `lr-change`
-alias. All four carry `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
+clear — emits one native `input` Event, then `lr-input`, one native `change` Event, then
+`lr-change`. The native events have no detail. Both typed events carry
+`detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
 new committed selection (a string in single mode, a `string[]` in `multiple` mode), `previousValue`
 the selection before this change in the same shape; `data` is index-aligned with `value`: `data[i]`
 describes `value[i]` — the opaque `data` payload of a light-DOM `<lr-option data>` or an async
@@ -635,11 +635,12 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-input`/`lr-change`/native `input` event detail `value` and `previousValue` narrow to `string` when
+`lr-input`/`lr-change` event detail `value` and `previousValue` narrow to `string` when
 `Multiple` is `false` and `string[]` (`readonly string[]` in a detail) when `true`. Types only; the
 runtime and the mirrored surface are unchanged, and an untyped `<lr-combobox>` keeps
 `string | string[]`. The exported `LyraComboboxChangeEvent`/`LyraComboboxInputEvent` aliases type
-`lr-change` and the native `input` listener respectively; `lr-input` shares `lr-change`'s detail.
+`lr-change` and the native `input` listener respectively; the latter is an `Event` without detail.
+`lr-input` shares `lr-change`'s detail.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -744,7 +745,7 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `data?: unknown` (attribute: false) — opaque application payload, e.g. the backend record this
   option represents. Never read or rendered by this component; retained by reference, never
   deep-cloned, through the owning `lr-combobox`'s `selectedRows` and the owning `lr-select`'s
-  `selectedData`, and in both controls' `lr-input`/`lr-change`/`input`/`change` event details.
+  `selectedData`, and in both controls' `lr-input`/`lr-change` event details.
   Assigning it notifies the owning picker with `lr-option-change`, like `sub`/`dotColor`/`group`
 - `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
   otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)
@@ -873,10 +874,8 @@ Floating form-control panels follow the [shared surface treatment](shared/styles
 Editing fields and inline color editors retain opaque interiors.
 
 A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
-**Form-associated** (hand-rolled internals, not the shared `FormAssociated` mixin — same reasoning
-as `lr-combobox`: `multiple` re-shapes the committed `value` into a `string[]`, which the shared
-mixin — built for a single string value — can't model, so both controls attach their own
-`ElementInternals` and drive `setValidity()` directly instead). The trigger is a `<button>`, not a text
+**Form-associated**, with shared internals and validation plumbing. Like `lr-combobox`, it retains
+its own single/multiple value, reset, and option synchronization. The trigger is a `<button>`, not a text
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
@@ -1135,6 +1134,17 @@ every selection change and a `form.reset()` — like a native control, only anot
 required/selection validity without changing the selection/default or clearing prior interaction
 state.
 
+**Selection veto:** `lr-change-request` is a bubbling, composed, cancelable event before a user
+selection change. Its `{ value, previousValue, data }` describes the complete proposed selection,
+with frozen arrays and opaque `data` identities preserved. Call `preventDefault()` to retain the
+current selection, form value, validity, and popup state. Canceled requests produce no `input`,
+`lr-input`, `change`, `lr-change`, `lr-activate`, or `lr-clear` notification. The same request covers
+pointer and keyboard picks, closed-list type-ahead, single-option activation, chip removal, and
+clear. A listener's synchronous `value`, `selectedOptions`, or option `selected` write supersedes
+the proposal, including a same-value write; nested selection gestures during dispatch are ignored.
+Removing or disabling the proposed option also prevents its commit. Programmatic writes,
+reset/restoration, and a single-select re-pick of the current occurrence emit no request.
+
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
 read `event.target.value`. Both
@@ -1156,7 +1166,7 @@ listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
-`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every**
+`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every accepted**
 activation of an available listbox row — a click, or Enter/Space on the active row — whether or not
 the selection actually moved. Its `value` is the activated option's own value, **always a single
 string**, even in `multiple` mode, where `lr-input`/`lr-change` carry the whole `string[]` instead.
@@ -1550,7 +1560,8 @@ and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
+values. Their typed aliases `lr-input` and `lr-change` carry `{ value }` after the corresponding
+native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
 `lr-clear` (no detail) follows `clear()`'s `input`/`change`.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
@@ -1693,7 +1704,8 @@ access.
 **Selection properties:** `selectionStart`, `selectionEnd`, and `selectionDirection` mirror the
 internal native date input.
 
-**Events:** `input` is an `InputEvent`, `change` is an `Event`, and `focus`/`blur` are
+**Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
+`lr-input` and `lr-change` carry `{ value }`. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
@@ -2994,7 +3006,8 @@ rather than an approximation of them:
   shortcut (send-and-keep-open, insert-newline, open-in-new-tab), never a submission.
 - An Enter **during IME composition** commits the highlighted candidate; submitting there would
   throw away the word being typed, so it is skipped.
-- A keydown already `defaultPrevented` by a listener above stays vetoed.
+- A keydown `defaultPrevented` during propagation stays vetoed, including by a bubbling listener on
+  the host or an ancestor. Submission runs after those listeners have handled the keystroke.
 - The **submitter is resolved, not skipped**: the form's default button is the first submit
   control in `form.elements`, so its `name`/`value` entry and its
   `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button
@@ -3933,9 +3946,9 @@ label: string; start: number; end: number; id?: string }`; a bounded frozen arra
   endpoint writes and reassigning the same `presets` array preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
-**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
+**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { value: { start, end }, start, end }`),
 both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
-native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
+native-style composed `change` (no detail) then `lr-change` (`detail: { value: { start, end }, start, end }`), both fired
 on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are
@@ -4108,6 +4121,9 @@ rtl`).
 ---
 
 ## `lr-swatch-picker`
+
+`:state(selected)` matches while the live value resolves to an option in the current palette.
+The selected option retains its `swatch-selected` part; removing that option clears the state.
 
 Keyboard navigation and item-update focus restoration reveal the complete focused swatch
 inside scrolling containers, including single-row `nowrap` palettes. Public
@@ -4642,10 +4658,8 @@ checkmark/dash color and scale.
 </script>
 ```
 
-Form-associated via a directly-attached `ElementInternals` (not the shared `FormAssociated` mixin,
-whose `value` accessor assumes a plain string default flow) with its own hand-rolled
-`updateValidity()` — same shape as `<lr-combobox>`'s and `<lr-switch>`'s direct-`ElementInternals`
-handling.
+Form-associated through shared internals and validation support, with a checked-state adapter
+that keeps the submitted token independent of whether the control is checked.
 Session-history/autofill restoration uses four explicit state tokens: `checked`, `unchecked`,
 `checked/indeterminate`, and `unchecked/indeterminate`. This preserves both public booleans while
 keeping an unchecked control distinguishable from a checked control whose submitted value is an
@@ -4827,8 +4841,8 @@ Plus shared tokens
 </script>
 ```
 
-Form-associated the same way as `<lr-checkbox>`: a directly-attached `ElementInternals` with a
-hand-rolled `updateValidity()`, not the shared `FormAssociated` mixin. The thumb animates the
+Form-associated with the same shared internals and checked-state handling as `<lr-checkbox>`.
+The thumb animates the
 logical `inset-inline-start` property (not a physical `transform: translateX()`), so the slide
 direction mirrors correctly under `dir="rtl"`.
 Session-history/autofill restoration uses the same explicit `checked`/`unchecked` state tokens as
@@ -5462,7 +5476,8 @@ writes and range-method calls are safe no-ops. Native selection, Home/End, click
 host facade changes all move the fixed-cell keyboard target, so printable, Delete, and Backspace
 edit the cell at the live compact caret rather than a stale internal index.
 
-**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
+**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`,
+their typed aliases `lr-input` and `lr-change` (`detail: { value }`), and
 `lr-clear` (no detail) after `clear()`'s `input`/`change` — editing the field empty with
 Backspace/Delete or typing never emits it. Fixed-cell edits
 emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME
@@ -5638,9 +5653,10 @@ label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
-both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
+both prefixed aliases carry `{ value, option, radio }`. `option` and its retained `radio` alias
+reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
-including one on the already-selected option — also emits `lr-activate` (`{ value, radio }`) after
+including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
 those events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
@@ -6694,7 +6710,8 @@ extra host controls rendered in the footer beside Submit/Skip.
 
 **Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
 
-**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (frozen
+**Events:** `lr-input` (`detail: { value }`), `lr-change` (`detail: { value }` after a user commit),
+`lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,
@@ -7302,6 +7319,9 @@ These named interfaces and helper signatures are available to typed integrations
 
 ## `lr-toggle`
 
+The live `:state(pressed)` hook follows user and programmatic `pressed` writes; the reflected
+`pressed` attribute remains available. State publication does not emit value events.
+
 A two-state button that owns its `pressed` state — the self-managed counterpart of
 `<lr-button aria-pressed>`. It renders a native `<button type="button">` whose `aria-pressed` is
 always `"true"` or `"false"`, and takes the shared `variant`/`appearance`/`size` vocabulary. It is
@@ -7688,6 +7708,11 @@ uppercased, and no country is inferred. `.countries` accepts
 catalog helper are documented in the
 [catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
+Country, currency, unit and time-zone pickers also expose `<name>-picker-register.js` under their
+granular component directory. These lean entries register the picker alone; import `lr-select.js`
+and `lr-option.js` for the ordinary control. The searchable `lr-combobox` loads when needed.
+The default picker entries register select and option synchronously.
+
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
 may display regional-indicator letters; the visible country name remains the identifying text.
@@ -7968,3 +7993,17 @@ marker" above).
   <button>Submit</button>
 </form>
 ```
+
+### Value notifications
+
+Form value controls expose native `input` and `change` events alongside typed `lr-input` and
+`lr-change` notifications. Native events are `Event` or `InputEvent`; read typed values from the
+prefixed event's `detail.value`. Combobox and checkbox-group native events no longer carry custom
+selection details. Programmatic writes and reset/restore remain silent. Live edits emit input;
+commits emit change, and discrete selections emit both. Composite controls contain child events
+and publish their complete aggregate value once.
+
+Date-picker, date-input, OTP-input, rating, model-select, voice-picker, and rubric-form include the
+typed pair. Time-range adds `detail.value: { start, end }` while keeping top-level `start`/`end`.
+Color-picker's `lr-input` includes `{ value }`. Combobox filter typing keeps its separate `lr-filter`
+contract; typed value events describe committed selections, not the filter query.

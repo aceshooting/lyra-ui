@@ -197,6 +197,8 @@ it('toggles the full wrapper and fires lr-expand with sourceId and the new state
   )) as LyraSourceCard;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const full = el.shadowRoot!.querySelector('[part="full"]') as HTMLElement;
+  const toggles: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
 
   let firing = oneEvent(el, 'lr-expand');
   toggle.click();
@@ -214,6 +216,10 @@ it('toggles the full wrapper and fires lr-expand with sourceId and the new state
   expect((event as CustomEvent).detail).to.deep.equal({ sourceId: 'doc-1', expanded: false });
   expect(toggle.textContent!.trim()).to.equal('Show more');
   expect(full.hidden).to.be.true;
+  expect(toggles).to.deep.equal([
+    { itemId: 'doc-1', expanded: true },
+    { itemId: 'doc-1', expanded: false },
+  ]);
 });
 
 it('links the toggle to the full-content wrapper it controls via aria-controls', async () => {

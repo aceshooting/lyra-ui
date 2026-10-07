@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -29,8 +30,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part="canvas"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* A background wash on the canvas box, not filter: brightness(). A filter applies to the element's
      own painted output, so it re-tinted every drawn node, link and label, and multiplied nothing on
@@ -127,8 +127,7 @@ export const styles = css`
     fill: context-stroke;
   }
   [part="link"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="link"][data-dangling] {
     stroke-dasharray: var(--lr-size-2px) var(--lr-size-2px);
@@ -157,8 +156,7 @@ export const styles = css`
     );
   }
   [part="node"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="label"] {
     font-size: var(--lr-font-size-2xs);
@@ -276,8 +274,7 @@ export const styles = css`
     );
   }
   [part="hull"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="community-label"] {
     font-size: var(--lr-font-size-2xs);

@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A path-keyed file explorer. Each assignment creates a frozen, clone-owned model from at most the first 10,000 inspected source positions across 64 descendant levels; reassign after changes. Empty and blank paths are omitted; the first successfully admitted occurrence owns each path. A record with unreadable optional metadata cannot suppress a later valid file at the same path.',
+          'A path-keyed file explorer. Each assignment creates a frozen, clone-owned model from at most the first 10,000 inspected source positions across 64 descendant levels; reassign after changes. A localized `limit` notice appears when 10,000 valid source items are retained and more remain. Empty and blank paths are omitted; the first successfully admitted occurrence owns each path. A record with unreadable optional metadata cannot suppress a later valid file at the same path.',
       },
     },
   },

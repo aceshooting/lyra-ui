@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
@@ -96,15 +97,6 @@ it('keeps the pre-hook body hover outline when each scoped property is unset', a
     <lr-tool-select-dialog open></lr-tool-select-dialog>
   `);
   const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
-
-  function resolvedInShadow(declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   const expectedWidth = resolvedInShadow(
     'outline-width: var(--lr-border-width-thin)',
@@ -1816,7 +1808,6 @@ describe('vetoed toggles never flip the composed control', () => {
   });
 });
 
-
 it('orders the tool selection request before a noncancelable accepted notification', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`
     <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
@@ -1858,7 +1849,6 @@ it('preserves host tool state written during a request and refuses recursive tog
   expect(changes).to.equal(0);
   expect(el.selectedToolIds).to.deep.equal(['host-tool']);
 });
-
 
 describe('native modal interoperability', () => {
   it('reconciles a directly closed native carrier through one public API close', async () => {
@@ -1947,7 +1937,6 @@ describe('native modal interoperability', () => {
     }
   });
 });
-
 
 for (const nativeContext of [false, true]) {
   it(`names the rendered dialog owner with host, property, and heading precedence (${nativeContext ? 'native' : 'ordinary'})`, async () => {

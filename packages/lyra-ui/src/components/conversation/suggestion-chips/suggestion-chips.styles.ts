@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -71,8 +72,7 @@ export const styles = css`
     opacity: var(--lr-suggestion-chips-disabled-opacity, var(--lr-opacity-disabled));
   }
   [part~='chip']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='chip-label'] {
     display: -webkit-box;

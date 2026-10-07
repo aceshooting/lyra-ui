@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing, panelFrame } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -8,13 +9,7 @@ export const styles = css`
   }
 
   [part='base'] {
-    box-sizing: border-box;
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    margin: 0;
-    padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    ${panelFrame}
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
@@ -63,8 +58,7 @@ export const styles = css`
 
   /* no-hover-state: a read-only status that only takes focus by script. */
   [part='status']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='actions'] {
@@ -79,8 +73,7 @@ export const styles = css`
     --_lr-permission-grant-decision-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
     --_lr-permission-grant-decision-active-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-inline-size: 100%;
     padding-inline: var(--lr-button-padding-inline, var(--lr-space-s));
     border: var(--lr-border-width-thin) solid var(--lr-button-outlined-border, var(--lr-color-border));
@@ -102,8 +95,7 @@ export const styles = css`
   }
 
   [part='decision']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part='decision']:disabled {

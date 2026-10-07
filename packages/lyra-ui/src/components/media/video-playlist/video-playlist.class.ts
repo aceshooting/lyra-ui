@@ -2,16 +2,11 @@ import { eventCollectionSupport } from '../../../internal/collection-snapshot.js
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime } from '../media-time.js';
+import { formatMediaTime } from '../../../internal/media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import {
-  MAX_NATIVE_PLAYBACK_RATE,
-  MIN_NATIVE_PLAYBACK_RATE,
-  type NativeMediaPreferences,
-  type NativeTextTrackPreference,
-} from '../../../internal/media-controller.js';
+import type { NativeMediaPreferences } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { tag } from '../../../internal/prefix.js';
@@ -94,23 +89,6 @@ function safeRepeat(value: unknown): LyraVideoPlaylistRepeat {
 
 function sameVideos(left: readonly LyraVideo[], right: readonly LyraVideo[]): boolean {
   return left.length === right.length && left.every((video, index) => video === right[index]);
-}
-
-function isSelectableTrack(track: TextTrack): boolean {
-  return track.kind === 'subtitles' || track.kind === 'captions' || track.kind === 'descriptions';
-}
-
-function validVolume(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
-}
-
-function validPlaybackRate(value: unknown): value is number {
-  return (
-    typeof value === 'number' &&
-    Number.isFinite(value) &&
-    value >= MIN_NATIVE_PLAYBACK_RATE &&
-    value <= MAX_NATIVE_PLAYBACK_RATE
-  );
 }
 
 function sourceSnapshot(src: string, type: string, media: string): LyraVideoPlaylistSource {
@@ -528,15 +506,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     video.pause();
     video.hidden = true;
     this.needsReload.add(video);
-    const native = video.getVideoElement();
-    if (!native) return;
-    const mediaChildren = [...native.children].filter(
-      (child) => child.localName === 'source' || child.localName === 'track',
-    );
-    if (!native.hasAttribute('src') && mediaChildren.length === 0) return;
-    native.removeAttribute('src');
-    for (const child of mediaChildren) child.remove();
-    native.load();
+    video.unloadMedia();
   }
 
   private activateVideo(video: LyraVideo, shouldPlay: boolean, generation: number): void {
@@ -566,62 +536,11 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     video: LyraVideo,
     native: HTMLVideoElement | undefined = video.getVideoElement(),
   ): NativeMediaPreferences {
-    const state = video.getState();
-    const preferences: NativeMediaPreferences = {};
-    if (validVolume(state.volume)) preferences.volume = state.volume;
-    if (typeof state.muted === 'boolean') preferences.muted = state.muted;
-    if (validPlaybackRate(state.playbackRate)) preferences.playbackRate = state.playbackRate;
-
-    const tracks = Array.from(native?.textTracks ?? []);
-    const showingIndex = tracks.findIndex((track) =>
-      isSelectableTrack(track) && track.mode !== 'disabled');
-    if (showingIndex < 0) {
-      preferences.textTrack = null;
-    } else {
-      const track = tracks[showingIndex]!;
-      preferences.textTrack = {
-        index: showingIndex,
-        kind: track.kind,
-        label: track.label,
-        language: track.language,
-      };
-    }
-    return preferences;
+    return video.captureMediaPreferences(native);
   }
 
   private applyPreferences(video: LyraVideo, preferences: Readonly<NativeMediaPreferences>): void {
-    if (validVolume(preferences.volume)) video.setVolume(preferences.volume);
-    if (validPlaybackRate(preferences.playbackRate)) video.setPlaybackRate(preferences.playbackRate);
-    if (typeof preferences.muted === 'boolean' && video.getState().muted !== preferences.muted) {
-      video.toggleMute();
-    }
-    this.applyTextTrackPreference(video.getVideoElement(), preferences.textTrack);
-  }
-
-  private applyTextTrackPreference(
-    native: HTMLVideoElement | undefined,
-    preference: NativeTextTrackPreference | null | undefined,
-  ): void {
-    if (!native || preference === undefined) return;
-    const tracks = Array.from(native?.textTracks ?? []);
-    if (preference === null) {
-      for (const track of tracks) {
-        if (isSelectableTrack(track)) track.mode = 'disabled';
-      }
-      return;
-    }
-    const exact = tracks.find(
-      (track) =>
-        track.kind === preference.kind &&
-        track.label === preference.label &&
-        track.language === preference.language,
-    );
-    const indexed = tracks[preference.index];
-    const selected = exact ?? (indexed?.kind === preference.kind ? indexed : undefined);
-    if (!selected) return;
-    for (const track of tracks) {
-      if (isSelectableTrack(track)) track.mode = track === selected ? 'hidden' : 'disabled';
-    }
+    video.applyMediaPreferences(preferences);
   }
 
   private handleLoadedMetadata(video: LyraVideo): void {

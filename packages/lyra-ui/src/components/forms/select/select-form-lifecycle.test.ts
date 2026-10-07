@@ -1,4 +1,6 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
+import { withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
 import './select.js';
 import '../combobox/option.js';
 import type { LyraSelect } from './select.js';
@@ -57,24 +59,7 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
       ><lr-option value="a">Apple</lr-option></lr-select
     >
   `)) as LyraSelect;
-  const aliases: CustomEvent[] = [];
-  el.addEventListener("lr-invalid", (event) =>
-    aliases.push(event as CustomEvent)
-  );
-  // Registered after the component's own constructor-time relay, so it observes the native event
-  // once the alias has had its turn at it.
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = requiredItem(aliases, 0, 'invalid alias');
-  expect(alias.target === el).to.equal(true);
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
-  // Nothing cancelled it, so the browser's own validation UI stays enabled.
-  expect(natives).to.have.lengthOf(1);
-  expect(requiredItem(natives, 0, 'native invalid event').defaultPrevented).to.be.false;
+  assertInvalidAlias(el);
 });
 
 
@@ -84,13 +69,7 @@ it("cancels the native invalid event when the lr-invalid alias is cancelled", as
       ><lr-option value="a">Apple</lr-option></lr-select
     >
   `)) as LyraSelect;
-  el.addEventListener("lr-invalid", (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  expect(requiredItem(natives, 0, 'native invalid event').defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled' });
 });
 
 
@@ -799,10 +778,7 @@ describe("validationMessage localization", () => {
 
 describe("ElementInternals availability", () => {
   it("does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
-    delete HTMLElement.prototype.attachInternals;
-    try {
+    withUnavailableInternals(() => {
       let el: LyraSelect | undefined;
       expect(() => {
         el = document.createElement("lr-select") as LyraSelect;
@@ -811,20 +787,14 @@ describe("ElementInternals availability", () => {
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    });
   });
 });
 
 
 describe("ElementInternals unavailable at call time (attachInternals throws)", () => {
   it("falls back to no-op ElementInternals when attachInternals() exists but throws (e.g. already attached elsewhere)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    HTMLElement.prototype.attachInternals = function (): ElementInternals {
-      throw new Error("already attached");
-    };
-    try {
+    withUnavailableInternals(() => {
       let el: LyraSelect | undefined;
       expect(() => {
         el = document.createElement("lr-select") as LyraSelect;
@@ -832,9 +802,7 @@ describe("ElementInternals unavailable at call time (attachInternals throws)", (
       expect(el!.checkValidity()).to.be.true;
       expect(el!.reportValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    }, () => new Error('already attached'));
   });
 });
 

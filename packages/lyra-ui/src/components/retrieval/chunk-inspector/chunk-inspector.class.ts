@@ -75,8 +75,9 @@ export interface LyraChunkInspectorEventMap {
     sourceId: string;
     anchor?: LyraChunkAnchor;
   }>>;
-  /** A chunk's text toggle changed its expanded state. */
+  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
   'lr-chunk-toggle': CustomEvent<{ chunkId: string; expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string }>;
 }
 
 type Tier = 'high' | 'medium' | 'low';
@@ -116,6 +117,7 @@ function isDenseSize(size: LyraSize): boolean {
  * sourceId, anchor? }`.
  * @event lr-chunk-toggle - A chunk's text toggle was activated, expanding or collapsing it.
  *   `detail: { chunkId, expanded }`; `expandedChunkIds` already reflects it.
+ * @event lr-toggle - The same change with `detail: { expanded, itemId }`.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
@@ -203,6 +205,11 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
    *  and an explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
    *  overall owner; an explicitly empty host label stays empty on the group. */
   @property() label?: string;
+  /** Optional one-based position supplied by a containing result list. The standalone inspector
+   * uses each chunk's position in its own sorted list when this is unset. */
+  @property({ attribute: false }) ordinalIndex?: number;
+  /** Logical result count paired with `ordinalIndex`. */
+  @property({ attribute: false }) ordinalTotal?: number;
 
   /** Whether `size` selects the dense rows (`s` or smaller). */
   private get dense(): boolean {
@@ -226,6 +233,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     sort: ChunkInspectorSort;
     result: readonly LyraChunk[];
   };
+  private chunkOrdinalById = new Map<string, number>();
 
   private sortedChunks(): readonly LyraChunk[] {
     const cached = this.sortedChunksCache;
@@ -239,6 +247,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           )
         : canonical;
     this.sortedChunksCache = { source: this.chunks, sort: this.sort, result };
+    this.chunkOrdinalById = new Map(result.map((chunk, index) => [chunk.id, index]));
     return result;
   }
 
@@ -283,6 +292,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       ? [...this.expandedChunkIds, chunkId]
       : this.expandedChunkIds.filter((id) => id !== chunkId);
     this.emit('lr-chunk-toggle', { chunkId, expanded });
+    this.emit('lr-toggle', { itemId: chunkId, expanded });
   }
 
   // Row state is mirrored into a second part-name token (`chunk-current`, `score-fill-<tone>`,
@@ -316,6 +326,12 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
             base: titleText,
             page: formattedPage,
           });
+    const ordinalIndex = this.ordinalIndex === undefined
+      ? (this.chunkOrdinalById.get(chunk.id) ?? 0) + 1
+      : Math.max(1, finiteCount(this.ordinalIndex, 1));
+    const ordinalTotal = this.ordinalTotal === undefined
+      ? this.sortedChunks().length
+      : Math.max(ordinalIndex, finiteCount(this.ordinalTotal, ordinalIndex));
     const expanded = this.expandedChunkIds.includes(chunk.id);
     const current = this.activeChunkId === chunk.id;
     return html`
@@ -344,7 +360,14 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
           aria-label=${getListFormat(this.effectiveLocale, {
             style: 'short',
             type: 'conjunction',
-          }).format([titleWithPage, this.tierLabel(tier)])}
+          }).format([
+            this.localize('chunkInspectorOpenOrdinal', undefined, {
+              index: getNumberFormat(this.effectiveLocale).format(ordinalIndex),
+              total: getNumberFormat(this.effectiveLocale).format(ordinalTotal),
+            }),
+            titleWithPage,
+            this.tierLabel(tier),
+          ])}
           @click=${() =>
             this.emit('lr-chunk-open', {
               chunkId: chunk.id,

@@ -1,14 +1,11 @@
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
-import {
-  accessibleTextRecordsMatter,
-  bindAccessibleTextObserver,
-  composedAccessibilityText,
-} from '../../../internal/accessibility-visibility.js';
+import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { containsNestedInteractive } from '../../../internal/nested-interactive.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
@@ -24,38 +21,6 @@ import { LYRA_DEFAULT_open } from '../../../internal/default-strings.generated.j
 export interface LyraCardEventMap {
   'lr-card-activate': CustomEvent<null>;
 }
-
-/**
- * Anything in the composed path between the original event target and `[part='base']` that a user
- * would reasonably consider "the thing I clicked". A whole-card activation must not fire when the
- * user aimed at a slotted control inside the card -- the card is a *container*, so unlike
- * `<lr-chip>`'s `toggleable` (which forbids focusable children outright and can therefore carry
- * `role="button"`), it can only distinguish the two cases at event time.
- */
-const NESTED_CONTROL_SELECTOR = [
-  'a[href]',
-  'button',
-  'input',
-  'select',
-  'textarea',
-  'summary',
-  'audio[controls]',
-  'video[controls]',
-  'label',
-  '[contenteditable]:not([contenteditable="false"])',
-  '[tabindex]:not([tabindex="-1"])',
-  '[role="button"]',
-  '[role="link"]',
-  '[role="checkbox"]',
-  '[role="switch"]',
-  '[role="radio"]',
-  '[role="menuitem"]',
-  '[role="option"]',
-  '[role="tab"]',
-  '[role="textbox"]',
-  '[role="slider"]',
-  '[role="spinbutton"]',
-].join(',');
 
 function isElementNode(value: EventTarget | undefined): value is Element {
   return (
@@ -244,16 +209,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   private readonly slotPresence = new SlotPresenceController(this);
   @state() private accessibleContentText = '';
-  private contentObserver?: MutationObserver;
-  private readonly contentUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.contentObserver || !this.needsAccessibleContentText()) return;
-    this.recomputeAccessibleContentText();
-    bindAccessibleTextObserver(
-      this.contentObserver, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades,
-    );
-  });
-  private contentObserverDocument?: Document;
-  private contentObserverGeneration = 0;
+  private readonly contentTextObserver = new AccessibleTextController(
+    this, [''], () => {
+      if (this.needsAccessibleContentText()) this.recomputeAccessibleContentText();
+    }, ['alt', 'aria-labelledby', 'slot'],
+  );
   private semanticFocusOrigin?: Element;
 
   private semanticOwner(): HTMLElement | null {
@@ -314,18 +274,6 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    * click on `<lr-button>` retargets to the host, but its composed path still contains the
    * internal native `<button>`.
    */
-  private originatesInNestedControl(
-    e: Event,
-    root: EventTarget | null
-  ): boolean {
-    for (const node of e.composedPath()) {
-      if (node === root) return false;
-      if (isElementNode(node) && node.matches(NESTED_CONTROL_SELECTOR))
-        return true;
-    }
-    return false;
-  }
-
   private onBaseClick = (e: Event): void => {
     // The activation button is `pointer-events: none`, so a pointer press lands on the card
     // content and reaches this listener instead -- native `disabled` alone therefore closes only
@@ -339,7 +287,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       this.emit('lr-card-activate', null);
       return;
     }
-    if (this.originatesInNestedControl(e, e.currentTarget)) return;
+    if (containsNestedInteractive(e, e.currentTarget)) return;
     this.emit('lr-card-activate', null);
   };
 
@@ -347,7 +295,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // Returning BEFORE the stopPropagation() below is deliberate: a disabled card swallows its own
     // navigation proxy, not the consumer's click event.
     if (this.disabled) return;
-    if (e.defaultPrevented || this.originatesInNestedControl(e, e.currentTarget)) return;
+    if (e.defaultPrevented || containsNestedInteractive(e, e.currentTarget)) return;
     // Replace the proxy source click with the native anchor click. Without containment, both
     // composed events escape the card and one physical activation looks like two application
     // clicks even though navigation happens only once.
@@ -358,7 +306,9 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   };
 
   override connectedCallback(): void {
+    this.contentTextObserver.setEnabled(this.needsAccessibleContentText());
     super.connectedCallback();
+    if (this.needsAccessibleContentText()) this.recomputeAccessibleContentText();
     this.requestUpdate();
   }
 
@@ -368,13 +318,12 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   private syncAccessibleContentText(): void {
+    this.contentTextObserver.setEnabled(this.needsAccessibleContentText());
     if (!this.needsAccessibleContentText()) {
-      if (this.contentObserver) this.resetContentObserver();
       this.accessibleContentText = '';
       return;
     }
-    if (!this.hasUpdated || !this.contentObserver) this.recomputeAccessibleContentText();
-    this.armContentObserver();
+    if (!this.hasUpdated || this.accessibleContentText === '') this.recomputeAccessibleContentText();
   }
 
   private recomputeAccessibleContentText(): void {
@@ -383,51 +332,14 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       .trim();
   }
 
-  private armContentObserver(): void {
-    const ownerDocument = this.ownerDocument;
-    if (!this.isConnected) return;
-    if (this.contentObserver && this.contentObserverDocument === ownerDocument) return;
-    this.resetContentObserver();
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.contentObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (!accessibleTextRecordsMatter(observer, records)) return;
-      if (
-        this.contentObserver !== observer ||
-        this.contentObserverDocument !== ownerDocument ||
-        this.contentObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        !this.needsAccessibleContentText()
-      ) {
-        return;
-      }
-      this.recomputeAccessibleContentText();
-      bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades);
-    });
-    this.contentObserver = observer;
-    this.contentObserverDocument = ownerDocument;
-    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.contentUpgrades);
-  }
-
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.semanticFocusOrigin = undefined;
-    this.resetContentObserver();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.resetContentObserver();
-  }
-
-  private resetContentObserver(): void {
-    this.contentObserverGeneration += 1;
-    this.contentObserver?.disconnect();
-    this.contentUpgrades.disconnect();
-    this.contentObserver = undefined;
-    this.contentObserverDocument = undefined;
+    this.contentTextObserver.adopted();
   }
 
   /** Activates the native whole-card owner: the linked anchor when `href` is safe, or the

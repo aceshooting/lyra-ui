@@ -1,4 +1,5 @@
 import type { RetrievalChunk } from '../../ai/types.js';
+import { firstByIdentity } from '../../internal/collection-identity.js';
 
 /** Runtime boundary for public collection rows before a renderer dereferences their fields. */
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,26 +29,7 @@ export function isValidRetrievalChunk(value: unknown): value is RetrievalChunk {
 }
 
 /** Keeps the first row for every nonblank identity without mutating the input collection. */
-export function firstByRetrievalIdentity<T>(
-  values: readonly T[],
-  identity: (value: T) => unknown
-): T[] {
-  const retained: T[] = [];
-  const seen = new Set<string>();
-  const source = Array.isArray(values) ? values : [];
-  for (const value of source) {
-    let id: unknown;
-    try {
-      id = identity(value);
-    } catch {
-      continue;
-    }
-    if (!isNonBlankIdentity(id) || seen.has(id)) continue;
-    seen.add(id);
-    retained.push(value);
-  }
-  return retained;
-}
+export const firstByRetrievalIdentity: typeof firstByIdentity = firstByIdentity;
 
 const canonicalIdentityLists = new WeakMap<
   readonly unknown[],

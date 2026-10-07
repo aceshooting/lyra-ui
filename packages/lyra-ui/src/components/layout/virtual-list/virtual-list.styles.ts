@@ -117,36 +117,24 @@ export const styles = css`
     inset-block-start: var(--_lr-virtual-list-row-offset);
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
   }
-  /* lr-thread-list's renderItem output lands in this shadow root, so an excerpt's <mark> is
-     unreachable from the thread-list stylesheet or a rule following ::part(row-excerpt). Pinned to
-     that callback's own part so other virtualized row hooks keep their semantics; the public
-     properties inherit from lr-thread-list through this host and stay component-scoped.
-     SHADOW-MODE ONLY: under row-projection="light" the row content is a slotted light-DOM node, and
-     a shadow rule cannot style a slotted node's descendants -- only ::slotted() reaches the slotted
-     node itself, never inside it. lr-thread-list does not opt into projection, so nothing in this
-     repo regresses; a future projected consumer owns this highlight from its own stylesheet, which
-     it can do precisely because projection hands the cascade back. */
-  [part="row"] [part~="row-excerpt"] mark {
+  /* Callback content stamped into this shadow root can opt into these generic mark/link hooks. */
+  [part="row"] [data-lr-virtual-list-mark] mark {
     background: var(
-      --lr-thread-list-excerpt-highlight-bg,
-      var(--lr-color-warning-quiet)
+      --lr-virtual-list-row-mark-bg,
+      revert
     );
     color: var(
-      --lr-thread-list-excerpt-highlight-color,
-      inherit
+      --lr-virtual-list-row-mark-color,
+      revert
     );
     border-radius: var(
-      --lr-thread-list-excerpt-highlight-radius,
-      var(--lr-radius-xs)
+      --lr-virtual-list-row-mark-radius,
+      0
     );
-    padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
+    padding: var(--lr-virtual-list-row-mark-padding, 0);
   }
-  /* lr-activity-feed's renderText output lands in this shadow root at or above virtualize-at, the
-     same one-shadow-hop-unreachable shape as the row-excerpt <mark> rule immediately above --
-     :where() keeps specificity at zero so an inline style on the callback's own returned anchor
-     still wins. SHADOW-MODE ONLY, for the same reason documented above. */
-  [part="row"] [part~="entry-text"] a:where(:any-link) {
-    color: var(--lr-activity-feed-entry-text-link-color, var(--lr-color-brand));
+  [part="row"] [data-lr-virtual-list-link] a:where(:any-link) {
+    color: var(--lr-virtual-list-row-link-color, revert);
   }
   [part="group"] {
     position: absolute;

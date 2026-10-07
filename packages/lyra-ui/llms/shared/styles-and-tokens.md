@@ -54,7 +54,7 @@ Three layers, and **which one you set decides how far the override reaches**:
 1. **`--lr-theme-*`** — the application input layer. `theme.css` supplies values on its root and
    light/dark mode selectors; component shadow styles never redeclare them. Set these to retheme.
 2. **`--lr-*`** — internal tokens. Themeable base tokens read a `--lr-theme-*` input and use a
-   built-in fallback when it is unset. Aliases, computed tokens, and the colour ramp may instead
+   built-in fallback when it is unset. Aliases and computed tokens may instead
    resolve through another internal token or a fixed contract value. See
    [the colour ramp and the semantic grid](#the-colour-ramp-and-the-semantic-grid) for how a colour
    resolves through this layer.
@@ -314,7 +314,7 @@ only guaranteed legible under the matching `on-quiet` foreground — so shipping
 alone would hand you a pairing with nothing behind it.
 
 **Deliberately not published**, and each for a reason that makes reading it a bug rather than a
-convenience: `--lr-ramp-*` (a step encodes a light-mode choice and has no theme hook),
+convenience: `--lr-ramp-*` (tooling-only numeric inputs, absent from component host styles),
 `--lr-size-*` (value-named geometry constants, frozen internals), the chart, graph and terminal
 palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
 your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
@@ -359,27 +359,24 @@ no-op either way round.
 
 ### The colour ramp and the semantic grid
 
-Colour has two layers beneath the `--lr-*` tokens you normally read.
+Colour uses a tooling ramp to generate the semantic `--lr-*` tokens you normally read.
 
 **The ramp — `--lr-ramp-<variant>-<step>`.** Five variants (`brand`, `success`, `warning`,
 `danger`, `neutral`) × eleven steps (`05 10 20 30 40 50 60 70 80 90 95`). The step number is
 approximate perceptual lightness: `-05` is nearly black, `-95` nearly white, `-50` the mid tone. The
-ramp is generated in OKLCH, so the same step number reads as the same _apparent_ lightness across
+ramp is generated in OKLCH and retained in canonical token data, so the same step number reads as the same _apparent_ lightness across
 every variant — which is what makes the grid above it predictable rather than 45 separate
 decisions.
 
 **Never reference a ramp step directly — from application CSS or from a component's own styles.**
-Two reasons, and both fail silently. A step encodes a light-mode choice: `-50` is a comfortable fill
-on white and unreadable on a dark surface, so a rule written against it looks correct until someone
-switches modes. And the ramp carries no `--lr-theme-*` hook and is re-declared on every `lr-*`
-element's own `:host`, so a `:root { --lr-ramp-brand-50: … }` in an application stylesheet is
-shadowed at the first component it reaches and changes nothing at all. Read the grid instead; it
-picks the right step per mode for you, and it is the layer that _is_ overridable.
+A step encodes a light-mode choice: `-50` can be comfortable on white and unreadable on a dark
+surface. The ramp values are tooling data, not CSS properties declared on component hosts. Read
+the semantic grid instead; it picks the right value per mode and supports theme overrides.
 
 **The grid — `--lr-color-<variant>-<role>-<emphasis>`.** `{brand|success|warning|danger|neutral}` ×
 `{fill|border|on}` × `{quiet|normal|loud}` = 45 slots. This is the layer components consume and the
-layer to build on. Its _shape_ is identical in light and dark; only which ramp step each slot
-resolves to changes, so a rule written against it is mode-independent for free.
+layer to build on. Its _shape_ is identical in light and dark; the generator resolves different
+ramp steps into each mode's literal fallback, so a rule written against it is mode-independent.
 
 - `fill` — a background. `on` — text and icons that sit **on** the matching `fill`. `border` — an
   outline.
@@ -405,9 +402,9 @@ rethemed without forking anything beneath it:
 }
 ```
 
-The full chain for one colour is therefore: your `--lr-theme-*` input, else the grid slot's default,
-else the ramp step it points at. To move a whole tone, set its nine `--lr-theme-color-<variant>-*`
-inputs — that is the wholesale route, since the ramp itself is not a consumer override point.
+The full runtime chain for one colour is your `--lr-theme-*` input, else the grid slot's generated
+fallback. To move a whole tone, set its nine `--lr-theme-color-<variant>-*` inputs; the ramp remains
+a design-tool input rather than a consumer override point.
 
 The flat names are aliases into the grid, kept because they read well at the call site:
 

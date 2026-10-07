@@ -103,8 +103,13 @@ export const ControlledChildState: Story = {
         ]}
         .contextTotal=${16_384}
         .composerStatus=${'streaming'}
+        .composerValue=${'Review the collected context'}
         .composerMinRows=${3}
         .composerMaxRows=${6}
+        .composerSubmitDisabled=${true}
+        .composerWithoutStop=${true}
+        .composerSpellcheck=${false}
+        .composerWrap=${'hard'}
       ></lr-agent-workspace>
     </div>
   `,

@@ -1,8 +1,11 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlTextWrap,
+  formControlChrome,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -56,17 +59,8 @@ export const styles = css`
     --_lr-locale-picker-trigger-padding-default: var(--lr-space-m) var(--lr-space-l);
   }
 
-  [part='form-control-label'] {
-    display: block;
-    margin-block-end: var(--lr-space-xs);
-    font-size: var(--lr-font-size-md-sm);
-    font-weight: var(--lr-font-weight-semibold);
-  }
-  /* :empty never matches -- the part always holds a literal <slot> child -- so emptiness is
-     tracked via hasLabelSlot/label.length and reflected as the hidden attribute (as lr-select). */
-  [part='form-control-label'][hidden] {
-    display: none;
-  }
+  ${formControlChrome}
+
   ${formControlRequiredMarker}
 
   [part='trigger'] {
@@ -101,8 +95,7 @@ export const styles = css`
       border-color var(--lr-transition-fast);
   }
   [part='trigger']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
@@ -347,8 +340,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='load-retry'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-button);
@@ -365,37 +357,18 @@ export const styles = css`
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
   }
   [part='load-retry']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='load-retry']:where(:disabled) { cursor: default; opacity: var(--lr-opacity-disabled); }
   @media (prefers-reduced-motion: reduce) {
     [part='load-retry'] { transition: none; }
   }
 
-  [part='hint'] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  [part='hint'][hidden] {
-    display: none;
-  }
-  [part='error'] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part='error'][hidden] {
-    display: none;
-  }
   [part='form-control'],
   [part='form-control-label'],
   [part='hint'],
   [part='error'] {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    ${formControlTextWrap}
   }
 
   ${glassScrollLayerStyles}

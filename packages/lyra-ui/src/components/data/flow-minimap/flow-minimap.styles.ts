@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
 
@@ -84,8 +85,7 @@ export const styles = css`
     cursor: grabbing;
   }
   [part='viewport-hit-area']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='base'][data-locked] [part='viewport-hit-area'] {
     cursor: default;

@@ -1,5 +1,6 @@
 import { imageDescriptionDraft, imageDimensionDraft, imageResizeDraft } from './image-tools.js';
-import type { DocxImageContext, DocxImageSource, DocxResult, DocxRevision, DocxSelectionLease, DocxSession } from './types.js';
+import { captureSelectionIntent, type DocxSelectionIntent } from './selection-intent.js';
+import type { DocxImageContext, DocxImageSource, DocxResult, DocxRevision, DocxSession } from './types.js';
 
 interface ImageInsertionDefaults {
   readonly width: string;
@@ -34,24 +35,15 @@ export function imageInsertionDraft(bytes: Uint8Array, width: string, height: st
 }
 
 class CaretInsertionIntent implements ImageInsertionIntent {
-  private phase: 'owned' | 'dispatched' | 'released' = 'owned';
-  constructor(private readonly session: DocxSession, private readonly lease: DocxSelectionLease,
-    private readonly revision: DocxRevision, private readonly selectionVersion: number) {}
+  constructor(private readonly intent: DocxSelectionIntent) {}
   valid(session: DocxSession | null): boolean {
-    const snapshot = session?.snapshot();
-    return this.phase === 'owned' && session === this.session && snapshot?.status === 'ready' &&
-      snapshot.revision?.documentId === this.revision.documentId && snapshot.revision.value === this.revision.value &&
-      snapshot.selection.version === this.selectionVersion;
+    return this.intent.valid(session);
   }
   async dispatch(source: DocxImageSource): Promise<DocxResult<DocxRevision>> {
-    if (!this.valid(this.session)) { this.release(); return { ok: false, code: 'stale-selection' }; }
-    this.phase = 'dispatched';
-    try { return await this.session.insertImage(source, { expectedRevision: this.revision, selection: this.lease }); }
-    finally { this.phase = 'released'; this.lease.release(); }
+    return this.intent.insertImage(source);
   }
   release(): void {
-    if (this.phase !== 'owned') return;
-    this.phase = 'released'; this.lease.release();
+    this.intent.release();
   }
 }
 
@@ -59,9 +51,6 @@ class CaretInsertionIntent implements ImageInsertionIntent {
 export function captureImageInsertionIntent(session: DocxSession | null): ImageInsertionIntent | null {
   const snapshot = session?.snapshot();
   if (!session || snapshot?.status !== 'ready' || !snapshot.revision || !session.canInsertImage().enabled) return null;
-  const retained = session.retainSelection();
-  if (!retained.ok) return null;
-  const intent = new CaretInsertionIntent(session, retained.value, snapshot.revision, snapshot.selection.version);
-  if (intent.valid(session)) return intent;
-  intent.release(); return null;
+  const retained = captureSelectionIntent(session, () => true, snapshot);
+  return retained ? new CaretInsertionIntent(retained) : null;
 }

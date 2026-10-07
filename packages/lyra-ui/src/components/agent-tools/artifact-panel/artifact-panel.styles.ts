@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -65,13 +66,8 @@ export const styles = css`
     color: var(--lr-artifact-panel-view-active-color, var(--lr-color-brand));
   }
   [part='restore-button'], [part='copy-button'], [part='download-button'] {
-    box-sizing: border-box; min-block-size: var(--lr-size-1-5rem);
-    font: inherit; font-size: var(--lr-font-size-xs); background: var(--lr-color-surface); color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
-    padding: var(--lr-space-2xs) var(--lr-space-s); cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+    font-size: var(--lr-font-size-xs);
   }
-  [part='restore-button']:hover, [part='copy-button']:hover, [part='download-button']:hover,
   [part='view-button']:hover:not([aria-pressed='true']) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
@@ -79,13 +75,11 @@ export const styles = css`
   /* Pressed pushes the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour, so it reads as a distinctly deeper step than hover in both
      themes. */
-  [part='restore-button']:active, [part='copy-button']:active, [part='download-button']:active,
   [part='view-button']:active:not([aria-pressed='true']) {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
-  [part='restore-button']:focus-visible, [part='copy-button']:focus-visible,
-  [part='download-button']:focus-visible, [part='view-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+  [part='view-button']:focus-visible {
+    ${focusRing}
   }
   [part='version-nav'] {
     display: flex;
@@ -105,8 +99,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: none;
     color: var(--lr-color-text);
@@ -126,8 +119,7 @@ export const styles = css`
   }
   [part='version-previous']:focus-visible,
   [part='version-next']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='version-previous']:disabled,
   [part='version-next']:disabled {

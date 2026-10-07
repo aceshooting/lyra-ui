@@ -44,6 +44,19 @@
   },
   "deprecations": [
     {
+      "tag": "lr-chunk-inspector",
+      "kind": "event",
+      "name": "lr-chunk-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+    },
+    {
       "tag": "lr-community-card",
       "kind": "event",
       "name": "lr-entity-activate",
@@ -81,6 +94,19 @@
       },
       "removalNotBefore": "28.0.0",
       "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-memory-panel",
+      "kind": "event",
+      "name": "lr-memory-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
     },
     {
       "tag": "lr-path-strip",
@@ -159,6 +185,32 @@
       },
       "removalNotBefore": "28.0.0",
       "rationale": "lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-retrieval-trace",
+      "kind": "event",
+      "name": "lr-stage-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
+    },
+    {
+      "tag": "lr-source-card",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
     },
     {
       "tag": "lr-source-picker",

@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -117,8 +118,7 @@ export const styles = css`
     grid-column: 3;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     /* The pull-out is optical alignment: it absorbs this button's own padding so the glyph reads
        level with the panel edge instead of inset twice. It is clamped to the panel gutter because
        the base clips its overflow, and a pull deeper than the gutter pushes the tappable target
@@ -164,8 +164,7 @@ export const styles = css`
   }
 
   [part~='close-button']:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   .countdown {

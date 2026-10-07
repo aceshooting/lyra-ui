@@ -48,6 +48,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 import { parseSync, visitorKeys } from 'oxc-parser';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -376,12 +377,6 @@ function parseFile(source) {
   return parsed;
 }
 
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(fullPath) : [fullPath];
-  });
-}
 
 function isCheckedSource(file) {
   return (

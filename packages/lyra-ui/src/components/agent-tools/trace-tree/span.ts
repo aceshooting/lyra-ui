@@ -8,10 +8,9 @@ import { finiteRange } from '../../../internal/numbers.js';
 
 export type LyraSpanKind = 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
 
-/** The tool-call status vocabulary shared with `<lr-tool-call-chip>` and `<lr-tool-call-block>`:
- *  the shared tool lifecycle plus `incomplete`, a span that ended without a result (an interrupted
- *  stream, a cancelled run) -- a span standing in for a call reads identically to the call itself. */
-export type LyraSpanStatus = LyraToolStatus | 'incomplete';
+/** The shared tool lifecycle plus `incomplete` for an interrupted span and neutral `unknown` for
+ *  an explicitly unrecognized provider status. */
+export type LyraSpanStatus = LyraToolStatus | 'incomplete' | 'unknown';
 
 /** Normalizes foreign provider data before it reaches closed span-kind maps. */
 export function normalizeLyraSpanKind(value: unknown): LyraSpanKind {
@@ -37,9 +36,10 @@ export function normalizeLyraSpanStatus(value: unknown): LyraSpanStatus {
     case 'error':
     case 'denied':
     case 'incomplete':
+    case 'unknown':
       return value;
     default:
-      return 'pending';
+      return value == null ? 'pending' : 'unknown';
   }
 }
 
@@ -60,7 +60,7 @@ export interface LyraSpan {
   startMs: number;
   /** Milliseconds relative to the trace start. Absent while the span is still running. */
   endMs?: number;
-  /** Same vocabulary as the library's existing tool-lifecycle status. */
+  /** Tool-lifecycle status plus `incomplete`; unrecognized provider values become neutral `unknown`, while absent values become `pending`. */
   status: LyraSpanStatus;
   tokensIn?: number;
   tokensOut?: number;

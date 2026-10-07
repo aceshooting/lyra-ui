@@ -17,6 +17,8 @@ import {
 } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { TableViewerScrollController, tableHighlightsForColumn, tableHighlightsForRow } from '../table-viewer-shared.js';
+import { advanceViewerSearchIndex, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import {
   DocumentAnchorTarget,
   prioritizedHighlightCandidates,
@@ -63,11 +65,6 @@ type SpreadsheetState =
   | { kind: 'loading' }
   | { kind: 'loaded'; sheets: SpreadsheetSheet[] }
   | { kind: 'error'; message: string };
-type OwnedAnimationFrameWait = {
-  owner: Window;
-  handle?: number;
-  resolve: (isCurrent: boolean) => void;
-};
 const MAX_SPREADSHEET_SHEETS = 256;
 const MAX_SPREADSHEET_CELLS = 1_000_000;
 const MAX_SEARCH_MATCHES = 1_000;
@@ -225,12 +222,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   private loadLibrary: () => Promise<SheetJsApi | null> = loadSheetJsCached;
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
-  private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
+  private readonly tableScroll = new TableViewerScrollController(this);
 
   /** A genuine disconnect drops the grid (the query survives and re-runs after the reload). */
   private readonly detached = new DeferredTeardown(() => {
     this.generation++;
-    this.cancelPendingAnimationFrames();
+    this.tableScroll.cancel();
     this.fetchState = { kind: 'idle' };
     this.activeRowKey = '';
     this.activeSheetIndex = 0;
@@ -256,31 +253,8 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.detached.flush();
-    this.cancelPendingAnimationFrames();
+    this.tableScroll.cancel();
     this.announcements.adopted();
-  }
-
-  private waitForOwnerAnimationFrame(): Promise<boolean> {
-    const owner = this.ownerDocument.defaultView;
-    if (!owner || !this.isConnected) return Promise.resolve(false);
-    return new Promise<boolean>((resolve) => {
-      const pending: OwnedAnimationFrameWait = { owner, resolve };
-      this.pendingAnimationFrames.add(pending);
-      pending.handle = owner.requestAnimationFrame(() => {
-        if (!this.pendingAnimationFrames.delete(pending)) return;
-        resolve(this.isConnected && this.ownerDocument.defaultView === owner);
-      });
-    });
-  }
-
-  private cancelPendingAnimationFrames(): void {
-    const pendingFrames = [...this.pendingAnimationFrames];
-    this.pendingAnimationFrames.clear();
-    for (const pending of pendingFrames) {
-      if (pending.handle !== undefined)
-        pending.owner.cancelAnimationFrame(pending.handle);
-      pending.resolve(false);
-    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -464,12 +438,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     rawRow: number,
     currentSheetName: string
   ): ResolvedCellHighlight[] {
-    return this.cellHighlights.filter(
-      ({ parsed, sheet }) =>
-        (sheet === undefined || sheet === currentSheetName) &&
-        rawRow - 1 >= parsed.startRow &&
-        rawRow - 1 <= parsed.endRow
-    );
+    return tableHighlightsForRow(this.cellHighlights, rawRow, currentSheetName);
   }
 
   private renderCell(
@@ -479,10 +448,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     role: 'cell' | 'columnheader'
   ): TemplateResult {
     const text = cell(value, this.effectiveLocale);
-    const colHighlights = rowHighlights.filter(
-      (entry) =>
-        colIndex >= entry.parsed.startCol && colIndex <= entry.parsed.endCol
-    );
+    const colHighlights = tableHighlightsForColumn(rowHighlights, colIndex);
     if (!colHighlights.length)
       return html`<div part="cell" role=${role}>${text}</div>`;
     const active = colHighlights.find(
@@ -670,7 +636,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     return this.fetchState === loadedState;
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'cell-range' || this.fetchState.kind !== 'loaded')
       return false;
     const parsed = parseCellRange(anchor.range);
@@ -690,21 +656,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     const list = this.renderRoot.querySelector(
       `${tag('virtual-list')}[data-sheet-index="${sheetIndex}"]`
     ) as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
-    if (list?.updateComplete) await list.updateComplete;
-    if (!(await this.waitForOwnerAnimationFrame())) return;
-    const row = list?.shadowRoot?.querySelector(
-      '[part="row"][aria-current="true"]'
-    );
-    const target = row?.querySelectorAll('[part~="cell"]')[col] as
-      | HTMLElement
-      | undefined;
-    target?.scrollIntoView({
-      behavior: prefersReducedMotion(this)
-        ? 'auto'
-        : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    await this.tableScroll.scrollColumnIntoView(list, col);
   }
 
   // -- search ---------------------------------------------------------------------------------------
@@ -768,8 +720,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
    *  next match lives on a different one. Resolves `false` (no-op) when there are no matches. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex =
-      (this.searchActiveIndex + 1) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
     this.emitSearchChange();
     const match = this.searchMatches[this.searchActiveIndex]!;
     await this.jumpToCell(match.sheetIndex, match.row, match.col);
@@ -780,9 +731,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
    *  previous match lives on a different one. Resolves `false` (no-op) when there are no matches. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
-    this.searchActiveIndex =
-      (this.searchActiveIndex - 1 + this.searchMatches.length) %
-      this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
     this.emitSearchChange();
     const match = this.searchMatches[this.searchActiveIndex]!;
     await this.jumpToCell(match.sheetIndex, match.row, match.col);
@@ -797,21 +746,13 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
     this.activeRowKey = '';
-    this.emit('lr-search-change', {
-      query: '',
-      matchCount: 0,
-      matchCountExact: true,
-      activeIndex: -1,
-    });
+    this.emit('lr-search-change', viewerSearchDetail('', 0, true, -1));
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.emit('lr-search-change', viewerSearchDetail(
+      this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex,
+    ));
   }
 
   private stopInternalEvent = (event: Event): void => {

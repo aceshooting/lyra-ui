@@ -77,6 +77,14 @@ export const NoMatches: Story = {
   render: () => staticDemo('mention-demo-empty', PEOPLE, { query: 'zzz', emptyText: 'No teammates match “zzz”' }),
 };
 
+export const ManyMatches: Story = {
+  parameters: { docs: { description: { story: 'The full filtered set remains available to the host; the popup offers fifty navigable suggestions and describes the remaining count.' } } },
+  render: () => staticDemo('mention-demo-many', Array.from({ length: 55 }, (_, index) => ({
+    suggestionId: `person-${index}`,
+    label: `Person ${index + 1}`,
+  }))),
+};
+
 /** An item can be marked `disabled`, rendering it as a genuinely non-actionable row: no selection
  *  by click or keyboard, and ArrowDown/ArrowUp highlighting steps past it instead of landing on
  *  it -- including the default pre-highlighted first row. */

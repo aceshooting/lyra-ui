@@ -1,3 +1,5 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   fixture,
   expect,
@@ -23,14 +25,6 @@ import {
 } from "../../../../test/wtr-mouse.js";
 import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
-/** Waits two animation frames -- enough for the component's rAF-coalesced
- *  scroll handler *and* a queued ResizeObserver callback to have run. */
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
-  );
-}
-
 /** Sentinel for "emit no row-projection attribute at all", distinguishing the unset state from
  *  an explicit `row-projection="shadow"` in the byte-identity regression below. */
 const nothingAttribute = Symbol('no row-projection attribute');
@@ -40,20 +34,68 @@ const stringKey = (item: unknown) => item as string;
 const renderText = (item: unknown, index: number) =>
   html`item ${item}#${index}`;
 
-/** Resolves a declaration against the component's inherited token layer, rather than the test
- * document's light DOM where those tokens are intentionally absent. */
-function resolvedInShadow(
-  el: LyraVirtualList,
-  declaration: string,
-  property: string
-): string {
-  const probe = document.createElement("span");
-  probe.setAttribute("style", declaration);
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return value;
+interface ResizeRecord {
+  callback: ResizeObserverCallback;
+  observer: ResizeObserver;
+  observed: Element[];
 }
+
+function installResizeObserverStub(options: {
+  onObserve?: (target: Element, record: ResizeRecord) => void;
+} = {}): { records: ResizeRecord[]; restore(): void } {
+  const originalResizeObserver = window.ResizeObserver;
+  const records: ResizeRecord[] = [];
+  class TestResizeObserver {
+    readonly record: ResizeRecord;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        observer: this as unknown as ResizeObserver,
+        observed: [],
+      };
+      records.push(this.record);
+    }
+
+    observe(target: Element): void {
+      this.record.observed.push(target);
+      options.onObserve?.(target, this.record);
+    }
+
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    TestResizeObserver as unknown as typeof ResizeObserver;
+  return {
+    records,
+    restore(): void {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = originalResizeObserver;
+    },
+  };
+}
+
+it('styles only callback content opted into the generic mark and link hooks', async () => {
+  const el = await fixture<LyraVirtualList>(html`
+    <lr-virtual-list row-height="40" style="--lr-virtual-list-height:120px;--lr-virtual-list-row-mark-bg:rgb(1, 2, 3);--lr-virtual-list-row-link-color:rgb(4, 5, 6)"
+      .items=${[1]}
+      .keyFunction=${numberKey}
+      .renderItem=${() => html`
+        <span data-lr-virtual-list-mark><mark class="selected">Selected</mark></span>
+        <mark class="plain">Plain</mark>
+        <span data-lr-virtual-list-link><a href="#selected">Link</a></span>
+      `}
+    ></lr-virtual-list>
+  `);
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector<HTMLElement>('mark.selected')!;
+  const plain = el.shadowRoot!.querySelector<HTMLElement>('mark.plain')!;
+  const link = el.shadowRoot!.querySelector<HTMLAnchorElement>('a[href="#selected"]')!;
+  expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(plain).backgroundColor).to.not.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(link).color).to.equal('rgb(4, 5, 6)');
+});
 
 it("does not schedule a Lit update from the initial container measurement", async () => {
   const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> })
@@ -649,31 +691,8 @@ for (const external of [false, true]) {
 }
 
 it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize", async () => {
-  interface ResizeRecord {
-    callback: ResizeObserverCallback;
-    observer: ResizeObserver;
-  }
-
-  const originalResizeObserver = window.ResizeObserver;
-  const records: ResizeRecord[] = [];
-  class TestResizeObserver {
-    readonly record: ResizeRecord;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.record = {
-        callback,
-        observer: this as unknown as ResizeObserver,
-      };
-      records.push(this.record);
-    }
-
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  }
-  (
-    window as unknown as { ResizeObserver: typeof ResizeObserver }
-  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  const resizeObserverStub = installResizeObserverStub();
+  const { records } = resizeObserverStub;
 
   try {
     const el = (await fixture(
@@ -712,38 +731,13 @@ it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize
 
     expect(el.offsetForIndex(1)).to.equal(96);
   } finally {
-    (
-      window as unknown as { ResizeObserver: typeof ResizeObserver }
-    ).ResizeObserver = originalResizeObserver;
+    resizeObserverStub.restore();
   }
 });
 
 it("uses a group marker's rendered height when a ResizeObserver entry omits borderBoxSize", async () => {
-  interface ResizeRecord {
-    callback: ResizeObserverCallback;
-    observer: ResizeObserver;
-  }
-
-  const originalResizeObserver = window.ResizeObserver;
-  const records: ResizeRecord[] = [];
-  class TestResizeObserver {
-    readonly record: ResizeRecord;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.record = {
-        callback,
-        observer: this as unknown as ResizeObserver,
-      };
-      records.push(this.record);
-    }
-
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  }
-  (
-    window as unknown as { ResizeObserver: typeof ResizeObserver }
-  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  const resizeObserverStub = installResizeObserverStub();
+  const { records } = resizeObserverStub;
 
   try {
     const el = (await fixture(
@@ -786,38 +780,13 @@ it("uses a group marker's rendered height when a ResizeObserver entry omits bord
     // the DEFAULT_GROUP_ESTIMATE_PX=32 estimate) contributed ahead of it.
     expect(el.offsetForIndex(1)).to.equal(64 + 40);
   } finally {
-    (
-      window as unknown as { ResizeObserver: typeof ResizeObserver }
-    ).ResizeObserver = originalResizeObserver;
+    resizeObserverStub.restore();
   }
 });
 
 it("keeps a measured group height when a fresh-but-content-identical groups array is reassigned", async () => {
-  interface ResizeRecord {
-    callback: ResizeObserverCallback;
-    observer: ResizeObserver;
-  }
-
-  const originalResizeObserver = window.ResizeObserver;
-  const records: ResizeRecord[] = [];
-  class TestResizeObserver {
-    readonly record: ResizeRecord;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.record = {
-        callback,
-        observer: this as unknown as ResizeObserver,
-      };
-      records.push(this.record);
-    }
-
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  }
-  (
-    window as unknown as { ResizeObserver: typeof ResizeObserver }
-  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  const resizeObserverStub = installResizeObserverStub();
+  const { records } = resizeObserverStub;
 
   try {
     const el = (await fixture(
@@ -858,9 +827,7 @@ it("keeps a measured group height when a fresh-but-content-identical groups arra
     await el.updateComplete;
     expect(el.offsetForIndex(1)).to.equal(64 + 40);
   } finally {
-    (
-      window as unknown as { ResizeObserver: typeof ResizeObserver }
-    ).ResizeObserver = originalResizeObserver;
+    resizeObserverStub.restore();
   }
 });
 
@@ -928,31 +895,8 @@ for (const external of [false, true]) {
 }
 
 it("adjusts an indexed source's offset by real measured deltas from earlier auto-height rows", async () => {
-  interface ResizeRecord {
-    callback: ResizeObserverCallback;
-    observer: ResizeObserver;
-  }
-
-  const originalResizeObserver = window.ResizeObserver;
-  const records: ResizeRecord[] = [];
-  class TestResizeObserver {
-    readonly record: ResizeRecord;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.record = {
-        callback,
-        observer: this as unknown as ResizeObserver,
-      };
-      records.push(this.record);
-    }
-
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  }
-  (
-    window as unknown as { ResizeObserver: typeof ResizeObserver }
-  ).ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  const resizeObserverStub = installResizeObserverStub();
+  const { records } = resizeObserverStub;
 
   try {
     const source: LyraVirtualListIndexedSource<number> = {
@@ -998,9 +942,7 @@ it("adjusts an indexed source's offset by real measured deltas from earlier auto
     // later index's offset must fold in exactly that delta.
     expect(afterOffset - beforeOffset).to.equal(96 - 48);
   } finally {
-    (
-      window as unknown as { ResizeObserver: typeof ResizeObserver }
-    ).ResizeObserver = originalResizeObserver;
+    resizeObserverStub.restore();
   }
 });
 

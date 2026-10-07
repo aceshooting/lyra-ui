@@ -432,6 +432,8 @@ export function buildTokens() {
       'These do not directly read a `--lr-theme-*` input. Aliases and computed values still follow',
       'the tokens or environment values they reference; fixed contract constants are intentionally',
       'not theme inputs.',
+      '`--lr-ramp-*` rows are numeric design-tool inputs retained in canonical token data; they are',
+      'not CSS custom properties declared by component hosts. Use the semantic `--lr-color-*` grid.',
       '',
       '| Token | Light/default value | Mode overrides |',
       '|---|---|---|',

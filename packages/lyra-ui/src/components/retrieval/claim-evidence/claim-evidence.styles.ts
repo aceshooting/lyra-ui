@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -53,8 +55,7 @@ export const styles = css`
     align-items: center;
     inline-size: 100%;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-s);
     border: 0;
     background: transparent;
@@ -103,7 +104,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
-  @container (max-inline-size: 319.98px) {
+  @container ${compactContainerQuery} {
     [part='claim-trigger'] {
       grid-template-columns: 1fr;
     }

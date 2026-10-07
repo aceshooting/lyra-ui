@@ -51,8 +51,9 @@ export type { LyraInputType, LyraInputEventMap } from './input-shared.js';
  *
  * Pressing Enter submits the ancestor `<form>`, the implicit submission a native `<input>`
  * performs — the internal input is inside a shadow root and has no form owner of its own, so the
- * platform can never do it here. The form's first enabled submit control becomes
- * `SubmitEvent.submitter` (an `<lr-button type="submit">` included, via its own `click()`), a
+ * platform can never do it here. Bubbling keydown listeners on the host or an ancestor may veto
+ * submission with `preventDefault()`. The form's first submit control becomes
+ * `SubmitEvent.submitter` when enabled (an `<lr-button type="submit">` included, via its own `click()`); a
  * modifier-held or IME-composition Enter is ignored, and a form with no submit button submits only
  * from a single field — all of it the platform's own rules, shared with every other lyra text
  * control through `internal/submit-on-enter.ts`.

@@ -25,6 +25,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { hasTopLayerAncestor, needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
 import { styles } from './tour.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
@@ -169,16 +170,6 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
   return (
     `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ` +
     `${x}px ${y}px, ${x}px ${bottom}px, ${right}px ${bottom}px, ${right}px ${y}px, ${x}px ${y}px, 0% 0%)`
-  );
-}
-
-function isElementNode(value: unknown): value is Element {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as Node).nodeType === 1 &&
-    typeof (value as Element).localName === 'string' &&
-    typeof (value as Element).matches === 'function'
   );
 }
 
@@ -1005,15 +996,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   };
 
   private ownsDirectionalKeys(event: KeyboardEvent): boolean {
-    return event
-      .composedPath()
-      .some(
-        (node) =>
-          isElementNode(node) &&
-          node.matches(
-            'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="grid"], [role="gridcell"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], [role="radiogroup"], [role="scrollbar"], [role="slider"], [role="spinbutton"], [role="tab"], [role="tablist"], [role="tree"], [role="treeitem"]',
-          ),
-      );
+    return keyEventOwnedByInnerControl(event, { container: this });
   }
 
   private onInteractiveScopeKeyDown = (event: KeyboardEvent): void => {

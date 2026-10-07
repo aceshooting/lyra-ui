@@ -14,6 +14,10 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
+import { VIRTUAL_LIST_ROW_ATTRIBUTE } from './virtual-list-attributes.js';
+export { VIRTUAL_LIST_ROW_ATTRIBUTE, VIRTUAL_LIST_STICKY_ATTRIBUTE } from './virtual-list-attributes.js';
+import { MAX_OVERSCAN_ROWS } from './virtual-list-limits.js';
+export { MAX_OVERSCAN_ROWS } from './virtual-list-limits.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { nativePopoverSupported } from '../../../internal/native-popover.js';
 import {
@@ -41,7 +45,6 @@ const DEFAULT_GROUP_ESTIMATE_PX = 32;
 const DEFAULT_OVERSCAN_ROWS = 6;
 /** Largest accepted overscan on either side of the visible range. This keeps
  *  an accidental huge value from defeating virtualization. */
-export const MAX_OVERSCAN_ROWS = 100;
 const MAX_VIRTUAL_LIST_GROUPS = 10_000;
 const EMPTY_VIRTUAL_LIST_GROUPS: readonly LyraVirtualListGroup[] = Object.freeze([]);
 
@@ -123,11 +126,9 @@ const ROW_PROJECTION = literalSetConverter<LyraVirtualListRowProjection>(
  * document's tree, not a shadow tree -- so this replaces `closest('[part="row"]')` for a delegated
  * listener in that mode. Built through `tag()`, exactly like `ANNOUNCEMENT_SINK_ATTRIBUTE`.
  */
-export const VIRTUAL_LIST_ROW_ATTRIBUTE = `data-${tag('virtual-list-row')}`;
 
 /** Reserved attribute marking the projected sticky-band wrapper. Same rationale as
  *  {@linkcode VIRTUAL_LIST_ROW_ATTRIBUTE}. */
-export const VIRTUAL_LIST_STICKY_ATTRIBUTE = `data-${tag('virtual-list-sticky')}`;
 
 /** lit-html binds attribute VALUES, never attribute NAMES, and the two reserved names above are
  *  derived from `tag()` rather than typed out — so the light template splices them in as static
@@ -403,6 +404,13 @@ export interface LyraVirtualListEventMap {
  *   where there is no group to pin). Always `aria-hidden`, `inert`, and pointer-transparent; put
  *   interactive actions in the real group row.
  * @csspart row - One rendered row's absolutely-positioned wrapper
+ * @cssprop [--lr-virtual-list-row-mark-bg=revert] - Background for `<mark>` inside callback
+ *   content marked with `data-lr-virtual-list-mark`.
+ * @cssprop [--lr-virtual-list-row-mark-color=revert] - Foreground for opted-in row marks.
+ * @cssprop [--lr-virtual-list-row-mark-radius=0] - Corner radius for opted-in row marks.
+ * @cssprop [--lr-virtual-list-row-mark-padding=0] - Padding for opted-in row marks.
+ * @cssprop [--lr-virtual-list-row-link-color=revert] - Anchor color inside callback content
+ *   marked with `data-lr-virtual-list-link`.
  *   (`role="listitem"`); `renderItem`'s return value renders inside it. Normal content wraps
  *   within the row; consumer content can opt out with `white-space: nowrap`.
  * @cssprop [--lr-virtual-list-height=var(--lr-size-24rem)] - The scroll viewport's height. A

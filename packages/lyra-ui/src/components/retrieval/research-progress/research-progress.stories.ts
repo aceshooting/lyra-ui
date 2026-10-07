@@ -36,6 +36,12 @@ export const Incomplete: Story = {
   ></lr-research-progress>`,
 };
 
+export const UnknownStatus: Story = {
+  render: () => html`<lr-research-progress style="max-inline-size: 42rem"
+    .steps=${[{ id: 'review', label: 'Review provider result', status: 'awaiting-review' }] as unknown as ResearchStep[]}
+  ></lr-research-progress>`,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-research-progress style="max-inline-size: 42rem"></lr-research-progress>`,
 };

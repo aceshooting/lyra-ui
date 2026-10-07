@@ -1,15 +1,17 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import {
   html,
   nothing,
-  svg,
   type TemplateResult,
-  type SVGTemplateResult,
   type PropertyValues,
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import { pencilIcon } from '../../../internal/icons.js';
 import type { LyraSize } from '../../../internal/variants.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { formatTimeOfDay, getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 import { autocorrectConverter, normalizeAutocorrect, spellcheckConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -35,71 +37,11 @@ export interface ConversationItemSelectDetail {
  *  `<lr-textarea>`'s identical converter, since Lit's default boolean converter would otherwise
  *  treat the mere presence of `spellcheck="false"` as `true`. */
 
-// Mirrors the shared icon set's viewBox/stroke conventions
-// (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
-// pencil/edit glyph to that module -- it's off limits here -- so this
-// one-off icon still reads as part of the same visual language as the rest
-// of the library's inline icons. Same approach lr-checkbox's own local
-// checkmark/indeterminate glyphs and lr-chat-message's local retryIcon()
-// take for the identical reason.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function pencilIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-  `;
-}
-
-/** `Intl.DateTimeFormat`-based absolute formatter -- clock time ("3:45 PM")
- *  for a timestamp that falls on the same calendar day as `now`, otherwise a
- *  calendar date ("Jul 10", or "Jul 10, 2024" once it's not the current
- *  year). Deliberately not a fuzzy "2 hours ago" relative string -- bucketed
- *  relative time (grouping a whole history list into "Today"/"Yesterday"/
- *  "Last 7 days" sections) belongs to the list level, not this single row's
- *  job. `formatTimestamp` overrides this
- *  entirely, mirroring `<lr-chat-message>`'s identical override hook. */
-function defaultFormatTimestamp(
-  date: Date,
-  locale: string,
-  now: Date = new Date()
-): string {
-  // Shared per-locale+options formatter cache: this runs per row per render in a history
-  // sidebar list, and constructing an `Intl.DateTimeFormat` per call is an ICU locale-data
-  // lookup. `effectiveLocale` always resolves to a non-empty tag (it falls back to `'en'`),
-  // so no empty-locale guard is needed.
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) {
-    return getDateTimeFormat(locale, {
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(date);
-  }
-  const sameYear = date.getFullYear() === now.getFullYear();
-  return getDateTimeFormat(
-    locale,
-    sameYear
-      ? { month: 'short', day: 'numeric' }
-      : { month: 'short', day: 'numeric', year: 'numeric' }
-  ).format(date);
-}
-
 export interface LyraConversationItemEventMap {
   'lr-select': CustomEvent<ConversationItemSelectDetail>;
   'lr-rename': CustomEvent<ConversationItemRenameDetail>;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 /**
  * `<lr-conversation-item>` — a selectable row representing one chat
@@ -177,8 +119,8 @@ export interface LyraConversationItemEventMap {
  * consumer applies the new label once it's actually persisted. Not fired
  * when the trimmed draft is empty or unchanged from the original `label`
  * (that's treated as an implicit cancel).
- * @event blur - Re-dispatched from the in-place rename input as a bubbling, composed event.
- * @event focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
+ * @event {FocusEvent} blur - Re-dispatched from the in-place rename input as a bubbling, composed event.
+ * @event {FocusEvent} focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="select-button"]`, the rename button, and `actions`. Also carries `base-menu-open` while a menu opened from `actions` is open.
  * @csspart base-menu-open - State alias on `base` while an `lr-dropdown`, `lr-popover` or
  *   `lr-context-menu` opened from the `actions` slot is open. Style a hover- or focus-revealed actions trigger on it too, e.g.
@@ -235,6 +177,14 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part~="select-button"][role="button"]'),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   /** Stable domain identity included in selection and rename request details. */
   @property({ attribute: 'conversation-id' }) conversationId = '';
@@ -465,15 +415,15 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     }
   };
 
-  private onLabelInputFocus = (): void => {
-    this.emit('focus', null);
+  private onLabelInputFocus = (event: FocusEvent): void => {
+    relayNativeEvent(this, event);
   };
 
   private onLabelInputBlur = (event: FocusEvent): void => {
     // Native blur/focus neither bubble nor cross the shadow boundary -- re-dispatch so a
     // host-level listener on the custom element itself can observe them. Always fires, even on
     // the Escape-driven path below, since the native input really did blur either way.
-    this.emit('blur', null);
+    relayNativeEvent(this, event);
     // If Escape already ended the edit synchronously (cancelRename() runs
     // before this fires), `renaming` is already false by the time the
     // now-removed input's blur event reaches here -- skip so Escape can't
@@ -528,7 +478,17 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     const ts = this.normalizedTimestamp;
     const formatter =
       this.formatTimestamp ??
-      ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+      ((date: Date) => {
+        const now = new Date();
+        if (date.toDateString() === now.toDateString()) return formatTimeOfDay(date, this.effectiveLocale);
+        const sameYear = date.getFullYear() === now.getFullYear();
+        return getDateTimeFormat(
+          this.effectiveLocale,
+          sameYear
+            ? { month: 'short', day: 'numeric' }
+            : { month: 'short', day: 'numeric', year: 'numeric' }
+        ).format(date);
+      });
     const displayLabel = this.label || this.localize('untitledConversation');
     const showRenameButton = !this.withoutRename && !this.renaming;
     // Shared between the rename button and the input it opens: the input is
@@ -577,12 +537,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                   aria-label=${renameLabel}
                   spellcheck=${this.spellcheck}
                   autocapitalize=${this.autocapitalize || nothing}
-                  autocorrect=${this.hasAttribute('autocorrect') ||
-                  !this.autocorrect
-                    ? this.autocorrect
-                      ? 'on'
-                      : 'off'
-                    : nothing}
+                  autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
                   @input=${this.onLabelInputChange}
                   @keydown=${this.onLabelInputKeyDown}
                   @focus=${this.onLabelInputFocus}

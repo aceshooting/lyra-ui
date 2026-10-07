@@ -1,5 +1,6 @@
 import { getListFormat, getNumberFormat } from '../../internal/intl-cache.js';
 import { finiteNumber } from '../../internal/numbers.js';
+import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../internal/data-descriptors.js';
 
 export interface BoundedRetrievalValueFormatOptions {
   readonly locale: string;
@@ -49,27 +50,36 @@ export function formatBoundedRetrievalValue(
 
     try {
       if (Array.isArray(current)) {
-        const length = current.length;
-        if (!Number.isSafeInteger(length) || length < 0) return options.invalid;
+        const lengthDescriptor = getOwnDataDescriptor(current, 'length');
+        if (lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR || lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
+          return options.invalid;
+        const length = lengthDescriptor.value;
+        if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) return options.invalid;
         const count = Math.min(length, maxEntries);
         const items: string[] = [];
-        for (let index = 0; index < count; index++)
-          items.push(format(current[index], depth + 1));
+        for (let index = 0; index < count; index++) {
+          const descriptor = getOwnDataDescriptor(current, String(index));
+          items.push(descriptor === MISSING_OWN_DATA_DESCRIPTOR ? '' :
+            descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? options.invalid : format(descriptor.value, depth + 1));
+        }
         if (length > count) items.push(options.truncated);
         return listFormat.format(items);
       }
 
       const entries: Array<readonly [string, unknown]> = [];
       let truncated = false;
+      let scanned = 0;
       for (const key in current as Record<string, unknown>) {
-        if (!Object.prototype.hasOwnProperty.call(current, key)) continue;
+        if (scanned++ >= maxValues) { truncated = true; break; }
+        const descriptor = getOwnDataDescriptor(current, key);
+        if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
         if (entries.length >= maxEntries) {
           truncated = true;
           break;
         }
         entries.push([
           boundedText(key),
-          (current as Record<string, unknown>)[key],
+          descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? options.invalid : descriptor.value,
         ]);
       }
       const parts = entries.map(

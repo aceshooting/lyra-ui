@@ -1,4 +1,7 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -9,10 +12,9 @@ export const styles = css`
        independent of the page theme and of whatever is in the photo. */
     --_lr-lightbox-control-bg: var(--lr-color-neutral);
     --_lr-lightbox-control-color: var(--lr-color-on-neutral);
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
+    ${modalHostStyles}
+    max-inline-size: none;
+    max-block-size: none;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-20rem);
     padding-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
@@ -93,8 +95,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     border-radius: var(--lr-radius-pill);
     background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
@@ -211,7 +212,7 @@ export const styles = css`
   /* Container-query lengths cannot reference custom properties, so the documented 320px
      narrow-allocation baseline is expressed in root-relative units and still follows the page's
      type scale -- mirrors pagination.styles.ts's container query. */
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part="counter"] {
       max-inline-size: 45%;
     }

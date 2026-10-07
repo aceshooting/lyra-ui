@@ -45,15 +45,20 @@ function assignedConsumerNodes(slot: HTMLSlotElement, active = new Set<Node>()):
  *
  * The controller intentionally answers only the generic presence question. Components whose
  * default slot is an option/item collection keep their specialized assigned-element handler for
- * identity, ordering, and mutation semantics.
+ * identity, ordering, and mutation semantics. Conditional passthrough slots may opt into
+ * light-DOM observation so new content is discovered before their internal slot is mounted.
  */
 export class SlotPresenceController implements ReactiveController {
   readonly #presence = new Map<string, boolean>();
   #listeningRoot?: EventTarget;
   #reconcileQueued = false;
   #connected = false;
+  #observer?: MutationObserver;
 
-  constructor(private readonly host: SlotPresenceHost) {
+  constructor(
+    private readonly host: SlotPresenceHost,
+    private readonly options: { observeLightDom?: boolean } = {},
+  ) {
     host.addController(this);
   }
 
@@ -69,6 +74,12 @@ export class SlotPresenceController implements ReactiveController {
     if (this.host[SEED_FIRST_RENDER_STATE]) this.host[SEED_FIRST_RENDER_STATE](seed);
     else seed();
     this.#listen();
+    const Observer = this.host.ownerDocument?.defaultView?.MutationObserver;
+    if (this.options.observeLightDom && Observer) {
+      this.#observer?.disconnect();
+      this.#observer = new Observer(() => this.#seedAvailablePresence(true));
+      this.#observer.observe(this.host, { childList: true, attributes: true, subtree: true, attributeFilter: ['slot'] });
+    }
   }
 
   hostUpdate(): void {
@@ -89,6 +100,8 @@ export class SlotPresenceController implements ReactiveController {
   hostDisconnected(): void {
     this.#connected = false;
     this.#stopListening();
+    this.#observer?.disconnect();
+    this.#observer = undefined;
   }
 
   readonly #onSlotChange = (): void => {
@@ -160,10 +173,13 @@ export class SlotPresenceController implements ReactiveController {
       if (!isSlotElement(slot)) continue;
       const name = slot.name;
       seen.add(name);
-      const present = hasRealContent(assignedConsumerNodes(slot));
+      // Direct assignments remain stable during transient native slotchange snapshots.
+      const present = this.#lightDomPresence(name);
       this.#setPresence(name, present, requestUpdate);
     }
-    for (const name of this.#presence.keys()) {
+    const names = new Set(this.#presence.keys());
+    for (const child of Array.from(this.host.children ?? [])) names.add(child.getAttribute('slot') ?? '');
+    for (const name of names) {
       if (!seen.has(name)) this.#setPresence(name, this.#lightDomPresence(name), requestUpdate);
     }
   }

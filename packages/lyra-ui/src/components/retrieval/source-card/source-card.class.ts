@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './source-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -20,7 +20,9 @@ export interface SourceCardOpenDetail {
 }
 
 export interface LyraSourceCardEventMap {
+  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
   'lr-expand': CustomEvent<SourceCardExpandDetail>;
+  'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string }>;
   'lr-open': CustomEvent<SourceCardOpenDetail>;
 }
 
@@ -55,6 +57,7 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * "Show more"/"Show less" toggle was activated, or all `full`-slotted content
  * was removed while expanded, collapsing the card automatically.
  * `detail: { sourceId, expanded }`.
+ * @event lr-toggle - The same change with `detail: { expanded, itemId }`.
  * @event lr-open - The title was activated. `detail: { sourceId, href }` —
  * `href` may be `undefined`. This component never navigates on its own
  * (staying a controlled component, the same convention
@@ -217,6 +220,7 @@ export class LyraSourceCard extends LyraSourceCardBase {
     if (count === 0 && this.fullExpanded) {
       this.fullExpanded = false;
       this.emit('lr-expand', { sourceId: this.sourceId, expanded: false });
+      this.emit('lr-toggle', { itemId: this.sourceId, expanded: false });
     }
   };
 
@@ -241,6 +245,7 @@ export class LyraSourceCard extends LyraSourceCardBase {
       sourceId: this.sourceId,
       expanded: this.fullExpanded,
     });
+    this.emit('lr-toggle', { itemId: this.sourceId, expanded: this.fullExpanded });
   };
 
   override render(): TemplateResult {

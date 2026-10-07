@@ -1,3 +1,4 @@
+import { nextFrame } from '../test/frames.js';
 import { expect } from '@open-wc/testing';
 import './all.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
@@ -79,10 +80,6 @@ interface MaybeLit {
 async function settle(el: Element): Promise<void> {
   const pending = (el as MaybeLit).updateComplete;
   if (pending) await pending;
-}
-
-function nextFrame(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function macrotask(): Promise<void> {

@@ -1,19 +1,8 @@
 /** @deprecated Import @aceshooting/lyra-ui/components/lr-dataset-viewer.js to register this component. */
 export * from './dataset-viewer.class.js';
-import { html } from 'lit';
 import { LyraDatasetViewer } from './dataset-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../layout/virtual-list/virtual-list.js';
-import { registerDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
+import './dataset-viewer-register.js';
 
 defineElement('dataset-viewer', LyraDatasetViewer);
-registerDocumentRenderer('lyra:dataset', {
-  matches: (file: LyraDocumentFile) => /\.(tsv|psv|dat)$/i.test(file.name),
-  capabilities: { anchors: ['cell-range'], search: true, textSelect: false },
-  render: (file: LyraDocumentFile) => html`<lr-dataset-viewer
-    src=${file.src}
-    name=${file.name}
-    .anchor=${file.anchor ?? null}
-    .highlights=${file.highlights ?? []}
-  ></lr-dataset-viewer>`,
-});

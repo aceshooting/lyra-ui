@@ -1650,3 +1650,16 @@ describe("lr-swatch-picker activation event", () => {
     ).to.equal(0);
   });
 });
+
+it('publishes selected state only while the live value matches a current swatch', async () => {
+  const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker .items=${options()}></lr-swatch-picker>`);
+  expect(el.matches(':state(selected)')).to.equal(false);
+  el.value = 'blue';
+  await el.updateComplete;
+  expect(el.matches(':state(selected)')).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[part~="swatch-selected"]').length).to.equal(1);
+  el.items = options().filter(item => item.value !== 'blue');
+  await el.updateComplete;
+  expect(el.matches(':state(selected)')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part~="swatch-selected"]').length).to.equal(0);
+});

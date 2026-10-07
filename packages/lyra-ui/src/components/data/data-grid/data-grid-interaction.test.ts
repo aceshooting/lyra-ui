@@ -831,6 +831,20 @@ it("resizes a column in the RTL-appropriate direction by pointer and by keyboard
   ).to.be.lessThan(keyDetail.width);
 });
 
+it('keeps a column drag on its owner window after the pointer leaves the handle', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="People" resizable .columns=${columns} .data=${rows}></lr-data-grid>`);
+  const handle = header(element, 'name').querySelector<HTMLElement>('[part="resize-handle"]')!;
+  const details: Array<{ width: number; finished: boolean }> = [];
+  element.addEventListener('lr-column-resize', (event) => details.push(event.detail));
+  handle.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 819, clientX: 100, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 820, clientX: 170 }));
+  expect(details.length).to.equal(0);
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 819, clientX: 140 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 819, clientX: 140 }));
+  expect(details.some((detail) => !detail.finished)).to.equal(true);
+  expect(details.at(-1)?.finished).to.equal(true);
+});
+
 it("ignores a page-size select whose value getter is not a usable primitive", async () => {
   const element = await dataGrid(html`
     <lr-data-grid
@@ -1359,4 +1373,3 @@ it("leaves Alt+Arrow on a resizable header to the browser instead of resizing", 
   expect(resizes).to.equal(0);
   expect(event.defaultPrevented).to.equal(false);
 });
-

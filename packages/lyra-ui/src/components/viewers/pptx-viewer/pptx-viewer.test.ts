@@ -974,7 +974,7 @@ describe("lr-pptx-viewer", () => {
       await aTimeout(20);
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent
-      ).to.contain("Failed to render this presentation");
+      ).to.contain('@aiden0z/pptx-renderer is not installed');
     } finally {
       restore();
     }

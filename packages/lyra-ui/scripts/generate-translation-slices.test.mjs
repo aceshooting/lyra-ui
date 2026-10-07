@@ -229,3 +229,33 @@ for (const [label, mutate, expected] of [
     await rm(root, { recursive: true, force: true });
   }
 }
+
+const portugueseFixture = await buildFixture();
+try {
+  const translations = path.join(portugueseFixture, 'src/translations');
+  const fixtures = path.join(portugueseFixture, 'scripts/fixtures');
+  await mkdir(fixtures, { recursive: true });
+  await writeFile(path.join(translations, 'pt-BR.ts'), xxCatalog.replaceAll('xx', 'pt-BR'));
+  await writeFile(path.join(translations, 'pt-PT.ts'), xxCatalog.replaceAll('xx', 'pt-PT')
+    .replace("formsOnly: 'XX forms only'", "formsOnly: 'European forms only'"));
+  await writeFile(path.join(fixtures, 'pt-PT-overrides.ts'),
+    "const strings = { formsOnly: 'European forms only' };\n");
+  await generateTranslationSlices({ packageDir: portugueseFixture, write: true, exclusions: {} });
+  const regionalForms = path.join(translations, 'pt-PT/forms.ts');
+  const regionalLayout = path.join(translations, 'pt-PT/layout.ts');
+  assert.match(await readFile(regionalForms, 'utf8'), /formsOnly: 'European forms only'/u);
+  assert.match(await readFile(regionalLayout, 'utf8'), /layoutOnly: 'XX layout only'/u);
+  assert.doesNotMatch(await readFile(regionalForms, 'utf8'), /import '\.\.\/pt-BR\//u,
+    'a regional consumer slice must not import its authoring base');
+  assert.equal((await generateTranslationSlices({ packageDir: portugueseFixture, write: false, exclusions: {} })).changedFileCount, 0);
+  const baseLayout = path.join(translations, 'pt-BR/layout.ts');
+  await writeFile(baseLayout, (await readFile(baseLayout, 'utf8'))
+    .replace("layoutOnly: 'XX layout only'", "layoutOnly: 'Updated base layout'"));
+  await generateTranslationSlices({ packageDir: portugueseFixture, write: true, exclusions: {} });
+  assert.match(await readFile(regionalLayout, 'utf8'), /layoutOnly: 'Updated base layout'/u,
+    'an inherited authoring value is flattened into the standalone regional slice');
+  assert.match(await readFile(regionalForms, 'utf8'), /formsOnly: 'European forms only'/u,
+    'regional overrides survive a base edit');
+} finally {
+  await rm(portugueseFixture, { recursive: true, force: true });
+}

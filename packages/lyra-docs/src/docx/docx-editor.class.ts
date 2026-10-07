@@ -20,7 +20,8 @@ import {
   imageRatioPartner, imageResizeDraft, imageResizeUnchanged,
 } from './image-tools.js';
 import { captureImageInsertionIntent, imageInsertionDefaults, imageInsertionDraft } from './image-insertion-tools.js';
-import { inspectDocxImage, withoutJpegApp1 } from './image-bytes.js';
+import { trackDeferredFocusReturn } from './deferred-focus-return.js';
+import { inspectDocxImageForInsertion } from './image-bytes.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
@@ -94,6 +95,9 @@ const toolIcons = {
 /** Tools rendered only in a matching context own their tooltip next to the trigger. */
 const contextualToolIcons = new Set<string>(['image-resize', 'image-description', 'image-delete', 'table-row-above',
   'table-row-below', 'table-column-left', 'table-column-right', 'table-delete-row', 'table-delete-column', 'table-delete-table']);
+const isToolActivationKey = (event: KeyboardEvent): boolean =>
+  (event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229;
+type EditorPopover = HTMLElement & { open: boolean; show(): Promise<void>; hide(options?: { focusTrigger?: boolean }): Promise<void> };
 const imageHandles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
 type ImageHandle = typeof imageHandles[number];
 interface ImageFrame { left: number; top: number; width: number; height: number }
@@ -914,8 +918,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.runEdit({ type: 'font-size', points });
   }
 
-  private toolPanel(part: string) {
-    return this.renderRoot.querySelector<HTMLElement & { hide(options?: { focusTrigger?: boolean }): Promise<void> }>(`[part="${part}"]`);
+  private findEditorPopover(part: string): EditorPopover | null {
+    return this.renderRoot.querySelector<EditorPopover>(`[part="${part}"]`);
+  }
+
+  private toolPanel(part: string): EditorPopover | null {
+    return this.findEditorPopover(part);
   }
 
   /** Apply a color tool's edit; palette picks close their popover and return to the document. */
@@ -956,7 +964,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private closeLinkEditor(returnFocus = true): void {
-    const popover = this.renderRoot.querySelector<HTMLElement & { hide(options?: { focusTrigger?: boolean }): Promise<void> }>('[part="link-popover"]');
+    const popover = this.findEditorPopover('link-popover');
     void popover?.hide({ focusTrigger: false }).then(() => {
       this.releaseToolbarSelection();
       if (returnFocus) this.focusEditor();
@@ -1008,8 +1016,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private tablePopover() {
-    return this.renderRoot.querySelector<HTMLElement & { open: boolean; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
-      '[part="table-insert-popover"]');
+    return this.findEditorPopover('table-insert-popover');
   }
 
   private releaseTableIntent(): void {
@@ -1025,7 +1032,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onTableActivationKey(event: KeyboardEvent): void {
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.prepareTableIntent();
+    if (isToolActivationKey(event)) this.prepareTableIntent();
   }
 
   private openTableDialog(event: Event): void {
@@ -1051,25 +1058,18 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const selectionVersion = session?.snapshot().selection.version;
     const popover = this.tablePopover();
     if (!popover) return;
-    const document = this.ownerDocument;
-    let cancelled = false;
-    const cancel = () => {
-      cancelled = true;
-      document.removeEventListener('focusin', cancel, true);
-      document.removeEventListener('pointerdown', cancel, true);
-      if (this.cancelTableFocusReturn === cancel) this.cancelTableFocusReturn = null;
-    };
-    this.cancelTableFocusReturn = cancel;
-    document.addEventListener('focusin', cancel, true);
-    document.addEventListener('pointerdown', cancel, true);
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
+      if (this.cancelTableFocusReturn === focus.cancel) this.cancelTableFocusReturn = null;
+    });
+    this.cancelTableFocusReturn = focus.cancel;
     void popover.hide({ focusTrigger: false }).then(() => {
-      const shouldFocus = !cancelled && this.isConnected && this.session === session && generation === this.tableDialogGeneration &&
+      const shouldFocus = !focus.cancelled && this.isConnected && this.session === session && generation === this.tableDialogGeneration &&
         !popover.open && session?.snapshot().selection.version === selectionVersion;
-      cancel();
+      focus.cancel();
       if (!shouldFocus) return;
       if (returnToEditor) this.focusEditor();
       else this.renderRoot.querySelector<HTMLElement>('[part="table-insert-trigger"]')?.focus();
-    }, cancel);
+    }, focus.cancel);
   }
 
   private runTableEdit(action: DocxTableAction, fromDialog = false): void {
@@ -1092,8 +1092,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private insertionPopover() {
-    return this.renderRoot.querySelector<HTMLElement & { open: boolean; show(): Promise<void>; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
-      '[part="image-insert-dialog"]');
+    return this.findEditorPopover('image-insert-dialog');
   }
 
   private resetImageInsertion(hide = true): void {
@@ -1125,7 +1124,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onImageInsertionKey(event: KeyboardEvent): void {
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229)
+    if (isToolActivationKey(event))
       this.prepareImageInsertion();
   }
 
@@ -1149,27 +1148,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.resetImageInsertion(false);
     const generation = this.insertionGeneration;
     if (!returnFocus || !popover) { void popover?.hide({ focusTrigger: false }); return; }
-    const document = this.ownerDocument;
-    let cancelled = false;
-    const cancel = () => {
-      cancelled = true; document.removeEventListener('focusin', cancel, true); document.removeEventListener('pointerdown', cancel, true);
-      if (this.cancelInsertionFocusReturn === cancel) this.cancelInsertionFocusReturn = null;
-    };
-    this.cancelInsertionFocusReturn = cancel;
-    document.addEventListener('focusin', cancel, true); document.addEventListener('pointerdown', cancel, true);
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
+      if (this.cancelInsertionFocusReturn === focus.cancel) this.cancelInsertionFocusReturn = null;
+    });
+    this.cancelInsertionFocusReturn = focus.cancel;
     void popover.hide({ focusTrigger: false }).then(async () => {
       await this.updateComplete;
-      if (cancelled || !this.isConnected || this.session !== owner || generation !== this.insertionGeneration || popover.open) {
-        cancel(); return;
+      if (focus.cancelled || !this.isConnected || this.session !== owner || generation !== this.insertionGeneration || popover.open) {
+        focus.cancel(); return;
       }
       const trigger = this.renderRoot.querySelector<LyraElement>('[part="image-insert-trigger"]');
       await trigger?.updateComplete;
-      const restore = !cancelled && this.isConnected && this.session === owner && generation === this.insertionGeneration &&
+      const restore = !focus.cancelled && this.isConnected && this.session === owner && generation === this.insertionGeneration &&
         !popover.open && trigger?.isConnected && this.renderRoot.contains(trigger) &&
         owner?.snapshot().activity === null && owner.snapshot().selection.version === selectionVersion;
-      cancel();
+      focus.cancel();
       if (restore) trigger.focus();
-    }).catch(cancel);
+    }).catch(focus.cancel);
   }
 
   private onImageInsertionHide(event: Event): void {
@@ -1233,15 +1228,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 1 || buffer.byteLength > maxImageBytes) {
         this.refuseImageInsertion('resource-limit', owner, generation); return;
       }
-      let bytes: Uint8Array = new Uint8Array(buffer), inspected = inspectDocxImage(bytes);
-      if (inspected.ok && inspected.value.hasJpegApp1) {
-        // Phone and camera photos carry EXIF/XMP (often location); insert the picture without it.
-        const stripped = withoutJpegApp1(bytes);
-        if (stripped) { bytes = stripped; inspected = inspectDocxImage(bytes); }
-      }
+      const inspected = inspectDocxImageForInsertion(new Uint8Array(buffer));
       if (!inspected.ok) { this.refuseImageInsertion(inspected.code, owner, generation); return; }
-      if (inspected.value.hasJpegApp1) { this.refuseImageInsertion('unsupported', owner, generation); return; }
-      const defaults = imageInsertionDefaults(inspected.value.pixelWidth, inspected.value.pixelHeight);
+      const { bytes, metadata } = inspected.value;
+      const defaults = imageInsertionDefaults(metadata.pixelWidth, metadata.pixelHeight);
       if (!defaults) { this.refuseImageInsertion('invalid-document', owner, generation); return; }
       if (!valid()) { this.refuseImageInsertion('stale-selection', owner, generation); return; }
       this.insertionBytes = bytes;
@@ -1283,22 +1273,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.insertionBytes = null;
     this.insertionDefaults = null;
     this.insertionWidth = ''; this.insertionHeight = ''; this.insertionTitle = ''; this.insertionDescription = '';
-    const document = this.ownerDocument;
-    let focusCancelled = false;
-    const cancelFocus = () => {
-      focusCancelled = true;
-      document.removeEventListener('focusin', cancelFocus, true);
-      document.removeEventListener('pointerdown', cancelFocus, true);
-      if (this.cancelInsertionFocusReturn === cancelFocus) this.cancelInsertionFocusReturn = null;
-    };
-    this.cancelInsertionFocusReturn = cancelFocus;
-    document.addEventListener('focusin', cancelFocus, true);
-    document.addEventListener('pointerdown', cancelFocus, true);
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
+      if (this.cancelInsertionFocusReturn === focus.cancel) this.cancelInsertionFocusReturn = null;
+    });
+    this.cancelInsertionFocusReturn = focus.cancel;
     const pending = intent.dispatch(source);
     void popover?.hide({ focusTrigger: false });
     const complete = (result: DocxResult<DocxRevision>) => {
-      const restoreFocus = !focusCancelled;
-      cancelFocus();
+      const restoreFocus = !focus.cancelled;
+      focus.cancel();
       if (!this.isConnected || this.session !== owner || this.insertionGeneration !== generation) return;
       this.insertionPhase = 'idle';
       this.insertionError = result.ok ? null : result.code;
@@ -1312,8 +1295,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private imagePopover(kind: 'resize' | 'description') {
-    return this.renderRoot.querySelector<HTMLElement & { open: boolean; hide(options?: { focusTrigger?: boolean }): Promise<void> }>(
-      `[part="image-${kind}-popover"]`);
+    return this.findEditorPopover(`image-${kind}-popover`);
   }
 
   private navigateImage(direction: DocxImageDirection): void {
@@ -1338,7 +1320,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onImageActivationKey(event: KeyboardEvent): void {
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.prepareImageIntent();
+    if (isToolActivationKey(event)) this.prepareImageIntent();
   }
 
   private openImageDialog(event: Event, kind: 'resize' | 'description'): void {
@@ -1418,25 +1400,18 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const selectionVersion = session?.snapshot().selection.version;
     const popover = this.imagePopover(kind);
     if (!popover) return;
-    const document = this.ownerDocument;
-    let cancelled = false;
-    const cancel = () => {
-      cancelled = true;
-      document.removeEventListener('focusin', cancel, true);
-      document.removeEventListener('pointerdown', cancel, true);
-      if (this.cancelImageFocusReturn === cancel) this.cancelImageFocusReturn = null;
-    };
-    this.cancelImageFocusReturn = cancel;
-    document.addEventListener('focusin', cancel, true);
-    document.addEventListener('pointerdown', cancel, true);
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
+      if (this.cancelImageFocusReturn === focus.cancel) this.cancelImageFocusReturn = null;
+    });
+    this.cancelImageFocusReturn = focus.cancel;
     void popover.hide({ focusTrigger: false }).then(() => {
-      const shouldFocus = !cancelled && this.isConnected && this.session === session && generation === this.imageDialogGeneration &&
+      const shouldFocus = !focus.cancelled && this.isConnected && this.session === session && generation === this.imageDialogGeneration &&
         !popover.open && session?.snapshot().selection.version === selectionVersion;
-      cancel();
+      focus.cancel();
       if (!shouldFocus) return;
       if (returnToEditor) this.focusEditor();
       else this.renderRoot.querySelector<HTMLElement>(`[part="image-${kind}-trigger"]`)?.focus();
-    }, cancel);
+    }, focus.cancel);
   }
 
   private changeImageDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
@@ -1739,7 +1714,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       event.preventDefault(); event.stopPropagation(); this.cancelImageInsertion(true); return;
     }
     if (event.key === 'Escape' && this.insertionPhase === 'idle' && this.insertionIntent) this.cancelImageInsertion(false);
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229) this.handoffImageInsertion(event);
+    if (isToolActivationKey(event)) this.handoffImageInsertion(event);
     if (event.altKey && event.key === 'F10') {
       event.preventDefault();
       event.stopPropagation();

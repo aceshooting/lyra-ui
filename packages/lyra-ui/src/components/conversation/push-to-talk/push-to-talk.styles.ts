@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -20,8 +21,7 @@ export const styles = css`
     position: relative;
     inline-size: var(--lr-push-to-talk-size, var(--lr-size-3rem));
     block-size: var(--lr-push-to-talk-size, var(--lr-size-3rem));
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border-radius: 50%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
@@ -30,8 +30,7 @@ export const styles = css`
     touch-action: none;
   }
   [part='trigger']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='trigger']:disabled {
     opacity: var(--lr-opacity-disabled);

@@ -12,6 +12,7 @@ const DEFAULT_FOCUS_MAX_DEPTH = 256;
 const DEFAULT_FOCUS_MAX_NODES = 10_000;
 const MAX_CONFIGURED_FOCUS_LIMIT = 100_000;
 
+
 const ARIA_WIDGET_ROLES = new Set([
   'button',
   'checkbox',

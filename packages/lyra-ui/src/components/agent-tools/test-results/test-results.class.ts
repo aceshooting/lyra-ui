@@ -7,10 +7,13 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
+import { testResultDetailSlotName } from './test-results-slots.js';
+export { testResultDetailSlotName } from './test-results-slots.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatShortDuration } from '../../../internal/duration.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -82,32 +85,6 @@ const STATUS_GLYPH: Record<Exclude<TestStatus, 'running'>, string> = {
   failed: '×',
   skipped: '–',
 };
-
-/** URI-encode a slot-name segment without throwing on an isolated UTF-16 surrogate. For
- * well-formed strings this is exactly `encodeURIComponent(value)`; malformed code units get their
- * own `%uXXXX` escape so distinct public ids remain distinct instead of crashing or collapsing. */
-function encodeDetailSlotSegment(value: string): string {
-  let encoded = '';
-  for (let index = 0; index < value.length;) {
-    const codePoint = value.codePointAt(index)!;
-    const character = String.fromCodePoint(codePoint);
-    encoded += codePoint >= 0xd800 && codePoint <= 0xdfff
-      ? `%u${codePoint.toString(16).toUpperCase().padStart(4, '0')}`
-      : encodeURIComponent(character);
-    index += character.length;
-  }
-  return encoded;
-}
-
-/** Returns the canonical collision-free rich-detail slot name for one suite/test pair.
- *
- * Well-formed ids use the same segment encoding as `encodeURIComponent`. Isolated UTF-16
- * surrogates, which `encodeURIComponent` rejects, are encoded as uppercase `%uXXXX` code units so
- * every string accepted by the component still has a deterministic, distinct slot name.
- */
-export function testResultDetailSlotName(suiteId: string, testId: string): string {
-  return `detail-${encodeDetailSlotSegment(suiteId)}:${encodeDetailSlotSegment(testId)}`;
-}
 
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
@@ -226,7 +203,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  read. */
   protected static override readonly identityCollectionProperties = Object.freeze(['suites']);
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly, agentActionButtonStyles];
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-filter-change',
@@ -263,8 +240,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   private completeStatusCounts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
   private normalizedTestKeys = new Set<string>();
   private detailSlotNames = new Set<string>();
+  private detailSlotsDirty = true;
   private projectionTruncated = false;
-  private limitAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
   private readonly idPrefix = nextId('test-results');
@@ -275,28 +253,13 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncLimitAnnouncementSink();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.projectionTruncated;
   }
 
-  override disconnectedCallback(): void {
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    super.disconnectedCallback();
-  }
-
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = undefined;
-    this.syncLimitAnnouncementSink();
-  }
-
-  private syncLimitAnnouncementSink(): void {
-    if (!this.isConnected || this.limitAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.limitAnnouncementSink?.release();
-    this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.announcements.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -307,7 +270,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       if (pruned.size !== this.manualExpanded.size) this.manualExpanded = pruned;
     }
     if (changed.has('suites') || changed.has('statusFilter')) this.rebuildProjection();
-    this.rebuildDetailSlotNames();
+    if (this.detailSlotsDirty) {
+      this.rebuildDetailSlotNames();
+      this.detailSlotsDirty = false;
+    }
     if (changed.has('runState') || changed.has('runId')) {
       const previousState = changed.has('runState') ? changed.get('runState') : this.runState;
       const previousRunId = changed.has('runId') ? changed.get('runId') : this.runId;
@@ -401,7 +367,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       this.liveRegion?.announce(text, { force: true });
     }
     if (this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
-      this.limitAnnouncementSink?.announce(this.localize('testResultsLimit', undefined, {
+      this.announcements.announcePolite(this.localize('testResultsLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
       }));
     }
@@ -464,6 +430,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private onDetailSlotChange(): void {
+    this.detailSlotsDirty = true;
     this.requestUpdate();
   }
 
@@ -485,6 +452,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           return html`
             <button
               part="filter-toggle"
+              data-agent-action="filter"
               type="button"
               data-status=${status}
               aria-pressed=${this.statusFilter.includes(status) ? 'true' : 'false'}
@@ -543,6 +511,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         ${canExpand
           ? html`<button
               part="test-expand-toggle"
+              data-agent-action="detail"
               type="button"
               aria-expanded=${expanded ? 'true' : 'false'}
               aria-controls=${failureId}

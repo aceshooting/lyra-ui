@@ -836,7 +836,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.emit('lr-load', { cellCount: raw.cells.length, language });
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     const index = this.resolveAnchorCellIndex(anchor);
     if (index < 0) return false;
     return this.activateCell(index, 'start');

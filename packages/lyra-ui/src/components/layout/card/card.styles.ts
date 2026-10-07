@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
 
 // Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
@@ -181,8 +183,7 @@ export const styles = css`
     position: absolute;
     inset: 0;
     z-index: var(--lr-layer-content);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: 0;
     border-radius: inherit;
@@ -194,8 +195,7 @@ export const styles = css`
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }
   [part="base"][href]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~="media"][hidden],
   [part="header"][hidden],
@@ -290,7 +290,7 @@ export const styles = css`
     padding: var(--spacing, var(--padding, var(--lr-space-m)));
   }
 
-  @container (max-inline-size: 30rem) {
+  @container ${mediumContainerQuery} {
     :host([orientation="horizontal"]) [part="base"],
     :host([orientation="horizontal"]) .linked-content {
       flex-direction: column;

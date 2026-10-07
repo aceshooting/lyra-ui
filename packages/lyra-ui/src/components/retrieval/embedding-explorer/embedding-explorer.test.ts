@@ -883,3 +883,30 @@ describe('lr-embedding-explorer point count past the render cap', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.be.true;
   });
 });
+
+it('prioritizes the plot label over the compatibility alias and preserves explicit empty names', async () => {
+  const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`);
+  const plot = () => el.shadowRoot!.querySelector('[part="plot"]')!;
+  expect(plot().getAttribute('aria-label')).to.equal('Embedding explorer');
+  el.accessibleLabel = 'Legacy vectors';
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('Legacy vectors');
+  el.label = 'Vectors';
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('Vectors');
+  el.label = '';
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('');
+  el.setAttribute('aria-label', 'Host vectors');
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('Host vectors');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('');
+  el.removeAttribute('aria-label');
+  el.label = null;
+  el.strings = { embeddingExplorerLabel: 'Vecteurs' };
+  await el.updateComplete;
+  expect(plot().getAttribute('aria-label')).to.equal('Vecteurs');
+  await expect(el).to.be.accessible();
+});

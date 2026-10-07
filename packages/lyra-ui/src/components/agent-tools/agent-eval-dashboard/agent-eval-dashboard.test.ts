@@ -14,6 +14,15 @@ expectLocaleFallback('de-DE', [
   'trendUnchanged',
 ]);
 describe('lr-agent-eval-dashboard', () => {
+  it('explains the documented newest-first history window when runs exceed its cap', async () => {
+    const runs = Array.from({ length: 3 }, (_, index) => ({ id: `run-${index}`, label: `Run ${index}`, status: 'done' as const }));
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard .runs=${runs} .maxRenderedRuns=${2}></lr-agent-eval-dashboard>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.length(2);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('most recent 2 evaluation runs');
+    expect(el.shadowRoot!.querySelector('[part="run"]')?.textContent).to.include('Run 0');
+  });
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
   it('keeps a run row and a metric card on their own entry when the host prepends one', async () => {

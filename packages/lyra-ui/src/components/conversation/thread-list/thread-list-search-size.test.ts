@@ -1,3 +1,4 @@
+import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './thread-list.js';
 import type { LyraChatThread, LyraThreadList } from './thread-list.js';
@@ -17,30 +18,6 @@ function clearButton(el: LyraThreadList): HTMLButtonElement | null {
   return el.shadowRoot!.querySelector<HTMLButtonElement>(
     '[part="clear-button"]'
   );
-}
-
-/**
- * Resolves design-token expressions in the component's OWN shadow tree, where its `:host`
- * declarations (and any size tier currently matching) are in scope. Comparing the field against
- * these values pins the rendering to the tokens the stylesheet names rather than to px numbers a
- * theme change would invalidate.
- */
-function resolveInShadow(
-  el: LyraThreadList,
-  declarations: readonly (readonly [string, string])[]
-): Record<string, string> {
-  const probe = document.createElement('div');
-  for (const [property, value] of declarations) {
-    probe.style.setProperty(property, value);
-  }
-  el.shadowRoot!.append(probe);
-  const computed = getComputedStyle(probe);
-  const resolved: Record<string, string> = {};
-  for (const [property] of declarations) {
-    resolved[property] = computed.getPropertyValue(property);
-  }
-  probe.remove();
-  return resolved;
 }
 
 function fieldGeometry(el: LyraThreadList): Record<string, string> {

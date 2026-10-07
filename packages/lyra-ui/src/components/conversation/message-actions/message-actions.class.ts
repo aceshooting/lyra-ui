@@ -4,16 +4,18 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
-  type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
+import { pencilIcon, regenerateIcon } from '../../../internal/icons.js';
 import {
+  getInheritedPropertyDescriptor,
   getOwnDataDescriptor,
+  isObjectValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -30,6 +32,7 @@ import {
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
+import { RovingToolbarController, leaseTabIndex } from '../../../internal/roving-toolbar.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import type {
   LyraClipboardWriteFailure,
@@ -91,52 +94,24 @@ function insideComposite(element: Element, root: Element): boolean {
   return false;
 }
 
-const MAX_DESCRIPTOR_PROTOTYPES = 100;
-
-function isObjectValue(value: unknown): value is object {
-  return value !== null && (typeof value === 'object' || typeof value === 'function');
-}
-
-/** Resolves an own/inherited descriptor without invoking an accessor. An encountered accessor
- * deliberately shadows farther prototypes, matching ordinary property lookup while failing closed. */
-function inheritedDescriptor(
-  value: object,
-  key: PropertyKey,
-): PropertyDescriptor | undefined {
-  let current: object | null = value;
-  for (let depth = 0; current && depth < MAX_DESCRIPTOR_PROTOTYPES; depth += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(current, key);
-    } catch {
-      return undefined;
-    }
-    if (descriptor) return descriptor;
-    try {
-      current = Object.getPrototypeOf(current) as object | null;
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
-
 function dataCallable(value: object, key: PropertyKey): Function | undefined {
-  const descriptor = inheritedDescriptor(value, key);
-  return descriptor && 'value' in descriptor && typeof descriptor.value === 'function'
+  const descriptor = getInheritedPropertyDescriptor(value, key);
+  return descriptor &&
+    Object.hasOwn(descriptor, 'value') &&
+    typeof descriptor.value === 'function'
     ? descriptor.value
     : undefined;
 }
 
 function dataValue(value: object, key: PropertyKey): unknown {
-  const descriptor = inheritedDescriptor(value, key);
-  return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  const descriptor = getInheritedPropertyDescriptor(value, key);
+  return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
 }
 
 function projectDisabled(value: object): DisabledProjection {
-  const descriptor = inheritedDescriptor(value, 'disabled');
+  const descriptor = getInheritedPropertyDescriptor(value, 'disabled');
   if (!descriptor) return { valid: true, disabled: false };
-  if ('value' in descriptor) {
+  if (Object.hasOwn(descriptor, 'value')) {
     return { valid: true, disabled: descriptor.value === true };
   }
   if (typeof descriptor.get !== 'function') return { valid: false, disabled: true };
@@ -214,30 +189,6 @@ export interface LyraMessageActionsEventMap {
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-feedback-change': CustomEvent<{ rating: MessageFeedbackValue }>;
   'lr-feedback-submit-request': CustomEvent<LyraEventDetailSnapshot<MessageFeedbackSubmitDetail>>;
-}
-
-// Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts's
-// chevronIcon()/closeIcon()/etc.) without adding regenerate/edit glyphs to that module -- it's off
-// limits here -- so these one-off icons still read as part of the same visual language as the rest of
-// the library's inline icons. Same approach lr-chat-message's/lr-chat-composer's/
-// lr-conversation-item's own local glyphs take for the identical reason.
-function regenerateIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <polyline points="23 4 23 10 17 10"></polyline>
-      <polyline points="1 20 1 14 7 14"></polyline>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-    </svg>
-  `;
-}
-
-function editIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <path d="M12 20h9"></path>
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-    </svg>
-  `;
 }
 
 /**
@@ -332,6 +283,9 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   protected static override readonly ownedCollectionProperties = Object.freeze(['controls']);
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="toolbar"]'),
+  );
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-feedback-submit-request',
   ]);
@@ -419,6 +373,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   private activeStopIndex = 0;
+  private readonly rovingToolbar = new RovingToolbarController();
   /** Drives the `data-revealed` host attribute imperatively, not via a Lit
    *  template binding -- `lr-graph`'s `data-hovered` attribute is the precedent for this exact
    *  technique) while `revealOnInteraction` is active. CSS alone cannot key `:host`'s own opacity off the
@@ -480,6 +435,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     this.stopSyncGeneration++;
     this.stopObserver?.disconnect();
     this.stopObserver = undefined;
@@ -636,21 +592,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     if (action) return action;
     const target = element as HTMLElement;
     const id = `direct-${++this.nextDirectActionId}`;
-    let leasedTarget: HTMLElement | undefined;
-    let leasedAuthoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
-    const releaseTabIndex = (): void => {
-      const leased = leasedTarget;
-      if (leased && leased.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (leasedAuthoredTabIndex === null) leased.removeAttribute('tabindex');
-        else leased.setAttribute('tabindex', leasedAuthoredTabIndex);
-      }
-      leasedTarget = undefined;
-      leasedAuthoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
-    };
+    const tabIndexLease = leaseTabIndex();
     action = {
       id,
       get disabled() {
@@ -660,32 +602,11 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
         target.focus(options);
       },
       setTabIndex(tabIndex) {
-        if (leasedTarget !== target) {
-          releaseTabIndex();
-          leasedTarget = target;
-          leasedAuthoredTabIndex = target.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null &&
-            target.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        target.tabIndex = tabIndex;
-        lastManagedTabIndex = target.getAttribute('tabindex');
+        tabIndexLease.set(target, tabIndex);
       },
-      releaseTabIndex,
+      releaseTabIndex: () => tabIndexLease.release(),
       hasAuthoredTabIndex() {
-        if (leasedTarget !== target) return target.hasAttribute('tabindex');
-        if (
-          lastManagedTabIndex !== null &&
-          target.getAttribute('tabindex') === lastManagedTabIndex
-        ) {
-          return leasedAuthoredTabIndex !== null;
-        }
-        return target.hasAttribute('tabindex');
+        return tabIndexLease.hasAuthored(target);
       },
       matchesEventPath(path) {
         return path.includes(element);
@@ -929,17 +850,8 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     );
     if (originIndex < 0 && path[0] !== e.currentTarget) return;
     const currentIndex = originIndex >= 0 ? originIndex : this.activeStopIndex;
-    const forwardKey =
-      this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey =
-      this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    let target: number;
-    if (e.key === forwardKey) target = (currentIndex + 1) % stops.length;
-    else if (e.key === backwardKey)
-      target = (currentIndex - 1 + stops.length) % stops.length;
-    else if (e.key === 'Home') target = 0;
-    else if (e.key === 'End') target = stops.length - 1;
-    else return;
+    const target = this.rovingToolbar.move(e, stops.length, currentIndex, this.effectiveDirection);
+    if (target === null) return;
     e.preventDefault();
     this.setActiveStop(stops, target);
     stops[target]?.action.focus();
@@ -978,7 +890,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           aria-label=${this.localize('editMessage')}
           @click=${this.onEditClick}
         >
-          ${editIcon()}
+          ${pencilIcon()}
         </lr-icon-button>`;
       case 'feedback':
         return html`<lr-message-feedback

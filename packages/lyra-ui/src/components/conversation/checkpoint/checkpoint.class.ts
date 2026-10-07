@@ -1,7 +1,7 @@
 import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { formatTimeOfDay } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
@@ -37,11 +37,6 @@ function bookmarkIcon(): SVGTemplateResult {
       focusable="false"
     ><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1Z"></path></svg>
   `;
-}
-
-/** `hour:minute` in the component's effective locale. */
-function defaultFormatTimestamp(date: Date, locale: string): string {
-  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
 }
 
 /**
@@ -225,7 +220,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     const label = this.computedLabel;
     const ariaLabel = this.getAttribute('aria-label') ?? label;
     const ts = this.normalizedTimestamp;
-    const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
 
     return html`
       <div part="base" role="group" aria-label=${ariaLabel}>

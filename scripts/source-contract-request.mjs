@@ -49,10 +49,13 @@ export function assertSourceContractRequest(request) {
   ]) {
     for (const entry of entries) {
       const hasAdditionalRoutes = operation === 'update' && entry != null && Object.hasOwn(entry, 'additionalRoutes');
+      const hasTargetFingerprint = operation === 'relocation' && entry != null &&
+        Object.hasOwn(entry, 'expectedTargetFingerprint');
       const fields = ['module', 'exportName', 'kind', ...(operation === 'enrollment'
         ? ['document', 'family', 'locator'] : ['expectedFingerprint'])];
       if (operation === 'relocation') fields.push('toModule');
       if (hasAdditionalRoutes) fields.push('additionalRoutes');
+      if (hasTargetFingerprint) fields.push('expectedTargetFingerprint');
       exactKeys(entry, fields, `Source-contract ${operation}`);
       sourcePath(entry.module, 'src/', '.ts', 'Contract module');
       nonempty(entry.exportName, 'Contract exportName');
@@ -77,6 +80,12 @@ export function assertSourceContractRequest(request) {
       }
       if (operation !== 'enrollment') {
         assert.match(entry.expectedFingerprint, /^[a-f0-9]{20}$/u, 'Expected fingerprint must be the exact old census hash');
+        if (hasTargetFingerprint) {
+          assert.match(entry.expectedTargetFingerprint, /^[a-f0-9]{20}$/u,
+            'Expected target fingerprint must be the exact reviewed live census hash');
+          assert.notEqual(entry.expectedTargetFingerprint, entry.expectedFingerprint,
+            'Expected target fingerprint must name a changed census hash');
+        }
       } else {
         sourcePath(entry.document, 'llms/', '.md', 'Contract document');
         nonempty(entry.family, 'Contract family');

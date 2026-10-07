@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../flow-canvas/flow-canvas.js';
 import './flow-minimap.js';
@@ -8,11 +9,6 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
-}
-
-function sinkTexts(doc: Document = document): string[] {
-  const sink = sinkElement(doc);
-  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
 const nodes: FlowNode[] = [
@@ -524,7 +520,7 @@ it('re-targets its shared sink with the canvas when adopted into another documen
     await minimap.updateComplete;
 
     expect(sinkElement() === null, 'the original document must release both adopted holders').to.be.true;
-    expect(sinkTexts(frameDocument)).to.have.length(1);
+    expect(sinkTexts('polite', frameDocument)).to.have.length(1);
   } finally {
     wrapper.remove();
     iframe.remove();

@@ -1,10 +1,12 @@
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { renderApproveAction, renderDenyAction } from '../approval-action-buttons.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
@@ -60,8 +62,8 @@ export interface LyraToolApprovalDialogEventMap {
   'lr-approve-request': CustomEvent<{ args: unknown }>;
   'lr-deny-request': CustomEvent<null>;
   'lr-close': CustomEvent<LyraToolApprovalDialogCloseDetail>;
-  blur: CustomEvent<null>;
-  focus: CustomEvent<null>;
+  blur: FocusEvent;
+  focus: FocusEvent;
 }
 /**
  * `<lr-tool-approval-dialog>` — a human-in-the-loop gate: presents one
@@ -161,8 +163,8 @@ export interface LyraToolApprovalDialogEventMap {
  * this library: nesting this dialog inside a consumer's own `<lr-dialog>` means that dialog's
  * `lr-close` listener also observes this event. See `<lr-dialog>`'s own `lr-close` docs for the
  * full list of emitters and the `event.target !== event.currentTarget` guard.
- * @event focus - Re-dispatched when the raw-JSON editor receives focus.
- * @event blur - Re-dispatched when the raw-JSON editor loses focus.
+ * @event {FocusEvent} focus - Re-dispatched when the raw-JSON editor receives focus.
+ * @event {FocusEvent} blur - Re-dispatched when the raw-JSON editor loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself.
  * @csspart header - The wrapper around the heading.
@@ -314,9 +316,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.close('api');
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private overlay?: OverlayHandle;
-  private focusReturnOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private errorAnnouncementSink?: AnnouncementSink;
   private suppressNextErrorAnnouncement = true;
   private readonly titleId = nextId('tool-approval-dialog-title');
@@ -344,10 +345,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
     if (changed.has('open')) {
       if (this.open) {
-        this.deferredFocusReturn.cancel();
-        this.focusReturnOpener = captureFocusReturnOpener(this);
-        this.nativeModal.prepare();
-        this.activateOverlay();
+        this.modalSurface.open(() => this.activateOverlay());
         // Every open starts fresh in the read-only view -- a reused instance
         // must never carry a half-finished edit (or its error state), or a
         // previous proposal's stuck pending decision, over from whatever the
@@ -355,20 +353,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         this.resetProposalState();
       } else {
         const hadOverlay = this.overlay !== undefined;
-        this.leaveTopLayer();
-        this.overlay?.deactivate();
-        this.overlay = undefined;
-        // The synchronous return keeps the established timing whenever the opener can already
-        // take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.focusReturnOpener;
-        this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
+        this.modalSurface.close(hadOverlay, () => {
+          this.overlay?.deactivate();
+          this.overlay = undefined;
+        }, () => !this.open);
       }
     }
     const proposalChanged = changed.has('proposalKey') || changed.has('toolName') || changed.has('args');
@@ -431,7 +419,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       this.requestUpdate();
     }
     if (this.hasUpdated && this.open) {
-      this.nativeModal.prepare();
+      this.modalSurface.prepare();
       this.requestUpdate();
       this.activateOverlay();
       // The shadow panel survives a same-document reparent, so restore focus before the pending
@@ -447,29 +435,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   /** Joins the top layer like `<lr-dialog>` so an already open dialog cannot cover it. */
   private enterTopLayer(): void {
-    if (!this.isConnected || this.nativeModal.show()) return;
-    this.popover = 'manual';
-    try {
-      if (!this.matches(':popover-open')) this.showPopover();
-    } catch {
-      // No popover support: the z-index fallback applies.
-    }
-  }
-
-  private leaveTopLayer(): void {
-    this.nativeModal.hide();
-    try {
-      if (this.matches(':popover-open')) this.hidePopover();
-    } catch {
-      // Never promoted.
-    }
+    this.modalSurface.show();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.leaveTopLayer();
+    this.modalSurface.disconnect();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
@@ -571,8 +543,8 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
     e.stopPropagation();
   };
-  private onEditorFocus = (): void => { this.emit('focus'); };
-  private onEditorBlur = (): void => { this.emit('blur'); };
+  private onEditorFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
+  private onEditorBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
   private decisionDispatching = false;
   private onApprove = (): void => {
@@ -693,16 +665,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         </div>
         <div part="footer">
           <slot name="footer"></slot>
-          <lr-button
-            part="deny-button"
-            variant="neutral"
-            appearance="outlined"
-            type="button"
-            ?loading=${this.pendingAction === 'deny'}
-            ?disabled=${this.pendingAction === 'approve'}
-            exportparts="base:deny-button-base, button:deny-button-base, label:deny-button-label, start:deny-button-start, end:deny-button-end, spinner:deny-button-spinner"
-            @click=${this.onDeny}
-          >${this.localize('deny')}</lr-button>
+          ${renderDenyAction({
+            label: this.localize('deny'), loading: this.pendingAction === 'deny',
+            disabled: this.pendingAction === 'approve', onClick: this.onDeny,
+          })}
           ${!this.readonly
             ? html`<lr-button
                 part="edit-button"
@@ -714,15 +680,11 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                 @click=${this.toggleEdit}
               >${this.editing ? this.localize('cancel') : this.localize('edit')}</lr-button>`
             : nothing}
-          <lr-button
-            part="approve-button"
-            variant="brand"
-            type="button"
-            ?loading=${this.pendingAction === 'approve'}
-            ?disabled=${hasError || this.pendingAction === 'deny'}
-            exportparts="base:approve-button-base, button:approve-button-base, label:approve-button-label, start:approve-button-start, end:approve-button-end, spinner:approve-button-spinner"
-            @click=${this.onApprove}
-          >${this.localize('approve')}</lr-button>
+          ${renderApproveAction({
+            label: this.localize('approve'), loading: this.pendingAction === 'approve',
+            disabled: hasError || this.pendingAction === 'deny', variant: 'brand',
+            onClick: this.onApprove,
+          })}
         </div>
         ${this.nativeModal.renderHelperSlot()}
       </div>

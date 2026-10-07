@@ -563,3 +563,22 @@ describe("lr-knowledge-base-admin heading level", () => {
     expect([own().getAttribute("role"), (await child()).getAttribute("role")]).to.deep.equal([null, null]);
   });
 });
+
+
+it('keeps modified/composing keys out of tab activation and skips inert tabs', async () => {
+  const el = await fixture<LyraKnowledgeBaseAdmin>(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`);
+  const tabs = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  for (const init of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }, { isComposing: true }]) {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true, ...init });
+    tabs[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented).to.equal(false);
+    expect(el.activeTab).to.equal('sources');
+  }
+  tabs[1]!.inert = true;
+  tabs[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  await el.updateComplete;
+  expect(el.activeTab).to.equal('sources');
+  const panel = el.shadowRoot!.getElementById(tabs[0]!.getAttribute('aria-controls')!)!;
+  expect(panel.getAttribute('aria-labelledby')).to.equal(tabs[0]!.id);
+  expect(tabs[0]!.getAttribute('aria-selected')).to.equal('true');
+});

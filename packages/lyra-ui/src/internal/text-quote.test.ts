@@ -335,6 +335,16 @@ describe('normalizeQuoteText', () => {
 });
 
 describe('scopeFromElement + resolveTextQuote', () => {
+  it('skips only caller-selected chrome subtrees while retaining adjacent content', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<p>Before</p><button data-chrome>Toggle</button><button>User text</button><p>After</p>';
+    const scope = scopeFromElement(root, undefined, (element) => element.hasAttribute('data-chrome'));
+    expect(scope.text).to.include('Before');
+    expect(scope.text).not.to.include('Toggle');
+    expect(scope.text).to.include('User text');
+    expect(scope.text).to.include('After');
+  });
+
   function makeContent(html: string): HTMLElement {
     const el = document.createElement('div');
     el.innerHTML = html;

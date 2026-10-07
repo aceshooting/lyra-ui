@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -240,8 +241,7 @@ export const styles = css`
     );
   }
   [part="divider"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The divider beside a rail/floating-collapsed pane (isDividerDisabled()). The collapsing
      panel's live flex/order/inline-size are set inline by updated(); only the divider's drag/hover

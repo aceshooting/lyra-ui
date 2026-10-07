@@ -10,6 +10,8 @@ import {
 } from '../../../internal/announcer.js';
 import {
   getOwnDataDescriptor,
+  projectFrozenRows,
+  projectStringList,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -17,8 +19,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { closeIcon } from '../../../internal/icons.js';
+import { renderNativeSearch } from '../../../internal/native-search.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_nodePaletteDragHint, LYRA_DEFAULT_nodePaletteEmpty, LYRA_DEFAULT_nodePaletteLabel, LYRA_DEFAULT_nodePalettePlaceholder, LYRA_DEFAULT_nodePaletteResultCount, LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_search } from '../../../internal/default-strings.generated.js';
@@ -60,45 +61,10 @@ interface CanonicalPaletteItem {
 const EMPTY_CANONICAL_PALETTE_ITEMS: readonly CanonicalPaletteItem[] =
   Object.freeze([]);
 
-function descriptorValue(
-  value: object,
-  property: PropertyKey
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
 
 function projectKeywords(value: unknown): readonly string[] | undefined {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0 ||
-      lengthDescriptor.value > MAX_PALETTE_KEYWORDS
-    )
-      return undefined;
-
-    const keywords: string[] = [];
-    const length = Math.min(lengthDescriptor.value, MAX_PALETTE_KEYWORDS);
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        typeof descriptor.value !== 'string'
-      )
-        return undefined;
-      keywords.push(descriptor.value);
-    }
-    return Object.freeze(keywords);
-  } catch {
-    return undefined;
-  }
+  return projectStringList(value, MAX_PALETTE_KEYWORDS, { strict: true, rejectOversized: true });
 }
-
 function projectPaletteItem(
   candidate: unknown,
   sourceIndex: number
@@ -110,13 +76,13 @@ function projectPaletteItem(
       Array.isArray(candidate)
     )
       return undefined;
-    const typeDescriptor = descriptorValue(candidate, 'type');
-    const labelDescriptor = descriptorValue(candidate, 'label');
-    const descriptionDescriptor = descriptorValue(candidate, 'description');
-    const categoryDescriptor = descriptorValue(candidate, 'category');
-    const keywordsDescriptor = descriptorValue(candidate, 'keywords');
-    const iconDescriptor = descriptorValue(candidate, 'icon');
-    const disabledDescriptor = descriptorValue(candidate, 'disabled');
+    const typeDescriptor = getOwnDataDescriptor(candidate, 'type');
+    const labelDescriptor = getOwnDataDescriptor(candidate, 'label');
+    const descriptionDescriptor = getOwnDataDescriptor(candidate, 'description');
+    const categoryDescriptor = getOwnDataDescriptor(candidate, 'category');
+    const keywordsDescriptor = getOwnDataDescriptor(candidate, 'keywords');
+    const iconDescriptor = getOwnDataDescriptor(candidate, 'icon');
+    const disabledDescriptor = getOwnDataDescriptor(candidate, 'disabled');
     if (
       typeDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       typeDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -181,34 +147,8 @@ function projectPaletteItem(
 }
 
 function projectPaletteItems(value: unknown): readonly CanonicalPaletteItem[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_CANONICAL_PALETTE_ITEMS;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return EMPTY_CANONICAL_PALETTE_ITEMS;
-
-    const items: CanonicalPaletteItem[] = [];
-    const length = Math.min(lengthDescriptor.value, MAX_PALETTE_ITEMS);
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      )
-        continue;
-      const item = projectPaletteItem(descriptor.value, index);
-      if (item) items.push(item);
-    }
-    return Object.freeze(items);
-  } catch {
-    return EMPTY_CANONICAL_PALETTE_ITEMS;
-  }
+  return projectFrozenRows(value, projectPaletteItem, MAX_PALETTE_ITEMS,
+    EMPTY_CANONICAL_PALETTE_ITEMS);
 }
 
 export interface LyraNodePaletteEventMap {
@@ -279,6 +219,9 @@ export interface LyraNodePaletteEventMap {
  * @csspart search-field - The wrapper around the search input and its clear button.
  * @csspart empty - The no-results message.
  * @csspart live-region - The result-count announcement.
+ * Search geometry honors shared input and form-control tokens before its default values; the
+ * component-specific search tokens take precedence. Clear actions honor icon-button paint tokens.
+ *
  * @cssprop [--lr-node-palette-search-min-height=var(--lr-icon-button-size)] - Minimum row height of
  *   the search field, for matching it to a themed search field of a chosen density tier. Point it
  *   at `--lr-form-control-height-l` (or any tier of that ladder) to line this field up with the
@@ -609,30 +552,6 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     }
   }
 
-  private onSearchInput = (e: Event): void => {
-    this.queryText = (e.target as HTMLInputElement).value;
-    this.activeIndex = 0;
-  };
-
-  /** Replaces the suppressed native `type="search"` cancel button -- see `search-clear`'s doc. */
-  private onSearchClear = (): void => {
-    if (this.queryText === '') return;
-    this.queryText = '';
-    this.activeIndex = 0;
-    this.renderRoot.querySelector<HTMLInputElement>('[part="search"]')?.focus();
-  };
-
-  // Native focus/blur neither bubble nor cross the shadow boundary, so a host listening for
-  // focus/blur directly on <lr-node-palette> (e.g. to highlight the field as active) would never
-  // hear about the internal search field without this bridge.
-  private onSearchFocus = (event: FocusEvent): void => {
-    relayNativeEvent(this, event);
-  };
-
-  private onSearchBlur = (event: FocusEvent): void => {
-    relayNativeEvent(this, event);
-  };
-
   private onFieldKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -843,28 +762,13 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return html`<div part="base">
       <slot name="header"></slot>
       <div part="search-field">
-        <input
-          part="search"
-          type="search"
-          aria-label=${this.localize('search')}
-          aria-controls=${this.listId}
-          placeholder=${this.localize('nodePalettePlaceholder')}
-          .value=${this.queryText}
-          @input=${this.onSearchInput}
-          @keydown=${this.onFieldKeyDown}
-          @focus=${this.onSearchFocus}
-          @blur=${this.onSearchBlur}
-        />
-        ${this.queryText === ''
-          ? nothing
-          : html`<button
-              part="search-clear"
-              type="button"
-              aria-label=${this.localize('clear')}
-              @click=${this.onSearchClear}
-            >
-              <span aria-hidden="true" inert>${closeIcon()}</span>
-            </button>`}
+        ${renderNativeSearch({
+          host: this, part: 'search', value: this.queryText,
+          label: this.localize('search'), placeholder: this.localize('nodePalettePlaceholder'),
+          clearLabel: this.localize('clear'), controls: this.listId,
+          onValue: (value) => { this.queryText = value; this.activeIndex = 0; },
+          onKeydown: this.onFieldKeyDown,
+        })}
       </div>
       <div part="list" id=${this.listId} role="listbox" aria-label=${listLabel}>
         ${groups.length === 0

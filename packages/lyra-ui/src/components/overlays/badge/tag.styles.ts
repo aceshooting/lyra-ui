@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 /**
@@ -31,8 +32,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin: 0;
     padding: 0;
     border: none;
@@ -60,8 +60,7 @@ export const styles = css`
     background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background)));
   }
   [part~='remove-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~='remove-button'] svg {
     display: block;

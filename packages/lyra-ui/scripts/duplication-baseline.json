@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "jscpdVersion": "5.4.0",
+  "scopes": {
+    "logic": {
+      "maxPercentage": 2.98,
+      "measuredSources": 711,
+      "measuredLines": 307819,
+      "measuredDuplicatedLines": 9150
+    },
+    "tooling": {
+      "maxPercentage": 1.45,
+      "measuredSources": 385,
+      "measuredLines": 152829,
+      "measuredDuplicatedLines": 2208
+    },
+    "tests": {
+      "maxPercentage": 3.65,
+      "measuredSources": 1067,
+      "measuredLines": 625013,
+      "measuredDuplicatedLines": 22755
+    },
+    "css": {
+      "maxPercentage": 7.53,
+      "measuredSources": 303,
+      "measuredLines": 50755,
+      "measuredDuplicatedLines": 3818
+    }
+  }
+}

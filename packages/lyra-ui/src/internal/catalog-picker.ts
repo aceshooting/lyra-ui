@@ -1,4 +1,5 @@
-import { maxCssTime } from './css-motion-time.js';
+import { setNativeRangeText } from './native-text-control.js';
+import { waitForTransitionSettle } from './css-motion-time.js';
 import { getOwnDataDescriptor } from './data-descriptors.js';
 import { CATALOG_ROW_LIMIT } from './selection-catalog.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
@@ -8,6 +9,9 @@ import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
+import { TypeAheadBuffer } from './type-ahead-buffer.js';
+import { resolveListMove } from './list-navigation.js';
+import { DocumentPointerListener } from './document-pointer.js';
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {
@@ -36,7 +40,6 @@ export type LyraCatalog<T extends LyraCatalogEntry = LyraCatalogEntry> =
 
 export type DisplayCatalogEntry<T extends LyraCatalogEntry> = T & { synthetic: boolean };
 
-const TYPE_AHEAD_RESET_MS = 500;
 const normalizedCatalogs = new WeakMap<object, readonly LyraCatalogEntry[]>();
 
 function ownDataValue(target: object, key: PropertyKey): unknown {
@@ -129,46 +132,6 @@ export function filterCatalogEntries<T>(
   );
 }
 
-/** The first index whose row is not disabled, or `-1` when every row is (including an empty
- *  list) — the active-descendant analogue of a roving-tabindex "first focusable stop". */
-function firstEnabledIndex(rows: readonly LyraCatalogEntry[]): number {
-  return rows.findIndex((entry) => entry.disabled !== true);
-}
-
-/** The last index whose row is not disabled, or `-1` when every row is. */
-function lastEnabledIndex(rows: readonly LyraCatalogEntry[]): number {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    if (rows[index]?.disabled !== true) return index;
-  }
-  return -1;
-}
-
-/**
- * Steps `from` by one row in `direction`, skipping past disabled rows without wrapping — the
- * active-descendant analogue of a roving-tabindex step function that consults the disabled
- * predicate before committing to the next position (see `docs/agents/a11y-responsive-motion.md`).
- * Stays at `from` when it is already a valid, enabled stop and every row ahead in that direction is
- * disabled; resolves to the boundary stop when starting from no selection (`-1`) at all.
- */
-function stepEnabledIndex(
-  rows: readonly LyraCatalogEntry[],
-  from: number,
-  direction: 1 | -1,
-): number {
-  if (rows.length === 0) return -1;
-  // The same clamp the un-disabled-aware arithmetic always used (`clamp(from + direction, 0, rows.length
-  // - 1)`), which is also what makes `from === -1` step to index 0 in EITHER direction rather than to
-  // the far boundary -- an existing quirk of this control's own keyboard contract, preserved here
-  // rather than only added for the disabled-skipping case.
-  let index = Math.min(Math.max(from + direction, 0), rows.length - 1);
-  for (let steps = 0; steps < rows.length; steps += 1) {
-    if (rows[index]?.disabled !== true) return index;
-    index += direction;
-    if (index < 0 || index >= rows.length) break;
-  }
-  return from >= 0 && from < rows.length && rows[from]?.disabled !== true ? from : -1;
-}
-
 interface CatalogPickerChangeDetail {
   value: string;
   inCatalog: boolean;
@@ -186,6 +149,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   isReadonly: () => boolean;
   locale: () => string;
   searchableFields: (entry: T) => readonly string[];
+  emitInput: (detail: CatalogPickerChangeDetail) => void;
   emitChange: (detail: CatalogPickerChangeDetail) => void;
   onValueChange: (value: string, oldValue: string) => void;
   onDefaultValueChange: (value: string, oldValue: string) => void;
@@ -210,8 +174,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
 export class CatalogPickerController<T extends LyraCatalogEntry> {
   private readonly popupPosition: AnchoredPopoverController;
   private overlay?: OverlayHandle;
-  private pointerListenerDocument?: Document;
-  private pointerListener?: (event: PointerEvent) => void;
+  private readonly pointer: DocumentPointerListener;
   private _activeIndex = -1;
   private revealPending = false;
   private _query = '';
@@ -230,13 +193,16 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   suppressControlEvents = false;
   // Closed-mode type-ahead, matching <lr-select>: printable keystrokes accumulate and the buffer
   // resets after a quiet window.
-  private typeAheadBuffer = '';
-  private typeAheadReset?: { readonly view: Window; readonly handle: number };
+  private readonly typeBuffer: TypeAheadBuffer;
 
   constructor(
     private readonly host: CatalogPickerHost,
     private readonly options: CatalogPickerControllerOptions<T>,
   ) {
+    this.typeBuffer = new TypeAheadBuffer(host);
+    this.pointer = new DocumentPointerListener(host, (event) => {
+      if (!event.composedPath().includes(host)) this.overlay?.dismissBackdrop();
+    });
     this.popupPosition = new AnchoredPopoverController((anchor, popup) =>
       deferredPlace(anchor, popup, {
         strategy: resolveEffectivePositioningStrategy(this.host, undefined, 'fixed'),
@@ -399,46 +365,24 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.listboxHideWatcher = undefined;
   }
 
-  /** Waits for `[part="listbox"]`'s own real CSS exit transition (read live, so a consumer's
-   *  `--lr-transition-fast` override is honored) before removing it from layout -- exactly
-   *  `toast-item.class.ts`'s `waitForVisualCompletion` shape, kept local here rather than shared
-   *  since this is the only other transition-settle wait in the source tree today. */
+  /** Removes the listbox from layout after its real CSS exit transition. */
   private scheduleListboxHide(): void {
     this.cancelListboxHideWatch();
     const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
-    const view = this.host.ownerDocument.defaultView;
-    if (!listbox || !view || prefersReducedMotion(this.host)) {
+    const watch = waitForTransitionSettle(listbox, this.host, {
+      reducedMotion: prefersReducedMotion(this.host),
+    });
+    if (!watch.pending) {
       this.setListboxHidden(true);
       return;
     }
-    const computed = view.getComputedStyle(listbox);
-    const transitionMs =
-      maxCssTime(computed.transitionDuration) + maxCssTime(computed.transitionDelay);
-    if (transitionMs <= 0) {
-      this.setListboxHidden(true);
-      return;
-    }
-    let settled = false;
-    let timeout: number | undefined;
-    const finish = (): void => {
-      if (settled) return;
-      settled = true;
-      if (timeout !== undefined) view.clearTimeout(timeout);
-      listbox.removeEventListener('transitionend', onEnd);
-      if (this.listboxHideWatcher === cancel) this.listboxHideWatcher = undefined;
-      this.setListboxHidden(true);
-    };
-    const onEnd = (event: TransitionEvent): void => {
-      if (event.target === listbox) finish();
-    };
-    const cancel = (): void => {
-      settled = true;
-      if (timeout !== undefined) view.clearTimeout(timeout);
-      listbox.removeEventListener('transitionend', onEnd);
-    };
-    listbox.addEventListener('transitionend', onEnd);
-    timeout = view.setTimeout(finish, transitionMs + 50);
+    const cancel = (): void => watch.cancel();
     this.listboxHideWatcher = cancel;
+    void watch.finished.then(() => {
+      if (this.listboxHideWatcher !== cancel) return;
+      this.listboxHideWatcher = undefined;
+      this.setListboxHidden(true);
+    });
   }
 
   setOpen(next: boolean): void {
@@ -549,11 +493,12 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.value = next;
     this.hide();
     this.options.emitChange({ value: next, inCatalog });
-    this.emitValueEvents();
+    this.emitValueEvents({ value: next, inCatalog });
   }
 
-  emitValueEvents(): void {
+  emitValueEvents(detail: CatalogPickerChangeDetail = { value: this._value, inCatalog: this.normalizedCatalog.some((entry) => entry.id === this._value) }): void {
     dispatchNativeEvent(this.host, 'input');
+    this.options.emitInput(detail);
     dispatchNativeEvent(this.host, 'change');
   }
 
@@ -592,51 +537,50 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
    */
   private typeAhead(event: KeyboardEvent): boolean {
     const { key } = event;
-    if (key.length !== 1 || event.altKey || event.ctrlKey || event.metaKey) return false;
-    if (key === ' ' && this.typeAheadBuffer === '') return false;
+    if (!this.typeBuffer.accepts(event)) return false;
+    if (key === ' ' && this.typeBuffer.text === '') return false;
     if (key === ' ') event.preventDefault();
-    const locale = resolveIntlLocale(this.options.locale());
-    this.typeAheadBuffer += key.toLocaleLowerCase(locale);
-    if (this.typeAheadReset) this.typeAheadReset.view.clearTimeout(this.typeAheadReset.handle);
-    this.typeAheadReset = undefined;
-    const view = this.host.ownerDocument?.defaultView;
-    if (view) {
-      const handle = view.setTimeout(() => {
-        this.typeAheadBuffer = '';
-        this.typeAheadReset = undefined;
-      }, TYPE_AHEAD_RESET_MS);
-      this.typeAheadReset = { view, handle };
-    }
-    const buffer = this.typeAheadBuffer;
-    if (!view) this.typeAheadBuffer = '';
+    const locale = this.options.locale();
+    this.typeBuffer.add(key, locale);
     const rows = this.effectiveEntries;
     const current = this._open
       ? this._activeIndex
       : rows.findIndex((entry) => entry.id === this._value);
-    for (let step = 1; step <= rows.length; step += 1) {
-      const index = (current + step + rows.length) % rows.length;
+    const index = this.typeBuffer.match(rows, current, row => row.label, locale, row => row.disabled !== true);
+    if (index !== null) {
       const row = rows[index]!;
-      if (row.disabled === true || !row.label.toLocaleLowerCase(locale).startsWith(buffer)) continue;
       if (this._open) this.setActiveIndex(index);
       else this.selectEntry(row);
-      break;
     }
     return true;
   }
 
+  private moveIndex(rows: readonly LyraCatalogEntry[], event: KeyboardEvent): number {
+    return resolveListMove(event, {
+      count: rows.length,
+      current: this._activeIndex,
+      orientation: 'vertical',
+      wrap: false,
+      clamp: true,
+      backwardFromMissing: 'first',
+      isAvailable: index => rows[index]?.disabled !== true,
+    }) ?? -1;
+  }
+
   handleTriggerKeyDown(event: KeyboardEvent): void {
+    if (event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey) return;
     if (this.typeAhead(event)) return;
     const rows = this.effectiveEntries;
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, 1));
+        this.setActiveIndex(this.moveIndex(rows, event));
         break;
       case 'ArrowUp':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, -1));
+        this.setActiveIndex(this.moveIndex(rows, event));
         break;
       case 'Enter':
       case ' ':
@@ -650,13 +594,13 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'Home':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(firstEnabledIndex(rows));
+          this.setActiveIndex(this.moveIndex(rows, event));
         }
         break;
       case 'End':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(lastEnabledIndex(rows));
+          this.setActiveIndex(this.moveIndex(rows, event));
         }
         break;
     }
@@ -669,12 +613,12 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'ArrowDown':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, 1));
+        this.setActiveIndex(this.moveIndex(rows, event));
         break;
       case 'ArrowUp':
         event.preventDefault();
         if (!this._open) return this.show();
-        this.setActiveIndex(stepEnabledIndex(rows, this._activeIndex, -1));
+        this.setActiveIndex(this.moveIndex(rows, event));
         break;
       case 'Enter':
         if (this._open) {
@@ -685,13 +629,13 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       case 'Home':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(firstEnabledIndex(rows));
+          this.setActiveIndex(this.moveIndex(rows, event));
         }
         break;
       case 'End':
         if (this._open) {
           event.preventDefault();
-          this.setActiveIndex(lastEnabledIndex(rows));
+          this.setActiveIndex(this.moveIndex(rows, event));
         }
         break;
     }
@@ -708,7 +652,9 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.setQuery(input.value);
     this.setActiveIndex(-1);
     this.show();
+    const detail = { value: this._value, inCatalog: this.normalizedCatalog.some((entry) => entry.id === this._value) };
     relayNativeEvent(this.host, event);
+    this.options.emitInput(detail);
   }
 
   handleInputFocus(event: FocusEvent): void {
@@ -821,8 +767,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   setRangeText(replacement: string, start?: number, end?: number, selectMode?: SelectionMode): void {
     const input = this.input;
     if (!input) return;
-    if (start === undefined || end === undefined) input.setRangeText(replacement);
-    else input.setRangeText(replacement, start, end, selectMode);
+    setNativeRangeText(input, replacement, start, end, selectMode);
     this.setQuery(input.value);
     this.setActiveIndex(-1);
     this.value = input.value;
@@ -833,6 +778,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   disconnected(): void {
+    this.typeBuffer.clear();
     this.popupPosition.disconnect();
     this.deactivateOverlay(false);
     this.cancelListboxHideWatch();
@@ -841,6 +787,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   adopted(): void {
+    this.typeBuffer.clear();
     this.popupPosition.disconnect();
     this.unbindDocumentPointer();
     this.overlay?.suspend();
@@ -861,32 +808,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   private bindDocumentPointer(): void {
-    if (!this.host.isConnected) return;
-    const ownerDocument = this.host.ownerDocument;
-    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
-    this.unbindDocumentPointer();
-    const listener = (event: PointerEvent): void => {
-      if (
-        this.pointerListener !== listener ||
-        this.pointerListenerDocument !== ownerDocument ||
-        !this.host.isConnected ||
-        this.host.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      if (!event.composedPath().includes(this.host)) this.overlay?.dismissBackdrop();
-    };
-    this.pointerListenerDocument = ownerDocument;
-    this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
+    if (this.host.isConnected) this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
-    }
-    this.pointerListenerDocument = undefined;
-    this.pointerListener = undefined;
+    this.pointer.unbind();
   }
 
   private activatePopupOverlay(): void {

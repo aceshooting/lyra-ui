@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -78,8 +79,7 @@ export const styles = css`
        nested rows. */
     inline-size: var(--lr-size-1-25rem);
     block-size: var(--lr-size-1-25rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-block-start: var(--lr-size-0-1875rem);
     flex: 0 0 auto;
     display: inline-flex;
@@ -130,8 +130,7 @@ export const styles = css`
   }
   [part="toggle"]:focus-visible,
   [part="copy-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Stands in for [part='toggle'] on the closing-bracket row, so it matches the toggle's used
      inline-size: min-inline-size wins over the toggle's smaller inline-size, making the real box
@@ -220,8 +219,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     line-height: var(--lr-line-height-none);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     border-radius: var(--lr-radius);
     cursor: pointer;

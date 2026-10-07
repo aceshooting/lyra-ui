@@ -4,6 +4,8 @@
 // Import a single helper (`@aceshooting/lyra-ui/utilities/positioner`) rather than this barrel when
 // you only need one -- the barrel reaches every module it names.
 export { LyraElement } from './lyra-element.js';
+export { installDeprecatedAliases } from './deprecated-aliases.js';
+export type { LyraAliasMapping, LyraDeprecatedAliases } from './deprecated-aliases.js';
 export type {
   LyraEmitArgs,
   LyraEmittedEvent,

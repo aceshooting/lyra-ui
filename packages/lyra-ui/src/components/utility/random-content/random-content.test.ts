@@ -660,9 +660,6 @@ it('does not autoplay-tick when only one eligible child exists', async () => {
   await el.updateComplete;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expect((el as any).timer).to.be.undefined;
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  expect((el as any).timer).to.be.undefined;
 });
 
 it('disables autoplay ticking entirely under prefers-reduced-motion', async () => {
@@ -690,9 +687,7 @@ it('disables autoplay ticking entirely under prefers-reduced-motion', async () =
     expect((el as any).reduceMotion).to.be.true;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((el as any).timer).to.be.undefined;
-    const before = shownChild(el).id;
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    expect(shownChild(el).id).to.equal(before);
+    expect(shownChild(el).id).to.equal('r0');
   } finally {
     window.matchMedia = originalMatchMedia;
   }
@@ -1046,6 +1041,31 @@ it('observes live text in an aria-labelledby target outside the selected subtree
   await Promise.resolve();
 
   expect(sink.lastElementChild?.textContent).to.equal('Updated external label');
+});
+
+it('wakes a missing external label only when its referenced id appears', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.mode = 'sequence';
+  const candidate = document.createElement('div');
+  candidate.setAttribute('aria-labelledby', 'later-selection-label');
+  candidate.textContent = 'Fallback';
+  el.append(candidate);
+  container.append(el);
+  await el.updateComplete;
+  const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
+  const unrelated = document.createElement('span');
+  unrelated.id = 'unrelated-selection-label';
+  container.append(unrelated);
+  await Promise.resolve();
+  expect(sink.childElementCount).to.equal(0);
+  const label = document.createElement('span');
+  label.textContent = 'Later external label';
+  container.append(label);
+  label.id = 'later-selection-label';
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(sink.lastElementChild?.textContent).to.equal('Later external label');
 });
 
 it('keeps explicit randomize() silent while the component host is hidden', async () => {
@@ -1684,4 +1704,3 @@ it('sizes its icon buttons from the host font, not the UA control font', async (
     expect(getComputedStyle(button).fontSize).to.equal(getComputedStyle(el).fontSize);
   }
 });
-

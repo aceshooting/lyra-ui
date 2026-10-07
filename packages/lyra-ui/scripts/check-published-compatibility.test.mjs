@@ -112,7 +112,7 @@ test('immutable 22 source retains every published policy independently of curren
 
 test('published eligible cohort remains migratable after simulated 23 source removals without changing profile actions', async () => {
   const { assembleCompatibilityContext, policyKey, compatibilityKey } = await import('./published-compatibility.mjs');
-  const { projectRenameLedger, validateRenameLedger } = await import('./lyra-rename-ledger.mjs');
+  const { emptyRenameLedger, projectRenameLedger, validateRenameLedger } = await import('./lyra-rename-ledger.mjs');
   const { buildLyraRenameReference } = await import('./build-llms.mjs');
   const { buildMigrationContract, migrateText } = await import('./migrate-wa.mjs');
   const root = join(directory, '22.0.0');
@@ -120,6 +120,7 @@ test('published eligible cohort remains migratable after simulated 23 source rem
   const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
   const input = role => JSON.parse(Buffer.from(archive.payloads[capture.inputs.find(entry => entry.origin === 'source' && entry.role === role).sha256], 'base64'));
   const metadata = input('metadata'); const original = input('inventory'); const ledger = input('renameLedger');
+  ledger.profiles.push(emptyRenameLedger().profiles.find(profile => profile.origin === 'lyra-v25'));
   const facts = (await checkPublishedCompatibility(directory)).captures.find(entry => entry.capture.sourceVersion === '22.0.0').facts;
   const candidate = structuredClone(original);
   const eligible = facts.records.filter(entry => entry.policy.removalNotBefore === '23.0.0');

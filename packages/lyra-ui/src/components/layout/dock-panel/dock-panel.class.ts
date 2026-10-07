@@ -8,6 +8,9 @@ import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { styles } from './dock-panel.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { SeparatorDragController, separatorArrowDirection, separatorCoordinate } from '../../../internal/separator-drag.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
@@ -29,10 +32,15 @@ export interface LyraDockPanelCollapseChangeDetail {
 
 export interface LyraDockPanelEventMap {
   'lr-resize-request': CustomEvent<LyraDockPanelResizeDetail>;
+  'lr-resize': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-input': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-change': CustomEvent<LyraDockPanelResizeDetail>;
+  /** @deprecated Use `lr-toggle-request`; same expanded detail. */
   'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
+  /** @deprecated Use `lr-toggle`; same expanded detail. */
   'lr-collapse-change': CustomEvent<LyraDockPanelCollapseChangeDetail>;
+  'lr-toggle-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
+  'lr-toggle': CustomEvent<LyraDockPanelCollapseChangeDetail>;
 }
 
 /** Arrow-key step, in px, per keydown on the resize handle. */
@@ -48,6 +56,8 @@ interface DragState {
   readonly minExtent: string;
   readonly maxExtent: string;
   readonly containerPx: number;
+  readonly bounds: { minPx: number; maxPx: number };
+  currentSizePx: number;
   expectedExtent: string;
   finalExtent: string;
   acceptedResize: boolean;
@@ -97,18 +107,13 @@ interface DragState {
  *
  * @customElement lr-dock-panel
  * @slot - The panel's own content.
- * @event lr-resize-request - A cancelable proposed `extent` (a `px` CSS length string), `detail: {
- *   extent }`, fired before a discrete keyboard step commits and before a pointer drag's final
- *   settle commits. Call `preventDefault()` to reject it: a keyboard step simply does not apply,
- *   and a drag's final settle snaps the panel back to the size it had before that drag gesture
- *   began. Not fired for a continuous pointer drag's own intermediate ticks -- checking a
- *   cancelable event on every pointermove would make a live drag visibly stutter -- only its
- *   final settle on release.
+ * @event lr-resize-request - Cancelable proposed `detail: { extent }` before each pointer or
+ *   keyboard resize step. Preventing it leaves the current extent unchanged.
+ * @event lr-resize - Accepted pointer or keyboard step with frozen `detail: { extent }`.
  * @event lr-resize-input - Frozen `detail: { extent }` (a `px` CSS length string), fired for every
  *   genuine pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
  * @event lr-resize-change - Frozen `detail: { extent }`, fired once on genuine pointerup after at
- *   least one value transition and the drag's `lr-resize-request` was not prevented, and after
- *   each genuine keyboard step whose own `lr-resize-request` was not prevented. Pointer
+ *   least one accepted value transition, and after each accepted keyboard step. Pointer
  *   cancellation, lost capture, policy/geometry mutation, no-op attempts, and a prevented
  *   `lr-resize-request` all emit nothing.
  * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
@@ -116,6 +121,8 @@ interface DragState {
  *   `collapsed` directly. `detail: { expanded }` carries the proposed state.
  * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
  *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { expanded }` carries the new state.
+ * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle commits.
+ * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`.
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
  * @csspart handle - The draggable resize handle on the panel's inner edge. Its numeric ARIA range
@@ -135,6 +142,8 @@ interface DragState {
  *   (drag affordance vs. button feedback).
  * @cssprop [--lr-dock-panel-handle-active-color=color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of `handle` while actively dragged/pressed.
+ * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-m)] - Requested resize target width;
+ *   the target is at least `--lr-icon-button-size` and stays inside the panel's clipped edge.
  * @status stable
  * @since 4.0.0
  */
@@ -156,13 +165,21 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  (they mirror under RTL); `'top'`/`'bottom'` are block-direction. */
   @property({ reflect: true }) placement: LyraDockPanelEdge = 'end';
 
+  private _extent = '280px';
   /** The current docked extent along the resize axis, as a CSS length (e.g. `"320px"`).
    *
    *  Spelled `extent`, not `size`: everywhere else in the library `size` names a tier on the
    *  shared six-step ladder (`internal/variants.ts`'s `LyraSize`), and this is an arbitrary CSS
    *  length instead. A clean rename with no alias -- `size`/`min-size`/`max-size` on
    *  `<lr-dock-panel>` are simply unknown attributes now. */
-  @property() extent = '280px';
+  @property()
+  get extent(): string { return this._extent; }
+  set extent(value: string) {
+    const old = this._extent;
+    this._extent = value;
+    markVetoGuardWrite(this.resizeWriteGuard);
+    this.requestUpdate('extent', old);
+  }
   /** Minimum resize bound, as a CSS length. */
   @property({ attribute: 'min-extent' }) minExtent = '160px';
   /** Maximum resize bound, as a CSS length. Empty means "no explicit cap" -- the live extent of
@@ -170,12 +187,29 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
    *  its container. */
   @property({ attribute: 'max-extent' }) maxExtent = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
-  @property({ type: Boolean, reflect: true }) collapsed = false;
+  private readonly toggleWriteGuard = new VetoWriteGuard();
+  private _collapsed = false;
+  @property({ type: Boolean, reflect: true })
+  get collapsed(): boolean { return this._collapsed; }
+  set collapsed(next: boolean) {
+    const old = this._collapsed;
+    this._collapsed = next;
+    markVetoGuardWrite(this.toggleWriteGuard);
+    this.requestUpdate('collapsed', old);
+  }
   /** When set, no drag handle renders at all and the panel is a fixed size. */
   @property({ type: Boolean, reflect: true, attribute: 'without-resize' }) withoutResize = false;
 
   private drag: DragState | null = null;
-  private dragOwnerWindow?: Window;
+  private readonly resizeWriteGuard = new VetoWriteGuard();
+  private resizeRequestSequence = 0;
+  private renderBounds?: { minPx: number; maxPx: number };
+  private renderSizePx?: number;
+  private readonly dragController = new SeparatorDragController(
+    this,
+    (event) => this.onPointerMove(event),
+    (event) => event.type === 'pointerup' ? this.onPointerUp(event) : this.onPointerCancel(event),
+  );
   private readonly contentId = nextId('dock-panel-content');
   // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
@@ -188,6 +222,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.renderBounds = undefined;
+    this.renderSizePx = undefined;
     this.applyHostSize();
     this.armContainerResizeObserver();
   }
@@ -201,6 +237,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.renderBounds = undefined;
+    this.renderSizePx = undefined;
     this.endDrag();
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
@@ -310,8 +348,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return rect?.height ?? ownerWindow?.innerHeight ?? 0;
   }
 
-  private resolveBoundsPx(): { minPx: number; maxPx: number } {
-    const containerPx = Math.max(0, this.containerPx());
+  private resolveBoundsPx(containerSize = this.containerPx()): { minPx: number; maxPx: number } {
+    const containerPx = Math.max(0, containerSize);
     const lengthContext = {
       host: this,
       percentBase: containerPx,
@@ -346,17 +384,19 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   private reconcileLiveExtent(): void {
-    const bounds = this.resolveBoundsPx();
+    const containerPx = this.containerPx();
+    const bounds = this.resolveBoundsPx(containerPx);
     this.applyHostSize(bounds);
+    this.renderBounds = bounds;
     if (this.collapsed) return;
 
-    const containerPx = this.containerPx();
     const authoredPx = resolveCssLength(this.extent, {
       host: this,
       percentBase: containerPx,
       viewportBasis: this.ownerDocument.defaultView ?? undefined,
     });
     const renderedPx = this.currentSizePx();
+    this.renderSizePx = renderedPx;
     const candidate = authoredPx ?? renderedPx;
     if (!Number.isFinite(candidate)) return;
     const clamped = Math.min(Math.max(candidate, bounds.minPx), bounds.maxPx);
@@ -368,17 +408,21 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const nextExtent = `${Math.round(clamped)}px`;
     if (this.extent !== nextExtent) this.extent = nextExtent;
     this.applyHostSize(bounds);
+    this.renderSizePx = this.currentSizePx();
   }
 
   /** Computes the clamped extent a raw pixel size would resolve to, without applying it --
    *  `undefined` when it's a no-op against the current live size. Split from `applyProposal()` so
-   *  a discrete step (keyboard, or a pointer drag's final settle) can offer the proposed extent
+   *  a pointer or keyboard step can offer the proposed extent
    *  through the cancelable `lr-resize-request` veto before mutating anything. */
-  private resolveProposal(px: number): { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined {
-    const bounds = this.resolveBoundsPx();
+  private resolveProposal(
+    px: number,
+    bounds = this.resolveBoundsPx(),
+    currentSizePx = this.currentSizePx(),
+  ): { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined {
     const clamped = Math.min(Math.max(px, bounds.minPx), bounds.maxPx);
     const nextExtent = `${Math.round(clamped)}px`;
-    const currentExtent = `${Math.round(this.currentSizePx())}px`;
+    const currentExtent = `${Math.round(currentSizePx)}px`;
     if (nextExtent === currentExtent) return undefined;
     return { bounds, nextExtent };
   }
@@ -393,29 +437,52 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.applyHostSize(bounds);
   }
 
-  /** Continuous pointer-drag ticks apply immediately with no per-tick veto -- checking a
-   *  cancelable event on every pointermove would make a live drag visibly stutter waiting on
-   *  synchronous listener work. `onHandleKeyDown`'s discrete steps and a drag's final settle in
-   *  `onPointerUp` each go through `lr-resize-request` instead; see those for the veto path. */
-  private commitSize(px: number): string | undefined {
-    const proposal = this.resolveProposal(px);
-    if (!proposal) return undefined;
-    this.applyProposal(proposal.bounds, proposal.nextExtent);
-    return proposal.nextExtent;
-  }
-
   /** Proposes `extent` through the cancelable `lr-resize-request` veto point (mirroring
    *  `lr-collapse-request`'s propose-then-commit shape) and applies it only when not
    *  `defaultPrevented`. Returns whether it was applied. */
-  private requestResize(bounds: { minPx: number; maxPx: number }, extent: string): boolean {
-    const request = this.emit('lr-resize-request', Object.freeze({ extent }), { cancelable: true });
-    if (request.defaultPrevented) return false;
-    this.applyProposal(bounds, extent);
-    return true;
+  private requestResize(bounds: { minPx: number; maxPx: number }, extent: string): string | undefined {
+    const requestSequence = ++this.resizeRequestSequence;
+    const snapshot = {
+      drag: this.drag,
+      extent: this.extent,
+      placement: this.placement,
+      collapsed: this.collapsed,
+      withoutResize: this.withoutResize,
+      minExtent: this.minExtent,
+      maxExtent: this.maxExtent,
+      growSign: this.growSign,
+      containerPx: this.drag?.containerPx ?? this.containerPx(),
+    };
+    let committed: string | undefined;
+    requestThenCommit({
+      requestDetail: Object.freeze({ extent }),
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-resize-request', detail, init),
+      guard: this.resizeWriteGuard,
+      commit: () => {
+        const currentBounds = this.resolveBoundsPx(snapshot.containerPx);
+        if (
+          this.drag !== snapshot.drag || this.collapsed || this.collapsed !== snapshot.collapsed ||
+          this.resizeRequestSequence !== requestSequence ||
+          this.withoutResize || this.withoutResize !== snapshot.withoutResize ||
+          this.extent !== snapshot.extent || this.placement !== snapshot.placement ||
+          this.minExtent !== snapshot.minExtent || this.maxExtent !== snapshot.maxExtent ||
+          this.growSign !== snapshot.growSign ||
+          Math.abs(this.containerPx() - snapshot.containerPx) > 0.5 ||
+          Math.abs(currentBounds.minPx - bounds.minPx) > 0.5 ||
+          Math.abs(currentBounds.maxPx - bounds.maxPx) > 0.5
+        ) {
+          if (snapshot.drag && this.drag === snapshot.drag) this.endDrag();
+          return;
+        }
+        this.applyProposal(bounds, extent);
+        committed = this.extent;
+      },
+    });
+    return committed;
   }
 
   private emitResize(
-    type: 'lr-resize-input' | 'lr-resize-change',
+    type: 'lr-resize' | 'lr-resize-input' | 'lr-resize-change',
     extent: string
   ): void {
     this.emit(type, Object.freeze({ extent }));
@@ -446,54 +513,53 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       return;
     }
     const handle = e.currentTarget as HTMLElement;
-    const ownerWindow = handle.ownerDocument.defaultView;
-    if (!ownerWindow) return;
+    if (!this.dragController.start(e, handle)) return;
     const axis = this.axis;
     const growSign = this.growSign;
+    const containerPx = this.containerPx();
+    const startSizePx = this.currentSizePx();
     this.drag = {
       pointerId: e.pointerId,
-      startPos: axis === 'inline' ? e.clientX : e.clientY,
-      startSizePx: this.currentSizePx(),
+      startPos: separatorCoordinate(e, axis),
+      startSizePx,
       axis,
       growSign,
       placement: this.placement,
       minExtent: this.minExtent,
       maxExtent: this.maxExtent,
-      containerPx: this.containerPx(),
+      containerPx,
+      bounds: this.resolveBoundsPx(containerPx),
+      currentSizePx: startSizePx,
       expectedExtent: this.extent,
       finalExtent: this.extent,
       acceptedResize: false,
     };
-    this.dragOwnerWindow = ownerWindow;
-    try {
-      handle.setPointerCapture(e.pointerId);
-    } catch {
-      // A synthetic or detached pointer cannot be captured; the window listeners still end the drag.
-    }
-    ownerWindow.addEventListener('pointermove', this.onPointerMove);
-    ownerWindow.addEventListener('pointerup', this.onPointerUp);
-    // A drag can end without a pointerup: a system gesture / palm rejection
-    // can fire pointercancel, and losing capture (e.g. element removed) fires
-    // lostpointercapture -- both need the same teardown as pointerup or the
-    // handle keeps "resizing" in response to unrelated movement.
-    ownerWindow.addEventListener('pointercancel', this.onPointerCancel);
-    ownerWindow.addEventListener('lostpointercapture', this.onPointerCancel);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drag;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    if (!this.dragSnapshotIsCurrent(drag)) {
+    if (
+      this.withoutResize || this.collapsed || this.placement !== drag.placement ||
+      this.axis !== drag.axis || this.growSign !== drag.growSign ||
+      this.extent !== drag.expectedExtent || this.minExtent !== drag.minExtent ||
+      this.maxExtent !== drag.maxExtent
+    ) {
       this.endDrag();
       return;
     }
-    const pos = drag.axis === 'inline' ? e.clientX : e.clientY;
+    const pos = separatorCoordinate(e, drag.axis);
     const delta = drag.growSign * (pos - drag.startPos);
-    const extent = this.commitSize(drag.startSizePx + delta);
-    if (extent === undefined) return;
+    const proposal = this.resolveProposal(drag.startSizePx + delta, drag.bounds, drag.currentSizePx);
+    if (!proposal) return;
+    const extent = this.requestResize(proposal.bounds, proposal.nextExtent);
+    if (!extent || this.drag !== drag) return;
     drag.expectedExtent = extent;
     drag.finalExtent = extent;
+    drag.currentSizePx = parseFloat(extent);
     drag.acceptedResize = true;
+    this.emitResize('lr-resize', extent);
+    if (this.drag !== drag || this.extent !== extent || this.collapsed || this.withoutResize) return;
     this.emitResize('lr-resize-input', extent);
   };
 
@@ -503,20 +569,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     const shouldCommit =
       drag.acceptedResize && this.dragSnapshotIsCurrent(drag);
     const finalExtent = drag.finalExtent;
-    const startSizePx = drag.startSizePx;
     this.endDrag();
     if (!shouldCommit) return;
-    // The drag already tracked the pointer live via lr-resize-input on every tick (checking a
-    // veto per-tick would stutter a live drag -- see requestResize()'s own doc comment), so a
-    // rejected final settle here means visibly snapping back to the size this drag gesture
-    // started from, not silently no-op-ing a resize the user just watched happen.
-    const request = this.emit('lr-resize-request', Object.freeze({ extent: finalExtent }), {
-      cancelable: true,
-    });
-    if (request.defaultPrevented) {
-      this.applyProposal(this.resolveBoundsPx(), `${Math.round(startSizePx)}px`);
-      return;
-    }
     this.emitResize('lr-resize-change', finalExtent);
   };
 
@@ -526,16 +580,9 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   };
 
   private endDrag(): void {
-    const ownerWindow = this.dragOwnerWindow;
+    const pointerId = this.drag?.pointerId;
     this.drag = null;
-    this.dragOwnerWindow = undefined;
-    ownerWindow?.removeEventListener('pointermove', this.onPointerMove);
-    ownerWindow?.removeEventListener('pointerup', this.onPointerUp);
-    ownerWindow?.removeEventListener('pointercancel', this.onPointerCancel);
-    ownerWindow?.removeEventListener(
-      'lostpointercapture',
-      this.onPointerCancel
-    );
+    if (pointerId != null) this.dragController.end(pointerId);
   }
 
   private onHandleKeyDown = (e: KeyboardEvent): void => {
@@ -544,43 +591,59 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // already encodes whether that direction grows or shrinks the panel for
     // the current edge + RTL-ness, exactly mirroring how onPointerMove folds
     // it into the drag delta above.
-    const forwardKey = this.axis === 'inline' ? 'ArrowRight' : 'ArrowDown';
-    const backwardKey = this.axis === 'inline' ? 'ArrowLeft' : 'ArrowUp';
+    const arrowDirection = separatorArrowDirection(e, this.axis, false);
     let proposal: { bounds: { minPx: number; maxPx: number }; nextExtent: string } | undefined;
     if (e.key === 'Home' || e.key === 'End') {
       e.preventDefault();
       const { minPx, maxPx } = this.resolveBoundsPx();
       proposal = this.resolveProposal(e.key === 'Home' ? minPx : maxPx);
-    } else if (e.key === forwardKey) {
+    } else if (arrowDirection === 1) {
       e.preventDefault();
       proposal = this.resolveProposal(
         this.currentSizePx() + this.growSign * KEYBOARD_STEP_PX
       );
-    } else if (e.key === backwardKey) {
+    } else if (arrowDirection === -1) {
       e.preventDefault();
       proposal = this.resolveProposal(
         this.currentSizePx() - this.growSign * KEYBOARD_STEP_PX
       );
     }
     if (!proposal) return;
-    // A keyboard step is a single discrete action, exactly like the collapse toggle -- unlike a
-    // continuous pointer drag, proposing it through lr-resize-request first costs nothing
-    // perceptible.
-    if (!this.requestResize(proposal.bounds, proposal.nextExtent)) return;
-    this.emitResize('lr-resize-input', proposal.nextExtent);
-    this.emitResize('lr-resize-change', proposal.nextExtent);
+    const extent = this.requestResize(proposal.bounds, proposal.nextExtent);
+    if (!extent) return;
+    this.emitResize('lr-resize', extent);
+    if (this.extent !== extent || this.collapsed || this.withoutResize) return;
+    this.emitResize('lr-resize-input', extent);
+    if (this.extent !== extent || this.collapsed || this.withoutResize) return;
+    this.emitResize('lr-resize-change', extent);
   };
 
+  private dispatchingToggle = false;
   private toggleCollapsed = (): void => {
-    const next = !this.collapsed;
-    const request = this.emit(
-      'lr-collapse-request',
-      Object.freeze({ expanded: !next }),
-      { cancelable: true }
-    );
-    if (request.defaultPrevented) return;
-    this.collapsed = next;
-    this.emit('lr-collapse-change', Object.freeze({ expanded: !next }));
+    if (this.dispatchingToggle) return;
+    const previous = this.collapsed;
+    const detail = () => Object.freeze({ expanded: previous });
+    this.dispatchingToggle = true;
+    try {
+      requestThenCommit({
+        requestDetail: detail(),
+        emitRequest: (proposal, init: { cancelable: true }) => {
+          const request = this.emit('lr-toggle-request', proposal, init);
+          const legacy = this.emit('lr-collapse-request', detail(), init);
+          if (legacy.defaultPrevented) request.preventDefault();
+          return request;
+        },
+        guard: this.toggleWriteGuard,
+        commit: () => {
+          if (this.collapsed !== previous) return;
+          this.collapsed = !previous;
+          this.emit('lr-collapse-change', detail());
+          this.emit('lr-toggle', detail());
+        },
+      });
+    } finally {
+      this.dispatchingToggle = false;
+    }
   };
 
   /** Rotation (deg) for the collapse-toggle's chevron on the `top`/`bottom` edges: it points
@@ -600,8 +663,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private handleTemplate(): TemplateResult | typeof nothing {
     if (this.withoutResize || this.collapsed) return nothing;
-    const { minPx, maxPx } = this.resolveBoundsPx();
-    const nowPx = Math.min(Math.max(this.currentSizePx(), minPx), maxPx);
+    const { minPx, maxPx } = this.renderBounds ?? this.resolveBoundsPx();
+    const nowPx = Math.min(Math.max(this.renderSizePx ?? this.currentSizePx(), minPx), maxPx);
     // hit-area-exempt: a drag-handle separator (role="separator",
     // mouse-drag/arrow-key resize), not a tap-to-activate icon button: the
     // visible bar stays a slim 3px while [part='handle']::before (see

@@ -1,4 +1,6 @@
-import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
+import { setNativeRangeText } from '../../../internal/native-text-control.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -21,7 +23,6 @@ import { currentValidityValidator, type LyraFormValidator } from '../form-valida
 import { declaredDefaultConverter, literalSetConverter } from '../../../internal/converters.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
-import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
@@ -63,6 +64,8 @@ const MAX_VALUE_SOURCE_LENGTH = 4_096;
 type Cell = { kind: 'segment' } | { kind: 'separator'; text: string };
 
 export interface LyraOtpInputEventMap {
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   input: InputEvent;
   change: Event;
   focus: FocusEvent;
@@ -116,6 +119,8 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @slot label - Rich label content, rendered after any `label` text.
  * @slot hint - Rich supporting text, rendered after any `hint` text.
  * @slot error - Rich validation text, rendered after any `errorText`.
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event input - The real input changed; relayed as one native `InputEvent` with its editing
  *   payload intact. Intermediate IME composition waits for the final non-composing event.
  * @event change - The value changed and the field settled on blur or Enter; relayed as one native
@@ -283,18 +288,14 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }) autocomplete = 'one-time-code';
 
   @state() private focused = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   /** Intrinsic invalid styling is only shown once the user has actually engaged with the field. */
   @state() private touched = false;
 
   @query('[part="control"]') private control?: HTMLInputElement;
-  // The label/hint/error slots -- read once from `firstUpdated()` in addition to their own
-  // `@slotchange` listeners; see `collectInitialSlotAssignment`'s own doc.
-  @query('slot[name="label"]') private labelSlotEl?: HTMLSlotElement;
-  @query('slot[name="hint"]') private hintSlotEl?: HTMLSlotElement;
-  @query('slot[name="error"]') private errorSlotEl?: HTMLSlotElement;
 
   private readonly labelId = nextId('otp-input-label');
   private readonly hintId = nextId('otp-input-hint');
@@ -485,6 +486,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     if (this.control) this.control.value = nextValue;
     this.touched = true;
     dispatchNativeInputEvent(this, { data, inputType });
+    this.emit('lr-input', { value: nextValue });
     this.segmentEditPendingChange = true;
     this.completeIfTransition(previousFilled);
     this.requestUpdate();
@@ -610,11 +612,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     }
 
     const boundedReplacement = this.sanitize(replacement);
-    if (start === undefined || end === undefined) {
-      control.setRangeText(boundedReplacement);
-    } else {
-      control.setRangeText(boundedReplacement, start, end, selectMode);
-    }
+    setNativeRangeText(control, boundedReplacement, start, end, selectMode);
 
     const raw = control.value;
     const selectionStart = selectionPrefixLength(raw, control.selectionStart);
@@ -635,7 +633,9 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     this.value = '';
     if (this.control) this.control.value = '';
     dispatchNativeInputEvent(this, { inputType: 'deleteContentBackward' });
+    this.emit('lr-input', { value: '' });
     dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { value: '' });
     this.emit('lr-clear');
   }
 
@@ -655,7 +655,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override disconnectedCallback(): void {
-    this.releaseExternalDescription();
     super.disconnectedCallback();
     this.autosubmitToken += 1;
   }
@@ -671,59 +670,20 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     // native focus event and changes `focused`, which Lit correctly diagnoses as an update that
     // was scheduled from inside the update it just completed.
     if (this.autofocus) this.scheduleAfterUpdate(() => this.focus(), 'otp-autofocus');
-    // happy-dom (through at least 20.14.5) never fires a slot's INITIAL `slotchange` -- see
-    // `collectInitialSlotAssignment`'s own doc -- so a label/hint/error child already slotted at
-    // connect (the ordinary "render once data is ready" Lit pattern) would otherwise leave
-    // `hasLabelSlot`/`hasHintSlot`/`hasErrorSlot` at their `false` default, hiding real slotted
-    // content behind `?hidden` and omitting it from `aria-describedby`. Collect once here too;
-    // re-deriving the same boolean from the same assigned-node count is trivially idempotent
-    // against a real browser also firing the initial event.
-    // Deferred a microtask, mirroring `<lr-select>`'s identical `firstUpdated()` collection:
-    // these are reactive `@state` fields, so writing them synchronously here -- after this same
-    // update has already been marked complete -- trips Lit's dev "scheduled an update after an
-    // update completed" warning. A real slotchange fires from outside the update cycle entirely;
-    // queuing a microtask reproduces that same timing instead of writing from inside the cycle.
-    const labelSlot = this.labelSlotEl;
-    const hintSlot = this.hintSlotEl;
-    const errorSlot = this.errorSlotEl;
-    queueMicrotask(() => {
-      collectInitialSlotAssignment(labelSlot, (slot) => this.applyLabelSlotAssignment(slot));
-      collectInitialSlotAssignment(hintSlot, (slot) => this.applyHintSlotAssignment(slot));
-      collectInitialSlotAssignment(errorSlot, (slot) => this.applyErrorSlotAssignment(slot));
-    });
+
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    if (this.hasUpdated) this.syncExternalDescription();
+    this.hostDescription.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
-    this.syncExternalDescription();
   }
 
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
-
-  private syncExternalDescription(): void {
-    if (!this.isConnected) return;
-    const target = this.control ?? null;
-    if (!target) return;
-    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
-    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
-  }
+  private readonly hostDescription = new HostDescriptionController(this, () => this.control ?? null);
 
   override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
@@ -802,6 +762,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     this.touched = true;
     this.value = next;
     relayNativeEvent(this, event);
+    this.emit('lr-input', { value: next });
     this.completeIfTransition(previousFilled);
   };
 
@@ -870,13 +831,17 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
 
   private onChange = (event: Event): void => {
     this.segmentEditPendingChange = false;
+    const value = this.value;
     relayNativeEvent(this, event);
+    this.emit('lr-change', { value });
   };
 
   private flushPendingChange(): void {
     if (!this.segmentEditPendingChange) return;
     this.segmentEditPendingChange = false;
+    const value = this.value;
     dispatchNativeEvent(this, 'change');
+    this.emit('lr-change', { value });
   }
 
   private onFocus = (event: FocusEvent): void => {
@@ -892,25 +857,6 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     this.flushPendingChange();
     relayNativeEvent(this, event);
   };
-
-  private onLabelSlotChange = (event: Event): void => {
-    this.applyLabelSlotAssignment(event.target as HTMLSlotElement);
-  };
-  private onHintSlotChange = (event: Event): void => {
-    this.applyHintSlotAssignment(event.target as HTMLSlotElement);
-  };
-  private onErrorSlotChange = (event: Event): void => {
-    this.applyErrorSlotAssignment(event.target as HTMLSlotElement);
-  };
-  private applyLabelSlotAssignment(slot: HTMLSlotElement): void {
-    this.hasLabelSlot = slot.assignedNodes({ flatten: true }).length > 0;
-  }
-  private applyHintSlotAssignment(slot: HTMLSlotElement): void {
-    this.hasHintSlot = slot.assignedNodes({ flatten: true }).length > 0;
-  }
-  private applyErrorSlotAssignment(slot: HTMLSlotElement): void {
-    this.hasErrorSlot = slot.assignedNodes({ flatten: true }).length > 0;
-  }
 
   private renderSegment(index: number, invalid: boolean): TemplateResult {
     const char = this.segmentValues[index] ?? '';
@@ -948,7 +894,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
     return html`
       <div part="base form-control">
         <label part="label form-control-label" id=${this.labelId} for="control" ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+          ${this.label}<slot name="label"></slot>
         </label>
         <div part="field segments" @click=${() => this.focus()}>
           ${this.cells.map((cell) =>
@@ -987,10 +933,10 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
           />
         </div>
         <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
         <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+          ${this.hint}<slot name="hint"></slot>
         </div>
       </div>
     `;

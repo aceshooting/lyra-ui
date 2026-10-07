@@ -246,6 +246,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
             placeholder=${this.localize('selectModel')}
             @focus=${this.containNativeEvent}
             @blur=${this.containNativeEvent}
+            @lr-input=${this.containNativeEvent}
             @lr-change=${this.onModelChange}
           ></lr-model-select>
         </div>

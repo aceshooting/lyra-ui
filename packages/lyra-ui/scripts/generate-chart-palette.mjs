@@ -17,7 +17,7 @@
 // Run: node scripts/generate-chart-palette.mjs
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { assertCanonicalPalette, canonicalPaletteColor, readCanonicalPalette } from './palette-canonical.mjs';
+import { assertCanonicalPalette, canonicalPaletteColor, readCanonicalPalette, srgbToLinear, linearToSrgb, toSrgbHex as toHex } from './palette-canonical.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,35 +33,6 @@ const CVD_MIN_DISTANCE = 0.1;
 // for much more separation than the gate requires simply makes the search unsatisfiable.
 const CONTRAST_TARGET = 3.35;
 const CVD_TARGET = 0.115;
-
-const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-const linearToSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
-
-function oklchToRgb({ L, C, H }) {
-  const h = (H * Math.PI) / 180;
-  const a = C * Math.cos(h);
-  const b = C * Math.sin(h);
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-  return [
-    linearToSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-    linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-    linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
-  ];
-}
-
-function toHex({ L, C, H }) {
-  let chroma = C;
-  for (let i = 0; i < 200; i += 1) {
-    const rgb = oklchToRgb({ L, C: chroma, H });
-    if (rgb.every((c) => c >= -0.0001 && c <= 1.0001)) {
-      return `#${rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0')).join('')}`;
-    }
-    chroma *= 0.98;
-  }
-  return '#000000';
-}
 
 const channels = (hex) => [0, 2, 4].map((i) => srgbToLinear(parseInt(hex.slice(1 + i, 3 + i), 16) / 255));
 const luminance = (hex) => {

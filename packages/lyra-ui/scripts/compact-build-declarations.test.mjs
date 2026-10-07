@@ -5,7 +5,30 @@ import path from 'node:path';
 import {
   compactBuildDeclarations,
   compactDeclarationText,
+  stripPrivateMemberJsdoc,
 } from './compact-build-declarations.mjs';
+
+const privateDocs = `/** Class documentation. */
+export declare class Documented {
+  /** Public API documentation. */
+  value: string;
+  /** Protected extension documentation. */
+  protected extension(): void;
+  /** Private implementation documentation. */
+  private cache;
+  /** Private method documentation. */
+  private refresh(): void;
+  // A non-doc comment separates this private member from the earlier JSDoc.
+  private separated;
+}
+`;
+const strippedPrivateDocs = stripPrivateMemberJsdoc(privateDocs);
+assert.match(strippedPrivateDocs, /Class documentation/);
+assert.match(strippedPrivateDocs, /Public API documentation/);
+assert.match(strippedPrivateDocs, /Protected extension documentation/);
+assert.doesNotMatch(strippedPrivateDocs, /Private implementation documentation|Private method documentation/);
+assert.match(strippedPrivateDocs, /private cache|private refresh|private separated/);
+assert.equal(stripPrivateMemberJsdoc(strippedPrivateDocs), strippedPrivateDocs);
 
 const source = `export declare class Example {
     /** IDE documentation remains available.

@@ -1,13 +1,14 @@
 import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
-import { ownsKeyboardInput } from './key-ownership.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -68,6 +69,14 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="viewport"][role="group"]'),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
 
   @property({ type: Number, reflect: true }) zoom = 1;
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
@@ -163,7 +172,12 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    if (event.altKey || event.ctrlKey || event.metaKey || ownsKeyboardInput(event)) return;
+    if (
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      keyEventOwnedByInnerControl(event, { container: this })
+    ) return;
     if (event.key === '+' || event.key === '=') {
       event.preventDefault();
       this.zoomIn();

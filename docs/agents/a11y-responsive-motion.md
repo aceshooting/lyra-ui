@@ -178,6 +178,9 @@ component and a release blocker for a new one.
 - Any component with a multi-column, label-plus-actions, toolbar, or potentially long translated
   layout gets a narrow-allocation story/test (320px is a useful baseline) and a long-content
   case. A wide desktop canvas is not sufficient responsive evidence.
+- Container-query thresholds use the root-relative, exclusive shared queries in
+  `src/internal/container-breakpoints.styles.ts` (`20rem`, `30rem`, `40rem`). Test a narrow
+  allocation again with an enlarged root font so adjacent components compact together.
 
 ## Motion — durations and phases form one themeable system
 

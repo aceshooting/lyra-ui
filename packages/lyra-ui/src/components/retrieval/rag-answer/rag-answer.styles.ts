@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 export const styles = css`
   :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
@@ -8,5 +9,5 @@ export const styles = css`
   [part='citation-list'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); align-items: center; }
   [part='error'] { color: var(--lr-color-danger); }
   [part='retry'] { align-self: flex-start; }
-  @container (max-inline-size: 319.98px) { [part='base'] { gap: var(--lr-space-s); } }
+  @container ${compactContainerQuery} { [part='base'] { gap: var(--lr-space-s); } }
 `;

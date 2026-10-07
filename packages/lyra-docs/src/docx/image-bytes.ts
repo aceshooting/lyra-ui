@@ -21,6 +21,22 @@ export function inspectDocxImage(bytes: Uint8Array, options: { trailing?: boolea
   catch (error) { return { ok: false, code: error instanceof ImageRefusal ? error.code : 'invalid-document' }; }
 }
 
+/** Inspects an insertion image after removing camera metadata from JPEGs. */
+export function inspectDocxImageForInsertion(input: Uint8Array): DocxResult<Readonly<{ bytes: Uint8Array; metadata: DocxImageMetadata }>> {
+  let bytes = input;
+  let metadata = inspectDocxImage(bytes);
+  if (!metadata.ok) return metadata;
+  if (metadata.value.hasJpegApp1) {
+    const stripped = withoutJpegApp1(bytes);
+    if (!stripped) return { ok: false, code: 'unsupported' };
+    bytes = stripped;
+    metadata = inspectDocxImage(bytes);
+    if (!metadata.ok) return metadata;
+    if (metadata.value.hasJpegApp1) return { ok: false, code: 'unsupported' };
+  }
+  return { ok: true, value: { bytes, metadata: metadata.value } };
+}
+
 /** True when the bytes claim to be PNG, GIF or JPEG; such bytes must pass full inspection. */
 export function isDocxRasterSignature(bytes: Uint8Array): boolean {
   return (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) ||
@@ -38,7 +54,7 @@ export function isDocxMetafileSignature(bytes: Uint8Array): boolean {
 
 /** Copy a JPEG without its APP1 (EXIF/XMP) segments, which carry camera and location metadata.
  * Every other byte is preserved; returns null when the segment structure cannot be walked. */
-export function withoutJpegApp1(bytes: Uint8Array): Uint8Array | null {
+function withoutJpegApp1(bytes: Uint8Array): Uint8Array | null {
   if (bytes[0] !== 255 || bytes[1] !== 216) return null;
   const kept: Uint8Array[] = [bytes.subarray(0, 2)];
   let at = 2;

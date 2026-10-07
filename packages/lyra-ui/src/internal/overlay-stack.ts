@@ -1,6 +1,7 @@
 import { getActiveNativeModal } from './native-modal-context.js';
 import { takeOverlayOrder, type OverlayOrderReservation } from './overlay-order.js';
 import { deepActiveElementIn } from './active-element.js';
+import { flattenedParentElement } from './composed-tree.js';
 import {
   collectComposedAutofocusElements,
   collectComposedFocusTargets,
@@ -123,18 +124,11 @@ export function deepActiveElement(
   return deepActiveElementIn(doc);
 }
 
-function composedParent(element: Element): Element | null {
-  if (element.assignedSlot) return element.assignedSlot;
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode() as ShadowRoot;
-  return root.host ?? null;
-}
-
 export function composedContains(container: Element, candidate: Element | null): boolean {
   let current = candidate;
   while (current) {
     if (current === container) return true;
-    current = composedParent(current);
+    current = flattenedParentElement(current);
   }
   return false;
 }
@@ -205,7 +199,7 @@ function entryTabStops(entry: OverlayEntry, panel: HTMLElement): HTMLElement[] {
 /** `element` and its flattened-tree ancestors, outermost first. */
 function composedPath(element: Element): Element[] {
   const path: Element[] = [];
-  for (let current: Element | null = element; current; current = composedParent(current)) path.unshift(current);
+  for (let current: Element | null = element; current; current = flattenedParentElement(current)) path.unshift(current);
   return path;
 }
 

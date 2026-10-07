@@ -178,6 +178,27 @@ describe('NativeMediaController', () => {
     expect(secondEnglish.mode).to.equal('showing');
   });
 
+  it('preserves hidden custom-overlay captions across a native-element replacement and reconnect', () => {
+    const first = document.createElement('video');
+    const selected = first.addTextTrack('captions', 'English', 'en');
+    selected.mode = 'hidden';
+    const second = document.createElement('video');
+    const replacement = second.addTextTrack('captions', 'English', 'en');
+    const other = second.addTextTrack('captions', 'French', 'fr');
+    other.mode = 'showing';
+    const controller = new NativeMediaController(document.createElement('div'), {
+      selectedTrackMode: 'hidden',
+    });
+    controller.attach(first);
+    expect(controller.captureUserPreferences().textTrack?.language).to.equal('en');
+    controller.attach(second);
+    expect(replacement.mode).to.equal('hidden');
+    expect(other.mode).to.equal('disabled');
+    controller.disconnect();
+    controller.reconnect();
+    expect(replacement.mode).to.equal('hidden');
+  });
+
   it('clones only allowlisted safe source/track attributes without moving consumer nodes', () => {
     const consumer = document.createElement('div');
     consumer.innerHTML = `

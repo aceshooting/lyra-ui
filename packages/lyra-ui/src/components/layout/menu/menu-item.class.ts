@@ -10,10 +10,9 @@ import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, query, state } from 'lit/decorators.js';
 import { isAccessibilitySubtreeExcluded } from '../../../internal/a11y.js';
 import {
-  accessibleTextRecordsMatter,
-  bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -375,8 +374,9 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  observer is what makes the item — rather than every parent that has to care — the authority on
    *  its own navigability. */
   private nativeStateObserver?: MutationObserver;
-  /** Watches default-slot label text, including flattened nodes projected from an outer wrapper. */
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [], () => this.syncSlottedLabel(), ['data-hidden', 'label', 'slot'],
+  );
   private labelObservationGeneration = 0;
   private announcedNativeState = '';
   private owningMenu: MenuItemOwner | null = null;
@@ -450,13 +450,6 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         attributes: true,
         attributeFilter: ['hidden', 'inert', 'aria-hidden'],
       });
-      const observer = new MutationObserverCtor((records) => {
-        if (!accessibleTextRecordsMatter(observer, records)) return;
-        this.observeLabelContent();
-        this.syncSlottedLabel();
-      });
-      this.labelObserver = observer;
-      this.observeLabelContent();
     }
     this.addEventListener('slotchange', this.onForwardedLabelSlotChange);
     const labelGeneration = ++this.labelObservationGeneration;
@@ -466,7 +459,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         labelGeneration !== this.labelObservationGeneration
       )
         return;
-      this.observeLabelContent();
+      this.labelTextObserver.bind();
       this.syncSlottedLabel();
       const submenuSlot = this.renderRoot.querySelector<HTMLSlotElement>(
         'slot[name="submenu"]'
@@ -485,12 +478,15 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.nativeStateObserver = undefined;
     this.labelObservationGeneration += 1;
     this.removeEventListener('slotchange', this.onForwardedLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
     if (this.submenuPanel && this.submenuPanelAttached) {
       this.submenuPanel[submenuPanelController].detach(this);
       this.submenuPanelAttached = false;
     }
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.labelTextObserver.adopted();
   }
 
   /** Every flag a parent's navigability predicate reads, in one comparable string. */
@@ -759,10 +755,6 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       .trim();
   }
 
-  private observeLabelContent(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, ['data-hidden', 'label', 'slot']);
-  }
-
   private syncSlottedLabel(
     slot: HTMLSlotElement | null = this.defaultLabelSlot()
   ): void {
@@ -773,14 +765,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   }
 
   private onLabelSlotChange = (event: Event): void => {
-    this.observeLabelContent();
+    this.labelTextObserver.bind();
     this.syncSlottedLabel(event.target as HTMLSlotElement);
   };
 
   private onForwardedLabelSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;
     if (!this.labelForwardingSlots().includes(slot)) return;
-    this.observeLabelContent();
+    this.labelTextObserver.bind();
     this.syncSlottedLabel();
   };
 

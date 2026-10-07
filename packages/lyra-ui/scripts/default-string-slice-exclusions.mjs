@@ -17,19 +17,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   'src/components/conversation/model-select/model-select.class.ts': Object.freeze(['fieldRequired']),
   'src/components/conversation/model-settings-panel/model-settings-panel.class.ts': Object.freeze(['fieldRequired']),
 
-  // The strip and its tooltip rows resolve only the usageBadge* and duration keys. These generic
-  // catalog-shaped literals and the bare tokensIn/tokensOut keys come from transitive helpers.
-  'src/components/conversation/usage-badge/usage-badge.class.ts': Object.freeze([
-    'collapse',
-    'details',
-    'map',
-    'navigation',
-    'open',
-    'search',
-    'select',
-    'tokensIn',
-    'tokensOut',
-  ]),
   'src/components/conversation/voice-picker/voice-picker.class.ts': Object.freeze(['fieldRequired']),
 
   // A local dynamic segment-key map makes the conservative fallback inspect transitive helpers.

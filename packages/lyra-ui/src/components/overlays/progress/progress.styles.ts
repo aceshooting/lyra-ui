@@ -1,3 +1,4 @@
+import { progressTrackPaint, progressIndicatorPaint } from '../../../internal/progress-track.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -54,25 +55,12 @@ export const styles = css`
         var(--track-height, var(--height, var(--_lr-progress-track-height)))
       )
     );
-    border-radius: var(--lr-progress-track-radius, var(--lr-radius-pill));
-    background: var(
-      --lr-progress-track-color,
-      var(--track-color, var(--lr-color-brand-quiet))
-    );
+    ${progressTrackPaint}
   }
   [part="indicator"] {
     block-size: 100%;
     border-radius: inherit;
-    background: var(
-      --lr-progress-indicator-color,
-      var(
-        --indicator-color,
-        var(
-          --lr-progress-indicator-variant-color,
-          var(--_lr-progress-indicator-variant-color)
-        )
-      )
-    );
+    ${progressIndicatorPaint}
     transition: inline-size var(--lr-transition-base);
   }
   /* Still (no animation): full length and dimmed, so it never reads as a value; keyframes restore the sweep. */

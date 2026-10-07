@@ -19,6 +19,7 @@ import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal
 import { nextId } from '../../../internal/a11y.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { SeparatorDragController, separatorArrowDirection, separatorCoordinate, separatorDelta } from '../../../internal/separator-drag.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   CollapseBreakpointController,
@@ -77,6 +78,7 @@ interface DragState {
   index: number;
   startPos: number;
   base: HTMLElement;
+  rtl: boolean;
   /** Cumulative delta already folded into the live `sizes` so far this
    *  gesture — clamping against live sizes (see onPointerMove) means each
    *  move must apply only the *incremental* delta since the last move, not
@@ -630,7 +632,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // Keyed by pointerId so an interrupted or concurrent (multi-touch) drag on
   // one divider never reads or clobbers another pointer's drag state.
   private drags = new Map<number, DragState>();
-  private dragOwnerWindow?: Window;
+  private readonly dragController = new SeparatorDragController(
+    this,
+    (event) => this.onPointerMove(event),
+    (event) => this.onPointerUp(event),
+  );
   // Direct panels are an ordered ownership sequence, not merely a count. Each
   // snapshot preserves the latest author intent while the split temporarily
   // projects layout/collapse styles, so replacement, reordering, removal,
@@ -646,6 +652,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private panelOwnershipObserverGeneration = 0;
   private constraintIssueKey = '';
   private constraintConfigVersion = 0;
+  private renderConstraintBounds: Array<{ min: number; max: number }> = [];
   private initializedSizes = false;
   private measuredInlineSize = Number.POSITIVE_INFINITY;
   private _effectiveOrientation: LyraOrientation = 'horizontal';
@@ -884,6 +891,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         }
       }
     }
+    this.renderConstraintBounds = this.resolveConstraintBounds(this.getContainerSize()).bounds;
   }
 
   /**
@@ -2079,18 +2087,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     };
   }
 
-  private percentBounds(
-    index: number,
-    containerSize: number
-  ): { min: number; max: number } {
-    return (
-      this.resolveConstraintBounds(containerSize).bounds[index] ?? {
-        min: 0,
-        max: Infinity,
-      }
-    );
-  }
-
   /** Whether a panel's constraint needs the clamp()-based flex-basis branch at all (as opposed to
    *  the plain bare-percent branch) — true whenever any px or percent bound is set. */
   private hasClampConstraint(
@@ -2171,8 +2167,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const currentB = next[i + 1];
     if (currentA === undefined || currentB === undefined) return next;
     const pairTotal = currentA + currentB;
-    const a = this.percentBounds(i, containerSize);
-    const b = this.percentBounds(i + 1, containerSize);
+    const bounds = this.resolveConstraintBounds(containerSize).bounds;
+    const a = bounds[i] ?? { min: 0, max: Infinity };
+    const b = bounds[i + 1] ?? { min: 0, max: Infinity };
     // Panel i's own bounds, further narrowed by panel i+1's bounds (its
     // partner's min/max caps how much i can grow/shrink within the pair).
     const loRaw = Math.max(a.min, pairTotal - b.max);
@@ -2331,35 +2328,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // wouldn't stop).
     if (e.button !== 0 || this.isDividerDisabled(index)) return;
     const divider = e.currentTarget as HTMLElement;
-    const ownerWindow = divider.ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    if (this.drags.size > 0 && this.dragOwnerWindow !== ownerWindow) return;
+    if (!this.dragController.start(e, divider)) return;
     // The divider that dispatched this is itself a child of [part="base"],
     // so baseEl is guaranteed to be already rendered here.
     this.drags.set(e.pointerId, {
       index,
-      startPos:
-        this.effectiveOrientation === 'vertical' ? e.clientY : e.clientX,
+      startPos: separatorCoordinate(e, this.effectiveOrientation === 'vertical' ? 'block' : 'inline'),
       base: this.baseEl!,
+      rtl: this.effectiveOrientation === 'horizontal' && isRtl(this),
       appliedDelta: 0,
       acceptedResize: false,
     });
-    try {
-      divider.setPointerCapture(e.pointerId);
-    } catch {
-      // A synthetic or detached pointer cannot be captured; the window listeners still end the drag.
-    }
-    if (this.drags.size === 1) {
-      this.dragOwnerWindow = ownerWindow;
-      ownerWindow.addEventListener('pointermove', this.onPointerMove);
-      ownerWindow.addEventListener('pointerup', this.onPointerUp);
-      // A drag can end without a pointerup: a system gesture / palm rejection
-      // can fire `pointercancel`, and losing capture (e.g. element removed)
-      // fires `lostpointercapture` — both need the same teardown as pointerup
-      // or the divider keeps "resizing" in response to unrelated movement.
-      ownerWindow.addEventListener('pointercancel', this.onPointerUp);
-      ownerWindow.addEventListener('lostpointercapture', this.onPointerUp);
-    }
   };
 
   private onPointerMove = (e: PointerEvent): void => {
@@ -2371,6 +2350,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.endDragGestures();
       return;
     }
+    if (this.effectiveOrientation === 'horizontal' && isRtl(this) !== drag.rtl) {
+      this.endDragGestures();
+      return;
+    }
     const total =
       this.effectiveOrientation === 'vertical'
         ? drag.base.clientHeight
@@ -2379,15 +2362,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.endDragGestures();
       return;
     }
-    const pos =
-      this.effectiveOrientation === 'vertical' ? e.clientY : e.clientX;
-    let cumulativeDelta = ((pos - drag.startPos) / total) * 100;
+    const cumulativeDelta = (
+      separatorDelta(
+        drag.startPos,
+        e,
+        this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
+        drag.rtl,
+      ) / total
+    ) * 100;
     // Panels are ordered along the inline axis via CSS `order`, so under RTL
     // `flex-direction: row` already renders panel[i] to the *right* of
     // panel[i+1] — a physically-rightward drag has to shrink index instead
     // of growing it to keep matching the visible panel under the pointer.
-    if (this.effectiveOrientation === 'horizontal' && isRtl(this))
-      cumulativeDelta = -cumulativeDelta;
     // Clamp against the *current* live sizes, not this pointer's own drag-start
     // snapshot -- two adjacent dividers dragged concurrently share one panel
     // between them, and each clamp pass must see whatever the other pointer's
@@ -2433,40 +2419,22 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (!drag) return;
     this.drags.delete(e.pointerId);
     if (e.type === 'pointerup' && drag.acceptedResize) this.settle();
-    if (this.drags.size === 0) this.removeDragListeners();
+    this.dragController.end(e.pointerId);
   };
-
-  private removeDragListeners(): void {
-    const ownerWindow = this.dragOwnerWindow;
-    this.dragOwnerWindow = undefined;
-    ownerWindow?.removeEventListener('pointermove', this.onPointerMove);
-    ownerWindow?.removeEventListener('pointerup', this.onPointerUp);
-    ownerWindow?.removeEventListener('pointercancel', this.onPointerUp);
-    ownerWindow?.removeEventListener('lostpointercapture', this.onPointerUp);
-  }
 
   private endDragGestures(): void {
     this.drags.clear();
-    this.removeDragListeners();
+    this.dragController.cancelAll();
   }
 
   private onDividerKeyDown = (e: KeyboardEvent, index: number): void => {
     // Same rail/floating-adjacent guard as onPointerDown.
     if (this.isDividerDisabled(index) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
-    // Mirror the same swap as onPointerMove for horizontal+RTL.
-    const rtl = this.effectiveOrientation === 'horizontal' && isRtl(this);
-    const forwardKey =
-      this.effectiveOrientation === 'vertical'
-        ? 'ArrowDown'
-        : rtl
-        ? 'ArrowLeft'
-        : 'ArrowRight';
-    const backwardKey =
-      this.effectiveOrientation === 'vertical'
-        ? 'ArrowUp'
-        : rtl
-        ? 'ArrowRight'
-        : 'ArrowLeft';
+    const direction = separatorArrowDirection(
+      e,
+      this.effectiveOrientation === 'vertical' ? 'block' : 'inline',
+      this.effectiveOrientation === 'horizontal' && isRtl(this),
+    );
     if (e.key === 'Home' || e.key === 'End') {
       const { min, max } = this.dividerValueRange(index);
       const current = this.sizes[index];
@@ -2474,9 +2442,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         const target = e.key === 'Home' ? min : max;
         if (this.applyDelta(index, target - current, true)) e.preventDefault();
       }
-    } else if (e.key === forwardKey) {
+    } else if (direction === 1) {
       if (this.applyDelta(index, KEYBOARD_STEP, true)) e.preventDefault();
-    } else if (e.key === backwardKey) {
+    } else if (direction === -1) {
       if (this.applyDelta(index, -KEYBOARD_STEP, true)) e.preventDefault();
     }
   };
@@ -2831,7 +2799,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   override render(): TemplateResult {
     const dividers: TemplateResult[] = [];
-    const bounds = this.resolveConstraintBounds(this.getContainerSize()).bounds;
+    const bounds = this.renderConstraintBounds;
     for (let i = 0; i < this.panelCount - 1; i++) {
       // The achievable range is bounded by both adjacent panels, not the
       // whole track — pushing past it would starve the partner even though

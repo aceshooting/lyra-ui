@@ -38,6 +38,27 @@ export type LyraOrientation = 'horizontal' | 'vertical';
  */
 export type LyraToolStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
 
+/** Shared terminal meaning; components may keep their own public spelling and display wording. */
+export type LyraAgentTerminalStatus = 'success' | 'error' | 'cancelled';
+
+/** Resolve accepted agent-work spellings without treating a foreign status as pending. */
+export function normalizeAgentTerminalStatus(value: unknown): LyraAgentTerminalStatus | undefined {
+  switch (value) {
+    case 'success':
+    case 'done':
+    case 'completed':
+    case 'complete':
+      return 'success';
+    case 'error':
+    case 'failed':
+      return 'error';
+    case 'cancelled':
+      return 'cancelled';
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Whether a reasoning/activity surface is streaming a run as it happens or replaying a finished
  * one. Drives whether the surface auto-follows new content and how it announces updates.

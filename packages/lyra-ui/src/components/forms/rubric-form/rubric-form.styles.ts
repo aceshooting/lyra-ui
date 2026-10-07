@@ -83,26 +83,21 @@ export const styles = css`
 
   [part='submit'],
   [part='skip'] {
-    font: inherit;
-    border-radius: var(--lr-radius);
-    padding: var(--lr-space-xs) var(--lr-space-m);
-    cursor: pointer;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    --_lr-agent-action-radius: var(--lr-radius);
+    --_lr-agent-action-padding-inline: var(--lr-space-m);
   }
-  [part='submit'] {
-    background: var(--lr-rubric-form-submit-bg, var(--lr-color-brand));
-    border-color: var(--lr-rubric-form-submit-border-color, var(--lr-color-brand));
-    color: var(--lr-rubric-form-submit-color, var(--lr-color-on-brand));
+  button[part='submit'] {
+    background: var(--lr-rubric-form-submit-bg, var(--lr-button-accent-fill, var(--lr-color-brand)));
+    border-color: var(--lr-rubric-form-submit-border-color, var(--lr-button-accent-fill, var(--lr-color-brand)));
+    color: var(--lr-rubric-form-submit-color, var(--lr-button-accent-on-fill, var(--lr-color-on-brand)));
     /* Hover/active below repaint both background and border-color, so both channels need to
        ease; without this this button's paint snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
-  [part='skip'] {
-    background: var(--lr-rubric-form-skip-bg, var(--lr-color-surface));
+  button[part='skip'] {
+    background: var(--lr-rubric-form-skip-bg, var(--lr-button-fill, var(--lr-color-surface)));
     border-color: var(--lr-rubric-form-skip-border-color, var(--lr-color-border));
-    color: var(--lr-rubric-form-skip-color, var(--lr-color-text));
+    color: var(--lr-rubric-form-skip-color, var(--lr-button-on-fill, var(--lr-color-text)));
     /* Hover/active below only repaint background, so that is all this needs; without it this
        button's fill snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast);
@@ -126,17 +121,6 @@ export const styles = css`
   [part='skip']:not(:disabled):active {
     background: var(--lr-rubric-form-skip-active-bg, color-mix(in oklab, var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
   }
-  [part='submit']:disabled,
-  [part='skip']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
-  }
-  [part='submit']:focus-visible,
-  [part='skip']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-
   [part='empty'] {
     color: var(--lr-color-text-quiet);
   }

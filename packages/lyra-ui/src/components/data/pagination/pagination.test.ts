@@ -1,3 +1,5 @@
+import { sinkTexts } from '../../../../test/announcements.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./pagination.js";
@@ -10,13 +12,6 @@ function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
   return document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`
   );
-}
-
-function sinkTexts(politeness: "polite" | "assertive"): string[] {
-  const element = sinkElement(politeness);
-  return element
-    ? Array.from(element.children).map((child) => child.textContent ?? "")
-    : [];
 }
 
 async function pagination(
@@ -47,6 +42,22 @@ async function compactPagination(
 }
 
 expectLocaleFallback('ar-EG', ['next', 'paginationLabel', 'previous']);
+
+it('switches the compact container layout with the root type scale', async () => {
+  const root = document.documentElement;
+  const original = root.style.fontSize;
+  try {
+    root.style.fontSize = '16px';
+    const el = await pagination(html`<lr-pagination total="95" page-size="10" with-summary style="inline-size: 360px"></lr-pagination>`);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+    expect(getComputedStyle(base).flexDirection).to.equal('row');
+    root.style.fontSize = '20px';
+    await waitUntil(() => getComputedStyle(base).flexDirection === 'column');
+    expect(getComputedStyle(base).flexDirection).to.equal('column');
+  } finally {
+    root.style.fontSize = original;
+  }
+});
 
 it("exposes totalPages as the sole derived total plus a localized item-range summary", async () => {
   const el = await pagination();
@@ -1341,21 +1352,6 @@ describe("numbered page list", () => {
 
   function itemCount(el: LyraPagination): number {
     return el.shadowRoot!.querySelectorAll('[part="pages"] > li').length;
-  }
-
-  /** Resolves what `declaration` computes to *inside this component's shadow root*, where the
-   *  `--lr-*` tokens live, so an appearance default can be asserted against the token it uses. */
-  function resolvedInShadow(
-    el: LyraPagination,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
   }
 
   it("renders every page as its own control when they all fit", async () => {

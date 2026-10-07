@@ -1,7 +1,8 @@
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -23,10 +24,7 @@ import type {
   TableSortRequestDetail,
 } from '../table/table.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './document-library.styles.js';
 import {
   normalizeReflectedOptionalSize,
@@ -448,20 +446,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   /** Failed-load supporting copy, forwarded to the nested table. */
   @property({ attribute: 'error-description' }) errorDescription = '';
 
-  /** True once a real light-DOM child assigned `slot="error"` is observed -- see
-   *  `errorSlotObserver` below. Gates whether the `error` slot passthrough is mounted on the
-   *  nested `<lr-table>`: an always-mounted passthrough would count as "assigned content" for the
-   *  table's own `error` slot regardless of whether anything real is inside it, permanently
-   *  hiding the table's built-in failed-load state even when the consumer never used the slot. */
-  @state() private hasErrorSlot = false;
-
-  private errorSlotObserver?: MutationObserver;
-
-  private computeHasErrorSlot(): boolean {
-    return Array.from(this.children).some(
-      (el) => el.getAttribute('slot') === 'error'
-    );
-  }
+  private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private retryRequestActive = false;
 
@@ -519,47 +505,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  rather than falling back. */
   @property() label?: string;
 
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.syncAnnouncementSink();
-    this.hasErrorSlot = this.computeHasErrorSlot();
-    this.errorSlotObserver = new MutationObserver(() => {
-      this.hasErrorSlot = this.computeHasErrorSlot();
-    });
-    this.errorSlotObserver.observe(this, {
-      childList: true,
-      attributes: true,
-      subtree: true,
-      attributeFilter: ['slot'],
-    });
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.releaseAnnouncementSink();
-    this.errorSlotObserver?.disconnect();
-    this.errorSlotObserver = undefined;
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument)
-      return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   private snapshotDocuments(documents: unknown): readonly LibraryDocument[] {
@@ -798,7 +748,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private setSelected(ids: Iterable<string>): void {
     this.selectedDocumentIds = [...ids];
-    this.announcementSink?.announce(this.selectionCountText());
+    this.announcements.announcePolite(this.selectionCountText());
     const eventIds = Object.freeze([...this.selectedDocumentIds]);
     this.emit('lr-selection-change', Object.freeze({ documentIds: eventIds }));
   }

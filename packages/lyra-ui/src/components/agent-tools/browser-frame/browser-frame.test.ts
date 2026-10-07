@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -5,13 +6,6 @@ import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
-
-function sinkTexts(doc: Document = document): string[] {
-  return Array.from(
-    doc.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > div`),
-    (node) => node.textContent ?? '',
-  );
-}
 
 describe('lr-browser-frame', () => {
   it('defaults to phase=idle, controller=agent, withoutControls=false', async () => {
@@ -76,7 +70,7 @@ describe('lr-browser-frame', () => {
       await el.updateComplete;
 
       expect(sinkTexts(), 'the old document no longer owns the adopted component sink').to.deep.equal([]);
-      expect(sinkTexts(frameDocument)).to.deep.equal(['Connecting…']);
+      expect(sinkTexts('polite', frameDocument)).to.deep.equal(['Connecting…']);
     } finally {
       el.remove();
       iframe.remove();
@@ -697,7 +691,6 @@ describe('collecting already-slotted default content without relying on the init
     }
   });
 });
-
 
 describe('lr-browser-frame deprecated --lr-browser-frame-controller-background alias', () => {
   const fill = (el: LyraBrowserFrame): string =>

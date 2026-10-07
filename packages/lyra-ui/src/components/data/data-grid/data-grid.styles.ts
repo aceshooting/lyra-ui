@@ -1,4 +1,6 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
@@ -112,7 +114,8 @@ export const styles = css`
       solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
   }
 
-  [part="tree-limit"] {
+  [part="tree-limit"],
+  [part="row-limit"] {
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-start: var(--border-width, var(--_lr-data-grid-border-width))
       solid var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
@@ -168,8 +171,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: 0;
     border-radius: var(--border-radius, var(--_lr-data-grid-border-radius));
     background: transparent;
@@ -262,8 +264,7 @@ export const styles = css`
   [part~="column-menu-button"],
   [part~="filter-button"],
   [part~="pager-button"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
 
   [part="table"] {
@@ -341,8 +342,7 @@ export const styles = css`
 
   [part="body"] {
     position: relative;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     max-block-size: var(--max-height, var(--_lr-data-grid-max-height));
     overflow: auto;
     /* Stable row keys own scroll anchoring while virtual spacers change. Native anchoring
@@ -516,8 +516,7 @@ export const styles = css`
     inset-block: 0;
     inset-inline-end: calc(var(--lr-space-xs) * -1);
     inline-size: var(--lr-space-l);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: col-resize;
     touch-action: none;
   }
@@ -708,8 +707,7 @@ export const styles = css`
   }
 
   [part="page-current"] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     text-align: center;
   }
 
@@ -764,7 +762,7 @@ export const styles = css`
     background: var(--background-color, var(--_lr-data-grid-background-color));
   }
 
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part="toolbar"] {
       align-items: stretch;
       flex-direction: column;

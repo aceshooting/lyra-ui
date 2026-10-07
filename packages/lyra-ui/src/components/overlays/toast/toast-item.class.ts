@@ -1,4 +1,4 @@
-import { maxCssTime } from '../../../internal/css-motion-time.js';
+import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -561,6 +561,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       void surface.offsetWidth;
     }
     this.setAttribute('data-visible', '');
+    this.bindMessageObserverTargets();
+    this.recomputeMessageText();
     this.interactionReady = true;
     if (surface) surface.inert = false;
     this.announceMessage(true);
@@ -728,42 +730,16 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     const surface = this.shadowRoot?.querySelector<HTMLElement>(
       '[part="toast-item"]'
     );
-    const view = this.ownerDocument.defaultView;
-    if (!surface || !view || prefersReducedMotion(this))
-      return Promise.resolve();
-
-    const computed = view.getComputedStyle(surface);
-    const transitionMs =
-      maxCssTime(computed.transitionDuration) +
-      maxCssTime(computed.transitionDelay);
-    const animationMs =
-      maxCssTime(computed.animationDuration) +
-      maxCssTime(computed.animationDelay);
-    const fallbackMs = Math.max(transitionMs, animationMs);
-    if (fallbackMs <= 0) return Promise.resolve();
-
-    return new Promise<void>((resolve) => {
-      let settled = false;
-      let timeout: number | undefined;
-      const cancelKey =
-        kind === 'show' ? 'cancelShowAnimation' : 'cancelHideAnimation';
-      const finish = (): void => {
-        if (settled) return;
-        settled = true;
-        if (timeout !== undefined) view.clearTimeout(timeout);
-        surface.removeEventListener('transitionend', onEnd);
-        surface.removeEventListener('animationend', onEnd);
-        if (this[cancelKey] === cancel) this[cancelKey] = undefined;
-        resolve();
-      };
-      const onEnd = (event: Event): void => {
-        if (event.target === surface) finish();
-      };
-      const cancel = (): void => finish();
-      surface.addEventListener('transitionend', onEnd);
-      surface.addEventListener('animationend', onEnd);
-      timeout = view.setTimeout(finish, fallbackMs + 50);
-      this[cancelKey] = cancel;
+    const watch = waitForTransitionSettle(surface ?? null, this, {
+      reducedMotion: prefersReducedMotion(this),
+      includeAnimation: true,
+    });
+    if (!watch.pending) return watch.finished;
+    const cancelKey = kind === 'show' ? 'cancelShowAnimation' : 'cancelHideAnimation';
+    const cancel = (): void => watch.cancel();
+    this[cancelKey] = cancel;
+    return watch.finished.then(() => {
+      if (this[cancelKey] === cancel) this[cancelKey] = undefined;
     });
   }
 
@@ -865,13 +841,15 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     if (!this.messageObserver) return;
     this.messageObserver.disconnect();
     this.observeMessageNode(this);
-    let ancestor = composedParentElement(this);
-    while (ancestor) {
-      this.messageObserver.observe(ancestor, {
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-      });
-      ancestor = composedParentElement(ancestor);
+    if (this.hasAttribute('data-visible')) {
+      let ancestor = composedParentElement(this);
+      while (ancestor) {
+        this.messageObserver.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
+        });
+        ancestor = composedParentElement(ancestor);
+      }
     }
     for (const slot of this.querySelectorAll<HTMLSlotElement>('slot')) {
       for (const assigned of slot.assignedNodes({ flatten: true }))
@@ -1010,6 +988,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.cancelShowAnimation = undefined;
     this.clearTimer();
     this.removeAttribute('data-visible');
+    this.bindMessageObserverTargets();
     this.setAttribute('data-hiding', '');
     void this.completeHide().then(
       () => {

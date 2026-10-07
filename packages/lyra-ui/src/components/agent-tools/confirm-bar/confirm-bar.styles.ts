@@ -1,4 +1,6 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -81,10 +83,9 @@ export const styles = css`
      a hover tint would advertise an interaction it lacks. The real targets [part='approve-button']
      and [part='deny-button'] are composed <lr-button>s carrying their own hover. */
   [part='status']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
-  @container lr-confirm-bar (max-inline-size: 20rem) {
+  @container lr-confirm-bar ${compactContainerQuery} {
     [part='footer'] {
       justify-content: stretch;
     }

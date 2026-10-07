@@ -1,4 +1,4 @@
-import { collectionSupport } from './collection-snapshot.js';
+import { collectionSupport, writeNormalizedOwnedCollection } from './collection-snapshot.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { property } from 'lit/decorators.js';
 import type { PropertyValues } from 'lit';
@@ -111,6 +111,29 @@ it('retains one owned snapshot until a distinct caller collection is assigned', 
   await el.updateComplete;
   expect(el.rows, 'rebinding the getter-returned snapshot is also a no-op').to.equal(currentSnapshot);
   expect(el.rowUpdates).to.equal(updatesAfterFirstAssignment + 1);
+});
+
+it('preserves the external rebind identity across a marked internal normalization write', async () => {
+  const el = await fixture<OwnedCollectionRebindingDemo>(html`<lr-owned-collection-rebinding-demo></lr-owned-collection-rebinding-demo>`);
+  const source = [{ label: 'stale', nested: { value: 1 } }];
+  el.rows = source;
+  await el.updateComplete;
+  writeNormalizedOwnedCollection(el, 'rows', () => {
+    el.rows = [{ label: 'normalized', nested: { value: 1 } }];
+  });
+  await el.updateComplete;
+  const normalized = el.rows;
+  const updates = el.rowUpdates;
+
+  source[0]!.label = 'mutated outside';
+  el.rows = source;
+  await el.updateComplete;
+  expect(el.rows).to.equal(normalized);
+  expect(el.rowUpdates).to.equal(updates);
+
+  el.rows = [{ label: 'fresh', nested: { value: 2 } }];
+  await el.updateComplete;
+  expect(el.rows[0]!.label).to.equal('fresh');
 });
 
 it('lets an explicit change detector resnapshot a repeated caller identity', async () => {

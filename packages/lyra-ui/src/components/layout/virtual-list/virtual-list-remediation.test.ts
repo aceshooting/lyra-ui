@@ -1,12 +1,9 @@
+import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './virtual-list.js';
 import type { LyraVirtualList } from './virtual-list.js';
-
-async function nextFrame(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-}
 
 const numberKey = (item: unknown): number => item as number;
 

@@ -18,6 +18,7 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -1296,27 +1297,17 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private targetsInteractiveContent(event: Event, includeSlideEditors = false): boolean {
     const slides = new Set(this.slideElements());
-    for (const target of event.composedPath()) {
-      if (!(target instanceof Element)) continue;
-      const slideRoot = slides.has(target as HTMLElement);
-      if (target === this || target === this.viewport || (slideRoot && !includeSlideEditors)) continue;
-      const name = target.localName;
-      if (
-        name === 'a' ||
-        name === 'button' ||
-        name === 'input' ||
-        name === 'label' ||
-        name === 'select' ||
-        name === 'textarea' ||
-        target.hasAttribute('contenteditable') ||
-        (!slideRoot && name.includes('-') && target.getRootNode() !== this.shadowRoot)
-      ) return true;
-      const role = target.getAttribute('role')?.trim().toLowerCase();
-      if (role && ['button', 'checkbox', 'combobox', 'link', 'radio', 'slider', 'spinbutton', 'switch', 'textbox'].includes(role)) {
-        return true;
-      }
-    }
-    return false;
+    const slideRoot = event.composedPath().find(
+      (target): target is HTMLElement =>
+        typeof target === 'object' && target !== null &&
+        (target as Node).nodeType === 1 && slides.has(target as HTMLElement),
+    );
+    return keyEventOwnedByInnerControl(event, {
+      container: !includeSlideEditors && slideRoot ? slideRoot : this,
+      ownsButtons: true,
+      ownsCustomElements: true,
+      ignoreCustomElements: slides,
+    });
   }
 
   private onViewportPointerMove = (event: PointerEvent): void => {

@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -31,8 +32,7 @@ export const styles = css`
   }
   button[part~='item'] {
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: var(--lr-transition-interactive);
@@ -44,8 +44,7 @@ export const styles = css`
     background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   button[part~='item']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Opacity dims only the decorative (aria-hidden) swatch; the text parts re-color through the
      quiet-text token instead, so a hidden item's label keeps AA contrast rather than fading toward

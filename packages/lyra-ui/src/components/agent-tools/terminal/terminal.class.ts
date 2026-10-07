@@ -39,6 +39,7 @@ import { styles } from './terminal.styles.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { advanceViewerSearchIndex, sameViewerSearchDetail, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
   writeClipboardText,
@@ -139,12 +140,7 @@ interface SearchMatch {
   lineNumber: number;
 }
 
-interface SearchState {
-  query: string;
-  matchCount: number;
-  matchCountExact: boolean;
-  activeIndex: number;
-}
+type SearchState = LyraSearchChangeDetail;
 
 export interface LyraTerminalEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
@@ -515,6 +511,20 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
   }
 
+  private eraseLine(mode: 0 | 1 | 2): void {
+    const line = this.buffer[this.buffer.length - 1];
+    if (!line) return;
+    if (mode === 1) {
+      const end = Math.min(this.column + 1, line.cells.length);
+      for (let index = 0; index < end; index++) line.cells[index] = { char: ' ', styles: EMPTY_CELL_STYLES };
+      return;
+    }
+    const start = mode === 2 ? 0 : Math.min(this.column, line.cells.length);
+    const removed = line.cells.length - start;
+    line.cells.length = start;
+    this.retainedCellCount -= removed;
+  }
+
   private writeInternal(raw: string, notifySearch = true): void {
     const previousSearch = this.searchState();
     // A write only edits the cursor line and appends after it; earlier lines stay as they were.
@@ -526,7 +536,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (boundedRaw !== '') {
       const segments = this.ansiParser.push(boundedRaw);
       for (const seg of segments) {
-        this.applyChunk(seg.text, seg.styles);
+        if (seg.eraseLine !== undefined) this.eraseLine(seg.eraseLine);
+        else this.applyChunk(seg.text, seg.styles);
       }
     }
     this.trimScrollback(false, false);
@@ -663,30 +674,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.emit('lr-search-change', this.searchState());
   }
 
   private searchState(): SearchState {
-    return {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    };
+    return viewerSearchDetail(this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex);
   }
 
   private emitSearchChangeIfChanged(previous: SearchState): void {
-    if (
-      previous.query !== this.searchQuery ||
-      previous.matchCount !== this.searchMatches.length ||
-      previous.matchCountExact !== this.searchMatchCountExact ||
-      previous.activeIndex !== this.searchActiveIndex
-    ) {
+    if (!sameViewerSearchDetail(previous, this.searchState())) {
       this.emitSearchChange();
     }
   }
@@ -722,7 +718,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   async searchNext(): Promise<boolean> {
     if (this.searchMatches.length === 0) return false;
     const previousSearch = this.searchState();
-    this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
     this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
     return true;
@@ -733,7 +729,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   async searchPrevious(): Promise<boolean> {
     if (this.searchMatches.length === 0) return false;
     const previousSearch = this.searchState();
-    this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
     this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
     return true;

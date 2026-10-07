@@ -1,3 +1,5 @@
+import { nativeSearchStyles } from '../../../internal/native-search.styles.js';
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -16,87 +18,15 @@ export const styles = css`
     display: flex;
     min-inline-size: 0;
   }
-  [part='search'] {
-    inline-size: 100%;
-    box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    /* Geometry knobs, each defaulting to the value the field shipped with, so an unset palette
-       renders exactly as before. The tappable-target floor stays underneath the height knob: a
-       density tier may not shrink this field below the shared WCAG minimum. */
-    min-block-size: max(
-      var(--lr-icon-button-size),
-      var(--lr-node-palette-search-min-height, var(--lr-icon-button-size))
-    );
-    padding-block: var(--lr-node-palette-search-padding-block, var(--lr-space-xs));
-    padding-inline-start: var(
-      --lr-node-palette-search-padding-inline,
-      var(--lr-space-s)
-    );
-    /* Room for the search-clear button, rendered only once the field has a value. */
-    padding-inline-end: calc(var(--lr-icon-button-size) + var(--lr-space-2xs));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-node-palette-search-radius, var(--lr-radius));
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    font-size: var(--lr-node-palette-search-font-size, inherit);
-    transition: border-color var(--lr-transition-fast);
+  [part='search-field'] {
+    --_search-height: max(var(--lr-icon-button-size), var(--lr-node-palette-search-min-height, var(--lr-input-control-height, var(--lr-input-control-min-height, var(--lr-form-control-height, var(--lr-icon-button-size))))));
+    --_search-padding-block: var(--lr-node-palette-search-padding-block, var(--lr-input-padding-block, var(--lr-form-control-padding-block, var(--lr-space-xs))));
+    --_search-padding-inline: var(--lr-node-palette-search-padding-inline, var(--lr-input-padding-inline, var(--lr-form-control-padding-inline, var(--lr-space-s))));
+    --_search-radius: var(--lr-node-palette-search-radius, var(--lr-input-radius, var(--lr-form-control-radius, var(--lr-radius))));
+    --_search-font-size: var(--lr-node-palette-search-font-size, var(--lr-input-font-size, var(--lr-form-control-font-size, inherit)));
   }
-  [part='search']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  /* no-pressed-state: a press on a text field lands the caret rather than activating a control, so
-     a pressed tint would last only the mousedown before the :focus-visible ring above -- the state
-     that actually persists and communicates -- replaced it. */
-  [part='search']:hover {
-    border-color: var(--lr-color-border-strong);
-  }
-  [part='search']::-webkit-search-cancel-button,
-  [part='search']::-webkit-search-decoration {
-    /* Replaced by the themed search-clear button (unthemed glyph otherwise), not merely hidden. */
-    appearance: none;
-    -webkit-appearance: none;
-    display: none;
-  }
-  [part='search']::placeholder {
-    color: var(--lr-color-text-quiet);
-  }
-  [part='search-clear'] {
-    position: absolute;
-    inset-inline-end: var(--lr-space-2xs);
-    inset-block-start: 50%;
-    translate: 0 -50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0;
-    border: none;
-    border-radius: var(--lr-radius);
-    background: none;
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-m);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
-  }
-  [part='search-clear']:hover {
-    color: var(--lr-color-text);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
-  }
-  [part='search-clear']:active {
-    color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part='search-clear']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
+  [part='search-field'] { --_search-end-padding: calc(var(--lr-icon-button-size) + var(--lr-space-2xs)); }
+  ${nativeSearchStyles}
   [part='list'] {
     display: flex;
     flex-direction: column;
@@ -117,8 +47,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-2px);
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: grab;

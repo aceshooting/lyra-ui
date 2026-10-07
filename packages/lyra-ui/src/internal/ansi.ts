@@ -1,9 +1,9 @@
 /**
  * Dependency-free ANSI/SGR (`CSI … m`) parser for rendering streamed console/terminal output as
  * styled text segments — shared by any component that needs to turn raw ANSI-colored text into
- * styled segments, rather than re-implementing this per consumer. Handles only SGR color/style
- * codes; every other escape sequence -- other CSI finals, OSC/DCS/SOS/PM/APC strings, and two- or
- * three-byte escapes such as `ESC ( B` or `ESC 7` -- is stripped and never interpreted.
+ * styled segments, rather than re-implementing this per consumer. Handles SGR color/style codes
+ * and erase-in-line (`CSI K`); other CSI finals, OSC/DCS/SOS/PM/APC strings, and two- or three-byte
+ * escapes such as `ESC ( B` or `ESC 7` are stripped and never interpreted.
  * Cursor/line-buffer control characters (`\r`/`\b`/`\t`/`\n`) are deliberately out of scope here —
  * they are a terminal-emulation concern owned by the consuming component, not this parser.
  */
@@ -25,10 +25,12 @@ export interface AnsiStyles {
 export interface AnsiSegment {
   text: string;
   styles: AnsiStyles;
+  /** A terminal line erase operation at this position in the stream (no visible text). */
+  eraseLine?: 0 | 1 | 2;
 }
 
 export interface AnsiParser {
-  /** Feeds `chunk` through the parser, returning the styled text segments it produced. A partial
+  /** Feeds `chunk` through the parser, returning ordered text and erase-in-line segments. A partial
    *  escape sequence at the end of `chunk` is buffered internally and completed by a later `push()`
    *  call rather than emitted as literal text. An unterminated sequence longer than the bounded
    *  carry ceiling is dropped so later output resumes from a clean parser boundary. */
@@ -305,11 +307,19 @@ export function createAnsiParser(): AnsiParser {
           continue;
         }
         overlong ||= j - i + 1 > MAX_ANSI_SEQUENCE_LENGTH;
-        if (!overlong && final === 0x6d) {
+        if (!overlong && (final === 0x6d || final === 0x4b)) {
           const params = parseSgrParameters(input, i + 2, j);
-          if (params !== null) applySgr(params);
+          if (params !== null) {
+            if (final === 0x6d) applySgr(params);
+            else {
+              const mode = params[0];
+              if (params.length === 1 && (mode === 0 || mode === 1 || mode === 2)) {
+                segments.push({ text: '', styles, eraseLine: mode });
+              }
+            }
+          }
         }
-        // Any other CSI final byte (cursor move, erase, scroll, ...) is stripped without being
+        // Other CSI final bytes (cursor move, scroll, ...) are stripped without being
         // interpreted -- the consuming component owns cursor/line-buffer control on its own.
         i = j + 1;
         textStart = i;

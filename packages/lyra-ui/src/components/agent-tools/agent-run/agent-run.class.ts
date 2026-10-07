@@ -14,6 +14,7 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { agentStatusKind, agentStatusMessage } from '../agent-status-presentation.js';
 import { agentStatusText } from '../../../internal/agent-status-text.js';
@@ -257,7 +258,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     'metrics',
   ]);
 
-  static override styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, srOnly, styles, agentActionButtonStyles];
 
   /** The run to display. Controlled and never mutated by this component -- pass a new object to
    *  update it. `null` renders the shared `<lr-empty>` `noData` state. A runtime summary record
@@ -514,12 +515,12 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                 <div part="actions">
                   <slot name="actions"></slot>
                   ${this.canCancel
-                    ? html`<button part="cancel-button" type="button" @click=${this.onCancelClick}>
+                    ? html`<button part="cancel-button" data-agent-action="neutral" type="button" @click=${this.onCancelClick}>
                         ${this.localize('cancel')}
                       </button>`
                     : nothing}
                   ${this.canRetry
-                    ? html`<button part="retry-button" type="button" @click=${this.onRetryClick}>
+                    ? html`<button part="retry-button" data-agent-action="neutral" type="button" @click=${this.onRetryClick}>
                         ${this.localize('retry')}
                       </button>`
                     : nothing}

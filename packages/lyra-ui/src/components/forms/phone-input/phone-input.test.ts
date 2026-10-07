@@ -1,4 +1,6 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import {
   type LyraPhoneInput,
   type LyraPhoneNumberAdapter,
@@ -1760,9 +1762,7 @@ it('tints the country trigger while the invisible select over it is hovered, and
 
 describe('lr-phone-input implicit form submission', () => {
   const enterOn = (el: LyraPhoneInput, init: KeyboardEventInit = {}) =>
-    (el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement).dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true, ...init }),
-    );
+    dispatchEnterKeyAndSettle(el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement, init);
 
   it('submits the ancestor form when Enter is pressed in the telephone field', async () => {
     const form = (await fixture(html`
@@ -1772,7 +1772,7 @@ describe('lr-phone-input implicit form submission', () => {
     await el.updateComplete;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -1798,7 +1798,7 @@ describe('lr-phone-input implicit form submission', () => {
     });
 
     expect(el.form === form).to.be.true;
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -1818,7 +1818,7 @@ describe('lr-phone-input implicit form submission', () => {
       submits += 1;
       submitterName = ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? '';
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submitterName, 'the lr-button was the submitter').to.equal('action');
   });
@@ -1832,7 +1832,7 @@ describe('lr-phone-input implicit form submission', () => {
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
     expect(el.checkValidity(), 'an unparseable number is invalid').to.be.false;
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(0);
   });
 
@@ -1844,28 +1844,28 @@ describe('lr-phone-input implicit form submission', () => {
     await el.updateComplete;
     let submits = 0;
     form.addEventListener('submit', (e) => { e.preventDefault(); submits += 1; });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener('keydown', veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener('keydown', veto, true);
     expect(submits).to.equal(0);
 
     el.disabled = true;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, 'a disabled control never submits').to.equal(0);
 
     el.disabled = false;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, 'a bare Enter still submits').to.equal(1);
   });
 });
@@ -1875,27 +1875,8 @@ it('emits a cancelable lr-invalid alias and forwards its cancellation to the nat
     <lr-phone-input label="Phone number" required default-country="LU" .adapter=${adapter}></lr-phone-input>
   `)) as LyraPhoneInput;
   await el.updateComplete;
-  const aliases: CustomEvent[] = [];
-  el.addEventListener('lr-invalid', (event) => aliases.push(event as CustomEvent));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = aliases[0];
-  if (!alias) throw new Error('The invalid alias was not emitted.');
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
-
-  // Cancelling the alias must cancel the native `invalid` it aliases, or an app rendering its own
-  // error banner cannot suppress the browser's validation bubble alongside it. The host's alias
-  // listener is installed in the constructor, so it runs before the recorder registered here.
-  el.addEventListener('lr-invalid', (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener('invalid', (event) => natives.push(event));
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { native: 'ignore' });
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled' });
 });
 
 it('bars constraint validation while disabled or fieldset-disabled', async () => {

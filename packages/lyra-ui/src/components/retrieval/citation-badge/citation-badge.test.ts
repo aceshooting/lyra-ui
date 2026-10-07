@@ -20,6 +20,19 @@ it('defaults to index=1, status="default", empty source-id/href/label', async ()
   expect(el.label).to.equal('');
 });
 
+it('keeps a normal button tab stop when rovingTabIndex is unset and forwards opt-in values', async () => {
+  const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!;
+  expect(el.rovingTabIndex).to.equal(undefined);
+  expect(button.tabIndex).to.equal(0);
+  el.rovingTabIndex = -1;
+  await el.updateComplete;
+  expect(button.tabIndex).to.equal(-1);
+  el.rovingTabIndex = undefined;
+  await el.updateComplete;
+  expect(button.tabIndex).to.equal(0);
+});
+
 it('keeps the compact citation target at the live hit-area token override', async () => {
   const el = (await fixture(
     html`<lr-citation-badge style="--lr-icon-button-size:52px"></lr-citation-badge>`,

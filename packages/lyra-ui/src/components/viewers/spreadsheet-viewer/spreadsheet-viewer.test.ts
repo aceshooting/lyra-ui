@@ -1,3 +1,4 @@
+import { assertHighlightedCellActivation, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
 import {
   aTimeout,
   expect,
@@ -1332,24 +1333,7 @@ describe('lr-spreadsheet-viewer', () => {
           },
         ];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const highlighted = list.shadowRoot!.querySelector(
-          '[part~="cell-highlight"]'
-        ) as HTMLElement;
-        expect(highlighted != null).to.equal(true);
-        expect(highlighted.hasAttribute('tabindex')).to.be.false;
-        expect(highlighted.getAttribute('role')).to.equal('cell');
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLButtonElement;
-        expect(action.tagName).to.equal('BUTTON');
-        expect(action.getAttribute('aria-label')).to.equal(
-          'Highlight: Ada — First result'
-        );
-        const listener = oneEvent(el, 'lr-highlight-activate');
-        action.click();
-        const event = (await listener) as CustomEvent<{ highlightId: string }>;
-        expect(event.detail).to.deep.equal({ highlightId: 'h1' });
+        await assertHighlightedCellActivation(el, { id: 'h1', name: 'Highlight: Ada — First result' });
       } finally {
         restore();
       }
@@ -1376,10 +1360,7 @@ describe('lr-spreadsheet-viewer', () => {
           },
         ];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const action = list.shadowRoot!.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLButtonElement;
+        const { action } = highlightedCellAction(el);
         expect(action.getAttribute('aria-label')).to.equal(
           'First result ⇐ Ada'
         );
@@ -1406,15 +1387,9 @@ describe('lr-spreadsheet-viewer', () => {
           },
         ];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const highlighted = list.shadowRoot!.querySelector(
-          '[part~="cell-highlight"]'
-        ) as HTMLElement;
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLButtonElement;
+        const { action, root } = highlightedCellAction(el);
         action.focus();
-        expect(list.shadowRoot!.activeElement === action).to.be.true;
+        expect(root.activeElement === action).to.be.true;
       } finally {
         restore();
       }
@@ -1438,10 +1413,7 @@ describe('lr-spreadsheet-viewer', () => {
           },
         ];
         await el.updateComplete;
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        const highlighted = list.shadowRoot!.querySelector(
-          '[part~="cell-highlight-action"]'
-        ) as HTMLElement;
+        const { action: highlighted } = highlightedCellAction(el);
         let activated = false;
         el.addEventListener('lr-highlight-activate', () => {
           activated = true;

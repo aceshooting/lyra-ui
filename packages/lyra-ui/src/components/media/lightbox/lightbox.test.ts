@@ -2,6 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render, type PropertyValues } from 'lit';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './lightbox.js';
+import '../../overlays/dialog/dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
 import type { LyraLightbox, LyraLightboxImage } from './lightbox.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -1253,4 +1254,20 @@ it('returns focus to an opener the host re-shows only after lr-close', async () 
       await el.close('api');
     },
   });
+});
+
+it('joins the top layer above an already open dialog and leaves it on close', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-dialog open label="Settings">Settings body</lr-dialog>
+      <lr-lightbox .images=${[image]}></lr-lightbox>
+    </div>
+  `);
+  const dialog = wrapper.querySelector('lr-dialog')!;
+  await waitUntil(() => dialog.matches(':popover-open'));
+  const lightbox = wrapper.querySelector('lr-lightbox') as LyraLightbox;
+  await lightbox.show();
+  expect(lightbox.matches(':popover-open')).to.equal(true);
+  await lightbox.close('api');
+  expect(lightbox.matches(':popover-open')).to.equal(false);
 });

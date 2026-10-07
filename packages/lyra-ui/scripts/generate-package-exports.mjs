@@ -16,6 +16,7 @@ const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/agent-tools/agent-status-presentation.ts',
   'src/components/agent-tools/approval-state.ts',
+  'src/components/agent-tools/eval-result/eval-result-register.ts',
   'src/components/agent-tools/stack-trace/stack-trace-parse.ts',
   'src/components/agent-tools/tool-result-view/registry.ts',
   'src/components/agent-tools/trace-tree/span.ts',
@@ -23,9 +24,11 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/charts/chart/chart-core-loader.ts',
   'src/components/charts/chart/chart-feature-loader.ts',
   'src/components/charts/chart/chart-preload.ts',
+  'src/components/conversation/agent-workspace/agent-workspace-register.ts',
   'src/components/conversation/code-block/code-loader.ts',
   'src/components/conversation/markdown/markdown-loader.ts',
   'src/components/conversation/message-actions/toolbar-actions.ts',
+  'src/components/conversation/prompt-input/prompt-input-register.ts',
   'src/components/conversation/widget-renderer/default-registry.ts',
   'src/components/conversation/widget-renderer/resolve.ts',
   'src/components/conversation/widget-renderer/registry.ts',
@@ -35,12 +38,17 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   // exports map blocks everything it does not list, so following the documented example was a hard
   // build error. (The types are also re-exported by `flow-canvas.class.js`, so this adds no new
   // surface -- only the route the docs already name.) Found by `check:doc-specifiers`.
+  'src/components/data/condition-builder/condition-builder-register.ts',
   'src/components/data/flow-canvas/flow-types.ts',
   // The lean `<lr-icon-button>` registration entry. `./icon-button.js` eagerly imports `<lr-icon>`
   // so an `icon` attribute paints synchronously; a slot-only consumer then ships that icon code in
   // the entry chunk plus an unreachable dompurify chunk. This is their documented opt-out, so it
   // needs a real route -- an exports map blocks everything it does not list.
+  'src/components/forms/country-picker/country-picker-register.ts',
+  'src/components/forms/currency-picker/currency-picker-register.ts',
   'src/components/forms/icon-button/icon-button-register.ts',
+  'src/components/forms/time-zone-picker/time-zone-picker-register.ts',
+  'src/components/forms/unit-picker/unit-picker-register.ts',
   // The lean `<lr-filter-bar>` registration entry. `./filter-bar.js` eagerly imports every
   // composed control the bar could possibly render (select/combobox/checkbox-menu's
   // dropdown+dropdown-item/date-input/input/chip/chip-group/button/spinner) because `filters` is a
@@ -49,6 +57,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   // ~+69.5 kB gzip). This is their documented opt-out -- import it plus each composed control's own
   // registration entry for the filter `type`s actually declared (see this file's own header
   // comment) -- so it needs a real route, exactly like `icon-button-register.ts` above.
+  'src/components/layout/dashboard-grid/dashboard-grid-register.ts',
   'src/components/layout/filter-bar/filter-bar-register.ts',
   'src/components/media/attachment-chip/file-size.ts',
   'src/components/media/flag/flag-peer.ts',
@@ -62,15 +71,21 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/utility/export-button/csv.ts',
   'src/components/utility/icon/icon-library.ts',
   'src/components/viewers/archive-viewer/archive-viewer-register.ts',
+  'src/components/viewers/calendar-viewer/calendar-viewer-register.ts',
+  'src/components/viewers/contact-viewer/contact-viewer-register.ts',
   'src/components/viewers/csv-viewer/csv-viewer-register.ts',
+  'src/components/viewers/dataset-viewer/dataset-viewer-register.ts',
   'src/components/viewers/document-viewer/document-viewer-kinds.ts',
   'src/components/viewers/document-viewer/registry.ts',
   'src/components/viewers/docx-viewer/docx-viewer-register.ts',
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
+  'src/components/viewers/email-viewer/email-viewer-register.ts',
+  'src/components/viewers/html-viewer/html-viewer-register.ts',
   'src/components/viewers/notebook-viewer/notebook-viewer-register.ts',
   'src/components/viewers/pdf-viewer/pdf-viewer-register.ts',
   'src/components/viewers/pptx-viewer/pptx-viewer-register.ts',
   'src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.ts',
+  'src/components/viewers/svg-viewer/svg-viewer-register.ts',
   'src/components/viewers/xml-viewer/xml-viewer-register.ts',
   // `PptxViewerAdapter`/`PptxViewerAdapterEvent`/`PptxTextSearchResult`/`PptxSearchHighlightHandle`/
   // `PptxThumbnailHandle` are imported (type-only) by pptx-viewer.class.ts but never re-exported --
@@ -84,6 +99,9 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
 // derives from the file tree (see below). Each group states why it stays out of the curated list
 // above instead of silently vanishing from consideration.
 export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
+  // The box-plot class re-exports the loader's public compatibility function; callers use the
+  // existing class route, so a second granular helper route would be redundant.
+  'src/components/charts/chart/box-plot-loader.ts',
   // Already reachable without a dedicated route: each viewer's registration module (which already
   // has its own package export via the component inventory, and is re-exported again by the
   // `./components/viewers` family barrel) does `export * from './<name>-loader.js'` wholesale, so
@@ -134,6 +152,7 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/announcer.ts',
   'src/utilities/catalog.ts',
   'src/utilities/css-length.ts',
+  'src/utilities/deprecated-aliases.ts',
   'src/utilities/defined.ts',
   'src/utilities/form-associated.ts',
   'src/utilities/format.ts',
@@ -149,6 +168,12 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/scoped-registry.ts',
   'src/utilities/scoped-registry-loader.ts',
   'src/utilities/theme.ts',
+]);
+
+// Shared document admission is used by both the viewer and the editor companion. Its consumer
+// route is intentionally exact; the remaining internal modules have no public deep-import path.
+export const CURATED_ADMISSION_MODULES = Object.freeze([
+  { source: 'src/internal/docx-zip-admission.ts', route: './utils/docx-zip-admission.js' },
 ]);
 
 function invariant(condition, message) {
@@ -188,7 +213,7 @@ function addRoute(routes, exportPath, target, owner) {
 // QUALIFIED suffix (`-peer-bulk`) is not the bare suffix (`-peer`). A qualified variant is a helper
 // module by every criterion that makes the bare form one, so it must be classified too.
 function matchesPublicHelperNamingConvention(basename) {
-  return basename === 'registry.ts' || /-(?:loader|peer|register)(?:-[a-z0-9]+)*\.ts$/.test(basename);
+  return basename === 'registry.ts' || basename === 'document-viewer-kinds.ts' || /-(?:loader|peer|register)(?:-[a-z0-9]+)*\.ts$/.test(basename);
 }
 
 function walkFiles(directory) {
@@ -435,6 +460,7 @@ export function closeWildcardPackageExports(
   utilityExports = {},
   localeExports = {},
   retiredExportIdentities = [],
+  admissionExports = {},
 ) {
   invariant(currentExports && typeof currentExports === 'object' && !Array.isArray(currentExports), 'package exports must be an object');
   invariant(Array.isArray(retiredExportIdentities), 'retired export identities must be an array');
@@ -447,7 +473,11 @@ export function closeWildcardPackageExports(
   }
   const generatedEntries = Object.entries(componentExports);
   const generatedUtilityEntries = Object.entries(utilityExports);
-  const generatedPaths = new Set([...generatedEntries, ...generatedUtilityEntries].map(([key]) => key));
+  const generatedPaths = new Set([
+    ...generatedEntries.map(([key]) => key),
+    ...generatedUtilityEntries.map(([key]) => key),
+    ...Object.keys(admissionExports),
+  ]);
   const result = {};
   let insertedComponents = false;
   let insertedUtilities = false;
@@ -492,6 +522,7 @@ export function closeWildcardPackageExports(
   }
   insertComponents();
   insertUtilities();
+  Object.assign(result, admissionExports);
   Object.assign(result, localeExports);
   return result;
 }
@@ -506,6 +537,11 @@ function expectedPackage(packageDir) {
     packageDir, exportDeprecations: metadata.exportDeprecations,
   });
   const utilityExports = deriveExplicitUtilityExports({ packageDir });
+  const admissionExports = Object.fromEntries(CURATED_ADMISSION_MODULES.map(({ source, route }) => {
+    assertSourceExists(packageDir, source);
+    const compiled = `./${source.replace(/^src\//, 'dist/').replace(/\.ts$/, '.js')}`;
+    return [route, { types: compiled.replace(/\.js$/, '.d.ts'), default: compiled }];
+  }));
   const historyIndexPath = join(packageDir, 'scripts', 'fixtures', 'compatibility-history', 'index.json');
   // Small synthetic package fixtures have no publication history and explicitly get an empty
   // retirement set. A real history directory with a missing index is not treated as empty.
@@ -523,6 +559,7 @@ function expectedPackage(packageDir) {
       utilityExports,
       deriveLocaleDeclarationExports(packageDir),
       retiredExportIdentities,
+      admissionExports,
     ),
   };
 }

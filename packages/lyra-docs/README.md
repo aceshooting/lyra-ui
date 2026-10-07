@@ -1,7 +1,7 @@
 # @aceshooting/lyra-docs
 
 `@aceshooting/lyra-docs` is a public, experimental companion package for the
-native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.26.0`
+native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.27.0`
 engine as an optional peer. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
@@ -15,7 +15,7 @@ Install the package with its `@aceshooting/lyra-ui` peer, and the optional docum
 when using the editor:
 
 ```sh
-pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.26.0
+pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.27.0
 ```
 
 ## Imports
@@ -45,7 +45,7 @@ Lyra controls inherit the public theme. The engine is dynamically loaded on the
 first open, so importing the session API or registering the custom element does
 not initialize it. Package admission and the controls that only appear in an open
 document (color, chart, checkbox and text-area controls) also load with the first open.
-`@docx-editor.dev/core` is an exact `2.26.0` peer dependency and development
+`@docx-editor.dev/core` is an exact `2.27.0` peer dependency and development
 dependency; consumers may omit it until they use the editor.
 
 ## Custom element
@@ -478,13 +478,16 @@ any of these bounds are refused:
 | Expanded size per entry | 16 MiB |
 | Expanded archive total | 64 MiB |
 | XML part | 16 MiB |
-| XML nodes across the archive | 1,000,000 |
+| XML nodes across the archive | 250,000 |
 | XML nesting depth | 128 |
 | Individual image | 4 MiB |
 | Image width or height | 8,192 pixels |
 | Pixels in one image | 16 million |
 | Unique images | 256 |
 | Pixels across unique images | 64 million |
+
+The XML-node ceiling is lower than earlier editor releases; documents above 250,000 nodes now
+return `resource-limit` before opening. The DOCX viewer uses the same package ceilings.
 
 XML must be valid UTF-8. Only stored or deflated, unencrypted, non-ZIP64 DOCX
 archives are accepted; an Info-ZIP Unicode path field must spell the entry name.

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -177,7 +178,7 @@ export const styles = css`
        @container (max-inline-size: var(--token)) rule parses and then silently never matches, which
        is precisely the class of inert CSS that is invisible to every gate. So the value stays where
        it can be read, in rem, matching every other container query in this library. */
-  @container (max-inline-size: 30rem) {
+  @container ${mediumContainerQuery} {
     [data-label-auto]::part(form-control-label),
     [data-label-auto] [part='filter-control-label'] {
       position: absolute;

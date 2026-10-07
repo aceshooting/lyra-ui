@@ -1,3 +1,4 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
@@ -5,7 +6,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteRange, isSliderKey } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './image-comparer.styles.js';
@@ -18,6 +19,8 @@ import { LYRA_DEFAULT_imageComparerLabel } from '../../../internal/default-strin
 export type LyraImageComparerOrientation = LyraOrientation;
 
 export interface LyraImageComparerEventMap {
+  'lr-input': CustomEvent<{ value: number }>;
+  'lr-change': CustomEvent<{ value: number }>;
   input: Event;
   change: Event;
   blur: FocusEvent;
@@ -45,6 +48,8 @@ function normalizeOrientation(value: unknown): LyraImageComparerOrientation {
  * @slot handle - Custom decorative content inside the draggable handle. The flattened slot
  *   subtree is inert and hidden from assistive technology; the native range remains the only
  *   interaction target.
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event {Event} input - Bubbling, composed native input event emitted after the divider's
  *   live position has been committed.
  * @event {Event} change - Bubbling, composed native change event emitted when the range gesture
@@ -123,12 +128,16 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private onInput = (event: Event): void => {
     const input = event.currentTarget as HTMLInputElement;
     this.position = Number(input.value);
+    const value = this.position;
     relayNativeEvent(this, event);
+    this.emit('lr-input', { value });
   };
 
   private onChange = (event: Event): void => {
     this.position = Number((event.currentTarget as HTMLInputElement).value);
+    const value = this.position;
     relayNativeEvent(this, event);
+    this.emit('lr-change', { value });
   };
 
   private onPointerDown = (event: PointerEvent): void => {
@@ -181,14 +190,14 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     if (normalized === this.normalizedPosition) return;
     this.position = normalized;
     this.keyboardDirty = true;
-    dispatchNativeEvent(this, 'input');
+    emitValueEvents(this, 'input', { value: this.position }, detail => this.emit('lr-input', detail));
   };
 
   private onKeyUp = (event: KeyboardEvent): void => {
     if (!isSliderKey(event.key) || !this.keyboardDirty) return;
     event.preventDefault();
     this.keyboardDirty = false;
-    dispatchNativeEvent(this, 'change');
+    emitValueEvents(this, 'change', { value: this.position }, detail => this.emit('lr-change', detail));
   };
 
   private onFocus = (event: FocusEvent): void => {
@@ -199,7 +208,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     this.onPointerEnd();
     if (this.keyboardDirty) {
       this.keyboardDirty = false;
-      dispatchNativeEvent(this, 'change');
+      emitValueEvents(this, 'change', { value: this.position }, detail => this.emit('lr-change', detail));
     }
     relayNativeEvent(this, event);
   };

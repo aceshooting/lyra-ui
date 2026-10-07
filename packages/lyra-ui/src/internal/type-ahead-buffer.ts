@@ -12,7 +12,7 @@ export class TypeAheadBuffer {
     this.#reset = new DebounceController<Window>(
       500,
       (armedIn) => {
-        if (host.isConnected && host.ownerDocument.defaultView === armedIn) this.text = '';
+        if (host.ownerDocument.defaultView === armedIn) this.text = '';
       },
       () => host.ownerDocument.defaultView,
     );
@@ -23,8 +23,33 @@ export class TypeAheadBuffer {
     this.#reset.cancel();
     this.text += key.toLocaleLowerCase(resolveIntlLocale(locale));
     const view = this.host.ownerDocument.defaultView;
-    if (this.host.isConnected && view) this.#reset.push(view);
+    if (view) this.#reset.push(view);
     return this.text;
+  }
+
+  /** Printable, unmodified keys only; composition must finish before a list moves. */
+  accepts(event: KeyboardEvent): boolean {
+    return !event.defaultPrevented && !event.isComposing && event.keyCode !== 229 &&
+      !event.altKey && !event.ctrlKey && !event.metaKey && event.key.length === 1;
+  }
+
+  /** Finds the next prefix match after `current`, wrapping across available entries. */
+  match<T>(
+    items: readonly T[],
+    current: number,
+    label: (item: T) => string,
+    locale: string,
+    isAvailable: (item: T) => boolean = () => true,
+  ): number | null {
+    if (!this.text || items.length === 0) return null;
+    const resolvedLocale = resolveIntlLocale(locale);
+    for (let step = 1; step <= items.length; step++) {
+      const index = ((current + step) % items.length + items.length) % items.length;
+      const item = items[index];
+      if (item !== undefined && isAvailable(item) &&
+          label(item).toLocaleLowerCase(resolvedLocale).startsWith(this.text)) return index;
+    }
+    return null;
   }
 
   clear(): void {

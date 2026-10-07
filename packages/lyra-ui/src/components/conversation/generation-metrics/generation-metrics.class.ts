@@ -3,8 +3,10 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { styles } from './generation-metrics.styles.js';
-import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { OwnedInterval } from '../../../internal/owned-timer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
@@ -92,11 +94,24 @@ export interface LyraGenerationMetricsEventMap {
 }
 
 export type GenerationMetricsStatus = 'idle' | 'running' | 'complete';
+export type GenerationMetricsStatusInput = GenerationMetricsStatus | 'success' | 'done' | 'completed';
 
-const GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
+const BASE_GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
   ['idle', 'running', 'complete'],
   'idle',
 );
+const normalizeGenerationMetricsStatus = (value: unknown): GenerationMetricsStatus =>
+  normalizeAgentTerminalStatus(value) === 'success' ? 'complete' : BASE_GENERATION_METRICS_STATUS.normalize(value);
+const GENERATION_METRICS_STATUS = {
+  fromAttribute: normalizeGenerationMetricsStatus,
+  toAttribute: normalizeGenerationMetricsStatus,
+  normalize: normalizeGenerationMetricsStatus,
+  normalizeReflected(host: Element, attribute: string, value: unknown): GenerationMetricsStatus {
+    const normalized = normalizeGenerationMetricsStatus(value);
+    if (host.hasAttribute(attribute) && host.getAttribute(attribute) !== normalized) host.setAttribute(attribute, normalized);
+    return normalized;
+  },
+};
 /**
  * `<lr-generation-metrics>` — a compact, ticking status readout shown
  * alongside an in-progress AI response: elapsed time, token count, and
@@ -181,13 +196,14 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   private _status: GenerationMetricsStatus = 'idle';
 
   /** Generation lifecycle. `idle` is never-started/reset, `running` ticks and permits Stop, and
-   *  `complete` freezes the final metrics. Invalid attribute or JavaScript writes fail closed to
+   *  `complete` freezes the final metrics. `success`, `done` and `completed` normalize to
+   *  `complete`; invalid attribute or JavaScript writes fail closed to
    *  `idle`. */
   @property({ reflect: true, converter: GENERATION_METRICS_STATUS })
   get status(): GenerationMetricsStatus {
     return this._status;
   }
-  set status(next: GenerationMetricsStatus) {
+  set status(next: GenerationMetricsStatusInput) {
     const normalized = GENERATION_METRICS_STATUS.normalize(next);
     const old = this._status;
     if (old === normalized) return;
@@ -219,10 +235,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   @state() private elapsedMs = 0;
 
   private stopFocused = false;
-  private tickTimer?: number;
-  private tickTimerOwner?: Window;
-  private tickTimerDocument?: Document;
-  private tickerGeneration = 0;
+  private readonly tickTimer = new OwnedInterval(this);
 
   // Only ever set/read while `startedAt` is unset -- see the class doc.
   private fallbackStartMs?: number;
@@ -320,42 +333,19 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   private startTicker(): void {
     this.stopTicker();
     if (!this.isConnected || this.status !== 'running') return;
-    const ownerDocument = this.ownerDocument;
-    const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow) return;
-    const generation = this.tickerGeneration;
     // Setting `elapsedMs` here (unlike inside `updated()`, see that method's
     // doc) is fine: an interval callback is a wholly separate future task,
     // not a continuation of an in-progress Lit update, so this starts a
     // normal, self-contained update cycle rather than a same-tick "second
     // update" scheduled mid-render.
-    const handle = ownerWindow.setInterval(() => {
-      if (
-        this.tickTimer !== handle ||
-        this.tickTimerOwner !== ownerWindow ||
-        this.tickTimerDocument !== ownerDocument ||
-        this.tickerGeneration !== generation ||
-        !this.isConnected ||
-        this.status !== 'running' ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
+    this.tickTimer.schedule(1000, () => {
+      if (this.status !== 'running') return;
       this.elapsedMs = this.computeElapsedMs();
-    }, 1000);
-    this.tickTimer = handle;
-    this.tickTimerOwner = ownerWindow;
-    this.tickTimerDocument = ownerDocument;
+    });
   }
 
   private stopTicker(): void {
-    this.tickerGeneration += 1;
-    if (this.tickTimer !== undefined) {
-      this.tickTimerOwner?.clearInterval(this.tickTimer);
-    }
-    this.tickTimer = undefined;
-    this.tickTimerOwner = undefined;
-    this.tickTimerDocument = undefined;
+    this.tickTimer.cancel();
   }
 
   // `startedAt` is host-supplied and, unlike `tokenCount`/`tokensPerSecond`
@@ -414,17 +404,15 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     const locale = this.effectiveLocale;
     const elapsed = formatElapsed(this.elapsedMs, locale);
     const tokenCount = hasTokens ? formatTokenCount(validTokenCount!, locale) : undefined;
-    const tokenMessageKey =
-      tokenCount && getPluralRules(locale).select(tokenCount.rounded) === 'one'
-        ? 'generationStatusTokenCount'
-        : 'generationStatusTokensCount';
-
     return html`
       <div part="base" tabindex="-1">
         <span part="elapsed">${this.localize(elapsed.key, undefined, elapsed.values)}</span>
         ${hasTokens
           ? html`<span part="tokens"
-              >${this.localize(tokenMessageKey, undefined, { count: tokenCount!.formatted })}</span
+              >${this.localize('generationStatusTokens', undefined, {
+                count: tokenCount!.formatted,
+                pluralCount: tokenCount!.rounded,
+              })}</span
             >`
           : nothing}
         ${hasThroughput

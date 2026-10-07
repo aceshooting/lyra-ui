@@ -1,4 +1,6 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { BUILDER_CHILD_EVENTS, containShadowChildEvent } from '../../../internal/child-event-containment.js';
+import { boundedRecordString, normalizeLabeledOptions } from '../../../internal/record-normalize.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
@@ -134,8 +136,6 @@ export interface LyraConditionBuilderEventMap {
   'lr-remove-condition': CustomEvent<{ readonly conditionId: string }>;
 }
 
-const CHILD_EVENTS = ['input', 'change', 'lr-input', 'lr-change', 'lr-activate', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide', 'lr-clear', 'lr-filter', 'lr-invalid'];
-const stopEvent = (event: Event): void => event.stopPropagation();
 
 const MAX_FIELDS = 200;
 const MAX_CONDITIONS = 200;
@@ -194,7 +194,7 @@ function ownValue(record: object, key: string): unknown {
 }
 
 function boundedString(value: unknown): string {
-  return typeof value === 'string' ? value.slice(0, MAX_TEXT) : '';
+  return boundedRecordString(value, MAX_TEXT);
 }
 
 function optionalFiniteNumber(value: unknown, positive = false): number | undefined {
@@ -205,17 +205,7 @@ function optionalFiniteNumber(value: unknown, positive = false): number | undefi
 
 function normalizeOptions(value: unknown): readonly ConditionBuilderFieldOption[] {
   if (!Array.isArray(value)) return EMPTY_OPTIONS;
-  const seen = new Set<string>();
-  const result: ConditionBuilderFieldOption[] = [];
-  for (const candidate of value.slice(0, MAX_OPTIONS)) {
-    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const optionValue = boundedString(ownValue(candidate, 'value'));
-    if (optionValue.trim().length === 0 || seen.has(optionValue)) continue;
-    seen.add(optionValue);
-    const label = boundedString(ownValue(candidate, 'label'));
-    result.push(Object.freeze({ value: optionValue, ...(label ? { label } : {}) }));
-  }
-  return Object.freeze(result);
+  return normalizeLabeledOptions(value, MAX_OPTIONS, MAX_TEXT);
 }
 
 function normalizeOperators(value: unknown): readonly ConditionBuilderOperator[] | undefined {
@@ -680,7 +670,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
 
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
-    for (const type of CHILD_EVENTS) root.addEventListener(type, stopEvent);
+    for (const type of BUILDER_CHILD_EVENTS) root.addEventListener(type, containShadowChildEvent);
     return root;
   }
 

@@ -5,7 +5,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { type LyraFrame, type LyraSize } from '../../../internal/variants.js';
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './entity-card.styles.js';

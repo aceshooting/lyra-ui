@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -34,8 +35,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-block-start: var(--lr-space-xs);
     padding: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -62,8 +62,7 @@ export const styles = css`
   }
   [part='pause-button']:focus-visible,
   [part='next-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   ::slotted(*) {
     /* Inline candidates need a transformable box for directional entrance effects; inline-block

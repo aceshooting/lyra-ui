@@ -753,3 +753,21 @@ it('keeps a pressed toggle on its own fill under the pointer when --lr-toggle-ho
     await resetMouse();
   }
 });
+
+it('publishes live pressed state for silent writes and leaves a vetoed activation unchanged', async () => {
+  const el = await fixture<LyraToggle>(html`<lr-toggle>Pin</lr-toggle>`);
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+  expect(el.matches(':state(pressed)')).to.equal(false);
+  el.pressed = true;
+  await el.updateComplete;
+  expect(el.matches(':state(pressed)')).to.equal(true);
+  expect(changes).to.equal(0);
+  el.addEventListener('lr-toggle-toggle-request', event => event.preventDefault());
+  control(el).click();
+  await el.updateComplete;
+  expect(el.matches(':state(pressed)')).to.equal(true);
+  el.pressed = false;
+  await el.updateComplete;
+  expect(el.matches(':state(pressed)')).to.equal(false);
+});

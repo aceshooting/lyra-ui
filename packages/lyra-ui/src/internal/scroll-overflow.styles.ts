@@ -1,4 +1,5 @@
-import { css } from 'lit';
+import { css, unsafeCSS } from 'lit';
+import type { CSSResult } from 'lit';
 
 /**
  * The edge fade that `ScrollOverflowController` gates, keyed on the attributes the controller
@@ -10,8 +11,11 @@ import { css } from 'lit';
  * vertical placement or orientation) and the forced-colors reset at the end win without
  * `!important`.
  */
-export const scrollOverflowFadeStyles = css`
-  [data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
+export function scrollOverflowFade(selector = '[data-scroll-overflow]', rtlSelector = ':host(:dir(rtl)) [data-scroll-overflow]'): CSSResult {
+  const track = unsafeCSS(selector);
+  const rtlTrack = unsafeCSS(rtlSelector);
+  return css`
+  ${track}:where([data-scroll-start][data-scroll-end]) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -27,8 +31,8 @@ export const scrollOverflowFadeStyles = css`
       transparent
     );
   }
-  [data-scroll-overflow]:where([data-scroll-end]:not([data-scroll-start])),
-  :host(:dir(rtl)) [data-scroll-overflow]:where([data-scroll-start]:not([data-scroll-end])) {
+  ${track}:where([data-scroll-end]:not([data-scroll-start])),
+  ${rtlTrack}:where([data-scroll-start]:not([data-scroll-end])) {
     -webkit-mask-image: linear-gradient(
       to right,
       var(--lr-mask-opaque),
@@ -42,8 +46,8 @@ export const scrollOverflowFadeStyles = css`
       transparent
     );
   }
-  [data-scroll-overflow]:where([data-scroll-start]:not([data-scroll-end])),
-  :host(:dir(rtl)) [data-scroll-overflow]:where([data-scroll-end]:not([data-scroll-start])) {
+  ${track}:where([data-scroll-start]:not([data-scroll-end])),
+  ${rtlTrack}:where([data-scroll-end]:not([data-scroll-start])) {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -58,10 +62,13 @@ export const scrollOverflowFadeStyles = css`
     );
   }
   @media (forced-colors: active) {
-    [data-scroll-overflow],
-    :host(:dir(rtl)) [data-scroll-overflow] {
+    ${track},
+    ${rtlTrack} {
       -webkit-mask-image: none;
       mask-image: none;
     }
   }
 `;
+}
+
+export const scrollOverflowFadeStyles = scrollOverflowFade();

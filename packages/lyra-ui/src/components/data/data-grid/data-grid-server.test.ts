@@ -3,7 +3,7 @@ import './data-grid.js';
 import { type Person, columns, rows, dataGrid, delay, header } from '../../../../test/data-grid.js';
 
 
-it("emits only the mirrored request event with an immutable snapshot and server paging", async () => {
+it('emits both supported request events with immutable server paging details', async () => {
   const element = await dataGrid(html`
     <lr-data-grid
       label="Server people"
@@ -21,9 +21,11 @@ it("emits only the mirrored request event with an immutable snapshot and server 
   element.searchTerm = "Lin";
   let prefixedRequests = 0;
   element.addEventListener("lr-data-request", () => { prefixedRequests += 1; });
-  const requestEvent = oneEvent(element, "request");
+  const requestEvent = oneEvent(element, 'request');
+  const lrRequestEvent = oneEvent(element, 'lr-request');
   await element.reload();
   const request = await requestEvent;
+  const lrRequest = await lrRequestEvent;
   expect(request.detail.page).to.equal(2);
   expect(request.detail.pageSize).to.equal(5);
   expect(request.detail.sort).to.deep.equal([{ id: "name", desc: true }]);
@@ -45,6 +47,12 @@ it("emits only the mirrored request event with an immutable snapshot and server 
   expect(Object.isFrozen(request.detail.sort)).to.equal(true);
   expect(Object.isFrozen(request.detail.filters)).to.equal(true);
   expect(request.detail.signal).to.be.instanceOf(AbortSignal);
+  expect(lrRequest.detail).to.deep.equal(request.detail);
+  expect(lrRequest.detail.signal).to.equal(request.detail.signal);
+  expect(Object.isFrozen(lrRequest.detail)).to.equal(true);
+  expect(lrRequest.bubbles).to.equal(true);
+  expect(lrRequest.composed).to.equal(true);
+  expect(lrRequest.cancelable).to.equal(false);
   expect(prefixedRequests).to.equal(0);
   expect(request.bubbles).to.equal(true);
   expect(request.composed).to.equal(true);

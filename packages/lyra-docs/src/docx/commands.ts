@@ -1,13 +1,15 @@
+import { DOCX_ZIP_LIMITS } from '@aceshooting/lyra-ui/utils/docx-zip-admission.js';
 import type { DocxAction, DocxCommand, DocxHighlight, DocxResult, DocxTableAction, DocxImageAction } from './types.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import { isDocxXmlText } from './xml-text.js';
+import { ownDataRecord } from './own-data-record.js';
 
 export const DOCX_LIMITS = Object.freeze({
   styleId: 128, styleLabel: 128, styles: 256, fonts: 128, fontFamily: 64,
   href: 2048, text: 4096, query: 256, matches: 100, context: 48,
   imagePoints: 1440, imageTitle: 256, imageDescription: 2048,
   tableRows: 20, tableColumns: 20, tableCells: 400,
-  inputBytes: 16 * 1024 * 1024, xmlNodes: 1_000_000,
+  inputBytes: DOCX_ZIP_LIMITS.input, xmlNodes: DOCX_ZIP_LIMITS.nodes,
 });
 const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
 const limited = Object.freeze({ ok: false, code: 'resource-limit' } as const);
@@ -17,20 +19,6 @@ const DOCX_HIGHLIGHTS = Object.freeze(['yellow', 'green', 'cyan', 'magenta', 'bl
   'darkGreen', 'darkMagenta', 'darkRed', 'darkYellow', 'darkGray', 'lightGray', 'black', 'none'] as const);
 const success = <T>(value: T): DocxResult<T> => Object.freeze({ ok: true, value });
 
-/** Only own data properties cross the command boundary; caller getters are never invoked. */
-function record(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) return null;
-  const copy: Record<string, unknown> = Object.create(null);
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== 'string') return null;
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (!descriptor || !Object.hasOwn(descriptor, 'value')) return null;
-    copy[key] = descriptor.value;
-  }
-  return copy;
-}
 function keys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
   return Reflect.ownKeys(value).every(key => typeof key === 'string' && allowed.includes(key));
 }
@@ -50,7 +38,7 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
       return ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'undo', 'redo'].includes(value)
         ? success(value as DocxCommand) : unsupported;
     }
-    const action = record(value);
+    const action = ownDataRecord(value);
     if (!action || typeof action.type !== 'string') return invalid;
     const type = action.type;
     switch (type) {
@@ -154,7 +142,7 @@ export function normalizeDocxSearch(query: unknown, options?: unknown): DocxResu
   try {
     const checked = text(query, DOCX_LIMITS.query);
     if (!checked.ok) return checked;
-    const values = options === undefined ? Object.create(null) as Record<string, unknown> : record(options);
+    const values = options === undefined ? Object.create(null) as Record<string, unknown> : ownDataRecord(options);
     if (!values || !keys(values, ['matchCase', 'wholeWord', 'limit'])) return invalid;
     const matchCase = values.matchCase === undefined ? false : values.matchCase;
     const wholeWord = values.wholeWord === undefined ? false : values.wholeWord;

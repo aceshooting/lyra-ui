@@ -1,3 +1,5 @@
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -101,6 +103,7 @@ export interface LyraSwatchPickerEventMap {
  *   (Home on an already-first selection, End on an already-last one, an arrow key in a one-item
  *   row) produces no click at all. When an activation does move the selection, `lr-change` is
  *   emitted first, so a listener reading `value` from either event sees the settled selection.
+ * @cssstate selected - The live value matches an option in the current palette.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized via
  *   `--lr-swatch-picker-hit-size` (its private default follows `size` and is floored at 24px),
@@ -156,6 +159,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     items: { attribute: false, noAccessor: true },
   };
 
+  private readonly stateInternals = attachInternalsSafely(this);
   private _items: readonly SwatchPickerItem[] = Object.freeze([]);
   private readonly itemSnapshots = new WeakMap<object, SwatchPickerItem>();
   /** The selectable color swatches, in display order. */
@@ -351,6 +355,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    setCustomState(this.stateInternals, 'selected', this.resolveSelectedIndex() >= 0);
     if (!changed.has('items')) return;
     const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     if (!active?.part?.contains('swatch')) return;

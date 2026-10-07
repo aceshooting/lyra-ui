@@ -10,6 +10,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
+import { RovingToolbarController, leaseTabIndex, type TabIndexLease } from '../../../internal/roving-toolbar.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -18,6 +19,7 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import {
   finiteAdd,
   finiteMidpoint,
@@ -86,12 +88,6 @@ interface ActionFocusRepair {
   index: number;
   repair: ComposedFocusRepairSnapshot;
   stop: HTMLElement;
-}
-
-interface ActionTabIndexLease {
-  readonly authored: string | null;
-  lastManaged: string | null;
-  consumerOwns: boolean;
 }
 
 /**
@@ -168,6 +164,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   protected static override readonly ownedCollectionProperties = Object.freeze(['anchor', 'actions']);
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="toolbar"][role="toolbar"]'),
+  );
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-action',
   ]);
@@ -212,7 +211,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private focusedAction?: ActionFocusRepair;
   private actionObserver?: MutationObserver;
   private managedActionStops = new Set<HTMLElement>();
-  private actionTabIndexLeases = new WeakMap<HTMLElement, ActionTabIndexLease>();
+  private actionTabIndexLeases = new WeakMap<HTMLElement, TabIndexLease>();
+  private readonly rovingToolbar = new RovingToolbarController();
 
   private get effectiveActions(): readonly SelectionAction[] {
     const seen = new Set<SelectionAction>();
@@ -268,6 +268,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.hostDescription.adopted();
     // Adoption can happen after a node was already disconnected, so independently invalidate
     // every continuation and exact owner-window subscription retained by the old document.
     this.lifecycleGeneration++;
@@ -516,14 +517,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
    *  authored action after that manager releases it. */
   private hasAuthoredActionTabIndex(button: HTMLElement): boolean {
     const lease = this.actionTabIndexLeases.get(button);
-    if (!lease) return button.hasAttribute('tabindex');
-    if (
-      lease.lastManaged !== null &&
-      button.getAttribute('tabindex') === lease.lastManaged
-    ) {
-      return lease.authored !== null;
-    }
-    return button.hasAttribute('tabindex');
+    return lease ? lease.hasAuthored(button) : button.hasAttribute('tabindex');
   }
 
   private writeActionTabIndex(
@@ -531,36 +525,14 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     tabIndex: 0 | -1,
   ): void {
     let lease = this.actionTabIndexLeases.get(button);
-    if (!lease) {
-      lease = {
-        authored: button.getAttribute('tabindex'),
-        lastManaged: null,
-        consumerOwns: false,
-      };
-      this.actionTabIndexLeases.set(button, lease);
-    }
-    if (
-      lease.consumerOwns ||
-      (lease.lastManaged !== null &&
-        button.getAttribute('tabindex') !== lease.lastManaged)
-    ) {
-      lease.consumerOwns = true;
-      return;
-    }
-    button.tabIndex = tabIndex;
-    lease.lastManaged = button.getAttribute('tabindex');
+    if (!lease) this.actionTabIndexLeases.set(button, lease = leaseTabIndex());
+    lease.set(button, tabIndex);
   }
 
   private releaseActionTabIndex(button: HTMLElement): void {
     const lease = this.actionTabIndexLeases.get(button);
     if (!lease) return;
-    if (
-      !lease.consumerOwns &&
-      button.getAttribute('tabindex') === lease.lastManaged
-    ) {
-      if (lease.authored === null) button.removeAttribute('tabindex');
-      else button.setAttribute('tabindex', lease.authored);
-    }
+    lease.release();
     this.actionTabIndexLeases.delete(button);
   }
 
@@ -684,17 +656,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     if (originIndex < 0 && path[0] !== event.currentTarget) return;
     const currentIndex =
       originIndex >= 0 ? originIndex : this.activeActionIndex;
-    const forward =
-      this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
-    const backward =
-      this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
-    let next: number;
-    if (event.key === forward) next = (currentIndex + 1) % buttons.length;
-    else if (event.key === backward)
-      next = (currentIndex - 1 + buttons.length) % buttons.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = buttons.length - 1;
-    else return;
+    const next = this.rovingToolbar.move(event, buttons.length, currentIndex, this.effectiveDirection);
+    if (next === null) return;
     event.preventDefault();
     // Arrow/Home/End is an intentional move away from the currently focused stop, so the live
     // repair snapshot must not pin reconciliation to that old stop.

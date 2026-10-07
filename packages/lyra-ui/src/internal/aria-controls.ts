@@ -1,3 +1,4 @@
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   asciiWhitespaceTokens,
   isSingleAsciiWhitespaceToken,
@@ -29,11 +30,12 @@ export interface AppliedDescription {
 /** An IDREF relationship that can be projected from a host onto its semantic owner. */
 export type ResolvedAriaRelationship = 'aria-describedby' | 'aria-labelledby';
 
-type ElementReferenceProperty = 'ariaDescribedByElements' | 'ariaLabelledByElements';
+type OwnedAriaRelationship = ResolvedAriaRelationship | 'aria-controls';
+type ElementReferenceProperty = 'ariaDescribedByElements' | 'ariaLabelledByElements' | 'ariaControlsElements';
 type RelationshipPosition = 'after' | 'before';
 
 interface RelationshipDefinition {
-  readonly attribute: ResolvedAriaRelationship;
+  readonly attribute: OwnedAriaRelationship;
   readonly property: ElementReferenceProperty;
 }
 
@@ -44,6 +46,10 @@ const DESCRIPTION_RELATIONSHIP: RelationshipDefinition = {
 const LABEL_RELATIONSHIP: RelationshipDefinition = {
   attribute: 'aria-labelledby',
   property: 'ariaLabelledByElements',
+};
+const CONTROLS_RELATIONSHIP: RelationshipDefinition = {
+  attribute: 'aria-controls',
+  property: 'ariaControlsElements',
 };
 
 interface AttributeRelationshipBaseline {
@@ -95,8 +101,10 @@ type RelationshipOwnership = WeakMap<HTMLElement, RelationshipOwnershipState>;
 // deliberately does not inspect or adapt any foreign registry schema.
 const DESCRIPTION_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.aria-description-ownership.v1');
 const LABEL_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.aria-label-ownership.v1');
+const CONTROLS_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.aria-controls-relationship-ownership.v1');
 const fallbackDescriptionOwnership: RelationshipOwnership = new WeakMap();
 const fallbackLabelOwnership: RelationshipOwnership = new WeakMap();
+const fallbackControlsOwnership: RelationshipOwnership = new WeakMap();
 
 const descriptionOwnership = sharedRealmRegistry<RelationshipOwnership>(
   DESCRIPTION_OWNERSHIP,
@@ -108,13 +116,20 @@ const labelOwnership = sharedRealmRegistry<RelationshipOwnership>(
   () => new WeakMap(),
   fallbackLabelOwnership,
 );
+const controlsOwnership = sharedRealmRegistry<RelationshipOwnership>(
+  CONTROLS_OWNERSHIP,
+  () => new WeakMap(),
+  fallbackControlsOwnership,
+);
 
 function relationshipDefinition(relationship: ResolvedAriaRelationship): RelationshipDefinition {
   return relationship === 'aria-describedby' ? DESCRIPTION_RELATIONSHIP : LABEL_RELATIONSHIP;
 }
 
-function relationshipOwnership(relationship: ResolvedAriaRelationship): RelationshipOwnership {
-  return relationship === 'aria-describedby' ? descriptionOwnership : labelOwnership;
+function relationshipOwnership(relationship: OwnedAriaRelationship): RelationshipOwnership {
+  return relationship === 'aria-describedby'
+    ? descriptionOwnership
+    : relationship === 'aria-labelledby' ? labelOwnership : controlsOwnership;
 }
 
 function reflectedRelationshipElements(
@@ -687,6 +702,20 @@ export function acquireAriaDescription(
   );
 }
 
+/** Shares the relationship baseline, peer composition, and adoption guards used by descriptions. */
+export interface AriaControlsLease {
+  readonly target: HTMLElement;
+  update(controls: readonly Element[]): void;
+  release(): void;
+}
+
+export function acquireAriaControls(
+  target: HTMLElement,
+  controls: readonly Element[],
+): AriaControlsLease {
+  return acquireFixedRelationship(target, controls, CONTROLS_RELATIONSHIP, 'after');
+}
+
 /** A host IDREF relationship projected onto a replaceable semantic owner. */
 export interface ResolvedAriaRelationshipLease {
   readonly host: HTMLElement;
@@ -877,6 +906,70 @@ export function acquireResolvedAriaRelationship(
   };
   update(initialTarget);
   return lease;
+}
+
+/** Keeps an authored host description on the current inner role owner. */
+export class HostDescriptionController implements ReactiveController {
+  private external?: ResolvedAriaRelationshipLease;
+  private required?: AriaDescriptionLease;
+
+  constructor(
+    private readonly host: ReactiveControllerHost & HTMLElement,
+    private readonly target: () => HTMLElement | null,
+    private readonly requiredDescriptions: () => readonly Element[] = () => [],
+  ) {
+    host.addController(this);
+  }
+
+  hostConnected(): void {
+    this.refresh();
+  }
+
+  hostUpdated(): void {
+    this.refresh();
+  }
+
+  /** Lit has no adoption controller hook; a host's adoptedCallback calls this. */
+  adopted(): void {
+    this.release();
+    this.refresh();
+  }
+
+  hostDisconnected(): void {
+    this.release();
+  }
+
+  refresh(): void {
+    if (!this.host.isConnected) return;
+    const target = this.target();
+    // Keep the host lease while the attribute is absent so a later author write is observed.
+    if (this.external) this.external.update(target);
+    else this.external = acquireResolvedAriaRelationship(this.host, target, 'aria-describedby');
+    if (!target) {
+      this.required?.release();
+      this.required = undefined;
+      return;
+    }
+    const descriptions = this.requiredDescriptions();
+    if (!descriptions.length) {
+      this.required?.release();
+      this.required = undefined;
+      return;
+    }
+    if (this.required?.target !== target) {
+      this.required?.release();
+      this.required = acquireAriaDescription(target, descriptions);
+    } else {
+      this.required.update(descriptions);
+    }
+  }
+
+  private release(): void {
+    this.required?.release();
+    this.required = undefined;
+    this.external?.release();
+    this.external = undefined;
+  }
 }
 
 /**

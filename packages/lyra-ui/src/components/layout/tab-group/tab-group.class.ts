@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { isRtl } from '../../../internal/rtl.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { nextId } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -955,18 +955,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // A vertical strip navigates with Up/Down per the APG; a horizontal one with Left/Right, which
     // swap under RTL the same way lr-multi-split/lr-tree handle physical directions. Up/Down are never
     // direction-dependent -- block flow does not reverse under RTL.
-    const rtl = isRtl(this);
-    const forwardKey = this.isVertical
-      ? 'ArrowDown'
-      : rtl
-      ? 'ArrowLeft'
-      : 'ArrowRight';
-    const backwardKey = this.isVertical
-      ? 'ArrowUp'
-      : rtl
-      ? 'ArrowRight'
-      : 'ArrowLeft';
-
     // Manual activation commits the focused tab; the APG requires this precisely because automatic
     // activation would reveal every panel arrowed past.
     if (
@@ -979,27 +967,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       return;
     }
 
-    let targetIndex: number;
-    switch (e.key) {
-      case forwardKey:
-        targetIndex =
-          currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
-        break;
-      case backwardKey:
-        targetIndex =
-          currentIndex < 0
-            ? navigable.length - 1
-            : (currentIndex - 1 + navigable.length) % navigable.length;
-        break;
-      case 'Home':
-        targetIndex = 0;
-        break;
-      case 'End':
-        targetIndex = navigable.length - 1;
-        break;
-      default:
-        return;
-    }
+    const targetIndex = resolveListMove(e, {
+      count: navigable.length,
+      current: currentIndex,
+      orientation: this.isVertical ? 'vertical' : 'horizontal',
+      direction: this.effectiveDirection,
+    });
+    if (targetIndex === null) return;
     e.preventDefault();
     const target = navigable[targetIndex]!; // safe: navigable non-empty (checked) and targetIndex in [0, length)
     if (this.activation === 'manual') {

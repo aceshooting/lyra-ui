@@ -65,32 +65,15 @@ function readGrids(text) {
   // surface. That produced five confident, entirely fictional failures.
   const find = (predicate) => blocks.find((block) => predicate(block.trimStart())) ?? '';
 
-  // The ramp is declared once, on `:host`, and inherits into every other block.
-  const ramp = new Map();
-  for (const match of find((block) => block.startsWith(':host {')).matchAll(
-    /(--lr-ramp-[a-z0-9-]+):\s*(#[0-9a-f]{6})/g,
-  )) {
-    ramp.set(match[1], match[2]);
-  }
-
-  /**
-   * A grid slot resolves to a ramp step, not to a literal -- that indirection is the point of
-   * having a ramp at all. Follow the reference here rather than requiring a hex in the file, or
-   * this gate would quietly check zero semantic pairs the moment the grid started using the ramp
-   * (a passing run proving nothing, which is worse than a failing one).
-   */
+  /** The generator resolves ramp steps into literal semantic fallbacks before runtime. */
   const parse = (block) => {
     const map = new Map();
-    for (const match of block.matchAll(
-      /(--lr-color-[a-z0-9-]+):\s*var\([^,]+,\s*var\((--lr-ramp-[a-z0-9-]+)\)\)/g,
-    )) {
-      const hex = ramp.get(match[2]);
-      if (!hex) throw new Error(`${match[1]} points at ${match[2]}, which the ramp does not declare`);
+    for (const match of block.matchAll(/(--lr-color-[a-z0-9-]+):\s*var\([^,]+,\s*(#[0-9a-f]{6}|rgb\([^)]+\))\)/g)) {
+      const value = match[2];
+      const hex = value.startsWith('#')
+        ? value
+        : `#${[...value.matchAll(/\d+/g)].slice(0, 3).map(([channel]) => Number(channel).toString(16).padStart(2, '0')).join('')}`;
       map.set(match[1], hex);
-    }
-    // Literal fallbacks are still honoured, so a hand-pinned slot stays checkable.
-    for (const match of block.matchAll(/(--lr-color-[a-z0-9-]+):\s*var\([^,]+,\s*(#[0-9a-f]{6})\)/g)) {
-      map.set(match[1], match[2]);
     }
     return map;
   };
@@ -101,9 +84,8 @@ function readGrids(text) {
   // block contained nothing but a selector line -- so the dark grid parsed EMPTY and the whole
   // dark half of this gate silently checked nothing at all.
   const dark = parse(find((block) => block.startsWith(":host([data-lr-theme='dark']) {")));
-  if (ramp.size === 0) throw new Error('no ramp steps parsed from the palette -- the file shape changed');
-  if (dark.size === 0) throw new Error('no dark grid parsed from the palette -- the file shape changed');
-  return { light, dark, ramp };
+  if (light.size !== 45 || dark.size !== 45) throw new Error('expected 45 semantic slots per palette mode');
+  return { light, dark };
 }
 
 /**

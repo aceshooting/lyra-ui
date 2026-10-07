@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -84,7 +85,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
-  @container (max-inline-size: 639.98px) {
+  @container ${wideContainerQuery} {
     [part="panes"] {
       flex-direction: column;
     }

@@ -390,11 +390,24 @@ describe("lr-email-viewer", () => {
     }
   });
 
-  it("searches headers together with the body", async () => {
+  it("searches message body without matching header chrome", async () => {
     const { el, restore } = await loaded(TEXT_EML);
     try {
-      expect(await el.search("Plain note")).to.equal(1);
+      expect(await el.search("Plain note")).to.equal(0);
       expect(await el.search("See you at noon")).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps author body text searchable when folding is disabled', async () => {
+    const { el, restore } = await loaded(TEXT_EML);
+    try {
+      const button = document.createElement('button');
+      button.setAttribute('data-email-chrome', 'quote-toggle');
+      button.textContent = 'Author action';
+      el.shadowRoot!.querySelector('[part="body"]')!.append(button);
+      expect(await el.search('Author action')).to.equal(1);
     } finally {
       restore();
     }
@@ -1271,6 +1284,25 @@ describe("lr-email-viewer", () => {
   });
 
   describe("fold-quotes (text body)", () => {
+    it('excludes its plain-text quote toggle from search and selection context', async () => {
+      const restore = stubFetch(QUOTED_TEXT_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        expect(await el.search('Show quoted text')).to.equal(0);
+        expect(await el.search('Sounds good')).to.equal(1);
+        const bodyText = el.shadowRoot!.querySelector('[part="body-text"]')!;
+        const range = document.createRange();
+        range.selectNodeContents(bodyText);
+        const anchor = (el as unknown as { computeSelectionAnchor(range: Range, text: string): { suffix?: string } | null })
+          .computeSelectionAnchor(range, bodyText.textContent ?? '');
+        expect(anchor).not.to.equal(null);
+        expect(anchor?.suffix ?? '').not.to.include('Show quoted text');
+      } finally {
+        restore();
+      }
+    });
+
     it("folds a >= 3 line trailing quote run behind a toggle", async () => {
       const restore = stubFetch(QUOTED_TEXT_EML);
       const el = await fixture<LyraEmailViewer>(
@@ -1349,6 +1381,25 @@ describe("lr-email-viewer", () => {
   });
 
   describe("fold-quotes (html body)", () => {
+    it('excludes its HTML quote toggle from search and selection context', async () => {
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        expect(await el.search('Show quoted text')).to.equal(0);
+        expect(await el.search('Sounds good')).to.equal(1);
+        const paragraph = el.shadowRoot!.querySelector('[part="body-html"] p')!;
+        const range = document.createRange();
+        range.selectNodeContents(paragraph);
+        const anchor = (el as unknown as { computeSelectionAnchor(range: Range, text: string): { suffix?: string } | null })
+          .computeSelectionAnchor(range, paragraph.textContent ?? '');
+        expect(anchor).not.to.equal(null);
+        expect(anchor?.suffix ?? '').not.to.include('Show quoted text');
+      } finally {
+        restore();
+      }
+    });
+
     it("parses folded HTML and quote searches in the adopted owner realm", async () => {
       const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
       const frameDocument = frame.contentDocument!;

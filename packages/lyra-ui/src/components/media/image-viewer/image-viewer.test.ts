@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./image-viewer.js";
 import type { LyraImageViewer, LyraImageRotation } from "./image-viewer.js";
+import { resolvedInShadow } from "../../../../test/shadow-style.js";
 import type { LyraHighlight } from "../../viewers/document-viewer/anchors.js";
 import type { LyraPanZoom } from "../pan-zoom/pan-zoom.class.js";
 import {
@@ -1573,19 +1574,6 @@ describe("localization", () => {
 });
 
 describe("active-state cssprop escape hatches", () => {
-  function resolvedInShadow(
-    el: LyraImageViewer,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   // These fixtures use the module-level LOADABLE_PNG rather than the https PNG_SRC placeholder for
   // the reason documented there: PNG_SRC's eventual load failure replaces the frame mid-test.
 

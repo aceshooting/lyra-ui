@@ -7,6 +7,7 @@ import type {
 } from './rag-eval-dashboard.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -361,6 +362,23 @@ it('renders runs without metric definitions or slices as bounded history only', 
   ).to.equal('Unscored run');
 });
 
+it('keeps run history to one tab stop and moves focus with Arrow, Home and End', async () => {
+  const el = (await fixture(html`<lr-rag-eval-dashboard .runs=${[
+    { id: 'one', label: 'One', metrics: {} },
+    { id: 'two', label: 'Two', metrics: {} },
+    { id: 'three', label: 'Three', metrics: {} },
+  ]}></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="run"]')];
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([0, -1, -1]);
+  await focusByKeyboard(buttons[0]!);
+  buttons[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  expect(el.shadowRoot!.activeElement === buttons[2]).to.equal(true);
+  await el.updateComplete;
+  expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, -1, 0]);
+  buttons[2]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(true);
+});
+
 it('normalizes non-array collections and non-finite metric values', async () => {
   const el = (await fixture(html`
     <lr-rag-eval-dashboard
@@ -433,6 +451,7 @@ describe('lr-rag-eval-dashboard render cap', () => {
     const limit = el.shadowRoot!.querySelector('[part="limit"]');
     expect(limit, 'a localized truncation notice is shown').to.exist;
     expect(limit!.textContent).to.contain('500');
+    expect(limit!.textContent).to.include('most recent');
   });
 
   it('renders no truncation notice at or under the render cap', async () => {

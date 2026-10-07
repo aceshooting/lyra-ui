@@ -2,11 +2,13 @@ import { expect, fixture } from '@open-wc/testing';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { trueDefaultBooleanConverter } from './converters.js';
-import { invertAlias, type LyraDeprecatedAliases } from './deprecated-aliases.js';
+import { invertAlias } from './deprecated-aliases.js';
+import { installDeprecatedAliases, type LyraDeprecatedAliases } from '../utilities/deprecated-aliases.js';
 import { tag } from './prefix.js';
 import { captureDeprecationWarnings } from '../../test/expected-deprecations.js';
 
 class AliasDemo extends LyraElement {
+  static { installDeprecatedAliases(); }
   protected static override deprecatedAliases: LyraDeprecatedAliases = {
     closable: ['withoutCloseButton', invertAlias, invertAlias],
     legend: 'withLegend',

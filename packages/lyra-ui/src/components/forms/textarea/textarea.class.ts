@@ -1,3 +1,5 @@
+import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -5,12 +7,10 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import {
-  acquireResolvedAriaRelationship,
-  type ResolvedAriaRelationshipLease,
-} from '../../../internal/aria-controls.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { OwnedFrame, OwnedTimeout } from '../../../internal/owned-timer.js';
 import {
   FormAssociated,
   isBarredFromValidation,
@@ -377,12 +377,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
   private resizeObserver?: ResizeObserver;
   private lastObservedWidth?: number;
-  private resizeRaf?: number;
-  private resizeRafOwner?: Window;
-  private countAnnounceTimer?: number;
-  private countAnnounceTimerOwner?: Window;
+  private readonly resizeRaf = new OwnedFrame(this);
+  private readonly countAnnounceTimer = new OwnedTimeout(this);
   private countAnnouncementSink?: AnnouncementSink;
-  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
+  private readonly hostDescription = new HostDescriptionController(this, () => this.textareaEl ?? null);
 
   constructor() {
     super();
@@ -488,11 +486,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   ): void {
     const ta = this.textareaEl;
     if (!ta) return;
-    if (start === undefined || end === undefined) {
-      ta.setRangeText(replacement);
-    } else {
-      ta.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(ta, replacement, start, end, selectMode);
     this.value = ta.value;
     this.fitToContent();
   }
@@ -514,10 +508,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       this.armResizeObserver();
       this.fitToContent();
     }
-    // Recreate the host relationship lease here so its host/root observer belongs to this document.
-    if (this.hasUpdated) {
-      this.syncExternalDescription();
-    }
   }
 
   override disconnectedCallback(): void {
@@ -527,50 +517,16 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.settledDebounce.cancel();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
-    if (this.resizeRaf !== undefined)
-      this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
-    this.resizeRaf = undefined;
-    this.resizeRafOwner = undefined;
-    if (this.countAnnounceTimer !== undefined) {
-      this.countAnnounceTimerOwner?.clearTimeout(this.countAnnounceTimer);
-    }
-    this.countAnnounceTimer = undefined;
-    this.countAnnounceTimerOwner = undefined;
+    this.resizeRaf.cancel();
+    this.countAnnounceTimer.cancel();
     this.countAnnouncementSink?.release();
     this.countAnnouncementSink = undefined;
-    this.releaseExternalDescription();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseExternalDescription();
-    if (this.isConnected && this.hasUpdated) {
-      this.syncExternalDescription();
-    }
-  }
-
-  /** Resolves host-owned descriptions onto the native textarea without copying labelledby. */
-  private syncExternalDescription(): void {
-    const target = this.textareaEl ?? null;
-    if (!target) {
-      this.releaseExternalDescription();
-      return;
-    }
-    if (!this.externalDescriptionLease) {
-      this.externalDescriptionLease = acquireResolvedAriaRelationship(
-        this,
-        target,
-        'aria-describedby',
-      );
-      return;
-    }
-    this.externalDescriptionLease.update(target);
-  }
-
-  private releaseExternalDescription(): void {
-    this.externalDescriptionLease?.release();
-    this.externalDescriptionLease = undefined;
+    this.hostDescription.adopted();
   }
 
   /**
@@ -601,29 +557,15 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   private scheduleCountAnnouncement(): void {
-    if (this.countAnnounceTimer !== undefined) {
-      this.countAnnounceTimerOwner?.clearTimeout(this.countAnnounceTimer);
-    }
-    this.countAnnounceTimer = undefined;
-    this.countAnnounceTimerOwner = undefined;
+    this.countAnnounceTimer.cancel();
     if (!this.withCount) return;
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.countAnnounceTimerOwner = view;
-    this.countAnnounceTimer = view.setTimeout(() => {
-      this.countAnnounceTimer = undefined;
-      this.countAnnounceTimerOwner = undefined;
-      if (
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== view ||
-        !this.withCount
-      )
-        return;
+    this.countAnnounceTimer.schedule(this.countAnnounceDelay, () => {
+      if (!this.withCount) return;
       if (!isAccessibilityVisible(this)) return;
       const text = this.countText();
       this.announcedCountText = text;
       this.countAnnouncementSink?.announce(text);
-    }, this.countAnnounceDelay);
+    });
   }
 
   /**
@@ -681,7 +623,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.updated(changed);
     if (changed.has('value')) setCustomState(this.internals, 'blank', this.value === '');
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
-    this.syncExternalDescription();
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native textarea only on this render, so validity has to be recomputed after it.
     if (
@@ -697,10 +638,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       } else if (changed.get('resize') === 'auto') {
         this.resizeObserver?.disconnect();
         this.resizeObserver = undefined;
-        if (this.resizeRaf !== undefined)
-          this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
-        this.resizeRaf = undefined;
-        this.resizeRafOwner = undefined;
+        this.resizeRaf.cancel();
         if (this.textareaEl) {
           this.textareaEl.style.blockSize = '';
           this.textareaEl.style.overflowY = '';
@@ -741,14 +679,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
         return;
       }
       this.lastObservedWidth = width;
-      if (this.resizeRaf !== undefined)
-        this.resizeRafOwner?.cancelAnimationFrame(this.resizeRaf);
-      this.resizeRafOwner = view;
-      this.resizeRaf = view.requestAnimationFrame(() => {
-        this.resizeRaf = undefined;
-        this.resizeRafOwner = undefined;
-        if (!this.isConnected || this.ownerDocument.defaultView !== view)
-          return;
+      this.resizeRaf.schedule(() => {
         this.fitToContent();
       });
     });
@@ -909,11 +840,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
               : 'false'}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-              ? this.autocorrect
-                ? 'on'
-                : 'off'
-              : nothing}
+            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
@@ -932,17 +859,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             @keydown=${this.onKeyDown}
           ></textarea>
         </div>
-        <div id="textarea-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error"></slot>
-        </div>
-        <div
-          id="textarea-hint"
-          part="hint form-control-help-text"
-          ?hidden=${!hasHint}
-        >
-          ${this.hint || this.helpText}<slot name="hint"></slot
-          ><slot name="help-text"></slot>
-        </div>
+        ${renderFormControlHintError({ idPrefix: 'textarea', hint: this.hint || this.helpText, errorText: this.errorText, hasHint, hasError, helpTextSlot: true })}
         <div part="footer" ?hidden=${!this.withCount}>
           ${this.withCount
             ? html`<div part="count" aria-hidden="true">

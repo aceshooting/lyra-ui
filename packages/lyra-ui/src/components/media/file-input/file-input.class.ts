@@ -1,30 +1,24 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController } from '../../../internal/form-control-controller.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import {
-  attachInternalsSafely,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DropSessionController, isFileValue, readFileList, type DropSessionState } from '../../../internal/drop-session-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -33,6 +27,8 @@ import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
 import { classifyFiles, freezeDetail, handleDrop, type FileIntakeResult } from './file-intake.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from '../attachment-chip/file-size.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -151,6 +147,8 @@ export interface LyraFileInputFilesEvent extends CustomEvent<LyraFileInputFilesD
 export interface LyraFileInputEventMap {
   blur: FocusEvent;
   focus: FocusEvent;
+  'lr-input': CustomEvent<{ value: readonly File[] }>;
+  'lr-change': CustomEvent<{ value: readonly File[] }>;
   input: Event;
   change: Event;
   'lr-invalid': CustomEvent<null>;
@@ -173,6 +171,8 @@ export interface LyraFileInputEventMap {
  * @slot hint - Custom form-control hint content.
  * @slot error - Custom validation error content. Use `with-error` when this slot is populated in
  * server-rendered declarative shadow DOM before light-DOM slot assignment is observable.
+ * @event lr-input - Typed value edit notification; detail includes `value`.
+ * @event lr-change - Typed value commit notification; detail includes `value`.
  * @event lr-files - Frozen `detail: { files, rejected, remainingFiles, remainingTotalSize }` with
  * detached readonly sequences and rejected-file records, fired on drop and manual selection.
  * `remainingFiles`/`remainingTotalSize` report the allowance still left under `maxFiles`/
@@ -330,7 +330,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
+    'lr-input',
+    'lr-change',
   ]);
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-input': Object.freeze(['value']),
+    'lr-change': Object.freeze(['value']),
+  });
 
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles, srOnly];
@@ -482,7 +488,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   /** Owns the drag-session state machine and folder traversal -- shared with `lr-drop-zone`. */
@@ -508,16 +514,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like choosing/dropping/removing a file or a blur; `checkValidity()`'s own call below runs
-    // inside `withStaticValidityCheck()` so this listener can tell the silent query apart from
-    // every other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
     this.internals.setFormValue(null);
     this.dropSession = new DropSessionController(this, {
       isDisabled: () => this.liveDisabled,
@@ -615,6 +617,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     if (this._disabled) {
       this.dropSession.reset();
     }
@@ -947,15 +951,11 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // Recomputed at call time, like a native control: `validators` is a plain JS array whose
     // entries can start failing without any property on this host changing, so a check that read
     // only the last published state would answer from a stale snapshot.
-    this.updateValidity();
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity(() => this.updateValidity());
   }
 
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // Reporting is what a submit attempt does, and a failed submit is precisely when native
     // `:user-invalid` starts matching — so it counts as interaction. (A submission attempt itself
     // never calls this method -- it drives `ElementInternals` directly -- which is what
@@ -1028,7 +1028,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     if (disabled) {
       this.dropSession.reset();
     }
@@ -1161,8 +1164,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       if (!this.nonRetaining) {
         this.files = this.effectiveMultiple ? [...this._files, ...files] : files;
       }
-      dispatchNativeEvent(this, 'input');
-      dispatchNativeEvent(this, 'change');
+      const value = Object.freeze([...this._files]);
+      emitValueEvents(this, 'input', { value }, detail => this.emit('lr-input', detail));
+      emitValueEvents(this, 'change', { value }, detail => this.emit('lr-change', detail));
     }
     this.emit('lr-files', detail);
   }
@@ -1310,8 +1314,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     this.touched = true;
     const hadFocus = activeElementIn(this.shadowRoot)?.matches('[part="remove-button"]');
     this.files = this._files.filter((_, candidate) => candidate !== index);
-    dispatchNativeEvent(this, 'input');
-    dispatchNativeEvent(this, 'change');
+    const value = Object.freeze([...this._files]);
+    emitValueEvents(this, 'input', { value }, detail => this.emit('lr-input', detail));
+    emitValueEvents(this, 'change', { value }, detail => this.emit('lr-change', detail));
     if (!hadFocus) return;
     void this.updateComplete.then(() => {
       const buttons = this.renderRoot.querySelectorAll<HTMLElement>('[part="remove-button"]');

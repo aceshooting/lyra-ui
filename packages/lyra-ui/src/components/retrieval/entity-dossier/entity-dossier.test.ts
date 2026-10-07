@@ -378,3 +378,58 @@ describe('lr-entity-dossier retired show-focus-button alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+it('names the overall dossier independently of the compatibility tab-strip name', async () => {
+  const el = await populated();
+  const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+  const tabs = () => el.shadowRoot!.querySelector('[part="tabs"]')!;
+  expect(base().getAttribute('role')).to.equal('group');
+  expect(base().getAttribute('aria-label')).to.equal('Details');
+  el.accessibleLabel = 'Record tabs';
+  el.label = 'Person record';
+  await el.updateComplete;
+  expect(base().getAttribute('aria-label')).to.equal('Person record');
+  expect(tabs().getAttribute('aria-label')).to.equal('Record tabs');
+  el.label = '';
+  await el.updateComplete;
+  expect(base().getAttribute('aria-label')).to.equal('');
+  el.setAttribute('aria-label', 'Host record');
+  await el.updateComplete;
+  expect(base().getAttribute('aria-label')).to.equal('Host record');
+  expect(tabs().getAttribute('aria-label')).to.equal(null);
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(base().getAttribute('aria-label')).to.equal('');
+  el.removeAttribute('aria-label');
+  el.label = null;
+  el.strings = { details: 'Détails' };
+  await el.updateComplete;
+  expect(base().getAttribute('aria-label')).to.equal('Détails');
+  await expect(el).to.be.accessible();
+});
+
+
+it('qualifies the supporting inspector toggle once while retaining its legacy event', async () => {
+  const el = await populated();
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+  const toggles: unknown[] = [];
+  const legacy: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => toggles.push(event.detail));
+  el.addEventListener('lr-chunk-toggle', (event) => legacy.push(event.detail));
+  inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  expect(toggles).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
+  expect(legacy).to.deep.equal([{ chunkId: 'ch1', expanded: true }]);
+});
+
+it('leaves descendant toggles distinct from the inspector-owned disclosure event', async () => {
+  const el = await populated();
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+  const child = document.createElement('span');
+  inspector.append(child);
+  const seen: unknown[] = [];
+  el.addEventListener('lr-toggle', (event) => seen.push(event.detail));
+  child.dispatchEvent(new CustomEvent('lr-toggle', {
+    bubbles: true, composed: true, detail: { expanded: true, itemId: 'nested' },
+  }));
+  expect(seen).to.deep.equal([{ expanded: true, itemId: 'nested' }]);
+});

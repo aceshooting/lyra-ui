@@ -1,5 +1,6 @@
 import type { ReactiveElement } from 'lit';
 import { warnDeprecatedUsage } from './dev-mode-attribute-warning.js';
+import { registerDeprecatedAliasSupport } from './lyra-element.js';
 
 /** Converts one side of a deprecated alias pair into the other side's value. */
 export type LyraAliasMapping = (value: unknown) => unknown;
@@ -32,6 +33,19 @@ type AliasConstructor = typeof ReactiveElement & { deprecatedAliases?: LyraDepre
 
 const linkCache = new WeakMap<object, Map<string, AliasLink[]>>();
 const syncing = new WeakSet<object>();
+
+/** Install alias synchronization only in bundles containing a class with a deprecated alias table. */
+export function installDeprecatedAliases(): void {
+  registerDeprecatedAliasSupport(
+    (host, name, oldValue) => syncDeprecatedAlias(host as unknown as AliasHost, name, oldValue),
+    (host, attribute) => {
+      const alias = deprecatedAliasForAttribute(host, attribute);
+      if (!alias) return undefined;
+      const before = (host as unknown as AliasHost)[alias];
+      return () => warnAuthoredAliasAttribute(host, alias, before);
+    },
+  );
+}
 
 function linksFor(ctor: AliasConstructor): Map<string, AliasLink[]> {
   let links = linkCache.get(ctor);
@@ -68,7 +82,7 @@ function attributeName(ctor: AliasConstructor, property: string): string {
  * `LyraElement.requestUpdate()` for every changed reactive property. A field initializer (old
  * value `undefined` before the first update) or a write made by this sync never warns.
  */
-export function syncDeprecatedAlias(host: AliasHost, name: PropertyKey | undefined, oldValue: unknown): void {
+function syncDeprecatedAlias(host: AliasHost, name: PropertyKey | undefined, oldValue: unknown): void {
   if (typeof name !== 'string') return;
   const ctor = host.constructor as AliasConstructor;
   // Nearly every class declares no aliases: test that before touching the shared WeakSet.
@@ -103,7 +117,7 @@ export function syncDeprecatedAlias(host: AliasHost, name: PropertyKey | undefin
 }
 
 /** The deprecated alias property that `attribute` sets on `host`, if any. */
-export function deprecatedAliasForAttribute(host: ReactiveElement, attribute: string): string | undefined {
+function deprecatedAliasForAttribute(host: ReactiveElement, attribute: string): string | undefined {
   const ctor = host.constructor as AliasConstructor;
   if (!ctor.deprecatedAliases) return undefined;
   for (const [property, links] of linksFor(ctor)) {
@@ -117,11 +131,10 @@ export function deprecatedAliasForAttribute(host: ReactiveElement, attribute: st
  * write path cannot tell from a field initializer: an alias whose default is `undefined`, written
  * by markup before the first update. Reflection never changes the property, so it never warns.
  */
-export function warnAuthoredAliasAttribute(host: ReactiveElement, alias: string, before: unknown): void {
+function warnAuthoredAliasAttribute(host: ReactiveElement, alias: string, before: unknown): void {
   const record = host as AliasHost;
   if (Object.is(before, record[alias])) return;
   const ctor = host.constructor as AliasConstructor;
   const canonical = linksFor(ctor).get(alias)?.find((link) => link.deprecated)?.partner;
   if (canonical) warnDeprecatedUsage(host, 'property', alias, attributeName(ctor, canonical));
 }
-

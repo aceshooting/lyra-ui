@@ -5445,6 +5445,22 @@ test('native event review compares constructors and propagation flags, not names
   assert.equal(publishedEvent('wa-custom').cancelable, 'always');
 });
 
+test('combobox native value events retain their propagation contract in the manifest', async () => {
+  const manifest = await liveGeneratedManifest();
+  const declaration = manifest.modules.flatMap((module) => module.declarations ?? [])
+    .find((entry) => entry.tagName === 'lr-combobox');
+  assert.ok(declaration);
+  const events = normalizeDeclaration(declaration, { ecosystem: 'lyra' }).events;
+  for (const name of ['input', 'change']) {
+    const event = events.find((entry) => entry.name === name);
+    assert.ok(event, `lr-combobox#${name}`);
+    assert.equal(event.constructor, 'Event');
+    assert.equal(event.bubbles, true);
+    assert.equal(event.composed, true);
+    assert.equal(event.cancelable, 'never');
+  }
+});
+
 test('reviewed comparison normalizations cover only exact default pairs and inferred analyzer attributes', () => {
   const upstream = {
     attributes: [

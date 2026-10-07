@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -108,16 +109,14 @@ export const styles = css`
     );
   }
   :where([part="title"]):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="previous"],
   [part="next"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     border: none;
     background: none;
     cursor: pointer;
@@ -153,8 +152,7 @@ export const styles = css`
   }
   [part="previous"]:focus-visible,
   [part="next"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Rotate the wrapping part element, not the inner <svg> -- internal/icons.ts's documented
      contract; this once rotated the svg directly. */
@@ -318,8 +316,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part~="day"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="view-grid"] {
     display: grid;
@@ -361,8 +358,7 @@ export const styles = css`
     );
   }
   :where([part~="view-item"]):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~="view-item-selected"] {
     background: var(--lr-date-picker-view-selected-bg, var(--lr-color-brand));

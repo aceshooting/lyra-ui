@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './svg-viewer.js';
@@ -940,14 +941,6 @@ describe('back-compat', () => {
 });
 
 describe('active-region cssprop escape hatch', () => {
-  function resolvedInShadow(el: LyraSvgViewer, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function activeRegion(style = ''): Promise<{ el: LyraSvgViewer; region: HTMLElement; restore: () => void }> {
     const wrapper = (await fixture(html`<div style=${style}><lr-svg-viewer></lr-svg-viewer></div>`)) as HTMLElement;

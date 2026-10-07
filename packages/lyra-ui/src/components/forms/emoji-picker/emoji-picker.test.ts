@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import './emoji-picker.js';
@@ -1423,17 +1424,6 @@ it('is accessible with groups populated', async () => {
 });
 
 describe('emoji interaction-state cssprops', () => {
-  /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
-   *  `--lr-*` design tokens actually live. Used to assert the unset default byte-for-byte against
-   *  the token it falls back to. */
-  function resolvedInShadow(el: LyraEmojiPicker, declaration: string, property: string): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   /** Builds an emoji picker inside a styled ancestor `<div>`, so the theming prop is set on an
    *  ancestor of the host (proving a `:host` declaration would not have shadowed it). Mirrors

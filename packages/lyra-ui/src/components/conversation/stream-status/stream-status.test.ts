@@ -85,10 +85,10 @@ it('renders persistent localized text for every phase without making it a live r
   const el = (await fixture(html`
     <lr-stream-status
       .strings=${{
-        audioVisualizerIdle: 'Inactif',
-        realtimeSessionConnecting: 'Connexion',
+        streamStatusIdle: 'Inactif',
+        streamStatusConnecting: 'Connexion',
+        streamStatusStalled: 'Connexion bloquée.',
         statusRunning: 'Actif',
-        streamStallAnnounce: 'Connexion bloquée.',
       }}
     ></lr-stream-status>
   `)) as LyraStreamStatus;

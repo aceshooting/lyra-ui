@@ -5,8 +5,13 @@ import {
   deferredPlaceReady,
   deferredTrackRect,
   loadAnchoredOverlayRuntime,
+  PopupTransitionWaiters,
+  awaitPopupAnimations,
+  settlePopupTransition,
   syncTopLayerRelease,
+  waitForDeferredPlacement,
   type AnchoredOverlayRuntime,
+  type DeferredOperationHandle,
 } from './anchored-overlay-runtime.js';
 
 const runtime = {
@@ -15,6 +20,69 @@ const runtime = {
 } as AnchoredOverlayRuntime;
 
 afterEach(() => __setAnchoredOverlayRuntimeLoaderForTesting(undefined));
+
+it('ignores a successful placement after a newer operation supersedes it', async () => {
+  const old = Object.assign(() => undefined, { ready: Promise.resolve(true) }) as DeferredOperationHandle;
+  const next = Object.assign(() => undefined, { ready: Promise.resolve(false) }) as DeferredOperationHandle;
+  let current: DeferredOperationHandle | undefined = old;
+  const result = waitForDeferredPlacement(() => current);
+  current = next;
+  expect(await result).to.equal(false);
+});
+
+it('resolves only the superseded popup transition waiters', async () => {
+  const waiters = new PopupTransitionWaiters<'show' | 'hide'>();
+  const settled: string[] = [];
+  void waiters.wait('show').then(() => settled.push('show'));
+  void waiters.wait('hide').then(() => settled.push('hide'));
+  waiters.resolve('show');
+  await Promise.resolve();
+  expect(settled).to.deep.equal(['show']);
+  waiters.resolve('hide');
+  await Promise.resolve();
+  expect(settled).to.deep.equal(['show', 'hide']);
+});
+
+it('does not settle a superseded popup paint', async () => {
+  const host = document.createElement('div');
+  expect(await awaitPopupAnimations(host, () => null, () => false)).to.equal(false);
+  expect(await awaitPopupAnimations(host, () => null, () => true)).to.equal(true);
+});
+
+it('does not settle an old-document popup paint after adoption', async () => {
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const host = document.createElement('div');
+  document.body.append(host);
+  try {
+    const pending = awaitPopupAnimations(host, () => null, () => true);
+    frame.contentDocument!.adoptNode(host);
+    expect(await pending).to.equal(false);
+  } finally {
+    host.remove();
+    frame.remove();
+  }
+});
+
+it('keeps popup placement and concealment in transition order', async () => {
+  const host = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve(true) });
+  const order: string[] = [];
+  await settlePopupTransition({
+    host,
+    popup: () => null,
+    isCurrent: () => true,
+    waitForPosition: async () => { order.push('position'); return true; },
+    onSettled: () => order.push('show'),
+  });
+  await settlePopupTransition({
+    host,
+    popup: () => null,
+    isCurrent: () => true,
+    conceal: () => order.push('conceal'),
+    onSettled: () => order.push('hide'),
+  });
+  expect(order).to.deep.equal(['position', 'show', 'conceal', 'hide']);
+});
 
 it('loads the anchored runtime once and shares the cached first-open promise', async () => {
   let resolve!: (value: AnchoredOverlayRuntime) => void;

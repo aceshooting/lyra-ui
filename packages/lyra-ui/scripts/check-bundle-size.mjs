@@ -121,15 +121,25 @@ const esbuild = requireFromLoaderHost("esbuild");
 const budgets = JSON.parse(readFileSync(budgetsPath, "utf8"));
 if (!printBudgetReview) validateBundleBudgetPolicy(budgets);
 const initialBudgets = JSON.parse(readFileSync(initialBudgetsPath, "utf8"));
+const requiredInitialRouteEntries = [
+  "dist/autoloader.js",
+  "dist/autoloader-cdn.js",
+  "dist/locale-loader.js",
+  "dist/utilities/scoped-registry-loader.js",
+];
 const initialBaselineEntries = initialBudgets.$baseline;
 const initialMarginalBudgets = initialBudgets.$marginalGzipKb;
+const initialRouteBudgets = initialBudgets.$routeGzipKb ?? {};
 if (
   !Array.isArray(initialBaselineEntries) ||
   initialBaselineEntries.length === 0 ||
   initialBaselineEntries.some((entry) => typeof entry !== "string") ||
   typeof initialMarginalBudgets !== "object" ||
   initialMarginalBudgets === null ||
-  Array.isArray(initialMarginalBudgets)
+  Array.isArray(initialMarginalBudgets) ||
+  typeof initialRouteBudgets !== "object" ||
+  initialRouteBudgets === null ||
+  Array.isArray(initialRouteBudgets)
 ) {
   throw new TypeError(
     "scripts/bundle-initial-budgets.json must define a non-empty $baseline array and a $marginalGzipKb object"
@@ -137,6 +147,9 @@ if (
 }
 for (const [entry, budget] of Object.entries(initialMarginalBudgets)) {
   budgetKilobytesToBytes(budget, `${entry}: initial marginal budget`);
+}
+for (const [entry, budget] of Object.entries(initialRouteBudgets)) {
+  budgetKilobytesToBytes(budget, `${entry}: initial route budget`);
 }
 const exclusionClaims = JSON.parse(readFileSync(exclusionClaimsPath, "utf8"));
 const entries = Object.keys(budgets)
@@ -421,6 +434,8 @@ if (exclusionClaimsOnly) {
     ...entries,
     ...initialBaselineEntries,
     ...Object.keys(initialMarginalBudgets),
+    ...requiredInitialRouteEntries,
+    ...Object.keys(initialRouteBudgets),
     ...[...cssMeasurements.values()].flatMap((measurement) => measurement.imports),
   ])].filter(
     (entry) => !existsSync(join(packageDir, entry))
@@ -460,6 +475,14 @@ if (exclusionClaimsOnly) {
         ),
         outputCount: route.outputCount,
       });
+    }
+    const initialRouteMeasurements = [];
+    for (const entry of [...new Set([...requiredInitialRouteEntries, ...Object.keys(initialRouteBudgets)])].sort()) {
+      const route = await bundleInitialRoute(
+        `route-${entry.replaceAll(/[^a-z0-9]+/giu, "-")}`,
+        [entry]
+      );
+      initialRouteMeasurements.push({ entry, gzipBytes: route.gzipBytes, outputCount: route.outputCount });
     }
     const measured = [];
     for (const entry of entries) {
@@ -628,6 +651,23 @@ if (exclusionClaimsOnly) {
         console.log(`${line} ok`);
       }
     }
+    for (const measurement of initialRouteMeasurements) {
+      const budgetKb = initialRouteBudgets[measurement.entry];
+      const line = `${measurement.entry}: initial route gzip ${toKb(measurement.gzipBytes)} KB ` +
+        `(${measurement.gzipBytes} bytes; ${measurement.outputCount} initial chunk(s); budget ${budgetKb} KB)`;
+      if (typeof budgetKb !== 'number') {
+        if (!printBudgetReview) errors.push(`${measurement.entry}: missing hard initial-route budget`);
+        else console.log(`${measurement.entry}: initial route gzip ${measurement.gzipBytes} bytes; budget pending`);
+        continue;
+      }
+      if (measurement.gzipBytes > budgetKilobytesToBytes(budgetKb, measurement.entry)) {
+        errors.push(`${line} -- OVER BUDGET`);
+      } else if (!printBudgetReview) {
+        const finding = bundleBudgetSlackFinding(measurement.entry, measurement.gzipBytes, budgetKb);
+        if (finding) errors.push(`${line} -- STALE BUDGET: ${finding}`);
+        else console.log(`${line} ok`);
+      } else console.log(`${line} ok`);
+    }
     for (const [label, actualBytes, budgetKey] of [
       ["component p95", p95ComponentGzipBytes, "$componentP95GzipKb"],
       ["component max", maxComponentGzipBytes, "$componentMaxGzipKb"],
@@ -715,7 +755,7 @@ if (exclusionClaimsOnly) {
       console.log(
         `bundle-size budgets verified: ${measured.length} entries within scripts/bundle-budgets.json ` +
           `${cssMeasured.length} CSS measurements within scripts/bundle-css-budgets.json, ` +
-          `${initialMeasurements.length} splitting-aware initial routes ` +
+          `${initialMeasurements.length + initialRouteMeasurements.length} splitting-aware initial routes ` +
           `(${optionalPeers.length} optional peers externalized)`
       );
     }

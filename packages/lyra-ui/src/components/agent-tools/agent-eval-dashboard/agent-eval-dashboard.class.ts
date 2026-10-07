@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -20,6 +20,7 @@ import { overallSemanticLabel } from '../semantic-owner.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
@@ -53,6 +54,7 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': Cu
  * @csspart run-label - A run label.
  * @csspart run-meta - Status and metric value.
  * @csspart run-status - A run status badge.
+ * @csspart limit - Visible notice when the run history exceeds `maxRenderedRuns`.
  * @csspart run-status-message - Optional caller-supplied detail for a run status.
  * @csspart empty - The empty history message.
  * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
@@ -97,6 +99,27 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
 
   static override styles = [LyraElement.styles, styles];
 
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private limitAnnouncementInitialized = false;
+  private previouslyTruncated = false;
+  private projectedRunsTruncated = false;
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncements.adopted();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.limitAnnouncementInitialized && this.projectedRunsTruncated && !this.previouslyTruncated) {
+      this.limitAnnouncements.announcePolite(this.localize('ragEvalDashboardRunsLimit', undefined, {
+        count: getNumberFormat(this.effectiveLocale).format(Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500))),
+      }));
+    }
+    this.limitAnnouncementInitialized = true;
+    this.previouslyTruncated = this.projectedRunsTruncated;
+  }
+
   /** Metric cards and selector choices. Empty ids are omitted; duplicates normalize first-wins. */
   @property({ attribute: false }) metrics: readonly AgentEvaluationMetric[] = [];
   /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
@@ -133,10 +156,6 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   }
   private statusLabel(status: AgentStatusValue): string {
     return agentStatusLabel(status) ?? agentStatusText(this.localize.bind(this), agentStatusKind(status));
-  }
-  private get projectedRuns(): AgentEvaluationDashboardRun[] {
-    const limit = Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500));
-    return this.normalizedRuns.slice(0, limit);
   }
   private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string {
     const safe = Number.isFinite(value) ? value : 0;
@@ -182,7 +201,9 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     const label = this.label == null ? this.localize('evaluationDashboardLabel') : this.label;
     const semanticLabel = overallSemanticLabel(this, label);
     const active = this.activeMetric;
-    const runs = this.projectedRuns;
+    const allRuns = this.normalizedRuns;
+    const runs = allRuns.slice(0, Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500)));
+    this.projectedRunsTruncated = allRuns.length > runs.length;
     const metrics = this.normalizedMetrics;
     const values = runs.map((run) => {
       const value = active ? run.metrics?.[active.id] : undefined;
@@ -211,6 +232,11 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
         ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} with-legend aria-label=${active.label}></lr-lite-chart></div>`
         : nothing}
       ${this.renderRuns(runs)}
+      ${this.projectedRunsTruncated
+        ? html`<p part="limit" role="note">${this.localize('ragEvalDashboardRunsLimit', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(runs.length),
+          })}</p>`
+        : nothing}
     </section>`;
   }
 }

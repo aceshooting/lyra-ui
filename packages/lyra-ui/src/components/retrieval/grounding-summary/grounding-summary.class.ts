@@ -6,6 +6,9 @@ import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
+  readOwnDataValue,
+  projectFrozenRows,
+  projectStringList as projectDescriptorStringList,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -14,6 +17,8 @@ import {
   finiteRange,
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { projectGroundedClaim } from '../grounded-claim-projection.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import '../../data/stat/stat.class.js';
@@ -95,12 +100,6 @@ const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
 );
 const EMPTY_WARNINGS: readonly string[] = Object.freeze([]);
 
-function descriptorValue(
-  value: object,
-  property: PropertyKey
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
 
 function valueOfDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>
@@ -125,52 +124,19 @@ function nestedEventDetailValue(
 ): unknown | undefined {
   const detail = event.detail;
   if (detail === null || typeof detail !== 'object') return undefined;
-  const descriptor = descriptorValue(detail, property);
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    ? undefined
-    : descriptor.value;
+  return readOwnDataValue(detail, property);
 }
 
 function projectStringList(value: unknown): readonly string[] | undefined {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return undefined;
-
-    const values: string[] = [];
-    const length = Math.min(
-      lengthDescriptor.value,
-      MAX_PROJECTED_GROUNDING_ROWS
-    );
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
-      if (
-        descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
-        typeof descriptor.value === 'string'
-      )
-        values.push(descriptor.value);
-    }
-    return Object.freeze(values);
-  } catch {
-    return undefined;
-  }
+  return projectDescriptorStringList(value, MAX_PROJECTED_GROUNDING_ROWS);
 }
 
 function projectRange(value: unknown): CanonicalRange | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
       return undefined;
-    const startDescriptor = descriptorValue(value, 'start');
-    const endDescriptor = descriptorValue(value, 'end');
+    const startDescriptor = getOwnDataDescriptor(value, 'start');
+    const endDescriptor = getOwnDataDescriptor(value, 'end');
     if (hasUnsafeDescriptor([startDescriptor, endDescriptor])) return undefined;
     const start = valueOfDescriptor(startDescriptor);
     const end = valueOfDescriptor(endDescriptor);
@@ -182,67 +148,23 @@ function projectRange(value: unknown): CanonicalRange | undefined {
 }
 
 function projectClaim(value: unknown): CanonicalClaim | undefined {
-  try {
-    if (value === null || typeof value !== 'object' || Array.isArray(value))
-      return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const textDescriptor = descriptorValue(value, 'text');
-    const statusDescriptor = descriptorValue(value, 'status');
-    const citationIdsDescriptor = descriptorValue(value, 'citationIds');
-    const confidenceDescriptor = descriptorValue(value, 'confidence');
-    const explanationDescriptor = descriptorValue(value, 'explanation');
-    if (
-      hasUnsafeDescriptor([
-        idDescriptor,
-        textDescriptor,
-        statusDescriptor,
-        citationIdsDescriptor,
-        confidenceDescriptor,
-        explanationDescriptor,
-      ])
-    )
-      return undefined;
-
-    const id = valueOfDescriptor(idDescriptor);
-    const text = valueOfDescriptor(textDescriptor);
-    const citationIds = projectStringList(valueOfDescriptor(citationIdsDescriptor));
-    if (
-      typeof id !== 'string' ||
-      id.trim().length === 0 ||
-      typeof text !== 'string' ||
-      citationIds === undefined
-    )
-      return undefined;
-
-    const status = valueOfDescriptor(statusDescriptor);
-    const confidence = valueOfDescriptor(confidenceDescriptor);
-    const explanation = valueOfDescriptor(explanationDescriptor);
-    const input = Object.freeze({
-      id,
-      text,
-      status: (typeof status === 'string' ? status : 'unsupported') as GroundedClaim['status'],
-      citationIds,
-      ...(typeof confidence === 'number' && Number.isFinite(confidence)
-        ? { confidence }
-        : {}),
-      ...(typeof explanation === 'string' ? { explanation } : {}),
-    });
-    return Object.freeze({ source: value as GroundedClaim, input, id });
-  } catch {
-    return undefined;
-  }
+  const projected = projectGroundedClaim(value);
+  if (!projected) return undefined;
+  const { source, ...fields } = projected;
+  const input = Object.freeze({ ...fields, status: fields.status as GroundedClaim['status'] });
+  return Object.freeze({ source, input, id: projected.id });
 }
 
 function projectCitation(value: unknown): CanonicalCitation | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
       return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const chunkIdDescriptor = descriptorValue(value, 'chunkId');
-    const sourceIdDescriptor = descriptorValue(value, 'sourceId');
-    const spanDescriptor = descriptorValue(value, 'span');
-    const labelDescriptor = descriptorValue(value, 'label');
-    const quoteDescriptor = descriptorValue(value, 'quote');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const chunkIdDescriptor = getOwnDataDescriptor(value, 'chunkId');
+    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
+    const spanDescriptor = getOwnDataDescriptor(value, 'span');
+    const labelDescriptor = getOwnDataDescriptor(value, 'label');
+    const quoteDescriptor = getOwnDataDescriptor(value, 'quote');
     if (
       hasUnsafeDescriptor([
         idDescriptor,
@@ -289,53 +211,19 @@ function projectRows<T extends { readonly id: string }>(
   project: (entry: unknown) => T | undefined,
   empty: readonly T[]
 ): readonly T[] {
-  try {
-    if (!Array.isArray(value)) return empty;
-    const lengthDescriptor = descriptorValue(value, 'length');
-    if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return empty;
-
-    const rows: T[] = [];
-    const seen = new Set<string>();
-    const length = Math.min(
-      lengthDescriptor.value,
-      MAX_PROJECTED_GROUNDING_ROWS
-    );
-    for (let index = 0; index < length; index += 1) {
-      const descriptor = descriptorValue(value, String(index));
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      )
-        continue;
-      const row = project(descriptor.value);
-      // A malformed duplicate must never reserve its public identity ahead of a valid later row.
-      if (!row || seen.has(row.id)) continue;
-      seen.add(row.id);
-      rows.push(row);
-    }
-    return Object.freeze(rows);
-  } catch {
-    return empty;
-  }
+  return projectFrozenRows(value, project, MAX_PROJECTED_GROUNDING_ROWS, empty, (row) => row.id);
 }
 
 function projectAssessment(value: unknown): CanonicalAssessment | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value))
       return undefined;
-    const supportedClaimsDescriptor = descriptorValue(value, 'supportedClaims');
-    const unsupportedClaimsDescriptor = descriptorValue(value, 'unsupportedClaims');
-    const coverageDescriptor = descriptorValue(value, 'coverage');
-    const confidenceDescriptor = descriptorValue(value, 'confidence');
-    const warningsDescriptor = descriptorValue(value, 'warnings');
-    const claimsDescriptor = descriptorValue(value, 'claims');
+    const supportedClaimsDescriptor = getOwnDataDescriptor(value, 'supportedClaims');
+    const unsupportedClaimsDescriptor = getOwnDataDescriptor(value, 'unsupportedClaims');
+    const coverageDescriptor = getOwnDataDescriptor(value, 'coverage');
+    const confidenceDescriptor = getOwnDataDescriptor(value, 'confidence');
+    const warningsDescriptor = getOwnDataDescriptor(value, 'warnings');
+    const claimsDescriptor = getOwnDataDescriptor(value, 'claims');
     if (
       hasUnsafeDescriptor([
         supportedClaimsDescriptor,
@@ -434,6 +322,23 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
+  private rovingEvidenceId = '';
+
+  private onEvidenceKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const badges = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="evidence-list"] lr-citation-badge');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => {
+        const badge = badges?.[candidate];
+        const button = badge?.shadowRoot?.querySelector<HTMLButtonElement>('[part="base"]');
+        return Boolean(badge && button && isRovingTargetAvailable(badge) && isRovingTargetAvailable(button));
+      },
+    });
+    if (next === null) return;
+    event.preventDefault();
+    const badge = badges?.[next];
+    badge?.shadowRoot?.querySelector<HTMLButtonElement>('[part="base"]')?.focus();
+  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -632,7 +537,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
 
   private renderEvidenceItem = (
     citation: CanonicalCitation,
-    index: number
+    index: number,
+    count: number,
+    rovingEvidenceId: string | undefined,
   ): TemplateResult => {
     // The offsets are locale-formatted before interpolation, the same way every other number in
     // this component (and the adjacent citation badge's own index) is: interpolating raw JS numbers
@@ -650,6 +557,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
         <lr-citation-badge
           index=${index + 1}
           source-id=${citation.sourceId ?? ''}
+          .rovingTabIndex=${citation.id === rovingEvidenceId ? 0 : -1}
+          @focusin=${() => { this.rovingEvidenceId = citation.id; this.requestUpdate(); }}
+          @keydown=${(event: KeyboardEvent) => this.onEvidenceKeyDown(event, index, count)}
           @lr-citation-activate=${(event: Event) =>
             this.onCitation('lr-citation-select', citation, event)}
           @lr-citation-open=${(event: Event) =>
@@ -694,6 +604,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const claims = a.claims;
     const citations = this.normalizedCitations;
+    const renderedCitations = citations.slice(0, MAX_RENDERED_GROUNDING_CITATIONS);
+    const rovingEvidenceId = renderedCitations.some((citation) => citation.id === this.rovingEvidenceId)
+      ? this.rovingEvidenceId : renderedCitations[0]?.id;
 
     return html`
       <div
@@ -771,10 +684,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   >${numberFormat.format(citations.length)}</span
                 >
                 <ul part="evidence-list" role="list">
-                  ${citations
-                    .slice(0, MAX_RENDERED_GROUNDING_CITATIONS)
+                  ${renderedCitations
                     .map((citation, index) =>
-                      this.renderEvidenceItem(citation, index)
+                      this.renderEvidenceItem(citation, index, renderedCitations.length, rovingEvidenceId)
                     )}
                 </ul>
                 ${citations.length > MAX_RENDERED_GROUNDING_CITATIONS

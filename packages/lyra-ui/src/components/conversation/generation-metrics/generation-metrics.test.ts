@@ -130,6 +130,20 @@ it("normalizes invalid status attributes and direct JavaScript writes to idle", 
   expect(el.status).to.equal("idle");
 });
 
+it('normalizes shared success spellings to the completed metrics state', async () => {
+  const el = (await fixture(
+    html`<lr-generation-metrics status="done"></lr-generation-metrics>`
+  )) as LyraGenerationMetrics;
+  expect(el.status).to.equal('complete');
+  expect(el.getAttribute('status')).to.equal('complete');
+  el.status = 'success';
+  await el.updateComplete;
+  expect(el.status).to.equal('complete');
+  el.status = 'completed';
+  await el.updateComplete;
+  expect(el.getAttribute('status')).to.equal('complete');
+});
+
 it("hides the stop button entirely while without-stop is set", async () => {
   const el = (await fixture(
     html`<lr-generation-metrics
@@ -391,8 +405,10 @@ it("localizes the complete tokens segment via .strings so translations can reord
     <lr-generation-metrics
       token-count="340"
       .strings=${{
-        generationStatusTokenCount: "Jeton : {count}",
-        generationStatusTokensCount: "Jetons : {count}",
+        generationStatusTokens: {
+          one: "Jeton : {count}",
+          other: "Jetons : {count}",
+        },
       }}
     ></lr-generation-metrics>
   `)) as LyraGenerationMetrics;

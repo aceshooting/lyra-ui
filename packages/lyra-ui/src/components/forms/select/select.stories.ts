@@ -621,3 +621,19 @@ export const TopLayer: Story = {
     </div>
   `,
 };
+
+
+/** The unavailable value stays visible while application policy can veto its selection. */
+export const SelectionVeto: Story = {
+  render: () => html`
+    <lr-select label="Access level" value="viewer"
+      hint="Administrator access requires approval."
+      @lr-change-request=${(event: CustomEvent<{ value: string | readonly string[] }>) => {
+        if (event.detail.value === 'administrator') event.preventDefault();
+      }}>
+      <lr-option value="viewer">Viewer</lr-option>
+      <lr-option value="editor">Editor</lr-option>
+      <lr-option value="administrator">Administrator</lr-option>
+    </lr-select>
+  `,
+};

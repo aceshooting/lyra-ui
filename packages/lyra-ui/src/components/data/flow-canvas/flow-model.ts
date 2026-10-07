@@ -1,5 +1,6 @@
 import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
+import { isPlainRecord } from '../../../internal/object-guards.js';
 import type {
   FlowEdge,
   FlowHandle,
@@ -28,19 +29,9 @@ export const DEFAULT_FLOW_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object
 const MAX_FLOW_COLLECTION_NODES = 50_000;
 const MAX_FLOW_COLLECTION_DEPTH = 16;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
-}
-
 /** Retain every finite canvas coordinate; the canvas plane permits negative positions. */
 function snapshotFlowPosition(value: unknown): Readonly<{ x: number; y: number }> | undefined {
-  if (!isRecord(value)) return undefined;
+  if (!isPlainRecord(value)) return undefined;
   const x = value['x'];
   const y = value['y'];
   if (
@@ -83,7 +74,7 @@ function snapshotFlowData(value: Record<string, unknown>): Readonly<Record<strin
       retainedEntries += 1;
       remaining -= 1;
       const item = descriptor.value as unknown;
-      if (Array.isArray(item) || isRecord(item)) {
+      if (Array.isArray(item) || isPlainRecord(item)) {
         if (depth >= MAX_FLOW_COLLECTION_DEPTH) continue;
         let clone = seen.get(item);
         if (!clone) {
@@ -148,7 +139,7 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
     try {
       const id = node?.id;
       if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
-      const data = isRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
+      const data = isPlainRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
       const position = snapshotFlowPosition(node?.position);
       const inputs = snapshotFlowHandles(node?.inputs);
       const outputs = snapshotFlowHandles(node?.outputs);
@@ -201,7 +192,7 @@ export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge
 }
 
 export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
-  if (!isRecord(value)) return Object.freeze({});
+  if (!isPlainRecord(value)) return Object.freeze({});
   const entries: [string, Readonly<FlowRunDecoration>][] = [];
   let keys: string[];
   try {
@@ -219,7 +210,7 @@ export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
     if (!descriptor || !('value' in descriptor)) continue;
     const candidate: unknown = descriptor.value;
     try {
-      if (!isRecord(candidate)) continue;
+      if (!isPlainRecord(candidate)) continue;
       const status = normalizeFlowStatus(candidate['status']);
       if (!status) continue;
       const progress = candidate['progress'];

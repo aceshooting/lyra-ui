@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./document-preview.js";
 import type { LyraDocumentPreview } from "./document-preview.js";
@@ -194,8 +195,7 @@ describe("text/* and application/json dispatch", () => {
           mime-type="text/plain"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] pre')?.textContent === 'line one\nline two');
       const pre = el.shadowRoot!.querySelector(
         '[part="body"] pre'
       ) as HTMLElement;
@@ -215,8 +215,7 @@ describe("text/* and application/json dispatch", () => {
           mime-type="application/json"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] pre')?.textContent === '{"a":1}');
       expect(
         el.shadowRoot!.querySelector('[part="body"] pre')!.textContent
       ).to.equal('{"a":1}');
@@ -249,8 +248,7 @@ describe("text/* and application/json dispatch", () => {
         "Loading document…"
       );
       resolveFetch(textResponse("done"));
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] pre')?.textContent === 'done');
       expect(
         el.shadowRoot!.querySelector('[part="body"] pre')!.textContent
       ).to.equal("done");
@@ -304,11 +302,9 @@ describe("text/* and application/json dispatch", () => {
           mime-type="text/plain"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] pre')?.textContent === 'content for https://example.test/a.txt');
       el.src = "https://example.test/b.txt";
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"] pre')?.textContent === 'content for https://example.test/b.txt');
       expect(
         el.shadowRoot!.querySelector('[part="body"] pre')!.textContent
       ).to.equal("content for https://example.test/b.txt");
@@ -345,8 +341,7 @@ describe("text/* and application/json dispatch", () => {
       el.src = "https://example.test/b.txt";
       await el.updateComplete;
       expect(firstSignal!.aborted).to.be.true;
-      await aTimeout(20);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('pre')?.textContent === 'fresh content');
       expect(el.shadowRoot!.querySelector("pre")?.textContent).to.equal(
         "fresh content"
       );
@@ -1843,18 +1838,6 @@ describe("back-compat (image format)", () => {
 });
 
 describe("active-region cssprop escape hatch", () => {
-  function resolvedInShadow(
-    el: LyraDocumentPreview,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement("span");
-    probe.setAttribute("style", declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function activeRegion(
     style = ""

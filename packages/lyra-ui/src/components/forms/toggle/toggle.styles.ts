@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -112,8 +113,7 @@ export const styles = css`
   /* The ring sits one layer above a pressed neighbour, whose joined border overlaps this one. */
   [part~='button']:focus-visible {
     z-index: calc(var(--lr-layer-content) + 1);
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   /* The host is not form-associated, so :host(:disabled) can never match; the native button can. */

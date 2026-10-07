@@ -223,7 +223,7 @@ export {
   getEasingNames,
   LYRA_ANIMATION_NAMES,
   LYRA_EASINGS,
-} from './components/media/animation/animation.class.js';
+} from './components/media/animation/animation-catalog.js';
 export type {
   LyraAnimationCatalog,
   LyraAnimationEasingName,
@@ -299,7 +299,7 @@ export type {
 } from './components/utility/tour/tour.class.js';
 export {
   setFlagUrlResolver,
-} from './components/media/flag/flag.class.js';
+} from './components/media/flag/flag-url-resolver.js';
 export type {
   LyraFlagFidelity,
   LyraFlagShape,
@@ -402,7 +402,7 @@ export type {
 } from './components/layout/multi-split/multi-split.class.js';
 export {
   SNAP_NONE,
-} from './components/layout/split-panel/split-panel.class.js';
+} from './components/layout/split-panel/split-panel-snap.js';
 export type {
   LyraSplitPanelEventMap,
   LyraSplitPanelSnapFunction,
@@ -491,7 +491,7 @@ export type {
 } from './components/agent-tools/stack-trace/stack-trace-parse.js';
 export {
   testResultDetailSlotName,
-} from './components/agent-tools/test-results/test-results.class.js';
+} from './components/agent-tools/test-results/test-results-slots.js';
 export type {
   TestStatus,
   TestRunState,
@@ -604,7 +604,7 @@ export type {
 } from './components/media/map/map.class.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,
-} from './components/media/file-input/file-input.class.js';
+} from './components/media/file-input/file-intake.js';
 export type {
   LyraFileInputCapture,
   LyraFileInputFilesDetail,
@@ -758,7 +758,7 @@ export type {
 } from './components/conversation/chat-composer/chat-composer.class.js';
 export {
   formatFileSize,
-} from './components/media/attachment-chip/attachment-chip.class.js';
+} from './components/media/attachment-chip/file-size.js';
 export type {
   LyraAttachmentIdDetail,
   LyraAttachmentPreviewRequestDetail,
@@ -772,7 +772,7 @@ export type { LyraStreamPhase } from './internal/stream-phase.js';
 export {
   VIRTUAL_LIST_ROW_ATTRIBUTE,
   VIRTUAL_LIST_STICKY_ATTRIBUTE,
-} from './components/layout/virtual-list/virtual-list.class.js';
+} from './components/layout/virtual-list/virtual-list-attributes.js';
 export type {
   LyraVirtualListIndexedSource,
   LyraVirtualListGroup,
@@ -812,7 +812,7 @@ export type {
 } from './components/retrieval/source-card/source-card.class.js';
 export {
   computeAppRailMode,
-} from './components/layout/app-rail/app-rail.class.js';
+} from './components/layout/app-rail/app-rail-mode.js';
 export type {
   LyraAppRailItemEventMap,
   LyraAppRailItemToggleDetail,
@@ -832,7 +832,7 @@ export type {
 } from './components/layout/app-rail/app-rail.class.js';
 export {
   resolveResponsivePanelEffectiveMode,
-} from './components/layout/responsive-panel/responsive-panel.class.js';
+} from './components/layout/responsive-panel/responsive-panel-mode.js';
 export type {
   LyraResponsivePanelMode,
   LyraResponsivePanelEffectiveMode,
@@ -849,7 +849,7 @@ export type {
 } from './components/utility/mention-popover/mention-popover.class.js';
 export {
   looksLikeMarkdown,
-} from './components/conversation/streaming-text/streaming-text.class.js';
+} from './components/conversation/streaming-text/markdown-detection.js';
 export type {
   LyraStreamingTextEventMap,
   StreamingTextContentMode,
@@ -914,14 +914,12 @@ export type {
   LyraTooltipTrigger,
 } from './components/overlays/overlay/tooltip.class.js';
 export type { LyraArrowPlacement } from './components/overlays/overlay/popover.class.js';
-export {
-  type LyraDropdownEventMap,
-} from './components/overlays/overlay/dropdown.class.js';
-export {
-  type LyraContextMenuEventMap,
-  type LyraContextMenuPoint,
-  type LyraContextMenuShowDetail,
-  type LyraContextMenuSource,
+export type { LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
+export type {
+  LyraContextMenuEventMap,
+  LyraContextMenuPoint,
+  LyraContextMenuShowDetail,
+  LyraContextMenuSource,
 } from './components/overlays/context-menu/context-menu.class.js';
 export type {
   ChipRemoveDetail,
@@ -1029,7 +1027,7 @@ export type {
 export {
   shortcutTokenLabel,
   parseShortcut,
-} from './components/overlays/kbd/kbd.class.js';
+} from './components/overlays/kbd/kbd-shortcut.js';
 export type {
   EffectiveKbdPlatform,
   KbdKeyLabel,
@@ -1293,7 +1291,7 @@ export type {
   PdfOutlineItem,
   LyraPdfViewerEventMap,
 } from './components/viewers/pdf-viewer/pdf-viewer.class.js';
-export { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './components/media/image-viewer/image-viewer.class.js';
+export { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './components/media/image-viewer/image-viewer-limits.js';
 export type {
   LyraImageFit,
   LyraImageRotation,

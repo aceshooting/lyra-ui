@@ -1,3 +1,4 @@
+import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -412,11 +413,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   ): void {
     const composer = this.composer;
     if (!composer) return;
-    if (start === undefined || end === undefined) {
-      composer.setRangeText(replacement);
-    } else {
-      composer.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(composer, replacement, start, end, selectMode);
     this.value = composer.value;
   }
 
@@ -905,11 +902,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         part="composer"
         .spellcheck=${this.spellcheck}
         .autocapitalize=${this.autocapitalize}
-        autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-          ? this.autocorrect
-            ? 'on'
-            : 'off'
-          : nothing}
+        autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
         .wrap=${this.wrap}
         .autocomplete=${this.autocomplete}
         .inputMode=${this.inputMode}

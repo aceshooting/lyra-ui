@@ -1,11 +1,11 @@
 import { html, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
-  composedParentElement,
   isAccessibilitySubtreeExcluded,
   isAccessibilityVisibilityHidden,
 } from '../../../internal/a11y.js';
@@ -18,7 +18,6 @@ import {
 } from '../../../internal/option-selection.js';
 import { styles } from './option.styles.js';
 
-const FORWARDED_ANCESTOR_ATTRIBUTES = ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'];
 const GLYPH_VIEW_BOX = '0 0 24 24';
 const GLYPH_STROKE_WIDTH = '1.75';
 
@@ -215,15 +214,17 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   /** Accessible text generated from flattened default-slot content, excluding named adornments. */
   get defaultLabel(): string {
     if (!('childNodes' in this)) return '';
-    const observer = this.labelObserver;
-    const pending = observer?.takeRecords();
-    if (observer && pending?.length) {
+    const pending = this.labelTextObserver.takeRecords();
+    if (pending.length) {
       this.cachedDefaultLabel = undefined;
+      const ownerDocument = this.ownerDocument;
       queueMicrotask(() => {
-        if (this.labelObserver === observer) this.handleLabelRecords(pending);
+        if (this.isConnected && this.ownerDocument === ownerDocument) this.handleLabelRecords(pending);
       });
     }
-    return observer ? (this.cachedDefaultLabel ??= this.computeDefaultLabel()) : this.computeDefaultLabel();
+    return this.isConnected
+      ? (this.cachedDefaultLabel ??= this.computeDefaultLabel())
+      : this.computeDefaultLabel();
   }
 
   private computeDefaultLabel(): string {
@@ -240,7 +241,9 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       .trim();
   }
 
-  private labelObserver?: MutationObserver;
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [], (records) => this.handleLabelRecords([...records]), ['slot'],
+  );
   private observedDefaultLabel = '';
   private cachedDefaultLabel?: string;
 
@@ -284,42 +287,6 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       while (top.parentNode && top.parentNode !== this) top = top.parentNode;
       return top.parentNode === this && this.isDefaultLabelNode(top);
     });
-  }
-
-  private observeLabelNode(node: Node): void {
-    if (!this.labelObserver) return;
-    if (node.nodeType === 3) {
-      this.labelObserver.observe(node, { characterData: true });
-      return;
-    }
-    if (node.nodeType !== 1) return;
-    this.labelObserver.observe(node, {
-      attributes: true,
-      attributeFilter: [
-        'aria-hidden',
-        'aria-label',
-        'aria-labelledby',
-        'alt',
-        'class',
-        'hidden',
-        'inert',
-        'id',
-        'open',
-        'slot',
-        'style',
-      ],
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  private composedParentForLabelNode(node: Node): Element | null {
-    const assignedSlot = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot;
-    if (assignedSlot) return assignedSlot;
-    if (node.parentElement) return node.parentElement;
-    const root = node.getRootNode() as Document | ShadowRoot;
-    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
   }
 
   /** The consumer-owned ancestry where forwarded content was authored. Unlike the composed parent
@@ -368,42 +335,6 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     return true;
   }
 
-  private observeLabelAncestors(node: Node, attributeFilter: string[]): void {
-    const observer = this.labelObserver;
-    if (!observer) return;
-    let ancestor = this.composedParentForLabelNode(node);
-    while (ancestor) {
-      // `this` and its light-DOM descendants already have one full-subtree registration. Calling
-      // observe() again with attribute-only options would replace that registration rather than
-      // augment it. Consumer-owned composed ancestors still need their own registration because
-      // a wrapper class/style can change an assigned root through `::slotted()` CSS.
-      if (ancestor !== this && !this.contains(ancestor)) {
-        observer.observe(ancestor, { attributes: true, attributeFilter });
-      }
-      ancestor = composedParentElement(ancestor);
-    }
-  }
-
-  private bindLabelObserverTargets(): void {
-    if (!this.labelObserver) return;
-    this.labelObserver.disconnect();
-    this.observeLabelNode(this);
-    // Direct content never consults ancestors; only their `inert` changes the row's availability.
-    this.observeLabelAncestors(this, ['inert']);
-    for (const child of this.children) {
-      if (!this.isDefaultLabelNode(child)) {
-        this.labelObserver.observe(child, { attributes: true, childList: true, characterData: true, subtree: true });
-      }
-    }
-    for (const slot of this.labelForwardingSlots()) {
-      if (slot.assignedNodes().length === 0) continue;
-      for (const assigned of slot.assignedNodes({ flatten: true })) {
-        this.observeLabelNode(assigned);
-        this.observeLabelAncestors(assigned, FORWARDED_ANCESTOR_ATTRIBUTES);
-      }
-    }
-  }
-
   private handleLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
@@ -412,7 +343,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       !this.labelForwardingSlots().includes(target as HTMLSlotElement)
     ) return;
     this.cachedDefaultLabel = undefined;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.bind();
     this.handleLabelMutation();
   };
 
@@ -424,7 +355,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.addEventListener('focusout', this.handleFocusOut);
     this.syncOptionState();
     this.addEventListener('slotchange', this.handleLabelSlotChange);
-    this.rebuildLabelObserver();
+    this.cachedDefaultLabel = undefined;
     this.observedDefaultLabel = this.defaultLabel;
   }
 
@@ -434,45 +365,20 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.removeEventListener('focusin', this.handleFocusIn);
     this.removeEventListener('focusout', this.handleFocusOut);
     this.removeEventListener('slotchange', this.handleLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
     this.hasHover = false;
     this.hasCurrent = false;
     this.syncOptionState();
     super.disconnectedCallback();
   }
 
-  /**
-   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
-   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
-   * through that window's microtask queue even after this element is adopted into a different
-   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
-   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
-   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
-   * observer here rather than only lazily on the next connect.
-   */
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.rebuildLabelObserver();
-  }
-
-  /** Tears down and reconstructs `labelObserver` bound to the current `ownerDocument`'s realm, then
-   *  rebinds every current target. Called on connect and on adoption -- see `adoptedCallback()`. */
-  private rebuildLabelObserver(): void {
-    this.labelObserver?.disconnect();
     this.cachedDefaultLabel = undefined;
-    // `defaultLabel` derives from light-DOM content, so direct text mutations need their own
-    // observer to notify a parent combobox/select that its cached row data is stale.
-    const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor((records) => this.handleLabelRecords(records))
-      : undefined;
-    this.bindLabelObserverTargets();
+    this.labelTextObserver.adopted();
   }
 
   private handleLabelRecords(records: MutationRecord[]): void {
     this.cachedDefaultLabel = undefined;
-    this.bindLabelObserverTargets();
     const presentationChanged = records.some((record) => {
       if (record.type === 'attributes' && record.attributeName === 'inert') return true;
       // A removed slot name no longer identifies its former adornment. Notify directly

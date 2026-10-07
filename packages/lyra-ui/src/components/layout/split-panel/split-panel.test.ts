@@ -660,6 +660,141 @@ it('lets listeners veto proposed pointer and keyboard repositioning without comm
   }
 });
 
+it('offers both request aliases on every step and settles only accepted resizes', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  handle.setPointerCapture = () => {};
+  const order: string[] = [];
+  for (const type of ['lr-resize-request', 'lr-reposition-request', 'lr-resize', 'lr-reposition', 'lr-resize-change']) {
+    element.addEventListener(type, () => order.push(type));
+  }
+  const start = handle.getBoundingClientRect();
+  const x = start.left + start.width / 2;
+  pointer(handle, 'pointerdown', 41, x);
+  pointer(window, 'pointermove', 41, x + 40);
+  expect(order).to.deep.equal(['lr-resize-request', 'lr-reposition-request', 'lr-resize', 'lr-reposition']);
+  pointer(window, 'pointerup', 41, x + 40);
+  expect(order.at(-1)).to.equal('lr-resize-change');
+
+  const committedPosition = element.position;
+  const veto = (event: Event): void => event.preventDefault();
+  element.addEventListener('lr-resize-request', veto);
+  order.length = 0;
+  keydown(element, 'ArrowRight');
+  expect(order).to.deep.equal(['lr-resize-request', 'lr-reposition-request']);
+  expect(element.position).to.equal(committedPosition);
+  element.removeEventListener('lr-resize-request', veto);
+
+  order.length = 0;
+  keydown(element, 'ArrowRight');
+  expect(order).to.deep.equal(['lr-resize-request', 'lr-reposition-request', 'lr-resize', 'lr-reposition', 'lr-resize-change']);
+  element.position = 35;
+  await elementUpdated(element);
+  expect(order.length).to.equal(5);
+
+  order.length = 0;
+  pointer(handle, 'pointerdown', 42, x);
+  pointer(window, 'pointermove', 42, x + 25);
+  pointer(window, 'pointercancel', 42, x + 25);
+  expect(order).to.deep.equal(['lr-resize-request', 'lr-reposition-request', 'lr-resize', 'lr-reposition']);
+});
+
+it('uses drag-start bounds for proposals and rechecks constraints before each accepted pointer tick', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  handle.setPointerCapture = () => {};
+  const rect = handle.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  pointer(handle, 'pointerdown', 43, x);
+  const probes = ['.constraint-min', '.constraint-max'].map((selector) =>
+    element.shadowRoot!.querySelector(selector) as HTMLElement,
+  );
+  const originals = probes.map((probe) => probe.getBoundingClientRect);
+  let reads = 0;
+  probes.forEach((probe, index) => {
+    probe.getBoundingClientRect = function () {
+      reads += 1;
+      return originals[index]!.call(this);
+    };
+  });
+  try {
+    pointer(window, 'pointermove', 43, x + 20);
+    pointer(window, 'pointermove', 43, x + 40);
+    expect(reads).to.equal(4);
+  } finally {
+    probes.forEach((probe, index) => { probe.getBoundingClientRect = originals[index]!; });
+    pointer(window, 'pointercancel', 43, x + 40);
+  }
+});
+
+it('retires a drag when constraints change without changing the panel allocation', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size:400px;block-size:100px;--min:0px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const handle = divider(element);
+  handle.setPointerCapture = () => {};
+  const rect = handle.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  let settled = 0;
+  element.addEventListener('lr-resize-change', () => { settled += 1; });
+  pointer(handle, 'pointerdown', 45, x);
+  element.style.setProperty('--min', '80px');
+  (element as unknown as { measureAndSynchronize(initial: boolean): void }).measureAndSynchronize(false);
+  pointer(window, 'pointermove', 45, x + 40);
+  pointer(window, 'pointerup', 45, x + 40);
+  expect(settled).to.equal(0);
+  expect(handle.hasAttribute('data-dragging')).to.equal(false);
+});
+
+it('lets a resize-request listener take ownership of the position without a stale commit', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size:400px;block-size:100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const original = element.position;
+  const events: string[] = [];
+  element.addEventListener('lr-resize-request', () => { element.position = original; events.push('request'); });
+  element.addEventListener('lr-resize', () => events.push('resize'));
+  keydown(element, 'ArrowRight');
+  expect(element.position).to.equal(original);
+  expect(events).to.deep.equal(['request']);
+});
+
+it('ends an in-flight drag when inherited direction changes', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div dir="ltr"><lr-split-panel style="inline-size:400px;block-size:100px"></lr-split-panel></div>
+  `);
+  const element = wrapper.querySelector('lr-split-panel') as LyraSplitPanel;
+  const handle = divider(element);
+  handle.setPointerCapture = () => {};
+  const rect = handle.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const before = element.position;
+  pointer(handle, 'pointerdown', 44, x);
+  wrapper.dir = 'rtl';
+  await Promise.resolve();
+  pointer(window, 'pointermove', 44, x + 40);
+  pointer(window, 'pointerup', 44, x + 40);
+  expect(element.position).to.equal(before);
+});
+
+it('renders the separator range from the last observer measurement', async () => {
+  const element = (await fixture(html`
+    <lr-split-panel style="inline-size: 400px; block-size: 100px"></lr-split-panel>
+  `)) as LyraSplitPanel;
+  const minProbe = element.shadowRoot!.querySelector('.constraint-min') as HTMLElement;
+  const originalRect = minProbe.getBoundingClientRect;
+  minProbe.getBoundingClientRect = () => { throw new Error('render read the constraint probe'); };
+  try {
+    expect(() => element.render()).to.not.throw();
+  } finally {
+    minProbe.getBoundingClientRect = originalRect;
+  }
+});
+
 it('maps pointer movement through the logical inline axis in RTL', async () => {
   const element = (await fixture(html`
     <lr-split-panel dir="rtl" style="inline-size: 400px; block-size: 100px"></lr-split-panel>

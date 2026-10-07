@@ -78,6 +78,8 @@ const provenance: LyraProvenance = {
 export const Default: Story = {
   render: () => html`
     <lr-entity-dossier
+      label="Person record"
+      .accessibleLabel=${'Record sections'}
       .entity=${entity}
       .types=${types}
       community-label="Nobel laureates"

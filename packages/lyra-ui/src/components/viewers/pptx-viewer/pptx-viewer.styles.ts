@@ -40,58 +40,8 @@ export const styles = css`
   }
   [part="previous-button"],
   [part="next-button"] {
-    /* Keep the glyph compact while giving the interactive box the shared
-       minimum target size -- same "small glyph, padded hit box" pattern as
-       lr-code-block's/lr-json-viewer's [part='toggle']. */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     inline-size: var(--lr-size-2rem);
     block-size: var(--lr-size-2rem);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
-    padding: 0;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
-  }
-  [part="previous-button"]:hover,
-  [part="next-button"]:hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  [part="previous-button"]:active,
-  [part="next-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="previous-button"]:disabled,
-  [part="next-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
-  }
-  [part="previous-button"]:focus-visible,
-  [part="next-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
-  }
-  [part="previous-icon"],
-  [part="next-icon"] {
-    display: inline-flex;
-  }
-  [part="previous-icon"] {
-    transform: rotate(180deg);
-  }
-  :host(:dir(rtl)) [part="previous-icon"] {
-    transform: rotate(0deg);
-  }
-  :host(:dir(rtl)) [part="next-icon"] {
-    transform: rotate(180deg);
   }
   [part="slide-count"] {
     min-inline-size: 0;

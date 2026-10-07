@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './mind-map.js';
 import type { LyraMindMap, LyraTopic } from './mind-map.js';
@@ -7,12 +8,6 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 function sinkElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
-  );
-}
-
-function sinkTexts(): string[] {
-  return Array.from(sinkElement()?.children ?? []).map(
-    (child) => child.textContent ?? ''
   );
 }
 

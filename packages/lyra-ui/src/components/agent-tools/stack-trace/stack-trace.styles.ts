@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -98,8 +99,7 @@ export const styles = css`
     );
   }
   button[part="frame"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="frame-function"] {
     font-weight: var(--lr-font-weight-semibold);
@@ -135,8 +135,7 @@ export const styles = css`
     );
   }
   [part="internal-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="raw"] {
     margin: 0;
@@ -151,34 +150,14 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
   [part="copy-button"] {
-    font: inherit;
     font-size: var(--lr-font-size-xs);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    padding: var(--lr-space-2xs) var(--lr-space-s);
-    cursor: pointer;
+    --_lr-agent-action-radius: var(--lr-radius);
     margin-block-end: var(--lr-space-s);
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
   [part="copy-button"]:hover {
     border-color: var(
       --lr-stack-trace-interactive-color,
       var(--lr-color-brand)
     );
-  }
-  /* As with [part='frame'] above: hover moves the border only, so pressed tints the button's own
-     surface fill toward --lr-color-mix-partner instead of restating the border colour. */
-  [part="copy-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="copy-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
   }
 `;

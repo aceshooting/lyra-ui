@@ -1,3 +1,5 @@
+import { sinkTexts } from '../../../../test/announcements.js';
+import { glyphRect } from '../../../../test/geometry.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
@@ -32,11 +34,6 @@ function bruteForceHighlightForLine(
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = sinkElement(politeness);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 function recordVirtualListOffsetRebuilds(list: LyraVirtualList): {
@@ -194,6 +191,28 @@ describe('lr-terminal', () => {
     el.write('50%\rdone!');
     await el.updateComplete;
     expect(el.getPlainText()).to.equal('done!');
+  });
+
+  it('applies CSI K progress erasure across split writes without stale text', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('Downloading 100%');
+    el.write('\r\x1b[');
+    el.write('KDone');
+    await el.updateComplete;
+    expect(el.getPlainText()).to.equal('Done');
+  });
+
+  it('erases from the cursor, through the cursor, or the whole line for CSI 0K/1K/2K', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('abcdefgh\rabc\x1b[0K');
+    expect(el.getPlainText()).to.equal('abc');
+    el.replace('abcdefgh\rabc\x1b[1K');
+    expect(el.getPlainText()).to.equal('    efgh');
+    el.replace('abcdefgh\rabc\x1b[2K');
+    expect(el.getPlainText()).to.equal('');
+    el.write('Z');
+    await el.updateComplete;
+    expect(el.getPlainText()).to.equal('   Z');
   });
 
   it('\\b steps back one cell and \\t advances to 8-column stops', async () => {
@@ -1899,19 +1918,6 @@ describe('card chrome theming hooks', () => {
     expect(getComputedStyle(part(el, 'download-button')).borderTopColor).to.equal('rgb(10, 20, 30)');
   });
 });
-
-function glyphRect(root: Node, needle: string): DOMRect {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const index = (node as Text).data.indexOf(needle);
-    if (index === -1) continue;
-    const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + needle.length);
-    return range.getClientRects()[0] ?? range.getBoundingClientRect();
-  }
-  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
-}
 
 it('scrolls an unwrapped terminal from the start of its lines under RTL and follows the page when wrapping', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 360px">

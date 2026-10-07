@@ -30,6 +30,7 @@ function pickerController(
     isReadonly: () => false,
     locale: () => 'en',
     searchableFields: (entry) => [entry.id, entry.label],
+    emitInput: () => {},
     emitChange: () => {},
     onValueChange: () => {},
     onDefaultValueChange: () => {},
@@ -193,6 +194,7 @@ it('reuses normalized rows and lowercased search keys until the catalog, value o
       fieldReads += 1;
       return [entry.id, entry.label];
     },
+    emitInput: () => {},
     emitChange: () => {},
     onValueChange: () => {},
     onDefaultValueChange: () => {},
@@ -292,6 +294,7 @@ describe('closed-mode type-ahead', () => {
       isReadonly: () => false,
       locale: () => 'en',
       searchableFields: (entry) => [entry.id, entry.label],
+      emitInput: () => {},
       emitChange: (detail) => changes.push(detail.value),
       onValueChange: () => {},
       onDefaultValueChange: () => {},
@@ -353,6 +356,8 @@ describe('closed-mode type-ahead', () => {
     }
     expect(controller.value).to.equal('');
     type('Tab');
+    expect(controller.value).to.equal('');
+    controller.handleTriggerKeyDown(new KeyboardEvent('keydown', { key: 'b', isComposing: true, cancelable: true }));
     expect(controller.value).to.equal('');
   });
 });

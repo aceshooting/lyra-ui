@@ -1,9 +1,10 @@
+import { assertCallsBaseWillUpdate, withUnavailableInternals } from '../../../../test/contracts/form-lifecycle.js';
+import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-focus-blur.js';
+import { assertInvalidAlias } from '../../../../test/contracts/invalid-alias.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
-import type { PropertyValues } from "lit";
 import "./switch.js";
 import type { LyraSwitch } from "./switch.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import { LyraElement } from "../../../internal/lyra-element.js";
 
 it("contains long label and hint content at 320px in LTR and RTL", async () => {
   const label = "InternationalizedSwitchLabelWithoutAnyNaturalBreakOpportunity";
@@ -79,42 +80,14 @@ it("emits one cancelable lr-invalid alias when a validity check fails", async ()
   const el = (await fixture(
     html`<lr-switch required>Enable</lr-switch>`
   )) as LyraSwitch;
-  const aliases: CustomEvent[] = [];
-  el.addEventListener("lr-invalid", (event) =>
-    aliases.push(event as CustomEvent)
-  );
-  // Registered after the component's own constructor-time relay, so it observes the native event
-  // once the alias has had its turn at it.
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(aliases).to.have.lengthOf(1);
-  const alias = aliases[0];
-  if (!alias) throw new Error('The invalid alias was not emitted.');
-  expect(alias.target === el).to.equal(true);
-  expect(alias.bubbles && alias.composed).to.be.true;
-  expect(alias.cancelable).to.be.true;
-  // Nothing cancelled it, so the browser's own validation UI stays enabled.
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.false;
+  assertInvalidAlias(el);
 });
 
 it("cancels the native invalid event when the lr-invalid alias is cancelled", async () => {
   const el = (await fixture(
     html`<lr-switch required>Enable</lr-switch>`
   )) as LyraSwitch;
-  el.addEventListener("lr-invalid", (event) => event.preventDefault());
-  const natives: Event[] = [];
-  el.addEventListener("invalid", (event) => natives.push(event));
-
-  expect(el.checkValidity()).to.be.false;
-  expect(natives).to.have.lengthOf(1);
-  const native = natives[0];
-  if (!native) throw new Error('The native invalid event was not emitted.');
-  expect(native.defaultPrevented).to.be.true;
+  assertInvalidAlias(el, { alias: 'cancel', native: 'cancelled' });
 });
 
 it("reflects the pinned Web Awesome value property", async () => {
@@ -544,10 +517,7 @@ it("does not toggle on host click() while disabled", async () => {
 
 describe("ElementInternals availability", () => {
   it("does not throw when constructed in an environment without a real ElementInternals implementation (e.g. a downstream Vitest + happy-dom suite)", () => {
-    const original = HTMLElement.prototype.attachInternals;
-    // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
-    delete HTMLElement.prototype.attachInternals;
-    try {
+    withUnavailableInternals(() => {
       let el: LyraSwitch | undefined;
       expect(() => {
         el = document.createElement("lr-switch") as LyraSwitch;
@@ -556,37 +526,14 @@ describe("ElementInternals availability", () => {
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
       expect(el!.form === null).to.equal(true);
-    } finally {
-      HTMLElement.prototype.attachInternals = original;
-    }
+    });
   });
 });
 
 it("calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in", async () => {
-  // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
-  // to prove LyraSwitch's own willUpdate() override actually calls super.willUpdate(...) rather
-  // than shadowing it silently.
-  const proto = LyraElement.prototype as unknown as {
-    willUpdate: (changed: PropertyValues) => void;
-  };
-  const original = proto.willUpdate;
-  let called = false;
-  proto.willUpdate = function (
-    this: LyraElement,
-    changed: PropertyValues
-  ): void {
-    called = true;
-    original.call(this, changed);
-  };
-  try {
-    const el = (await fixture(
-      html`<lr-switch>Label</lr-switch>`
-    )) as LyraSwitch;
-    await el.updateComplete;
-    expect(called).to.be.true;
-  } finally {
-    proto.willUpdate = original;
-  }
+  await assertCallsBaseWillUpdate('lr-switch', async () =>
+    (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch
+  );
 });
 
 it('defaults to unchecked with role="switch" and aria-checked="false"', async () => {
@@ -1025,18 +972,7 @@ it("relays exactly one native focus/blur pair, and never lr-focus/lr-blur", asyn
   ).to.include.members(["base", "switch", "wrapper"]);
   el.blur();
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
-  expect(nativeEvents.map((event) => event.type)).to.deep.equal([
-    "focus",
-    "blur",
-  ]);
-  expect(nativeEvents.every((event) => event instanceof FocusEvent)).to.be.true;
-  expect(
-    nativeEvents.every(
-      (event) => event.target === el && event.bubbles && event.composed
-    )
-  ).to.be.true;
-  // v9 dropped the v8 lr-focus/lr-blur compatibility aliases -- only the native pair remains.
-  expect(aliases).to.deep.equal([]);
+  assertNativeFocusBlurPair(el, nativeEvents, aliases);
 });
 
 it("reflects aria-invalid on the inner switch only after the field has been interacted with once", async () => {

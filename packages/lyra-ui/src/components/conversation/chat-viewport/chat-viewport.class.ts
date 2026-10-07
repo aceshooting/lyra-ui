@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import type {
@@ -9,10 +10,10 @@ import type {
   LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
-import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import {
-  acquireAnnouncementSink,
+  AnnouncementSinkController,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import {
@@ -126,6 +127,15 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+  private readonly hostDescription = new HostDescriptionController(
+    this, () => this.renderRoot.querySelector<HTMLElement>('[part="scroll"][role="log"]'),
+  );
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+    this.announcements.adopted();
+  }
 
   
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
@@ -169,7 +179,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private pendingScrollBehavior?: 'auto' | 'smooth';
   private contentResizeObserver?: ResizeObserver;
   private contentMutationObserver?: MutationObserver;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this);
+  private get announcementSink(): AnnouncementSink | undefined {
+    this.announcements.setExclusiveChannel(this.livePoliteness);
+    return this.livePoliteness ? this.announcements.current(this.livePoliteness) : undefined;
+  }
+  private get livePoliteness(): 'polite' | 'assertive' | undefined {
+    return this.live === 'polite' || this.live === 'assertive' ? this.live : undefined;
+  }
   private scrollResizeObserver?: ResizeObserver;
   private growthFrame: OwnedAnimationFrame | null = null;
   private listenedVirtualList?: LyraVirtualList;
@@ -225,13 +242,12 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
+    this.announcements.setExclusiveChannel(this.livePoliteness);
     if (this.hasUpdated) this.armObservers();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.releaseAnnouncementSink();
     this.teardownObservers();
     // Safety net for a drag still in progress (pointerdown fired, no matching pointerup/
     // pointercancel/lostpointercapture yet) when this element is disconnected -- without this the
@@ -276,7 +292,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('live')) this.syncAnnouncementSink();
+    if (changed.has('live')) this.announcements.setExclusiveChannel(this.livePoliteness);
     this.unreadBoundaryEl?.setAttribute('aria-label', this.localize('newMessages'));
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -376,9 +392,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private pillLabel(): string {
     const count = this.unreadCount;
     if (count <= 0) return this.localize('jumpToLatest');
-    const key =
-      getPluralRules(this.effectiveLocale).select(count) === 'one' ? 'newMessageCount' : 'newMessagesCount';
-    return this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) });
+    return this.localize('newMessagesCount', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(count),
+      pluralCount: count,
+    });
   }
 
   private updateUnreadDividerPosition(): void {
@@ -583,30 +600,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (this.follow) this.performScrollToEnd('auto');
     });
     this.growthFrame = frame;
-  }
-
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    const politeness = this.live === 'polite' || this.live === 'assertive' ? this.live : undefined;
-    if (!this.isConnected || politeness === undefined) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (
-      this.announcementSink?.politeness === politeness &&
-      this.announcementSink.element.ownerDocument === this.ownerDocument
-    ) {
-      return;
-    }
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink(politeness, {
-      document: this.ownerDocument,
-      source: this,
-    });
   }
 
   /**

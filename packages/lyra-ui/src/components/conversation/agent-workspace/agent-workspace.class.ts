@@ -9,7 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
-import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
+import type { ChatComposerStatus, ChatComposerWrap } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 import type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
@@ -29,7 +29,8 @@ import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from '../../agent-
 import type { LyraToolTimeline } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 export type { ToolTimelineEntry } from '../../agent-tools/tool-timeline/tool-timeline.class.js';
 import { styles } from './agent-workspace.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, normalizeAutocorrect, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { lengthLimitConverter } from '../../../internal/length-constraints.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings.generated.js';
@@ -286,6 +287,40 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   /** Minimum and maximum rows for the built-in composer. */
   @property({ type: Number, attribute: 'composer-min-rows' }) composerMinRows = 1;
   @property({ type: Number, attribute: 'composer-max-rows' }) composerMaxRows = 8;
+
+  /** Gates the built-in Send action without disabling its textarea or busy Stop action. */
+  @property({ type: Boolean, attribute: 'composer-submit-disabled' }) composerSubmitDisabled = false;
+
+  /** Shows a disabled Send action instead of Stop while the built-in composer is busy. */
+  @property({ type: Boolean, attribute: 'composer-without-stop' }) composerWithoutStop = false;
+
+  /** Makes plain Enter insert a newline in the built-in composer. */
+  @property({ type: Boolean, attribute: 'composer-without-enter-submit' }) composerWithoutEnterSubmit = false;
+
+  /** Native editing constraints forwarded to the built-in composer. */
+  @property({ type: Boolean, attribute: 'composer-readonly' }) composerReadOnly = false;
+  @property({ converter: lengthLimitConverter, attribute: 'composer-minlength' }) composerMinLength?: number;
+  @property({ converter: lengthLimitConverter, attribute: 'composer-maxlength' }) composerMaxLength?: number;
+
+  /** Native editing hints forwarded to the built-in composer's textarea. */
+  @property({ converter: trueDefaultBooleanConverter, attribute: 'composer-spellcheck' }) composerSpellcheck = true;
+  @property({ attribute: 'composer-autocapitalize' }) composerAutocapitalize = '';
+  private composerAutocorrectValue = true;
+  /** Native autocorrect state for the built-in composer.
+   * @default true */
+  @property({ converter: autocorrectConverter, attribute: 'composer-autocorrect' })
+  get composerAutocorrect(): boolean {
+    return this.composerAutocorrectValue;
+  }
+  set composerAutocorrect(next: boolean | string) {
+    const previous = this.composerAutocorrectValue;
+    this.composerAutocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate('composerAutocorrect', previous);
+  }
+  @property({ attribute: 'composer-wrap' }) composerWrap: ChatComposerWrap = 'soft';
+  @property({ attribute: 'composer-autocomplete' }) composerAutocomplete = '';
+  @property({ attribute: 'composer-inputmode' }) composerInputMode = '';
+  @property({ attribute: 'composer-enterkeyhint' }) composerEnterKeyHint = '';
 
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
@@ -553,6 +588,19 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   .status=${this.composerStatus}
                   .minRows=${this.safeComposerMinRows}
                   .maxRows=${this.safeComposerMaxRows}
+                  .submitDisabled=${this.composerSubmitDisabled}
+                  .withoutStop=${this.composerWithoutStop}
+                  .withoutEnterSubmit=${this.composerWithoutEnterSubmit}
+                  .readOnly=${this.composerReadOnly}
+                  .minLength=${this.composerMinLength}
+                  .maxLength=${this.composerMaxLength}
+                  .spellcheck=${this.composerSpellcheck}
+                  .autocapitalize=${this.composerAutocapitalize}
+                  .autocorrect=${this.composerAutocorrect}
+                  .wrap=${this.composerWrap}
+                  .autocomplete=${this.composerAutocomplete}
+                  .inputMode=${this.composerInputMode}
+                  .enterKeyHint=${this.composerEnterKeyHint}
                   placeholder=${this.composerPlaceholder == null
                     ? this.localize('composerPlaceholder')
                     : this.composerPlaceholder}

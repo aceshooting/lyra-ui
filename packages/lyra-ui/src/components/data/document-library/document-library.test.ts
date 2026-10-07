@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
@@ -45,13 +46,6 @@ function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
   );
-}
-
-function sinkTexts(doc: Document = document): string[] {
-  const sink = sinkElement(doc);
-  return sink
-    ? Array.from(sink.children, (child) => child.textContent ?? "")
-    : [];
 }
 
 function findCheckbox(table: HTMLElement, rowIndex: number): HTMLElement {
@@ -246,7 +240,7 @@ it("re-targets selection announcements after cross-document adoption", async () 
       sinkElement() === null,
       "the original document releases the adopted library"
     ).to.be.true;
-    expect(sinkTexts(frameDocument)).to.deep.equal(["1 selected"]);
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(["1 selected"]);
   } finally {
     el.remove();
     iframe.remove();
@@ -1360,7 +1354,6 @@ describe("lr-document-library contains the composed lr-checkbox's lr-checkbox-to
     expect(rowCheckbox.checked).to.equal(false);
   });
 });
-
 
 describe('document-library retry request boundary', () => {
   it('forwards only the cancelable canonical request and preserves nested event ordering', async () => {

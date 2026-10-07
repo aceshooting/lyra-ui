@@ -1,5 +1,6 @@
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import "./combobox.js";
 import "./option.js";
 import "../input/input.js";
@@ -1229,19 +1230,7 @@ describe("lr-combobox setCustomValidity()", () => {
 
 describe("lr-combobox implicit form submission", () => {
   const enterOn = (el: LyraCombobox, init: KeyboardEventInit = {}) =>
-    (
-      el.shadowRoot!.querySelector(
-        '[part="combobox-input"]'
-      ) as HTMLInputElement
-    ).dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-        ...init,
-      })
-    );
+    dispatchEnterKeyAndSettle(el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement, init);
 
   const inForm = () => html`
     <form>
@@ -1261,7 +1250,7 @@ describe("lr-combobox implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -1284,7 +1273,7 @@ describe("lr-combobox implicit form submission", () => {
       submitterName =
         ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? "";
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submitterName, "the lr-button was the submitter").to.equal("action");
   });
@@ -1313,7 +1302,7 @@ describe("lr-combobox implicit form submission", () => {
       })
     );
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
     expect(el.value, "Enter committed the highlighted option").to.equal("a");
     expect(
@@ -1331,21 +1320,21 @@ describe("lr-combobox implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener("keydown", veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener("keydown", veto, true);
     expect(submits).to.equal(0);
 
-    enterOn(el);
+    await enterOn(el);
     expect(submits, "a bare Enter still submits").to.equal(1);
   });
 });

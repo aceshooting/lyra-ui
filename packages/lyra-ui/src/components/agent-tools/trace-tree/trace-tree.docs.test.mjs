@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const stylesSource = readFileSync(join(here, 'trace-tree.styles.ts'), 'utf8');
 const llmsAgentTools = readFileSync(join(here, '../../../../llms/agent-tools.md'), 'utf8');
-const paletteSource = readFileSync(join(here, '../../../internal/tokens/palette.styles.ts'), 'utf8');
+const canonicalTokens = JSON.parse(readFileSync(join(here, '../../../../tokens/canonical-tokens.json'), 'utf8'));
 const tokensSource = readFileSync(join(here, '../../../internal/tokens.styles.ts'), 'utf8');
 
 // --- Minimal WCAG relative-luminance/contrast helpers, mirroring the shipped
@@ -31,10 +31,9 @@ function contrastRatio(hexA, hexB) {
 }
 
 function ramp(name) {
-  const re = new RegExp(`--lr-ramp-${name}:\\s*(#[0-9a-fA-F]{6});`);
-  const match = paletteSource.match(re);
-  assert.ok(match, `expected --lr-ramp-${name} in palette.styles.ts`);
-  return match[1];
+  const value = canonicalTokens.tokens[`--lr-ramp-${name}`]?.values?.light;
+  assert.match(value ?? '', /^#[0-9a-fA-F]{6}$/, `expected canonical ramp ${name}`);
+  return value;
 }
 function textQuietLight() {
   const match = tokensSource.match(/--lr-color-text-quiet: var\(--lr-theme-color-text-quiet, (#[0-9a-fA-F]{6})\)/);

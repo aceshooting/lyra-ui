@@ -1,5 +1,12 @@
 {
   "$comment": "Documented lean-entry dependency exclusions verified from real peer-inclusive esbuild metafiles. includedOptionalPeers removes only those peers from the ordinary external list; forbiddenInputs are normalized metafile path fragments. tool-param-form.js intentionally registers the select and option controls it renders, but not the unused checkbox family. widget-renderer.class.js's `registry` property defaults to the built-in `DEFAULT_WIDGET_TYPE_REGISTRY` (see its own JSDoc), so `default-registry.js` -- a pure data module (tag-name + prop-allowlist literals via createWidgetTypeRegistry(), no component-class imports) -- is a legitimate, cheap, always-bundled input and was removed from this list; the 8 actual widget-type component classes it maps to (card/badge/button/stat/result-card/result-field/markdown/media-card) are populated separately by the side-effectful widget-renderer.ts registration entry, not by default-registry.ts, so those forbiddenInputs entries remain accurate. The style runtime must not bundle optional look definitions under theme/looks/; consumers select those through their granular look modules.",
+  "dist/components/agent-tools/eval-result/eval-result-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/rubric-form/rubric-form.class.js",
+      "components/utility/diff-view/diff-view.class.js"
+    ]
+  },
   "dist/components/agent-tools/tool-param-form/tool-param-form.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
@@ -12,6 +19,25 @@
     ],
     "forbiddenInputs": [
       "node_modules/@shikijs/langs/dist/"
+    ]
+  },
+  "dist/components/conversation/agent-workspace/agent-workspace-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/agent-tools/agent-run/agent-run.class.js",
+      "components/agent-tools/tool-timeline/tool-timeline.class.js",
+      "components/retrieval/retrieval-results/retrieval-results.class.js",
+      "components/retrieval/grounding-summary/grounding-summary.class.js",
+      "components/agent-tools/context-inspector/context-inspector.class.js"
+    ]
+  },
+  "dist/components/conversation/prompt-input/prompt-input-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/conversation/model-select/model-select.class.js",
+      "components/conversation/voice-picker/voice-picker.class.js",
+      "components/retrieval/source-picker/source-picker.class.js",
+      "components/conversation/prompt-queue/prompt-queue.class.js"
     ]
   },
   "dist/components/conversation/markdown/markdown-core.js": {
@@ -35,12 +61,54 @@
       "components/media/media-card/media-card.class.js"
     ]
   },
+  "dist/components/data/condition-builder/condition-builder-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/combobox/combobox.class.js",
+      "components/forms/date-picker/date-input.class.js"
+    ]
+  },
+  "dist/components/forms/country-picker/country-picker-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/select/select.class.js",
+      "components/forms/combobox/option.class.js"
+    ]
+  },
+  "dist/components/forms/currency-picker/currency-picker-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/select/select.class.js",
+      "components/forms/combobox/option.class.js"
+    ]
+  },
+  "dist/components/forms/time-zone-picker/time-zone-picker-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/select/select.class.js",
+      "components/forms/combobox/option.class.js"
+    ]
+  },
+  "dist/components/forms/unit-picker/unit-picker-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/forms/select/select.class.js",
+      "components/forms/combobox/option.class.js"
+    ]
+  },
   "dist/components/forms/locale-picker/locale-picker.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [
       "internal/overlay-manager.js",
       "internal/rendered-state.js",
       "internal/scroll-lock.js"
+    ]
+  },
+  "dist/components/layout/dashboard-grid/dashboard-grid-register.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/layout/widget/widget.class.js",
+      "components/conversation/widget-renderer/widget-renderer.class.js"
     ]
   },
   "dist/components/utility/export-button/export-button.js": {

@@ -1,3 +1,5 @@
+import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
+import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot, LyraBoxPlotSummary } from './box-plot.js';
@@ -132,15 +134,7 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   expect(el.getAttribute('aria-busy')).to.equal('false');
   expect((el.shadowRoot!.querySelector('lr-skeleton')) == null).to.be.true;
   expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
-  const sink = assertiveSink();
-  expect(sink !== null, 'a connected box plot must acquire its sink before a peer failure').to.be
-    .true;
-  expect(sink!.getRootNode() === document, 'the alert sink must live in document light DOM').to.be
-    .true;
   expect(assertiveTexts(), 'a successful initial mount must not announce an error').to.deep.equal([]);
-  expect(() => (
-    el as unknown as { syncAnnouncementSinks(): void }
-  ).syncAnnouncementSinks()).to.not.throw();
 });
 
 describe('box-plot family-contract regressions', () => {
@@ -633,106 +627,13 @@ it('uses the shared cancellable legend visibility contract instead of private Ch
   expect(commits).to.equal(1);
 });
 
-it('keeps a controlled hidden box series hidden when its show proposal is canceled', async () => {
-  const el = (await fixture(html`<lr-box-plot
-    with-legend
-    .hiddenDatasets=${[0]}
-    .labels=${['A']}
-    .datasets=${[
-      { label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
-    ]}
-  ></lr-box-plot>`)) as LyraBoxPlot;
-  await waitUntil(() => (el as any).chart != null);
-  const chart = (el as any).chart;
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  const proposed: unknown[] = [];
-  let commits = 0;
-  const veto = (event: Event) => {
-    proposed.push((event as CustomEvent).detail);
-    event.preventDefault();
-  };
-  el.addEventListener('lr-legend-visibility-change-request', veto);
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  try {
-    button.click();
-    await el.updateComplete;
-
-    expect(proposed).to.deep.equal([{ datasetIndex: 0, visible: true, hiddenDatasets: [] }]);
-    expect(commits).to.equal(0);
-    expect(el.hiddenDatasets).to.deep.equal([0]);
-    expect(chart.isDatasetVisible(0)).to.be.false;
-    expect(button.getAttribute('aria-pressed')).to.equal('false');
-  } finally {
-    el.removeEventListener('lr-legend-visibility-change-request', veto);
-  }
-});
-
-it('fires one canonical legend-visibility request and no removed before-alias', async () => {
-  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  const requests: CustomEvent[] = [];
-  let removedAliasEvents = 0;
-  let commits = 0;
-  el.addEventListener('lr-legend-visibility-change-request', (event) =>
-    requests.push(event as CustomEvent),
-  );
-  el.addEventListener('lr-before-legend-visibility-change', () => removedAliasEvents++);
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(requests.length).to.equal(1);
-  expect(removedAliasEvents).to.equal(0);
-  expect(requests[0]?.detail).to.deep.equal({ datasetIndex: 0, visible: false, hiddenDatasets: [0] });
-  expect(requests[0]?.cancelable).to.equal(true);
-  expect(commits).to.equal(1);
-});
-
-it('vetoes the box-plot legend toggle when only the canonical -request name is canceled', async () => {
-  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  let commits = 0;
-  el.addEventListener('lr-legend-visibility-change-request', (event) => event.preventDefault());
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(commits).to.equal(0);
-  expect(el.hiddenDatasets).to.equal(undefined);
-});
-
-it('does not dispatch the removed box-plot veto alias or let its listener veto', async () => {
-  const el = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
-  el.labels = ['A'];
-  el.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
-  await el.updateComplete;
-  await waitUntil(() => (el as any).chart != null);
-  const button = el.shadowRoot!.querySelector('[part~="legend-item"]') as HTMLElement;
-  let removedAliasEvents = 0;
-  let commits = 0;
-  el.addEventListener('lr-before-legend-visibility-change', (event) => {
-    removedAliasEvents++;
-    event.preventDefault();
-  });
-  el.addEventListener('lr-legend-visibility-change', () => commits++);
-
-  button.click();
-  await el.updateComplete;
-
-  expect(removedAliasEvents).to.equal(0);
-  expect(commits).to.equal(1);
-  expect(el.hiddenDatasets).to.deep.equal([0]);
+testLegendVisibilityEvents('box-plot', async (controlledHidden = false) => {
+  const element = (await fixture(html`<lr-box-plot with-legend></lr-box-plot>`)) as LyraBoxPlot;
+  element.labels = ['A'];
+  element.datasets = [{ label: 'Range', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  element.hiddenDatasets = controlledHidden ? [0] : undefined;
+  await element.updateComplete;
+  return element;
 });
 
 it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
@@ -1041,6 +942,7 @@ it('releases and reacquires its alert sink when adopted into another document', 
 
   try {
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    (el as any).announcements.announceAssertive('Before adoption');
     const originalSink = assertiveSink();
     expect(originalSink !== null).to.be.true;
 
@@ -1049,15 +951,14 @@ it('releases and reacquires its alert sink when adopted into another document', 
     foreignDocument.body.appendChild(el);
     await el.updateComplete;
 
-    const adoptedSink = assertiveSink(foreignDocument);
-    expect(adoptedSink !== null, 'reconnect must acquire a sink in the adopted document').to.be.true;
-    expect(adoptedSink!.ownerDocument === foreignDocument).to.be.true;
     expect(assertiveTexts(foreignDocument), 'reconnect must not announce stale state').to.deep.equal(
       [],
     );
 
     await (el as any).onBoxPlotPluginLoaded(null);
     await el.updateComplete;
+    const adoptedSink = assertiveSink(foreignDocument);
+    expect(adoptedSink?.ownerDocument === foreignDocument).to.be.true;
     expect(assertiveTexts(foreignDocument)).to.have.length(1);
     expect(assertiveTexts(), 'nothing may be announced into the old document').to.deep.equal([]);
 
@@ -1343,6 +1244,18 @@ it('redraws the live chart with the current reduced-motion state when the media 
   } finally {
     window.matchMedia = originalMatchMedia;
   }
+});
+
+it('updates a drawn chart when an ancestor changes its motion preference', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div><lr-box-plot></lr-box-plot></div>`);
+  const el = parent.querySelector('lr-box-plot') as LyraBoxPlot;
+  el.datasets = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+  parent.setAttribute('data-lr-motion', 'reduce');
+  await waitUntil(() => (el as any).chart?.options.animation === false);
+  parent.removeAttribute('data-lr-motion');
+  await waitUntil(() => (el as any).chart?.options.animation !== false);
 });
 
 it('refreshTheme() forces a redraw that re-reads out-of-band theme changes', async () => {
@@ -2407,18 +2320,7 @@ describe('bidi isolation of formatted labels', () => {
     min: median - 2, q1: median - 1, median, q3: median + 1, max: median + 2,
   });
 
-  function renderedBox(root: Element, needle: string): DOMRect {
-    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
-      const index = node.data.indexOf(needle);
-      if (index < 0) continue;
-      const range = root.ownerDocument.createRange();
-      range.setStart(node, index);
-      range.setEnd(node, index + needle.length);
-      return range.getBoundingClientRect();
-    }
-    throw new Error(`"${needle}" is not rendered in ${root.localName}`);
-  }
+
 
   type Runtime = {
     scales: Record<string, { position: string; ticks: { label: unknown }[] }>;

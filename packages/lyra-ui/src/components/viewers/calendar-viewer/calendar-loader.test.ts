@@ -1,3 +1,4 @@
+import { assertOptionalPeerSilent } from '../../../../test/contracts/optional-peer-loader.js';
 import { expect } from '@open-wc/testing';
 import { clearIcalCache, loadIcal, loadIcalDeps } from './calendar-loader.js';
 
@@ -51,19 +52,6 @@ describe('calendar loader', () => {
   });
 
   it('stays silent when Lit development diagnostics are unavailable', async () => {
-    const originalWarn = console.warn;
-    const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
-    const originalIssuedWarnings = runtime.litIssuedWarnings;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    delete runtime.litIssuedWarnings;
-    try {
-      expect(await loadIcalDeps(() => Promise.reject(new Error('production secret')))).to.be.null;
-      expect(calls).to.have.length(0);
-    } finally {
-      console.warn = originalWarn;
-      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
-      else runtime.litIssuedWarnings = originalIssuedWarnings;
-    }
+    await assertOptionalPeerSilent(() => loadIcalDeps(() => Promise.reject(new Error('production secret'))));
   });
 });

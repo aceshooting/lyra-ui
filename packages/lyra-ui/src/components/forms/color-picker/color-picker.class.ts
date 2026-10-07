@@ -231,7 +231,7 @@ function isElementValue(value: unknown): value is Element {
 
 export interface LyraColorPickerEventMap {
   'lr-invalid': CustomEvent<null>;
-  'lr-input': CustomEvent<null>;
+  'lr-input': CustomEvent<{ value: string }>;
   input: InputEvent;
   change: Event;
   blur: FocusEvent;
@@ -289,7 +289,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   key release, swatch click, text entry, eyedropper result).
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
  *   emitted alongside the native `change` event.
- * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event.
+ * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event with `detail: { value }`.
  * @event lr-show - The colour panel is about to open, however `open` became true. Cancelable —
  *   `preventDefault()` leaves it closed. Initial markup, disconnect cleanup, and a close forced
  *   by disablement apply without emitting this request event.
@@ -921,7 +921,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const changed = this.writeSerializedValue();
     if (changed) {
       dispatchNativeInputEvent(this);
-      this.emit('lr-input');
+      this.emit('lr-input', { value: this.value });
     }
     return changed;
   }

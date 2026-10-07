@@ -1,4 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -92,8 +94,7 @@ export const styles = css`
       100%,
       max(var(--_lr-span-waterfall-width), var(--lr-icon-button-size))
     );
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     inline-size: var(--_lr-span-waterfall-target-width);
     inset-inline-start: min(
       var(--_lr-span-waterfall-start),
@@ -138,8 +139,7 @@ export const styles = css`
     );
   }
   [part="bar"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part="bar"][data-tone="success"] {
     background: var(--lr-span-waterfall-success-color, var(--lr-color-success));
@@ -212,7 +212,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
 
-  @container (max-inline-size: 479.98px) {
+  @container ${mediumContainerQuery} {
     [part="axis"] {
       margin-inline-start: 0;
     }

@@ -9,6 +9,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
+import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings.generated.js';
@@ -86,21 +87,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   private createToolbarAction(direction: 'previous' | 'next'): LyraToolbarAction {
     const host = this;
     const button = () => direction === 'previous' ? host.previousButtonEl : host.nextButtonEl;
-    let leasedButton: HTMLButtonElement | undefined;
-    let authoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
-    const releaseTabIndex = (): void => {
-      const target = leasedButton;
-      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (authoredTabIndex === null) target.removeAttribute('tabindex');
-        else target.setAttribute('tabindex', authoredTabIndex);
-      }
-      leasedButton = undefined;
-      authoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
-    };
+    const tabIndexLease = leaseTabIndex();
     return {
       id: direction,
       get disabled() {
@@ -110,28 +97,9 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
         button()?.focus(options);
       },
       setTabIndex(tabIndex) {
-        const target = button();
-        if (!target) {
-          releaseTabIndex();
-          return;
-        }
-        if (leasedButton !== target) {
-          releaseTabIndex();
-          leasedButton = target;
-          authoredTabIndex = target.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null &&
-            target.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        target.tabIndex = tabIndex;
-        lastManagedTabIndex = target.getAttribute('tabindex');
+        tabIndexLease.set(button(), tabIndex);
       },
-      releaseTabIndex,
+      releaseTabIndex: () => tabIndexLease.release(),
       matchesEventPath(path) {
         const target = button();
         return target !== undefined && path.includes(target);

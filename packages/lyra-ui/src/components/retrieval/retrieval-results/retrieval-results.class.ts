@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -19,13 +19,14 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
+import { renderRetrievalMetadata } from '../retrieval-metadata.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -79,7 +80,6 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   };
 }
 
-const MAX_METADATA_ENTRIES = 32;
 
 function safeScore(score: number): number {
   return finiteRange(score, 0, 0, 1);
@@ -448,7 +448,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         // Skipped on `selectedChunkIds` alone (an explicit controlled write already reflects the
         // caller's own intent) and on the very first update (nothing to resync yet).
         const shouldAnnounce = this.hasUpdated && changed.has('chunks');
-        this.selectedChunkIds = normalized;
+        writeNormalizedOwnedCollection(this, 'selectedChunkIds', () => {
+          this.selectedChunkIds = normalized;
+        });
         if (shouldAnnounce) this.reportSelection(normalized);
       }
     }
@@ -730,33 +732,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return row;
   }
 
-  private formatMetadataValue(value: unknown): string {
-    return formatBoundedRetrievalValue(value, {
-      locale: this.effectiveLocale,
-      invalid: this.localize('valueInvalid'),
-      truncated: '…',
-    });
-  }
-
   private renderMetadata(
     metadata?: Record<string, unknown>
   ): TemplateResult | typeof nothing {
-    const entries = metadata ? Object.entries(metadata) : [];
-    if (entries.length === 0) return nothing;
-    return html`
-      <dl part="metadata">
-        ${entries.slice(0, MAX_METADATA_ENTRIES).map(
-          ([key, value]) =>
-            html`<div part="metadata-entry">
-              <dt part="metadata-term">${key}</dt>
-              <dd part="metadata-value">${this.formatMetadataValue(value)}</dd>
-            </div>`
-        )}
-        ${entries.length > MAX_METADATA_ENTRIES
-          ? html`<div part="metadata-entry"><dt part="metadata-term">…</dt></div>`
-          : nothing}
-      </dl>
-    `;
+    return renderRetrievalMetadata(metadata, this.effectiveLocale, this.localize('valueInvalid'), this.localize('valueTruncated'));
   }
 
   // Shared by both rendering paths (flat list and `<lr-virtual-list>`'s `renderItem`), exactly like
@@ -765,7 +744,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // wrapper is supplied by whichever caller renders it, since `<lr-virtual-list>` already supplies
   // its own per-row wrapper when virtualized and a second, nested one would double up `part="row"`
   // within the same shadow tree and duplicate `role="listitem"` semantics.
-  private renderRow = (item: unknown): TemplateResult => {
+  private renderRow = (item: unknown, index: number, total: number): TemplateResult => {
     const chunk = item as RetrievalChunk;
     const selected = this.selectedChunkIds.includes(chunk.id);
     const rowLabel = chunk.source.name || this.localize('untitledSource');
@@ -775,7 +754,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             part="select"
             data-chunk-id=${chunk.id}
             .checked=${selected}
-            aria-label=${this.localize('retrievalResultsSelectRow', undefined, {
+            aria-label=${this.localize('retrievalResultsSelectRowOrdinal', undefined, {
+              index: getNumberFormat(this.effectiveLocale).format(index + 1),
+              total: getNumberFormat(this.effectiveLocale).format(total),
               label: rowLabel,
             })}
             @lr-checkbox-toggle-request=${this.stopOwnedEvent}
@@ -800,6 +781,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           .thresholds=${this.thresholds}
           size=${this.presentation === 'compact' ? 's' : 'm'}
           .activeChunkId=${this.activeChunkId}
+          .ordinalIndex=${index + 1}
+          .ordinalTotal=${total}
           label=${rowLabel}
           @lr-chunk-open=${(
             e: CustomEvent<{
@@ -877,7 +860,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     // `renderRow()` reads controlled selection and presentation state. Keep this wrapper fresh so
     // virtualized visible rows receive those state changes without reassigning the guarded item
     // collection (which would rebuild its offsets).
-    const renderVirtualRow = (item: unknown): TemplateResult => this.renderRow(item);
+    const ordinalById = new Map(processed.chunks.map((chunk, index) => [chunk.id, index]));
+    const renderVirtualRow = (item: unknown): TemplateResult =>
+      this.renderRow(item, ordinalById.get((item as RetrievalChunk).id) ?? 0, processed.chunks.length);
     return html`
       <div
         part="base"
@@ -909,7 +894,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
                 ${processed.chunks.map(
                   (c) =>
                     html`<div part="row" role="listitem">
-                      ${this.renderRow(c)}
+                      ${this.renderRow(c, ordinalById.get(c.id) ?? 0, processed.chunks.length)}
                     </div>`
                 )}
               </div>

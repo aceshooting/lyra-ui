@@ -17,6 +17,8 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { styles } from './signature-pad.styles.js';
+import { SIGNATURE_PAD_MAX_STROKES, SIGNATURE_PAD_MAX_POINTS } from './signature-pad-limits.js';
+export { SIGNATURE_PAD_MAX_STROKES, SIGNATURE_PAD_MAX_POINTS } from './signature-pad-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_signaturePad, LYRA_DEFAULT_signaturePadEmpty, LYRA_DEFAULT_signaturePadInstructions, LYRA_DEFAULT_signaturePadLabel, LYRA_DEFAULT_signaturePadPenDown, LYRA_DEFAULT_signaturePadPenUp, LYRA_DEFAULT_signaturePadSigned } from '../../../internal/default-strings.generated.js';
@@ -26,11 +28,6 @@ installFormControlLabelSupport();
 
 /** One stroke: its `[x, y]` points, each coordinate a fraction (0–1) of the pad's width or height. */
 export type SignatureStroke = ReadonlyArray<readonly [number, number]>;
-
-/** The most strokes a signature keeps. */
-export const SIGNATURE_PAD_MAX_STROKES = 256;
-/** The most points one stroke keeps. */
-export const SIGNATURE_PAD_MAX_POINTS = 2048;
 
 export interface LyraSignaturePadEventMap {
   change: Event;

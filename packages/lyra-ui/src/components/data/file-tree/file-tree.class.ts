@@ -1,10 +1,13 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
+import { GIT_STATUSES, type GitStatus } from './file-tree-status.js';
+export { GIT_STATUSES } from './file-tree-status.js';
+export type { GitStatus } from './file-tree-status.js';
 import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
@@ -16,7 +19,6 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileTreeDiffS
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-export type GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' | 'ignored';
 
 export interface FileTreeNode {
   readonly path: string;
@@ -32,15 +34,6 @@ export interface FileTreeNode {
 
 const MAX_FILE_TREE_NODES = 10_000;
 const MAX_FILE_TREE_DEPTH = 64;
-export const GIT_STATUSES: ReadonlySet<GitStatus> = new Set<GitStatus>([
-  'added',
-  'modified',
-  'deleted',
-  'renamed',
-  'untracked',
-  'conflicted',
-  'ignored',
-]);
 
 interface FileTreeDraft {
   readonly fields: Omit<FileTreeNode, 'children'>;
@@ -78,8 +71,10 @@ function normalizeFileTreeNodes(value: unknown): readonly FileTreeNode[] {
 function normalizeFileTreeSnapshot(value: unknown): {
   readonly nodes: readonly FileTreeNode[];
   readonly truncated: boolean;
+  readonly limitReached: boolean;
 } {
   let truncated = false;
+  let limitReached = false;
   const rootShape = boundedArrayShape(value);
   const roots = rootShape.isArray ? (value as readonly unknown[]) : [];
   const drafts: FileTreeDraft[] = [];
@@ -105,6 +100,7 @@ function normalizeFileTreeSnapshot(value: unknown): {
     }
     if (drafts.length >= MAX_FILE_TREE_NODES || inspected >= MAX_FILE_TREE_NODES) {
       truncated = true;
+      limitReached = drafts.length >= MAX_FILE_TREE_NODES;
       break;
     }
     const sourceIndex = frame.index++;
@@ -185,7 +181,7 @@ function normalizeFileTreeSnapshot(value: unknown): {
         : {}),
     });
   }
-  return { nodes: Object.freeze(rootDrafts.map((draft) => draft.normalized!)), truncated };
+  return { nodes: Object.freeze(rootDrafts.map((draft) => draft.normalized!)), truncated, limitReached };
 }
 
 const GIT_STATUS_LETTER: Record<GitStatus, string> = {
@@ -260,6 +256,7 @@ export interface LyraFileTreeEventMap {
  *   (keyboard-open parity: a second activation of the same file opens it).
  * @event lr-load-children - `detail: { filePath }` — a lazy (hasChildren, unloaded) directory expanded.
  * @csspart base - The root wrapper.
+ * @csspart limit - Localized notice when the source listing exceeds its 10,000-item snapshot.
  * @status stable
  * @since 4.0.0
  */
@@ -291,6 +288,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   private _nodes: readonly FileTreeNode[] = [];
   private nodesTruncated = false;
+  private nodesLimitReached = false;
   private lastNodesSource: unknown = undefined;
   /** Clone-owned, cycle-safe readonly node snapshot. Empty/blank paths are omitted and duplicate
    * paths use the first valid node; projection inspects at most 10,000 source positions across 64
@@ -309,6 +307,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     this.lastNodesSource = value;
     this._nodes = snapshot.nodes;
     this.nodesTruncated = snapshot.truncated;
+    this.nodesLimitReached = snapshot.limitReached;
     this.requestUpdate('nodes', previous);
   }
 
@@ -558,6 +557,11 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
           @lr-collapse=${this.stopInnerEvent}
           @lr-after-collapse=${this.stopInnerEvent}
         ></lr-tree>
+        ${this.nodesLimitReached
+          ? html`<div part="limit">${this.localize('treeLimit', undefined, {
+              count: getNumberFormat(this.effectiveLocale).format(MAX_FILE_TREE_NODES),
+            })}</div>`
+          : nothing}
       </div>
     `;
   }

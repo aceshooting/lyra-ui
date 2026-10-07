@@ -206,12 +206,22 @@ describe('data-grid row budget', () => {
       ></lr-data-grid>
     `);
     expect(element.dataTruncated).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim()).to.equal(
+      'Only the first 10,000 rows are shown.',
+    );
+    expect(element.shadowRoot!.querySelector('[part="tree-limit"]') === null).to.equal(true);
+    element.strings = { dataGridRowLimit: 'Showing {count} rows only.' };
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim()).to.equal(
+      'Showing 10,000 rows only.',
+    );
     element.data = many.slice();
     await element.updateComplete;
     expect([...element.selectedKeys]).to.deep.equal([3, 10_004]);
     element.data = many.slice(0, 10);
     await element.updateComplete;
     expect(element.dataTruncated).to.equal(false);
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]') === null).to.equal(true);
     expect([...element.selectedKeys]).to.deep.equal([3]);
   });
 });

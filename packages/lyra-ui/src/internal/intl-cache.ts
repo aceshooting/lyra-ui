@@ -141,6 +141,11 @@ export function getDateTimeFormat(locale: string | undefined, options?: Intl.Dat
   );
 }
 
+/** Formats a locale-aware hour/minute clock time with the shared date-time formatter cache. */
+export function formatTimeOfDay(date: Date, locale: string): string {
+  return getDateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
+}
+
 /**
  * A shared `Intl.DisplayNames` for the given locale and options. Note the
  * `Intl.DisplayNames` constructor itself requires `options.type`, so omitting

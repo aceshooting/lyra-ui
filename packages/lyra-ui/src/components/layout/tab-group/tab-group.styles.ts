@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -44,8 +45,7 @@ export const styles = css`
     display: inline-grid;
     place-items: center;
     inline-size: var(--lr-icon-button-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     appearance: none;
     background: none;
@@ -237,8 +237,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   [part="panel"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
     border-radius: var(--lr-radius);
   }
   @media (prefers-reduced-motion: reduce) {

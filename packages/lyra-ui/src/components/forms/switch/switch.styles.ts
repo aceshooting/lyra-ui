@@ -1,3 +1,7 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import {
+  formControlSupportingText,
+} from '../../../internal/form-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -28,12 +32,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   .switch-owner:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Mouse-pointer parity with the :focus-visible ring above, plus a deeper press. Gated on
      :host(:not(:disabled)) like lr-checkbox's/lr-radio's [part~='base']:hover rules -- not a native
@@ -211,23 +213,7 @@ export const styles = css`
     color: var(--lr-switch-checked-label-color, var(--lr-switch-label-color, var(--lr-color-text)));
   }
 
-  [part~="hint"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
-  }
-  /* :empty never matches here -- same fix as [part='hint']/[part='error'] on lr-select. */
-  [part~="hint"][hidden] {
-    display: none;
-  }
-  [part="error"] {
-    margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-danger);
-  }
-  [part="error"][hidden] {
-    display: none;
-  }
+  ${formControlSupportingText}
 
   @media (prefers-reduced-motion: reduce) {
     [part~="track"],

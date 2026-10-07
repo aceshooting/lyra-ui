@@ -4,6 +4,8 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
   getOwnDataDescriptor,
+  isPlainDataRecord as isRealmNeutralPlainRecord,
+  readOwnArrayLength,
 } from './data-descriptors.js';
 import { devWarnOnce } from './dev-warning.js';
 
@@ -17,6 +19,27 @@ const PUBLIC_COLLECTION_WORK_LIMIT = PUBLIC_COLLECTION_NODE_LIMIT * 2;
 const PUBLIC_COLLECTION_DEPTH_LIMIT = 256;
 const OMIT_COLLECTION_VALUE = Symbol('omit-public-collection-value');
 const EXHAUSTED_COLLECTION_VALUE = Symbol('exhausted-public-collection-value');
+const normalizedCollectionWrites = new WeakMap<LyraElement, Set<PropertyKey>>();
+
+/** Keep the last host-owned source when a component writes a normalized public value back through
+ * the collection boundary. The write still snapshots and updates the public property; only the
+ * unchanged host source remains eligible for the next declarative rebind no-op. */
+export function writeNormalizedOwnedCollection(
+  host: LyraElement,
+  property: PropertyKey,
+  write: () => void
+): void {
+  let active = normalizedCollectionWrites.get(host);
+  if (!active) normalizedCollectionWrites.set(host, (active = new Set()));
+  const alreadyActive = active.has(property);
+  active.add(property);
+  try {
+    write();
+  } finally {
+    if (!alreadyActive) active.delete(property);
+    if (active.size === 0) normalizedCollectionWrites.delete(host);
+  }
+}
 
 type CollectionSnapshotFailure =
   | typeof OMIT_COLLECTION_VALUE
@@ -53,6 +76,18 @@ export interface PublicCollectionSnapshotOptions {
   readonly retain?: CollectionRetention;
   /** Called once when the snapshot retains fewer root entries than the source holds. */
   readonly onTruncate?: (truncation: CollectionTruncation) => void;
+  /** Optional lower ceilings for a schema with a smaller accepted input shape. */
+  readonly limits?: {
+    readonly entries?: number;
+    readonly nodes?: number;
+    readonly depth?: number;
+  };
+  /** Keep a bounded prefix of nested arrays instead of rejecting their containing record. */
+  readonly nestedArrayPrefix?: boolean;
+  /** Select how an own data property crosses the boundary without reading accessors. */
+  readonly recordKey?: (key: string, value: unknown, depth: number) => 'copy' | 'preserve' | 'omit';
+  /** Reports any rejected or capped input independently of root-level truncation. */
+  readonly onResult?: (result: Readonly<{ invalid: boolean; truncated: boolean }>) => void;
 }
 
 interface CollectionSnapshotBudget {
@@ -61,10 +96,22 @@ interface CollectionSnapshotBudget {
   readonly seen: WeakMap<object, unknown>;
   readonly additions: object[];
   readonly realm: SnapshotRealm;
-  /** Root-array retention; nested arrays never truncate (an over-limit one fails its record). */
+  readonly entryLimit: number;
+  readonly depthLimit: number;
+  readonly nestedArrayPrefix: boolean;
+  readonly recordKey?: PublicCollectionSnapshotOptions['recordKey'];
+  invalid: boolean;
+  truncated: boolean;
+  /** Root-array retention; nested prefix truncation requires an explicit policy opt-in. */
   readonly retention?: CollectionRetention;
   /** What the root lost, written only by root-level code and only when it lost entries. */
   rootLoss?: CollectionTruncation;
+}
+
+function boundedSnapshotLimit(value: number | undefined, maximum: number): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+    ? Math.min(value, maximum)
+    : maximum;
 }
 
 function recordRootLoss(
@@ -73,7 +120,10 @@ function recordRootLoss(
   source: number,
   retained: number
 ): void {
-  if (retained < source) budget.rootLoss = Object.freeze({ kept, retained, source });
+  if (retained < source) {
+    budget.rootLoss = Object.freeze({ kept, retained, source });
+    budget.truncated = true;
+  }
 }
 
 function consumeSnapshotWork(budget: CollectionSnapshotBudget): boolean {
@@ -99,26 +149,6 @@ function snapshotRealm(view?: Window | SnapshotRealm | null): SnapshotRealm {
     Object: candidate?.Object ?? Object,
     Set: candidate?.Set ?? Set,
   };
-}
-
-function isRealmNeutralPlainRecord(value: object): boolean {
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    const constructor = Object.getOwnPropertyDescriptor(
-      prototype,
-      'constructor'
-    );
-    return Boolean(
-      constructor &&
-        'value' in constructor &&
-        typeof constructor.value === 'function' &&
-        constructor.value.name === 'Object' &&
-        Object.getPrototypeOf(prototype) === null
-    );
-  } catch {
-    return false;
-  }
 }
 
 function isArrayValue(value: unknown): value is unknown[] {
@@ -262,16 +292,30 @@ function snapshotDataRecord(
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
         !descriptor.enumerable
-      )
+      ) {
+        if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) budget.invalid = true;
         continue;
+      }
       if (budget.remaining <= 0) return EXHAUSTED_COLLECTION_VALUE;
       budget.remaining -= 1;
-      const entry = preserveRecordKeys?.has(key)
+      const disposition = budget.recordKey?.(key, descriptor.value, depth) ?? 'copy';
+      if (disposition === 'omit') {
+        budget.invalid = true;
+        continue;
+      }
+      const entry = disposition === 'preserve' || preserveRecordKeys?.has(key)
         ? descriptor.value
         : preserveCollectionItemKeys?.has(key)
         ? snapshotIdentityCollection(descriptor.value, budget.realm, budget)
-        : snapshotCollectionValue(descriptor.value, budget, depth + 1);
-      if (isCollectionSnapshotFailure(entry)) return entry;
+        : snapshotCollectionValue(
+            descriptor.value, budget, depth + 1, undefined, undefined,
+            budget.nestedArrayPrefix && isArrayValue(descriptor.value)
+          );
+      if (isCollectionSnapshotFailure(entry)) {
+        if (entry === OMIT_COLLECTION_VALUE) budget.invalid = true;
+        else budget.truncated = true;
+        return entry;
+      }
       Object.defineProperty(output, key, {
         value: entry,
         enumerable: true,
@@ -306,36 +350,25 @@ function snapshotCollectionValue(
   }
   if (typeof value === 'function') return value;
   if (budget.seen.has(value)) return budget.seen.get(value);
-  if (depth > PUBLIC_COLLECTION_DEPTH_LIMIT || budget.remaining <= 0)
+  if (depth > budget.depthLimit || budget.remaining <= 0)
     return EXHAUSTED_COLLECTION_VALUE;
 
   if (isArrayValue(value)) {
     if (!consumeSnapshotWork(budget)) return EXHAUSTED_COLLECTION_VALUE;
-    const lengthDescriptor = getOwnDataDescriptor(value, 'length');
-    if (lengthDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
-      return allowPrefixTruncation
-        ? emptyRealmArray(budget.realm)
-        : OMIT_COLLECTION_VALUE;
+    const sourceLength = readOwnArrayLength(value);
+    if (sourceLength === undefined) {
+      budget.invalid = true;
+      return allowPrefixTruncation ? emptyRealmArray(budget.realm) : OMIT_COLLECTION_VALUE;
     }
     if (
-      lengthDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      typeof lengthDescriptor.value !== 'number' ||
-      !Number.isSafeInteger(lengthDescriptor.value) ||
-      lengthDescriptor.value < 0
-    )
-      return allowPrefixTruncation
-        ? emptyRealmArray(budget.realm)
-        : OMIT_COLLECTION_VALUE;
-    const sourceLength = lengthDescriptor.value;
-    if (
       !allowPrefixTruncation &&
-      sourceLength > PUBLIC_COLLECTION_ENTRY_LIMIT
+      sourceLength > budget.entryLimit
     )
       return EXHAUSTED_COLLECTION_VALUE;
-    const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
+    const length = Math.min(sourceLength, budget.entryLimit);
     // An append-ordered root walks from its end, so either way the snapshot is the longest
     // contiguous run from the retained end that fits both the entry limit and the value budget.
-    const newest = allowPrefixTruncation && budget.retention === 'newest';
+    const newest = depth === 0 && allowPrefixTruncation && budget.retention === 'newest';
     const output = new budget.realm.Array() as unknown[];
     rememberSnapshot(budget, value, output);
     const kept: unknown[] = [];
@@ -352,20 +385,26 @@ function snapshotCollectionValue(
       const descriptor = getOwnDataDescriptor(value, String(index));
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR) continue;
       if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) {
+        budget.invalid = true;
         if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
         dropped += 1;
         continue;
       }
       const entry = snapshotTransaction(budget, () => {
         budget.remaining -= 1;
-        return snapshotCollectionValue(descriptor.value, budget, depth + 1);
+        return snapshotCollectionValue(
+          descriptor.value, budget, depth + 1, undefined, undefined,
+          budget.nestedArrayPrefix && isArrayValue(descriptor.value)
+        );
       });
       if (entry === OMIT_COLLECTION_VALUE) {
+        budget.invalid = true;
         if (!allowPrefixTruncation) return OMIT_COLLECTION_VALUE;
         dropped += 1;
         continue;
       }
       if (entry === EXHAUSTED_COLLECTION_VALUE) {
+        budget.truncated = true;
         if (!allowPrefixTruncation) return EXHAUSTED_COLLECTION_VALUE;
         break;
       }
@@ -381,7 +420,8 @@ function snapshotCollectionValue(
         writable: false,
       });
     }
-    if (allowPrefixTruncation)
+    if (walked - dropped < sourceLength) budget.truncated = true;
+    if (allowPrefixTruncation && depth === 0)
       recordRootLoss(budget, newest ? 'newest' : 'oldest', sourceLength, walked - dropped);
     return Object.freeze(output);
   }
@@ -431,7 +471,10 @@ function snapshotCollectionValue(
   // Mutable binary views have no truthful recursively-frozen same-shape representation. No
   // enrolled public property uses one; a hostile/untyped assignment fails closed here. Event
   // contracts that expose bytes must define their own detached representation.
-  if (isNativeArrayBufferView(value)) return OMIT_COLLECTION_VALUE;
+  if (isNativeArrayBufferView(value)) {
+    budget.invalid = true;
+    return OMIT_COLLECTION_VALUE;
+  }
   const rect = snapshotDOMRect(value, budget);
   if (rect !== OMIT_COLLECTION_VALUE) return rect;
   if (isImmutableBlob(value)) return value;
@@ -440,16 +483,17 @@ function snapshotCollectionValue(
   // `for...in` also traverses its prototype. Neither can satisfy this generic boundary's bounded,
   // prototype-independent work contract. Components that deliberately accept such records use a
   // schema-aware owned accessor with domain-specific limits instead.
+  budget.invalid = true;
   return OMIT_COLLECTION_VALUE;
 }
 
 /** Counts a plain record's enumerable keys, up to the boundary's own work ceiling. */
-function boundedRecordSize(value: object): number | undefined {
+function boundedRecordSize(value: object, limit = PUBLIC_COLLECTION_WORK_LIMIT): number | undefined {
   let size = 0;
   try {
     for (const key in value) {
       if (typeof key === 'string') size += 1;
-      if (size >= PUBLIC_COLLECTION_WORK_LIMIT) break;
+      if (size >= limit) break;
     }
   } catch {
     return undefined;
@@ -475,15 +519,24 @@ export function snapshotPublicCollection(
   if (
     value === null ||
     (typeof value !== 'object' && typeof value !== 'function')
-  )
+  ) {
+    options.onResult?.(Object.freeze({ invalid: false, truncated: false }));
     return value;
+  }
   const realm = snapshotRealm(view);
+  const nodeLimit = boundedSnapshotLimit(options.limits?.nodes, PUBLIC_COLLECTION_NODE_LIMIT);
   const budget: CollectionSnapshotBudget = {
-    remaining: PUBLIC_COLLECTION_NODE_LIMIT,
-    remainingWork: PUBLIC_COLLECTION_WORK_LIMIT,
+    remaining: nodeLimit,
+    remainingWork: nodeLimit * 2,
     seen: new WeakMap(),
     additions: [],
     realm,
+    entryLimit: boundedSnapshotLimit(options.limits?.entries, PUBLIC_COLLECTION_ENTRY_LIMIT),
+    depthLimit: boundedSnapshotLimit(options.limits?.depth, PUBLIC_COLLECTION_DEPTH_LIMIT),
+    nestedArrayPrefix: options.nestedArrayPrefix ?? false,
+    recordKey: options.recordKey,
+    invalid: false,
+    truncated: false,
     retention: options.retain ?? 'oldest',
   };
   const snapshot = snapshotTransaction(budget, () =>
@@ -491,8 +544,13 @@ export function snapshotPublicCollection(
   );
   if (!isCollectionSnapshotFailure(snapshot)) {
     if (budget.rootLoss) options.onTruncate?.(budget.rootLoss);
+    options.onResult?.(Object.freeze({ invalid: budget.invalid, truncated: budget.truncated }));
     return snapshot;
   }
+  options.onResult?.(Object.freeze({
+    invalid: budget.invalid || snapshot === OMIT_COLLECTION_VALUE,
+    truncated: budget.truncated || snapshot === EXHAUSTED_COLLECTION_VALUE,
+  }));
   if (isArrayValue(value) || isNativeArrayBufferView(value as object))
     return emptyRealmArray(realm);
   if (typeof value === 'object') {
@@ -501,7 +559,7 @@ export function snapshotPublicCollection(
     if (nativeSetValues(value))
       return readonlySetFacade(new realm.Set(), realm);
     if (isRealmNeutralPlainRecord(value)) {
-      const size = boundedRecordSize(value);
+      const size = boundedRecordSize(value, nodeLimit * 2);
       if (size) options.onTruncate?.(Object.freeze({ kept: 'oldest', retained: 0, source: size }));
       const prototype = Object.getPrototypeOf(value);
       return Object.freeze(
@@ -645,7 +703,7 @@ function snapshotIdentityMap(
   budget?: CollectionSnapshotBudget
 ): ReadonlyMap<unknown, unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Map<unknown, unknown>();
-  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+  for (let count = 0; count < (budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT); count += 1) {
     const next = entries.next();
     if (next.done) break;
     if (budget && !consumeSnapshotWork(budget))
@@ -662,7 +720,7 @@ function snapshotIdentitySet(
   budget?: CollectionSnapshotBudget
 ): ReadonlySet<unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Set<unknown>();
-  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+  for (let count = 0; count < (budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT); count += 1) {
     const next = values.next();
     if (next.done) break;
     if (budget && !consumeSnapshotWork(budget))
@@ -706,9 +764,10 @@ function snapshotDetachedMap(
   rememberSnapshot(budget, source, facade);
   const settle = (): ReadonlyMap<unknown, unknown> => {
     if (allowPrefixTruncation) recordNativeCollectionLoss(budget, source, 'map', backing.size);
+    else if ((nativeCollectionSize(source, 'map') ?? 0) > budget.entryLimit) budget.truncated = true;
     return facade;
   };
-  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+  for (let count = 0; count < budget.entryLimit; count += 1) {
     let next: IteratorResult<readonly [unknown, unknown]>;
     try {
       next = entries.next();
@@ -729,11 +788,14 @@ function snapshotDetachedMap(
         ? entry
         : ([key, entry] as const);
     });
-    if (pair === EXHAUSTED_COLLECTION_VALUE)
+    if (pair === EXHAUSTED_COLLECTION_VALUE) {
+      budget.truncated = true;
       return allowPrefixTruncation
         ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
-    if (pair !== OMIT_COLLECTION_VALUE) backing.set(pair[0], pair[1]);
+    }
+    if (pair === OMIT_COLLECTION_VALUE) budget.invalid = true;
+    else backing.set(pair[0], pair[1]);
   }
   return settle();
 }
@@ -750,9 +812,10 @@ function snapshotDetachedSet(
   rememberSnapshot(budget, source, facade);
   const settle = (): ReadonlySet<unknown> => {
     if (allowPrefixTruncation) recordNativeCollectionLoss(budget, source, 'set', backing.size);
+    else if ((nativeCollectionSize(source, 'set') ?? 0) > budget.entryLimit) budget.truncated = true;
     return facade;
   };
-  for (let count = 0; count < PUBLIC_COLLECTION_ENTRY_LIMIT; count += 1) {
+  for (let count = 0; count < budget.entryLimit; count += 1) {
     let next: IteratorResult<unknown>;
     try {
       next = values.next();
@@ -768,11 +831,14 @@ function snapshotDetachedSet(
       budget.remaining -= 1;
       return snapshotCollectionValue(next.value, budget, depth + 1);
     });
-    if (entry === EXHAUSTED_COLLECTION_VALUE)
+    if (entry === EXHAUSTED_COLLECTION_VALUE) {
+      budget.truncated = true;
       return allowPrefixTruncation
         ? settle()
         : EXHAUSTED_COLLECTION_VALUE;
-    if (entry !== OMIT_COLLECTION_VALUE) backing.add(entry);
+    }
+    if (entry === OMIT_COLLECTION_VALUE) budget.invalid = true;
+    else backing.add(entry);
   }
   return settle();
 }
@@ -798,15 +864,7 @@ function snapshotIdentityCollection(
   if (isArrayValue(value)) {
     if (budget && !consumeSnapshotWork(budget))
       return EXHAUSTED_COLLECTION_VALUE;
-    const lengthDescriptor = getOwnDataDescriptor(value, 'length');
-    const sourceLength =
-      lengthDescriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
-      lengthDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
-      typeof lengthDescriptor.value === 'number' &&
-      Number.isSafeInteger(lengthDescriptor.value) &&
-      lengthDescriptor.value >= 0
-        ? lengthDescriptor.value
-        : 0;
+    const sourceLength = readOwnArrayLength(value) ?? 0;
     const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
     const kept: CollectionRetention = root?.retain ?? 'oldest';
     const offset = kept === 'newest' ? sourceLength - length : 0;
@@ -877,6 +935,11 @@ function snapshotEventDetail(
     seen: new WeakMap(),
     additions: [],
     realm: snapshotRealm(view),
+    entryLimit: PUBLIC_COLLECTION_ENTRY_LIMIT,
+    depthLimit: PUBLIC_COLLECTION_DEPTH_LIMIT,
+    nestedArrayPrefix: false,
+    invalid: false,
+    truncated: false,
   };
   const snapshot = snapshotTransaction(budget, () =>
     snapshotCollectionValue(
@@ -908,6 +971,7 @@ interface CollectionPropertyPolicy {
   readonly owns: boolean;
   readonly preservesItemIdentity: boolean;
   readonly preservesObjectIdentity: boolean;
+  readonly immutableSource: boolean;
   /** Enrolled in `appendOrderedCollectionProperties`: an over-limit root keeps its newest entries. */
   readonly retainsNewest: boolean;
 }
@@ -949,8 +1013,9 @@ function collectionPropertyPolicy(
   let preservesItemIdentity = false;
   let preservesObjectIdentity = false;
   let retainsNewest = false;
+  let immutableSource = false;
   for (const constructor of lyraClassChain(ctor)) {
-    // Both fields are `protected static` -- hidden from external consumers of the class, but this
+    // These fields are protected static -- hidden from external consumers of the class, but this
     // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
     // module-level function rather than a method. The `hasOwnProperty` guard above already limits
     // the cast to a constructor that actually declares its own override of the field.
@@ -959,6 +1024,7 @@ function collectionPropertyPolicy(
       identityCollectionProperties: readonly PropertyKey[];
       identityCollectionObjectProperties: readonly PropertyKey[];
       appendOrderedCollectionProperties: readonly PropertyKey[];
+      immutableSourceCollectionProperties: readonly PropertyKey[];
     };
     if (
       Object.prototype.hasOwnProperty.call(
@@ -984,6 +1050,8 @@ function collectionPropertyPolicy(
       declared.identityCollectionObjectProperties.includes(name)
     )
       preservesObjectIdentity = true;
+    if (Object.prototype.hasOwnProperty.call(constructor, 'immutableSourceCollectionProperties') &&
+      declared.immutableSourceCollectionProperties.includes(name)) immutableSource = true;
     if (
       Object.prototype.hasOwnProperty.call(
         constructor,
@@ -998,6 +1066,7 @@ function collectionPropertyPolicy(
     preservesItemIdentity,
     preservesObjectIdentity,
     retainsNewest,
+    immutableSource,
   });
   policies.set(name, policy);
   return policy;
@@ -1008,6 +1077,7 @@ const COLLECTION_ENROLLMENT_FIELDS = [
   'identityCollectionProperties',
   'identityCollectionObjectProperties',
   'appendOrderedCollectionProperties',
+  'immutableSourceCollectionProperties',
 ] as const;
 
 /**
@@ -1068,7 +1138,8 @@ function samePolicy(
     a.owns === b.owns &&
     a.preservesItemIdentity === b.preservesItemIdentity &&
     a.preservesObjectIdentity === b.preservesObjectIdentity &&
-    a.retainsNewest === b.retainsNewest
+    a.retainsNewest === b.retainsNewest &&
+    a.immutableSource === b.immutableSource
   );
 }
 
@@ -1124,11 +1195,11 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
       // boundary owns a source, repeating that exact source or round-tripping the getter's snapshot
       // is a no-op unless the property deliberately supplied a domain-specific change detector.
       // Identity-preserving collections remain explicit render requests because their live items
-      // may have changed even while the array itself did not.
+      // may have changed, unless their documented contract explicitly requires a new source.
       if (
         previous &&
         declaration.hasChanged === undefined &&
-        !policy.preservesItemIdentity &&
+        (!policy.preservesItemIdentity || policy.immutableSource) &&
         !policy.preservesObjectIdentity &&
         (Object.is(value, previous.source) || Object.is(value, previous.retained))
       ) {
@@ -1155,7 +1226,9 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
       recordCollectionTruncation(this, name, truncation);
       originalSet.call(this, snapshot);
       lastAssignments.set(this, {
-        source: value,
+        source: normalizedCollectionWrites.get(this)?.has(name)
+          ? (previous ? previous.source : value)
+          : value,
         retained: descriptor.get?.call(this) ?? snapshot,
       });
     };

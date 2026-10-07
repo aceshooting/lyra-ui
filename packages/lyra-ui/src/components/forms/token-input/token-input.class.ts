@@ -1,8 +1,9 @@
+import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
@@ -11,7 +12,6 @@ import {
   applyComposedFocusRepair,
 } from '../../../internal/focus-navigation.js';
 import {
-  AnchoredValidityController,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -33,20 +33,16 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 import {
-  attachInternalsSafely,
   createStringArrayFormDataState,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
+
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings.generated.js';
@@ -364,7 +360,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.externalDescriptionLease = undefined;
   }
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private labelId = nextId('token-input-label');
@@ -432,11 +428,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) {
-      this.setAttribute('name', this._name);
-    } else {
-      this.removeAttribute('name');
-    }
+    reflectFormName(this, this._name);
     this.syncValidity();
     this.requestUpdate('name', old);
   }
@@ -462,6 +454,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (!wasEffectivelyDisabled && this.effectiveDisabled)
       this.retireDisabledInteraction();
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     // Disabling bars constraint validation, so the violation itself is recomputed here rather than
     // left raised on a control the browser will never enforce.
     this.syncValidity();
@@ -494,24 +488,12 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(
-      this,
-      this.internals,
-      () => this[VALIDITY_ANCHOR]()
-    );
-    installCustomErrorProperty(
-      this,
-      () => this.validityController.customValidityMessage
-    );
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init)
-    );
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like blurring; `checkValidity()`'s own call below runs inside `withStaticValidityCheck()`
-    // so this listener can tell the silent query apart from every other path that raises the
-    // same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
   }
   override connectedCallback(): void {
     super.connectedCallback();
@@ -563,6 +545,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * fieldset re-enabling instead of being permanently overwritten.
    */
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
     const wasEffectivelyDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
     if (!wasEffectivelyDisabled && this.effectiveDisabled)
@@ -590,17 +573,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.syncValidity();
   };
   checkValidity(): boolean {
-    // Silent query: must never mark a pristine control as interacted, however invalid it already
-    // is. `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above
-    // that whatever `invalid` event fires synchronously inside this call is this call, not a
-    // submission attempt.
-    return withStaticValidityCheck(this, () => this.internals.checkValidity());
+    return this.validityController.checkValidity();
   }
   /** Reporting is what a submit attempt does, and a failed submit is precisely when native
    *  `:user-invalid` starts matching — so it counts as interaction, exactly as it does in the
    *  `FormAssociated` mixin. (A submission attempt itself never calls this method -- it drives
    *  `ElementInternals` directly -- which is what `installInteractionOnInvalid()` above covers.) */
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     this.touched = true;
     this.syncValidity();
     return this.internals.reportValidity();
@@ -694,11 +674,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   ): void {
     const input = this.inputEl;
     if (!input) return;
-    if (start === undefined || end === undefined) {
-      input.setRangeText(replacement);
-    } else {
-      input.setRangeText(replacement, start, end, selectMode);
-    }
+    setNativeRangeText(input, replacement, start, end, selectMode);
     this.draft = input.value;
   }
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
@@ -1174,11 +1150,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           ?readonly=${this.readonly}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-            ? this.autocorrect
-              ? 'on'
-              : 'off'
-            : nothing}
+          autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
           @input=${this.onEditInput}
           @change=${this.stopInternalChange}
           @keydown=${this.onEditKeyDown}
@@ -1254,11 +1226,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           ?readonly=${this.readonly}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.hasAttribute('autocorrect') || !this.autocorrect
-            ? this.autocorrect
-              ? 'on'
-              : 'off'
-            : nothing}
+          autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
           aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
           aria-labelledby=${!hasAccessibleLabel && hasLabel
             ? this.labelId

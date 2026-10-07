@@ -6,7 +6,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './background-runs.styles.js';
+import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_backgroundRunsCancelFor, LYRA_DEFAULT_backgroundRunsEmpty, LYRA_DEFAULT_backgroundRunsLabel, LYRA_DEFAULT_backgroundRunsLimit, LYRA_DEFAULT_backgroundRunsOpenFor, LYRA_DEFAULT_backgroundRunsStatusCompleted, LYRA_DEFAULT_backgroundRunsStatusFailed, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
@@ -19,11 +21,11 @@ export interface BackgroundRun {
   id: string;
   label: string;
   description?: string;
-  /** `done`/`success` (an `AgentStatusKind` or tool status) show as `completed`, `error` as `failed`. */
-  status: BackgroundRunStatus | 'done' | 'success' | 'error';
+  /** Shared terminal spellings are accepted alongside the component's original values. */
+  status: BackgroundRunStatus | 'done' | 'success' | 'complete' | 'error';
 }
 
-type NormalizedRun = Omit<BackgroundRun, 'status'> & { status: BackgroundRunStatus };
+type NormalizedRun = Omit<BackgroundRun, 'status'> & { status: BackgroundRunStatus | 'unknown' };
 
 export interface LyraBackgroundRunsEventMap {
   'lr-run-activate': CustomEvent<{ runId: string }>;
@@ -33,21 +35,22 @@ export interface LyraBackgroundRunsEventMap {
 
 const MAX_RENDERED_RUNS = 100;
 const STATUSES: readonly BackgroundRunStatus[] = ['queued', 'running', 'completed', 'failed', 'cancelled'];
-const STATUS_LABEL_KEY: Record<BackgroundRunStatus, string> = {
+const STATUS_LABEL_KEY: Record<NormalizedRun['status'], string> = {
   queued: 'agentRunStatusQueued',
   running: 'statusRunning',
   completed: 'backgroundRunsStatusCompleted',
   failed: 'backgroundRunsStatusFailed',
   cancelled: 'agentRunStatusCancelled',
+  unknown: 'statusUnknown',
 };
-const STATUS_ALIASES: Readonly<Record<string, BackgroundRunStatus>> = { done: 'completed', success: 'completed', error: 'failed' };
-const CANCELLABLE_STATUSES: ReadonlySet<BackgroundRunStatus> = new Set(['queued', 'running']);
+const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['queued', 'running']);
 
 /**
  * `<lr-background-runs>` — a bounded, controlled list of background run states. Open and eligible
  * cancel buttons emit host requests only; statuses remain host-owned and this component never
  * polls, starts timers, or executes a run operation. Blank ids are skipped, duplicate ids retain
- * the first valid item, and no more than 100 rows are mounted.
+ * the first valid item, and no more than 100 rows are mounted. Shared terminal spellings are
+ * normalized; an explicit foreign status remains visible as a neutral unknown row.
  *
  * @customElement lr-background-runs
  * @event lr-run-activate - A run was requested for opening. `detail: { runId }`.
@@ -98,7 +101,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
   protected static override collectionSupport = collectionSupport;
   protected static override readonly ownedCollectionProperties = Object.freeze(['runs']);
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
 
   /** Ordered host-owned records. The component never mutates assigned runs. */
   @property({ attribute: false }) runs: readonly BackgroundRun[] = [];
@@ -118,9 +121,10 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
       const valid: NormalizedRun[] = [];
       for (const run of Array.isArray(this.runs) ? this.runs : []) {
         try {
-          const status = STATUS_ALIASES[run.status] ?? run.status;
-          if (typeof run.label === 'string' && (STATUSES as readonly string[]).includes(status))
-            valid.push({ ...run, status: status as BackgroundRunStatus });
+          const terminal = normalizeAgentTerminalStatus(run.status);
+          const status = terminal === 'success' ? 'completed' : terminal === 'error' ? 'failed' : terminal === 'cancelled' ? 'cancelled' : run.status;
+          if (typeof run.label === 'string')
+            valid.push({ ...run, status: (STATUSES as readonly string[]).includes(status) ? status as BackgroundRunStatus : 'unknown' });
         } catch {
           // A malformed row is skipped.
         }
@@ -165,6 +169,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
         <div part="actions">
           <button
             part="open"
+            data-agent-action="neutral"
             type="button"
             aria-label=${this.localize('backgroundRunsOpenFor', undefined, { label: run.label })}
             ?disabled=${this.disabled}
@@ -173,6 +178,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
           ${cancellable
             ? html`<button
                 part="cancel"
+                data-agent-action="neutral"
                 type="button"
                 aria-label=${this.localize('backgroundRunsCancelFor', undefined, { label: run.label })}
                 ?disabled=${this.disabled}

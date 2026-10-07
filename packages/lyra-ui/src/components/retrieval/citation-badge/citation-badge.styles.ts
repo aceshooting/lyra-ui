@@ -1,5 +1,6 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { anchoredPreviewPanel } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -60,8 +61,7 @@ export const styles = css`
        hugging the leading edge. */
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0 var(--lr-size-0-3em);
     border: var(--lr-border-width-thin) solid
       var(--lr-citation-badge-border, var(--_lr-citation-badge-border));
@@ -99,8 +99,7 @@ export const styles = css`
     );
   }
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   [part="bracket"] {
@@ -111,22 +110,7 @@ export const styles = css`
      lr-tool-call-chip's own [part='tooltip'], and no open/close transition for the same reason: a
      preview tracking the pointer/focus target should appear instantly, not chase a fade. */
   [part="popover"] {
-    position: fixed;
-    z-index: var(--lr-layer-dropdown);
-    box-sizing: border-box;
-    max-inline-size: min(
-      var(--lr-popover-viewport-clamp),
-      var(--lr-size-22rem)
-    );
-    padding: var(--lr-space-s) var(--lr-space-m);
-    /* Anchored overlay: a positioner-placed panel floating over page content, on the shared
-       overlay-surface family (internal/overlay-surface.styles.ts) so it retints with every other
-       popup rather than with the page behind it. */
-    ${overlaySurface}
-    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
-    font-size: var(--lr-font-size-sm);
-    line-height: var(--lr-line-height-1-4);
-    color: var(--lr-color-text);
+    ${anchoredPreviewPanel}
   }
 
   @media (prefers-reduced-motion: reduce) {

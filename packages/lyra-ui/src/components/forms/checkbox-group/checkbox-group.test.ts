@@ -113,7 +113,7 @@ it("publishes fresh immutable value snapshots through its getter and each group 
     >
   `)) as LyraCheckboxGroup;
   const values: Array<readonly string[]> = [];
-  for (const name of ["input", "change", "lr-change"] as const) {
+  for (const name of ["lr-input", "lr-change"] as const) {
     el.addEventListener(name, (event) => values.push(event.detail.value));
   }
 
@@ -128,9 +128,9 @@ it("publishes fresh immutable value snapshots through its getter and each group 
   expect(Object.isFrozen(first)).to.equal(true);
   expect(Object.isFrozen(second)).to.equal(true);
   expect(first === second).to.equal(false);
-  expect(values).to.have.length(3);
+  expect(values).to.have.length(2);
   expect(values.every(Object.isFrozen)).to.equal(true);
-  expect(new Set(values).size).to.equal(3);
+  expect(new Set(values).size).to.equal(2);
 });
 
 it('gives host focus and click their native meanings on the first enabled checkbox', async () => {
@@ -922,8 +922,8 @@ it('consumes child native-style events before emitting one group event surface',
   expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
   expect(events.every(({ target }) => target === el)).to.be.true;
   expect(events.map(({ detail }) => detail)).to.deep.equal([
-    { value: ['a'] },
-    { value: ['a'] },
+    undefined,
+    undefined,
     { value: ['a'] },
   ]);
 });

@@ -412,6 +412,8 @@ the default slot and emits a composed event, while adding no layout of its own.
 
 **Events:** `lr-resize` with a frozen `Readonly<{ entries: readonly ResizeObserverEntry[] }>`
 detail. The sequence is detached and bounded while each native observer entry retains identity.
+Because this event bubbles and is composed, a listener on a layout ancestor can distinguish its
+own resize event from an observed child's event with `event.target === event.currentTarget`.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 
@@ -948,7 +950,9 @@ preserving null readback; an explicitly empty query remains empty.
   reactive property) — matches the same fallback on `<lr-combobox>`/`<lr-table>`.
 - `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; label-valid `items`
   filtered by `query` via `filter` (or the built-in default). An empty `query` skips the query
-  predicate but still omits malformed-label rows.
+  predicate but still omits malformed-label rows. This getter retains every match; the popup
+  renders and navigates the first 50, then adds a localized, non-option count of remaining matches
+  as the listbox description.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
   same-tree consumers; do not copy it to an external control as a string IDREF.
@@ -1754,7 +1758,9 @@ leaves all three fields, not per field-to-field Tab; each entry into the control
 exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-input` and `lr-change` carry the same `{ value, day, month, year, field }` detail after their
+respective native events. `lr-invalid` (no detail) is emitted once as a bubbling/composed alias
+when native validity fails.
 
 **Slots:** `label`, `hint`, `error` (each rendered alongside its matching property).
 
@@ -2238,3 +2244,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly ok: true;
     readonly text: string;
   }`
+
+`lr-known-date` also emits typed `lr-input` and `lr-change` after its corresponding native events.
+Both use the existing `LyraKnownDateEventDetail`, including `value`; native InputEvent metadata and
+legacy native-event detail remain available for compatibility.

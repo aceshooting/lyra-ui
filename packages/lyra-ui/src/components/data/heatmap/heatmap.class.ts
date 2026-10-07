@@ -6,7 +6,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
-import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
+import { finiteInteger, finiteNumber, finiteRange, minMax } from '../../../internal/numbers.js';
 import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
@@ -17,10 +17,13 @@ import {
   linearBucket,
   midpointAlpha,
   midpointBucket,
-  minMax,
   sqrtStep,
 } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
+import { resolveRgb, formatRgb } from './heatmap-colors.js';
+export { hexToRgb, resolveRgb } from './heatmap-colors.js';
+import { DEFAULT_BUCKET_COUNT, MAX_HEATMAP_CELLS, MAX_HEATMAP_DECORATIONS, MAX_ACCESSIBLE_HEATMAP_CELLS, normalizeBucketCount } from './heatmap-limits.js';
+export { MAX_BUCKET_COUNT, MAX_HEATMAP_CELLS, MAX_HEATMAP_DECORATIONS, MAX_ACCESSIBLE_HEATMAP_CELLS, normalizeBucketCount } from './heatmap-limits.js';
 import {
   buildCalendarGrid,
   parseIsoDate,
@@ -53,8 +56,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
+  AnnouncementSinkController,
 } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -135,7 +137,6 @@ const DEFAULT_MATRIX_CELL_SIZE = 22;
 /** Largest explicit row pitch; bounds accidental numeric outliers independently of data size. */
 const MAX_MATRIX_ROW_HEIGHT = 4096;
 const DEFAULT_ACCESSIBLE_TARGET_SIZE_PX = 40;
-const DEFAULT_BUCKET_COUNT = 5;
 /**
  * Hard lower bound on a `fitToWidth`-derived cell size, in both modes. A grid squeezed below this
  * stops being a readable heatmap and starts producing degenerate geometry (sub-pixel fill rects,
@@ -148,11 +149,8 @@ const FIT_MIN_CELL = 4;
  * untrusted attribute/property value turning the ramp into an unbounded
  * allocation without discarding any useful color resolution.
  */
-export const MAX_BUCKET_COUNT = 256;
+// Public limits are defined in heatmap-limits.ts so helper imports avoid the component class.
 /** Total canonical matrix cells and maximum caller-supplied legend/annotation entries. */
-export const MAX_HEATMAP_CELLS = 10_000;
-export const MAX_HEATMAP_DECORATIONS = 256;
-export const MAX_ACCESSIBLE_HEATMAP_CELLS = 400;
 /** Ring stroke width for both the annotation overlay and the keyboard focus ring. */
 const RING_LINE_WIDTH = 2;
 const FALLBACK_FOCUS_RING_COLOR = '#0969da';
@@ -331,116 +329,12 @@ export interface HeatmapSelectionChangeDetail {
   readonly source: HeatmapSelectionSource;
 }
 
-const HEX_RE = /^([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const RGB_RE =
-  /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i;
-
-/**
- * Parses a strict `#rgb`/`#rgba`/`#rrggbb`/`#rrggbbaa` hex string into an
- * `[r, g, b, a]` quadruple (`a` in `[0, 1]`, defaulting to `1` for the
- * 3/6-digit alpha-less forms), or `null` if `hex` isn't one (rather than
- * silently coercing an unparsable string to `0` via
- * `Number.parseInt(..., 16)` returning `NaN`).
- */
-export function hexToRgb(hex: string): [number, number, number, number] | null {
-  const clean = hex.trim().replace('#', '');
-  if (!HEX_RE.test(clean)) return null;
-  const hasAlpha = clean.length === 4 || clean.length === 8;
-  const full =
-    clean.length <= 4
-      ? clean
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : clean;
-  const num = Number.parseInt(full, 16);
-  if (hasAlpha) {
-    return [
-      (num >>> 24) & 255,
-      (num >>> 16) & 255,
-      (num >>> 8) & 255,
-      (num & 255) / 255,
-    ];
-  }
-  return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 1];
-}
-
-function parseRgbString(
-  value: string
-): [number, number, number, number] | null {
-  const match = RGB_RE.exec(value);
-  if (!match) return null;
-  const a = match[4] === undefined ? 1 : Number(match[4]);
-  return [Number(match[1]), Number(match[2]), Number(match[3]), a];
-}
-
-/** Resolves the color `ctx.fillStyle` currently holds to concrete `[r, g, b, a]` bytes by
- *  rendering and reading back a single pixel, the same `getImageData(0, 0, 1, 1)` idiom
- *  `theme.ts`/`shiki-dark-theme.ts`/`color-core.ts` already use elsewhere in this library. Unlike
- *  string-matching the canvas's read-back serialization, this resolves any CSS color syntax the
- *  canvas accepts -- including `oklch()`, `lab()`, and `color(display-p3 ...)`, which canvas
- *  round-trips through `ctx.fillStyle` using their own literal syntax rather than normalizing to
- *  a form `hexToRgb`/`parseRgbString` recognize -- without hand-implementing each color space's
- *  conversion math. Returns `null` if `getImageData` itself throws (e.g. a tainted canvas). */
-function resolveViaPixelReadback(
-  ctx: CanvasRenderingContext2D
-): [number, number, number, number] | null {
-  try {
-    ctx.clearRect(0, 0, 1, 1);
-    ctx.fillRect(0, 0, 1, 1);
-    const [r = 0, g = 0, b = 0, a = 0] = ctx.getImageData(0, 0, 1, 1).data;
-    return [r, g, b, a / 255];
-  } catch {
-    return null;
-  }
-}
-
-/** Formats an `[r, g, b, a]` quadruple as the shortest equivalent CSS color —
- *  `rgb(r, g, b)` when fully opaque (matching every pre-alpha-support call
- *  site's output exactly), `rgba(r, g, b, a)` otherwise. */
-function formatRgb([r, g, b, a]: [number, number, number, number]): string {
-  const alpha = Math.min(1, Math.max(0, a));
-  return alpha >= 1
-    ? `rgb(${r}, ${g}, ${b})`
-    : `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 1000) / 1000})`;
-}
-
-function warnInvalidColor(color: string): void {
-  devWarnOnce(
-    `heatmap-invalid-color:${color}`,
-    `<lr-heatmap> could not parse "${color}" (set via --lr-heatmap-scale-lo/-hi) as a CSS ` +
-      'color; falling back to the default ramp endpoint.'
-  );
-}
-
-let warnedNoCanvasContext = false;
-
-/** Distinct from `warnInvalidColor()`: that one means "this color string is not valid CSS", this
- *  one means "the environment can't tell us, because there is no canvas 2D context to parse it
- *  with". Both end at the same fallback, so without separate messages a consumer debugging a wrong
- *  ramp color cannot tell a typo'd token from a headless/canvas-disabled environment. Warned once
- *  per page, not once per color: the cause is environmental, and `resolveRgb()` runs per ramp
- *  endpoint on every draw pass. */
-function warnNoCanvasContext(): void {
-  if (warnedNoCanvasContext) return;
-  warnedNoCanvasContext = true;
-  devWarnOnce(
-    'heatmap-no-canvas-context',
-    '<lr-heatmap>: no 2D canvas context is available in this environment; color resolution ' +
-      'for non-hex/non-rgb values (e.g. oklch(), color(srgb ...), named colors) will fall back ' +
-      'to the given default instead of resolving the requested color.'
-  );
-}
-
 /**
  * Normalizes a bucket count to the safe, renderable range. Non-finite values
  * restore the public default; finite values are floored and clamped to
  * `[2, MAX_BUCKET_COUNT]`. Flooring keeps the ramp array's length in exact
  * agreement with the count used by `quartileBucket()`.
  */
-export function normalizeBucketCount(bucketCount: number): number {
-  return finiteInteger(bucketCount, DEFAULT_BUCKET_COUNT, 2, MAX_BUCKET_COUNT);
-}
 
 /**
  * Attribute converter for the optional `max-cell-size`/`min-cell-size` clamps. Unlike Lit's default
@@ -484,56 +378,6 @@ const bucketCountConverter = {
       : normalizeBucketCount(Number(value));
   },
 };
-
-/**
- * Resolves any syntactically valid CSS `<color>` — hex, `rgb()`, `hsl()`,
- * `oklch()`, a named color, etc. — to an `[r, g, b, a]` quadruple (`a` in
- * `[0, 1]`, `1` for an opaque input). A translucent input (e.g.
- * `rgba(255,255,255,.028)`, a common way to key a color ramp off a themed
- * "quiet surface" token) round-trips its alpha rather than silently
- * resolving to the fully opaque equivalent.
- *
- * Hand-rolling a parser for every CSS color syntax is unnecessary and
- * error-prone (a naive hex-only parser silently turns an unrecognized format
- * into `NaN` -> `0`, i.e. solid black). The canvas 2D context already
- * implements the full CSS color grammar via its `fillStyle` setter, so this
- * normalizes through that instead. Assigning an unparsable string to
- * `fillStyle` is a spec'd no-op (the previous value is kept, it never
- * throws), so a sentinel round-trip is used to detect that case and fall
- * back to `fallbackHex` (with a one-time development diagnostic) instead of
- * silently drawing the wrong color.
- */
-export function resolveRgb(
-  color: string,
-  fallbackHex: string,
-  ownerDocument?: Document
-): [number, number, number, number] {
-  const fallback = hexToRgb(fallbackHex) ?? [0, 0, 0, 1];
-  const direct = hexToRgb(color);
-  if (direct) return direct;
-
-  const ctx = getScratchCtx(ownerDocument);
-  if (!ctx) {
-    warnNoCanvasContext();
-    return fallback;
-  }
-
-  const sentinel = 'rgb(1, 2, 3)';
-  ctx.fillStyle = sentinel;
-  const sentinelNormalized = ctx.fillStyle;
-  ctx.fillStyle = color;
-  if (ctx.fillStyle === sentinelNormalized && color.trim() !== sentinel) {
-    warnInvalidColor(color);
-    return fallback;
-  }
-  const normalized = ctx.fillStyle;
-  return (
-    hexToRgb(normalized) ??
-    parseRgbString(normalized) ??
-    resolveViaPixelReadback(ctx) ??
-    fallback
-  );
-}
 
 /** Linearly interpolates between two already-resolved `[r, g, b, a]` quadruples at `t` in `[0, 1]`,
  *  formatting the result as `rgb(...)` when fully opaque or `rgba(...)` when either endpoint is translucent. */
@@ -1861,7 +1705,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private pendingAccessibleFocusOrigin: Element | undefined;
   private restoringAccessibleFocus = false;
   private accessibleFocusGeneration = 0;
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private authorRole: string | null = null;
   private authorAriaLabel: string | null = null;
   private generatedAriaLabel = '';
@@ -1883,7 +1727,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     this.refreshAccessibleTargetSize();
     const owner = this.ownerDocument.defaultView;
     const ResizeObserverCtor = owner?.ResizeObserver;
@@ -1938,7 +1781,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.pendingAccessibleFocus = undefined;
     this.pendingAccessibleFocusOrigin = undefined;
     this.restoringAccessibleFocus = false;
-    this.releaseAnnouncementSink();
     this.hoverCell = null;
     this.focusedCell = null;
     this.liveText = '';
@@ -1953,23 +1795,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.cancelDrawFrame();
   }
 
-  private releaseAnnouncementSink(): void {
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
-  }
-
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) {
-      this.releaseAnnouncementSink();
-      return;
-    }
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument)
-      return;
-    this.releaseAnnouncementSink();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   private watchDpr(): void {
@@ -4436,7 +4264,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       ? this.localize('heatmapSelectedCellLabel', undefined, { cell: text })
       : text;
     this.liveText = announcement;
-    this.announcementSink?.announce(announcement);
+    this.announcements.announcePolite(announcement);
   }
 
   private emitCellClick(pos: CellPos, source: HeatmapSelectionSource = 'pointer', select = true): void {

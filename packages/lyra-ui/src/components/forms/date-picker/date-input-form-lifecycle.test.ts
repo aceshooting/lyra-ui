@@ -1,5 +1,6 @@
 // Focused native form lifecycle cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, html } from "@open-wc/testing";
+import { dispatchEnterKeyAndSettle } from '../../../../test/contracts/enter-submit.js';
 import { sendKeys } from "@web/test-runner-commands";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import "./date-input.js";
@@ -813,15 +814,7 @@ describe("lr-date-input implicit form submission", () => {
   const field = (el: LyraDateInput): HTMLInputElement =>
     el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const enterOn = (el: LyraDateInput, init: KeyboardEventInit = {}) =>
-    field(el).dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Enter",
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-        ...init,
-      })
-    );
+    dispatchEnterKeyAndSettle(field(el), init);
 
   it("submits the ancestor form when Enter is pressed in the date field", async () => {
     const form = (await fixture(html`
@@ -836,7 +829,7 @@ describe("lr-date-input implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
   });
 
@@ -852,7 +845,7 @@ describe("lr-date-input implicit form submission", () => {
       submittedValue = new FormData(form).get("when") as string | null;
     });
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     expect(el.value, "the typed text committed").to.equal("2026-07-15");
     expect(
       submittedValue,
@@ -874,7 +867,7 @@ describe("lr-date-input implicit form submission", () => {
       inputs += 1;
     });
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     // A real browser fires the native `change` for the same keystroke, right after the keydown.
     field(el).dispatchEvent(new Event("change", { bubbles: true }));
     expect(changes, "one change for one commit").to.equal(1);
@@ -902,7 +895,7 @@ describe("lr-date-input implicit form submission", () => {
       changes += 1;
     });
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
 
     field(el).value = "2026-08-01";
@@ -931,7 +924,7 @@ describe("lr-date-input implicit form submission", () => {
       changes += 1;
     });
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
 
     field(el).dispatchEvent(
@@ -964,7 +957,7 @@ describe("lr-date-input implicit form submission", () => {
       submitterName =
         ((e as SubmitEvent).submitter as HTMLButtonElement | null)?.name ?? "";
     });
-    enterOn(el);
+    await enterOn(el);
     expect(submits).to.equal(1);
     expect(submitterName, "the lr-button was the submitter").to.equal("action");
   });
@@ -982,28 +975,28 @@ describe("lr-date-input implicit form submission", () => {
       e.preventDefault();
       submits += 1;
     });
-    enterOn(el, { shiftKey: true });
-    enterOn(el, { ctrlKey: true });
-    enterOn(el, { altKey: true });
-    enterOn(el, { metaKey: true });
-    enterOn(el, { isComposing: true });
+    await enterOn(el, { shiftKey: true });
+    await enterOn(el, { ctrlKey: true });
+    await enterOn(el, { altKey: true });
+    await enterOn(el, { metaKey: true });
+    await enterOn(el, { isComposing: true });
     expect(submits).to.equal(0);
 
     // Capture on the host runs before the internal input's own listener.
     const veto = (e: Event): void => e.preventDefault();
     el.addEventListener("keydown", veto, true);
-    enterOn(el);
+    await enterOn(el);
     el.removeEventListener("keydown", veto, true);
     expect(submits).to.equal(0);
 
     el.readonly = true;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, "a readonly field never submits").to.equal(0);
 
     el.readonly = false;
     await el.updateComplete;
-    enterOn(el);
+    await enterOn(el);
     expect(submits, "a bare Enter still submits").to.equal(1);
   });
 });
@@ -1012,9 +1005,7 @@ describe("lr-date-input Enter commit after another write", () => {
   const field = (el: LyraDateInput): HTMLInputElement =>
     el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
   const enterOn = (el: LyraDateInput) =>
-    field(el).dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, composed: true, cancelable: true })
-    );
+    dispatchEnterKeyAndSettle(field(el));
 
   it("shows the reset value when the submit handler resets the form, then commits the same date typed again", async () => {
     const form = (await fixture(html`
@@ -1051,7 +1042,7 @@ describe("lr-date-input Enter commit after another write", () => {
       changes += 1;
     });
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
     el.value = "2026-08-01";
     await el.updateComplete;
@@ -1082,7 +1073,7 @@ describe("lr-date-input Enter commit after another write", () => {
     await el.updateComplete;
     form.addEventListener("submit", (event) => event.preventDefault());
     field(el).value = "2026-07-15";
-    enterOn(el);
+    await enterOn(el);
     await el.updateComplete;
     form.reset();
     await el.updateComplete;

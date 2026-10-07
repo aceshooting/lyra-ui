@@ -257,6 +257,11 @@ export const WidthAndHeightHooks: Story = {
         label="Floor only -- the preview action follows it"
         .catalog=${catalog}
       ></lr-voice-picker>
+      <lr-voice-picker
+        style="--lr-voice-picker-trigger-padding: var(--lr-space-s) var(--lr-space-m); --lr-voice-picker-font-size: var(--lr-font-size-lg); --lr-voice-picker-expand-size: var(--lr-size-1rem)"
+        label="Retuned text and chevron"
+        .catalog=${catalog}
+      ></lr-voice-picker>
     </div>
   `,
 };

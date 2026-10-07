@@ -28,6 +28,7 @@ const UNRELEASED_VERSION = 'unreleased';
 const LYRA_RENAME_PROFILES = Object.freeze([
   Object.freeze({ origin: 'lyra-v21', fromMajor: 21, toMajor: 22, aliasRemovalMajor: 23 }),
   Object.freeze({ origin: 'lyra-v22', fromMajor: 22, toMajor: 23, aliasRemovalMajor: 24 }),
+  Object.freeze({ origin: 'lyra-v25', fromMajor: 25, toMajor: 26, aliasRemovalMajor: 28 }),
 ]);
 
 export const LYRA_RENAME_ORIGINS = Object.freeze(LYRA_RENAME_PROFILES.map((profile) => profile.origin));
@@ -433,7 +434,7 @@ function validateExposure(findings, profile) {
  * Schema validation shared by the authored ledger and its packaged projection. It needs no
  * inventory, so the published CLI can fail closed on a malformed projection.
  */
-export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
+export function validateRenameLedgerShape(ledger, { projected = false, historicalReleaseMajor = null } = {}) {
   const findings = [];
   if (!isPlainObject(ledger)) return ['rename ledger must be an object'];
   const topKeys = projected ? ['schemaVersion', 'profiles'] : ['$comment', 'schemaVersion', 'profiles'];
@@ -444,8 +445,14 @@ export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
   }
   if (!Array.isArray(ledger.profiles)) return [...findings, 'rename ledger profiles must be an array'];
   const origins = ledger.profiles.map((profile) => profile?.origin);
-  if (JSON.stringify(origins) !== JSON.stringify(LYRA_RENAME_ORIGINS)) {
-    findings.push(`rename ledger profiles must be exactly ${LYRA_RENAME_ORIGINS.join(', ')} in that order`);
+  // A verified published capture can predate the v25 profile even when its package version is
+  // 25.x. The captured source and packed projection are compared byte-for-byte by the reader.
+  const historicalTwoProfiles = Number.isInteger(historicalReleaseMajor) &&
+    historicalReleaseMajor >= 22 && historicalReleaseMajor < 26 &&
+    JSON.stringify(origins) === JSON.stringify(LYRA_RENAME_ORIGINS.slice(0, 2));
+  const expectedOrigins = historicalTwoProfiles ? LYRA_RENAME_ORIGINS.slice(0, 2) : LYRA_RENAME_ORIGINS;
+  if (JSON.stringify(origins) !== JSON.stringify(expectedOrigins)) {
+    findings.push(`rename ledger profiles must be exactly ${expectedOrigins.join(', ')} in that order`);
   }
 
   for (const profile of ledger.profiles) {
@@ -530,7 +537,7 @@ export function validateRenameLedgerShape(ledger, { projected = false } = {}) {
     }
     if (projected) validateExposure(findings, profile);
   }
-  if (ledger.profiles.length === LYRA_RENAME_PROFILES.length) {
+  if (ledger.profiles.length >= 2) {
     const historicalFields = ledger.profiles[0]?.detailFields;
     const nextFields = ledger.profiles[1]?.detailFields;
     if ((Array.isArray(historicalFields) || Array.isArray(nextFields)) &&
@@ -547,6 +554,22 @@ function componentMap(inventory) {
 
 function surfaceEntry(component, kind, name) {
   return (component?.surface?.[SURFACE_SECTIONS[kind]] ?? []).find((entry) => entry.name === name) ?? null;
+}
+
+function hasCurrentSuccessor(component, kind, name) {
+  const seen = new Set();
+  while (true) {
+    const key = `${kind}\u0000${name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    const member = surfaceEntry(component, kind, name);
+    if (!member) return false;
+    if (!member.deprecated) return true;
+    const replacement = deprecationRecordFor(component, kind, name)?.replacement;
+    if (!replacement || replacement.kind === 'component' || replacement.kind === 'host-css-property') return false;
+    kind = replacement.kind;
+    name = replacement.name;
+  }
 }
 
 function deprecationRecords(component) {
@@ -655,8 +678,8 @@ export function mirroredMembers(inventory) {
  * so an incomplete ledger fails lint without breaking every build. `sharedTokens` (the canonical
  * token names) keeps document-wide design tokens out of the per-component ledger.
  */
-export function validateRenameLedger(ledger, { inventory, exportDeprecations = [], requireCoverage = false, sharedTokens = null, compatibilityContext = null }) {
-  const findings = validateRenameLedgerShape(ledger);
+export function validateRenameLedger(ledger, { inventory, exportDeprecations = [], requireCoverage = false, sharedTokens = null, compatibilityContext = null, historicalReleaseMajor = null }) {
+  const findings = validateRenameLedgerShape(ledger, { historicalReleaseMajor });
   if (findings.length) return findings;
   const components = componentMap(inventory);
   if (!Array.isArray(exportDeprecations)) return ['exportDeprecations must be an array'];
@@ -732,7 +755,9 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       if (!from) findings.push(`${label}: the deprecated alias ${entry.from} is not on the public surface`);
       else if (!from.deprecated) findings.push(`${label}: the alias ${entry.from} is not marked deprecated in the manifest`);
       if (!to) findings.push(`${label}: the canonical name ${entry.to} is not on the public surface`);
-      else if (to.deprecated) findings.push(`${label}: the canonical name ${entry.to} is itself deprecated`);
+      else if (to.deprecated && !(retired && hasCurrentSuccessor(targetOwner, entry.kind, entry.to))) {
+        findings.push(`${label}: the canonical name ${entry.to} is itself deprecated`);
+      }
       const record = policyFor(component, compatibilityContext, entry.tag, entry.kind, entry.from);
       if (!record) {
         findings.push(`${label}: no deprecation record retires ${entry.from}`);
@@ -908,8 +933,8 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
  * renamed attribute reflects, and which components expose each shared old and new name. The
  * multi-megabyte inventory itself never ships.
  */
-export function projectRenameLedger(ledger, inventory, { exportDeprecations = [], compatibilityContext = null } = {}) {
-  const findings = validateRenameLedger(ledger, { inventory, exportDeprecations, compatibilityContext });
+export function projectRenameLedger(ledger, inventory, { exportDeprecations = [], compatibilityContext = null, historicalReleaseMajor = null } = {}) {
+  const findings = validateRenameLedger(ledger, { inventory, exportDeprecations, compatibilityContext, historicalReleaseMajor });
   if (findings.length) throw new Error(`Invalid Lyra rename ledger: ${findings.join('; ')}`);
   const components = componentMap(inventory);
   const moduleRecords = new Map(exportDeprecations.map((record) => [moduleReviewKey(record), record]));
@@ -976,7 +1001,7 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
       };
     }),
   };
-  const shapeFindings = validateRenameLedgerShape(projection, { projected: true });
+  const shapeFindings = validateRenameLedgerShape(projection, { projected: true, historicalReleaseMajor });
   if (shapeFindings.length) throw new Error(`Invalid Lyra rename projection: ${shapeFindings.join('; ')}`);
   return projection;
 }

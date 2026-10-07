@@ -22,6 +22,12 @@ assert.equal(source.schemaVersion, 1);
 assert.equal(source.valueNamedTokenPolicy.frozenCount, 88);
 assert.ok(Object.keys(source.tokens).length >= 300, 'the canonical source must cover every shared token');
 assert.deepEqual(verifyRuntimeTokenParity(source, packageDir), []);
+const missingRamp = structuredClone(source);
+delete missingRamp.tokens['--lr-ramp-brand-05'];
+assert.match(validateCanonicalTokens(missingRamp).join('; '), /--lr-ramp-brand-05: canonical palette input is missing/u);
+const inventedRamp = structuredClone(source);
+inventedRamp.tokens['--lr-ramp-brand-15'] = structuredClone(source.tokens['--lr-ramp-brand-10']);
+assert.match(validateCanonicalTokens(inventedRamp).join('; '), /--lr-ramp-brand-15: unknown palette input/u);
 
 const valueNamed = Object.entries(source.tokens).filter(([name]) => /^--lr-size-/.test(name));
 assert.equal(valueNamed.length, 88);

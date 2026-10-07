@@ -1,3 +1,5 @@
+import { positiveInteger } from '../internal/numbers.js';
+
 /** Resource ceilings for recursively owned provider data. */
 export interface ProviderSnapshotLimits {
   /** Maximum collection nesting, with the root at depth zero. */
@@ -27,12 +29,6 @@ export interface ProviderSnapshotBudget {
   readonly limits: Readonly<ProviderSnapshotLimits>;
   bytes: number;
   nodes: number;
-}
-
-function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
 }
 
 export function resolveProviderSnapshotLimits(

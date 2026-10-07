@@ -1,11 +1,9 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
-  accessibleTextRecordsMatter,
-  bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './spinner.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -57,22 +55,13 @@ export class LyraSpinner extends LyraElement {
   // Assigned nodes do not exist in Lit's server DOM. Cache their accessible text only when the
   // browser can sample it, before a client-only first paint or just after the hydration render.
   private cachedVisibleLabelText = '';
-  private labelObserver?: MutationObserver;
-  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
-    if (this.isConnected && this.labelPlacement === 'after') this.recomputeVisibleLabelText();
-  });
-  private readonly onLabelSlotChange = (event: Event): void => {
-    if (this.labelPlacement !== 'after') return;
-    const target = event.target as Element | null;
-    if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    this.bindLabelObserverTargets();
-    this.recomputeVisibleLabelText();
-  };
+  private readonly labelTextObserver = new AccessibleTextController(
+    this, [''], () => this.recomputeVisibleLabelText(),
+  );
 
   override connectedCallback(): void {
+    this.labelTextObserver.setEnabled(this.labelPlacement === 'after');
     super.connectedCallback();
-    this.addEventListener('slotchange', this.onLabelSlotChange);
-    this.syncLabelObservation();
     if (this.labelPlacement !== 'after') return;
     if (this.hasUpdated) {
       this.recomputeVisibleLabelText(true, true);
@@ -82,35 +71,9 @@ export class LyraSpinner extends LyraElement {
     } else this.seedFirstRenderState(() => this.recomputeVisibleLabelText(false));
   }
 
-  private syncLabelObservation(): void {
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
-    if (!this.isConnected || this.labelPlacement !== 'after') {
-      this.labelUpgrades.disconnect();
-      return;
-    }
-    const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
-      ?.MutationObserver;
-    this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor((records, observer) => {
-          if (!accessibleTextRecordsMatter(observer, records)) return;
-          this.bindLabelObserverTargets();
-          this.recomputeVisibleLabelText();
-        })
-      : undefined;
-    this.bindLabelObserverTargets();
-  }
-
-  private bindLabelObserverTargets(): void {
-    bindAccessibleTextObserver(this.labelObserver, this, [], this.labelUpgrades);
-  }
-
-  override disconnectedCallback(): void {
-    this.removeEventListener('slotchange', this.onLabelSlotChange);
-    this.labelObserver?.disconnect();
-    this.labelObserver = undefined;
-    this.labelUpgrades.disconnect();
-    super.disconnectedCallback();
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.labelTextObserver.adopted();
   }
 
   private computeVisibleLabelText(preferLightDom = false): string {
@@ -139,7 +102,6 @@ export class LyraSpinner extends LyraElement {
 
   private recomputeVisibleLabelText(request = true, preferLightDom = false): void {
     const next = this.computeVisibleLabelText(preferLightDom);
-    this.bindLabelObserverTargets();
     if (next === this.cachedVisibleLabelText) return;
     this.cachedVisibleLabelText = next;
     if (request) this.requestUpdate();
@@ -148,7 +110,7 @@ export class LyraSpinner extends LyraElement {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('labelPlacement')) return;
-    this.syncLabelObservation();
+    this.labelTextObserver.setEnabled(this.labelPlacement === 'after');
     if (!this.hasUpdated) return;
     if (this.labelPlacement === 'after') this.recomputeVisibleLabelText(false, true);
     else this.cachedVisibleLabelText = '';
@@ -161,7 +123,7 @@ export class LyraSpinner extends LyraElement {
         : (this.labelPlacement === 'after' ? this.cachedVisibleLabelText : '') || this.localize('loading');
     return html`<span part="base spinner" role="progressbar" aria-label=${label}>
       <span part="spinner-indicator" aria-hidden="true"></span>
-      <span part="label" ?hidden=${this.labelPlacement === 'none'}><slot @slotchange=${this.onLabelSlotChange}></slot></span>
+      <span part="label" ?hidden=${this.labelPlacement === 'none'}><slot></slot></span>
     </span>`;
   }
 }

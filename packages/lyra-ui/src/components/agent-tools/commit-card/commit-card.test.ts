@@ -18,6 +18,15 @@ expectLocaleFallback('ar-EG', [
   'commitCardHideFiles',
 ]);
 describe('lr-commit-card', () => {
+  it('caps expanded file rows and explains the omitted tail', async () => {
+    const files: CommitFileChange[] = Array.from({ length: 501 }, (_, index) => ({
+      path: `src/file-${index}.ts`, additions: 1, deletions: 0,
+    }));
+    const el = await fixture<LyraCommitCard>(html`<lr-commit-card files-expanded .files=${files}></lr-commit-card>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="file"]')).to.have.length(500);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('Only the first 500 files');
+    expect(el.shadowRoot!.querySelector('[part="file-path"]')?.textContent).to.include('file-0');
+  });
   it('defaults to filesExpanded=false (files start collapsed) and withoutCopyButton=false', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
     expect(el.filesExpanded).to.be.false;

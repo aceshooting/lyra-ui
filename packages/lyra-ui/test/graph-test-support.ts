@@ -62,6 +62,31 @@ export const nodes = [
 ];
 export const links = [{ source: 'a', target: 'b' }];
 
+/** Seeds the common two-node graph without changing each test's renderer or layout fixture. */
+export async function readyGraphPair(el: LyraGraph, renderer: 'svg' | 'canvas' = 'svg'): Promise<LyraGraph> {
+  el.nodes = nodes;
+  el.edges = links;
+  await el.updateComplete;
+  if (renderer === 'canvas') {
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+  } else {
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+  }
+  return el;
+}
+
+/** Mounts the repeated plain SVG graph fixture; seeded tests retain their exact seed. */
+export async function mountGraphPair(seed?: number): Promise<LyraGraph> {
+  const el = asTestGraph(await fixture<LyraGraphElement>(seed === undefined
+    ? html`<lr-graph></lr-graph>`
+    : html`<lr-graph seed=${seed}></lr-graph>`));
+  return readyGraphPair(el);
+}
+
 export function announcementSink(
   doc: Document = document,
   politeness: 'polite' | 'assertive' = 'polite'

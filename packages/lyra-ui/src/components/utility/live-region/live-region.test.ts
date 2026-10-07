@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, waitUntil, nextFrame } from '@open-wc/testing';
 import {
   ANNOUNCEMENT_SINK_ATTRIBUTE,
@@ -18,14 +19,6 @@ function sinkElement(
   doc: Document = document,
 ): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(
-  politeness: AnnouncementPoliteness = 'polite',
-  doc: Document = document,
-): string[] {
-  const element = sinkElement(politeness, doc);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 it('is accessible in its default, empty state', async () => {

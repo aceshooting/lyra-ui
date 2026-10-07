@@ -1,24 +1,8 @@
+import { resolveDeclarationsInShadow as resolveInShadow } from '../../../../test/shadow-style.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './tool-select-dialog.js';
 import type { LyraToolSelectDialog } from './tool-select-dialog.js';
 
-function resolveInShadow(
-  el: HTMLElement,
-  declarations: readonly (readonly [string, string])[]
-): Record<string, string> {
-  const probe = document.createElement('div');
-  for (const [property, value] of declarations) {
-    probe.style.setProperty(property, value);
-  }
-  el.shadowRoot!.append(probe);
-  const computed = getComputedStyle(probe);
-  const resolved: Record<string, string> = {};
-  for (const [property] of declarations) {
-    resolved[property] = computed.getPropertyValue(property);
-  }
-  probe.remove();
-  return resolved;
-}
 
 function fieldGeometry(el: LyraToolSelectDialog): Record<string, string> {
   const computed = getComputedStyle(

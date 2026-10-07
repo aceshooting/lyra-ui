@@ -1,3 +1,4 @@
+import { glyphRect } from '../../../../test/geometry.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './stack-trace.js';
@@ -725,19 +726,6 @@ describe('card chrome theming hooks', () => {
   });
 });
 
-function glyphRect(root: Node, needle: string): DOMRect {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const index = (node as Text).data.indexOf(needle);
-    if (index === -1) continue;
-    const range = document.createRange();
-    range.setStart(node, index);
-    range.setEnd(node, index + needle.length);
-    return range.getClientRects()[0] ?? range.getBoundingClientRect();
-  }
-  throw new Error(`text ${JSON.stringify(needle)} not rendered`);
-}
-
 it('reads function names and locations left-to-right under RTL while the frame button follows the page', async () => {
   const host = await fixture<HTMLElement>(html`<div dir="rtl" style="inline-size: 480px">
     <lr-stack-trace expand-internal .trace=${'Error: boom\n    at Object.<anonymous> (/app/src/index.js:3:7)'}></lr-stack-trace>
@@ -754,7 +742,6 @@ it('reads function names and locations left-to-right under RTL while the frame b
   expect(frame ? getComputedStyle(frame).direction : 'rtl').to.equal('rtl');
   await expect(el).to.be.accessible();
 });
-
 
 describe('lr-stack-trace deprecated --lr-stack-trace-background alias', () => {
   const fill = (el: LyraStackTrace): string =>

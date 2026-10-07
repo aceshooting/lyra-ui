@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -65,7 +66,7 @@ export const styles = css`
   /* Container-query lengths cannot reference custom properties, so the documented 320px
      narrow-allocation baseline is expressed in root-relative units and still follows the page's
      type scale. */
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part='condition'] {
       flex-direction: column;
       align-items: stretch;

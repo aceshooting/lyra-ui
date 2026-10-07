@@ -1,13 +1,14 @@
+import { emitValueEvents } from '../../../internal/value-events.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-installFormControlLabelSupport();
 import {
-  AnchoredValidityController,
   resolveValidityAnchor,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
@@ -26,27 +27,21 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
 import {
-  attachInternalsSafely,
   createStringArrayFormDataState,
   getFormOwner,
-  installCustomErrorProperty,
   isBarredFromValidation,
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import {
-  installInteractionOnInvalid,
-  installInvalidEventAlias,
-  withStaticValidityCheck,
-} from '../../../internal/invalid-event-alias.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+installFormControlLabelSupport();
+
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_checkboxGroupRequired, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const DUPLICATE_VALUE_WARNING_KEY = 'lyra-checkbox-group-duplicate-child-values';
 const DUPLICATE_VALUE_WARNING =
@@ -64,9 +59,9 @@ export interface LyraCheckboxGroupToggleRequestDetail {
 
 export interface LyraCheckboxGroupEventMap {
   'lr-invalid': CustomEvent<null>;
-  input: CustomEvent<Readonly<{ value: readonly string[] }>>;
+  input: Event;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  change: CustomEvent<Readonly<{ value: readonly string[] }>>;
+  change: Event;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-checkbox-group-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>
@@ -91,9 +86,9 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @slot label - Visible group label.
  * @slot hint - Supporting text.
  * @slot error - Custom validation message.
- * @event input - User selection changed.
- * @event lr-input - Prefixed alias for `input`; `detail: { value: string[] }`.
- * @event change - User selection changed.
+ * @event {Event} input - User selection changed.
+ * @event lr-input - Typed edit notification; `detail: { value: string[] }`.
+ * @event {Event} change - User selection changed.
  * @event lr-change - User selection changed; detail is `{ value: string[] }`. Not fired for a
  * toggle a listener refused through `lr-checkbox-group-toggle-request`.
  * @event lr-checkbox-group-toggle-request - One owned checkbox is about to toggle;
@@ -210,12 +205,13 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    *  attempt alike, via `installInteractionOnInvalid()` — as for native `:user-invalid`. A silent
    *  `checkValidity()` alone never counts. */
   @state() private hasInteracted = false;
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
+  private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
+  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
+  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private internals: ElementInternals;
-  private validityController: AnchoredValidityController;
+  private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
   private labelId = nextId('checkbox-group-label');
@@ -256,8 +252,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   set name(next: string) {
     const old = this._name;
     this._name = next ?? '';
-    if (this._name) this.setAttribute('name', this._name);
-    else this.removeAttribute('name');
+    reflectFormName(this, this._name);
     this.sync();
     this.requestUpdate('name', old);
   }
@@ -309,6 +304,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
     this.propagateDisabled();
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the child boxes told about it.
@@ -318,16 +315,12 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   constructor() {
     super();
-    this.internals = attachInternalsSafely(this);
-    this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
-    installCustomErrorProperty(this, () => this.validityController.customValidityMessage);
-    installInvalidEventAlias(this, (init: { cancelable: true }) =>
-      this.emit('lr-invalid', null, init));
-    // Interactive validation (a submission attempt, `reportValidity()`) is interaction, exactly
-    // like editing or blurring; `checkValidity()`'s own call below runs inside
-    // `withStaticValidityCheck()` so this listener can tell the silent query apart from every
-    // other path that raises the same `invalid` event.
-    installInteractionOnInvalid(this, this.markInteracted);
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emit('lr-invalid', null, init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
   }
 
   private markInteracted = (): void => {
@@ -481,12 +474,11 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (event.type !== 'change' || this.effectiveDisabled) return;
     this.hasInteracted = true;
     this.sync();
+    const value = this.value;
     const detail = (): Readonly<{ value: readonly string[] }> =>
-      Object.freeze({ value: this.value });
-    this.emit('input', detail());
-    this.emit('lr-input', detail());
-    this.emit('change', detail());
-    this.emit('lr-change', detail());
+      Object.freeze({ value: Object.freeze([...value]) });
+    emitValueEvents(this, 'input', detail(), detail => this.emit('lr-input', detail));
+    emitValueEvents(this, 'change', detail(), detail => this.emit('lr-change', detail));
   };
 
   /** The group value that would result if `option` took `proposed`, in DOM order. */
@@ -581,19 +573,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (records.some((record) => this.isOwnedCheckbox(record.target))) this.sync();
   };
 
-  private hasDirectSupportSlot(name: 'label' | 'hint' | 'error'): boolean {
-    return Array.from(this.children ?? []).some((child) => child.getAttribute('slot') === name);
-  }
-
-  private syncSupportSlotFlags(): void {
-    this.hasLabelSlot = this.hasDirectSupportSlot('label');
-    this.hasHintSlot = this.hasDirectSupportSlot('hint');
-    this.hasErrorSlot = this.hasDirectSupportSlot('error');
-  }
-
   private onSlotChange = (): void => {
     this.cachedBoxes = undefined;
-    this.syncSupportSlotFlags();
+
     this.reconcileChildControllers();
     if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
     this.propagateDisabled();
@@ -664,12 +646,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
       this.onSlotChange();
     } else {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers only the light-DOM slot-presence flags until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down. The rest of onSlotChange()'s
-      // work is not render-gating state, so it still runs synchronously either way.
-      this.seedFirstRenderState(() => this.syncSupportSlotFlags());
       this.reconcileChildControllers();
       if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
       this.propagateDisabled();
@@ -847,8 +823,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
   get willValidate(): boolean { return this.internals.willValidate; }
-  checkValidity(): boolean { return withStaticValidityCheck(this, () => this.internals.checkValidity()); }
+  checkValidity(): boolean { return this.validityController.checkValidity(); }
   reportValidity(): boolean {
+    this.validityController.syncConstraints();
     // Marked explicitly rather than left to the `installInteractionOnInvalid()` listener: that
     // listener only fires when the check actually fails, but a `reportValidity()` call on an
     // already-valid control still counts as interaction (native `:user-valid` matches on it too).
@@ -926,7 +903,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.applyPendingRestore();
   }
   formDisabledCallback(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
     this.propagateDisabled();
     // Cascaded disablement bars constraint validation exactly like the group's own `disabled`.
     this.sync();

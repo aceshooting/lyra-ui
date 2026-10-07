@@ -7,6 +7,7 @@
     "dist/components/overlays/skeleton/skeleton.js",
     "dist/components/utility/icon/icon.js"
   ],
+  "$routeGzipKb": {},
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.0625,
     "dist/components/conversation/model-select/model-select.js": 23.1875,

@@ -317,6 +317,8 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `columnOrder: readonly string[] = []` (JS-only) — empty preserves declaration order.
 - `columns: readonly DataGridColumn<Row>[] = []` (JS-only).
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
+  Flat input beyond 10,000 rows shows the localized `row-limit` notice; nested input retains its
+  `tree-limit` notice when the node or depth budget is reached.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
 - `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
@@ -467,7 +469,8 @@ sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the
 Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
 descendants keep their own keys.
 
-**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` (canonical `rowKey`/
+**Events:** `lr-request` followed by `request` for a server-data request (each carries sort,
+filters, search, page, page size, and an abort signal); `lr-cell-click` and cancelable `lr-cell-contextmenu` (canonical `rowKey`/
 `columnId` plus row, column, value, and display index; vetoing the latter suppresses the native menu);
 `lr-column-move`, `lr-column-pin`, `lr-column-visibility-change`; `lr-column-resize`
 (`detail: { columnId, columnKey, width, finished }`; `columnKey` mirrors the table's name for the
@@ -522,7 +525,7 @@ glyph the component resets; rendered only while it has a value), `first-button`,
 and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
 search-cancel glyph the component resets; rendered only while it has a value),
 `select-all-checkbox`, `sort-indicator`,
-`sort-number`, `table`, `toolbar`, `tree-limit`.
+`sort-number`, `table`, `toolbar`, `row-limit`, `tree-limit`.
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
 its buttons have localized pin-to-start, pin-to-end, and unpin names; its visibility toggle has one
@@ -820,7 +823,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
 - `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
-  rows the snapshot keeps; the rest are not shown, counted, paged or exported
+  rows the snapshot keeps; the rest are not shown, counted, paged or exported. The localized
+  `row-limit` part makes this visible alongside the table.
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -1021,7 +1025,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   (`[part='row-total-cell']`) on every body row holding this row's total. Same "consumer
   computes/renders, table only positions" contract as the existing per-column `footer(rows)` — does
   not assume addition, so a non-sum aggregate works identically. Omit for no trailing column at all
-  (unchanged output)
+  (unchanged output). Its column header uses the localized `tableRowTotal` name.
 - `grandTotal?: (rows: readonly T[]) => unknown` (attribute: false) — renders the bottom-right cell (row-total
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
@@ -1102,7 +1106,8 @@ from `columns`/`rows`. `error` — replaces the built-in failed-load state, incl
 button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as
 this slot's fallback content.
 
-**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon`
+**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `row-limit` (localized
+notice when the assigned row collection exceeds 10,000 entries), `cell`, `more-button`, `sort-icon`
 (each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
 `sort-icon-inactive` (the muted bidirectional indicator under `sort-indicators="all"`), `reveal-columns-button`
 (shown when priority columns are hidden or when a narrow allocation is currently force-visible),
@@ -2832,8 +2837,11 @@ deeply-nested node's own shadow root still reaches it).
   Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
-  was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
-  children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
+  was omitted or the inspected-position ceiling was reached. When more than 1,000 valid nodes are
+  supplied, the localized `limit` part reports the retained-node cap; malformed input alone does
+  not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
+  children while `aria-setsize` preserves the declared sibling count. The `limit` CSS part is the
+  localized retained-node cap notice when more than 1,000 valid nodes are supplied. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
 badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
@@ -3403,7 +3411,8 @@ owns none of that.
 
 **Events:** none — purely presentational, activation/drag/connect all live on `lr-flow-canvas`.
 
-**Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
+**Slots:** default (body content), `start` (leading header glyph; `icon` is the deprecated legacy
+slot), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
 while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,
@@ -4095,6 +4104,8 @@ including an explicit empty string; removing it restores `label` or the localize
 **Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
 duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
 more rows than the composed tree's 1,000-row budget.
+When source normalization reaches its 10,000-node cap, the host shows a localized `limit` part;
+the composed tree shows its own 1,000-item notice when its valid-node cap is reached.
 
 **Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
 lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
@@ -4111,7 +4122,8 @@ row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unl
 expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
 `lr-selection-change` events stay inside the component.
 
-**CSS parts:** `base` — the root wrapper.
+**CSS parts:** `base` — the root wrapper; `limit` — localized notice when the source listing
+exceeds its 10,000-item snapshot.
 
 ## `lr-env-list`
 
@@ -4229,8 +4241,9 @@ Form-associated editor for a typed graph relationship/path query, including enti
 relationship and node-type filters, hop limits, validation, and saved queries.
 
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
-and saved-query updates continue normally. Each edit updates the query once and emits one
-`lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value events, prefixed value
+and saved-query updates continue normally. Each edit updates the query once and emits
+`input`/`lr-input` and `change`/`lr-change` on commits, with the complete
+`{ value: GraphQuery }` snapshot on the prefixed events. Native value events, prefixed value
 aliases and listbox show/hide lifecycle events from every child control are contained; events from
 slotted content pass through. Programmatic query assignments remain silent.
 
@@ -4289,7 +4302,7 @@ The matching request/accepted pair reuses one frozen payload: `{ query }` for ru
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and the
+id from `savedQueries`. The full set is native `input`/`change`, `lr-input`/`lr-change`, `lr-validity-change`, `lr-invalid`, and the
 eight phased action events (four requests and four accepted notifications).
 
 Migration note: veto save in `lr-query-save-request`, not `lr-query-save`; the existing
@@ -4333,10 +4346,16 @@ being shadowed by a declaration on the component host.
 Composable flat condition builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
+`components/data/condition-builder/condition-builder-register.js` registers the controls used by
+ordinary string, number, boolean and single-value enum rows. Import `lr-date-input.js` for date
+fields and `lr-combobox.js` for multi-value enum operators. The default entry registers both.
+
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
 and listbox show/hide lifecycle events from every row control and the combinator stay inside the
-builder. Programmatic `value` assignments remain silent.
+builder; events from slotted consumer content pass through. Programmatic `value` assignments
+remain silent. Both builders use the same bounded, own-data option normalization, retaining each
+builder's public option type and first-value-wins behavior.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
 aliases to `lr-condition-builder` / `LyraConditionBuilder` / `ConditionBuilder*`. Update the tag,
@@ -5051,3 +5070,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly color: string;
   }`
+
+`lr-data-grid` publishes each server-data request through both `request` and `lr-request`.
+Both events carry equivalent frozen `DataGridRequest` details with the same abort signal identity.
+Listen to either name to handle each request once.

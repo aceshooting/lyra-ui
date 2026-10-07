@@ -1,3 +1,4 @@
+import { snapshotStructuredData, isSnapshotArrayIndex as isArrayIndex, type SnapshotStructure } from '../../../internal/structured-snapshot.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -5,10 +6,7 @@ import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './schema-viewer.styles.js';
@@ -113,554 +111,36 @@ function isReadonlyArray<Value>(
   return Array.isArray(value);
 }
 
-/** Node-count ceiling for the caller-owned schema snapshot below, mirroring `LyraElement`'s own
- *  generic per-assignment collection budget -- generous enough that a legitimately wide schema
- *  never notices it, while still bounding a truly pathological caller. */
-const SCHEMA_SNAPSHOT_NODE_LIMIT = 50_000;
-const SCHEMA_SNAPSHOT_INSPECTION_LIMIT = SCHEMA_SNAPSHOT_NODE_LIMIT * 4;
-// Array length is independently capped: sparse attacker indexes must not make either the owned
-// snapshot or a later render walk an unbounded positional range.
-const SCHEMA_SNAPSHOT_ARRAY_LENGTH_LIMIT = SCHEMA_SNAPSHOT_NODE_LIMIT;
-const MAX_ARRAY_LENGTH = 0xffff_ffff;
-const OMIT_SCHEMA_VALUE = Symbol('omit-schema-value');
-const NODE_LIMIT_SCHEMA_VALUE = Symbol('schema-node-limit');
-const DEPTH_LIMIT_SCHEMA_VALUE = Symbol('schema-depth-limit');
-const FUNCTION_TO_STRING = Function.prototype.toString;
-const OBJECT_CONSTRUCTOR_SOURCE = FUNCTION_TO_STRING.call(Object);
-
-type SchemaSnapshotFailure =
-  | typeof OMIT_SCHEMA_VALUE
-  | typeof NODE_LIMIT_SCHEMA_VALUE
-  | typeof DEPTH_LIMIT_SCHEMA_VALUE;
-
-interface SchemaSnapshotBudget {
-  remaining: number;
-  remainingInspections: number;
-  readonly seen: Map<object, object>;
-  readonly additions: object[];
-}
-
-interface SchemaSnapshotCheckpoint {
-  readonly remaining: number;
-  readonly additions: number;
-}
-
-interface OwnEnumerableDataDescriptor {
-  readonly value: unknown;
-}
-
-const MISSING_SCHEMA_DESCRIPTOR = Symbol('missing-schema-descriptor');
-const ACCESSOR_SCHEMA_DESCRIPTOR = Symbol('accessor-schema-descriptor');
-const UNSAFE_SCHEMA_DESCRIPTOR = Symbol('unsafe-schema-descriptor');
-
-type SchemaDescriptorResult =
-  | OwnEnumerableDataDescriptor
-  | typeof MISSING_SCHEMA_DESCRIPTOR
-  | typeof ACCESSOR_SCHEMA_DESCRIPTOR
-  | typeof UNSAFE_SCHEMA_DESCRIPTOR;
-
-function isSchemaSnapshotFailure(
-  value: unknown
-): value is SchemaSnapshotFailure {
-  return (
-    value === OMIT_SCHEMA_VALUE ||
-    value === NODE_LIMIT_SCHEMA_VALUE ||
-    value === DEPTH_LIMIT_SCHEMA_VALUE
-  );
-}
-
-/** Accept ordinary and cross-realm plain records, while refusing custom prototypes. */
-function isPlainSchemaRecord(value: object): boolean {
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype === null) return true;
-    if (Object.getPrototypeOf(prototype) !== null) return false;
-    const constructorDescriptor = Object.getOwnPropertyDescriptor(
-      prototype,
-      'constructor'
-    );
-    if (
-      !constructorDescriptor ||
-      !('value' in constructorDescriptor) ||
-      typeof constructorDescriptor.value !== 'function'
-    ) {
-      return false;
-    }
-    const constructor = constructorDescriptor.value;
-    const constructorPrototype = Object.getOwnPropertyDescriptor(
-      constructor,
-      'prototype'
-    );
-    return Boolean(
-      constructorPrototype &&
-        'value' in constructorPrototype &&
-        constructorPrototype.value === prototype &&
-        FUNCTION_TO_STRING.call(constructor) === OBJECT_CONSTRUCTOR_SOURCE
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isSchemaArray(value: object): boolean {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
-function isArrayIndex(key: string): boolean {
-  const index = Number(key);
-  return (
-    Number.isInteger(index) &&
-    index >= 0 &&
-    index < MAX_ARRAY_LENGTH &&
-    String(index) === key
-  );
-}
-
-function checkpointSchemaSnapshot(
-  budget: SchemaSnapshotBudget
-): SchemaSnapshotCheckpoint {
+/** Structural maps and tuples are containers, while their children consume schema nodes.
+ * Their depth follows schema nesting rather than counting the intervening map/array twice. */
+function schemaStructure(depth: number): SnapshotStructure {
   return {
-    remaining: budget.remaining,
-    additions: budget.additions.length,
+    shape: 'record',
+    depth,
+    child: (key, value) => {
+      const structural = key === 'properties' || key === 'items' || key === 'allOf' || key === 'anyOf' || key === 'oneOf';
+      if (structural && depth >= MAX_SCHEMA_DEPTH) return undefined;
+      if (key === 'properties') return {
+        shape: 'record', depth: depth + 1, container: false,
+        child: () => schemaStructure(depth + 1),
+      };
+      let array = false;
+      try { array = Array.isArray(value); } catch { /* The walker rejects revoked proxies. */ }
+      if (key === 'allOf' || key === 'anyOf' || key === 'oneOf' || (key === 'items' && array)) return {
+        shape: 'array', depth: depth + 1, container: false,
+        child: (index) => isArrayIndex(index) ? schemaStructure(depth + 1) : { depth: depth + 1 },
+      };
+      if (key === 'items') return schemaStructure(depth + 1);
+      return { depth: depth + 1 };
+    },
   };
 }
 
-function restoreSchemaSnapshot(
-  budget: SchemaSnapshotBudget,
-  checkpoint: SchemaSnapshotCheckpoint
-): void {
-  budget.remaining = checkpoint.remaining;
-  // An omitted branch reclaims retained nodes and aliases, while source positions already
-  // inspected remain spent so repeated reflection failures cannot multiply total work.
-  while (budget.additions.length > checkpoint.additions) {
-    const source = budget.additions.pop();
-    if (source) budget.seen.delete(source);
-  }
-}
-
-function rememberSchemaSnapshot(
-  budget: SchemaSnapshotBudget,
-  source: object,
-  output: object
-): void {
-  budget.seen.set(source, output);
-  budget.additions.push(source);
-}
-
-function ownEnumerableDataDescriptor(
-  value: object,
-  key: string
-): SchemaDescriptorResult {
-  let descriptor: PropertyDescriptor | undefined;
-  try {
-    descriptor = Object.getOwnPropertyDescriptor(value, key);
-  } catch {
-    return UNSAFE_SCHEMA_DESCRIPTOR;
-  }
-  if (!descriptor || !descriptor.enumerable) return MISSING_SCHEMA_DESCRIPTOR;
-  if (!('value' in descriptor)) return ACCESSOR_SCHEMA_DESCRIPTOR;
-  return descriptor as OwnEnumerableDataDescriptor;
-}
-
-function safeArrayLength(
-  value: object
-): number | typeof UNSAFE_SCHEMA_DESCRIPTOR {
-  let descriptor: PropertyDescriptor | undefined;
-  try {
-    descriptor = Object.getOwnPropertyDescriptor(value, 'length');
-  } catch {
-    return UNSAFE_SCHEMA_DESCRIPTOR;
-  }
-  if (
-    !descriptor ||
-    !('value' in descriptor) ||
-    typeof descriptor.value !== 'number' ||
-    !Number.isSafeInteger(descriptor.value) ||
-    descriptor.value < 0 ||
-    descriptor.value > MAX_ARRAY_LENGTH
-  ) {
-    return UNSAFE_SCHEMA_DESCRIPTOR;
-  }
-  return descriptor.value;
-}
-
-function consumeSchemaInspection(budget: SchemaSnapshotBudget): boolean {
-  if (budget.remainingInspections <= 0) return false;
-  budget.remainingInspections -= 1;
-  return true;
-}
-
-function defineSnapshotValue(
-  output: object,
-  key: string,
-  value: unknown
-): void {
-  Object.defineProperty(output, key, {
-    configurable: false,
-    enumerable: true,
-    value,
-    writable: false,
-  });
-}
-
-function finishSchemaSnapshot<T extends object>(
-  output: T
-): T | typeof OMIT_SCHEMA_VALUE {
-  try {
-    return Object.freeze(output);
-  } catch {
-    return OMIT_SCHEMA_VALUE;
-  }
-}
-
-/**
- * Clones an arbitrary supported schema keyword value. Structural schema keys use the specialized
- * helpers below so their nested nodes keep the viewer's documented node budget, while ordinary
- * keyword values still receive the same recursive, descriptor-safe ownership boundary.
- */
-function snapshotSchemaValue(
-  value: unknown,
-  budget: SchemaSnapshotBudget,
-  depth: number
-): unknown | SchemaSnapshotFailure {
-  if (
-    value === null ||
-    (typeof value !== 'object' && typeof value !== 'function')
-  )
-    return value;
-  if (typeof value === 'function') return OMIT_SCHEMA_VALUE;
-  if (budget.seen.has(value)) return budget.seen.get(value)!;
-  if (depth > MAX_SCHEMA_DEPTH) return DEPTH_LIMIT_SCHEMA_VALUE;
-  if (budget.remaining <= 0) return NODE_LIMIT_SCHEMA_VALUE;
-  if (isSchemaArray(value))
-    return snapshotSchemaValueArray(value, budget, depth);
-  if (!isPlainSchemaRecord(value)) return OMIT_SCHEMA_VALUE;
-  return snapshotSchemaValueRecord(value, budget, depth);
-}
-
-function snapshotSchemaValueRecord(
-  value: object,
-  budget: SchemaSnapshotBudget,
-  depth: number
-): Readonly<Record<string, unknown>> | SchemaSnapshotFailure {
-  const checkpoint = checkpointSchemaSnapshot(budget);
-  if (budget.remaining <= 0) return NODE_LIMIT_SCHEMA_VALUE;
-  budget.remaining -= 1;
-  const output = Object.create(null) as Record<string, unknown>;
-  rememberSchemaSnapshot(budget, value, output);
-  try {
-    for (const key in value) {
-      if (!consumeSchemaInspection(budget)) break;
-      const descriptor = ownEnumerableDataDescriptor(value, key);
-      if (
-        descriptor === MISSING_SCHEMA_DESCRIPTOR ||
-        descriptor === ACCESSOR_SCHEMA_DESCRIPTOR
-      )
-        continue;
-      if (descriptor === UNSAFE_SCHEMA_DESCRIPTOR) {
-        restoreSchemaSnapshot(budget, checkpoint);
-        return OMIT_SCHEMA_VALUE;
-      }
-      const entryCheckpoint = checkpointSchemaSnapshot(budget);
-      const entry = snapshotSchemaValue(descriptor.value, budget, depth + 1);
-      if (entry === OMIT_SCHEMA_VALUE) {
-        restoreSchemaSnapshot(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === DEPTH_LIMIT_SCHEMA_VALUE) continue;
-      if (entry === NODE_LIMIT_SCHEMA_VALUE) break;
-      defineSnapshotValue(output, key, entry);
-    }
-  } catch {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const frozen = finishSchemaSnapshot(output);
-  if (frozen === OMIT_SCHEMA_VALUE) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  return frozen;
-}
-
-function snapshotSchemaValueArray(
-  value: object,
-  budget: SchemaSnapshotBudget,
-  depth: number
-): readonly unknown[] | SchemaSnapshotFailure {
-  const checkpoint = checkpointSchemaSnapshot(budget);
-  if (budget.remaining <= 0) return NODE_LIMIT_SCHEMA_VALUE;
-  budget.remaining -= 1;
-  const sourceLength = safeArrayLength(value);
-  if (sourceLength === UNSAFE_SCHEMA_DESCRIPTOR) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const output = new Array<unknown>(
-    Math.min(sourceLength, SCHEMA_SNAPSHOT_ARRAY_LENGTH_LIMIT)
-  );
-  rememberSchemaSnapshot(budget, value, output);
-  try {
-    for (const key in value) {
-      if (!consumeSchemaInspection(budget)) break;
-      const index = isArrayIndex(key) ? Number(key) : null;
-      if (index !== null && index >= output.length) continue;
-      const descriptor = ownEnumerableDataDescriptor(value, key);
-      if (
-        descriptor === MISSING_SCHEMA_DESCRIPTOR ||
-        descriptor === ACCESSOR_SCHEMA_DESCRIPTOR
-      )
-        continue;
-      if (descriptor === UNSAFE_SCHEMA_DESCRIPTOR) {
-        restoreSchemaSnapshot(budget, checkpoint);
-        return OMIT_SCHEMA_VALUE;
-      }
-      const entryCheckpoint = checkpointSchemaSnapshot(budget);
-      const entry = snapshotSchemaValue(descriptor.value, budget, depth + 1);
-      if (entry === OMIT_SCHEMA_VALUE) {
-        restoreSchemaSnapshot(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === DEPTH_LIMIT_SCHEMA_VALUE) continue;
-      if (entry === NODE_LIMIT_SCHEMA_VALUE) {
-        if (index !== null) output.length = index;
-        break;
-      }
-      defineSnapshotValue(output, key, entry);
-    }
-  } catch {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const frozen = finishSchemaSnapshot(output);
-  if (frozen === OMIT_SCHEMA_VALUE) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  return frozen;
-}
-
-function snapshotSchemaNode(
-  value: unknown,
-  depth: number,
-  budget: SchemaSnapshotBudget
-): JsonSchemaNode | SchemaSnapshotFailure {
-  if (
-    value === null ||
-    typeof value !== 'object' ||
-    !isPlainSchemaRecord(value)
-  ) {
-    return OMIT_SCHEMA_VALUE;
-  }
-  if (budget.seen.has(value)) return budget.seen.get(value)! as JsonSchemaNode;
-  if (depth > MAX_SCHEMA_DEPTH) return DEPTH_LIMIT_SCHEMA_VALUE;
-  if (budget.remaining <= 0) return NODE_LIMIT_SCHEMA_VALUE;
-  const checkpoint = checkpointSchemaSnapshot(budget);
-  budget.remaining -= 1;
-  const output = Object.create(null) as Record<string, unknown>;
-  rememberSchemaSnapshot(budget, value, output);
-  try {
-    for (const key in value) {
-      if (!consumeSchemaInspection(budget)) break;
-      const descriptor = ownEnumerableDataDescriptor(value, key);
-      if (
-        descriptor === MISSING_SCHEMA_DESCRIPTOR ||
-        descriptor === ACCESSOR_SCHEMA_DESCRIPTOR
-      )
-        continue;
-      if (descriptor === UNSAFE_SCHEMA_DESCRIPTOR) {
-        restoreSchemaSnapshot(budget, checkpoint);
-        return OMIT_SCHEMA_VALUE;
-      }
-      const entryCheckpoint = checkpointSchemaSnapshot(budget);
-      const entry = snapshotSchemaNodeField(
-        key,
-        descriptor.value,
-        budget,
-        depth
-      );
-      if (entry === OMIT_SCHEMA_VALUE) {
-        restoreSchemaSnapshot(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === DEPTH_LIMIT_SCHEMA_VALUE) continue;
-      if (entry === NODE_LIMIT_SCHEMA_VALUE) break;
-      defineSnapshotValue(output, key, entry);
-    }
-  } catch {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const frozen = finishSchemaSnapshot(output);
-  if (frozen === OMIT_SCHEMA_VALUE) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  return frozen as JsonSchemaNode;
-}
-
-function snapshotSchemaNodeField(
-  key: string,
-  value: unknown,
-  budget: SchemaSnapshotBudget,
-  depth: number
-): unknown | SchemaSnapshotFailure {
-  if (
-    depth >= MAX_SCHEMA_DEPTH &&
-    (key === 'properties' ||
-      key === 'items' ||
-      key === 'allOf' ||
-      key === 'anyOf' ||
-      key === 'oneOf')
-  ) {
-    return DEPTH_LIMIT_SCHEMA_VALUE;
-  }
-  if (key === 'properties')
-    return snapshotSchemaNodeMap(value, depth + 1, budget);
-  if (key === 'allOf' || key === 'anyOf' || key === 'oneOf') {
-    return snapshotSchemaNodeArray(value, depth + 1, budget);
-  }
-  if (key === 'items') {
-    if (value !== null && typeof value === 'object' && isSchemaArray(value)) {
-      return snapshotSchemaNodeArray(value, depth + 1, budget);
-    }
-    return snapshotSchemaNode(value, depth + 1, budget);
-  }
-  return snapshotSchemaValue(value, budget, depth + 1);
-}
-
-function snapshotSchemaNodeMap(
-  value: unknown,
-  depth: number,
-  budget: SchemaSnapshotBudget
-): Readonly<Record<string, JsonSchemaNode>> | SchemaSnapshotFailure {
-  if (
-    value === null ||
-    typeof value !== 'object' ||
-    !isPlainSchemaRecord(value)
-  ) {
-    return OMIT_SCHEMA_VALUE;
-  }
-  if (budget.seen.has(value))
-    return budget.seen.get(value)! as Readonly<Record<string, JsonSchemaNode>>;
-  const checkpoint = checkpointSchemaSnapshot(budget);
-  const output = Object.create(null) as Record<string, JsonSchemaNode>;
-  rememberSchemaSnapshot(budget, value, output);
-  try {
-    for (const key in value) {
-      if (!consumeSchemaInspection(budget)) break;
-      const descriptor = ownEnumerableDataDescriptor(value, key);
-      if (
-        descriptor === MISSING_SCHEMA_DESCRIPTOR ||
-        descriptor === ACCESSOR_SCHEMA_DESCRIPTOR
-      )
-        continue;
-      if (descriptor === UNSAFE_SCHEMA_DESCRIPTOR) {
-        restoreSchemaSnapshot(budget, checkpoint);
-        return OMIT_SCHEMA_VALUE;
-      }
-      const entryCheckpoint = checkpointSchemaSnapshot(budget);
-      const entry = snapshotSchemaNode(descriptor.value, depth, budget);
-      if (entry === OMIT_SCHEMA_VALUE) {
-        restoreSchemaSnapshot(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === DEPTH_LIMIT_SCHEMA_VALUE) continue;
-      if (entry === NODE_LIMIT_SCHEMA_VALUE) break;
-      defineSnapshotValue(output, key, entry);
-    }
-  } catch {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const frozen = finishSchemaSnapshot(output);
-  if (frozen === OMIT_SCHEMA_VALUE) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  return frozen as Readonly<Record<string, JsonSchemaNode>>;
-}
-
-function snapshotSchemaNodeArray(
-  value: unknown,
-  depth: number,
-  budget: SchemaSnapshotBudget
-): readonly JsonSchemaNode[] | SchemaSnapshotFailure {
-  if (value === null || typeof value !== 'object' || !isSchemaArray(value)) {
-    return OMIT_SCHEMA_VALUE;
-  }
-  if (budget.seen.has(value))
-    return budget.seen.get(value)! as readonly JsonSchemaNode[];
-  const checkpoint = checkpointSchemaSnapshot(budget);
-  const sourceLength = safeArrayLength(value);
-  if (sourceLength === UNSAFE_SCHEMA_DESCRIPTOR) return OMIT_SCHEMA_VALUE;
-  const output = new Array<JsonSchemaNode>(
-    Math.min(sourceLength, SCHEMA_SNAPSHOT_ARRAY_LENGTH_LIMIT)
-  );
-  rememberSchemaSnapshot(budget, value, output);
-  try {
-    for (const key in value) {
-      if (!consumeSchemaInspection(budget)) break;
-      const index = isArrayIndex(key) ? Number(key) : null;
-      if (index !== null && index >= output.length) continue;
-      const descriptor = ownEnumerableDataDescriptor(value, key);
-      if (
-        descriptor === MISSING_SCHEMA_DESCRIPTOR ||
-        descriptor === ACCESSOR_SCHEMA_DESCRIPTOR
-      )
-        continue;
-      if (descriptor === UNSAFE_SCHEMA_DESCRIPTOR) {
-        restoreSchemaSnapshot(budget, checkpoint);
-        return OMIT_SCHEMA_VALUE;
-      }
-      const entryCheckpoint = checkpointSchemaSnapshot(budget);
-      const entry = index !== null
-        ? snapshotSchemaNode(descriptor.value, depth, budget)
-        : snapshotSchemaValue(descriptor.value, budget, depth);
-      if (entry === OMIT_SCHEMA_VALUE) {
-        restoreSchemaSnapshot(budget, entryCheckpoint);
-        continue;
-      }
-      if (entry === DEPTH_LIMIT_SCHEMA_VALUE) continue;
-      if (entry === NODE_LIMIT_SCHEMA_VALUE) {
-        if (index !== null) output.length = index;
-        break;
-      }
-      defineSnapshotValue(output, key, entry);
-    }
-  } catch {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  const frozen = finishSchemaSnapshot(output);
-  if (frozen === OMIT_SCHEMA_VALUE) {
-    restoreSchemaSnapshot(budget, checkpoint);
-    return OMIT_SCHEMA_VALUE;
-  }
-  return frozen as readonly JsonSchemaNode[];
-}
-
-/**
- * Bounded, descriptor-safe, cycle-safe clone of a caller-supplied schema tree, run in place of
- * `LyraElement`'s generic `ownedCollectionProperties` snapshot. It accepts only arrays and
- * plain/null-prototype records, reads own enumerable data descriptors without invoking getters,
- * and freezes a detached result before assignment. Each malformed branch restores its provisional
- * node and cycle mappings before omission; genuine node/depth ceilings retain the safely cloned
- * prefix needed by the viewer's existing bounded rendering path.
- */
-/** Bounded, clone-owned root entry point for {@link snapshotSchemaNode}. */
 function snapshotSchema(value: unknown): JsonSchemaNode | null {
-  const snapshot = snapshotSchemaNode(value, 0, {
-    remaining: SCHEMA_SNAPSHOT_NODE_LIMIT,
-    remainingInspections: SCHEMA_SNAPSHOT_INSPECTION_LIMIT,
-    seen: new Map<object, object>(),
-    additions: [],
+  const snapshot = snapshotStructuredData(value, {
+    profile: 'schema', structure: schemaStructure(0),
   });
-  return isSchemaSnapshotFailure(snapshot) ? null : snapshot;
+  return (snapshot.value as JsonSchemaNode | undefined) ?? null;
 }
 
 /**
@@ -753,25 +233,13 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
   @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
   @property() label = '';
-  private announcementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private previousNodeLimitText = '';
   private previousIssueLimitText = '';
   private suppressNextLimitAnnouncement = true;
 
-  private syncAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.announcementSink?.element.ownerDocument === this.ownerDocument)
-      return;
-    this.announcementSink?.release();
-    this.announcementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
-    this.syncAnnouncementSink();
     // A reconnected or adopted component first snapshots the limits already visible in its new
     // context. They are resting content, not fresh transitions caused after that connection.
     if (this.hasUpdated) {
@@ -782,9 +250,12 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.announcementSink?.release();
-    this.announcementSink = undefined;
     this.suppressNextLimitAnnouncement = true;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
@@ -799,9 +270,9 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         ?.textContent?.trim() ?? '';
     if (!this.suppressNextLimitAnnouncement) {
       if (nodeText && nodeText !== this.previousNodeLimitText)
-        this.announcementSink?.announce(nodeText);
+        this.announcements.announcePolite(nodeText);
       if (issueText && issueText !== this.previousIssueLimitText)
-        this.announcementSink?.announce(issueText);
+        this.announcements.announcePolite(issueText);
     }
     this.previousNodeLimitText = nodeText;
     this.previousIssueLimitText = issueText;

@@ -46,6 +46,41 @@ describe('rendered glass foreground qualification', () => {
   beforeEach(() => { previous = document.adoptedStyleSheets; document.adoptedStyleSheets = [...previous, ...sheets]; });
   afterEach(async () => { document.adoptedStyleSheets = previous; await resetMouse(); });
 
+  it('reuses its document canvas and returns independent bytes for cached colors', () => {
+    const canvasPrototype = HTMLCanvasElement.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const contextPrototype = CanvasRenderingContext2D.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
+    const originalGetContext = canvasPrototype.getContext!;
+    const originalGetImageData = contextPrototype.getImageData!;
+    let contextCreations = 0;
+    let pixelReads = 0;
+    try {
+      canvasPrototype.getContext = function (this: HTMLCanvasElement, ...args: unknown[]) {
+        contextCreations++;
+        return originalGetContext.apply(this, args);
+      };
+      contextPrototype.getImageData = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+        pixelReads++;
+        return originalGetImageData.apply(this, args);
+      };
+      const first = toRgba('rgb(17 93 211)');
+      toRgba('rgb(19 97 223)');
+      first[0] = 0;
+      const repeated = toRgba('rgb(17 93 211)');
+      expect(contextCreations).to.be.at.most(1);
+      expect(pixelReads).to.be.at.most(2);
+      expect(repeated).to.deep.equal([17, 93, 211, 255]);
+      expect(repeated).to.not.equal(first);
+    } finally {
+      canvasPrototype.getContext = originalGetContext;
+      contextPrototype.getImageData = originalGetImageData;
+    }
+  });
+
+  it('resets the shared canvas before parsing an invalid color', () => {
+    expect(toRgba('rgb(17 93 211)')).to.deep.equal([17, 93, 211, 255]);
+    expect(toRgba('not-a-color')).to.deep.equal([0, 0, 0, 255]);
+  });
+
   for (const look of ['lyra', 'shadcn', 'material', 'data', 'terminal', 'high-contrast']) for (const mode of ['light', 'dark']) for (const treatment of ['solid', 'glass']) {
     it(`qualifies ${look}/${mode}/${treatment} chrome with every named accent over both extreme backdrops`, async () => {
       const host = await fixture<GlassContrastFixture>(html`<test-glass-contrast data-lr-look=${look} data-lr-mode=${mode} data-lr-surface=${treatment}><lr-button appearance="plain" variant="brand">Action</lr-button><lr-button appearance="accent" variant="brand">Filled</lr-button></test-glass-contrast>`);
@@ -63,15 +98,18 @@ describe('rendered glass foreground qualification', () => {
           const paint = getComputedStyle(surface).backgroundColor;
           if (treatment === 'glass') expect(toRgba(paint)[3]).to.be.within(152, 153);
           else expect(toRgba(paint)[3]).to.equal(255);
+          const textColors = ['--lr-color-text', '--lr-color-text-quiet'].map(token => [token, resolvedColorToken(surface, token)] as const);
+          const edgeColors = ['--lr-color-border', '--lr-color-border-strong', '--lr-focus-ring-color'].map(token => [token, resolvedColorToken(surface, token)] as const);
+          const plainColor = getComputedStyle(plainBase).color;
           for (const backdrop of ['black', 'white']) {
             const background = composite(paint, backdrop);
-            for (const token of ['--lr-color-text', '--lr-color-text-quiet']) {
-              expect(contrastRatio(resolvedColorToken(surface, token), background), `${look}/${mode}/${accent}/${surfaceToken}/${token}/${backdrop}`).to.be.at.least(4.5);
+            for (const [token, color] of textColors) {
+              expect(contrastRatio(color, background), `${look}/${mode}/${accent}/${surfaceToken}/${token}/${backdrop}`).to.be.at.least(4.5);
             }
-            expect(contrastRatio(getComputedStyle(plainBase).color, background), `${look}/${mode}/${accent}: plain action`).to.be.at.least(4.5);
+            expect(contrastRatio(plainColor, background), `${look}/${mode}/${accent}: plain action`).to.be.at.least(4.5);
             const highlighted = treatment === 'glass' ? composite('rgb(255 255 255 / 0.12)', background) : background;
-            for (const token of ['--lr-color-border', '--lr-color-border-strong', '--lr-focus-ring-color']) {
-              expect(contrastRatio(resolvedColorToken(surface, token), highlighted), `${look}/${mode}/${accent}/${token}: edge`).to.be.at.least(3);
+            for (const [token, color] of edgeColors) {
+              expect(contrastRatio(color, highlighted), `${look}/${mode}/${accent}/${token}: edge`).to.be.at.least(3);
             }
           }
           expect(contrastRatio(getComputedStyle(filledBase).color, getComputedStyle(filledBase).backgroundColor), 'opaque accent on-color').to.be.at.least(4.5);
@@ -97,17 +135,21 @@ describe('rendered glass foreground qualification', () => {
           else host.removeAttribute('data-lr-accent');
           for (const surfaceToken of ['--lr-color-surface', '--lr-color-surface-raised', '--lr-color-surface-overlay', '--lr-color-surface-container-high', '--lr-color-surface-container-highest']) {
             surface.style.setProperty('--test-surface', `var(${surfaceToken})`);
+            const paint = getComputedStyle(target);
+            const borderColor = resolvedColorToken(surface, '--lr-color-border');
+            // The inset highlight occupies the edge, not the padded text region.
+            const foreground = paint.color;
+            const targetBackground = paint.backgroundColor;
+            const surfacePaint = getComputedStyle(surface).backgroundColor;
+            const outline = focusTarget ? getComputedStyle(focusTarget) : undefined;
             for (const backdrop of ['black', 'white']) {
-              const behind = composite(getComputedStyle(surface).backgroundColor, backdrop);
+              const behind = composite(surfacePaint, backdrop);
               const highlighted = treatment === 'glass' ? composite('rgb(255 255 255 / 0.12)', behind) : behind;
-              const paint = getComputedStyle(target);
-              // The inset highlight occupies the edge, not the padded text region.
-              const background = composite(paint.backgroundColor, behind);
+              const background = composite(targetBackground, behind);
               const label = `${look}/${mode}/${treatment}/${accent || 'none'}/${surfaceToken}/${state}/${backdrop}`;
-              expect(contrastRatio(paint.color, background), `${label}: text`).to.be.at.least(4.5);
-              expect(contrastRatio(resolvedColorToken(surface, '--lr-color-border'), highlighted), `${label}: control edge`).to.be.at.least(3);
-              if (focusTarget) {
-                const outline = getComputedStyle(focusTarget);
+              expect(contrastRatio(foreground, background), `${label}: text`).to.be.at.least(4.5);
+              expect(contrastRatio(borderColor, highlighted), `${label}: control edge`).to.be.at.least(3);
+              if (outline) {
                 expect(outline.outlineStyle, `${label}: visible outline`).to.equal('solid');
                 expect(Number.parseFloat(outline.outlineWidth), `${label}: outline width`).to.be.greaterThan(0);
                 expect(contrastRatio(outline.outlineColor, highlighted), `${label}: focus`).to.be.at.least(3);

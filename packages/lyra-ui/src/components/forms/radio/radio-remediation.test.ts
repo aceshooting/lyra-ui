@@ -237,3 +237,17 @@ it('makes standalone radios that share a name and form owner mutually exclusive'
   expect([a!.checked, b!.checked, c!.checked]).to.deep.equal([false, true, true]);
   expect(new FormData(form).getAll('plan')).to.deep.equal(['b']);
 });
+
+it('keeps option and radio identities equal across a native-listener rewrite', async () => {
+  const group = await fixture<LyraRadioGroup>('<lr-radio-group><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group>');
+  await settle(group);
+  const option = group.querySelector<LyraRadio>('lr-radio')!;
+  const details: { value: string; option: LyraRadio; radio: LyraRadio }[] = [];
+  for (const name of ['lr-input', 'lr-change', 'lr-activate'] as const) {
+    group.addEventListener(name, event => details.push(event.detail));
+  }
+  group.addEventListener('input', () => { option.value = 'replacement'; });
+  option.click();
+  expect(details.map(detail => detail.value)).to.deep.equal(['a', 'a', 'a']);
+  expect(details.every(detail => detail.option === option && detail.radio === option)).to.equal(true);
+});

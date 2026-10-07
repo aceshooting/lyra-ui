@@ -1,5 +1,6 @@
-import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
-import { chartSyncStyles } from './chart-sync.styles.js';
+import { snapshotStructuredData, admitSnapshotArray, snapshotArrayStillAdmitted as chartArrayIsStillAdmitted, projectSnapshotArray, type SnapshotArrayAdmission as ChartArrayAdmission } from '../../../internal/structured-snapshot.js';
+import type { ChartSyncPresentation } from './chart-sync.js';
+import { LazyChartSyncController } from './chart-sync-lazy.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -8,6 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
@@ -23,6 +25,7 @@ import {
   type ZoomPlugin,
 } from './chart-feature-loader.js';
 import { styles } from './chart.styles.js';
+import { chartSurfaceStyles } from './chart-surface.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatChartValue } from './chart-number-format.js';
@@ -37,10 +40,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import {
-  acquireAnnouncementSink,
-  type AnnouncementSink,
-} from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   FALLBACK_GRID_COLOR,
   FALLBACK_LEGEND_COLOR,
@@ -52,6 +52,7 @@ import {
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
 import { ChartTokenCache } from './chart-token-cache.js';
+import { chartDataTableVisible, hasSlottedChartDataTable } from './chart-data-table.js';
 import { normalizeSize, type LyraSize, type LyraVariant } from '../../../internal/variants.js';
 import {
   createForcedColorPattern,
@@ -477,71 +478,21 @@ function isChartRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const MAX_CHART_INPUT_ENTRIES = 10_000;
-/** Values a raw `config.data` member may copy in total; each array still keeps <= 10,000. */
-const MAX_CHART_CONFIGURATION_DATA_NODES = 100_000;
 const CHART_INPUT_CAP_WARNING_KEY = 'lr-chart-input-cap';
 const MAX_CHART_CONFIGURATION_DEPTH = 32;
 const OMIT_CHART_CONFIGURATION_VALUE = Symbol('omit-chart-configuration-value');
 
-/**
- * A successful admission is the sole array classification for a projection pass. A revocable
- * proxy may revoke while its `length` descriptor is inspected, so calling `Array.isArray()` a
- * second time would turn an otherwise fail-closed input into a throw.
- */
-interface ChartArrayAdmission {
-  readonly source: object;
-  readonly length: number;
+function warnChartInputCap(): void {
+  devWarnOnce(CHART_INPUT_CAP_WARNING_KEY,
+    'lr-chart: an input array exceeded 10,000 entries; only the first 10,000 are used.');
 }
 
 function admitChartArray(value: unknown): ChartArrayAdmission | undefined {
-  try {
-    if (!Array.isArray(value)) return undefined;
-    const descriptor = getOwnDataDescriptor(value, 'length');
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof descriptor.value !== 'number' ||
-      !Number.isSafeInteger(descriptor.value) ||
-      descriptor.value < 0
-    )
-      return undefined;
-    if (descriptor.value > MAX_CHART_INPUT_ENTRIES)
-      devWarnOnce(
-        CHART_INPUT_CAP_WARNING_KEY,
-        'lr-chart: an input array exceeded 10,000 entries; only the first 10,000 are used.',
-      );
-    return { source: value, length: Math.min(descriptor.value, MAX_CHART_INPUT_ENTRIES) };
-  } catch {
-    return undefined;
-  }
+  return admitSnapshotArray(value, warnChartInputCap);
 }
 
-/** A proxy can revoke after first admission; recheck only its descriptor, never Array.isArray(). */
-function chartArrayIsStillAdmitted(admission: ChartArrayAdmission): boolean {
-  const descriptor = chartRecordValue(admission.source, 'length');
-  return (
-    descriptor !== MISSING_OWN_DATA_DESCRIPTOR &&
-    descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
-    typeof descriptor.value === 'number' &&
-    Number.isSafeInteger(descriptor.value) &&
-    descriptor.value >= admission.length
-  );
-}
-
-/** Copies bounded entries through descriptors so later consumers never iterate a source array. */
 function copyChartArrayEntries(admission: ChartArrayAdmission): readonly unknown[] {
-  if (!chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: unknown[] = Array.from({ length: admission.length }, () => undefined);
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    output[index] = descriptor.value;
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission, value => value, { missing: undefined }) ?? Object.freeze([]);
 }
 
 /** Enumerates only after the caller established an ordinary record, and contains hostile traps. */
@@ -604,22 +555,9 @@ function projectChartNumberData(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly (number | null)[] | undefined {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
-  const output: Array<number | null> = Array.from({ length: admission.length }, () => null);
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    const candidate = descriptor.value;
-    output[index] =
-      typeof candidate === 'number' && Number.isFinite(candidate)
-        ? candidate
-        : null;
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission,
+    entry => typeof entry === 'number' && Number.isFinite(entry) ? entry : null,
+    { missing: null });
 }
 
 function projectChartPoint(value: unknown): LyraChartPoint | null {
@@ -711,78 +649,37 @@ function projectChartDatum(value: unknown): unknown {
 }
 
 function projectChartDatasetValues(admission: ChartArrayAdmission): readonly unknown[] {
-  if (!chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: unknown[] = Array.from({ length: admission.length }, () => null);
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    output[index] = projectChartDatum(descriptor.value);
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission, projectChartDatum, { missing: null }) ?? Object.freeze([]);
 }
 
 function projectChartPoints(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly (LyraChartPoint | null)[] | undefined {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
-  const output: Array<LyraChartPoint | null> = Array.from(
-    { length: admission.length },
-    () => null,
-  );
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    output[index] = projectChartPoint(descriptor.value);
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission, projectChartPoint, { missing: null });
 }
 
 function projectChartStrings(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly string[] | undefined {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
-  const output: string[] = Array.from({ length: admission.length }, () => '');
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof descriptor.value !== 'string'
-    )
-      continue;
-    output[index] = descriptor.value;
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission, entry => typeof entry === 'string' ? entry : '', { missing: '' });
 }
 
 function projectChartPointRadii(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly number[] | undefined {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return undefined;
-  const output: number[] = Array.from({ length: admission.length }, () => Number.NaN);
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof descriptor.value !== 'number' ||
-      !Number.isFinite(descriptor.value)
-    )
-      continue;
-    output[index] = descriptor.value;
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission,
+    entry => typeof entry === 'number' && Number.isFinite(entry) ? entry : Number.NaN,
+    { missing: Number.NaN });
+}
+
+function projectHiddenDatasetIndexes(value: unknown): readonly number[] | undefined {
+  if (value === undefined) return undefined;
+  return projectSnapshotArray(admitChartArray(value),
+    entry => typeof entry === 'number' && Number.isInteger(entry) ? entry : undefined,
+    { compact: true }) ?? Object.freeze([]);
 }
 
 const CHART_ANNOTATION_TONES = new Set<LyraVariant>([
@@ -793,93 +690,31 @@ const CHART_ANNOTATION_TONES = new Set<LyraVariant>([
   'danger',
 ]);
 
-function projectHiddenDatasetIndexes(value: unknown): readonly number[] | undefined {
-  if (value === undefined) return undefined;
-  const admission = admitChartArray(value);
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: number[] = [];
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    const candidate =
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-        ? undefined
-        : descriptor.value;
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof candidate !== 'number' ||
-      !Number.isInteger(candidate)
-    )
-      continue;
-    output.push(candidate);
-  }
-  return Object.freeze(output);
-}
-
 function projectChartAnnotations(value: unknown): readonly LyraChartAnnotation[] {
-  const admission = admitChartArray(value);
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
+  // The owned boundary has already detached these records and omitted accessor fields.
+  if (!Array.isArray(value)) return Object.freeze([]);
   const output: LyraChartAnnotation[] = [];
-  for (let index = 0; index < admission.length; index += 1) {
-    const entry = chartRecordValue(admission.source, String(index));
-    if (
-      entry === MISSING_OWN_DATA_DESCRIPTOR ||
-      entry === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      !isChartRecord(entry.value)
-    )
-      continue;
-    const axis = chartRecordValue(entry.value, 'axis');
-    const lineValue = chartRecordValue(entry.value, 'value');
-    const from = chartRecordValue(entry.value, 'from');
-    const to = chartRecordValue(entry.value, 'to');
-    const label = chartRecordValue(entry.value, 'label');
-    const tone = chartRecordValue(entry.value, 'tone');
-    if (
-      axis === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      lineValue === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      from === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      to === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      label === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      tone === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    const axisValue = axis === MISSING_OWN_DATA_DESCRIPTOR ? undefined : axis.value;
-    const line = lineValue === MISSING_OWN_DATA_DESCRIPTOR ? undefined : lineValue.value;
-    const fromValue = from === MISSING_OWN_DATA_DESCRIPTOR ? undefined : from.value;
-    const toValue = to === MISSING_OWN_DATA_DESCRIPTOR ? undefined : to.value;
-    const labelValue = label === MISSING_OWN_DATA_DESCRIPTOR ? undefined : label.value;
-    const toneValue = tone === MISSING_OWN_DATA_DESCRIPTOR ? undefined : tone.value;
-    if (
-      (axisValue !== undefined && axisValue !== 'x' && axisValue !== 'y') ||
-      (labelValue !== undefined && typeof labelValue !== 'string') ||
-      (toneValue !== undefined &&
-        (typeof toneValue !== 'string' || !CHART_ANNOTATION_TONES.has(toneValue as LyraVariant)))
-    )
-      continue;
-    const normalizedAxis: LyraChartIndexAxis | undefined =
-      axisValue === 'x' || axisValue === 'y' ? axisValue : undefined;
+  for (const annotation of value) {
+    if (!isChartRecord(annotation)) continue;
+    const own = (key: string): unknown => Object.hasOwn(annotation, key) ? annotation[key] : undefined;
+    const axis = own('axis');
+    const line = own('value');
+    const from = own('from');
+    const to = own('to');
+    const label = own('label');
+    const tone = own('tone');
+    if ((axis !== undefined && axis !== 'x' && axis !== 'y') ||
+      (label !== undefined && typeof label !== 'string') ||
+      (tone !== undefined && (typeof tone !== 'string' || !CHART_ANNOTATION_TONES.has(tone as LyraVariant)))) continue;
     const common: Pick<LyraChartAnnotation, 'axis' | 'label' | 'tone'> = {
-      ...(normalizedAxis !== undefined ? { axis: normalizedAxis } : {}),
-      ...(typeof labelValue === 'string' ? { label: labelValue } : {}),
-      ...(typeof toneValue === 'string' ? { tone: toneValue as LyraVariant } : {}),
+      ...(axis === 'x' || axis === 'y' ? { axis } : {}),
+      ...(typeof label === 'string' ? { label } : {}),
+      ...(typeof tone === 'string' ? { tone: tone as LyraVariant } : {}),
     };
     if (typeof line === 'number' && Number.isFinite(line)) {
       output.push(Object.freeze({ ...common, value: line }));
-      continue;
-    }
-    if (
-      typeof fromValue === 'number' &&
-      Number.isFinite(fromValue) &&
-      typeof toValue === 'number' &&
-      Number.isFinite(toValue)
-    ) {
-      output.push(
-        Object.freeze({
-          ...common,
-          from: Math.min(fromValue, toValue),
-          to: Math.max(fromValue, toValue),
-        }),
-      );
+    } else if (typeof from === 'number' && Number.isFinite(from) && typeof to === 'number' && Number.isFinite(to)) {
+      output.push(Object.freeze({ ...common, from: Math.min(from, to), to: Math.max(from, to) }));
     }
   }
   return Object.freeze(output);
@@ -1003,28 +838,8 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
 }
 
 function normalizeChartSeries(value: unknown): readonly LyraChartSeries[] {
-  const admission = admitChartArray(value);
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: LyraChartSeries[] = [];
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    // `appendData()` can retain an already-admitted point series while replacing a numeric
-    // sibling. Reuse its non-enumerable canonical snapshot instead of revisiting the public
-    // caller-owned `data`/`points` array after it may have changed or become hostile.
-    const series = canonicalChartSeries(descriptor.value);
-    if (series) output.push(series);
-  }
-  return Object.freeze(output);
-}
-
-interface ChartConfigurationBudget {
-  remaining: number;
-  readonly active: Set<object>;
+  // Retained series reuse their private canonical snapshots, never their live data/points.
+  return projectSnapshotArray(admitChartArray(value), canonicalChartSeries, { compact: true }) ?? Object.freeze([]);
 }
 
 function isSafeChartConfigurationRecord(value: unknown): value is Record<string, unknown> {
@@ -1081,107 +896,36 @@ function projectLegendPosition(value: unknown): { [scaleId: string]: number } | 
 
 function copyChartConfigurationValue(
   value: unknown,
-  budget: ChartConfigurationBudget,
-  depth = 0,
+  profile: 'chart' | 'chartData' = 'chart',
 ): unknown | typeof OMIT_CHART_CONFIGURATION_VALUE {
-  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
-  if (typeof value === 'function') return value;
-  if (depth > MAX_CHART_CONFIGURATION_DEPTH || budget.remaining <= 0) {
-    return OMIT_CHART_CONFIGURATION_VALUE;
-  }
-  if (budget.active.has(value)) return OMIT_CHART_CONFIGURATION_VALUE;
-  const array = admitChartArray(value);
-  if (array && !chartArrayIsStillAdmitted(array)) return OMIT_CHART_CONFIGURATION_VALUE;
-  if (array) {
-    budget.remaining -= 1;
-    budget.active.add(value);
-    try {
-      const output: unknown[] = Array.from({ length: array.length }, () => undefined);
-      for (let index = 0; index < array.length && budget.remaining > 0; index += 1) {
-        budget.remaining -= 1;
-        const descriptor = chartRecordValue(array.source, String(index));
-        if (
-          descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-          descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-        )
-          continue;
-        const entry = copyChartConfigurationValue(descriptor.value, budget, depth + 1);
-        if (entry !== OMIT_CHART_CONFIGURATION_VALUE) output[index] = entry;
-      }
-      const copied = Object.freeze(output);
-      const canonical = canonicalChartDatasetDataValues.get(array.source);
+  const snapshot = snapshotStructuredData(value, {
+    profile,
+    omitKeys: UNSAFE_KEYS,
+    onArrayTruncate: warnChartInputCap,
+    onClone: (source, copied) => {
+      const canonical = canonicalChartDatasetDataValues.get(source);
       if (canonical) canonicalChartDatasetDataValues.set(copied, canonical);
-      return copied;
-    } finally {
-      budget.active.delete(value);
-    }
-  }
-  if (!isSafeChartConfigurationRecord(value)) {
-    // Canvas gradients/patterns and Chart.js instances are opaque leaves. Their identity is the
-    // contract; Lyra neither reads nor restructures them before handing them to Chart.js.
-    return value;
-  }
-  budget.remaining -= 1;
-  budget.active.add(value);
-  try {
-    const keys = chartEnumerableKeys(value);
-    if (!keys) return OMIT_CHART_CONFIGURATION_VALUE;
-    const output = Object.create(null) as Record<string, unknown>;
-    for (const key of keys) {
-      if (budget.remaining <= 0) break;
-      budget.remaining -= 1;
-      if (UNSAFE_KEYS.has(key)) continue;
-      const descriptor = chartRecordValue(value, key);
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        !descriptor.enumerable
-      )
-        continue;
-      const entry = copyChartConfigurationValue(descriptor.value, budget, depth + 1);
-      if (entry !== OMIT_CHART_CONFIGURATION_VALUE) output[key] = entry;
-    }
-    return Object.freeze(output);
-  } finally {
-    budget.active.delete(value);
-  }
+    },
+  });
+  return snapshot.value === undefined && value !== undefined
+    ? OMIT_CHART_CONFIGURATION_VALUE : snapshot.value;
 }
 
 function projectChartPlugins(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly LyraChartPlugin[] {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: LyraChartPlugin[] = [];
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      descriptor.value === null ||
-      (typeof descriptor.value !== 'object' &&
-        typeof descriptor.value !== 'function')
-    )
-      continue;
-    const plugin = descriptor.value as object;
-    if (admittedChartPlugins.has(plugin)) {
-      output.push(plugin as LyraChartPlugin);
-      continue;
-    }
+  return projectSnapshotArray(admission, candidate => {
+    if (candidate === null || (typeof candidate !== 'object' && typeof candidate !== 'function')) return undefined;
+    const plugin = candidate as object;
+    if (admittedChartPlugins.has(plugin)) return plugin as LyraChartPlugin;
     const id = chartRecordValue(plugin, 'id');
-    if (
-      id === MISSING_OWN_DATA_DESCRIPTOR ||
-      id === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof id.value !== 'string' ||
-      id.value.trim() === ''
-    )
-      continue;
-    // Plugins are an intentional opaque-identity exception: Chart.js invokes their callbacks
-    // itself, so only the checked `id` is read by Lyra before retaining the original object.
+    if (id === MISSING_OWN_DATA_DESCRIPTOR || id === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      typeof id.value !== 'string' || id.value.trim() === '') return undefined;
+    // Chart.js invokes opaque plugin callbacks; Lyra reads only the admitted id.
     admittedChartPlugins.add(plugin);
-    output.push(plugin as LyraChartPlugin);
-  }
-  return Object.freeze(output);
+    return plugin as LyraChartPlugin;
+  }, { compact: true }) ?? Object.freeze([]);
 }
 
 /**
@@ -1261,19 +1005,7 @@ function projectChartDatasetConfigurations(
   value: unknown,
   admission = admitChartArray(value),
 ): readonly LyraChartDatasetConfiguration[] {
-  if (!admission || !chartArrayIsStillAdmitted(admission)) return Object.freeze([]);
-  const output: LyraChartDatasetConfiguration[] = [];
-  for (let index = 0; index < admission.length; index += 1) {
-    const descriptor = chartRecordValue(admission.source, String(index));
-    if (
-      descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    )
-      continue;
-    const dataset = projectChartDatasetConfiguration(descriptor.value);
-    if (dataset) output.push(dataset);
-  }
-  return Object.freeze(output);
+  return projectSnapshotArray(admission, projectChartDatasetConfiguration, { compact: true }) ?? Object.freeze([]);
 }
 
 /**
@@ -1311,11 +1043,7 @@ function projectChartDataConfiguration(value: unknown): LyraChartDataConfigurati
 
 function projectChartConfiguration(value: unknown): LyraChartConfiguration | undefined {
   if (!isSafeChartConfigurationRecord(value)) return undefined;
-  // Each member is bounded on its own, so a large `data` member never displaces `options`.
-  const budget = (remaining = MAX_CHART_INPUT_ENTRIES): ChartConfigurationBudget => ({
-    remaining,
-    active: new Set(),
-  });
+  // Each member is bounded on its own, so a large data member never displaces options.
   const output = Object.create(null) as Record<string, unknown>;
   const type = chartRecordValue(value, 'type');
   const data = chartRecordValue(value, 'data');
@@ -1338,7 +1066,7 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
       continue;
     const copied = copyChartConfigurationValue(
       descriptor.value,
-      budget(property === 'data' ? MAX_CHART_CONFIGURATION_DATA_NODES : undefined),
+      property === 'data' ? 'chartData' : 'chart',
     );
     if (copied === OMIT_CHART_CONFIGURATION_VALUE) continue;
     if (property === 'data') {
@@ -1359,7 +1087,7 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
     if (pluginArray)
       output['plugins'] = projectChartPlugins(plugins.value, pluginArray);
     else {
-      const copied = copyChartConfigurationValue(plugins.value, budget());
+      const copied = copyChartConfigurationValue(plugins.value);
       if (copied !== OMIT_CHART_CONFIGURATION_VALUE) output['plugins'] = copied;
     }
   }
@@ -1901,22 +1629,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     'lr-datum-visibility-change',
   ]);
 
-  // `datasets` already owns its cloning/freezing through its own hand-written accessor (see
-  // `set datasets()` below) and is deliberately excluded here to avoid double-wrapping it.
-  // `annotations` and `hiddenDatasets` are plain Lit-generated accessors with no such protection of
-  // their own, unlike their `LyraBoxPlot`/`LyraLiteChart` siblings' identically named properties —
-  // enrolling them here gives every `lr-*-chart` subclass the same "bounded, clone-owned readonly
-  // snapshot" contract. `labels` is deliberately NOT enrolled here: `chart.test.ts`'s "drops a label
-  // array revoked during descriptor admission" test pins a revocable-Proxy hazard through
-  // `canonicalLabels()`'s own `projectChartStrings()` safety net, which reads `this.labels` lazily
-  // at `buildConfig()` time; the shared ownership boundary instead snapshots eagerly at assignment
-  // time and handles that same self-revoking-mid-enumeration Proxy differently (see handoffs).
+  // Series keep caller-owned data/points identities and private canonical projections. Labels
+  // are projected lazily so a proxy revoked during admission fails closed before chart reads.
+  // The remaining collections use the ordinary eager ownership boundary.
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'annotations',
     'hiddenDatasets',
   ]);
 
-  static override styles = [LyraElement.styles, specialistTokens, styles, srOnly, bidiStyles, chartSyncStyles];
+  static override styles = [LyraElement.styles, specialistTokens, chartSurfaceStyles, styles, srOnly, bidiStyles];
 
   constructor() {
     super();
@@ -1924,8 +1645,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // when prefers-color-scheme flips or an ancestor's theme attribute mutates. The controller
     // registers itself with the host via addController(); redraw only once a chart exists.
     new ThemeWatcher(this, () => {
-      this.canvasTokens.clear();
-      if (this.chart) this.refreshTheme();
+      if (this.chart && this.canvasTokens.hasThemeChanged()) this.refreshTheme();
     });
   }
 
@@ -1968,7 +1688,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const source = this.hiddenDatasets;
     if (this.hiddenDatasetsSnapshot && Object.is(this.hiddenDatasetsSnapshot.source, source))
       return this.hiddenDatasetsSnapshot.value;
-    const value = projectHiddenDatasetIndexes(source);
+    // The owned-collection boundary already detached this public array through descriptors.
+    const value = source === undefined ? undefined : Object.freeze(
+      Array.isArray(source)
+        ? source.filter((index): index is number => typeof index === 'number' && Number.isInteger(index))
+        : [],
+    );
     this.hiddenDatasetsSnapshot = { source, value };
     return value;
   }
@@ -2195,8 +1920,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Whether the data table is currently visible. Identical to `withDataTable` whenever
    *  `dataTableToggle` is off, which is what keeps the unset path byte-identical to before. */
   private get dataTableVisible(): boolean {
-    if (!this.dataTableToggle) return this.withDataTable;
-    return this.dataTableExpandedOverride ?? this.withDataTable;
+    return chartDataTableVisible(this.withDataTable, this.dataTableToggle, this.dataTableExpandedOverride);
   }
 
   private toggleDataTable(): void {
@@ -2746,8 +2470,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @state() private visible = true;
   private intersectionObserver?: IntersectionObserver;
   private intersectionGeneration = 0;
-  private reducedMotionQuery?: MediaQueryList;
-  private reducedMotionWindow?: BrowserWindow;
+  private stopReducedMotionWatch?: () => void;
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   // The unnamed `config-slot` carrying an optional `<script type="application/json">` raw
@@ -2800,8 +2523,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @state() private keyboardDatumAnnouncement = '';
   /** Shared document-level regions that carry announcements. The visually hidden datum copy is an
    *  inspection mirror only because shadow-root live regions are not consistently spoken. */
-  private politeAnnouncementSink?: AnnouncementSink;
-  private assertiveAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this);
   private lastDataTruncationAnnouncement = '';
   /** Gates the sampling notice so an initially supplied large dataset is described, not announced. */
   private isMounting = true;
@@ -2826,8 +2548,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   @property({ attribute: 'sync-group' }) syncGroup = '';
 
-  // @renderController ChartSyncController
-  private readonly chartSync = new ChartSyncController(this, (label, index) => this.syncPresentation(label, index), () => this.resetSyncTooltip(), (target) => target === this.canvasEl);
+  // @renderController LazyChartSyncController
+  private readonly chartSync = new LazyChartSyncController(this, (label, index) => this.syncPresentation(label, index), () => this.resetSyncTooltip(), (target) => target === this.canvasEl);
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -2835,7 +2557,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
       this.rebuildAfterAnnotationRegistration()
     );
-    this.syncAnnouncementSinks();
     // Loading and accessible DOM can settle while the first visibility decision is pending.
     this.visible = !this.ownerWindow?.IntersectionObserver;
     this.armReducedMotionWatcher();
@@ -2931,7 +2652,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     super.disconnectedCallback();
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
-    this.releaseAnnouncementSinks();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.announcedFeatureWarnings.clear();
@@ -2960,14 +2680,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.chartSync.disconnect();
     this.canvasTokens.clear();
     super.adoptedCallback();
+    this.announcements.adopted();
     this.requestUpdate();
-    this.releaseAnnouncementSinks();
-    this.syncAnnouncementSinks();
+    this.disarmReducedMotionWatcher();
     this.armReducedMotionWatcher();
   }
 
   private readonly onReducedMotionChange = (): void => {
-    if (!this.isConnected || this.ownerWindow !== this.reducedMotionWindow) return;
+    if (!this.isConnected) return;
     // Rebuild the effective options immediately. `draw()` updates an existing instance with
     // mode `none`, which also stops an in-flight construction animation; a later type/plugin
     // reconstruction reads the current preference again from `buildConfig()`.
@@ -2975,44 +2695,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   };
 
   private armReducedMotionWatcher(): void {
-    const ownerWindow = this.ownerWindow;
-    if (!ownerWindow?.matchMedia) return;
-    if (this.reducedMotionWindow === ownerWindow && this.reducedMotionQuery) return;
+    if (this.stopReducedMotionWatch) return;
     this.disarmReducedMotionWatcher();
-    this.reducedMotionWindow = ownerWindow;
-    this.reducedMotionQuery = ownerWindow.matchMedia('(prefers-reduced-motion: reduce)');
-    this.reducedMotionQuery.addEventListener('change', this.onReducedMotionChange);
+    this.stopReducedMotionWatch = observeReducedMotion(this, this.onReducedMotionChange);
   }
 
   private disarmReducedMotionWatcher(): void {
-    this.reducedMotionQuery?.removeEventListener('change', this.onReducedMotionChange);
-    this.reducedMotionQuery = undefined;
-    this.reducedMotionWindow = undefined;
-  }
-
-  /** Re-target the ref-counted regions after reconnect/adoption without replaying existing text. */
-  private syncAnnouncementSinks(): void {
-    if (!this.isConnected) return;
-    const heldInOwnerDocument =
-      this.politeAnnouncementSink?.element.ownerDocument === this.ownerDocument &&
-      this.assertiveAnnouncementSink?.element.ownerDocument === this.ownerDocument;
-    if (heldInOwnerDocument) return;
-    this.releaseAnnouncementSinks();
-    this.politeAnnouncementSink = acquireAnnouncementSink('polite', {
-      document: this.ownerDocument,
-      source: this,
-    });
-    this.assertiveAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseAnnouncementSinks(): void {
-    this.politeAnnouncementSink?.release();
-    this.politeAnnouncementSink = undefined;
-    this.assertiveAnnouncementSink?.release();
-    this.assertiveAnnouncementSink = undefined;
+    this.stopReducedMotionWatch?.();
+    this.stopReducedMotionWatch = undefined;
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
@@ -3253,14 +2943,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       changed.get('keyboardDatumAnnouncement') !== undefined &&
       this.keyboardDatumAnnouncement !== ''
     ) {
-      this.politeAnnouncementSink?.announce(this.keyboardDatumAnnouncement);
+      this.announcements.announcePolite(this.keyboardDatumAnnouncement);
     }
     if (
       changed.has('loadFailed') &&
       changed.get('loadFailed') !== undefined &&
       this.loadFailed
     ) {
-      this.assertiveAnnouncementSink?.announce(this.localize('chartMissingLibrary'));
+      this.announcements.announceAssertive(this.localize('chartMissingLibrary'));
     }
     const dataTruncation = this.dataTruncationMessage();
     if (wasMounting) {
@@ -3272,13 +2962,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const featureWarnings = this.featureWarningMessages();
       for (const warning of featureWarnings) {
         if (!this.announcedFeatureWarnings.has(warning)) {
-          this.assertiveAnnouncementSink?.announce(warning);
+          this.announcements.announceAssertive(warning);
         }
       }
       this.announcedFeatureWarnings = new Set(featureWarnings);
       if (!wasMounting && dataTruncation !== this.lastDataTruncationAnnouncement) {
         this.lastDataTruncationAnnouncement = dataTruncation;
-        if (dataTruncation) this.politeAnnouncementSink?.announce(dataTruncation);
+        if (dataTruncation) this.announcements.announcePolite(dataTruncation);
       }
     }
 
@@ -5187,6 +4877,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
+    this.canvasTokens.beginThemeDraw();
     const config = this.buildConfig();
     this.scaleExtremeSlices(config);
     const effectiveType = config.type;
@@ -5208,6 +4899,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       if (this.applyDatumVisibility()) this.chart.update('none');
       this.updateChartArea(this.chart);
       this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible());
+      this.canvasTokens.rememberTheme();
       return;
     }
     this.discardChart(true);
@@ -5227,6 +4919,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
     this.updateChartArea(this.chart);
     this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible());
+    this.canvasTokens.rememberTheme();
   }
 
   private drawIfVisible(): void {
@@ -5628,7 +5321,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private hasCustomDataTable(): boolean {
-    return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
+    return hasSlottedChartDataTable(this);
   }
 
   /** One DOM legend entry's text: the bare label, or a localized sentence with its values. */

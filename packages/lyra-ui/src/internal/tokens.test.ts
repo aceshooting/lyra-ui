@@ -155,10 +155,8 @@ function paletteBlock(mode: PaletteMode): string {
 /**
  * The standalone value a token resolves to with no consumer theme loaded.
  *
- * A semantic colour no longer carries its own literal per mode: it names a grid slot, the slot
- * names a ramp step, and the step carries the hex. Following that chain here is the point --
- * asserting the literal directly is what let the flat token and its own grid slot drift into two
- * different colours in the first place.
+ * A semantic colour names a grid slot whose literal fallback is resolved from canonical ramp
+ * data by the palette generator. Follow that bridge rather than assuming a separate flat value.
  */
 function fallbackHex(name: string, mode: PaletteMode): string {
   const escaped = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -167,14 +165,10 @@ function fallbackHex(name: string, mode: PaletteMode): string {
   const bridged = tokenCssText.match(new RegExp(`${escaped(name)}:\\s*var\\((--lr-color-[a-z0-9-]+)\\)`, 'i'));
   if (bridged) {
     const block = paletteBlock(mode);
-    const slot = block.match(
-      new RegExp(`${escaped(bridged[1]!)}:\\s*var\\([^,]+,\\s*var\\((--lr-ramp-[a-z0-9-]+)\\)\\)`, 'i'),
-    );
+    const slot = block.match(new RegExp(`${escaped(bridged[1]!)}:\\s*var\\([^,]+,\\s*(#[0-9a-f]{6}|rgb\\([^)]+\\))\\)`, 'i'));
     expect(slot, `${name} bridges to ${bridged[1]}, which the ${mode} grid does not declare`).to.not.equal(null);
-    // The ramp is declared once, on `:host`, and inherits into the dark block.
-    const step = palette.cssText.match(new RegExp(`${escaped(slot![1]!)}:\\s*(#[0-9a-f]{3,8})`, 'i'));
-    expect(step, `${slot![1]} is referenced but never declared`).to.not.equal(null);
-    return step![1]!;
+    const value = slot![1]!;
+    return value.startsWith('#') ? value : toHex([...value.matchAll(/\d+/g)].slice(0, 3).map(([channel]) => Number(channel)));
   }
 
   // The light value is declared once, on `:host`; the dark one is composed into each of the three

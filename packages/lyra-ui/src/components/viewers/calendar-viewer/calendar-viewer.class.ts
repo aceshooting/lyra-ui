@@ -15,6 +15,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { loadIcal, type IcalTimeApi } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
@@ -157,7 +158,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
   /** Display name associated with the calendar. It names `[part='base']` when host `aria-label` is

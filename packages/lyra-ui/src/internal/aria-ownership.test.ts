@@ -396,6 +396,22 @@ it('treats late same-value generated attributes and controls as authored baselin
   expect(target.getAttribute('aria-controls')).to.equal('same-control');
 });
 
+it('restores an authored controls IDREF after the owned control leaves its root', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`
+    <div><button aria-controls="author-control"></button><section id="owned-control"></section></div>
+  `);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('section')!;
+  const lease = acquireAriaOwnership(target, { controls: [owned] });
+  expect(target.getAttribute('aria-controls')).to.equal('author-control owned-control');
+
+  owned.remove();
+  lease.update(target, { controls: [owned] });
+  lease.release();
+  expect(target.getAttribute('aria-controls')).to.equal('author-control');
+});
+
 it('recreates attribute and control observation in the target realm after adoption', async function () {
   if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
   const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);

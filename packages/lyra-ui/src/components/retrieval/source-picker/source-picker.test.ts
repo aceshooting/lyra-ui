@@ -1,3 +1,4 @@
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -1028,18 +1029,6 @@ it('keyboard: a non-activation key on the select-all checkbox is a no-op', async
 });
 
 describe('checked-state cssprop escape hatch', () => {
-  function resolvedInShadow(
-    el: LyraSourcePicker,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
 
   async function picker(
     selectedSourceIds: string[],
@@ -1336,7 +1325,7 @@ it('caps adversarial depth and breadth and exposes a localized visible limit sta
 
 it('announces post-mount no-match transitions only through the light-DOM sink', async () => {
   const el = (await fixture(
-    html`<lr-source-picker .sources=${sources}></lr-source-picker>`
+    html`<lr-source-picker .sources=${sources} .strings=${{ sourcePickerMatches: { one: 'Found {count} matching source', other: 'Found {count} matching sources' } }}></lr-source-picker>`
   )) as LyraSourcePicker;
   const sink = document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
@@ -1354,6 +1343,16 @@ it('announces post-mount no-match transitions only through the light-DOM sink', 
   await el.updateComplete;
   await waitUntil(() => sink.children.length > before);
   expect(sink.lastElementChild?.textContent).to.equal('No matches');
+  search.dispatchEvent(
+    new CustomEvent('lr-input', {
+      detail: { value: 'curie' },
+      bubbles: true,
+      composed: true,
+    })
+  );
+  await el.updateComplete;
+  await waitUntil(() => (sink.lastElementChild?.textContent ?? '').startsWith('Found '));
+  expect(sink.lastElementChild?.textContent).to.match(/^Found \d+ matching source(?:s)?$/);
   expect(
     el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('role')
   ).to.equal(null);
@@ -1366,7 +1365,7 @@ it('announces post-mount no-match transitions only through the light-DOM sink', 
     })
   );
   await el.updateComplete;
-  expect(sink.children.length).to.equal(before + 1);
+  expect(sink.children.length).to.equal(before + 2);
   expect(
     el.shadowRoot!.querySelectorAll('[role="status"], [role="alert"]').length
   ).to.equal(0);
@@ -1399,6 +1398,34 @@ it('canonicalizes and prunes controlled source ids across replacement and emitte
   expect(
     el.shadowRoot!.querySelector('[part="summary"]')!.textContent
   ).to.include('1 of 1');
+});
+
+it('keeps a normalized selection when a host rebinds the same stale source array', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = [
+    { id: 'a', label: 'Alpha' },
+    { id: 'b', label: 'Beta' },
+  ];
+  const hostSelection = ['a', 'missing'];
+  el.selectedSourceIds = hostSelection;
+  await el.updateComplete;
+  expect(el.selectedSourceIds).to.deep.equal(['a']);
+
+  let changes = 0;
+  el.addEventListener('lr-selection-change', () => changes++);
+  el.selectedSourceIds = hostSelection;
+  expect(el.isUpdatePending).to.equal(false);
+  expect(el.selectedSourceIds).to.deep.equal(['a']);
+  expect(changes).to.equal(0);
+
+  el.sources = [{ id: 'b', label: 'Beta' }];
+  await el.updateComplete;
+  expect(changes).to.equal(1);
+  expect(el.selectedSourceIds).to.deep.equal([]);
+
+  el.selectedSourceIds = ['b'];
+  await el.updateComplete;
+  expect(el.selectedSourceIds).to.deep.equal(['b']);
 });
 
 describe('depth indent', () => {

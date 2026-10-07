@@ -14,7 +14,7 @@ import {
   type ResolvedElement,
   type LyraWidgetNode,
 } from './resolve.js';
-import { type LyraWidgetTypeRegistry } from './registry.js';
+import type { LyraWidgetTypeRegistry } from './registry.js';
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from './default-registry.js';
 
 // `unsafeStatic()` must return the SAME StaticValue instance for the same tag string on every

@@ -1,9 +1,7 @@
 import type { OoxmlElement, OoxmlNode, OoxmlPackage } from '@docx-editor.dev/core/store';
 import { parseDocxChart, type DocxChartModel } from './chart-model.js';
+import { CHART_NS as C, OFFICE_REL_NS as R, resolveOoxmlPart, WORD_NS as W } from './ooxml.js';
 
-const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-const C = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
-const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const CHART_RELATIONSHIP = `${R}/chart`;
 const LIMITS = { nodes: 200_000, charts: 32, bytes: 2 * 1024 * 1024 };
 const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -27,17 +25,6 @@ export interface DocxChartPlacement {
 const element = (node: OoxmlNode): node is OoxmlElement => node.kind !== 'textValue';
 
 /** Resolve a package-relative target without leaving the package; null for anything unusual. */
-function resolve(owner: string, target: string): string | null {
-  if (!target || /[\\%\x00-\x20\x7f:?#]/.test(target) || target.startsWith('//')) return null;
-  const segments = target.startsWith('/') ? [] : owner.split('/').slice(1, -1);
-  for (const segment of target.split('/')) {
-    if (!segment || segment === '.') continue;
-    if (segment === '..') { if (!segments.length) return null; segments.pop(); }
-    else segments.push(segment);
-  }
-  return '/' + segments.join('/');
-}
-
 /** Body charts with their cached series, read once per package revision; never throws. */
 export function chartPlacements(pkg: OoxmlPackage): readonly DocxChartPlacement[] {
   try {
@@ -55,7 +42,7 @@ export function chartPlacements(pkg: OoxmlPackage): readonly DocxChartPlacement[
       if (owner && node.namespaceUri === C && node.localName === 'chart') {
         const id = node.attributes.find(attribute => attribute.namespaceUri === R && attribute.localName === 'id')?.value;
         const relationship = relationships.find(entry => entry.id === id && entry.type === CHART_RELATIONSHIP && entry.targetMode !== 'External');
-        const part = relationship && resolve(main.name, relationship.rawTarget);
+        const part = relationship && resolveOoxmlPart(main.name, relationship.rawTarget);
         const bytes = part ? pkg.partBytes.get(part) : undefined;
         const model = bytes ? chartModel(bytes) : null;
         if (model) placements.push(Object.freeze({ drawingId: owner, model }));

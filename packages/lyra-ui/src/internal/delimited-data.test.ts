@@ -40,7 +40,6 @@ it('normalizes streaming grid configuration and derived dimensions', () => {
   const result = parseDelimitedGrid(parser, 'name\nAda');
   expect(result.data).to.deep.equal([['name'], ['Ada']]);
   expect(result.errors.map((error) => (error as { code?: string }).code)).to.deep.equal([
-    'UndetectableDelimiter',
     'sample',
   ]);
   expect(options?.['delimiter']).to.equal(',');
@@ -67,12 +66,15 @@ it('normalizes streaming header-record parsing and fields', () => {
   expect(parseDelimitedRecords(parser, 'name\nAda')).to.deep.equal({
     fields: ['name'],
     rows: [{ name: 'Ada' }],
-    errors: [{
-      type: 'Delimiter',
-      code: 'UndetectableDelimiter',
-      message: "Unable to auto-detect delimiting character; defaulted to ','",
-    }],
+    errors: [],
   });
+});
+
+it('does not turn valid one-column grid and header-only records into parser diagnostics', () => {
+  expect(parseDelimitedGrid(realParser, 'name\nAda\nGrace').errors).to.deep.equal([]);
+  expect(parseDelimitedRecords(realParser, 'name').errors).to.deep.equal([]);
+  expect(parseDelimitedGrid(realParser, '').errors.map((error) => (error as { code?: string }).code))
+    .to.include('UndetectableDelimiter');
 });
 
 it('preserves delimiter detection, escaped delimiters, and quoted newlines without flattening rows', () => {

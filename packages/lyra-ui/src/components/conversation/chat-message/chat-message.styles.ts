@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -79,8 +80,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     margin-inline-start: auto;
     border: none;
     background: var(--lr-icon-button-bg, transparent);
@@ -104,13 +104,11 @@ export const styles = css`
     color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-brand)));
   }
   [part~='bubble']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='collapse-button']:focus-visible,
   [part='retry-button']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part='collapse-button'] .chevron {
     display: inline-flex;

@@ -1,4 +1,7 @@
+import { visuallyHidden } from '../../../internal/a11y.js';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -244,8 +247,7 @@ export const styles = css`
   [part~="ellipsis"]:where(:focus-visible),
   [part~="page"]:where(:focus-visible),
   [part="page-input"]:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~="first-button"]:where(:disabled),
   [part~="previous-button"]:where(:disabled),
@@ -375,20 +377,13 @@ export const styles = css`
     border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
   }
   [part="live-region"].sr-only {
-    position: absolute;
-    inline-size: var(--lr-size-1px);
-    block-size: var(--lr-size-1px);
-    padding: 0;
+    ${visuallyHidden}
     margin: var(--lr-size-neg-1px);
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
   }
   /* Container-query lengths cannot reference custom properties; the documented
      320px narrow-allocation baseline is written in root-relative units so it
      still follows the page's type scale. */
-  @container (max-inline-size: 20rem) {
+  @container ${compactContainerQuery} {
     [part~="base"] {
       flex-direction: column;
       align-items: stretch;

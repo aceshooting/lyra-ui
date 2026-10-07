@@ -1,3 +1,4 @@
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -28,8 +29,7 @@ export const styles = css`
 
   [part='tab'] {
     box-sizing: border-box;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     border-block-end: var(--lr-border-width-medium) solid transparent;
@@ -53,8 +53,7 @@ export const styles = css`
   }
 
   [part='tab']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
 
   /* :where() zeroes the [aria-selected='true'] qualifier's specificity, keeping this at (0,1,0)

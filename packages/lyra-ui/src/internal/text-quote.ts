@@ -531,6 +531,7 @@ function nextNodeWithin(root: Node, node: Node, descend: boolean): Node | null {
 export function scopeFromElement(
   root: Element,
   limitOverrides?: Partial<TextQuoteLimits>,
+  skipElement?: (element: Element) => boolean,
 ): TextQuoteScope {
   const limits = resolvedLimits(limitOverrides);
   const segments: TextQuoteSegment[] = [];
@@ -549,7 +550,7 @@ export function scopeFromElement(
     }
     traversalNodesVisited++;
     const skipChildren = node.nodeType === Node.ELEMENT_NODE
-      && SKIP_TAGS.has((node as Element).tagName);
+      && (SKIP_TAGS.has((node as Element).tagName) || Boolean(skipElement?.(node as Element)));
     const next = nextNodeWithin(root, node, !skipChildren);
     if (node.nodeType !== Node.TEXT_NODE) {
       node = next;

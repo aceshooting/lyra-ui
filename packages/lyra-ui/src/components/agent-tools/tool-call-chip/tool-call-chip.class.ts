@@ -13,9 +13,7 @@ import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/n
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { nextId } from '../../../internal/a11y.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
-import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 
 import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon } from '../tool-status.js';
 import { literalSetConverter } from '../../../internal/converters.js';
@@ -79,12 +77,12 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolCallStatus>(TOOL_CALL_STAT
  * consumer must put actions in the detail surface opened from
  * `lr-tool-call-chip-select`, not links or controls in this description slot.
  *
- * The `icon` slot overrides the built-in per-status glyph entirely via the
+ * The `status-icon` slot overrides the built-in per-status glyph entirely via the
  * platform's own slot-fallback-content mechanism (`<slot
- * name="icon">${fallback}</slot>` — the same pattern `<lr-stat>`'s
+ * name="status-icon">${fallback}</slot>` — the same pattern `<lr-stat>`'s
  * `caption` slot and `<lr-file-input>`'s default slot already use):
- * whatever is assigned to `slot="icon"` wins; otherwise the `icon` prop is
- * rendered as a literal hint (e.g. an emoji); otherwise the built-in glyph
+ * whatever is assigned to `slot="status-icon"` (or its deprecated `icon` alias) wins; otherwise
+ * the `icon` prop is rendered as a literal hint (e.g. an emoji); otherwise the built-in glyph
  * for the current `status` is used.
  *
  * @customElement lr-tool-call-chip
@@ -93,12 +91,13 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolCallStatus>(TOOL_CALL_STAT
  * `lr-tool-call-chip-select`. Nothing renders when this slot is empty. An open tooltip
  * participates in shared Escape ordering even while only hovered, deferring to a genuinely
  * topmost overlay opened on top of it.
- * @slot icon - Overrides the built-in status glyph entirely.
+ * @slot status-icon - Overrides the built-in status glyph entirely.
+ * @slot icon - Legacy slot content is deprecated; use `status-icon` to override the built-in status glyph.
  * @event lr-tool-call-chip-select - The chip was activated (click or
  * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
  * alias this event replaced was removed in 9.0.0.
  * @csspart base - The clickable pill (`<button>`).
- * @csspart icon - Wrapper around the status glyph / `icon` slot.
+ * @csspart icon - Wrapper around the status glyph / `status-icon` slot.
  * @csspart label - Wrapper around `category`, `name` and `summary`.
  * @csspart category - The optional grouping label.
  * @csspart name - The tool/function name, or `display-name` when set.
@@ -409,9 +408,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
    *  than rendering a literal "NaN ms". A finite negative value clamps to `0` instead of
    *  rendering a nonsensical negative duration. */
   private get safeDurationMs(): number | null {
-    return this.durationMs != null && Number.isFinite(this.durationMs)
-      ? finiteRange(this.durationMs, 0, 0)
-      : null;
+    return safeDurationMs(this.durationMs);
   }
 
   /** The visible tool name: the display label when set, else `name`, else the localized
@@ -432,12 +429,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   }
 
   private localizedDuration(ms: number): string {
-    const duration = durationMessageValue(ms);
-    return this.localize(duration.key, undefined, {
-      value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
-      }).format(duration.value),
-    });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   override render(): TemplateResult {
@@ -462,8 +454,10 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         @blur=${this.onBlur}
       >
         <span part="icon" aria-hidden="true" inert>
-          <slot name="icon"
-            >${this.icon ? this.icon : STATUS_ICON(status)}</slot
+          <slot name="status-icon"
+            ><slot name="icon"
+              >${this.icon ? this.icon : STATUS_ICON(status)}</slot
+            ></slot
           >
         </span>
         <span part="label">

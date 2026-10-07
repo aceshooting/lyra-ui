@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import { render, type TemplateResult } from 'lit';
@@ -11,11 +12,6 @@ import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../te
 
 function sinkElement(doc: Document = document): HTMLElement | null {
   return doc.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
-}
-
-function sinkTexts(doc: Document = document): string[] {
-  const sink = sinkElement(doc);
-  return sink ? Array.from(sink.children, (child) => child.textContent ?? '') : [];
 }
 
 const WORDS = [
@@ -545,7 +541,7 @@ it('re-targets word-focus announcements after cross-document adoption', async ()
     keydown(el, 'ArrowRight');
     await el.updateComplete;
     expect(sinkElement() === null, 'the original document must release the adopted cloud').to.be.true;
-    expect(sinkTexts(frameDocument)).to.deep.equal(['alpha, 10']);
+    expect(sinkTexts('polite', frameDocument)).to.deep.equal(['alpha, 10']);
   } finally {
     el.remove();
     iframe.remove();

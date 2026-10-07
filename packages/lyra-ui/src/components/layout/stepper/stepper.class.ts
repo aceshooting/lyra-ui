@@ -7,7 +7,7 @@ import {
   type BreakpointBasis,
 } from '../../../internal/orientation-breakpoint.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
-import { isRtl } from '../../../internal/rtl.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import {
   observeScrollOverflow,
   SCROLL_OVERFLOW_ATTRIBUTE,
@@ -632,7 +632,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     // activate. Returning before the preventDefault() branches below also leaves Space scrolling
     // the page and Home/End reaching whatever scroll container the list sits in, which is the
     // correct behavior for a passive list.
-    if (this.readonly) return;
+    if (this.readonly || e.isComposing || e.keyCode === 229 || e.altKey || e.ctrlKey || e.metaKey) return;
     const navigable = this.steps
       .map((step, index) => ({ step, index }))
       .filter(({ step }) => !step.disabled);
@@ -644,43 +644,24 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const currentIndex = navigable.findIndex(
       (item) => item.index === focusedIndex
     );
-    const vertical = this.effectiveOrientation === 'vertical';
-    const rtl = !vertical && isRtl(this);
-    const forwardKey = vertical
-      ? 'ArrowDown'
-      : rtl
-      ? 'ArrowLeft'
-      : 'ArrowRight';
-    const backwardKey = vertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
-
-    let targetIndex: number;
-    switch (e.key) {
-      case forwardKey:
-        targetIndex = Math.min(
-          navigable.length - 1,
-          (currentIndex < 0 ? -1 : currentIndex) + 1
-        );
-        break;
-      case backwardKey:
-        targetIndex = Math.max(0, (currentIndex < 0 ? 1 : currentIndex) - 1);
-        break;
-      case 'Home':
-        targetIndex = 0;
-        break;
-      case 'End':
-        targetIndex = navigable.length - 1;
-        break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        if (currentIndex >= 0) {
-          const target = navigable[currentIndex]!;
-          this.selectStep(target.step, target.index);
-        }
-        return;
-      default:
-        return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (currentIndex >= 0) {
+        const target = navigable[currentIndex]!;
+        this.selectStep(target.step, target.index);
+      }
+      return;
     }
+    const targetIndex = resolveListMove(e, {
+      count: navigable.length,
+      current: currentIndex,
+      orientation: this.effectiveOrientation === 'vertical' ? 'vertical' : 'horizontal',
+      direction: this.effectiveDirection,
+      wrap: false,
+      clamp: true,
+      backwardFromMissing: 'first',
+    });
+    if (targetIndex === null) return;
     e.preventDefault();
     this.focusStep(navigable[targetIndex]!.index);
   };

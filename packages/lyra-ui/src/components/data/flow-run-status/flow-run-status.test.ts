@@ -1,3 +1,4 @@
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
 import { nothing, render } from 'lit';
@@ -11,11 +12,6 @@ import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../te
 
 function sinkElement(politeness: 'polite' | 'assertive'): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
-}
-
-function sinkTexts(politeness: 'polite' | 'assertive'): string[] {
-  const element = sinkElement(politeness);
-  return element ? Array.from(element.children).map((child) => child.textContent ?? '') : [];
 }
 
 const nodes: FlowNode[] = [
@@ -666,6 +662,5 @@ describe('summary visibility', () => {
     });
     expect(warnings).to.deep.equal([]);
   });
-
 
 });

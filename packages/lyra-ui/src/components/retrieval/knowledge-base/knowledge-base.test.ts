@@ -59,10 +59,14 @@ function rowCells(el: LyraKnowledgeBase, part: string): HTMLElement[] {
   ] as HTMLElement[];
 }
 
-function menuFor(el: LyraKnowledgeBase, rowIndex: number): LyraMenu {
-  return [...tableEl(el).shadowRoot!.querySelectorAll('lr-menu')][
+async function menuFor(el: LyraKnowledgeBase, rowIndex: number): Promise<LyraMenu> {
+  const dropdown = dropdownFor(el, rowIndex);
+  await dropdown.show();
+  const menu = [...tableEl(el).shadowRoot!.querySelectorAll('lr-menu')][
     rowIndex
   ] as LyraMenu;
+  await menu.updateComplete;
+  return menu;
 }
 
 function dropdownFor(el: LyraKnowledgeBase, rowIndex: number): LyraDropdown {
@@ -370,7 +374,7 @@ describe('lr-knowledge-base', () => {
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     await el.updateComplete;
-    const menu = menuFor(el, 2);
+    const menu = await menuFor(el, 2);
     const items = menuItems(menu);
     const listener = oneEvent(el, 'lr-source-sync');
     activate(items.find((i) => i.value === 'sync')!);
@@ -378,12 +382,39 @@ describe('lr-knowledge-base', () => {
     expect(event.detail).to.deep.equal({ sourceId: 's3' });
   });
 
+  it('mounts row action items only while their dropdown is open', async () => {
+    const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+    expect(tableEl(el).shadowRoot!.querySelectorAll('lr-dropdown').length).to.equal(sources.length);
+    expect(tableEl(el).shadowRoot!.querySelectorAll('lr-menu-item').length).to.equal(0);
+    const dropdown = dropdownFor(el, 0);
+    const menu = await menuFor(el, 0);
+    expect(menuItems(menu).length).to.equal(3);
+    await dropdown.hide({ focusTrigger: false });
+    expect(menuItems(menu).length).to.equal(0);
+  });
+
+  it('refreshes an open row menu when source status and localized labels change', async () => {
+    const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
+    await tableEl(el).updateComplete;
+    const menu = await menuFor(el, 0);
+    el.sources = [{ ...sources[0]!, syncStatus: 'syncing' }, ...sources.slice(1)];
+    el.strings = { knowledgeBaseDeleteAction: 'Remove source' };
+    await el.updateComplete;
+    await tableEl(el).updateComplete;
+    const currentMenu = dropdownFor(el, 0).querySelector('lr-menu') as LyraMenu;
+    expect(menuItems(currentMenu).find((item) => item.value === 'sync')!.disabled).to.equal(true);
+    expect(menuItems(currentMenu).find((item) => item.value === 'pause')!.disabled).to.equal(false);
+    expect(menuItems(currentMenu).find((item) => item.value === 'delete')!.textContent).to.include('Remove source');
+    expect(menu === currentMenu).to.equal(true);
+  });
+
   it('activating "Pause sync" emits lr-source-pause with that row\'s sourceId', async () => {
     const el = (await fixture(
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     await el.updateComplete;
-    const menu = menuFor(el, 1);
+    const menu = await menuFor(el, 1);
     const items = menuItems(menu);
     const listener = oneEvent(el, 'lr-source-pause');
     activate(items.find((i) => i.value === 'pause')!);
@@ -396,7 +427,7 @@ describe('lr-knowledge-base', () => {
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     await el.updateComplete;
-    const menu = menuFor(el, 0);
+    const menu = await menuFor(el, 0);
     const items = menuItems(menu);
     const listener = oneEvent(el, 'lr-source-delete');
     activate(items.find((i) => i.value === 'delete')!);
@@ -410,19 +441,19 @@ describe('lr-knowledge-base', () => {
     )) as LyraKnowledgeBase;
     await el.updateComplete;
 
-    const syncedRowItems = menuItems(menuFor(el, 0)); // syncStatus: 'synced'
+    const syncedRowItems = menuItems(await menuFor(el, 0)); // syncStatus: 'synced'
     expect(syncedRowItems.find((i) => i.value === 'sync')!.disabled).to.be
       .false;
     expect(syncedRowItems.find((i) => i.value === 'pause')!.disabled).to.be
       .true;
 
-    const syncingRowItems = menuItems(menuFor(el, 1)); // syncStatus: 'syncing'
+    const syncingRowItems = menuItems(await menuFor(el, 1)); // syncStatus: 'syncing'
     expect(syncingRowItems.find((i) => i.value === 'sync')!.disabled).to.be
       .true;
     expect(syncingRowItems.find((i) => i.value === 'pause')!.disabled).to.be
       .false;
 
-    const errorRowItems = menuItems(menuFor(el, 2)); // syncStatus: 'error' -- re-sync must stay available
+    const errorRowItems = menuItems(await menuFor(el, 2)); // syncStatus: 'error' -- re-sync must stay available
     expect(errorRowItems.find((i) => i.value === 'sync')!.disabled).to.be.false;
   });
 
@@ -465,7 +496,7 @@ describe('lr-knowledge-base', () => {
     await el.updateComplete;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="heading"]')).to.exist;
-    const menu = menuFor(el, 0);
+    const menu = await menuFor(el, 0);
     await menu.updateComplete;
     const listener = oneEvent(el, 'lr-source-delete');
     activate(menuItems(menu).find((i) => i.value === 'delete')!);
@@ -484,12 +515,12 @@ describe('lr-knowledge-base', () => {
       html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`
     )) as LyraKnowledgeBase;
     await el.updateComplete;
-    const menu = menuFor(el, 0);
     const dropdown = dropdownFor(el, 0);
     const trigger = tableEl(el).shadowRoot!.querySelectorAll(
       '[part="actions-trigger"]'
     )[0] as HTMLButtonElement;
     trigger.click();
+    const menu = [...tableEl(el).shadowRoot!.querySelectorAll('lr-menu')][0] as LyraMenu;
     await menu.updateComplete;
     expect(dropdown.open).to.be.true;
     await expect(el).to.be.accessible();
@@ -535,7 +566,7 @@ it('suppresses the canonical child menu selection after translating it', async (
   let leaked = 0;
   el.addEventListener('lr-select', () => leaked++);
   const sourceEvent = oneEvent(el, 'lr-source-sync');
-  activate(menuItems(menuFor(el, 0)).find((item) => item.value === 'sync')!);
+  activate(menuItems(await menuFor(el, 0)).find((item) => item.value === 'sync')!);
   await sourceEvent;
   expect(leaked).to.equal(0);
 });
@@ -564,7 +595,7 @@ it('omits blank and later duplicate source ids before summary, table rows, and a
   expect(summary.map((stat) => stat.value)).to.deep.equal(['1', '1', '0', '0']);
 
   const selected = oneEvent(el, 'lr-source-sync');
-  activate(menuItems(menuFor(el, 0)).find((entry) => entry.value === 'sync')!);
+  activate(menuItems(await menuFor(el, 0)).find((entry) => entry.value === 'sync')!);
   expect((await selected).detail).to.deep.equal({ sourceId: first.id });
 });
 
@@ -1034,7 +1065,7 @@ describe('lr-knowledge-base review fixes', () => {
       expect(badge.textContent!.trim(), part).to.equal('Unknown');
       expect(badge.variant, part).to.equal('neutral');
     }
-    const items = menuItems(menuFor(el, 0));
+    const items = menuItems(await menuFor(el, 0));
     expect(items.map((item) => `${item.value}:${item.disabled}`)).to.deep.equal(['sync:true', 'pause:true', 'delete:false']);
     const counts = [...el.shadowRoot!.querySelectorAll<LyraStat>('[part="summary-stat"]')].map((stat) => stat.value);
     expect(counts).to.deep.equal(['1', '0', '0', '0']);

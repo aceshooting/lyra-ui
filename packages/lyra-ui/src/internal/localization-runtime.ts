@@ -2,6 +2,7 @@ import { canonicalizeLocaleTag } from './locale-tag.js';
 import { warnLocaleFallback } from './dev-warning.js';
 import { domParentElement, flattenedParentElement, ownerView } from './composed-tree.js';
 import { getPluralRules } from './intl-cache.js';
+import { isPlainRecord } from './object-guards.js';
 import type {
   LyraLocaleDirection,
   LyraLocaleMeta,
@@ -397,17 +398,6 @@ const PLURAL_CATEGORIES = new Set<string>([
   'other',
 ]);
 const trustedMessageRecords = new WeakSet<object>();
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value))
-    return false;
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
-}
 
 function ownDataValue(
   record: Record<string, unknown>,

@@ -25,11 +25,11 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatMediaTime } from '../media-time.js';
+import { formatMediaTime } from '../../../internal/media-time.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
-import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import {
@@ -468,7 +468,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private transcriptLocale = '';
   private searchMatchIndices = new Set<number>();
   private cueKeys: string[] = [];
-  private errorAnnouncementSink?: AnnouncementSink;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
   private resizeWindow?: Window;
   private waveformResizeObserver?: ResizeObserver;
   private waveformResizeObserverWindow?: Window;
@@ -624,7 +624,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.connectionEventBaselinePending = true;
-    this.syncErrorAnnouncementSink();
     this.mediaController.reconnect();
     // Added here (not in firstUpdated) so every reconnect, including cross-document adoption,
     // binds the window that actually owns the component and pairs with disconnectedCallback.
@@ -643,7 +642,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   override disconnectedCallback(): void {
     this.connectionEventBaselinePending = true;
     this.mediaController.disconnect();
-    this.releaseErrorAnnouncementSink();
     this.unbindResizeWindow();
     this.unbindWaveformResizeObserver();
     this.cancelWaveformDrawFrame();
@@ -658,31 +656,15 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.releaseErrorAnnouncementSink();
-    this.syncErrorAnnouncementSink();
+    this.announcements.adopted();
     this.bindResizeWindow();
     this.syncWaveformVisibilityObserver();
     this.syncWaveformResizeObserver();
     if (this.isConnected && this.waveformDirty) this.drawWaveform();
   }
 
-  private syncErrorAnnouncementSink(): void {
-    if (!this.isConnected) return;
-    if (this.errorAnnouncementSink?.element.ownerDocument === this.ownerDocument) return;
-    this.releaseErrorAnnouncementSink();
-    this.errorAnnouncementSink = acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
-  }
-
-  private releaseErrorAnnouncementSink(): void {
-    this.errorAnnouncementSink?.release();
-    this.errorAnnouncementSink = undefined;
-  }
-
   private announceRenderError(): void {
-    this.errorAnnouncementSink?.announce(this.localize('avPlayerFailedToLoad'));
+    this.announcements.announceAssertive(this.localize('avPlayerFailedToLoad'));
   }
 
   private bindResizeWindow(): void {
@@ -857,7 +839,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.reconcileActiveCue();
   }
 
-  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'time-range' || !this.metadataLoaded) return false;
     this.seek(anchor.start);
     return true;

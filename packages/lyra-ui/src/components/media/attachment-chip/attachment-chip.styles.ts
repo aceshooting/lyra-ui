@@ -1,3 +1,4 @@
+import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -62,8 +63,7 @@ export const styles = css`
   :host([size='xs']) [part='remove-button'],
   :host([size='s']) [part='remove-button'],
   :host([size='small']) [part='remove-button'] {
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
   }
   [part='meta'][hidden] {
     display: none;
@@ -201,8 +201,7 @@ export const styles = css`
        inline/dense controls use -- an attachment chip is wide enough for its action buttons to
        meet a standalone icon button's tappable floor, matching [part='thumbnail'] above, which
        already sizes to this token. */
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    ${iconHitTarget}
     padding: 0;
     border: none;
     border-radius: calc(var(--lr-radius) * 0.6);

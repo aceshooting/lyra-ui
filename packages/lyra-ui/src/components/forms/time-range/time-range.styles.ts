@@ -1,3 +1,4 @@
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -127,8 +128,7 @@ export const styles = css`
     );
   }
   [part="preset-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* Inline var() fallbacks rather than :host declarations, so a consumer can set them on any
      ancestor without a :host declaration shadowing it. ::part(preset-button)[data-active] is
@@ -286,8 +286,7 @@ export const styles = css`
     transform: translate(100%, -50%);
   }
   [part^="handle"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   /* The mouse cue matching the :focus-visible ring above and the sibling
      [part='preset-button']:hover -- gated on :host(:not(:disabled)), as lr-checkbox's and

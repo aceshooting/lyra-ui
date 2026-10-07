@@ -255,12 +255,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
         style="width:400px;height:300px"
       ></lr-graph>`
     )) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await graphSupport.readyGraphPair(el, 'canvas');
     await aTimeout(50);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
@@ -697,17 +692,7 @@ describe('coverage: private-helper direct branches', () => {
   });
 
   it('an unhandled key on a node/link falls through onGraphKeyDown without moving the roving tab stop', async () => {
-    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    el.nodes = nodes;
-    el.edges = links;
-    await el.updateComplete;
-    await waitUntil(
-      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-      undefined,
-      {
-        timeout: NODE_COUNT_TIMEOUT,
-      }
-    );
+    const el = await graphSupport.mountGraphPair();
     const nodeEl = el.shadowRoot!.querySelector('[part="node"]') as SVGElement;
     nodeEl.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true })

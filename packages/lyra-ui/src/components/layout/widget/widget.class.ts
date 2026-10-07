@@ -1,12 +1,14 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
+import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { type LyraSize } from '../../../internal/variants.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { captureFocusReturnOpener, DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import {
@@ -25,8 +27,6 @@ import {
 } from '../../../internal/persisted-restore.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
-  accessibleTextRecordsMatter,
-  bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
@@ -130,6 +130,16 @@ function snapshotWidgetViews(value: unknown): readonly Readonly<LyraWidgetView>[
  * did, and converges immediately: the re-entrant write is value-identical, so it mutates no
  * attribute and fires no second callback.
  */
+const collapseWriteGuards = new WeakMap<LyraWidget, VetoWriteGuard>();
+function collapseWriteGuardFor(widget: LyraWidget): VetoWriteGuard {
+  let guard = collapseWriteGuards.get(widget);
+  if (!guard) {
+    guard = new VetoWriteGuard();
+    collapseWriteGuards.set(widget, guard);
+  }
+  return guard;
+}
+
 function installSynchronousCollapsedReflection(prototype: LyraWidget): void {
   // Non-null: the only caller is the static block below, immediately after
   // `definePersistedProperty()` installed this exact accessor pair. A `TypeError` at class
@@ -140,6 +150,7 @@ function installSynchronousCollapsedReflection(prototype: LyraWidget): void {
     ...installed,
     set(this: LyraWidget, next: boolean): void {
       installedSet.call(this, next);
+      markVetoGuardWrite(collapseWriteGuardFor(this));
       // Reads back through the getter so the attribute follows the coerced value, not the raw
       // argument -- `collapsed` accepts any truthy value (see the `coerce` option below).
       this.toggleAttribute('collapsed', this.collapsed);
@@ -148,8 +159,12 @@ function installSynchronousCollapsedReflection(prototype: LyraWidget): void {
 }
 
 export interface LyraWidgetEventMap {
+  /** @deprecated Use `lr-toggle-request`; its detail uses expanded polarity. */
   'lr-collapse-request': CustomEvent<{ collapsed: boolean }>;
+  /** @deprecated Use `lr-toggle`; its detail uses expanded polarity. */
   'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
+  'lr-toggle-request': CustomEvent<{ expanded: boolean }>;
+  'lr-toggle': CustomEvent<{ expanded: boolean }>;
   'lr-fullscreen-request': CustomEvent<{ fullscreen: boolean }>;
   'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
   'lr-view-request': CustomEvent<{ viewId: string }>;
@@ -164,14 +179,16 @@ export interface LyraWidgetEventMap {
  *
  * @customElement lr-widget
  * @slot - The panel body.
- * @slot icon - Optional decorative leading icon in the title row. Its flattened subtree is inert
+ * @slot start - Optional decorative leading icon in the title row. Its flattened subtree is inert
  *   and hidden from assistive technology.
+ * @slot icon - Legacy slot content is deprecated; use `start`. Its flattened subtree is inert and
+ *   hidden from assistive technology.
  * @slot label - Rich label content (overrides the `label` attribute).
  * @slot sublabel - Rich sublabel content (overrides the `sublabel` attribute).
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
  * @slot collapse-icon - Overrides the built-in chevron glyph inside the collapse/expand toggle
  *   button entirely, via the platform's own slot-fallback-content mechanism (same convention as
- *   `<lr-tool-call-chip>`'s `icon` slot): whatever is assigned wins, otherwise the default chevron
+ *   `<lr-tool-call-chip>`'s `status-icon` slot): whatever is assigned wins, otherwise the default chevron
  *   renders. Assigned content is decorative, inert, and aria-hidden so the outer toggle remains the
  *   sole action. Only meaningful while `collapsible`.
  * @slot fullscreen-icon - Overrides the built-in expand/close glyph inside the fullscreen toggle
@@ -188,6 +205,8 @@ export interface LyraWidgetEventMap {
  * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
  *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { collapsed }` (the new
  *   `collapsed` state).
+ * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle commits.
+ * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`.
  * @event lr-fullscreen-request - A cancelable proposed `fullscreen` state from the fullscreen
  *   toggle, Escape, or a backdrop click. Call `preventDefault()` to leave `fullscreen` unchanged.
  *   Not fired when a consumer sets `fullscreen` directly. `detail: { fullscreen }`.
@@ -401,15 +420,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private explicitTrigger?: HTMLElement;
   private fullscreenOpener?: HTMLElement | null;
   private readonly deferredFocusReturn = new DeferredFocusReturn();
-  private labelSlotObserver?: MutationObserver;
-  private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
-    if (!this.isConnected || !this.labelSlotObserver) return;
+  private readonly labelTextObserver = new AccessibleTextController(this, [], () => {
     const assigned = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]')
       ?.assignedElements({ flatten: true }) ?? [];
     this.syncLabelSlot(assigned);
-  });
-  private labelSlotObserverDocument?: Document;
-  private labelSlotObserverGeneration = 0;
+  }, ['alt', 'aria-labelledby', 'slot'], false);
   private ownerRealmGeneration = 0;
   private readonly bodyId = nextId('widget-body');
   private focusedViewIdBeforeUpdate?: string;
@@ -592,11 +607,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.resetOwnerRealmWork();
+    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]');
+    if (this.isConnected && slot) this.syncLabelSlot(slot.assignedElements({ flatten: true }));
+    this.labelTextObserver.adopted();
   }
 
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
-    this.resetLabelSlotObserver();
+    this.labelTextObserver.setEnabled(false);
   }
 
   private queueOwnerMicrotask(callback: VoidFunction): void {
@@ -660,52 +678,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private syncLabelSlot(assigned: Element[]): void {
     this.hasLabelSlot = assigned.length > 0;
     this.labelSlotText = this.readLabelSlotText(assigned);
-    this.resetLabelSlotObserver();
-    if (assigned.length === 0 || !this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor) return;
-    const generation = this.labelSlotObserverGeneration;
-    const observer = new MutationObserverCtor((records) => {
-      if (!accessibleTextRecordsMatter(observer, records)) return;
-      if (
-        this.labelSlotObserver !== observer ||
-        this.labelSlotObserverDocument !== ownerDocument ||
-        this.labelSlotObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.labelSlotText = this.readLabelSlotText(assigned);
-      bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.labelUpgrades);
-    });
-    this.labelSlotObserver = observer;
-    this.labelSlotObserverDocument = ownerDocument;
-    bindAccessibleTextObserver(observer, this, ['alt', 'aria-labelledby', 'slot'], this.labelUpgrades);
-    for (const element of assigned) {
-      observer.observe(element, {
-        attributes: true,
-        attributeFilter: ['alt', 'aria-hidden', 'aria-label', 'aria-labelledby', 'class', 'hidden', 'inert', 'style'],
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-    }
+    this.labelTextObserver.setEnabled(assigned.length > 0);
+    this.labelTextObserver.bind();
   }
 
   private readLabelSlotText(assigned: readonly Element[]): string | undefined {
     return (
       composedAccessibilityText(assigned).replace(/\s+/g, ' ').trim() || undefined
     );
-  }
-
-  private resetLabelSlotObserver(): void {
-    this.labelSlotObserverGeneration += 1;
-    this.labelSlotObserver?.disconnect();
-    this.labelUpgrades.disconnect();
-    this.labelSlotObserver = undefined;
-    this.labelSlotObserverDocument = undefined;
   }
 
   private setActiveView = (viewId: string): void => {
@@ -723,11 +703,31 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** Emits the cancelable interaction proposal before touching the persisted
    *  property, while retaining lr-collapse-change as the existing post-commit
    *  notification. */
+  private dispatchingCollapse = false;
   private requestCollapse(next: boolean): void {
-    const request = this.emit('lr-collapse-request', { collapsed: next }, { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.collapsed = next;
-    this.emit('lr-collapse-change', { collapsed: next });
+    if (this.dispatchingCollapse) return;
+    const previous = this.collapsed;
+    this.dispatchingCollapse = true;
+    try {
+      requestThenCommit({
+        requestDetail: { expanded: !next },
+        emitRequest: (proposal, init: { cancelable: true }) => {
+          const request = this.emit('lr-toggle-request', proposal, init);
+          const legacy = this.emit('lr-collapse-request', { collapsed: next }, init);
+          if (legacy.defaultPrevented) request.preventDefault();
+          return request;
+        },
+        guard: collapseWriteGuardFor(this),
+        commit: () => {
+          if (this.collapsed !== previous) return;
+          this.collapsed = next;
+          this.emit('lr-collapse-change', { collapsed: next });
+          this.emit('lr-toggle', { expanded: !next });
+        },
+      });
+    } finally {
+      this.dispatchingCollapse = false;
+    }
   }
 
   private toggleCollapsed = (): void => {
@@ -795,8 +795,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         <div part="header">
           <div part="title">
             ${renderInertPresentation(
-              html`<slot name="icon"></slot>`,
-              { part: 'icon', hidden: !this.slotPresence.has('icon') },
+              html`<slot name="start"><slot name="icon"></slot></slot>`,
+              { part: 'icon', hidden: !this.slotPresence.has('start') && !this.slotPresence.has('icon') },
             )}
             <div part="label-group">
               <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}

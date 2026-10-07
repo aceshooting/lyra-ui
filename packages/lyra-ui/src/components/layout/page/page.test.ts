@@ -9,6 +9,7 @@ import {
 } from '@open-wc/testing';
 import './page.js';
 import type { LyraPage } from './page.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   hoverUntilMatched,
   resetMouse,
@@ -1724,19 +1725,6 @@ it('operates foreign-realm navigation-toggle and delegated data-toggle controls'
 });
 
 describe('Page state cssprops', () => {
-  function resolvedInShadow(
-    page: LyraPage,
-    declaration: string,
-    property: string
-  ): string {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    page.shadowRoot!.append(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  }
-
   it('keeps pre-cssprop skip, navigation-toggle, backdrop, and drawer paint when props are unset', async () => {
     const page = (await fixture(html`
       <lr-page style="inline-size: 320px; --lr-transition-base: 0ms;">

@@ -27,7 +27,9 @@ import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { SeparatorDragController, separatorArrowDirection, separatorDelta } from '../../../internal/separator-drag.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { computeAppRailMode } from './app-rail-mode.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import {
   definePersistedProperty,
@@ -114,16 +116,7 @@ export interface LyraAppRailResizeDetail {
  * preference for the full/icon-only axis specifically, while the mobile
  * breakpoint continues to be tracked automatically regardless.
  */
-export function computeAppRailMode(
-  iconOnlyMatches: boolean,
-  mobileMatches: boolean,
-  preferredMode?: LyraAppRailPreferredMode | null,
-): LyraAppRailMode {
-  if (mobileMatches) return 'mobile';
-  if (preferredMode) return preferredMode;
-  if (iconOnlyMatches) return 'icon-only';
-  return 'full';
-}
+export { computeAppRailMode } from './app-rail-mode.js';
 
 export interface LyraAppRailEventMap {
   'lr-mode-change': CustomEvent<LyraAppRailModeChangeDetail>;
@@ -776,8 +769,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   @query('[part="base"], [part="panel"]') private baseEl?: HTMLElement;
   @query('[part="toggle"]') private toggleEl?: HTMLButtonElement;
   private resizePointerId?: number;
-  private resizeOwnerWindow?: Window;
+  private readonly resizeController = new SeparatorDragController(
+    this,
+    (event) => this.onResizerPointerMove(event),
+    (event) => this.onResizerPointerUp(event),
+  );
   private resizeStartX = 0;
+  private resizeRtl = false;
   private resizeStartWidth = 0;
   private resizeGestureChanged = false;
   private managedItems = new Set<HTMLElement>();
@@ -1665,29 +1663,22 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.resizePointerId !== undefined
     ) return;
     const resizer = e.currentTarget as HTMLElement;
-    const ownerWindow = resizer.ownerDocument.defaultView;
-    if (!ownerWindow) return;
+    if (!this.resizeController.start(e, resizer)) return;
     this.resizePointerId = e.pointerId;
-    this.resizeOwnerWindow = ownerWindow;
     this.resizeStartX = e.clientX;
+    this.resizeRtl = isRtl(this);
     this.resizeStartWidth = this.effectiveRailWidthPx;
     this.resizeGestureChanged = false;
-    resizer.setPointerCapture(e.pointerId);
-    ownerWindow.addEventListener('pointermove', this.onResizerPointerMove);
-    ownerWindow.addEventListener('pointerup', this.onResizerPointerUp);
-    ownerWindow.addEventListener('pointercancel', this.onResizerPointerUp);
-    ownerWindow.addEventListener('lostpointercapture', this.onResizerPointerUp);
     this.setDragging(true);
   };
 
   private onResizerPointerMove = (e: PointerEvent): void => {
     if (e.pointerId !== this.resizePointerId) return;
-    if (!this.resizable || this._mode !== 'full') {
+    if (!this.resizable || this._mode !== 'full' || isRtl(this) !== this.resizeRtl) {
       this.endResizerGesture();
       return;
     }
-    let delta = e.clientX - this.resizeStartX;
-    if (isRtl(this)) delta = -delta;
+    const delta = separatorDelta(this.resizeStartX, e, 'inline', this.resizeRtl);
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
     this.requestRailResize(next, false);
   };
@@ -1698,17 +1689,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
 
   private endResizerGesture(commit = false): void {
-    const ownerWindow = this.resizeOwnerWindow;
+    const pointerId = this.resizePointerId;
     const changed = this.resizeGestureChanged;
     const widthPx = this.effectiveRailWidthPx;
     this.resizePointerId = undefined;
-    this.resizeOwnerWindow = undefined;
     this.resizeGestureChanged = false;
     this.setDragging(false);
-    ownerWindow?.removeEventListener('pointermove', this.onResizerPointerMove);
-    ownerWindow?.removeEventListener('pointerup', this.onResizerPointerUp);
-    ownerWindow?.removeEventListener('pointercancel', this.onResizerPointerUp);
-    ownerWindow?.removeEventListener('lostpointercapture', this.onResizerPointerUp);
+    if (pointerId !== undefined) this.resizeController.end(pointerId);
     if (commit && changed) {
       this.emit('lr-rail-resize', { widthPx });
       if (this.persistReady) this.persistState();
@@ -1735,13 +1722,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private onResizerKeyDown = (e: KeyboardEvent): void => {
     if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const direction = separatorArrowDirection(e, 'inline', rtl);
     const step = 8;
     const width = this.effectiveRailWidthPx;
     const next =
-      e.key === forwardKey ? Math.min(this.safeMaxRailWidthPx, width + step)
-      : e.key === backwardKey ? Math.max(this.safeMinRailWidthPx, width - step)
+      direction === 1 ? Math.min(this.safeMaxRailWidthPx, width + step)
+      : direction === -1 ? Math.max(this.safeMinRailWidthPx, width - step)
       : e.key === 'Home' ? this.safeMinRailWidthPx
       : e.key === 'End' ? this.safeMaxRailWidthPx
       : width;

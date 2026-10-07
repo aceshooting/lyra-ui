@@ -10,6 +10,20 @@ const form = (el: LyraAgentQuestion): LyraToolParamForm => el.shadowRoot!.queryS
 const action = (el: LyraAgentQuestion, name: string): HTMLButtonElement => el.shadowRoot!.querySelector(`[data-action="${name}"]`)!;
 
 describe('lr-agent-question', () => {
+  it('paints native decisions from the shared button theme without changing their public parts', async () => {
+    const el = await fixture<LyraAgentQuestion>(html`
+      <lr-agent-question
+        .schema=${schema}
+        style="--lr-button-fill: rgb(10, 20, 30); --lr-button-on-fill: rgb(240, 241, 242); --lr-button-accent-fill: rgb(30, 70, 110); --lr-button-accent-on-fill: rgb(255, 255, 255); --lr-button-radius: 13px;"
+      ></lr-agent-question>
+    `);
+    expect(getComputedStyle(action(el, 'decline')).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(action(el, 'decline')).color).to.equal('rgb(240, 241, 242)');
+    expect(getComputedStyle(action(el, 'accept')).backgroundColor).to.equal('rgb(30, 70, 110)');
+    expect(getComputedStyle(action(el, 'accept')).color).to.equal('rgb(255, 255, 255)');
+    expect(getComputedStyle(action(el, 'accept')).borderTopLeftRadius).to.equal('13px');
+    expect(action(el, 'accept').getAttribute('part')).to.equal('action');
+  });
   it('renders an accessible question and English actions', async () => {
     const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" message="Which name?" .schema=${schema}></lr-agent-question>`);
     expect(el.shadowRoot!.textContent).to.include('Submit response');

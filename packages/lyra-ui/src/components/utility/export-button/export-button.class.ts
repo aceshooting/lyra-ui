@@ -1,5 +1,5 @@
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
-import { maxCssTime } from '../../../internal/css-motion-time.js';
+import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -32,6 +32,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
@@ -401,7 +402,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  opacity/transform open transition one render past the `hidden` -> unhidden one -- see that
    *  rule's own comment. */
   @state() private menuPositioned = false;
-  private pointerDocument?: Document;
+  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
   private connectionGeneration = 0;
   private connectedDocument?: Document;
   private pendingDisconnectDocument?: Document;
@@ -488,16 +489,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   private bindDocumentPointer(): void {
     if (!this.isConnected) return;
-    const owner = this.ownerDocument;
-    if (this.pointerDocument === owner) return;
-    this.unbindDocumentPointer();
-    owner.addEventListener('pointerdown', this.onDocPointer);
-    this.pointerDocument = owner;
+    this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    this.pointerDocument?.removeEventListener('pointerdown', this.onDocPointer);
-    this.pointerDocument = undefined;
+    this.pointer.unbind();
   }
 
   private onDocPointer = (e: PointerEvent): void => {
@@ -591,35 +587,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const token = ++this.menuHideToken;
     await this.updateComplete;
     if (token !== this.menuHideToken || this.open) return;
-    const menu = this.menuEl;
-    const view = this.ownerDocument.defaultView;
-    if (menu && view && !prefersReducedMotion(this)) {
-      const computed = view.getComputedStyle(menu);
-      const durationMs =
-        maxCssTime(computed.transitionDuration) +
-        maxCssTime(computed.transitionDelay);
-      if (durationMs > 0) {
-        await new Promise<void>((resolve) => {
-          let settled = false;
-          let timeout: number | undefined;
-          const finish = (): void => {
-            if (settled) return;
-            settled = true;
-            if (timeout !== undefined) view.clearTimeout(timeout);
-            menu.removeEventListener('transitionend', onEnd);
-            menu.removeEventListener('transitioncancel', onEnd);
-            resolve();
-          };
-          const onEnd = (event: Event): void => {
-            if (event.target === menu) finish();
-          };
-          menu.addEventListener('transitionend', onEnd);
-          menu.addEventListener('transitioncancel', onEnd);
-          timeout = view.setTimeout(finish, durationMs + 50);
-        });
-        if (token !== this.menuHideToken || this.open) return;
-      }
-    }
+    await waitForTransitionSettle(this.menuEl ?? null, this, {
+      reducedMotion: prefersReducedMotion(this),
+    }).finished;
+    if (token !== this.menuHideToken || this.open) return;
     this.menuHidden = true;
   }
 
