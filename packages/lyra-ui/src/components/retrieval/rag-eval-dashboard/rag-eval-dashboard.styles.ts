@@ -53,6 +53,13 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
+  @media (forced-colors: active) {
+    [part~='slice-selected'],
+    [part~='metric-selected'] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+  }
   [part='metric-category'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);

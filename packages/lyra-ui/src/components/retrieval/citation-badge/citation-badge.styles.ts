@@ -32,6 +32,21 @@ export const styles = css`
     --_lr-citation-badge-bg: var(--lr-color-danger-quiet);
   }
 
+  /* Forced colors replace the status tones, so each tier gets its own border style. */
+  @media (forced-colors: active) {
+    :host([status="high"]) [part="base"],
+    :host([status="verified"]) [part="base"] {
+      border: var(--lr-border-width-medium) solid CanvasText;
+    }
+    :host([status="medium"]) [part="base"],
+    :host([status="low"]) [part="base"] {
+      border: var(--lr-border-width-medium) dashed CanvasText;
+    }
+    :host([status="unverified"]) [part="base"] {
+      border: var(--lr-border-width-thick) double CanvasText;
+    }
+  }
+
   .wrapper {
     display: inline-flex;
   }

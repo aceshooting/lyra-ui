@@ -938,17 +938,22 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   `activeChunkId`, a new `size`) hands the internal `lr-virtual-list` the same array reference it
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
+- `expandedChunkIds: string[] = []` (attribute: false) — ids of the chunks whose text is expanded.
+  The inspector updates its own copy on toggle _then_ emits `lr-chunk-toggle`; reassign to control
+  (a composing list keeps expansion here across scrolling and re-sorting)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
   and larger render the full rows.
-- `label: string = ''` — fallback name for the populated result group. A non-empty host
-  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
+- `label?: string` — fallback name for the populated result group; omission uses the localized
+  default and an explicit empty string clears it. A non-empty host `aria-label` makes the host the
+  sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it).
+toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
+events stay inside the component.
 
 **Slots:** none.
 
@@ -1024,7 +1029,10 @@ Plus shared tokens otherwise.
     documentViewer.name = source.name;
     documentViewer.mimeType = source.mimeType;
     documentViewer.src = source.src;
-    documentViewer.anchor = e.detail.anchor ?? null;
+    const anchor = e.detail.anchor ?? null;
+    // An identical anchor is not re-applied; a repeat click on the same chunk jumps explicitly.
+    if (anchor && documentViewer.anchor === anchor) void documentViewer.scrollToAnchor(anchor);
+    else documentViewer.anchor = anchor;
     documentViewer.open = true;
   });
 </script>
@@ -1064,9 +1072,10 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   invalid-value error rather than the ordinary no-data state
 - `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
-  `lr-sources-change`
+  `lr-selection-change`
 - `withoutSelectAll: boolean = false` (attribute `without-select-all`) — omits the header control
-  that otherwise selects or clears every visible leaf source.
+  that otherwise selects or clears every leaf source — only the leaves matching the filter while one
+  is active, leaving hidden selections untouched.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
   while an explicit empty string stays empty
@@ -1080,12 +1089,13 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
   omitted state and removes the attribute
 
-**Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
-fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
-previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's
-own `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside
-the component; `lr-sources-change` is the host-level report of that toggle.
+**Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
+array, fired after every toggle including select-all. Also fired when a `sources` reassignment
+prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
+`selectedSourceIds` directly; that assignment is normalized silently) and its deprecated alias
+`lr-sources-change`, dispatched right after it. The select-all checkbox's and the filter field's
+`lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
+component; `lr-selection-change` is the host-level report.
 
 **Slots:** none.
 
@@ -1096,8 +1106,9 @@ owner), `summary` ("{selected} of {total} selected"), `tree`
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
-`checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree), `error` (a nonempty raw
+`checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
+badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
+empties the tree), `error` (a nonempty raw
 payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
@@ -1135,7 +1146,7 @@ set the step, not the depth. Plus shared tokens otherwise.
     },
   ];
   picker.addEventListener(
-    "lr-sources-change",
+    "lr-selection-change",
     (e) => (retrievalScope = e.detail.selectedSourceIds)
   );
 </script>
@@ -1143,7 +1154,7 @@ set the step, not the depth. Plus shared tokens otherwise.
 
 **Known gotchas:**
 
-- Deliberately not form-associated — `lr-sources-change` is the only wiring; there's no
+- Deliberately not form-associated — `lr-selection-change` is the only wiring; there's no
   `name`/`value`/`FormData` participation the way a genuine form control would have.
 - Selection, filtering and projection all consume the same bounded normalized tree. Repeated ids
   use the first depth-first occurrence; cyclic/repeated object identities are skipped.
@@ -1178,10 +1189,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId }`, from an entity chip),
-`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from a community card member or
-path-strip node — the only name either one emits, and the only one carrying `occurrenceIndex`),
-`lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
+entity chip, a community card member or a path-strip node — only the path strip carries
+`occurrenceIndex`), its deprecated alias `lr-entity-activate` (same detail, dispatched right after
+it by a community card member or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
@@ -1216,8 +1227,10 @@ Plus shared tokens.
 
 - Composes `lr-entity-chip`, `lr-path-strip`, `lr-community-card`, and `lr-chunk-inspector`
   directly rather than reimplementing their rendering — events from those inner components (e.g.
-  `lr-entity-activate`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM
+  `lr-entity-select`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM
   for the host to handle in one place.
+- The four sections are derived once per `provenance` assignment, so toggling a section header
+  never rebuilds the chunk inspector's input.
 
 ---
 
@@ -1692,7 +1705,9 @@ claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractio
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
 label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
   renders as an `lr-citation-badge` whose `index` is its 1-based position and whose `source-id` is
-  `citation.sourceId ?? ''`
+  `citation.sourceId ?? ''`; the visible label and span are not repeated in the badge's preview. A
+  `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
+  citation stays in the list
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,
@@ -1719,10 +1734,12 @@ rather than mounting an unbounded number of rows. The full citation set is still
 composed `lr-claim-evidence` for claim-to-citation lookup, which applies its own render cap.
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
-`@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
-The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
-richer event exists because a bare `sourceId`/`index` pair cannot identify the exact evidence span.
-The summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
+`@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated
+— and `lr-citation-open` (same detail) when its full-preview affordance is triggered (double-click,
+or Space), including from a nested claim's badge. The inner `lr-citation-badge`'s generic
+`lr-citation-activate`/`lr-citation-open` are stopped at this composition boundary; these richer
+events exist because a bare `sourceId`/`index` pair cannot identify the exact evidence span. The
+summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
 
 **Slots:** none.
 
@@ -1767,7 +1784,8 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   active non-`'queued'` stage). `embeddedChunkCount` renders only alongside a defined `chunkCount`.
   `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
   as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
-  newer backend stage to fail safely. Controlled — pass a new array to update
+  newer backend stage to fail safely. A blank `document.name` shows the localized "untitled source"
+  in the row and its retry/cancel names. Controlled — pass a new array to update
 - `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty
@@ -1856,13 +1874,17 @@ errorMessage?: string }` (all four types exported here), where
   `KnowledgeSourceIndexingHealth = 'healthy' | 'degraded' | 'failed' | 'unknown'` (absent is treated
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
-  as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (epoch ms Date or
-  ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
+  as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (a `Date` or an
+  ISO-8601 string); absent/unparseable renders "never synced". A `syncStatus`, `indexingHealth` or
+  `permission` outside these unions renders a neutral localized "Unknown" badge, offers no "Sync now",
+  and is left out of the synced/syncing/needs-attention counts. `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
+  heading; `'none'` keeps the visible text without heading semantics.
 - `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row.
 - `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
@@ -1921,7 +1943,7 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
 
 - `permission` is rendered informationally only — the per-row action menu is never gated by it.
   Authorization enforcement is the host's concern.
-- "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so
+- "Sync now" is disabled while `syncStatus === 'syncing'` or unrecognized (not on `'error'` rows, so
   re-running a failed sync is one click); "Pause sync" is enabled only while `'syncing'`.
 - The inner `lr-table`'s own `lr-row-activate` is deliberately stopped from propagating — this component
   exposes no row-click/selection semantics, only the per-row action menu.
@@ -2123,6 +2145,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
+  section headings; `'none'` keeps the visible text without heading semantics.
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
   panel label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
@@ -2146,6 +2170,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
 - `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
 'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
 collapsing it.
+- The expanded item's `lr-provenance-panel` events cross the panel unchanged and are part of its
+  typed event map: `lr-toggle`, `lr-entity-select`, `lr-entity-activate` (deprecated alias),
+  `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
+  as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
+  event's `composedPath()`.
 
 **Slots:** none.
 
@@ -2155,7 +2184,8 @@ heading text), `section-empty`, `list` (`role="list"`, omitted while that sectio
 (`role="listitem"`, carries `data-id`/`data-scope` and a stable `tabindex="-1"` so focus has
 somewhere to land after a confirmation resolves), `item-row`, `item-text`, `confidence` (carries
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
-`provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
+`provenance` is unset; `item-body` is `hidden` while collapsed and mounts its `lr-provenance-panel`
+only while expanded), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
 `forget-all-button` while the bulk confirmation is pending), `limit` (localized notice shown when a
 section's items exceed the 500-item render ceiling).
@@ -2208,7 +2238,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   unset
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
-  its own copy on toggle _then_ emits `lr-select`; reassign to control
+  its own copy on toggle _then_ emits `lr-selection-change`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
   `lr-checkbox`.
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
@@ -2274,17 +2304,22 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 
 **Events:**
 
-- `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
-  — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
-  host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `without-dedupe` switch. It is the only
-  host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
-  `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
+- `lr-selection-change` (`detail: RetrievalResultsSelectionChangeDetail` = `{ selectedChunkIds:
+string[]; chunks: RetrievalChunk[] }`) — the _complete_ updated selection, both as ids and as
+  exactly one canonical record per id, so a host needn't re-look-up ids against its own copy on every
+  toggle. This derived detail is always canonicalized nonblank/first-wins regardless of the legacy
+  `without-dedupe` switch. It is the only host-level report of a row toggle: the row checkbox's
+  `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
+  component. Its deprecated alias `lr-select` (`detail: { chunkIds, chunks }`, the same
+  selection) is dispatched right after it.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
-  `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`.
+  `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`. A row's
+  `lr-chunk-toggle` and the virtual list's scroll events stay inside: the component keeps each
+  row's "Show more" state itself, so it survives scrolling a virtualized row out and back and a
+  re-sort.
 
 **Slots:** none.
 
@@ -2296,7 +2331,8 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted while
 `without-selection` is set), `row-body` (carries `data-selected`), `row-body-selected` (additional part
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
-`presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
+`presentation="compact"`; at most 32 entries, each value formatted within the same bounds as a
+`lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
@@ -2351,7 +2387,7 @@ at the same size tier, so the toolbar row renders as one flush line.
 **Properties:**
 
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the
-  user types; a host reassignment always wins
+  user types and reports it through `lr-input`; a host reassignment always wins
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
 'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
@@ -2402,6 +2438,10 @@ at the same size tier, so the toolbar row renders as one flush line.
 
 **Events:**
 
+- `lr-input` (`detail: { value: string }`) — the user edited or cleared the query; `query` already
+  holds the value. The field's native `input`/`change`, `lr-change` and `lr-clear` stay inside.
+- `lr-mode-change` (`detail: { mode: LyraRetrievalMode }`) — the user picked a retrieval mode; `mode`
+  already holds it.
 - `lr-search` (`detail: RetrievalQuery` from `@aceshooting/lyra-ui/ai` = `{ text: string;
 filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
   Enter in the query field, or the submit button while not `loading`.
@@ -2451,8 +2491,8 @@ fetches, ranks, or computes retrieval results itself.
 **Properties:**
 
 - `stages: RetrievalStage[] = []` (attribute: false) — `RetrievalStage { id: string; kind:
-RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pending' | 'running'
-| 'success' | 'error' | 'denied'; detail?: string; evidence?: RetrievalStageEvidence }` (exported
+RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: LyraSpan['status'];
+detail?: string; evidence?: RetrievalStageEvidence }` (exported
   here), where `RetrievalStageKind = 'query-rewrite' | 'embed' | 'retrieve' | 'rerank' | 'filter'`.
   `startMs`/`endMs` are milliseconds relative to the trace start (`endMs` absent while still
   running); `status` uses `LyraSpan.status`'s vocabulary verbatim; `label` overrides the localized
@@ -2467,14 +2507,16 @@ RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pe
 unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
   page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
-  embedding model id); `metadata` renders as a plain key/value list. Malformed runtime chunk rows
+  embedding model id); `metadata` renders as a plain key/value list (at most 32 entries, each
+  value bounded and cycle-safe). Malformed runtime chunk rows
   are omitted while valid neighboring chunks remain visible. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
-- `label: string = ''` — accessible name for the timeline, falling back to its localized default.
-  An authored host `aria-label` independently names the trace and is not cloned onto the timeline;
-  explicit-empty/dynamic host changes preserve that single-owner distinction
+- `label?: string` — accessible name for the timeline; omission keeps its localized default and an
+  explicit empty string clears it. An authored host `aria-label` independently names the trace and is
+  not cloned onto the timeline; explicit-empty/dynamic host changes preserve that single-owner
+  distinction
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
 Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
@@ -2506,7 +2548,8 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
 **Known gotchas:**
 
 - Every stage starts collapsed; expansion state is internal `@state` keyed by stage id, not a
-  controlled property.
+  controlled property. A stage's evidence (text, chunk inspector, metadata) is mounted only while
+  it is expanded.
 
 ## `lr-rag-answer`
 
@@ -2531,7 +2574,9 @@ either way. An answer with no error announces nothing. Remove any host
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details
-from reaching the grounding summary); `label?: string` (omission uses the localized answer label; an explicit
+from reaching the grounding summary); `headingLevel: LyraHeadingLevel = '3'` (attribute
+`heading-level` — level of the Citations and Sources headings, also forwarded to the grounding
+summary; `'none'` keeps the visible text without heading semantics); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
@@ -2544,11 +2589,15 @@ while a partial property or slotted answer is streaming.
 `id`. Malformed rows and later duplicates are omitted first-wins before empty state, child
 composition, counts, rendering, lookup, or actions.
 
-**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding' }`),
-`lr-claim-select` (`{ claim }`), and `lr-retry`. When `assessment` is present, grounding summary is
+**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding', action: 'activate'
+| 'open' }`), `lr-claim-select` (`{ claim }`), `lr-open` (`{ sourceId, href }`, a generated source
+card's title was activated), and `lr-retry`. When `assessment` is present, grounding summary is
 the single citation presentation/action owner; the answer-level duplicate citation row is omitted.
 Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
-boundary and translated into that one section-qualified `lr-citation-select` contract.
+boundary and translated into that one section- and action-qualified `lr-citation-select` contract;
+a double-click reports two `activate`s then one `open`, so a host that only wants the open
+ignores the `activate`s. The generated source cards' `lr-expand`, the source list's `lr-toggle` and
+the Markdown renderer's housekeeping events stay inside.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list. Either slot renders from its assigned content without requiring the corresponding
@@ -2610,8 +2659,11 @@ permissions, and connector settings go in the `settings` slot.
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
-localized admin label, while an explicit empty string stays empty; authored host
-`aria-label` independently names the admin component and is not cloned onto either);
+localized admin label, while an explicit empty string empties the heading and the tablist keeps the
+localized name; authored host `aria-label` independently names the admin component and is not
+cloned onto either); `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the
+nested source inventory's heading sits one level below; `'none'` removes heading semantics from
+both);
 `withoutIngestion: boolean = false` (attribute `without-ingestion`). If ingestion is active when it
 becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
@@ -2654,9 +2706,11 @@ Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
 **Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
-`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''` (fallback name
-for the overall claim region; a non-empty host `aria-label` makes the host the sole overall owner,
-while an explicitly empty host label stays empty on the region).
+`selectedClaimId: string = ''` (attribute `selected-claim-id`, the claim marked `aria-pressed` and
+`claim-selected`; every claim's evidence renders regardless); `label?: string` (fallback name for
+the overall claim region; omission uses the localized default and an explicit empty string clears
+it; a non-empty host `aria-label` makes the host the sole overall owner, while an explicitly empty
+host label stays empty on the region).
 `GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
 `status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
@@ -2681,10 +2735,10 @@ At most 500 claims render as `claim` rows; a `claims` array past that length ren
   nested inside an already-bordered container don't double the frame. `plain` wins over the dense
   `size` tier when both are set — nothing left to tighten.
 
-**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`). A nested
-`lr-citation-badge` activation is contained and translated to `lr-citation-select`; the distinct
-composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unchanged with its
-`{ sourceId, index, href }` detail.
+**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`) and
+`lr-citation-open` (`{ citation }`). A nested `lr-citation-badge`'s activation and its distinct
+`lr-citation-open` (double-click, or Space) are contained and translated to these two events, each
+carrying the complete citation record.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `limit` (localized notice shown when `claims` exceeds the
@@ -2712,8 +2766,9 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label?: string` (fallback name
-for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `headingLevel: LyraHeadingLevel =
+'3'` (attribute `heading-level`, each set heading; `'none'` keeps the visible text without heading
+semantics); `label?: string` (fallback name for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
@@ -2728,7 +2783,9 @@ controlled selection, rendering, or events.
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
 
 Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
-is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
+is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled. A result
+button is named by its rank and source title (a blank name shows the localized "untitled source");
+its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
 
 **Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
@@ -2746,8 +2803,10 @@ and run history. The host computes metrics and owns evaluation execution.
 
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
-(attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label?: string` (visible heading and
+(attribute: false); `metricId: string = ''` (attribute `metric-id`; the first metric is used when
+unset, while an id that matches no metric selects none and renders no chart); `slice: string = ''`;
+`headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the run-history heading sits one
+level below; `'none'` keeps the visible text without heading semantics); `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `withoutChart: boolean = false` (attribute `without-chart`, reflected — omits the trend chart);
@@ -2761,13 +2820,14 @@ Metrics and runs are canonicalized independently by nonblank `id`. Malformed row
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
 history, counts, rendering, or actions.
 
-At most 500 of the currently filtered runs render as `run` buttons and feed the trend chart; a
-filtered set past that length renders a localized `limit` notice after the run history rather than
-mounting an unbounded number of rows.
+At most the 500 most recent of the currently filtered runs (the array end is newest) render as
+`run` buttons and feed the trend chart; a filtered set past that length renders a localized
+`limit` notice after the run history rather than mounting an unbounded number of rows.
 
-**Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
-`lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties.
+**Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
+`lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
+corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice-change` and
+`lr-run-change` (`{ run }`) are dispatched right after them.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
@@ -2801,8 +2861,10 @@ counted as completed; an unrecognized status renders as `pending` rather than dr
 nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
-record, and renders at most 100 steps. `label` sets the visible group heading; host `aria-label`
-names the semantic group.
+record, and renders at most 100 steps. `label` sets the visible group heading and names the group
+unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
+localized default for an empty one). `heading-level` (`'2'` by default; `'none'` keeps the text
+without heading semantics) sets the heading's level.
 
 **CSS parts:**
 

@@ -39,6 +39,10 @@ export interface LyraSourceEntry {
 }
 
 export interface LyraSourcePickerEventMap {
+  'lr-selection-change': CustomEvent<
+    LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
+  >;
+  /** @deprecated Use `lr-selection-change`. */
   'lr-sources-change': CustomEvent<
     LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
   >;
@@ -80,10 +84,11 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-source-picker
- * @event lr-sources-change - `detail: { selectedSourceIds }` — the complete updated leaf-id array,
+ * @event lr-selection-change - `detail: { selectedSourceIds }` — the complete updated leaf-id array,
  * fired after every toggle including select-all. Also fires when a `sources` reassignment prunes
  * a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
  * `selectedSourceIds` directly; that assignment is normalized silently.
+ * @event lr-sources-change - Deprecated alias of `lr-selection-change`, dispatched right after it.
  * @csspart base - The root wrapper.
  * @csspart search - The built-in filter `lr-input`, omitted while `withoutSearch` is set.
  * @csspart select-all - The header select-all row, omitted while `withoutSelectAll` is set.
@@ -158,6 +163,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change',
     'lr-sources-change',
   ]);
 
@@ -166,7 +172,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
    * its own copy on toggle *then* emits; reassign to control. */
   @property({ attribute: false }) selectedSourceIds: readonly string[] = [];
-  /** Omits the header control that otherwise selects or clears every visible leaf source. */
+  /** Omits the header control that otherwise selects or clears every leaf source, or only the
+   *  leaves matching the filter while one is active. */
   @property({ type: Boolean, attribute: 'without-select-all' })
   withoutSelectAll = false;
   /** Omits the built-in source filter. Toggling retains the query and selection, while keeping a
@@ -416,16 +423,14 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       ) {
         // A `sources` reassignment pruning previously-selected ids is a self-mutation of public
         // state (`selectedSourceIds`), not just an internal normalization -- without
-        // `lr-sources-change`, a host's own external copy of `selectedSourceIds` silently diverges
+        // `lr-selection-change`, a host's own external copy of `selectedSourceIds` silently diverges
         // with no way to resync, contradicting this class's own "fired after every toggle"
         // contract. Skipped on `selectedSourceIds` alone (an explicit controlled write already
         // reflects the caller's own intent) and on the very first update (nothing to resync yet).
         // Mirrors retrieval-results.class.ts's `shouldAnnounce` gate for the identical shape.
         const shouldAnnounce = this.hasUpdated && changed.has('sources');
         this.selectedSourceIds = normalized;
-        if (shouldAnnounce) {
-          this.emit('lr-sources-change', { selectedSourceIds: normalized });
-        }
+        if (shouldAnnounce) this.reportSelection(normalized);
       }
     }
     if (
@@ -502,9 +507,14 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       this.announcementSink?.announce(this.localize('noMatches'));
   }
 
+  private reportSelection(selectedSourceIds: string[]): void {
+    this.emit('lr-selection-change', { selectedSourceIds });
+    this.emit('lr-sources-change', { selectedSourceIds });
+  }
+
   private commitSelection(next: string[]): void {
     this.selectedSourceIds = next;
-    this.emit('lr-sources-change', { selectedSourceIds: next });
+    this.reportSelection(next);
   }
 
   private toggleEntry(entry: LyraSourceEntry): void {
@@ -518,18 +528,29 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     this.commitSelection([...set]);
   }
 
-  /** The select-all checkbox is internal chrome: its toggle proposal and every alias of its
-   *  commit stay inside, and `lr-sources-change` is the one host-level report of the toggle. */
+  /** The select-all checkbox and the filter field are internal chrome: their composed events stay
+   *  inside, and `lr-selection-change` is the one host-level report. */
   private stopOwnedEvent = (event: Event): void => {
     event.stopPropagation();
   };
 
+  /** The leaves select-all acts on: every leaf, or only the visible ones while filtering. */
+  private selectAllTargets(rows: readonly SourceRow[]): string[] {
+    return this.isFiltering()
+      ? rows.filter((row) => !row.hasChildren).map((row) => row.entry.id)
+      : this.allLeafIds();
+  }
+
   private toggleSelectAll(): void {
-    const all = this.allLeafIds();
-    const selectedIds = new Set(this.normalizedSelectedSourceIds());
-    const allSelected =
-      all.length > 0 && all.every((id) => selectedIds.has(id));
-    this.commitSelection(allSelected ? [] : all);
+    const targets = this.selectAllTargets(this.visibleRows());
+    if (!targets.length) return;
+    const selected = new Set(this.normalizedSelectedSourceIds());
+    const allSelected = targets.every((id) => selected.has(id));
+    for (const id of targets) {
+      if (allSelected) selected.delete(id);
+      else selected.add(id);
+    }
+    this.commitSelection([...selected]);
   }
 
   private focusRowByIndex(index: number, rows: SourceRow[]): void {
@@ -702,12 +723,13 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     }
     const rows = this.visibleRows();
     const activeId = this.activeId ?? rows[0]?.entry.id ?? null;
-    const allLeaves = this.allLeafIds();
+    const targets = this.selectAllTargets(rows);
+    const targetsSelected = targets.filter((id) => selectedIdSet.has(id)).length;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const selectAllState: 'true' | 'false' | 'mixed' =
-      selectedIds.length === 0
+      targetsSelected === 0
         ? 'false'
-        : allLeaves.length > 0 && allLeaves.every((id) => selectedIdSet.has(id))
+        : targetsSelected === targets.length
         ? 'true'
         : 'mixed';
 
@@ -719,6 +741,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               .size=${this.size ?? 'm'}
               placeholder=${this.localize('search')}
               .value=${this.query}
+              @input=${this.stopOwnedEvent}
+              @change=${this.stopOwnedEvent}
+              @lr-change=${this.stopOwnedEvent}
               @lr-input=${(e: CustomEvent<{ value: string }>) => {
                 e.stopPropagation();
                 this.query = e.detail.value;
@@ -745,13 +770,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               <span part="summary"
                 >${this.localize('sourcePickerSelection', undefined, {
                   selected: numberFormat.format(selectedIds.length),
-                  total: numberFormat.format(allLeaves.length),
+                  total: numberFormat.format(this.allLeafIds().length),
                 })}</span
               >
             </div>`
           : nothing}
         ${rows.length === 0
-          ? html`<div part="empty">${this.localize('noMatches')}</div>`
+          ? html`<lr-empty
+              part="empty"
+              heading=${this.localize('noMatches')}
+            ></lr-empty>`
           : html`<div
               part="tree"
               role="tree"

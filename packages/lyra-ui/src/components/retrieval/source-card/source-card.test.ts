@@ -727,3 +727,15 @@ describe('lr-source-card size and the retired compact alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+it('stretches its bordered base to a taller grid neighbour', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="display: grid; grid-template-columns: 1fr 1fr; inline-size: 400px">
+    <lr-source-card heading="Short"></lr-source-card>
+    <lr-source-card heading="Tall"><span slot="excerpt">${'long excerpt '.repeat(40)}</span></lr-source-card>
+  </div>`);
+  const [short, tall] = [...wrapper.querySelectorAll('lr-source-card')] as HTMLElement[];
+  await (tall as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  const base = short!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(Math.round(base.getBoundingClientRect().height)).to.equal(Math.round(short!.getBoundingClientRect().height));
+  expect(short!.getBoundingClientRect().height).to.be.greaterThan(100);
+});

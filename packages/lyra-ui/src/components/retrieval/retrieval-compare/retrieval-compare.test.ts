@@ -2,6 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import './retrieval-compare.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import type { LyraRetrievalCompare, RetrievalComparisonSet } from './retrieval-compare.js';
 
 function chunk(id: string, score: number, rank?: number): RetrievalChunk {
@@ -346,5 +347,62 @@ describe('chunk-selected cssprop escape hatch', () => {
     expect(getComputedStyle(selectedChunk).borderTopColor).to.equal(
       resolvedInShadow(el, 'border-top-color: var(--lr-color-brand)', 'border-top-color'),
     );
+  });
+});
+
+describe('lr-retrieval-compare review fixes', () => {
+  it('names a result by its rank and title, and describes it with the text and scores', async () => {
+    const el = await fixture<LyraRetrievalCompare>(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`);
+    const button = el.shadowRoot!.querySelector('[part~="chunk"]')!;
+    const text = (attribute: string): string =>
+      button.getAttribute(attribute)!.split(' ').map((id) => el.shadowRoot!.getElementById(id)!.textContent!.trim()).join(' ');
+    expect(text('aria-labelledby')).to.equal('Rank 1 Source b');
+    expect(text('aria-describedby')).to.contain('Text for b');
+    expect(text('aria-labelledby')).to.not.contain('Text for b');
+    await expect(el).to.be.accessible();
+  });
+
+  it('separates each score label from its value', async () => {
+    const el = await fixture<LyraRetrievalCompare>(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`);
+    const score = el.shadowRoot!.querySelector('[part="score"]')!.textContent!.replace(/\s+/g, ' ').trim();
+    expect(score).to.match(/^Dense \d/);
+  });
+
+  it('falls back to "Untitled source" for a blank source name', async () => {
+    const blank = { ...chunk('x', 0.5), source: { id: 's', name: '' } };
+    const el = await fixture<LyraRetrievalCompare>(html`<lr-retrieval-compare .sets=${[{ id: 'a', label: 'A', chunks: [blank] }]}></lr-retrieval-compare>`);
+    expect(el.shadowRoot!.querySelector('[part="chunk-title"]')!.textContent).to.equal('Untitled source');
+  });
+
+  it('gives two instances distinct set heading ids', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-retrieval-compare .sets=${sets}></lr-retrieval-compare><lr-retrieval-compare .sets=${sets}></lr-retrieval-compare></div>`);
+    const ids = [...wrapper.querySelectorAll('lr-retrieval-compare')].flatMap((compare) => [...compare.shadowRoot!.querySelectorAll('[part="set-heading"]')].map((heading) => heading.id));
+    expect(new Set(ids).size).to.equal(ids.length);
+  });
+
+  it('marks the selected chunk with an outline under forced colors', async () => {
+    const el = await fixture<LyraRetrievalCompare>(html`<lr-retrieval-compare selected-chunk-id="b" .sets=${sets}></lr-retrieval-compare>`);
+    const selected = el.shadowRoot!.querySelector('[part~="chunk-selected"]')!;
+    expect(getComputedStyle(selected).outlineStyle).to.equal('none');
+    try {
+      await setForcedColors('active');
+      expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+    } finally {
+      await setForcedColors('none');
+    }
+  });
+});
+
+describe('lr-retrieval-compare heading level', () => {
+  it('keeps level 3 by default, takes heading-level, and drops heading semantics for none', async () => {
+    const el = await fixture<LyraRetrievalCompare>(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`);
+    const heading = (): Element => el.shadowRoot!.querySelector('[part="set-heading"]')!;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal(['heading', '3']);
+    el.setAttribute('heading-level', '5');
+    await el.updateComplete;
+    expect(heading().getAttribute('aria-level')).to.equal('5');
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
 });

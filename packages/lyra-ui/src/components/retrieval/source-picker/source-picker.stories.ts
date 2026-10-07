@@ -24,7 +24,7 @@ const sources: LyraSourceEntry[] = [
 ];
 
 export const Default: Story = {
-  render: () => html`<lr-source-picker .sources=${sources} @lr-sources-change=${(e: CustomEvent) => console.log(e.detail)}></lr-source-picker>`,
+  render: () => html`<lr-source-picker .sources=${sources} @lr-selection-change=${(e: CustomEvent) => console.log(e.detail)}></lr-source-picker>`,
 };
 
 export const WithSelection: Story = {

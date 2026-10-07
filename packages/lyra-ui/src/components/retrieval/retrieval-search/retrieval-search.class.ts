@@ -54,6 +54,8 @@ export interface RetrievalFiltersChangeDetail {
 }
 
 export interface LyraRetrievalSearchEventMap {
+  'lr-input': CustomEvent<{ value: string }>;
+  'lr-mode-change': CustomEvent<{ mode: LyraRetrievalMode }>;
   'lr-search': CustomEvent<LyraEventDetailSnapshot<RetrievalQuery>>;
   'lr-cancel': CustomEvent<CancelEventDetail>;
   'lr-filters-change': CustomEvent<
@@ -91,6 +93,10 @@ export interface LyraRetrievalSearchEventMap {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-retrieval-search
+ * @event lr-input - The user edited or cleared the query. `detail: { value }`; `query` already holds
+ *   it.
+ * @event lr-mode-change - The user picked a retrieval mode. `detail: { mode }`; `mode` already
+ *   holds it.
  * @event lr-search - The query was submitted (Enter in the query field, or the submit button
  *   while not `loading`). `detail`: the full `RetrievalQuery` (`{ text, mode, filters, scope }`).
  * @event lr-cancel - The in-flight request should be cancelled: either the user clicked the
@@ -157,8 +163,8 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   ]);
 
   /** The current query text. Controlled -- the internal `lr-input` updates this optimistically as
-   *  the user types (mirroring every other Lyra input's controlled-value convention), and a host
-   *  reassignment always wins. */
+   *  the user types (mirroring every other Lyra input's controlled-value convention) and reports
+   *  it through `lr-input`; a host reassignment always wins. */
   @property() query = '';
 
   private _size?: LyraSize;
@@ -344,11 +350,10 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private formatFilterValue(value: unknown): string {
-    const sentinel = this.localize('valueInvalid');
     return formatBoundedRetrievalValue(value, {
       locale: this.effectiveLocale,
-      invalid: sentinel,
-      truncated: sentinel,
+      invalid: this.localize('valueInvalid'),
+      truncated: '…',
     });
   }
 
@@ -427,6 +432,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   private onQueryInput = (e: CustomEvent<{ value: string }>): void => {
     e.stopPropagation();
     this.query = e.detail.value;
+    this.emit('lr-input', { value: this.query });
   };
 
   private onQueryKeyDown = (e: KeyboardEvent): void => {
@@ -443,13 +449,11 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   private onModeChange = (e: CustomEvent<{ value: string }>): void => {
     e.stopPropagation();
     this.mode = e.detail.value as LyraRetrievalMode;
+    this.emit('lr-mode-change', { mode: this.mode });
   };
 
-  /** The inner `<lr-segmented>`'s `lr-activate` reports a repeat pick of the mode already chosen.
-   *  This component owns its own event surface (`lr-search`, `lr-mode-change`, ...), so the child's
-   *  raw event is contained here rather than escaping as an event this tag never documented --
-   *  the same containment `onModeChange` already applies to the child's `lr-change`. */
-  private containModeEvent = (e: Event): void => {
+  /** The composed field and mode selector's undocumented events stay inside. */
+  private stopOwnedEvent = (e: Event): void => {
     e.stopPropagation();
   };
 
@@ -488,6 +492,10 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             .size=${this.size ?? 'm'}
             placeholder=${this.placeholder == null ? this.localize('search') : this.placeholder}
             .value=${this.query}
+            @input=${this.stopOwnedEvent}
+            @change=${this.stopOwnedEvent}
+            @lr-change=${this.stopOwnedEvent}
+            @lr-clear=${this.stopOwnedEvent}
             @lr-input=${this.onQueryInput}
             @keydown=${this.onQueryKeyDown}
           ></lr-input>
@@ -502,7 +510,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             .value=${this.mode}
             label=${this.localize('retrievalModeLabel')}
             @lr-change=${this.onModeChange}
-            @lr-activate=${this.containModeEvent}
+            @lr-activate=${this.stopOwnedEvent}
           ></lr-segmented>
           <button part="submit" type="button" @click=${this.onSubmitClick}>
             ${this.loading ? this.localize('cancel') : this.localize('search')}

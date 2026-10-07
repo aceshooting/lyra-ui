@@ -79,14 +79,29 @@ describe('lr-research-progress', () => {
       .to.be.closeTo(progress.getBoundingClientRect().width, 1);
   });
 
-  it('uses the host label for the semantic owner and supports localized strings', async () => {
+  it('lets a host label own the group, names the progressbar from its own purpose, and supports localized strings', async () => {
     const el = await fixture<LyraResearchProgress>(html`
       <lr-research-progress aria-label="Evidence gathering" .steps=${steps}
         .strings=${{ researchProgressLabel: 'Source review', researchProgressStatusRunning: 'Working' }}></lr-research-progress>
     `);
-    expect(el.shadowRoot!.querySelector('[part="progress"]')?.getAttribute('aria-label')).to.equal('Evidence gathering');
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal(null);
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="progress"]')?.getAttribute('aria-label')).to.equal('Source review');
     expect(el.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal('Source review');
     expect(el.shadowRoot!.textContent).to.contain('Working');
+  });
+
+  it('names its own group from the label when the host carries no name', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress label="Literature review" .steps=${steps}></lr-research-progress>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Literature review');
+  });
+
+  it('never leaves the progressbar unnamed, even for an explicitly empty label', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress label="" .steps=${steps}></lr-research-progress>`);
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal('Research progress');
   });
 
   it('restores the localized visible label when the label attribute is removed', async () => {
@@ -114,5 +129,19 @@ describe('lr-research-progress', () => {
     expect(step.left).to.be.at.least(host.left - 1);
     expect(step.right).to.be.at.most(host.right + 1);
     expect(getComputedStyle(populated.shadowRoot!.querySelector('[part="step-label"]')!).direction).to.equal('rtl');
+  });
+});
+
+describe('lr-research-progress heading level', () => {
+  it('keeps level 2 by default, takes heading-level, and drops heading semantics for none', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${steps}></lr-research-progress>`);
+    const heading = (): Element => el.shadowRoot!.querySelector('[part="label"]')!;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal(['heading', '2']);
+    el.setAttribute('heading-level', '4');
+    await el.updateComplete;
+    expect(heading().getAttribute('aria-level')).to.equal('4');
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
 });

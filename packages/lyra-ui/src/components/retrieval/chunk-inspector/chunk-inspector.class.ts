@@ -1,7 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -29,6 +29,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraScoreThresholds } from '../graph/graph.class.js';
 /** A local, non-exported structural copy of the `lr-document-viewer` `LyraAnchor` discriminated
  *  union, declared here (rather than imported) so this component has no build-time coupling to the
  *  viewer stack. Structurally identical to the real thing, so `chunk.anchor` interops with a
@@ -80,6 +81,8 @@ export interface LyraChunkInspectorEventMap {
 
 type Tier = 'high' | 'medium' | 'low';
 
+const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
+
 /** How `<lr-chunk-inspector>` orders the chunks it was given. */
 export type ChunkInspectorSort = 'score' | 'none';
 
@@ -112,7 +115,7 @@ function isDenseSize(size: LyraSize): boolean {
  * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { chunkId,
  * sourceId, anchor? }`.
  * @event lr-chunk-toggle - A chunk's text toggle was activated, expanding or collapsing it.
- *   `detail: { chunkId, expanded }`.
+ *   `detail: { chunkId, expanded }`; `expandedChunkIds` already reflects it.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
@@ -164,7 +167,10 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['chunks']);
+  protected static override readonly ownedCollectionProperties = Object.freeze([
+    'chunks',
+    'expandedChunkIds',
+  ]);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -190,11 +196,13 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
    * default) and larger render the full rows.
    */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Fallback name for the populated chunk group. A non-empty host `aria-label` makes the host the
-   *  sole overall owner; an explicitly empty host label stays empty on the group. */
-  @property() label = '';
-
-  @state() private expandedIds = new Set<string>();
+  /** Ids of the chunks whose text is expanded. The inspector updates its own copy on toggle, then
+   *  emits `lr-chunk-toggle`; reassign to control. */
+  @property({ attribute: false }) expandedChunkIds: readonly string[] = [];
+  /** Fallback name for the populated chunk group; omitting it falls back to the localized default
+   *  and an explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
+   *  overall owner; an explicitly empty host label stays empty on the group. */
+  @property() label?: string;
 
   /** Whether `size` selects the dense rows (`s` or smaller). */
   private get dense(): boolean {
@@ -245,8 +253,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   private tier(score: number): Tier {
     const safeScore = this.safeScore(score);
-    if (safeScore >= this.thresholds.high) return 'high';
-    if (safeScore >= this.thresholds.medium) return 'medium';
+    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    if (safeScore >= high) return 'high';
+    if (safeScore >= medium) return 'medium';
     return 'low';
   }
 
@@ -269,11 +278,10 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   }
 
   private toggleExpand(chunkId: string): void {
-    const next = new Set(this.expandedIds);
-    const expanded = !next.has(chunkId);
-    if (expanded) next.add(chunkId);
-    else next.delete(chunkId);
-    this.expandedIds = next;
+    const expanded = !this.expandedChunkIds.includes(chunkId);
+    this.expandedChunkIds = expanded
+      ? [...this.expandedChunkIds, chunkId]
+      : this.expandedChunkIds.filter((id) => id !== chunkId);
     this.emit('lr-chunk-toggle', { chunkId, expanded });
   }
 
@@ -308,7 +316,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
             base: titleText,
             page: formattedPage,
           });
-    const expanded = this.expandedIds.has(chunk.id);
+    const expanded = this.expandedChunkIds.includes(chunk.id);
     const current = this.activeChunkId === chunk.id;
     return html`
       <div
@@ -384,24 +392,24 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     return (item: unknown) => this.renderVirtualChunk(item);
   }
 
+  /** The internal virtual list's scroll and range events are not part of this component's surface. */
+  private readonly stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   override render(): TemplateResult {
     const sorted = this.sortedChunks();
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('chunkInspectorLabel')
+      this.label == null ? this.localize('chunkInspectorLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {
-      // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute
-      // most other components use) so `[part="empty"]`'s `.textContent` -- a plain DOM accessor,
-      // which never pierces `lr-empty`'s own shadow root -- actually includes the message; see
-      // this component's notes for why the attribute-only form other components use wouldn't.
       return html`<div part="base">
-        <lr-empty part="empty"
-          ><span slot="heading"
-            >${this.localize('chunkInspectorEmpty')}</span
-          ></lr-empty
-        >
+        <lr-empty
+          part="empty"
+          heading=${this.localize('chunkInspectorEmpty')}
+        ></lr-empty>
       </div>`;
     }
     return html`
@@ -417,6 +425,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               .renderItem=${this.virtualRenderItem()}
               .keyFunction=${this.chunkKey}
               .activeItemId=${this.activeChunkId || ''}
+              @lr-virtual-scroll=${this.stopOwnedEvent}
+              @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
           : html`<div role="list">
               ${sorted.map((c) => this.renderChunk(c))}

@@ -3,6 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import './chunk-inspector.js';
 import type { LyraChunkInspector, LyraChunk } from './chunk-inspector.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 // Registers the real 'ar' catalog so the ar-EG/ar-u-nu-arab locale tests below -- which exercise
 // number-formatting and score-percentage rendering, not string-catalog completeness -- resolve
 // every key they incidentally touch (chunkInspectorLabel, sourcePageSuffix, chunkScore,
@@ -202,7 +203,7 @@ it('normalizes a NaN virtualizeAt to the default (50) instead of silently disabl
 it('shows chunkInspectorEmpty when chunks is empty', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No chunks retrieved');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('No chunks retrieved');
 });
 
 it('routes every localized string through this.localize(), provable via a .strings override reaching the rendered DOM', async () => {
@@ -247,7 +248,7 @@ it('localizes the empty-state message via a .strings override, not a hardcoded E
     html`<lr-chunk-inspector .strings=${{ chunkInspectorEmpty: 'Aucun extrait récupéré' }}></lr-chunk-inspector>`,
   )) as LyraChunkInspector;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Aucun extrait récupéré');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal('Aucun extrait récupéré');
 });
 
 it('keeps one populated owner across explicit-empty and dynamic host naming', async () => {
@@ -657,4 +658,63 @@ describe('lr-chunk-inspector size and the retired compact alias', () => {
     expect(regular).to.equal('3|3|3');
     expect(warnings).to.have.length(0);
   });
+});
+
+it('keeps the virtual list scroll and range events inside', async () => {
+  const leaked: string[] = [];
+  const onLeak = (event: Event): void => {
+    leaked.push(event.type);
+  };
+  const names = ['lr-virtual-scroll', 'lr-visible-range-change'];
+  for (const name of names) document.addEventListener(name, onLeak);
+  try {
+    const many = Array.from({ length: 12 }, (_, index) => ({ id: `m${index}`, text: 'x', score: 0.5, sourceId: 's', title: `T${index}` }));
+    const el = (await fixture(html`<lr-chunk-inspector virtualize-at="3" .chunks=${many}></lr-chunk-inspector>`)) as LyraChunkInspector;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { updateComplete: Promise<unknown>; scrollToIndex(index: number, options?: { align?: 'start'; behavior?: 'auto' }): void };
+    await list.updateComplete;
+    list.scrollToIndex(8, { align: 'start', behavior: 'auto' });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  } finally {
+    for (const name of names) document.removeEventListener(name, onLeak);
+  }
+  expect(leaked).to.deep.equal([]);
+});
+
+it('expands the chunks named by expandedChunkIds and keeps that property in step with the toggle', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector .chunks=${chunks} .expandedChunkIds=${['c2']}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  const toggles = (): HTMLElement[] => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="toggle"]')];
+  expect(toggles().map((toggle) => toggle.getAttribute('aria-expanded'))).to.deep.equal(['false', 'true', 'false']);
+  const toggled = oneEvent(el, 'lr-chunk-toggle');
+  toggles()[0]!.click();
+  expect((await toggled).detail).to.deep.equal({ chunkId: 'c1', expanded: true });
+  expect(el.expandedChunkIds).to.deep.equal(['c2', 'c1']);
+  toggles()[1]!.click();
+  expect(el.expandedChunkIds).to.deep.equal(['c1']);
+});
+
+it('keeps an explicitly empty label empty and uses the localized name only when label is omitted', async () => {
+  const empty = (await fixture(html`<lr-chunk-inspector label="" .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  const omitted = (await fixture(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Retrieved chunks');
+});
+
+it('falls back to the default tiers when thresholds is not an object', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  (el as unknown as { thresholds: unknown }).thresholds = undefined;
+  await el.updateComplete;
+  const tones = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="score-fill"]')].map((fill) => fill.dataset['tone']);
+  expect(tones).to.deep.equal(['success', 'warning', 'danger']);
+});
+
+it('marks the current row with an outline under forced colors', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector active-chunk-id="c2" .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+  const current = el.shadowRoot!.querySelector('[part~="chunk-current"]')!;
+  expect(getComputedStyle(current).outlineStyle).to.equal('none');
+  try {
+    await setForcedColors('active');
+    expect(getComputedStyle(current).outlineStyle).to.equal('solid');
+  } finally {
+    await setForcedColors('none');
+  }
 });

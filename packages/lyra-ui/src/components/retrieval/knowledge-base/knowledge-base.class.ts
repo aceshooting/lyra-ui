@@ -10,6 +10,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import {
   getDateTimeFormat,
@@ -66,9 +67,8 @@ export interface KnowledgeSource {
   indexingHealth?: KnowledgeSourceIndexingHealth;
   permission?: KnowledgeSourcePermission;
   documentCount?: number;
-  /** Epoch milliseconds or an ISO-8601 string, matching `LyraChatThread`/`ChatMessage`'s own
-   *  `Date | string` timestamp convention elsewhere in this library. Omitted/unparseable renders as
-   *  "never synced". */
+  /** A `Date` or an ISO-8601 string, matching `LyraChatThread`/`ChatMessage`'s own `Date | string`
+   *  timestamp convention elsewhere in this library. Omitted/unparseable renders as "never synced". */
   lastSyncedAt?: Date | string;
   /** Shown only while `syncStatus` is `'error'`. Caller-supplied data, not routed through
    *  `localize()`. */
@@ -315,6 +315,9 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
    *  localized default as its accessible name so the grid is never left unnamed. */
   @property() label?: string;
 
+  /** Semantic level of the heading; `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
+
   /** Hides the aggregate summary row (total/synced/syncing/needs-attention). */
   @property({ type: Boolean, attribute: 'without-summary', reflect: true })
   withoutSummary = false;
@@ -399,12 +402,21 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     }
   };
 
+  private sourcesCache?: { source: unknown; value: KnowledgeSource[] };
+
   private get normalizedSources(): KnowledgeSource[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.sources) ? this.sources : [],
-      (source) => source.id
-    );
+    if (this.sourcesCache?.source !== this.sources)
+      this.sourcesCache = {
+        source: this.sources,
+        value: firstByRetrievalIdentity(
+          Array.isArray(this.sources) ? this.sources : [],
+          (source) => source.id
+        ),
+      };
+    return this.sourcesCache.value;
   }
+
+  private readonly rowKey = (row: KnowledgeSource): string => row.id;
 
   private syncStatusLabel(status: KnowledgeSourceSyncStatus): string {
     switch (status) {
@@ -418,6 +430,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         return this.localize('knowledgeBaseSyncSynced');
       case 'error':
         return this.localize('knowledgeBaseSyncError');
+      default:
+        return this.localize('knowledgeBaseHealthUnknown');
     }
   }
 
@@ -429,7 +443,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         return this.localize('knowledgeBaseHealthDegraded');
       case 'failed':
         return this.localize('knowledgeBaseHealthFailed');
-      case 'unknown':
+      default:
         return this.localize('knowledgeBaseHealthUnknown');
     }
   }
@@ -444,6 +458,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         return this.localize('knowledgeBasePermissionViewer');
       case 'restricted':
         return this.localize('knowledgeBasePermissionRestricted');
+      default:
+        return this.localize('knowledgeBaseHealthUnknown');
     }
   }
 
@@ -471,7 +487,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       <div part="sync-cell">
         <lr-badge
           part="sync-badge"
-          variant=${SYNC_STATUS_VARIANT[source.syncStatus]}
+          variant=${SYNC_STATUS_VARIANT[source.syncStatus] ?? 'neutral'}
           >${this.syncStatusLabel(source.syncStatus)}</lr-badge
         >
         <span part="sync-timestamp">
@@ -493,7 +509,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const health = source.indexingHealth ?? 'unknown';
     return html`
       <div part="health-cell">
-        <lr-badge part="health-badge" variant=${HEALTH_VARIANT[health]}
+        <lr-badge part="health-badge" variant=${HEALTH_VARIANT[health] ?? 'neutral'}
           >${this.healthLabel(health)}</lr-badge
         >
         ${source.documentCount != null
@@ -513,7 +529,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     if (!source.permission) return html``;
     return html`<lr-badge
       part="permission-badge"
-      variant=${PERMISSION_VARIANT[source.permission]}
+      variant=${PERMISSION_VARIANT[source.permission] ?? 'neutral'}
       >${this.permissionLabel(source.permission)}</lr-badge
     >`;
   }
@@ -528,7 +544,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   private renderActionsCell(source: KnowledgeSource): TemplateResult {
     const canPause = source.syncStatus === 'syncing';
-    const canSync = source.syncStatus !== 'syncing';
+    const canSync =
+      SYNC_STATUS_VARIANT[source.syncStatus] !== undefined && !canPause;
     const label = this.localize('knowledgeBaseRowActionsLabel', undefined, {
       name: this.sourceName(source),
     });
@@ -566,10 +583,18 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     `;
   }
 
-  // Recomputed every render (not memoized) so column labels stay correct across a locale change --
-  // this list is small (five columns), so the recomputation cost is negligible.
+  private columnsCache?: {
+    locale: string;
+    strings: unknown;
+    value: TableColumn<KnowledgeSource>[];
+  };
+
+  // Rebuilt only when the locale or the strings change, so the table keeps its caches otherwise.
   private tableColumns(): TableColumn<KnowledgeSource>[] {
-    return [
+    const { effectiveLocale: locale, strings } = this;
+    const cached = this.columnsCache;
+    if (cached?.locale === locale && cached.strings === strings) return cached.value;
+    const value: TableColumn<KnowledgeSource>[] = [
       {
         key: 'name',
         label: this.localize('knowledgeBaseNameColumn'),
@@ -597,6 +622,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         cell: (row) => this.renderActionsCell(row),
       },
     ];
+    this.columnsCache = { locale, strings, value };
+    return value;
   }
 
   private renderSummary(sources: readonly KnowledgeSource[]): TemplateResult {
@@ -644,10 +671,11 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     // An explicitly blank heading is a visual choice; the grid still needs a name.
     const tableLabel =
       heading.trim() === '' ? this.localize('knowledgeBaseHeading') : heading;
+    const level = resolveHeadingLevel(this.headingLevel);
     return html`
       <div part="base">
         <div part="toolbar">
-          <h3 part="heading">${heading}</h3>
+          <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${heading}</div>
           ${!this.withoutCreate
             ? html`<lr-button
                 part="create-button"
@@ -667,7 +695,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           exportparts=${TABLE_EXPORT_PARTS}
           .columns=${this.tableColumns()}
           .rows=${sources}
-          .rowKey=${(row: KnowledgeSource) => row.id}
+          .rowKey=${this.rowKey}
           aria-label=${tableLabel}
           empty-heading=${this.localize('knowledgeBaseEmptyHeading')}
           empty-description=${this.localize(

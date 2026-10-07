@@ -633,6 +633,7 @@ describe('lr-rag-answer', () => {
     ).to.deep.equal({
       citation: citations[1],
       section: 'answer',
+      action: 'activate',
     });
     expect(leaked, "the child's own event does not escape the host").to.equal(
       0
@@ -661,6 +662,7 @@ describe('lr-rag-answer', () => {
     expect((await answerPending).detail).to.deep.equal({
       citation,
       section: 'answer',
+      action: 'open',
     });
     expect(leaked).to.equal(0);
 
@@ -677,7 +679,7 @@ describe('lr-rag-answer', () => {
     const groundingPending = oneEvent(el, 'lr-citation-select');
     summary!.dispatchEvent(
       new CustomEvent('lr-citation-open', {
-        detail: { index: 1, sourceId: 'd1' },
+        detail: { citation },
         bubbles: true,
         composed: true,
       })
@@ -685,6 +687,7 @@ describe('lr-rag-answer', () => {
     expect((await groundingPending).detail).to.deep.equal({
       citation,
       section: 'grounding',
+      action: 'open',
     });
     expect(leaked).to.equal(0);
   });
@@ -749,6 +752,7 @@ describe('lr-rag-answer', () => {
     expect((await pending).detail).to.deep.equal({
       citation,
       section: 'grounding',
+      action: 'activate',
     });
 
     el.loading = true;
@@ -855,6 +859,7 @@ describe('lr-rag-answer', () => {
     expect((await selected).detail).to.deep.equal({
       citation: firstCitation,
       section: 'answer',
+      action: 'activate',
     });
   });
 });
@@ -897,5 +902,105 @@ describe('lr-rag-answer retired show-claims alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+});
+
+describe('review fixes', () => {
+  const citations = [
+    { id: 'a', label: 'Dropped span', span: null },
+    { id: 'b', label: 'Second' },
+    { id: 'c', label: 'Third' },
+  ] as unknown as { id: string }[];
+  const assessment = { supportedClaims: 1, unsupportedClaims: 0, coverage: 1 };
+
+  async function dblclick(badge: HTMLElement): Promise<void> {
+    const button = badge.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    button.click();
+    button.click();
+    button.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  }
+
+  it('reports a double-click as two activates then one open, so a host can tell them apart', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer answer="x" .citations=${citations}></lr-rag-answer>`);
+    const seen: string[] = [];
+    el.addEventListener('lr-citation-select', (event) => {
+      const detail = (event as CustomEvent<{ citation: { id: string }; action: string }>).detail;
+      seen.push(`${detail.citation.id}:${detail.action}`);
+    });
+    await dblclick(el.shadowRoot!.querySelectorAll<HTMLElement>('lr-citation-badge')[2]!);
+    expect(seen).to.deep.equal(['c:activate', 'c:activate', 'c:open']);
+  });
+
+  it('opens the citation a grounding badge shows, even when an earlier citation has a malformed span', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer .citations=${citations} .assessment=${assessment}></lr-rag-answer>`);
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { updateComplete: Promise<unknown> };
+    await summary.updateComplete;
+    const badges = summary.shadowRoot!.querySelectorAll<HTMLElement>('lr-citation-badge');
+    expect(badges.length).to.equal(3);
+    const seen: string[] = [];
+    el.addEventListener('lr-citation-select', (event) => {
+      const detail = (event as CustomEvent<{ citation: { id: string }; section: string; action: string }>).detail;
+      seen.push(`${detail.citation.id}:${detail.section}:${detail.action}`);
+    });
+    await dblclick(badges[2]!);
+    expect(seen).to.deep.equal(['c:grounding:activate', 'c:grounding:activate', 'c:grounding:open']);
+  });
+
+  it('keeps the Markdown, source card and source list housekeeping events inside, and surfaces lr-open', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer answer="x" .sources=${[{ id: 'd1', name: 'guide.md' }]}></lr-rag-answer>`);
+    const leaked: string[] = [];
+    for (const name of ['lr-content-settled', 'lr-copy', 'lr-copy-error', 'lr-expand', 'lr-toggle'])
+      el.addEventListener(name, () => leaked.push(name));
+    const opened: unknown[] = [];
+    el.addEventListener('lr-open', (event) => opened.push((event as CustomEvent).detail));
+    const fire = (target: Element, name: string): void => {
+      target.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+    };
+    fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-content-settled');
+    fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-copy');
+    fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-copy-error');
+    fire(el.shadowRoot!.querySelector('lr-source-card')!, 'lr-expand');
+    fire(el.shadowRoot!.querySelector('lr-source-list')!, 'lr-toggle');
+    const card = el.shadowRoot!.querySelector('lr-source-card') as LyraSourceCard;
+    await card.updateComplete;
+    card.shadowRoot!.querySelector<HTMLElement>('[part="title"]')!.click();
+    expect(leaked).to.deep.equal([]);
+    expect(opened).to.deep.equal([{ sourceId: 'd1', href: '' }]);
+  });
+
+  it('does not stop the lr-expand of consumer content slotted into sources', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer answer="x"><lr-source-card slot="sources" source-id="s"></lr-source-card></lr-rag-answer>`);
+    let expands = 0;
+    el.addEventListener('lr-expand', () => (expands += 1));
+    el.querySelector('lr-source-card')!.dispatchEvent(new CustomEvent('lr-expand', { bubbles: true, composed: true }));
+    expect(expands).to.equal(1);
+  });
+
+  it('hands the grounding summary the same assessment and citations while the answer streams', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer answer="a" .citations=${[citations[1]]} .assessment=${assessment}></lr-rag-answer>`);
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { assessment: unknown; citations: unknown };
+    const before = [summary.assessment, summary.citations];
+    el.answer = 'a b';
+    await el.updateComplete;
+    el.answer = 'a b c';
+    await el.updateComplete;
+    expect(summary.assessment === before[0] && summary.citations === before[1]).to.equal(true);
+  });
+});
+
+describe('lr-rag-answer heading level', () => {
+  it('keeps level 3 by default, takes heading-level, and forwards it to the grounding summary', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer .citations=${[{ id: 'a' }]} .sources=${[{ id: 'd', name: 'doc' }]}></lr-rag-answer>`);
+    const headings = (): (string | null)[] => [...el.shadowRoot!.querySelectorAll('[part="section-heading"]')].map((heading) => heading.getAttribute('aria-level'));
+    expect(headings()).to.deep.equal(['3', '3']);
+    el.setAttribute('heading-level', '5');
+    await el.updateComplete;
+    expect(headings()).to.deep.equal(['5', '5']);
+    el.assessment = { supportedClaims: 1, unsupportedClaims: 0, coverage: 1 };
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { headingLevel: string }).headingLevel).to.equal('5');
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect([...el.shadowRoot!.querySelectorAll('[part="section-heading"]')].map((heading) => heading.getAttribute('role'))).to.deep.equal([null]);
   });
 });

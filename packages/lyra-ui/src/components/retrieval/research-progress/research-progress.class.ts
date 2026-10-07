@@ -1,12 +1,16 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { firstByIdentity } from '../../agent-tools/collection-identity.js';
+import { firstByRetrievalIdentity } from '../retrieval-identity.js';
+import {
+  retrievalSemanticLabel,
+  retrievalSemanticRole,
+} from '../retrieval-semantic-owner.js';
 import { styles } from './research-progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -91,6 +95,8 @@ export class LyraResearchProgress extends LyraElement {
   @property({ attribute: false }) steps: readonly ResearchStep[] = [];
   /** Accessible group name and visible heading. */
   @property() label?: string;
+  /** Semantic level of the heading; `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
 
   private get normalizedSteps(): ResearchStep[] {
     const valid: ResearchStep[] = [];
@@ -103,7 +109,7 @@ export class LyraResearchProgress extends LyraElement {
         // A malformed row cannot suppress later valid steps.
       }
     }
-    return firstByIdentity(valid, (step) => step.id);
+    return firstByRetrievalIdentity(valid, (step) => step.id);
   }
 
   private renderStep(step: ResearchStep): TemplateResult {
@@ -129,19 +135,20 @@ export class LyraResearchProgress extends LyraElement {
   override render(): TemplateResult {
     const steps = this.normalizedSteps;
     const visibleLabel = this.label == null ? this.localize('researchProgressLabel') : this.label;
-    const hostLabel = hostAriaLabel(this);
+    const groupLabel = retrievalSemanticLabel(this, visibleLabel);
+    const level = resolveHeadingLevel(this.headingLevel);
     const completed = steps.filter((step) => step.status === 'completed').length;
     const percent = steps.length === 0 ? 0 : Math.round((completed / steps.length) * 100);
     return html`
-      <section part="base" role="group" aria-label=${hostLabel === null ? nothing : hostLabel}>
-        <h2 part="label">${visibleLabel}</h2>
+      <section part="base" role=${retrievalSemanticRole(this, 'group') ?? nothing} aria-label=${groupLabel ?? nothing}>
+        <div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
         ${steps.length === 0
           ? html`<p part="empty">${this.localize('researchProgressEmpty')}</p>`
           : html`
               <div
                 part="progress"
                 role="progressbar"
-                aria-label=${hostLabel ?? visibleLabel}
+                aria-label=${visibleLabel || this.localize('researchProgressLabel')}
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow=${String(percent)}

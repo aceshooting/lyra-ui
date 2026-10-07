@@ -9,6 +9,8 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
+    block-size: 100%;
+    box-sizing: border-box;
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius-container);

@@ -12,8 +12,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     padding: var(--lr-space-s);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius-container);
   }
 
   [part='label'] {

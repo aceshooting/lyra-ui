@@ -32,6 +32,7 @@ import {
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
+export type { LyraScoreThresholds } from '../graph/graph.class.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -50,21 +51,47 @@ export interface LyraProvenance {
 
 type Section = 'entities' | 'relationships' | 'communities' | 'chunks';
 
+function deriveSections(p: Readonly<LyraProvenance> | null) {
+  return {
+    entities: firstByRetrievalIdentity(
+      Array.isArray(p?.entities) ? p.entities : [],
+      (entity) => entity?.id
+    ),
+    relationships: (Array.isArray(p?.relationships) ? p.relationships : []).filter(
+      (
+        relationship
+      ): relationship is Readonly<{ path: readonly LyraPathElement[] }> =>
+        relationship !== null &&
+        typeof relationship === 'object' &&
+        Array.isArray(relationship.path)
+    ),
+    communities: firstByRetrievalIdentity(
+      Array.isArray(p?.communities) ? p.communities : [],
+      (community) => community?.id
+    ),
+    chunks: firstByRetrievalIdentity(
+      Array.isArray(p?.chunks) ? p.chunks : [],
+      (chunk) => chunk?.id
+    ),
+  };
+}
+
 /** The panel is a conduit, so its event map is the union of every affordance it renders: its own
  *  section toggle plus the entity chips', community cards', path strips', and chunk inspector's
  *  events, all of which are `composed` and therefore reach a host listener on
- *  `<lr-provenance-panel>` itself. Declaring only `lr-toggle` typed those controls out of existence
- *  for anyone building handlers off this type. */
+ *  `<lr-provenance-panel>` itself. */
 export interface LyraProvenancePanelEventMap
-  extends Omit<LyraCommunityCardEventMap, 'lr-entity-activate'>,
+  extends Omit<LyraCommunityCardEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
     Omit<LyraEntityChipEventMap, 'lr-entity-select'>,
-    Omit<LyraPathStripEventMap, 'lr-entity-activate'>,
+    Omit<LyraPathStripEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
     LyraChunkInspectorEventMap {
-  /** Canonical name for the "user picked this entity" gesture, surfaced unchanged from an
-   *  embedded entity chip. No composed child emits this with an `occurrenceIndex` (only the
-   *  community card and the relationship path strip's own `lr-entity-activate` do), so unlike
-   *  those this stays the plain shape. */
-  'lr-entity-select': CustomEvent<{ entityId: string }>;
+  /** "The user picked this entity", surfaced unchanged from an embedded entity chip, community
+   *  card or relationship path strip; only the path strip carries `occurrenceIndex`. */
+  'lr-entity-select': CustomEvent<{
+    entityId: string;
+    occurrenceIndex?: number;
+  }>;
+  /** @deprecated Use `lr-entity-select`. */
   'lr-entity-activate': CustomEvent<{
     entityId: string;
     occurrenceIndex?: number;
@@ -83,10 +110,11 @@ export interface LyraProvenancePanelEventMap
  *
  * @customElement lr-provenance-panel
  * @event lr-toggle - A section header was toggled. `detail: { section, expanded }`.
- * @event lr-entity-select - Surfaced unchanged from an embedded entity chip.
- *   `detail: { entityId }`.
- * @event lr-entity-activate - Surfaced unchanged from an embedded community card or relationship
- *   path strip. `detail: { entityId, occurrenceIndex? }`.
+ * @event lr-entity-select - Surfaced unchanged from an embedded entity chip, community card or
+ *   relationship path strip. `detail: { entityId, occurrenceIndex? }`; only the path strip sets
+ *   `occurrenceIndex`.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it by
+ *   an embedded community card or relationship path strip.
  * @event lr-entity-open - Surfaced unchanged from an embedded entity chip (double-click, or Space
  *   while focused). `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from an embedded community card's title, drill button, or
@@ -165,6 +193,11 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   };
 
   private readonly sectionIdBase = nextId('provenance-panel');
+  /** One derivation per `provenance` snapshot, so a section toggle keeps the inspector's input. */
+  private sectionsCache?: {
+    source: unknown;
+    value: ReturnType<typeof deriveSections>;
+  };
 
   private toggleSection(section: Section): void {
     const expanded = !this.expandedSections[section];
@@ -202,27 +235,15 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
 
   override render(): TemplateResult {
     const p = this.provenance;
-    const entities = firstByRetrievalIdentity(
-      Array.isArray(p?.entities) ? p.entities : [],
-      (entity) => entity?.id
-    );
-    const relationships = (
-      Array.isArray(p?.relationships) ? p.relationships : []
-    ).filter(
-      (
-        relationship
-      ): relationship is Readonly<{ path: readonly LyraPathElement[] }> =>
-        relationship !== null &&
-        typeof relationship === 'object' &&
-        Array.isArray(relationship.path)
-    );
-    const communities = firstByRetrievalIdentity(
-      Array.isArray(p?.communities) ? p.communities : [],
-      (community) => community?.id
-    );
-    const chunks = firstByRetrievalIdentity(
-      Array.isArray(p?.chunks) ? p.chunks : [],
-      (chunk) => chunk?.id
+    if (this.sectionsCache?.source !== p)
+      this.sectionsCache = { source: p, value: deriveSections(p) };
+    const { entities, relationships, communities, chunks } =
+      this.sectionsCache.value;
+    const typeLabels = new Map(
+      firstByRetrievalIdentity(this.types, (type) => type?.id).map((type) => [
+        type.id,
+        type.label,
+      ])
     );
     const allEmpty =
       entities.length === 0 &&
@@ -261,10 +282,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           html`<div part="entity-row" class="entity-row">
             ${entities.map((entity) => {
               const typeLabel =
-                firstByRetrievalIdentity(this.types, (type) => type?.id)
-                  .find((type) => type.id === entity.type)?.label ??
-                entity.type ??
-                '';
+                typeLabels.get(entity.type as string) ?? entity.type ?? '';
               return html`<lr-entity-chip
                 entity-id=${entity.id}
                 text=${entity.label}

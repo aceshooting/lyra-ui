@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import type { Citation, GroundedClaim } from '../../../ai/types.js';
 import './claim-evidence.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import type { LyraClaimEvidence } from './claim-evidence.js';
 import {
   captureDeprecationWarnings,
@@ -149,23 +150,22 @@ it('stops the internal lr-citation-badge lr-citation-activate event before re-em
   expect(leaked).to.be.false;
 });
 
-it('lets a nested citation-open event cross the host unchanged', async () => {
+it('reports a nested citation-open as its own lr-citation-open carrying the citation record', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence
       .claims=${claims}
       .citations=${citations}
     ></lr-claim-evidence>`
   )) as LyraClaimEvidence;
-  const detail = { index: 1, sourceId: 'doc-1', href: '#evidence' };
   const pending = oneEvent(el, 'lr-citation-open');
   el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
     new CustomEvent('lr-citation-open', {
-      detail,
+      detail: { index: 1, sourceId: 'doc-1', href: '#evidence' },
       bubbles: true,
       composed: true,
     })
   );
-  expect((await pending).detail).to.deep.equal(detail);
+  expect((await pending).detail).to.deep.equal({ citation: citations[0] });
 });
 
 it('applies per-instance strings to claim status', async () => {
@@ -475,5 +475,79 @@ describe('lr-claim-evidence size and the retired compact alias', () => {
     });
     expect(dense).to.not.equal(regular);
     expect(warnings).to.have.length(0);
+  });
+});
+
+describe('review fixes', () => {
+  const many = (count: number): Citation[] => Array.from({ length: count }, (_, index) => ({ id: `c${index}`, sourceId: 's' }));
+
+  it('resolves each claim through one id lookup instead of scanning the citation list per claim and badge', async () => {
+    const total = 1234;
+    const citationList = many(total);
+    const claimList: GroundedClaim[] = Array.from({ length: 40 }, (_, index) => ({ id: `k${index}`, text: 'claim', status: 'supported', citationIds: [`c${index}`] }));
+    const el = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence></lr-claim-evidence>`);
+    const originalIndexOf = Array.prototype.indexOf;
+    const originalFilter = Array.prototype.filter;
+    let scans = 0;
+    Array.prototype.indexOf = function (this: unknown[], ...args: Parameters<typeof originalIndexOf>) {
+      if (this.length === total) scans += 1;
+      return originalIndexOf.apply(this, args);
+    };
+    Array.prototype.filter = function (this: unknown[], ...args: Parameters<typeof originalFilter>) {
+      if (this.length === total) scans += 1;
+      return originalFilter.apply(this, args);
+    } as typeof originalFilter;
+    try {
+      el.claims = claimList;
+      el.citations = citationList;
+      await el.updateComplete;
+    } finally {
+      Array.prototype.indexOf = originalIndexOf;
+      Array.prototype.filter = originalFilter;
+    }
+    expect(scans).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-citation-badge')).to.have.length(40);
+  });
+
+  it('keeps the badge number and the citation-list order for a claim citing several records', async () => {
+    const list: Citation[] = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const el = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence
+      .claims=${[{ id: 'k', text: 'claim', status: 'supported', citationIds: ['c', 'a', 'a'] }]} .citations=${list}
+    ></lr-claim-evidence>`);
+    const badges = [...el.shadowRoot!.querySelectorAll<HTMLElement & { index: number }>('lr-citation-badge')];
+    expect(badges.map((badge) => badge.index)).to.deep.equal([1, 3]);
+  });
+
+  it('reports a nested badge open as its own lr-citation-open carrying the citation record', async () => {
+    const list: Citation[] = [{ id: 'a', sourceId: 's1' }];
+    const el = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence
+      .claims=${[{ id: 'k', text: 'claim', status: 'supported', citationIds: ['a'] }]} .citations=${list}
+    ></lr-claim-evidence>`);
+    const seen: unknown[] = [];
+    el.addEventListener('lr-citation-open', (event) => seen.push((event as CustomEvent).detail));
+    el.shadowRoot!.querySelector('lr-citation-badge')!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+    expect(seen).to.have.length(1);
+    expect((seen[0] as { citation: unknown }).citation === list[0]).to.equal(true);
+    expect((seen[0] as { index?: number }).index).to.equal(undefined);
+  });
+
+  it('keeps an explicitly empty label empty and uses the localized name only when label is omitted', async () => {
+    const empty = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence label=""></lr-claim-evidence>`);
+    expect(empty.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+    const omitted = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence></lr-claim-evidence>`);
+    expect(omitted.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.not.equal('');
+  });
+
+  it('marks the selected claim with an outline under forced colors', async () => {
+    const el = await fixture<LyraClaimEvidence>(html`<lr-claim-evidence selected-claim-id="claim-1" .claims=${claims} .citations=${citations}></lr-claim-evidence>`);
+    const selected = el.shadowRoot!.querySelector('[part~="claim-selected"]')!;
+    expect(getComputedStyle(selected).outlineStyle).to.equal('none');
+    try {
+      await setForcedColors('active');
+      expect(getComputedStyle(selected).outlineStyle).to.equal('solid');
+    } finally {
+      await setForcedColors('none');
+    }
   });
 });

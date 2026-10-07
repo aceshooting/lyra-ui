@@ -24,8 +24,8 @@ export const styles = css`
   }
 
   [part='evidence-row'] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius-container);
     overflow: hidden;
   }
   [part='evidence-row'][data-active] {

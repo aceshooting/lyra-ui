@@ -74,6 +74,8 @@ expectLocaleFallback('ar-u-nu-arab', [
   'sourcePageSuffix',
   'chunkScore',
   'scoreTierHigh',
+  'spanStartedAtOffset',
+  'valueInvalid',
 ]);
 describe("lr-retrieval-trace", () => {
   it("renders one bar per stage through the internal lr-span-waterfall, sorted by startMs", async () => {
@@ -224,6 +226,15 @@ describe("lr-retrieval-trace", () => {
     expect(el.getAttribute("aria-label")).to.equal(null);
 
     el.label = "";
+    await el.updateComplete;
+    await waterfall.updateComplete;
+    expect(
+      waterfall
+        .shadowRoot!.querySelector('[part="base"]')!
+        .getAttribute("aria-label")
+    ).to.equal("");
+
+    el.label = undefined;
     await el.updateComplete;
     await waterfall.updateComplete;
     expect(
@@ -531,6 +542,8 @@ describe("lr-retrieval-trace", () => {
     const el = (await fixture(
       html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`
     )) as LyraRetrievalTrace;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
+    await el.updateComplete;
     const inspector = el.shadowRoot!.querySelector(
       "lr-chunk-inspector"
     ) as LyraChunkInspector;
@@ -567,6 +580,8 @@ describe("lr-retrieval-trace", () => {
     const el = await fixture<LyraRetrievalTrace>(html`
       <lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>
     `);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="evidence-toggle"]')!.click();
+    await el.updateComplete;
     const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
     await inspector.updateComplete;
 
@@ -641,13 +656,12 @@ describe("lr-retrieval-trace", () => {
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
   });
 
-  it("registers lr-span-waterfall, lr-chunk-inspector, lr-live-region and lr-empty as a side effect of importing retrieval-trace.js (regression)", async () => {
+  it("registers lr-span-waterfall, lr-chunk-inspector and lr-empty as a side effect of importing retrieval-trace.js (regression)", async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real component.
     expect(customElements.get("lr-span-waterfall")).to.exist;
     expect(customElements.get("lr-chunk-inspector")).to.exist;
-    expect(customElements.get("lr-live-region")).to.exist;
     expect(customElements.get("lr-empty")).to.exist;
   });
 
@@ -938,21 +952,16 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
   ) as LyraChunkInspector;
   let leaked = 0;
   el.addEventListener('lr-chunk-toggle', () => leaked++);
-  el.addEventListener('lr-expand', () => leaked++);
   const actions: unknown[] = [];
   el.addEventListener('lr-stage-chunk-action', (event) =>
     actions.push((event as CustomEvent).detail)
   );
 
-  // The inspector fires its canonical lr-chunk-toggle and then the deprecated lr-expand alias;
-  // only the canonical event is correlated, and neither escapes the trace.
-  for (const type of ['lr-chunk-toggle', 'lr-expand']) {
-    inspector.dispatchEvent(new CustomEvent(type, {
-      detail: { chunkId: 'c2', expanded: true },
-      bubbles: true,
-      composed: true,
-    }));
-  }
+  inspector.dispatchEvent(new CustomEvent('lr-chunk-toggle', {
+    detail: { chunkId: 'c2', expanded: true },
+    bubbles: true,
+    composed: true,
+  }));
 
   expect(actions).to.deep.equal([
     {
@@ -1046,4 +1055,57 @@ it('renders no evidence disclosure row when evidence.chunks is not an array', as
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="evidence-row"]') === null).to.be.true;
+});
+
+describe("review fixes", () => {
+  const twoChunkStages = (): RetrievalStage[] => [
+    { id: "a", kind: "retrieve", startMs: 0, endMs: 10, status: "success", evidence: { chunks: [{ id: "a1", text: "t", score: 0.9, source: { id: "s", name: "a.pdf" } }] } },
+    { id: "b", kind: "rerank", startMs: 10, endMs: 20, status: "success", evidence: { chunks: [{ id: "b1", text: "t", score: 0.8, source: { id: "s", name: "b.pdf" } }] } },
+  ];
+
+  it("mounts a stage's evidence only while it is expanded", async () => {
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${twoChunkStages()}></lr-retrieval-trace>`);
+    expect(el.shadowRoot!.querySelectorAll("lr-chunk-inspector").length).to.equal(0);
+    el.shadowRoot!.querySelector<HTMLElement>('[data-id="a"] [part="evidence-toggle"]')!.click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll("lr-chunk-inspector").length).to.equal(1);
+    el.shadowRoot!.querySelector<HTMLElement>('[data-id="a"] [part="evidence-toggle"]')!.click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll("lr-chunk-inspector").length).to.equal(0);
+  });
+
+  it("keeps every child input when an unrelated stage toggles", async () => {
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${twoChunkStages()}></lr-retrieval-trace>`);
+    const toggle = (id: string): void => el.shadowRoot!.querySelector<HTMLElement>(`[data-id="${id}"] [part="evidence-toggle"]`)!.click();
+    toggle("a");
+    await el.updateComplete;
+    const inspector = el.shadowRoot!.querySelector<LyraChunkInspector>('[data-id="a"] lr-chunk-inspector')!;
+    const waterfall = el.shadowRoot!.querySelector<LyraSpanWaterfall>("lr-span-waterfall")!;
+    const chunks = inspector.chunks;
+    const spans = waterfall.spans;
+    toggle("b");
+    await el.updateComplete;
+    expect(inspector.chunks === chunks).to.equal(true);
+    expect(waterfall.spans === spans).to.equal(true);
+  });
+
+  it("accepts the incomplete status LyraSpan defines and keeps it on the bar", async () => {
+    const stages: RetrievalStage[] = [{ id: "x", kind: "retrieve", startMs: 0, endMs: 5, status: "incomplete" }];
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+    const waterfall = el.shadowRoot!.querySelector<LyraSpanWaterfall>("lr-span-waterfall")!;
+    expect(waterfall.spans[0]!.status).to.equal("incomplete");
+  });
+
+  it("bounds the metadata it renders: entry count, long arrays and cycles", async () => {
+    const wide = Object.fromEntries(Array.from({ length: 200 }, (_, index) => [`key${index}`, index]));
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const stages: RetrievalStage[] = [{ id: "m", kind: "embed", startMs: 0, status: "success", evidence: { metadata: { ...wide, embedding: Array.from({ length: 1536 }, () => 0.01), cyclic } } }];
+    const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+    el.shadowRoot!.querySelector<HTMLElement>('[part="evidence-toggle"]')!.click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="evidence-metadata-row"]').length).to.be.at.most(33);
+    const lengths = [...el.shadowRoot!.querySelectorAll('[part="evidence-metadata-value"]')].map((value) => value.textContent!.trim().length);
+    expect(Math.max(...lengths)).to.be.lessThan(500);
+  });
 });

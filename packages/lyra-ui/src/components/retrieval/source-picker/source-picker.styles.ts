@@ -104,12 +104,31 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
   [part="checkbox"] {
+    display: grid;
+    place-items: center;
     flex: 0 0 auto;
     inline-size: var(--lr-size-1rem);
     block-size: var(--lr-size-1rem);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
+    color: var(--lr-color-on-brand);
+  }
+  /* A check and a dash give checked and mixed a shape; their borders survive forced colors. */
+  [part="checkbox"]:is([data-state="true"], [data-state="mixed"])::after {
+    content: '';
+    box-sizing: border-box;
+    border: solid currentColor;
+  }
+  [part="checkbox"][data-state="true"]::after {
+    inline-size: 30%;
+    block-size: 60%;
+    border-width: 0 var(--lr-border-width-medium) var(--lr-border-width-medium) 0;
+    transform: translateY(-10%) rotate(45deg);
+  }
+  [part="checkbox"][data-state="mixed"]::after {
+    inline-size: 60%;
+    border-width: var(--lr-border-width-medium) 0 0;
   }
   [part="checkbox"][data-state="true"] {
     background: var(--lr-source-picker-checked-bg, var(--lr-color-brand));

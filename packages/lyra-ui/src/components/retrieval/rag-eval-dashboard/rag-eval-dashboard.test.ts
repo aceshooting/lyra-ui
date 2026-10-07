@@ -6,6 +6,7 @@ import type {
   LyraRagEvaluationRun,
 } from './rag-eval-dashboard.js';
 import type { LyraStat } from '../../data/stat/stat.class.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -456,5 +457,74 @@ describe('lr-rag-eval-dashboard retired show-chart alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-rag-eval-dashboard review fixes', () => {
+  const series = (count: number): LyraRagEvaluationRun[] =>
+    Array.from({ length: count }, (_unused, index) => ({ id: `run-${index}`, label: `Run ${index}`, metrics: { mrr: index / 1000 } }));
+
+  it('keeps the most recent runs in the chart and history, ending where the metric cards do', async () => {
+    const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${series(600)}></lr-rag-eval-dashboard>`);
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="run"] > span:first-child')].map((node) => node.textContent);
+    expect(labels[0]).to.equal('Run 100');
+    expect(labels.at(-1)).to.equal('Run 599');
+    const chart = el.shadowRoot!.querySelector('lr-lite-chart') as unknown as { labels: string[] };
+    expect(chart.labels[0]).to.equal('Run 100');
+    expect(chart.labels.at(-1)).to.equal('Run 599');
+    expect((el.shadowRoot!.querySelector('lr-stat') as LyraStat).value).to.equal('0.599');
+  });
+
+  it('hands the chart the same inputs across an unrelated update', async () => {
+    const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`);
+    const chart = el.shadowRoot!.querySelector('lr-lite-chart') as HTMLElement & { labels: unknown; datasets: unknown };
+    const before = [chart.labels, chart.datasets];
+    el.label = 'Evaluation';
+    await el.updateComplete;
+    expect(chart.labels === before[0] && chart.datasets === before[1]).to.equal(true);
+  });
+
+  it('reports a metric, slice or run pick as a request event, then the deprecated change event', async () => {
+    const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr"></lr-rag-eval-dashboard>`);
+    const seen: string[] = [];
+    for (const name of ['lr-metric-change-request', 'lr-metric-change', 'lr-slice-change-request', 'lr-slice-change', 'lr-run-activate', 'lr-run-change'])
+      el.addEventListener(name, (event) => seen.push(`${name}:${JSON.stringify((event as CustomEvent).detail)}`));
+    el.shadowRoot!.querySelector<HTMLElement>('[data-metric-id="groundedness"]')!.click();
+    el.shadowRoot!.querySelector<HTMLElement>('[data-slice="legal"]')!.click();
+    el.shadowRoot!.querySelector<HTMLElement>('[part="run"]')!.click();
+    expect(seen).to.deep.equal([
+      'lr-metric-change-request:{"metricId":"groundedness"}',
+      'lr-metric-change:{"metricId":"groundedness"}',
+      'lr-slice-change-request:{"slice":"legal"}',
+      'lr-slice-change:{"slice":"legal"}',
+      `lr-run-activate:${JSON.stringify({ runId: runs[0]!.id, run: runs[0] })}`,
+      `lr-run-change:${JSON.stringify({ run: runs[0] })}`,
+    ]);
+  });
+
+  it('marks the selected slice and metric with an outline under forced colors', async () => {
+    const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr" slice="all"></lr-rag-eval-dashboard>`);
+    const selected = ['slice-selected', 'metric-selected'].map((part) => el.shadowRoot!.querySelector(`[part~="${part}"]`)!);
+    expect(selected.map((node) => getComputedStyle(node).outlineStyle)).to.deep.equal(['none', 'none']);
+    try {
+      await setForcedColors('active');
+      expect(selected.map((node) => getComputedStyle(node).outlineStyle)).to.deep.equal(['solid', 'solid']);
+    } finally {
+      await setForcedColors('none');
+    }
+  });
+});
+
+describe('lr-rag-eval-dashboard heading level', () => {
+  it('keeps level 2 with the run history one level below, takes heading-level, and drops semantics for none', async () => {
+    const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`);
+    const levels = (): (string | null)[] => ['heading', 'runs-heading'].map((part) => el.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute('aria-level'));
+    expect(levels()).to.deep.equal(['2', '3']);
+    el.setAttribute('heading-level', '4');
+    await el.updateComplete;
+    expect(levels()).to.deep.equal(['4', '5']);
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect(levels()).to.deep.equal([null, null]);
   });
 });

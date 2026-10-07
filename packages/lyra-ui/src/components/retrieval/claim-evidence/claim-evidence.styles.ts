@@ -17,12 +17,18 @@ export const styles = css`
   [part~='claim'] {
     min-inline-size: 0;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius-container);
     background: var(--lr-color-surface);
   }
   [part~='claim-selected'] {
     border-color: var(--lr-color-brand);
+  }
+  @media (forced-colors: active) {
+    [part~='claim-selected'] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
   }
   /* Density escape -- same convention as lr-source-card's and lr-entity-card's dense size tier. The
      tuned values sit in inline var() fallbacks, not a :host declaration (re-declared by every instance,

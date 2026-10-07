@@ -1020,3 +1020,53 @@ describe('knowledge-base retry reentry', () => {
     expect(table.error).to.equal(false);
   });
 });
+
+describe('lr-knowledge-base review fixes', () => {
+  const future = [
+    { id: 'q', name: 'Queued source', syncStatus: 'queued', indexingHealth: 'stale', permission: 'guest' },
+  ] as unknown as KnowledgeSource[];
+
+  it('shows a neutral Unknown badge, offers no sync, and leaves the row out of the counts for values it does not know', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .sources=${future}></lr-knowledge-base>`);
+    await tableEl(el).updateComplete;
+    for (const part of ['sync-badge', 'health-badge', 'permission-badge']) {
+      const badge = rowCells(el, part)[0] as HTMLElement & { variant: string };
+      expect(badge.textContent!.trim(), part).to.equal('Unknown');
+      expect(badge.variant, part).to.equal('neutral');
+    }
+    const items = menuItems(menuFor(el, 0));
+    expect(items.map((item) => `${item.value}:${item.disabled}`)).to.deep.equal(['sync:true', 'pause:true', 'delete:false']);
+    const counts = [...el.shadowRoot!.querySelectorAll<LyraStat>('[part="summary-stat"]')].map((stat) => stat.value);
+    expect(counts).to.deep.equal(['1', '0', '0', '0']);
+  });
+
+  it('keeps the nested table inputs across an unrelated update', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`);
+    const table = tableEl(el);
+    const before = [table.rows, table.columns, table.rowKey];
+    el.errorHeading = 'Could not load';
+    await el.updateComplete;
+    expect(table.rows === before[0] && table.columns === before[1] && table.rowKey === before[2]).to.equal(true);
+  });
+
+  it('relabels the nested columns when the strings change', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`);
+    el.strings = { knowledgeBaseNameColumn: 'Origine' };
+    await el.updateComplete;
+    expect(tableEl(el).columns[0]!.label).to.equal('Origine');
+  });
+});
+
+describe('lr-knowledge-base heading level', () => {
+  it('keeps level 3 by default, takes heading-level, and drops heading semantics for none', async () => {
+    const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base></lr-knowledge-base>`);
+    const heading = (): Element => el.shadowRoot!.querySelector('[part="heading"]')!;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal(['heading', '3']);
+    el.setAttribute('heading-level', '5');
+    await el.updateComplete;
+    expect(heading().getAttribute('aria-level')).to.equal('5');
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
+  });
+});

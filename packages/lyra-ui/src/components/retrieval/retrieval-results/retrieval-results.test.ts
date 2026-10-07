@@ -29,6 +29,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'retrievalResultsSelectRow',
   'scoreTierMedium',
   'showMore',
+  'valueInvalid',
 ]);
 
 function sinkOf(politeness: AnnouncementPoliteness): HTMLElement {
@@ -148,8 +149,8 @@ it('shows chunkInspectorEmpty when chunks is empty and not loading', async () =>
   )) as LyraRetrievalResults;
   await el.updateComplete;
   expect(
-    el.shadowRoot!.querySelector('[part="empty"]')!.textContent
-  ).to.include('No chunks retrieved');
+    el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')
+  ).to.equal('No chunks retrieved');
 });
 
 it('announces later settled empty transitions without replaying initial empty content', async () => {
@@ -1534,7 +1535,7 @@ it('renders non-serializable metadata through a safe string fallback', async () 
   await el.updateComplete;
 
   const metadataValue = el.shadowRoot!.querySelector('[part="metadata-value"]');
-  expect(metadataValue?.textContent).to.equal('[object Object]');
+  expect(metadataValue?.textContent).to.equal('{self: The value is invalid.}');
 });
 
 it('is accessible while grouped and virtualized', async () => {
@@ -1555,8 +1556,8 @@ it('applies a .strings override for the reused empty-state key', async () => {
   )) as LyraRetrievalResults;
   await el.updateComplete;
   expect(
-    el.shadowRoot!.querySelector('[part="empty"]')!.textContent
-  ).to.include('Texte vide');
+    el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')
+  ).to.equal('Texte vide');
 });
 
 it('localizes the whole row-selection accessible name instead of concatenating translated fragments', async () => {
@@ -2093,5 +2094,116 @@ describe('lr-retrieval-results retired dedupe alias', () => {
     });
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
+  });
+});
+
+function inspectorFor(el: LyraRetrievalResults, id: string): LyraChunkInspector | null {
+  for (const root of [el.shadowRoot!, vlist(el)?.shadowRoot].filter((r): r is ShadowRoot => !!r)) {
+    const found = root.querySelector<LyraChunkInspector>(`lr-chunk-inspector[data-chunk-id="${id}"]`);
+    if (found) return found;
+  }
+  return null;
+}
+
+const isExpanded = (inspector: LyraChunkInspector): boolean =>
+  inspector.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded') === 'true';
+
+describe('review fixes', () => {
+  it('reports a selection change as lr-selection-change, then the deprecated lr-select', async () => {
+    const el = (await fixture(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
+    const seen: string[] = [];
+    el.addEventListener('lr-selection-change', (event) => {
+      const detail = (event as CustomEvent<{ selectedChunkIds: string[]; chunks: RetrievalChunk[] }>).detail;
+      seen.push(`selection:${detail.selectedChunkIds}:${detail.chunks.map((chunk) => chunk.id)}`);
+    });
+    el.addEventListener('lr-select', (event) => {
+      const detail = (event as CustomEvent<RetrievalResultsSelectDetail>).detail;
+      seen.push(`select:${detail.chunkIds}:${detail.chunks.map((chunk) => chunk.id)}`);
+    });
+    clickCheckbox(el.shadowRoot!.querySelector('lr-checkbox') as LyraCheckbox);
+    await el.updateComplete;
+    expect(seen).to.deep.equal(['selection:c2:c2', 'select:c2:c2']);
+  });
+
+  it('keeps a row\'s expansion toggle and the virtual list events inside', async () => {
+    const many = Array.from({ length: 12 }, (_, index) => ({ id: `m${index}`, text: 'text', score: 0.9 - index / 100, source: { id: 's', name: 'doc.pdf' } }));
+    const leaked: string[] = [];
+    const names = ['lr-chunk-toggle', 'lr-virtual-scroll', 'lr-visible-range-change'];
+    const onLeak = (event: Event): void => {
+      leaked.push(event.type);
+    };
+    for (const name of names) document.addEventListener(name, onLeak);
+    try {
+      const el = (await fixture(html`<lr-retrieval-results virtualize-at="3" .chunks=${many}></lr-retrieval-results>`)) as LyraRetrievalResults;
+      await vlist(el).updateComplete;
+      await nextFrame();
+      const inspector = inspectorFor(el, 'm0')!;
+      await inspector.updateComplete;
+      inspector.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!.click();
+      vlist(el).scrollToIndex(8, { align: 'start', behavior: 'auto' });
+      await nextFrame();
+    } finally {
+      for (const name of names) document.removeEventListener(name, onLeak);
+    }
+    expect(leaked).to.deep.equal([]);
+  });
+
+  it('keeps a row\'s expansion when the list re-sorts', async () => {
+    const el = (await fixture(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
+    const first = inspectorFor(el, 'c1')!;
+    await first.updateComplete;
+    first.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!.click();
+    await el.updateComplete;
+    el.chunks = [{ id: 'c0', text: 'new', score: 0.99, source: { id: 's9', name: 'new.pdf' } }, ...chunks];
+    await el.updateComplete;
+    const moved = inspectorFor(el, 'c1')!;
+    await moved.updateComplete;
+    expect(isExpanded(moved)).to.equal(true);
+    const other = inspectorFor(el, 'c2')!;
+    await other.updateComplete;
+    expect(isExpanded(other)).to.equal(false);
+  });
+
+  it('keeps a row\'s expansion when the virtualized row scrolls out and back', async () => {
+    const many = Array.from({ length: 200 }, (_, index) => ({ id: `m${index}`, text: 'text', score: 0.9 - index / 100, source: { id: 's', name: 'doc.pdf' } }));
+    const el = (await fixture(html`<lr-retrieval-results virtualize-at="3" .chunks=${many}></lr-retrieval-results>`)) as LyraRetrievalResults;
+    await vlist(el).updateComplete;
+    await nextFrame();
+    const top = inspectorFor(el, 'm0')!;
+    await top.updateComplete;
+    top.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!.click();
+    await el.updateComplete;
+    vlist(el).scrollToIndex(199, { align: 'start', behavior: 'auto' });
+    await nextFrame();
+    expect(inspectorFor(el, 'm0') === null).to.equal(true);
+    vlist(el).scrollToIndex(0, { align: 'start', behavior: 'auto' });
+    await nextFrame();
+    await waitUntil(() => inspectorFor(el, 'm0') !== null, 'the first row did not come back');
+    const back = inspectorFor(el, 'm0')!;
+    await back.updateComplete;
+    expect(isExpanded(back)).to.equal(true);
+  });
+
+  it('hands each row inspector the same one-chunk array across unrelated updates', async () => {
+    const el = (await fixture(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
+    const before = inspectorFor(el, 'c2')!.chunks;
+    clickCheckbox(el.shadowRoot!.querySelector('lr-checkbox') as LyraCheckbox);
+    await el.updateComplete;
+    el.presentation = 'compact';
+    await el.updateComplete;
+    expect(inspectorFor(el, 'c2')!.chunks === before).to.equal(true);
+  });
+
+  it('bounds the metadata it renders: entry count, long arrays and cycles', async () => {
+    const wide = Object.fromEntries(Array.from({ length: 200 }, (_, index) => [`key${index}`, index]));
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const el = (await fixture(html`<lr-retrieval-results
+      .chunks=${[{ ...chunks[0]!, metadata: { ...wide, embedding: Array.from({ length: 1536 }, () => 0.01), cyclic } }]}
+    ></lr-retrieval-results>`)) as LyraRetrievalResults;
+    const entries = el.shadowRoot!.querySelectorAll('[part="metadata-entry"]');
+    expect(entries.length).to.be.at.most(33);
+    const text = el.shadowRoot!.querySelector('[part="metadata"]')!.textContent!;
+    expect(text.length).to.be.lessThan(2_000);
   });
 });

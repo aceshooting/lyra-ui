@@ -1,7 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -9,11 +9,7 @@ import {
   canonicalIdentityList,
   isValidRetrievalChunk,
 } from '../retrieval-identity.js';
-import {
-  finiteCount,
-  finiteNumber,
-  finiteRange,
-} from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
@@ -22,7 +18,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
@@ -32,18 +28,24 @@ import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** `lr-select`'s detail: the complete updated selection, both as bare ids and as one deterministic
- *  canonical `RetrievalChunk` record per id. This event contract is independent of the visible
- *  `without-dedupe` projection: duplicate rows never duplicate derived selection records. */
+export type { LyraScoreThresholds } from '../graph/graph.class.js';
+/** The deprecated `lr-select`'s detail: the complete updated selection, both as bare ids and as one
+ *  deterministic canonical `RetrievalChunk` record per id (`lr-selection-change` carries the same as
+ *  `selectedChunkIds`). This contract is independent of the visible `without-dedupe` projection:
+ *  duplicate rows never duplicate derived selection records. */
 export interface RetrievalResultsSelectDetail {
   chunkIds: string[];
   chunks: RetrievalChunk[];
 }
 
 export interface LyraRetrievalResultsEventMap {
+  'lr-selection-change': CustomEvent<
+    LyraEventDetailSnapshot<{ selectedChunkIds: string[]; chunks: RetrievalChunk[] }>
+  >;
+  /** @deprecated Use `lr-selection-change`. */
   'lr-select': CustomEvent<
     LyraEventDetailSnapshot<RetrievalResultsSelectDetail>
   >;
@@ -76,6 +78,8 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   };
 }
 
+const MAX_METADATA_ENTRIES = 32;
+
 function safeScore(score: number): number {
   return finiteRange(score, 0, 0, 1);
 }
@@ -102,7 +106,7 @@ function safeScore(score: number): number {
  * **Controlled component.** `chunks`/`selectedChunkIds`/`loading`/`errorText`/`hasMore` are all
  * host-owned;
  * this component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row
- * updates `selectedChunkIds` locally *then* emits `lr-select` (the same "update own copy, then
+ * updates `selectedChunkIds` locally *then* emits `lr-selection-change` (the same "update own copy, then
  * emit; reassign to control" convention `<lr-source-picker>` already uses) so a host can either
  * accept the update as-is or override it before the next render.
  *
@@ -124,14 +128,17 @@ function safeScore(score: number): number {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-retrieval-results
- * @event lr-select - The selected-chunk set changed. `detail: { chunkIds, chunks }` — `chunkIds`
- * is the complete updated selection (not just the toggled id), `chunks` the matching canonical
- * `RetrievalChunk` records.
+ * @event lr-selection-change - The selected-chunk set changed. `detail: { selectedChunkIds, chunks }` —
+ * `selectedChunkIds` is the complete updated selection (not just the toggled id), `chunks` the
+ * matching canonical `RetrievalChunk` records.
+ * @event lr-select - Deprecated alias of `lr-selection-change` (`detail: { chunkIds, chunks }`),
+ * dispatched right after it.
  * @event lr-load-more - More results were requested — via the internal `<lr-virtual-list>`'s own
  * scroll-near-bottom detection while virtualized, or the built-in `[part="load-more"]` button
  * otherwise. Only ever fires while `has-more` is true and `loading` is false.
  * @event lr-chunk-open - A row's title/open button was activated, forwarded verbatim from the
- * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { chunkId, sourceId, anchor? }` — the
+ * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`; the inspector's `lr-chunk-toggle` and the
+ * virtual list's scroll events stay inside. `detail: { chunkId, sourceId, anchor? }` — the
  * event a host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
  * collection/state transition removes every focused result action.
@@ -197,6 +204,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     loadMore: LYRA_DEFAULT_loadMore,
     retrievalResultsSelectRow: LYRA_DEFAULT_retrievalResultsSelectRow,
     untitledSource: LYRA_DEFAULT_untitledSource,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -209,6 +217,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-selection-change',
     'lr-select',
     'lr-chunk-open',
   ]);
@@ -217,7 +226,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
 
   /** Controlled selection, by chunk `id`. The component updates its own copy on toggle *then*
-   *  emits `lr-select`; reassign to control. An id with no matching chunk is harmless -- it simply
+   *  emits `lr-selection-change`; reassign to control. An id with no matching chunk is harmless -- it simply
    *  never renders a checked row. */
   @property({ attribute: false }) selectedChunkIds: readonly string[] = [];
 
@@ -311,6 +320,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  host `aria-label` makes the host the sole overall owner; an explicitly empty host label stays
    *  empty on the region. */
   @property() label?: string;
+
+  /** Chunk ids whose text is expanded, owned here so a row keeps it across scrolling and re-sorting. */
+  @state() private expandedChunkIds: readonly string[] = [];
   private pendingFocusTarget: string | 'base' | undefined;
   private previousProcessedChunkIds: string[] = [];
   private focusRestoreGeneration = 0;
@@ -418,6 +430,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       this.processedGroupingLocaleSignature = groupingLocaleSignature;
       this.processedChunksCache = this.computeProcessedChunks();
     }
+    if (changed.has('chunks')) {
+      const present = new Set(this.processedChunks.chunks.map((chunk) => chunk.id));
+      const kept = this.expandedChunkIds.filter((id) => present.has(id));
+      if (kept.length !== this.expandedChunkIds.length) this.expandedChunkIds = kept;
+    }
     if (changed.has('chunks') || changed.has('selectedChunkIds')) {
       const normalized = this.normalizedSelectedChunkIds();
       if (
@@ -425,19 +442,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         normalized.some((id, index) => id !== this.selectedChunkIds[index])
       ) {
         // A `chunks` reassignment dropping previously-selected ids is a self-mutation of public
-        // state (`selectedChunkIds`), not just an internal cache repair -- without `lr-select`, a
+        // state (`selectedChunkIds`), not just an internal cache repair -- without `lr-selection-change`, a
         // host's own external copy of `selectedChunkIds` silently diverges with no way to resync.
         // Skipped on `selectedChunkIds` alone (an explicit controlled write already reflects the
         // caller's own intent) and on the very first update (nothing to resync yet).
         const shouldAnnounce = this.hasUpdated && changed.has('chunks');
         this.selectedChunkIds = normalized;
-        if (shouldAnnounce) {
-          const selected = new Set(normalized);
-          this.emit('lr-select', {
-            chunkIds: normalized,
-            chunks: this.canonicalChunks().filter((chunk) => selected.has(chunk.id)),
-          });
-        }
+        if (shouldAnnounce) this.reportSelection(normalized);
       }
     }
     if (
@@ -680,35 +691,50 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   /** The row checkbox is internal selection chrome: its toggle proposal and every alias of its
-   *  commit stay inside, and `lr-select` is the one host-level report of the interaction. */
+   *  commit stay inside, and `lr-selection-change` is the one host-level report of the interaction. */
   private stopOwnedEvent = (event: Event): void => {
     event.stopPropagation();
   };
+
+  private reportSelection(chunkIds: string[]): void {
+    const selected = new Set(chunkIds);
+    const chunks = this.canonicalChunks().filter((chunk) => selected.has(chunk.id));
+    this.emit('lr-selection-change', { selectedChunkIds: chunkIds, chunks });
+    this.emit('lr-select', { chunkIds, chunks });
+  }
 
   private toggleSelect(chunk: RetrievalChunk): void {
     const next = new Set(this.normalizedSelectedChunkIds());
     if (next.has(chunk.id)) next.delete(chunk.id);
     else next.add(chunk.id);
-    const chunkIds = [...next];
-    this.selectedChunkIds = chunkIds;
-    const selectedChunks = this.canonicalChunks().filter((c) => next.has(c.id));
-    this.emit('lr-select', { chunkIds, chunks: selectedChunks });
+    this.selectedChunkIds = [...next];
+    this.reportSelection(this.selectedChunkIds as string[]);
+  }
+
+  private onChunkToggle = (
+    event: CustomEvent<{ chunkId: string; expanded: boolean }>
+  ): void => {
+    event.stopPropagation();
+    const { chunkId, expanded } = event.detail;
+    const rest = this.expandedChunkIds.filter((id) => id !== chunkId);
+    this.expandedChunkIds = expanded ? [...rest, chunkId] : rest;
+  };
+
+  /** One stable one-element array per chunk, so a row's inspector keeps its input across updates. */
+  private readonly rowChunks = new WeakMap<RetrievalChunk, LyraChunk[]>();
+
+  private rowChunksFor(chunk: RetrievalChunk): LyraChunk[] {
+    let row = this.rowChunks.get(chunk);
+    if (!row) this.rowChunks.set(chunk, (row = [toLyraChunk(chunk)]));
+    return row;
   }
 
   private formatMetadataValue(value: unknown): string {
-    if (value == null) return '';
-    if (typeof value === 'string' || typeof value === 'boolean')
-      return String(value);
-    if (typeof value === 'number') {
-      return getNumberFormat(this.effectiveLocale).format(
-        finiteNumber(value, 0)
-      );
-    }
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    return formatBoundedRetrievalValue(value, {
+      locale: this.effectiveLocale,
+      invalid: this.localize('valueInvalid'),
+      truncated: '…',
+    });
   }
 
   private renderMetadata(
@@ -718,13 +744,16 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (entries.length === 0) return nothing;
     return html`
       <dl part="metadata">
-        ${entries.map(
+        ${entries.slice(0, MAX_METADATA_ENTRIES).map(
           ([key, value]) =>
             html`<div part="metadata-entry">
               <dt part="metadata-term">${key}</dt>
               <dd part="metadata-value">${this.formatMetadataValue(value)}</dd>
             </div>`
         )}
+        ${entries.length > MAX_METADATA_ENTRIES
+          ? html`<div part="metadata-entry"><dt part="metadata-term">…</dt></div>`
+          : nothing}
       </dl>
     `;
   }
@@ -765,7 +794,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         <lr-chunk-inspector
           data-chunk-id=${chunk.id}
           exportparts="chunk:chunk, chunk-current:chunk-current, score:chunk-score, score-current:chunk-score-current, score-bar:chunk-score-bar, score-fill:chunk-score-fill, score-fill-success:chunk-score-fill-success, score-fill-warning:chunk-score-fill-warning, score-fill-danger:chunk-score-fill-danger, open-button:chunk-open-button, title:chunk-title, text:chunk-text, text-clamped:chunk-text-clamped, toggle:chunk-toggle"
-          .chunks=${[toLyraChunk(chunk)]}
+          .chunks=${this.rowChunksFor(chunk)}
+          .expandedChunkIds=${this.expandedChunkIds}
           .thresholds=${this.thresholds}
           size=${this.presentation === 'compact' ? 's' : 'm'}
           .activeChunkId=${this.activeChunkId}
@@ -783,6 +813,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             e.stopPropagation();
             this.emit('lr-chunk-open', e.detail);
           }}
+          @lr-chunk-toggle=${this.onChunkToggle}
         ></lr-chunk-inspector>
         ${this.presentation === 'expanded'
           ? this.renderMetadata(chunk.metadata)
@@ -828,16 +859,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           <lr-spinner part="spinner"></lr-spinner>
         </div>`;
       }
-      // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute) so
-      // `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces
-      // `<lr-empty>`'s own shadow root -- actually includes the message; the same reason
-      // `<lr-chunk-inspector>`'s own empty state takes this shape.
       return html`<div part="base" tabindex="-1">
-        <lr-empty part="empty"
-          ><span slot="heading"
-            >${this.localize('chunkInspectorEmpty')}</span
-          ></lr-empty
-        >
+        <lr-empty
+          part="empty"
+          heading=${this.localize('chunkInspectorEmpty')}
+        ></lr-empty>
       </div>`;
     }
 
@@ -875,6 +901,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
                 e.stopPropagation();
                 this.emit('lr-load-more');
               }}
+              @lr-virtual-scroll=${this.stopOwnedEvent}
+              @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
           : html`<div role="list">
                 ${processed.chunks.map(

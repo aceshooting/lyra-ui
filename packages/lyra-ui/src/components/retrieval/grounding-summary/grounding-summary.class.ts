@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   getOwnDataDescriptor,
@@ -27,6 +28,7 @@ import type {
 import { styles } from './grounding-summary.styles.js';
 import '../claim-evidence/claim-evidence.class.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
+export type { LyraScoreThresholds } from '../graph/graph.class.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
@@ -38,10 +40,15 @@ import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYR
 
 export interface LyraGroundingSummaryEventMap {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
+  'lr-citation-open': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
 }
 
 const MAX_PROJECTED_GROUNDING_ROWS = 10_000;
+
+type CitationEventName = 'lr-citation-select' | 'lr-citation-open';
+
+const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.8, medium: 0.5 };
 
 /** Caps how many evidence citations mount as `[part="evidence-item"]` rows. This is a rendering
  *  budget, distinct from and much smaller than `MAX_PROJECTED_GROUNDING_ROWS` (a DoS-safety
@@ -255,11 +262,7 @@ function projectCitation(value: unknown): CanonicalCitation | undefined {
     const spanValue = valueOfDescriptor(spanDescriptor);
     const label = valueOfDescriptor(labelDescriptor);
     const quote = valueOfDescriptor(quoteDescriptor);
-    const span =
-      spanDescriptor === MISSING_OWN_DATA_DESCRIPTOR || spanValue === undefined
-        ? undefined
-        : projectRange(spanValue);
-    if (spanValue !== undefined && span === undefined) return undefined;
+    const span = projectRange(spanValue);
     const input = Object.freeze({
       id,
       ...(typeof chunkId === 'string' ? { chunkId } : {}),
@@ -384,10 +387,11 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * `<lr-citation-badge>` for each evidence entry -- this component defines no numeric-badge or
  * citation-link markup of its own.
  *
- * This component contains `<lr-citation-badge>`'s raw `lr-citation-activate` event and emits the richer
- * `lr-citation-select` (`detail: { citation }`, `CitationSelectEventDetail` from `src/ai/types.ts`)
- * carrying the full `Citation` -- including its `span` -- since a bare `sourceId`/`index` pair
- * can't by itself tell a host which exact evidence span to jump to.
+ * This component contains `<lr-citation-badge>`'s raw `lr-citation-activate` and `lr-citation-open`
+ * events and emits the richer `lr-citation-select` and `lr-citation-open` (`detail: { citation }`,
+ * `CitationSelectEventDetail` from `src/ai/types.ts`) carrying the full `Citation` -- including its
+ * `span` -- since a bare `sourceId`/`index` pair can't by itself tell a host which exact evidence
+ * span to jump to. A `span` that is not a `{ start, end }` pair of numbers is treated as absent.
  *
  * Public collection sequences are bounded, frozen snapshots. The assessment and admitted
  * claim/citation source identities remain opaque while descriptor-safe projections copy fields
@@ -404,6 +408,8 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
+ * @event lr-citation-open - An evidence citation badge's full-preview affordance was triggered
+ *   (double-click, or Space). `detail: { citation }`.
  * @event lr-claim-select - A composed claim-evidence row was activated. `detail: { claim }`.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
@@ -469,11 +475,13 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-citation-select',
+    'lr-citation-open',
     'lr-claim-select',
   ]);
   /** Preserve admitted source identities inside the otherwise frozen event envelopes. */
   protected static override readonly identityEventDetailProperties = Object.freeze({
     'lr-citation-select': Object.freeze(['citation']),
+    'lr-citation-open': Object.freeze(['citation']),
     'lr-claim-select': Object.freeze(['claim']),
   });
 
@@ -565,8 +573,9 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   }
 
   private tone(value: number): LyraVariant {
-    if (value >= this.thresholds.high) return 'success';
-    if (value >= this.thresholds.medium) return 'warning';
+    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    if (value >= high) return 'success';
+    if (value >= medium) return 'warning';
     return 'danger';
   }
 
@@ -576,12 +585,17 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     );
   }
 
-  private onCitationSelect(citation: CanonicalCitation, event: Event): void {
+  private onCitation(
+    name: CitationEventName,
+    citation: CanonicalCitation,
+    event: Event
+  ): void {
     event.stopPropagation();
-    this.emit('lr-citation-select', { citation: citation.source });
+    this.emit(name, { citation: citation.source });
   }
 
-  private onNestedCitationSelect(
+  private onNestedCitation(
+    name: CitationEventName,
     citations: readonly CanonicalCitation[],
     event: CustomEvent<unknown>
   ): void {
@@ -590,8 +604,18 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const citation = citations.find(
       (candidate) => candidate.input === selected
     );
-    if (citation)
-      this.emit('lr-citation-select', { citation: citation.source });
+    if (citation) this.emit(name, { citation: citation.source });
+  }
+
+  /** One stable input array per projected row list, so the nested claim evidence keeps its inputs. */
+  private readonly inputsByRows = new WeakMap<readonly object[], object[]>();
+
+  private inputsOf<T extends { readonly input: object }>(
+    rows: readonly T[]
+  ): T['input'][] {
+    let inputs = this.inputsByRows.get(rows);
+    if (!inputs) this.inputsByRows.set(rows, (inputs = rows.map((row) => row.input)));
+    return inputs as T['input'][];
   }
 
   private onNestedClaimSelect(
@@ -627,11 +651,10 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           index=${index + 1}
           source-id=${citation.sourceId ?? ''}
           @lr-citation-activate=${(event: Event) =>
-            this.onCitationSelect(citation, event)}
-        >
-          ${citation.label ? html`<span>${citation.label}</span>` : nothing}
-          ${spanText ? html`<span>${spanText}</span>` : nothing}
-        </lr-citation-badge>
+            this.onCitation('lr-citation-select', citation, event)}
+          @lr-citation-open=${(event: Event) =>
+            this.onCitation('lr-citation-open', citation, event)}
+        ></lr-citation-badge>
         ${citation.label
           ? html`<span part="evidence-label">${citation.label}</span>`
           : nothing}
@@ -726,12 +749,14 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <lr-claim-evidence
                 part="claims"
-                .claims=${claims.map((claim) => claim.input)}
-                .citations=${citations.map((citation) => citation.input)}
+                .claims=${guard([claims], () => this.inputsOf(claims))}
+                .citations=${guard([citations], () => this.inputsOf(citations))}
                 @lr-claim-select=${(event: CustomEvent<unknown>) =>
                   this.onNestedClaimSelect(claims, event)}
                 @lr-citation-select=${(event: CustomEvent<unknown>) =>
-                  this.onNestedCitationSelect(citations, event)}
+                  this.onNestedCitation('lr-citation-select', citations, event)}
+                @lr-citation-open=${(event: CustomEvent<unknown>) =>
+                  this.onNestedCitation('lr-citation-open', citations, event)}
               ></lr-claim-evidence>
             `
           : nothing}

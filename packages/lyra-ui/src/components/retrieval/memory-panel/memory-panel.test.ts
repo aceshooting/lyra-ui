@@ -203,7 +203,7 @@ describe('lr-memory-panel', () => {
       ...el.shadowRoot!.querySelectorAll('[part="section"]'),
     ].find((s) => s.getAttribute('data-scope') === 'long-term')!;
     expect(
-      emptySection.querySelector('[part="section-empty"]')!.textContent
+      emptySection.querySelector('[part="section-empty"]')!.getAttribute('heading')
     ).to.equal('No data');
     expect(emptySection.querySelector('[part="list"]') == null).to.be.true;
   });
@@ -260,11 +260,10 @@ describe('lr-memory-panel', () => {
     ) as HTMLElement;
     expect(toggle == null).to.equal(false);
     expect(toggle.getAttribute('aria-expanded')).to.equal('false');
-    // The body -- and its lr-provenance-panel -- stay mounted while collapsed (hidden via the
-    // `hidden` attribute, not removed from the DOM), the same always-present-but-hidden pattern
-    // lr-confirm-bar's own [part="status"] uses.
+    // The body stays mounted for aria-controls; its provenance panel only exists while expanded.
     expect(body == null).to.equal(false);
     expect(body.hasAttribute('hidden')).to.equal(true);
+    expect(body.querySelector('lr-provenance-panel') === null).to.equal(true);
   });
 
   it('toggling the expand-toggle emits lr-memory-toggle, unhides the body, and reveals a populated lr-provenance-panel', async () => {
@@ -320,6 +319,16 @@ describe('lr-memory-panel', () => {
       '[part="item"][data-id="l1"] [part="item-body"]'
     ) as HTMLElement;
     expect(body.hasAttribute('hidden')).to.equal(true);
+    expect(body.querySelector('lr-provenance-panel') === null).to.equal(true);
+  });
+
+  it('falls back to the default confidence tiers when thresholds is not an object', async () => {
+    const el = await populated();
+    (el as unknown as { thresholds: unknown }).thresholds = undefined;
+    await el.updateComplete;
+    const tones = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="confidence"]')].map((node) => node.dataset['tone']);
+    expect(tones.length).to.be.greaterThan(0);
+    expect(tones.every((tone) => ['success', 'warning', 'danger'].includes(tone ?? ''))).to.equal(true);
   });
 
   it('forwards types and thresholds through to the nested lr-provenance-panel', async () => {
@@ -626,6 +635,23 @@ describe('lr-memory-panel', () => {
     ).click();
     const event = await listener;
     expect(event.detail.section).to.equal('entities');
+  });
+
+  it('reports an opened provenance chunk as its own lr-chunk-open carrying the owning memory', async () => {
+    const el = await fixture<LyraMemoryPanel>(html`<lr-memory-panel .longTerm=${[
+      { id: 'g1', text: 'Grounded memory', provenance: { chunks: [{ id: 'ch1', text: 'chunk text', score: 0.8, sourceId: 's1' }] } },
+    ]}></lr-memory-panel>`);
+    (el.shadowRoot!.querySelector('[part="item"][data-id="g1"] [part="expand-toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('lr-provenance-panel') as HTMLElement & { updateComplete: Promise<unknown> };
+    await panel.updateComplete;
+    const inspector = panel.shadowRoot!.querySelector('lr-chunk-inspector') as HTMLElement & { updateComplete: Promise<unknown> };
+    await inspector.updateComplete;
+    const seen: unknown[] = [];
+    el.addEventListener('lr-chunk-open', (event) => seen.push((event as CustomEvent).detail));
+    inspector.shadowRoot!.querySelector<HTMLElement>('[part="open-button"]')!.click();
+    expect(seen).to.have.length(1);
+    expect(seen[0]).to.deep.equal({ memoryId: 'g1', scope: 'long-term', chunkId: 'ch1', sourceId: 's1' });
   });
 
   it('moves focus to a stable element after resolving a pending confirmation, never leaving it stranded', async () => {
@@ -1803,5 +1829,19 @@ describe('lr-memory-panel retired lr-expand alias', () => {
     ]);
     expect(details.size, 'only the canonical event is emitted').to.equal(1);
     expect(warnings).to.have.length(0);
+  });
+});
+
+describe('lr-memory-panel heading level', () => {
+  it('keeps level 3 by default, takes heading-level, and drops heading semantics for none', async () => {
+    const el = await fixture<LyraMemoryPanel>(html`<lr-memory-panel .shortTerm=${[{ id: 's', text: 'note' }]}></lr-memory-panel>`);
+    const heading = (): Element => el.shadowRoot!.querySelector('[part="heading"]')!;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal(['heading', '3']);
+    el.setAttribute('heading-level', '5');
+    await el.updateComplete;
+    expect(heading().getAttribute('aria-level')).to.equal('5');
+    el.setAttribute('heading-level', 'none');
+    await el.updateComplete;
+    expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
 });

@@ -29,6 +29,13 @@ export const styles = css`
   lr-virtual-list::part(chunk-current) {
     background: var(--lr-chunk-inspector-current-bg, var(--lr-color-brand-quiet));
   }
+  @media (forced-colors: active) {
+    [part~='chunk-current'],
+    lr-virtual-list::part(chunk-current) {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+  }
   [part~='score'],
   lr-virtual-list::part(score) {
     display: flex;

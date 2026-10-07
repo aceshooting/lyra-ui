@@ -1,13 +1,16 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
   isNonBlankIdentity,
+  isRecord,
 } from '../retrieval-identity.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import '../../charts/chart/lite-chart.class.js';
 import '../../data/stat/stat.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -42,16 +45,19 @@ export interface LyraRagEvaluationRun {
   metadata?: Record<string, unknown>;
 }
 export interface LyraRagEvalDashboardEventMap {
+  'lr-metric-change-request': CustomEvent<{ metricId: string }>;
+  /** @deprecated Use `lr-metric-change-request`. */
   'lr-metric-change': CustomEvent<{ metricId: string }>;
+  'lr-slice-change-request': CustomEvent<{ slice: string }>;
+  /** @deprecated Use `lr-slice-change-request`. */
   'lr-slice-change': CustomEvent<{ slice: string }>;
+  'lr-run-activate': CustomEvent<{ runId: string; run: LyraRagEvaluationRun }>;
+  /** @deprecated Use `lr-run-activate`. */
   'lr-run-change': CustomEvent<{ run: LyraRagEvaluationRun }>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Caps how many evaluation runs mount as `[part="run"]` buttons (and feed the trend chart), so a
+/** Caps how many of the most recent evaluation runs mount as `[part="run"]` buttons (and feed the
+ *  trend chart), so a
  *  host-supplied `runs` array from a large benchmark sweep can never mount an unbounded number of
  *  interactive rows. Matches the 500-row ceiling used by every other bounded list in this library
  *  (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
@@ -69,14 +75,24 @@ const MAX_RENDERED_RUNS = 500;
  * Blank metric/run ids and later duplicates are ignored before fallback selection, filters,
  * counts, rendering, or actions. The first record for an id wins.
  *
- * At most 500 of the currently filtered runs render as `[part="run"]` buttons and feed the trend
- * chart; a filtered set past that length renders a localized `[part="limit"]` notice after the run
- * history rather than mounting an unbounded number of rows.
+ * At most the 500 most recent of the currently filtered runs (the array end is newest) render as
+ * `[part="run"]` buttons and feed the trend chart; a filtered set past that length renders a
+ * localized `[part="limit"]` notice after the run history rather than mounting an unbounded number
+ * of rows.
+ *
+ * Nothing here changes on a click: the host owns `metricId`, `slice` and the selected run, and the
+ * events only report what the user asked for.
  *
  * @customElement lr-rag-eval-dashboard
- * @event lr-metric-change - A metric was activated. `detail: { metricId }`.
- * @event lr-slice-change - An evaluation slice was activated. `detail: { slice }`.
- * @event lr-run-change - An evaluation run was activated. `detail: { run }`.
+ * @event lr-metric-change-request - A metric was activated; the host decides whether to change
+ *   `metricId`. `detail: { metricId }`.
+ * @event lr-metric-change - Deprecated alias of `lr-metric-change-request`, dispatched right after it.
+ * @event lr-slice-change-request - An evaluation slice was activated; the host decides whether to
+ *   change `slice`. `detail: { slice }`.
+ * @event lr-slice-change - Deprecated alias of `lr-slice-change-request`, dispatched right after it.
+ * @event lr-run-activate - An evaluation run was activated. `detail: { runId, run }`.
+ * @event lr-run-change - Deprecated alias of `lr-run-activate` (`detail: { run }`), dispatched right
+ *   after it.
  * @csspart base - The named dashboard region.
  * @csspart heading - The visible dashboard heading.
  * @csspart slices - Slice filter controls.
@@ -140,30 +156,46 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   /** Omits the trend chart that otherwise renders when an active metric and matching runs exist. */
   @property({ type: Boolean, attribute: 'without-chart', reflect: true })
   withoutChart = false;
+  /** Semantic level of the dashboard heading, with the run-history heading one level below it;
+   *  `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** CSS block size forwarded to the composed trend chart. */
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
 
 
+  private metricsCache?: { source: unknown; value: LyraRagEvaluationMetric[] };
+  private runsCache?: { source: unknown; value: LyraRagEvaluationRun[] };
+
   private get normalizedMetrics(): LyraRagEvaluationMetric[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.metrics) ? this.metrics : [],
-      (metric) => metric.id
-    );
+    if (this.metricsCache?.source !== this.metrics)
+      this.metricsCache = {
+        source: this.metrics,
+        value: firstByRetrievalIdentity(
+          Array.isArray(this.metrics) ? this.metrics : [],
+          (metric) => metric.id
+        ),
+      };
+    return this.metricsCache.value;
   }
 
   private get normalizedRuns(): LyraRagEvaluationRun[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.runs)
-        ? this.runs.filter(
-            (run): run is LyraRagEvaluationRun =>
-              isRecord(run) &&
-              isNonBlankIdentity(run['id']) &&
-              typeof run['label'] === 'string' &&
-              isRecord(run['metrics'])
-          )
-        : [],
-      (run) => run.id
-    );
+    if (this.runsCache?.source !== this.runs)
+      this.runsCache = {
+        source: this.runs,
+        value: firstByRetrievalIdentity(
+          Array.isArray(this.runs)
+            ? this.runs.filter(
+                (run): run is LyraRagEvaluationRun =>
+                  isRecord(run) &&
+                  isNonBlankIdentity(run['id']) &&
+                  typeof run['label'] === 'string' &&
+                  isRecord(run['metrics'])
+              )
+            : [],
+          (run) => run.id
+        ),
+      };
+    return this.runsCache.value;
   }
 
   private activeMetric(
@@ -215,14 +247,25 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     metric: LyraRagEvaluationMetric,
     runs: readonly LyraRagEvaluationRun[]
   ): number | undefined {
-    return [...runs]
-      .reverse()
-      .find((run) => Number.isFinite(run.metrics[metric.id]))?.metrics[
-      metric.id
-    ];
+    for (let index = runs.length - 1; index >= 0; index -= 1) {
+      const value = runs[index]!.metrics[metric.id];
+      if (Number.isFinite(value)) return value;
+    }
+    return undefined;
   }
 
-  private emitRunChange(run: LyraRagEvaluationRun): void {
+  private requestMetric(metricId: string): void {
+    this.emit('lr-metric-change-request', { metricId });
+    this.emit('lr-metric-change', { metricId });
+  }
+
+  private requestSlice(slice: string): void {
+    this.emit('lr-slice-change-request', { slice });
+    this.emit('lr-slice-change', { slice });
+  }
+
+  private activateRun(run: LyraRagEvaluationRun): void {
+    this.emit('lr-run-activate', { runId: run.id, run });
     this.emit('lr-run-change', { run });
   }
 
@@ -238,7 +281,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           type="button"
           data-slice=""
           aria-pressed=${this.slice ? 'false' : 'true'}
-          @click=${() => this.emit('lr-slice-change', { slice: '' })}
+          @click=${() => this.requestSlice('')}
         >
           ${this.localize('ragEvalDashboardAllSlices')}
         </button>
@@ -251,7 +294,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
               type="button"
               data-slice=${slice}
               aria-pressed=${this.slice === slice ? 'true' : 'false'}
-              @click=${() => this.emit('lr-slice-change', { slice })}
+              @click=${() => this.requestSlice(slice)}
             >
               ${slice}
             </button>
@@ -267,6 +310,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     const slices = this.slices(runs);
     const visibleLabel =
       this.label == null ? this.localize('ragEvalDashboardLabel') : this.label;
+    const level = resolveHeadingLevel(this.headingLevel);
+    const runsLevel = level && String(Math.min(6, +level + 1));
     const label = retrievalSemanticLabel(this, visibleLabel);
     const role = retrievalSemanticRole(this, 'region');
     if (!runs.length) {
@@ -290,7 +335,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           role=${role ?? nothing}
           aria-label=${label ?? nothing}
         >
-          <h2 part="heading">${visibleLabel}</h2>
+          <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
           ${this.renderSlices(slices)}
           <lr-empty
             part="empty"
@@ -308,18 +353,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     // Business values (the metric cards' `latestValue`) are always computed from the full
     // `filtered` set below; only the chart/run-history DOM node count is bounded here.
     const runsTruncated = filtered.length > MAX_RENDERED_RUNS;
-    const renderedRuns = filtered.slice(0, MAX_RENDERED_RUNS);
-    const values = renderedRuns.map((run) => {
-      const value = active ? run.metrics[active.id] : undefined;
-      return Number.isFinite(value) ? (value as number) : null;
-    });
+    const renderedRuns = filtered.slice(-MAX_RENDERED_RUNS);
     return html`
       <section
         part="base"
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
       >
-        <h2 part="heading">${visibleLabel}</h2>
+        <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
         ${this.renderSlices(slices)}
         <div part="metrics">
           ${metrics.map((metric) => {
@@ -331,8 +372,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                 type="button"
                 data-metric-id=${metric.id}
                 aria-pressed=${selected ? 'true' : 'false'}
-                @click=${() =>
-                  this.emit('lr-metric-change', { metricId: metric.id })}
+                @click=${() => this.requestMetric(metric.id)}
               >
                 <lr-stat
                   frame="plain"
@@ -353,8 +393,18 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                 <lr-lite-chart
                   type="line"
                   .height=${this.chartHeight}
-                  .labels=${renderedRuns.map((run) => run.label)}
-                  .datasets=${[{ label: active.label, data: values }]}
+                  .labels=${guard([this.runs, this.slice], () =>
+                    renderedRuns.map((run) => run.label)
+                  )}
+                  .datasets=${guard([this.runs, this.slice, active], () => [
+                    {
+                      label: active.label,
+                      data: renderedRuns.map((run) => {
+                        const value = run.metrics[active.id];
+                        return Number.isFinite(value) ? value : null;
+                      }),
+                    },
+                  ])}
                   aria-label=${active.label}
                 ></lr-lite-chart>
               </div>
@@ -364,13 +414,13 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           part="runs"
           aria-label=${this.localize('ragEvalDashboardRuns')}
         >
-          <h3 part="runs-heading">${this.localize('ragEvalDashboardRuns')}</h3>
+          <div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('ragEvalDashboardRuns')}</div>
           ${renderedRuns.map(
             (run) => html`
               <button
                 part="run"
                 type="button"
-                @click=${() => this.emitRunChange(run)}
+                @click=${() => this.activateRun(run)}
               >
                 <span>${run.label}</span>
                 ${active && Number.isFinite(run.metrics[active.id])

@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './retrieval-search.js';
 import type { LyraRetrievalSearch } from './retrieval-search.js';
@@ -193,13 +194,14 @@ it('opts the composed query lr-input into its own clear affordance', async () =>
   expect(query.hasAttribute('clearable')).to.equal(true);
 });
 
-it('suppresses raw child input and mode-change events after consuming them', async () => {
+it('reports the child field and mode changes once, as its own events', async () => {
   const el = (await fixture(
     html`<lr-retrieval-search></lr-retrieval-search>`
   )) as LyraRetrievalSearch;
-  let inputLeaks = 0;
+  const reported: string[] = [];
+  el.addEventListener('lr-input', (event) => reported.push(`input:${(event as CustomEvent<{ value: string }>).detail.value}`));
+  el.addEventListener('lr-mode-change', (event) => reported.push(`mode:${(event as CustomEvent<{ mode: string }>).detail.mode}`));
   let changeLeaks = 0;
-  el.addEventListener('lr-input', () => inputLeaks++);
   el.addEventListener('lr-change', () => changeLeaks++);
   queryInputOf(el).dispatchEvent(
     new CustomEvent('lr-input', {
@@ -216,8 +218,41 @@ it('suppresses raw child input and mode-change events after consuming them', asy
     })
   );
   await el.updateComplete;
-  expect(inputLeaks).to.equal(0);
+  expect(reported).to.deep.equal(['input:solar', 'mode:vector']);
   expect(changeLeaks).to.equal(0);
+});
+
+it('reports typing and clearing as lr-input with the query already updated, and keeps every other field event inside', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-search></lr-retrieval-search>`
+  )) as LyraRetrievalSearch;
+  const seen: string[] = [];
+  el.addEventListener('lr-input', (event) => seen.push(`${(event as CustomEvent<{ value: string }>).detail.value}|${el.query}`));
+  const leaked: string[] = [];
+  for (const name of ['input', 'change', 'lr-change', 'lr-clear', 'lr-input-settled'])
+    el.addEventListener(name, () => leaked.push(name));
+  nativeQueryInputOf(el).focus();
+  await sendKeys({ type: 'ab' });
+  await sendKeys({ press: 'Tab' });
+  expect(seen).to.deep.equal(['a|a', 'ab|ab']);
+  const clear = queryInputOf(el).shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
+  clear.click();
+  await el.updateComplete;
+  expect(seen[2]).to.equal('|');
+  expect(leaked).to.deep.equal([]);
+});
+
+it('reports a real mode pick as lr-mode-change after updating mode', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-search mode="vector"></lr-retrieval-search>`
+  )) as LyraRetrievalSearch;
+  const mode = modeOf(el) as HTMLElement & { updateComplete: Promise<boolean> };
+  await mode.updateComplete;
+  const seen: string[] = [];
+  el.addEventListener('lr-mode-change', (event) => seen.push(`${(event as CustomEvent<{ mode: string }>).detail.mode}|${el.mode}`));
+  mode.shadowRoot!.querySelector<HTMLElement>('[part="segment"][data-value="keyword"]')!.click();
+  await el.updateComplete;
+  expect(seen).to.deep.equal(['keyword|keyword']);
 });
 
 it('updates mode as the composed lr-segmented reports a change', async () => {
@@ -579,9 +614,12 @@ describe('active filters/scope chips', () => {
       ])
     );
     expect(labels.get('cycle')).to.include('Invalid filter value');
-    expect(labels.get('deep')).to.include('Invalid filter value');
-    expect(labels.get('wide')).to.include('Invalid filter value');
+    expect(labels.get('deep')).to.include('…');
+    expect(labels.get('wide')).to.include('…');
     expect(labels.get('long')!.length).to.be.lessThan(300);
+    for (const key of ['deep', 'wide', 'long'])
+      expect(labels.get(key), `${key} is truncated, not invalid`).to.not.include('Invalid filter value');
+    expect(labels.get('long')!.endsWith('…')).to.equal(true);
     expect(
       [...labels.values()].every((label) => label.length < 1_000)
     ).to.equal(true);

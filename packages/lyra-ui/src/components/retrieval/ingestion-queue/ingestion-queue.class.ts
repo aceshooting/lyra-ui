@@ -14,6 +14,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
   isNonBlankIdentity,
+  isRecord,
 } from '../retrieval-identity.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
@@ -42,7 +43,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_retry } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_retry, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -180,10 +181,6 @@ function retryIcon(): SVGTemplateResult {
 
 const DEFAULT_VIRTUALIZE_AT = 100;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /**
  * `<lr-ingestion-queue>` — a controlled list of documents moving through an ingestion pipeline
  * (upload → text extraction → chunking → embedding → indexing), each row showing its stage,
@@ -274,6 +271,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     ingestionStageUnknown: LYRA_DEFAULT_ingestionStageUnknown,
     ingestionStageUploading: LYRA_DEFAULT_ingestionStageUploading,
     retry: LYRA_DEFAULT_retry,
+    untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -380,11 +378,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return result;
   }
 
-  // Stable bound fields, not inline arrows recreated per render: `<lr-virtual-list>` compares
-  // `renderItem`/`keyFunction` by reference too, and a new closure invalidates the same caches a
-  // new items array would.
-  private readonly renderVirtualItem = (item: unknown): unknown =>
-    this.itemTemplate(item as IngestionQueueItem, false);
+  // A stable key; `renderItem` is fresh per render so a strings or locale change repaints the rows.
   private readonly ingestionItemKey = (item: unknown): string =>
     (item as IngestionQueueItem).id;
 
@@ -494,6 +488,11 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return finiteCount(item.attempts ?? 0, 0, Number.MAX_SAFE_INTEGER - 1);
   }
 
+  /** The internal virtual list's scroll and range events are not part of this component's surface. */
+  private readonly stopOwnedEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onRetryClick(item: IngestionQueueItem): void {
     this.emit('lr-retry', {
       itemId: item.id,
@@ -511,6 +510,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   ): TemplateResult => {
     const stage = normalizedStage(item.stage);
     const stageLabel = this.stageLabel(stage);
+    const name = item.document.name.trim()
+      ? item.document.name
+      : this.localize('untitledSource');
     const showProgress = stage !== 'unknown' && ACTIVE_STAGES.includes(stage);
     const canRetry = stage === 'failed';
     const canCancel = stage !== 'unknown' && CANCELABLE_STAGES.includes(stage);
@@ -529,9 +531,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
         data-stage=${stage}
       >
         <div part="item-header">
-          <span part="item-name" title=${item.document.name}
-            >${item.document.name}</span
-          >
+          <span part="item-name" title=${name}>${name}</span>
           <lr-badge part="item-stage" variant=${badgeVariantForStage(stage)}
             >${stageLabel}</lr-badge
           >
@@ -545,7 +545,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 'ingestionItemProgressLabel',
                 undefined,
                 {
-                  name: item.document.name,
+                  name,
                   stage: stageLabel,
                 }
               )}
@@ -595,7 +595,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                       'ingestionRetryWithContext',
                       undefined,
                       {
-                        label: item.document.name,
+                        label: name,
                       }
                     )}
                     @click=${() => this.onRetryClick(item)}
@@ -611,7 +611,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                       'ingestionCancelWithContext',
                       undefined,
                       {
-                        label: item.document.name,
+                        label: name,
                       }
                     )}
                     @click=${() => this.onCancelClick(item)}
@@ -666,8 +666,11 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               part="list"
               exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
               .items=${guard([items], () => items)}
-              .renderItem=${this.renderVirtualItem}
+              .renderItem=${(item: unknown) =>
+                this.itemTemplate(item as IngestionQueueItem, false)}
               .keyFunction=${this.ingestionItemKey}
+              @lr-virtual-scroll=${this.stopOwnedEvent}
+              @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
           : html`<div part="list" role="list">
               ${repeat(

@@ -2,10 +2,9 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
-import { finiteNumber } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
@@ -16,10 +15,11 @@ import {
   firstByRetrievalIdentity,
   isValidRetrievalChunk,
 } from '../retrieval-identity.js';
+import { formatBoundedRetrievalValue } from '../retrieval-value-format.js';
 import { styles } from './retrieval-trace.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_retrievalStageEmbed, LYRA_DEFAULT_retrievalStageFilter, LYRA_DEFAULT_retrievalStageQueryRewrite, LYRA_DEFAULT_retrievalStageRerank, LYRA_DEFAULT_retrievalStageRetrieve, LYRA_DEFAULT_retrievalTraceEvidenceToggle, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One of the five fixed stages a retrieval pipeline moves through, in order. */
@@ -63,7 +63,7 @@ export interface RetrievalStage {
   /** Milliseconds relative to the trace start. Absent while the stage is still running. */
   endMs?: number;
   /** Same vocabulary as `LyraSpan.status`. */
-  status: 'pending' | 'running' | 'success' | 'error' | 'denied';
+  status: LyraSpan['status'];
   /** Secondary text under the stage name, e.g. "12 chunks, top score 0.87". */
   detail?: string;
   evidence?: RetrievalStageEvidence;
@@ -95,16 +95,7 @@ function validChunks(evidence: RetrievalStageEvidence | undefined): RetrievalChu
     : [];
 }
 
-function hasEvidence(
-  evidence: RetrievalStageEvidence | undefined
-): evidence is RetrievalStageEvidence {
-  if (!evidence) return false;
-  return (
-    Boolean(evidence.text) ||
-    validChunks(evidence).length > 0 ||
-    Boolean(evidence.metadata && Object.keys(evidence.metadata).length > 0)
-  );
-}
+const MAX_METADATA_ENTRIES = 32;
 
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return {
@@ -193,6 +184,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     select: LYRA_DEFAULT_select,
     tokensIn: LYRA_DEFAULT_tokensIn,
     tokensOut: LYRA_DEFAULT_tokensOut,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -209,9 +201,10 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   /** Controlled selection, forwarded verbatim to the internal `<lr-span-waterfall>`'s `activeSpanId`. */
   @property({ attribute: 'active-stage-id' }) activeStageId: string | null =
     null;
-  /** Accessible name for the internal timeline. A host `aria-label` independently names the
-   *  trace as a whole; an empty value falls back to the timeline's localized default. */
-  @property() label = '';
+  /** Accessible name for the internal timeline; omitting it keeps the timeline's localized default
+   *  and an explicit empty string clears it. A host `aria-label` independently names the trace as
+   *  a whole. */
+  @property() label?: string;
 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
   @state() private expandedStageIds = new Set<string>();
@@ -222,10 +215,39 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
    *  `<lr-span-waterfall>` already dedupes internally) and the evidence list (rendered one row
    *  per entry here) in agreement, and keeps `expandedStageIds`/`activeStageId` comparisons keyed
    *  by an id that identifies exactly one stage. */
+  private normalizedStagesCache?: { source: unknown; value: RetrievalStage[] };
+
   private get normalizedStages(): RetrievalStage[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.stages) ? this.stages : [],
-      (stage) => stage.id
+    if (this.normalizedStagesCache?.source !== this.stages)
+      this.normalizedStagesCache = {
+        source: this.stages,
+        value: firstByRetrievalIdentity(
+          Array.isArray(this.stages) ? this.stages : [],
+          (stage) => stage.id
+        ),
+      };
+    return this.normalizedStagesCache.value;
+  }
+
+  /** One inspector row array per evidence object, so an unrelated update never re-snapshots it. */
+  private readonly stageChunkRows = new WeakMap<RetrievalStageEvidence, LyraChunk[]>();
+
+  private stageChunks(evidence: RetrievalStageEvidence): LyraChunk[] {
+    let rows = this.stageChunkRows.get(evidence);
+    if (!rows)
+      this.stageChunkRows.set(evidence, (rows = validChunks(evidence).map(toLyraChunk)));
+    return rows;
+  }
+
+  private hasEvidence(
+    evidence: RetrievalStageEvidence | undefined
+  ): evidence is RetrievalStageEvidence {
+    return (
+      typeof evidence === 'object' &&
+      evidence !== null &&
+      (Boolean(evidence.text) ||
+        this.stageChunks(evidence).length > 0 ||
+        Boolean(evidence.metadata && Object.keys(evidence.metadata).length > 0))
     );
   }
 
@@ -235,11 +257,14 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     return entry ? this.localize(entry.key) : String(stage.kind);
   }
 
-  private toSpans(): LyraSpan[] {
-    return this.normalizedStages.map(
-      (stage): LyraSpan => ({
+  private toSpans(
+    stages: readonly RetrievalStage[],
+    names: readonly string[]
+  ): LyraSpan[] {
+    return stages.map(
+      (stage, index): LyraSpan => ({
         id: stage.id,
-        name: this.stageLabel(stage),
+        name: names[index]!,
         kind: STAGE_SPAN_KIND[stage.kind] ?? 'tool',
         startMs: stage.startMs,
         endMs: stage.endMs,
@@ -269,7 +294,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     const stage = this.normalizedStages.find((s) => s.id === stageId);
     if (
       stage &&
-      hasEvidence(stage.evidence) &&
+      this.hasEvidence(stage.evidence) &&
       !this.expandedStageIds.has(stageId)
     ) {
       const next = new Set(this.expandedStageIds);
@@ -296,7 +321,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private renderEvidenceBody(stage: RetrievalStage): TemplateResult {
     const evidence = stage.evidence!;
-    const chunks = validChunks(evidence).map(toLyraChunk);
+    const chunks = this.stageChunks(evidence);
     const metaEntries = evidence.metadata
       ? Object.entries(evidence.metadata)
       : [];
@@ -333,12 +358,11 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
                 ...event.detail,
               });
             }}
-            @lr-expand=${(event: Event) => event.stopPropagation()}
           ></lr-chunk-inspector>`
         : nothing}
       ${metaEntries.length > 0
         ? html`<dl part="evidence-metadata">
-            ${metaEntries.map(
+            ${metaEntries.slice(0, MAX_METADATA_ENTRIES).map(
               ([key, value]) =>
                 html`<div part="evidence-metadata-row">
                   <dt part="evidence-metadata-key">${key}</dt>
@@ -347,32 +371,27 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
                   </dd>
                 </div>`
             )}
+            ${metaEntries.length > MAX_METADATA_ENTRIES
+              ? html`<div part="evidence-metadata-row"><dt part="evidence-metadata-key">…</dt></div>`
+              : nothing}
           </dl>`
         : nothing}
     `;
   }
 
   private formatMetadataValue(value: unknown): string {
-    if (value == null) return '';
-    if (typeof value === 'string' || typeof value === 'boolean')
-      return String(value);
-    if (typeof value === 'number') {
-      return getNumberFormat(this.effectiveLocale).format(
-        finiteNumber(value, 0)
-      );
-    }
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
+    return formatBoundedRetrievalValue(value, {
+      locale: this.effectiveLocale,
+      invalid: this.localize('valueInvalid'),
+      truncated: '…',
+    });
   }
 
   private renderEvidenceRow(
     stage: RetrievalStage,
     occurrenceIndex: number
   ): TemplateResult | typeof nothing {
-    if (!hasEvidence(stage.evidence)) return nothing;
+    if (!this.hasEvidence(stage.evidence)) return nothing;
     const expanded = this.expandedStageIds.has(stage.id);
     // The occurrence index keeps repeated references to the exact same caller object distinct;
     // the per-instance prefix keeps parallel trace instances distinct without exposing a raw
@@ -402,34 +421,31 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
           >
         </button>
         <div part="evidence-body" id=${bodyId} ?hidden=${!expanded}>
-          ${this.renderEvidenceBody(stage)}
+          ${expanded ? this.renderEvidenceBody(stage) : nothing}
         </div>
       </div>
     `;
   }
 
   override render(): TemplateResult {
-    const spans = this.toSpans();
-    const hasAnyEvidence = this.normalizedStages.some((s) =>
-      hasEvidence(s.evidence)
-    );
+    const stages = this.normalizedStages;
+    const names = stages.map((stage) => this.stageLabel(stage));
+    const hasAnyEvidence = stages.some((s) => this.hasEvidence(s.evidence));
     // A host aria-label names this composed trace. Forward only the distinct timeline label; the
-    // nested waterfall supplies its own localized purpose when this remains empty.
+    // nested waterfall supplies its own localized purpose when it is omitted.
     const label = this.label;
     return html`
       <div part="base">
         <lr-span-waterfall
           part="timeline"
-          .spans=${spans}
+          .spans=${guard([stages, ...names], () => this.toSpans(stages, names))}
           .activeSpanId=${this.activeStageId}
           .label=${label}
           @lr-span-select=${this.onStageSelect}
         ></lr-span-waterfall>
         ${hasAnyEvidence
           ? html`<div part="evidence-list">
-              ${this.normalizedStages.map((stage, index) =>
-                this.renderEvidenceRow(stage, index)
-              )}
+              ${stages.map((stage, index) => this.renderEvidenceRow(stage, index))}
             </div>`
           : nothing}
       </div>

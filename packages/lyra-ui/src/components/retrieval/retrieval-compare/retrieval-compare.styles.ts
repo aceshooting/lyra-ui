@@ -69,6 +69,12 @@ export const styles = css`
   [part~='chunk-selected'] {
     border-color: var(--lr-retrieval-compare-selected-border, var(--lr-color-brand));
   }
+  @media (forced-colors: active) {
+    [part~='chunk-selected'] {
+      outline: var(--lr-border-width-medium) solid Highlight;
+      outline-offset: calc(-1 * var(--lr-border-width-medium));
+    }
+  }
   [part='chunk-rank'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);

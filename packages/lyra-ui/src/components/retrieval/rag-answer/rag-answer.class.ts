@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type {
@@ -11,6 +12,7 @@ import type {
   GroundedClaim,
   GroundingAssessment,
 } from '../../../ai/types.js';
+import type { SourceCardOpenDetail } from '../source-card/source-card.class.js';
 import { styles } from './rag-answer.styles.js';
 import {
   retrievalSemanticLabel,
@@ -21,6 +23,7 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
@@ -28,13 +31,19 @@ import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFA
 
 export type LyraRagAnswerState = 'idle' | 'loading' | 'answer' | 'error';
 
+type CitationAction = 'activate' | 'open';
+
 export interface LyraRagCitationSelectDetail extends CitationSelectEventDetail {
   /** The one presentation owner that produced the action. */
   section: 'answer' | 'grounding';
+  /** `activate` for a click or Enter, `open` for a double-click or Space. A double-click also
+   *  reports two `activate`s first. */
+  action: CitationAction;
 }
 
 export interface LyraRagAnswerEventMap {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<LyraRagCitationSelectDetail>>;
+  'lr-open': CustomEvent<SourceCardOpenDetail>;
   'lr-claim-select': CustomEvent<LyraEventDetailSnapshot<{ claim: GroundedClaim }>>;
   'lr-retry': CustomEvent<null>;
 }
@@ -50,13 +59,17 @@ export interface LyraRagAnswerEventMap {
  * rendering, or activation. The first record for an id wins.
  * Both child citation signals (`lr-citation-activate` and `lr-citation-open`) are contained and
  * translated to this component's single `lr-citation-select` event, with `section` identifying
- * whether the answer citation row or grounding summary owned the badge.
+ * whether the answer citation row or grounding summary owned the badge and `action` which signal
+ * it was. The generated source cards' `lr-open` crosses this host; their `lr-expand`, the source
+ * list's `lr-toggle` and the Markdown renderer's housekeeping events stay inside.
  *
  * @customElement lr-rag-answer
  * @slot answer - Replaces the data-driven Markdown answer body.
  * @slot sources - Replaces the data-driven source list.
- * @event lr-citation-select - A citation badge was activated. `detail: { citation, section }`;
- *   `section` is the single presentation owner (`answer` or `grounding`).
+ * @event lr-citation-select - A citation badge was activated or opened. `detail: { citation,
+ *   section, action }`; `section` is the single presentation owner (`answer` or `grounding`) and
+ *   `action` is `activate` or `open`.
+ * @event lr-open - A generated source card's title was activated. `detail: { sourceId, href }`.
  * @event lr-claim-select - A claim was activated. `detail: { claim }`.
  * @event lr-retry - The retry button was activated after an error.
  * @csspart base - The root answer wrapper.
@@ -133,6 +146,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   /** Stops claim-level details from reaching the grounding summary. */
   @property({ type: Boolean, attribute: 'without-claims', reflect: true })
   withoutClaims = false;
+  /** Semantic level of the Citations and Sources headings, forwarded to the grounding summary;
+   *  `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
   /** Visible answer label and fallback article name, used when omitted; falls back to the
    *  localized `ragAnswerLabel`. An explicitly empty override stays empty. */
   @property() label?: string;
@@ -231,11 +247,18 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     );
   }
 
+  private citationsCache?: { source: unknown; value: Citation[] };
+
   private get normalizedCitations(): Citation[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.citations) ? this.citations : [],
-      (citation) => citation.id
-    );
+    if (this.citationsCache?.source !== this.citations)
+      this.citationsCache = {
+        source: this.citations,
+        value: firstByRetrievalIdentity(
+          Array.isArray(this.citations) ? this.citations : [],
+          (citation) => citation.id
+        ),
+      };
+    return this.citationsCache.value;
   }
 
   private get normalizedSources(): DocumentRef[] {
@@ -245,44 +268,60 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     );
   }
 
+  private assessmentCache?: {
+    source: unknown;
+    value: Readonly<GroundingAssessment> | null;
+  };
+
   private get normalizedAssessment(): Readonly<GroundingAssessment> | null {
     const assessment = this.assessment;
-    if (!assessment) return null;
-    const claims = firstByRetrievalIdentity(
-      Array.isArray(assessment.claims) ? assessment.claims : [],
-      (claim) => claim.id
-    );
-    return assessment.claims === undefined
-      ? assessment
-      : { ...assessment, claims };
+    if (this.assessmentCache?.source !== assessment) {
+      this.assessmentCache = {
+        source: assessment,
+        value:
+          !assessment || assessment.claims === undefined
+            ? assessment
+            : {
+                ...assessment,
+                claims: firstByRetrievalIdentity(
+                  Array.isArray(assessment.claims) ? assessment.claims : [],
+                  (claim) => claim.id
+                ),
+              },
+      };
+    }
+    return this.assessmentCache.value;
   }
 
-  private onAnswerCitationAction = (
-    event: CustomEvent<{ index: number }>
-  ): void => {
-    event.stopPropagation();
-    const citation = this.normalizedCitations[event.detail.index - 1];
-    if (citation)
-      this.emit('lr-citation-select', { citation, section: 'answer' });
-  };
-  private onGroundingCitationSelect = (
-    event: CustomEvent<CitationSelectEventDetail>
-  ): void => {
-    event.stopPropagation();
-    this.emit('lr-citation-select', { ...event.detail, section: 'grounding' });
-  };
-  private onGroundingCitationOpen = (
-    event: CustomEvent<{ index: number }>
-  ): void => {
-    event.stopPropagation();
-    const citation = this.normalizedCitations[event.detail.index - 1];
-    if (citation)
-      this.emit('lr-citation-select', { citation, section: 'grounding' });
-  };
+  private answerCitationHandler(action: CitationAction) {
+    return (event: CustomEvent<{ index: number }>): void => {
+      event.stopPropagation();
+      const citation = this.normalizedCitations[event.detail.index - 1];
+      if (citation)
+        this.emit('lr-citation-select', { citation, section: 'answer', action });
+    };
+  }
+  private onAnswerCitationActivate = this.answerCitationHandler('activate');
+  private onAnswerCitationOpen = this.answerCitationHandler('open');
+
+  private groundingCitationHandler(action: CitationAction) {
+    return (event: CustomEvent<CitationSelectEventDetail>): void => {
+      event.stopPropagation();
+      this.emit('lr-citation-select', { ...event.detail, section: 'grounding', action });
+    };
+  }
+  private onGroundingCitationSelect = this.groundingCitationHandler('activate');
+  private onGroundingCitationOpen = this.groundingCitationHandler('open');
 
   private stopOwnedEvent(event: Event): void {
     event.stopPropagation();
   }
+
+  /** Stops the events of the cards and list this component generates, not slotted consumer content. */
+  private stopGeneratedEvent = (event: Event): void => {
+    if ((event.target as Node).getRootNode() === this.renderRoot)
+      event.stopPropagation();
+  };
 
   private presentationState(): LyraRagAnswerState {
     if (this.errorText) return 'error';
@@ -325,6 +364,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     const state = this.presentationState();
     const busy = state === 'loading';
     const groundingOwnsCitations = assessment !== null;
+    const level = resolveHeadingLevel(this.headingLevel);
     return html`<article
       part="base"
       role=${articleRole ?? 'presentation'}
@@ -354,6 +394,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
                 @lr-highlight-activate=${this.stopOwnedEvent}
                 @lr-text-select=${this.stopOwnedEvent}
                 @lr-anchor-result=${this.stopOwnedEvent}
+                @lr-content-settled=${this.stopOwnedEvent}
+                @lr-copy=${this.stopOwnedEvent}
+                @lr-copy-error=${this.stopOwnedEvent}
               ></lr-markdown
             ></slot>
           </div>`
@@ -362,8 +405,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
         ? html`<lr-grounding-summary
             part="grounding"
             .assessment=${assessment}
-            .citations=${citations}
+            .citations=${guard([citations], () => citations)}
             .withoutClaims=${this.withoutClaims}
+            .headingLevel=${this.headingLevel}
             @lr-citation-select=${this.onGroundingCitationSelect}
             @lr-citation-open=${this.onGroundingCitationOpen}
           ></lr-grounding-summary>`
@@ -373,9 +417,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             part="citations"
             aria-label=${this.localize('ragAnswerCitations')}
           >
-            <h3 part="section-heading">
+            <div part="section-heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>
               ${this.localize('ragAnswerCitations')}
-            </h3>
+            </div>
             <div part="citation-list">
               ${citations.map(
                 (citation, index) =>
@@ -383,8 +427,8 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
                     .index=${index + 1}
                     .sourceId=${citation.sourceId ?? ''}
                     .label=${citation.label ?? ''}
-                    @lr-citation-activate=${this.onAnswerCitationAction}
-                    @lr-citation-open=${this.onAnswerCitationAction}
+                    @lr-citation-activate=${this.onAnswerCitationActivate}
+                    @lr-citation-open=${this.onAnswerCitationOpen}
                   ></lr-citation-badge>`
               )}
             </div>
@@ -395,11 +439,13 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
             part="sources"
             aria-label=${this.localize('ragAnswerSources')}
           >
-            <h3 part="section-heading">${this.localize('ragAnswerSources')}</h3>
+            <div part="section-heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${this.localize('ragAnswerSources')}</div>
             <lr-source-list
               part="source-list"
               .label=${this.localize('ragAnswerSources')}
               expanded
+              @lr-toggle=${this.stopGeneratedEvent}
+              @lr-expand=${this.stopGeneratedEvent}
               >${this.renderSourceItems(sources)}</lr-source-list
             >
           </section>`

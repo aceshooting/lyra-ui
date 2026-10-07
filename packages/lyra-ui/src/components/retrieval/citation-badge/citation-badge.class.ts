@@ -366,23 +366,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     this.hidePreviewNow();
   };
 
-  // keydown bubbles up from whatever actually holds focus (the button, or a
-  // focusable element inside slotted preview content) — attaching this at
-  // the wrapper, rather than the button alone, is what makes Escape work
-  // "while the popover has focus-within" per the component's contract,
-  // without needing to track focus targets explicitly here.
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && this.popoverOpen && this.overlayHandle?.isTopmost()) {
-      // Swallow it here rather than letting it bubble to e.g. a containing
-      // lr-dialog's own Escape-to-close handler — dismissing this
-      // lightweight preview shouldn't also close a surrounding modal. Gated
-      // on isTopmost() so a genuinely topmost overlay stacked above this one
-      // gets the keypress instead (the shared document-level listener still
-      // routes it there when this branch defers).
-      e.stopPropagation();
-      this.hidePreviewNow();
-      return;
-    }
     // Space normally activates a <button> the same as Enter, but this
     // component gives the two keys distinct meanings (Enter = activate,
     // Space = open) — so Space's native click-on-keyup must be pre-empted

@@ -9,13 +9,12 @@ import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.clas
 export type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-let knowledgeBaseAdminInstance = 0;
 
 export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';
 
@@ -99,13 +98,16 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   @property({ attribute: 'active-tab', reflect: true })
   activeTab: KnowledgeBaseAdminTab = 'sources';
   /** Accessible name and visible heading. Omitted falls back to a localized default; an
-   *  explicitly empty `label` is used as-is. */
+   *  explicitly empty `label` empties the visible heading, and the tablist keeps the localized name. */
   @property() label?: string;
+  /** Semantic level of the heading, with the nested source inventory's heading one level below it;
+   *  `none` removes heading semantics from both. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources. */
   @property({ type: Boolean, attribute: 'without-ingestion' }) withoutIngestion =
     false;
 
-  private readonly idPrefix = `lr-knowledge-base-admin-${++knowledgeBaseAdminInstance}`;
+  private readonly idPrefix = nextId('knowledge-base-admin');
   private focusSourcesAfterUpdate = false;
 
   private tabId(tab: KnowledgeBaseAdminTab): string {
@@ -192,16 +194,19 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   override render(): TemplateResult {
     const visibleLabel =
       this.label == null ? this.localize('knowledgeBaseAdminLabel') : this.label;
-    // A host aria-label wins over the internal tablist's computed accessible name (the visible
-    // heading always keeps showing `visibleLabel` regardless -- only the announced name changes).
-    const hostLabel = hostAriaLabel(this);
-    const tablistLabel = hostLabel === null ? visibleLabel : hostLabel;
+    // A host aria-label wins over the internal tablist's computed accessible name; the visible
+    // heading keeps showing `visibleLabel`, and the tablist is never left unnamed.
+    const tablistLabel =
+      hostAriaLabel(this) ??
+      (visibleLabel || this.localize('knowledgeBaseAdminLabel'));
     const tab: KnowledgeBaseAdminTab =
       this.activeTab === 'ingestion' && !this.withoutIngestion
         ? 'ingestion'
         : 'sources';
+    const level = resolveHeadingLevel(this.headingLevel);
+    const childLevel = level ? (String(Math.min(6, +level + 1)) as LyraHeadingLevel) : 'none';
     return html`<section part="base">
-      <h2 part="heading">${visibleLabel}</h2>
+      <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
       <div part="tabs" role="tablist" aria-label=${tablistLabel}>
         <button
           part="tab"
@@ -244,6 +249,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
         ${tab === 'sources'
           ? html`<lr-knowledge-base
               .sources=${this.sources}
+              .headingLevel=${childLevel}
               @lr-source-create=${(event: Event) =>
                 this.forward(event, 'lr-source-create', undefined)}
               @lr-source-sync=${(event: CustomEvent<{ sourceId: string }>) =>

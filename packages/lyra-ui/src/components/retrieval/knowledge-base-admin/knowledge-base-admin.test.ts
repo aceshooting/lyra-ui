@@ -27,8 +27,18 @@ describe("lr-knowledge-base-admin", () => {
       explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent
     ).to.equal("");
     expect(
-      explicitEmpty.shadowRoot!.querySelector('[part="tabs"]')!.getAttribute("aria-label")
-    ).to.equal("");
+      explicitEmpty.shadowRoot!.querySelector('[part="tabs"]')!.getAttribute("aria-label"),
+      "the tablist keeps a name"
+    ).to.equal("Knowledge base administration");
+  });
+
+  it("gives two instances distinct tab and panel ids", async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-knowledge-base-admin></lr-knowledge-base-admin><lr-knowledge-base-admin></lr-knowledge-base-admin></div>`);
+    const ids = [...wrapper.querySelectorAll("lr-knowledge-base-admin")].flatMap((admin) =>
+      [...admin.shadowRoot!.querySelectorAll("[role=tab], [role=tabpanel]")].map((node) => node.id)
+    );
+    expect(new Set(ids).size).to.equal(ids.length);
+    expect(ids.every((id) => id.startsWith("lr-knowledge-base-admin-"))).to.equal(true);
   });
 
   it("lets a consumer ::part(tab) override win on the rendered selected tab", async () => {
@@ -532,5 +542,24 @@ describe("lr-knowledge-base-admin retired hide-ingestion alias", () => {
     });
     expect(canonical).to.have.length(1);
     expect(warnings).to.have.length(0);
+  });
+});
+
+describe("lr-knowledge-base-admin heading level", () => {
+  it("keeps level 2 with the inventory one level below, takes heading-level, and drops semantics for none", async () => {
+    const el = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
+    const own = (): Element => el.shadowRoot!.querySelector('[part="heading"]')!;
+    const child = async (): Promise<Element> => {
+      const inventory = el.shadowRoot!.querySelector("lr-knowledge-base")! as HTMLElement & { updateComplete: Promise<unknown> };
+      await inventory.updateComplete;
+      return inventory.shadowRoot!.querySelector('[part="heading"]')!;
+    };
+    expect([own().getAttribute("role"), own().getAttribute("aria-level"), (await child()).getAttribute("aria-level")]).to.deep.equal(["heading", "2", "3"]);
+    el.setAttribute("heading-level", "4");
+    await el.updateComplete;
+    expect([own().getAttribute("aria-level"), (await child()).getAttribute("aria-level")]).to.deep.equal(["4", "5"]);
+    el.setAttribute("heading-level", "none");
+    await el.updateComplete;
+    expect([own().getAttribute("role"), (await child()).getAttribute("role")]).to.deep.equal([null, null]);
   });
 });

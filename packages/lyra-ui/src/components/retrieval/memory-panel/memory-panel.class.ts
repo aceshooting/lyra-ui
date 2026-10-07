@@ -10,7 +10,11 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
+import type {
+  LyraProvenance,
+  LyraProvenancePanelEventMap,
+} from '../provenance-panel/provenance-panel.class.js';
+import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { ConfirmBarVariant } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../provenance-panel/provenance-panel.class.js';
 import '../../agent-tools/confirm-bar/confirm-bar.class.js';
@@ -21,6 +25,7 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
@@ -29,6 +34,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export type { LyraScoreThresholds } from '../graph/graph.class.js';
 /**
  * One item held in a memory panel's short-term or long-term list. `provenance` reuses
  * `lr-provenance-panel`'s own `LyraProvenance` shape verbatim -- assigning `item.provenance` onto
@@ -199,7 +205,19 @@ export interface LyraMemoryExpandDetail {
   expanded: boolean;
 }
 
-export interface LyraMemoryPanelEventMap {
+/** The embedded provenance panel's other events cross this host unchanged; the owning
+ *  `[part="item"]` (`data-id`, `data-scope`) is on the event's `composedPath()`. */
+export interface LyraMemoryPanelEventMap
+  extends Omit<LyraProvenancePanelEventMap, 'lr-chunk-open'> {
+  'lr-chunk-open': CustomEvent<
+    LyraEventDetailSnapshot<{
+      memoryId: string;
+      scope: MemoryScope;
+      chunkId: string;
+      sourceId: string;
+      anchor?: NonNullable<LyraChunk['anchor']>;
+    }>
+  >;
   'lr-add': CustomEvent<LyraEventDetailSnapshot<LyraMemoryAddDetail>>;
   'lr-remove': CustomEvent<LyraMemoryRemoveDetail>;
   'lr-forget': CustomEvent<null>;
@@ -208,6 +226,8 @@ export interface LyraMemoryPanelEventMap {
 }
 
 type Tier = 'high' | 'medium' | 'low';
+
+const DEFAULT_TIERS: LyraScoreThresholds = { high: 0.75, medium: 0.5 };
 
 const CONFIRM_HEADING_KEY: Record<'add' | 'remove' | 'forget-all', string> = {
   add: 'memoryPanelConfirmAddHeading',
@@ -282,6 +302,18 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @event lr-forget - The pending "forget all long-term memories" action was approved. No detail.
  * @event lr-memory-toggle - A memory item's provenance disclosure was toggled, expanding or
  * collapsing it. `detail: { memoryId, scope, expanded }`.
+ * @event lr-toggle - Surfaced unchanged from an expanded item's provenance panel (a section
+ * header). `detail: { section, expanded }`.
+ * @event lr-entity-select - Surfaced unchanged from an expanded item's provenance panel.
+ * `detail: { entityId, occurrenceIndex? }`.
+ * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it.
+ * @event lr-entity-open - Surfaced unchanged from the provenance panel. `detail: { entityId }`.
+ * @event lr-drill - Surfaced unchanged from the provenance panel. `detail: { communityId }`.
+ * @event lr-relation-activate - Surfaced unchanged from the provenance panel.
+ * @event lr-chunk-open - A chunk of an expanded item's provenance was opened. `detail: { memoryId,
+ * scope, chunkId, sourceId, anchor? }`.
+ * @event lr-chunk-toggle - Surfaced unchanged from the provenance panel.
+ * `detail: { chunkId, expanded }`.
  * @csspart base - The root wrapper.
  * @csspart empty - The all-empty `lr-empty` state, shown when both lists are empty.
  * @csspart section - One of the two (short-term/long-term) sections; carries `data-scope`.
@@ -299,8 +331,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @csspart confidence - The item's confidence tier text, carrying `data-tone`. Omitted when
  * `confidence` is unset.
  * @csspart expand-toggle - The provenance disclosure toggle. Omitted when `provenance` is unset.
- * @csspart item-body - The disclosed `lr-provenance-panel` wrapper, `hidden` while collapsed.
- * Omitted when `provenance` is unset.
+ * @csspart item-body - The disclosure wrapper, `hidden` while collapsed; its
+ * `lr-provenance-panel` is mounted only while expanded. Omitted when `provenance` is unset.
  * @csspart item-actions - The wrapper around an item's action row (or its pending `lr-confirm-bar`).
  * @csspart add-button - The "Add to long-term memory" action. Only rendered on short-term items.
  * @csspart remove-button - The "Remove" action. Rendered on every item.
@@ -369,6 +401,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-add',
+    'lr-chunk-open',
   ]);
   /** The admitted memory is opaque caller state inside the otherwise frozen add envelope. */
   protected static override readonly identityEventDetailProperties =
@@ -390,6 +423,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     high: 0.75,
     medium: 0.5,
   };
+
+  /** Semantic level of the section headings; `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
 
   /** Fallback overall group name. A non-empty host `aria-label` makes the host the sole owner; an
    *  explicitly empty host label stays empty on the group, and so does an explicitly empty
@@ -569,8 +605,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private tier(score: number): Tier {
-    if (score >= this.thresholds.high) return 'high';
-    if (score >= this.thresholds.medium) return 'medium';
+    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    if (score >= high) return 'high';
+    if (score >= medium) return 'medium';
     return 'low';
   }
 
@@ -791,11 +828,17 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         ${item.provenance
           ? html`
               <div part="item-body" id=${bodyId} ?hidden=${!expanded}>
-                <lr-provenance-panel
-                  .provenance=${item.provenance}
-                  .types=${this.types}
-                  .thresholds=${this.thresholds}
-                ></lr-provenance-panel>
+                ${expanded
+                  ? html`<lr-provenance-panel
+                      .provenance=${item.provenance}
+                      .types=${this.types}
+                      .thresholds=${this.thresholds}
+                      @lr-chunk-open=${(event: CustomEvent<{ chunkId: string; sourceId: string; anchor?: NonNullable<LyraChunk['anchor']> }>) => {
+                        event.stopPropagation();
+                        this.emit('lr-chunk-open', { memoryId: item.id, scope, ...event.detail });
+                      }}
+                    ></lr-provenance-panel>`
+                  : nothing}
               </div>
             `
           : nothing}
@@ -850,16 +893,21 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     items: readonly CanonicalMemoryItem[]
   ): TemplateResult {
     const headingId = `${this.idBase}-${scope}-heading`;
+    const level = resolveHeadingLevel(this.headingLevel);
     return html`
       <section part="section" data-scope=${scope}>
         <div part="section-header">
-          <h3 part="heading" id=${headingId}>${this.localize(headingKey)}</h3>
+          <div part="heading" id=${headingId} role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${this.localize(headingKey)}</div>
           ${scope === 'long-term' && this.normalizedLongTerm.length > 0
             ? this.renderForgetAllControl()
             : nothing}
         </div>
         ${items.length === 0
-          ? html`<p part="section-empty">${this.localize('noData')}</p>`
+          ? html`<lr-empty
+              part="section-empty"
+              size="s"
+              heading=${this.localize('noData')}
+            ></lr-empty>`
           : html`<div part="list" role="list" aria-labelledby=${headingId}>
               ${items
                 .slice(0, MAX_RENDERED_MEMORY_ITEMS)

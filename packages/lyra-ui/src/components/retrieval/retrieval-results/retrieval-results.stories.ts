@@ -47,7 +47,7 @@ export const Default: Story = {
     html`<lr-retrieval-results
       active-chunk-id="c2"
       .chunks=${chunks}
-      @lr-select=${(e: CustomEvent) => console.log('lr-select', e.detail)}
+      @lr-selection-change=${(e: CustomEvent) => console.log('lr-selection-change', e.detail)}
       @lr-chunk-open=${(e: CustomEvent) => console.log('lr-chunk-open', e.detail)}
     ></lr-retrieval-results>`,
 };

@@ -9,7 +9,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A grounded answer surface that canonicalizes citations, sources, and nested assessment claims independently by nonblank id before composition, counts, rendering, lookup, and actions. Both nested citation activation/open signals are contained and translated to one section-qualified `lr-citation-select` event.',
+          'A grounded answer surface that canonicalizes citations, sources, and nested assessment claims independently by nonblank id before composition, counts, rendering, lookup, and actions. Both nested citation activation/open signals are contained and translated to one section- and action-qualified `lr-citation-select` event.',
       },
     },
   },

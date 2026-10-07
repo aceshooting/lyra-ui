@@ -38,7 +38,12 @@ export interface LyraClaimEvidenceEventMap {
   'lr-citation-select': CustomEvent<
     LyraEventDetailSnapshot<CitationSelectEventDetail>
   >;
+  'lr-citation-open': CustomEvent<
+    LyraEventDetailSnapshot<CitationSelectEventDetail>
+  >;
 }
+
+type CitationEventName = 'lr-citation-select' | 'lr-citation-open';
 
 const STATUS_VARIANT: Record<GroundedClaimStatus, BadgeVariant> = {
   supported: 'success',
@@ -292,14 +297,14 @@ function normalizedClaimStatus(status: unknown): GroundedClaimStatus {
  *
  * At most 500 claims render as `[part="claim"]` rows; a `claims` array past that length renders a
  * localized `[part="limit"]` notice after the list rather than mounting an unbounded number of rows.
- * A nested badge's `lr-citation-activate` is contained and translated to `lr-citation-select` with
- * the complete citation record. Its distinct `lr-citation-open` signal intentionally remains a
- * composed child event and crosses this host unchanged, preserving its `{ sourceId, index, href }`
- * detail for consumers that want the badge's richer open action.
+ * A nested badge's `lr-citation-activate` and `lr-citation-open` (double-click, or Space) are
+ * contained and translated to `lr-citation-select` and `lr-citation-open`, each with the complete
+ * citation record.
  *
  * @customElement lr-claim-evidence
  * @event lr-claim-select - A claim was activated. `detail: { claim }`.
  * @event lr-citation-select - Evidence was activated. `detail: { citation }`.
+ * @event lr-citation-open - Evidence's full-preview affordance was triggered. `detail: { citation }`.
  * @csspart base - The named claim-evidence region.
  * @csspart list - The claim list.
  * @csspart claim - One claim.
@@ -358,22 +363,25 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-claim-select',
     'lr-citation-select',
+    'lr-citation-open',
   ]);
   /** Keep the admitted source opaque inside the otherwise frozen event envelope. */
   protected static override readonly identityEventDetailProperties = Object.freeze({
     'lr-claim-select': Object.freeze(['claim']),
     'lr-citation-select': Object.freeze(['citation']),
+    'lr-citation-open': Object.freeze(['citation']),
   });
 
   /** Grounded claims rendered as the selectable evidence index. */
   @property({ attribute: false }) claims: readonly GroundedClaim[] = [];
   /** Citation records resolved by each claim's citation indexes. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
-  /** Controlled id of the claim whose evidence is expanded. */
+  /** Controlled id of the selected claim, marked `aria-pressed` and `claim-selected`. */
   @property({ attribute: 'selected-claim-id' }) selectedClaimId = '';
-  /** Fallback name for the claim-and-evidence region. A non-empty host `aria-label` makes the host
+  /** Fallback name for the claim-and-evidence region; omitting it falls back to the localized
+   *  default and an explicit empty string clears it. A non-empty host `aria-label` makes the host
    *  the sole overall owner; an explicitly empty host label stays empty on the region. */
-  @property() label = '';
+  @property() label?: string;
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the claim-trigger
    * padding and column gap for dense evidence lists -- same convention as `lr-source-card`'s and
@@ -451,20 +459,25 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     return this.localize('claimEvidenceConfidence', undefined, { percent });
   }
 
+  /** A claim's resolved evidence in citation-list order, from one id lookup built per render. */
   private resolvedCitations(
     claim: CanonicalClaim,
-    citations: readonly CanonicalCitation[]
-  ): CanonicalCitation[] {
-    const ids = new Set(claim.citationIds);
-    return citations.filter((citation) => ids.has(citation.id));
+    byId: ReadonlyMap<string, { citation: CanonicalCitation; index: number }>
+  ): { citation: CanonicalCitation; index: number }[] {
+    const found = new Set<{ citation: CanonicalCitation; index: number }>();
+    for (const id of claim.citationIds) {
+      const entry = byId.get(id);
+      if (entry) found.add(entry);
+    }
+    return [...found].sort((a, b) => a.index - b.index);
   }
 
   private renderClaim(
     claim: CanonicalClaim,
-    allCitations: readonly CanonicalCitation[]
+    byId: ReadonlyMap<string, { citation: CanonicalCitation; index: number }>
   ): TemplateResult {
     const selected = claim.id === this.selectedClaimId;
-    const citations = this.resolvedCitations(claim, allCitations);
+    const citations = this.resolvedCitations(claim, byId);
     const status = normalizedClaimStatus(claim.status);
     const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
@@ -492,17 +505,15 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           ? html`
               <div part="evidence">
                 ${citations.map(
-                  (citation) => html`
+                  ({ citation, index }) => html`
                     <lr-citation-badge
-                      .index=${allCitations.indexOf(citation) + 1}
+                      .index=${index + 1}
                       .sourceId=${citation.sourceId ?? ''}
                       .label=${citation.label ?? ''}
-                      @lr-citation-activate=${(event: Event) => {
-                        event.stopPropagation();
-                        this.emit('lr-citation-select', {
-                          citation: citation.source,
-                        });
-                      }}
+                      @lr-citation-activate=${(event: Event) =>
+                        this.reportCitation('lr-citation-select', citation, event)}
+                      @lr-citation-open=${(event: Event) =>
+                        this.reportCitation('lr-citation-open', citation, event)}
                     ></lr-citation-badge>
                     ${citation.quote ? html`<q>${citation.quote}</q>` : nothing}
                   `
@@ -514,12 +525,37 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     `;
   }
 
+  private reportCitation(
+    name: CitationEventName,
+    citation: CanonicalCitation,
+    event: Event
+  ): void {
+    event.stopPropagation();
+    this.emit(name, { citation: citation.source });
+  }
+
+  private citationsById?: {
+    source: readonly CanonicalCitation[];
+    map: Map<string, { citation: CanonicalCitation; index: number }>;
+  };
+
+  private lookupCitations(citations: readonly CanonicalCitation[]) {
+    if (this.citationsById?.source !== citations)
+      this.citationsById = {
+        source: citations,
+        map: new Map(
+          citations.map((citation, index) => [citation.id, { citation, index }])
+        ),
+      };
+    return this.citationsById.map;
+  }
+
   override render(): TemplateResult {
     const claims = this.normalizedClaims;
-    const citations = this.normalizedCitations;
+    const byId = this.lookupCitations(this.normalizedCitations);
     const label = retrievalSemanticLabel(
       this,
-      this.label || this.localize('claimEvidenceLabel')
+      this.label == null ? this.localize('claimEvidenceLabel') : this.label
     );
     const role = retrievalSemanticRole(this, 'region');
     return html`
@@ -532,7 +568,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
           ? html`<ol part="list">
               ${claims
                 .slice(0, MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS)
-                .map((claim) => this.renderClaim(claim, citations))}
+                .map((claim) => this.renderClaim(claim, byId))}
             </ol>
             ${claims.length > MAX_RENDERED_CLAIM_EVIDENCE_CLAIMS
               ? html`<p part="limit" role="note">${this.localize(

@@ -290,8 +290,8 @@ it('shows noMatches when the filter empties the tree, and noData when sources it
   );
   await el.updateComplete;
   expect(
-    el.shadowRoot!.querySelector('[part="empty"]')!.textContent
-  ).to.include('No matches');
+    el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')
+  ).to.equal('No matches');
 
   el.sources = [];
   await el.updateComplete;
@@ -493,7 +493,7 @@ it('honors a .strings override for the select-all label and the empty/no-matches
     })
   );
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal(
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('heading')).to.equal(
     'Aucun résultat'
   );
 

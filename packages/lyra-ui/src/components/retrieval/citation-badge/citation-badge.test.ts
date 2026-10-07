@@ -1,6 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 import './citation-badge.js';
 import type { LyraCitationBadge } from './citation-badge.js';
 
@@ -367,9 +369,29 @@ describe('hover/focus preview popover', () => {
     await el.updateComplete;
     expect(popover.hidden).to.be.false;
 
-    base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await sendKeys({ press: 'Escape' });
     await el.updateComplete;
     expect(popover.hidden).to.be.true;
+  });
+
+  it('lets Escape reach an application listener while it closes the preview', async () => {
+    const el = (await fixture(
+      html`<lr-citation-badge index="1"><p>preview</p></lr-citation-badge>`,
+    )) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    await focusByKeyboard(base);
+    await el.updateComplete;
+    let seen = 0;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') seen += 1;
+    };
+    window.addEventListener('keydown', onKeyDown);
+    try {
+      await sendKeys({ press: 'Escape' });
+    } finally {
+      window.removeEventListener('keydown', onKeyDown);
+    }
+    expect(seen).to.equal(1);
   });
 
   it('does not trap Tab focus — no tabindex/focus-trap wiring on the popover itself', async () => {
@@ -508,4 +530,21 @@ describe('keyboard-only preview focus', () => {
     expect(popover.hidden, 'pointer-then-script focus opens nothing').to.equal(true);
     base.blur();
   });
+});
+
+it('gives each status tier its own border style under forced colors', async () => {
+  const styles: Record<string, string> = {};
+  try {
+    await setForcedColors('active');
+    for (const status of ['default', 'verified', 'medium', 'unverified']) {
+      const el = (await fixture(html`<lr-citation-badge status=${status} index="1"></lr-citation-badge>`)) as LyraCitationBadge;
+      styles[status] = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).borderStyle;
+    }
+  } finally {
+    await setForcedColors('none');
+  }
+  expect(styles['verified']).to.equal('solid');
+  expect(styles['medium']).to.equal('dashed');
+  expect(styles['unverified']).to.equal('double');
+  expect(styles['default']).to.not.equal('dashed');
 });

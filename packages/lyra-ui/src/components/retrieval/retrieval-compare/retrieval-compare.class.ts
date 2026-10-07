@@ -6,6 +6,7 @@ import type {
   RetrievalChunk,
   RetrievalScoreBreakdown,
 } from '../../../ai/types.js';
+import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -13,6 +14,7 @@ import {
   isValidRetrievalChunk,
 } from '../retrieval-identity.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
 import {
@@ -21,10 +23,8 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareSparseScore, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-let retrievalCompareInstance = 0;
 
 export interface RetrievalComparisonSet {
   id: string;
@@ -79,6 +79,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     retrievalCompareRank: LYRA_DEFAULT_retrievalCompareRank,
     retrievalCompareRerankScore: LYRA_DEFAULT_retrievalCompareRerankScore,
     retrievalCompareSparseScore: LYRA_DEFAULT_retrievalCompareSparseScore,
+    untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -92,16 +93,19 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
 
   /** Named retrieval result sets rendered side by side. */
   @property({ attribute: false }) sets: readonly RetrievalComparisonSet[] = [];
-  /** Maximum ranked chunks shown from each set after stable score ordering. */
+  /** Maximum ranked chunks shown from each set, ordered by effective rank (an explicit `rank`,
+   *  else input position) and then score. */
   @property({ type: Number, attribute: 'top-k' }) topK = 10;
   /** Controlled chunk id highlighted across every set that contains it. */
   @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
+  /** Semantic level of each result-set heading; `none` keeps the visible text without heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
   /** Fallback name for the comparison region. Omitting it falls back to a localized default; an
    *  explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
    *  overall owner; an explicitly empty host label stays empty on the region. */
   @property() label?: string;
 
-  private readonly headingIdPrefix = `lr-retrieval-compare-${++retrievalCompareInstance}`;
+  private readonly headingIdPrefix = nextId('retrieval-compare');
 
   private get effectiveTopK(): number {
     return Math.max(1, finiteCount(this.topK, 10));
@@ -199,36 +203,42 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     chunks: readonly RetrievalChunk[]
   ): TemplateResult => {
     const headingId = `${this.headingIdPrefix}-set-${setIndex}`;
+    const level = resolveHeadingLevel(this.headingLevel);
     return html`
       <section part="set" aria-labelledby=${headingId}>
-        <h3 part="set-heading" id=${headingId}>${set.label}</h3>
+        <div part="set-heading" id=${headingId} role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${set.label}</div>
         <ol part="chunks">
           ${chunks.map((chunk, index) => {
             const selected = chunk.id === this.selectedChunkId;
             const rank = this.rank(chunk, index);
             const chunkPart = selected ? 'chunk chunk-selected' : 'chunk';
+            const id = `${headingId}-chunk-${index}`;
             return html`
               <li>
                 <button
                   part=${chunkPart}
                   type="button"
                   aria-pressed=${selected ? 'true' : 'false'}
+                  aria-labelledby="${id}-rank ${id}-title"
+                  aria-describedby="${id}-text ${id}-scores"
                   @click=${() =>
                     this.emit('lr-chunk-select', { setId: set.id, chunk })}
                 >
-                  <span part="chunk-rank"
+                  <span part="chunk-rank" id="${id}-rank"
                     >${this.localize('retrievalCompareRank', undefined, {
                       rank: getNumberFormat(this.effectiveLocale).format(rank),
                     })}</span
                   >
-                  <strong part="chunk-title">${chunk.source.name}</strong>
-                  <span part="chunk-text">${chunk.text}</span>
-                  <span part="scores">
+                  <strong part="chunk-title" id="${id}-title"
+                    >${chunk.source.name || this.localize('untitledSource')}</strong
+                  >
+                  <span part="chunk-text" id="${id}-text">${chunk.text}</span>
+                  <span part="scores" id="${id}-scores">
                     ${this.scoreEntries(chunk).map(
                       ([scoreLabel, value]) => html`
                         <span part="score"
-                          ><span>${scoreLabel}</span
-                          ><span>${this.formatScore(value)}</span></span
+                          ><span>${scoreLabel}</span>
+                          <span>${this.formatScore(value)}</span></span
                         >
                       `
                     )}
