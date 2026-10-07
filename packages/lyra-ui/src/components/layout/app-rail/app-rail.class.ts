@@ -56,6 +56,9 @@ export type LyraAppRailPreferredMode = Exclude<LyraAppRailMode, 'mobile'>;
 /** Whitespace-separated tokens accepted by the `persist` attribute. */
 export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';
 
+/** Rail-owned controls inside the nav slot whose clicks do not close the mobile overlay. */
+const NON_NAVIGATION_CLICK = '[part~="toggle"], [part~="header-actions"], [part~="meta"], [part~="end"]';
+
 const APP_RAIL_FRAME = optionalLiteralSetConverter<LyraFrame>(['card', 'plain']);
 
 /** Width attributes: any value `Number()` reads as a number parses exactly as the pixel-only
@@ -168,8 +171,9 @@ export interface LyraAppRailEventMap {
  *   a slotted group is marked `icon-only` exactly like a slotted item, and
  *   forwards that state to the items it owns. Generic
  *   links and buttons remain supported, but their compact presentation is the
- *   consumer's responsibility. While the mobile overlay is open, clicking
- *   anywhere inside this slot closes it.
+ *   consumer's responsibility. While the mobile overlay is open, clicking inside this slot closes
+ *   it, except on a group's or item's disclosure toggle, a group's `header-actions` and an item's
+ *   `meta`/`end` content.
  * @slot header - Logo/brand content, shown above the nav items in every mode.
  * @slot footer - A trailing user/settings trigger, shown below the nav items.
  * @event lr-mode-change - The effective mode changed. A LIVE breakpoint crossing (after mount) or
@@ -438,15 +442,15 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   @property({ useDefault: true }) hotkey = '';
 
   /** Optional accessible name for the rail's navigation landmark and mobile dialog. Every
-   *  nonempty supplied string is literal; only absence/empty uses the localized fallback. A
-   *  host-level `aria-label` attribute takes precedence, including an explicit empty value. */
+   *  supplied string is literal, including an empty one; only absence uses the localized
+   *  fallback. A host-level `aria-label` attribute takes precedence, including an explicit empty
+   *  value. */
   @property() label?: string;
 
   /** Accessible name overriding `label` (and its localized default) for the nav landmark / dialog
-   *  role, mirroring `<lr-date-input>`'s `accessibleLabel` pattern. Reads the host's own
-   *  `aria-label` attribute -- unset (the default, `null`) reproduces today's exact
-   *  `label`/localized-default output. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+   *  role, mapped to the host `aria-label` attribute like every other navigation component.
+   *  Unset (the default, `null`) uses `label`, then the localized default. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Manually prefers `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while the
    *  `mobile-breakpoint` continues to be tracked automatically regardless — e.g. a user's manual
@@ -1631,11 +1635,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.triggerAria = undefined;
   }
 
-  // See the default-slot @slot doc -- any click inside the nav items while
-  // the overlay is open closes it, without trying to distinguish a real
-  // navigation trigger from incidental slotted content.
-  private onNavItemClick = (): void => {
-    if (this.overlayActive) this.setOpen(false);
+  // Closes the mobile overlay on a nav click, except on controls that are not navigation.
+  private onNavItemClick = (event: Event): void => {
+    if (!this.overlayActive) return;
+    if (event.composedPath().some((node) => isHtmlElement(node) && node.matches(NON_NAVIGATION_CLICK))) return;
+    this.setOpen(false);
   };
 
   // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -1729,23 +1733,21 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     const rtl = this.getAttribute('dir') === 'rtl' || isRtl(this);
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     const step = 8;
-    if (e.key === forwardKey) {
-      const next = Math.min(this.safeMaxRailWidthPx, this.effectiveRailWidthPx + step);
-      if (next !== this.effectiveRailWidthPx) {
-        e.preventDefault();
-        this.requestRailResize(next);
-      }
-    } else if (e.key === backwardKey) {
-      const next = Math.max(this.safeMinRailWidthPx, this.effectiveRailWidthPx - step);
-      if (next !== this.effectiveRailWidthPx) {
-        e.preventDefault();
-        this.requestRailResize(next);
-      }
-    }
+    const width = this.effectiveRailWidthPx;
+    const next =
+      e.key === forwardKey ? Math.min(this.safeMaxRailWidthPx, width + step)
+      : e.key === backwardKey ? Math.max(this.safeMinRailWidthPx, width - step)
+      : e.key === 'Home' ? this.safeMinRailWidthPx
+      : e.key === 'End' ? this.safeMaxRailWidthPx
+      : width;
+    if (next === width) return;
+    e.preventDefault();
+    this.requestRailResize(next);
   };
 
   private resizerPositionObserver?: ResizeObserver;
@@ -1788,9 +1790,25 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     resizer.style.setProperty('inset-inline-end', 'auto');
   }
 
+  private renderResizer(): TemplateResult {
+    const railWidthPx = this.effectiveRailWidthPx;
+    return html`<div
+      part="resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label=${this.localize('resizeNavigation')}
+      aria-valuenow=${Math.round(railWidthPx)}
+      aria-valuetext=${this.resizeValueText(railWidthPx)}
+      aria-valuemin=${this.safeMinRailWidthPx}
+      aria-valuemax=${this.safeMaxRailWidthPx}
+      tabindex="0"
+      @pointerdown=${this.onResizerPointerDown}
+      @keydown=${this.onResizerKeyDown}
+    ><span part="resizer-track"></span></div>`;
+  }
+
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
-    const railWidthPx = this.effectiveRailWidthPx;
     const showCollapse = this.collapsible && !mobile;
     const expanded = this._mode !== 'icon-only';
     return this.nativeModal.render(html`
@@ -1809,7 +1827,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         id=${this.navId}
         part=${mobile ? 'panel' : 'base'}
         aria-label=${
-          this.nativeModal.requested ? nothing : this.accessibleLabel ?? (this.label ? this.label : this.localize('navigation'))
+          this.nativeModal.requested ? nothing : this.accessibleLabel ?? this.label ?? this.localize('navigation')
         }
         role=${this.nativeModal.requested ? nothing : this.overlayActive ? 'dialog' : 'navigation'}
         aria-modal=${this.overlayActive && !this.nativeModal.requested ? 'true' : nothing}
@@ -1842,22 +1860,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         </div>
         ${this.nativeModal.renderHelperSlot()}
       </div>
-      ${this.resizable && this._mode === 'full'
-        ? html`<div
-            part="resizer"
-            role="separator"
-            aria-orientation="vertical"
-            aria-label=${this.localize('resizeNavigation')}
-            aria-valuenow=${Math.round(railWidthPx)}
-            aria-valuetext=${this.resizeValueText(railWidthPx)}
-            aria-valuemin=${this.safeMinRailWidthPx}
-            aria-valuemax=${this.safeMaxRailWidthPx}
-            tabindex="0"
-            @pointerdown=${this.onResizerPointerDown}
-            @keydown=${this.onResizerKeyDown}
-          ><span part="resizer-track"></span></div>`
-        : nothing}
-    `, { label: this.accessibleLabel ?? (this.label || this.localize('navigation')) });
+      ${this.resizable && this._mode === 'full' ? this.renderResizer() : nothing}
+    `, { label: this.accessibleLabel ?? this.label ?? this.localize('navigation') });
   }
 }
 

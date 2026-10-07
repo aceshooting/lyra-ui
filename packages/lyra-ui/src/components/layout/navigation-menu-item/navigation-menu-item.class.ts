@@ -11,6 +11,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -60,17 +61,6 @@ const PLACEMENT_STYLE_PROPERTIES = [
 ] as const;
 
 const SHOW_OFFSET = 'translateY(var(--lr-size-neg-0-25rem))';
-
-/** Parses a computed `transition-duration`/`transition-delay` list into milliseconds. */
-function parseTimeList(value: string): number[] {
-  return value.split(',').map((entry) => {
-    const match = /^\s*(-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)(ms|s)\s*$/i.exec(entry);
-    if (!match) return 0;
-    const amount = Number(match[1]);
-    if (!Number.isFinite(amount)) return 0;
-    return match[2]?.toLowerCase() === 's' ? amount * 1000 : amount;
-  });
-}
 
 /**
  * `<lr-navigation-menu-item>` — one entry of an `<lr-navigation-menu>` bar: a link, a disclosure
@@ -689,12 +679,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     // The switch duration is never declared on the host, so read the resolved transition itself:
     // it already carries the whole fallback chain and the reduced-motion flattening.
     const style = view.getComputedStyle(panel);
-    const durations = parseTimeList(style.transitionDuration);
-    const delays = parseTimeList(style.transitionDelay);
-    const total = Math.max(
-      0,
-      ...durations.map((duration, index) => duration + (delays[index % Math.max(1, delays.length)] ?? 0)),
-    );
+    const total = maxCssTime(style.transitionDuration) + maxCssTime(style.transitionDelay);
     let frame: number | undefined;
     let timer: number | undefined;
     const onEnd = (event: TransitionEvent): void => {

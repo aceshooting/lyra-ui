@@ -1,4 +1,5 @@
 import type { ReactiveElement } from 'lit';
+import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 
 /** Private rendered-motion coordinator shared by Details and Accordion Item. */
@@ -15,6 +16,15 @@ export class DisclosureMotionController {
   cancel(): void {
     this.generation += 1;
     setCustomState(this.internals, 'animating', false);
+  }
+
+  /** Moves focus to `trigger` when it sits inside `region`, which a collapse is about to hide. */
+  repairFocus(region: Element | null, trigger: HTMLElement | null): void {
+    for (let node = deepActiveElementIn(this.host.ownerDocument); node && region; node = composedParentElement(node)) {
+      if (node !== region) continue;
+      trigger?.focus({ preventScroll: true });
+      return;
+    }
   }
 
   async settle(afterRender?: () => void): Promise<boolean> {

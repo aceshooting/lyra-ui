@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import {
@@ -35,13 +35,14 @@ export interface LyraAccordionEventMap {
   'lr-after-expand': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   'lr-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
   'lr-after-collapse': CustomEvent<LyraEventDetailSnapshot<LyraAccordionEventDetail>>;
-  // `lr-expand`/`lr-collapse` put the direction in the event NAME; this shape puts it in the
-  // DETAIL instead, as `collapsed` (`collapsed: true` is the closing direction). `item` is kept
-  // alongside it because, unlike single-panel components, an accordion's toggling entity is one of
-  // several children -- a generic listener still needs it to know which panel is proposed to
-  // change.
+  // `lr-expand`/`lr-collapse` carry the direction in the event name; this event carries it in the
+  // detail (`expanded`, like every other `lr-toggle-request`, plus the older `collapsed`).
   'lr-toggle-request': CustomEvent<
-    LyraEventDetailSnapshot<{ readonly collapsed: boolean; readonly item: LyraAccordionItem }>
+    LyraEventDetailSnapshot<{
+      readonly collapsed: boolean;
+      readonly expanded: boolean;
+      readonly item: LyraAccordionItem;
+    }>
   >;
 }
 
@@ -80,7 +81,8 @@ function normalizeMode(value: unknown): LyraAccordionMode {
  *   group's event only when `event.target === event.currentTarget` (see `lr-toggle-request`).
  * @event lr-toggle-request - Emitted alongside `lr-expand`/`lr-collapse` for the same proposed
  *   transition, with the direction in the detail instead of the event name, plus `item` to
- *   identify which child is proposed to change. `detail: { collapsed, item }`. Cancelable; a
+ *   identify which child is proposed to change. `detail: { expanded, collapsed, item }`, where
+ *   `expanded` is the proposed state, as in every other `lr-toggle-request`. Cancelable; a
  *   listener calling `preventDefault()` on either `lr-toggle-request` or the matching
  *   `lr-expand`/`lr-collapse` vetoes the transition, and both always fire so a listener on one
  *   name never misses a transition the other name already vetoed.
@@ -132,7 +134,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     'lr-after-collapse': Object.freeze(['item']),
     'lr-toggle-request': Object.freeze(['item']),
   });
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',
     'lr-after-expand',
@@ -312,20 +314,24 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     return true;
   }
 
-  #isNavigableItem(item: LyraAccordionItem): boolean {
+  /** `excluded` memoises composed ancestors for one pass, so items share their common ancestors' style reads. */
+  #isNavigableItem(item: LyraAccordionItem, excluded = new Map<Element, boolean>()): boolean {
     if (item.disabled) return false;
     for (
       let current: Element | null = item;
       current;
       current = composedParentElement(current)
     ) {
-      if (isAccessibilitySubtreeExcluded(current)) return false;
+      let hidden = excluded.get(current);
+      if (hidden === undefined) excluded.set(current, (hidden = isAccessibilitySubtreeExcluded(current)));
+      if (hidden) return false;
     }
     return true;
   }
 
   #navigableItems(): LyraAccordionItem[] {
-    return [...this.panels].filter((panel) => this.#isNavigableItem(panel));
+    const excluded = new Map<Element, boolean>();
+    return [...this.panels].filter((panel) => this.#isNavigableItem(panel, excluded));
   }
 
   #syncRovingTabIndex(
@@ -349,13 +355,9 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     const items = [...this.panels];
     const index = items.indexOf(displaced);
     if (index < 0) return this.#navigableItems()[0];
-    return (
-      items.slice(index + 1).find((item) => this.#isNavigableItem(item)) ??
-      items
-        .slice(0, index)
-        .reverse()
-        .find((item) => this.#isNavigableItem(item))
-    );
+    const excluded = new Map<Element, boolean>();
+    const available = (item: LyraAccordionItem): boolean => this.#isNavigableItem(item, excluded);
+    return items.slice(index + 1).find(available) ?? items.slice(0, index).reverse().find(available);
   }
 
   #reconcileRovingFocus(displaced = this.#lastFocusedItem): void {
@@ -447,7 +449,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     );
     const unified = this.emit(
       'lr-toggle-request',
-      { item, collapsed },
+      { item, collapsed, expanded: !collapsed },
       { cancelable: true }
     );
     return !directional.defaultPrevented && !unified.defaultPrevented;
@@ -501,6 +503,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   };
 
   private handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
     const current = this.#itemFor(event);
     if (
       !current ||

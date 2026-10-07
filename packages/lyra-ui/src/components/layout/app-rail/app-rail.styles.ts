@@ -30,6 +30,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   :host([mode="mobile"]) [part="toggle"] {
     display: inline-flex;

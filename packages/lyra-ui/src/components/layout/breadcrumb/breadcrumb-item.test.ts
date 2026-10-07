@@ -336,3 +336,15 @@ it('inherits its pressed fill independently from an ancestor', async () => {
     await resetMouse();
   }
 });
+
+it('keeps an authored role and applies listitem only when none is set', async () => {
+  const plain = (await fixture(html`<lr-breadcrumb-item>Home</lr-breadcrumb-item>`)) as LyraBreadcrumbItem;
+  const authored = (await fixture(html`<lr-breadcrumb-item role="presentation">Home</lr-breadcrumb-item>`)) as LyraBreadcrumbItem;
+  expect([plain.getAttribute('role'), authored.getAttribute('role')]).to.deep.equal(['listitem', 'presentation']);
+});
+
+it('colours a link from its own color hook', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="--lr-breadcrumb-item-color: rgb(1, 2, 3)"><lr-breadcrumb-item href="/">Home</lr-breadcrumb-item></div>`);
+  const base = wrapper.querySelector('lr-breadcrumb-item')!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(getComputedStyle(base).color).to.equal('rgb(1, 2, 3)');
+});

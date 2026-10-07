@@ -1,6 +1,11 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
-import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+import {
+  activateNonmodalOverlay,
+  composedContains,
+  deepActiveElement,
+  type OverlayHandle,
+} from '../../../internal/nonmodal-overlay-manager.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -8,10 +13,12 @@ import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
   isComposedFocusAvailable,
+  repairComposedFocus,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { tag } from '../../../internal/prefix.js';
@@ -210,8 +217,12 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   /** Optional destination. Without `href`, the item renders as a button. */
   @property() href = '';
 
-  /** Optional link target. */
+  /** Optional link target. Any target adds `noopener noreferrer` to the rendered `rel`. */
   @property() target = '';
+
+  /** Link relationship tokens for the anchor; `opener` is dropped and a `target` always adds
+   *  `noopener noreferrer`. */
+  @property() rel?: string;
 
   /** Prevents activation while retaining the item in the rail. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -238,8 +249,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
    * block, so the automatic top-layer escape never applies, and no `z-index` on the tooltip can
    * lift it out of that ancestor's context. While set, the tooltip is placed with the `fixed`
    * strategy whatever `--lr-positioning-strategy` resolves to; no DOM node moves, so anchoring,
-   * RTL placement, focus, Escape and the show/hide transition are unchanged. It stays promoted
-   * through its hide transition and leaves the top layer once it settles closed. Stacking contexts
+   * RTL placement, focus and Escape dismissal are unchanged. Stacking contexts
    * are deliberately not detected automatically. Without native Popover API support the tooltip
    * keeps its ordinary `z-index` stacking. Same contract as `<lr-popover>`'s `top-layer`. Changes
    * apply live while open. Also applied when the owning `<lr-app-rail>` sets `top-layer`.
@@ -294,6 +304,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   @query('slot[name="meta"]') private metaSlot?: HTMLSlotElement;
   @query('slot[name="end"]') private endSlot?: HTMLSlotElement;
   private stopPositioning?: () => void;
+  private tooltipOverlay?: OverlayHandle;
   private labelObserver?: MutationObserver;
   private childrenObserver?: MutationObserver;
   private recoverFocusAfterIconOnly = false;
@@ -391,16 +402,10 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   };
 
   // Only the default slot's own content counts toward the tooltip text and the disclosure's
-  // interpolated {label} -- text incidentally living inside the (decorative) `icon` slot or a
-  // nested `children` item shouldn't leak into either. Mirrors `lr-chip`'s `labelText` getter.
+  // interpolated {label}; every named slot (`icon`, `meta`, `end`, `children`) stays out.
   private get labelText(): string {
     return Array.from(this.childNodes)
-      .filter((node): node is Text | Element => {
-        if (node.nodeType === 3) return true;
-        if (node.nodeType !== 1) return false;
-        const slot = (node as Element).getAttribute('slot');
-        return slot !== 'icon' && slot !== 'children';
-      })
+      .filter((node) => node.nodeType === 3 || (node.nodeType === 1 && !(node as Element).getAttribute('slot')))
       .map((n) => n.textContent ?? '')
       .join('')
       .trim();
@@ -490,6 +495,10 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('tooltip') && !this.tooltip) this.showTooltip = false;
+    const children = this.renderRoot?.querySelector('[part="children"]');
+    if (changed.has('expanded') && !this._expanded && children) {
+      repairComposedFocus(children, () => this.renderRoot.querySelector('[part="toggle"]'));
+    }
     if (changed.has('href') || changed.has('disabled')) {
       const previous = this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null;
       const nextIsLink = Boolean(safeLinkHref(this.href)) && !this.disabled;
@@ -528,7 +537,19 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     if (!popup) {
       this.stopPositioning?.();
       this.stopPositioning = undefined;
+      this.tooltipOverlay?.deactivate({ restoreFocus: false });
+      this.tooltipOverlay = undefined;
       return;
+    }
+    if (!this.tooltipOverlay?.isActive()) {
+      this.tooltipOverlay = activateNonmodalOverlay({
+        host: this,
+        panel: () => this.renderRoot.querySelector<HTMLElement>('[part="tooltip"]'),
+        onEscape: () => {
+          this.showTooltip = false;
+        },
+        restoreFocusTo: null,
+      });
     }
     if (
       changed.has('showTooltip') ||
@@ -566,6 +587,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     this.childrenObserver = undefined;
     this.stopPositioning?.();
     this.stopPositioning = undefined;
+    this.tooltipOverlay?.deactivate({ restoreFocus: false });
+    this.tooltipOverlay = undefined;
     this.showTooltip = false;
   }
 
@@ -573,7 +596,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     if (this.focusReturnTarget && isComposedFocusAvailable(this.focusReturnTarget)) {
       return this.focusReturnTarget;
     }
-    const rail = this.closest('lr-app-rail');
+    const rail = this.closest(tag('app-rail'));
     const owner = rail?.shadowRoot?.querySelector<HTMLElement>('[part~="base"], [part~="panel"]') ?? null;
     return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
@@ -636,7 +659,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
             part="base"
             href=${href}
             target=${this.target || nothing}
-            rel=${this.target ? 'noopener noreferrer' : nothing}
+            rel=${resolveGuardedRel(this.rel, this.target) ?? nothing}
             aria-label=${label ?? nothing}
             aria-disabled="false"
             aria-current=${this.current ? 'page' : 'false'}

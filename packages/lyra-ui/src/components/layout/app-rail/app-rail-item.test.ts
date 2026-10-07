@@ -1776,3 +1776,62 @@ it('hides nested disclosure in icon-only while preserving its expansion and acce
   expect(getComputedStyle(el.shadowRoot!.querySelector('[part="children"]')!).display).not.to.equal('none');
   expect(el.expanded).to.equal(true);
 });
+
+describe('app-rail-item flyout, name and rel', () => {
+  it('dismisses the label flyout with Escape for keyboard focus and for hover', async () => {
+    const wrapper = await fixture(html`<div><lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item></div>`);
+    const el = wrapper.querySelector('lr-app-rail-item') as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const flyout = () => el.shadowRoot!.querySelector('[part="tooltip"]');
+
+    await focusByKeyboard(base);
+    await waitUntil(() => flyout() !== null, 'keyboard focus shows the flyout');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => flyout() === null, 'Escape dismisses the focused flyout');
+    base.blur();
+
+    base.dispatchEvent(new MouseEvent('mouseenter'));
+    await waitUntil(() => flyout() !== null, 'hover shows the flyout');
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => flyout() === null, 'Escape dismisses the hovered flyout');
+  });
+
+  it('names the flyout and the disclosure from the default slot only', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item tooltip icon-only>
+        Account<span slot="meta">3</span><button slot="end">More options</button>
+        <lr-app-rail-item slot="children">Profile</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Account');
+    expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-label')).to.equal('Expand Account');
+  });
+
+  it('merges an authored rel with the target guard and drops opener', async () => {
+    const el = (await fixture(html`<lr-app-rail-item href="/a" target="_blank" rel="me opener">A</lr-app-rail-item>`)) as LyraAppRailItem;
+    const anchor = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(anchor.getAttribute('rel')).to.equal('me noopener noreferrer');
+    el.target = '';
+    await el.updateComplete;
+    expect(anchor.getAttribute('rel')).to.equal('me');
+    el.rel = '';
+    await el.updateComplete;
+    expect(anchor.hasAttribute('rel')).to.equal(false);
+  });
+
+  it('moves focus to the disclosure when collapsing hides a focused child', async () => {
+    const el = (await fixture(html`
+      <lr-app-rail-item expanded>Projects
+        <lr-app-rail-item slot="children" id="child">One</lr-app-rail-item>
+      </lr-app-rail-item>
+    `)) as LyraAppRailItem;
+    const child = el.querySelector('#child') as LyraAppRailItem;
+    await child.updateComplete;
+    child.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.focus();
+    el.expanded = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle');
+  });
+});

@@ -67,7 +67,7 @@ export class LyraMenubarItem extends LyraElement {
   /** @internal */
   get menuElement(): HTMLElement | null { return this.panel; }
   /** @internal */
-  get textLabel(): string { return composedAccessibilityText(this).replace(/\s+/g, ' ').trim() || this.label; }
+  get textLabel(): string { return this.label; }
 
   /** @internal Releases only the requesting owner's lease after reparenting. */
   [menubarItemOwner](owner: MenubarItemOwner | null, expectedOwner?: MenubarItemOwner): void {

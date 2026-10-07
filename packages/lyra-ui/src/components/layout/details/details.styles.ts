@@ -101,6 +101,7 @@ export const styles = css`
     max-inline-size: 100%;
     overflow: clip;
     overflow-wrap: anywhere;
+    transition: var(--lr-transition-interactive);
   }
   .summary-content {
     flex: 1 1 auto;

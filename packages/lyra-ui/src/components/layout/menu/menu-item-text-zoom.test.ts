@@ -73,6 +73,7 @@ describe('mounted menu text follows root text zoom after look changes', function
       base.style.transition = 'none';
       base.style.opacity = '0';
       await nextFrame();
+      expect(getComputedStyle(base).opacity).to.equal('0');
       base.style.transition = 'opacity var(--lr-transition-fast)';
       const duration = Number.parseFloat(getComputedStyle(base).transitionDuration);
       expect(duration).to.be.greaterThan(0);

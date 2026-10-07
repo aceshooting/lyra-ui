@@ -64,7 +64,7 @@ export const styles = css`
 
   [part='toggle']:where(:hover) {
     background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    color: var(--_lr-glass-brand-text, var(--lr-color-brand));
   }
 
   [part='toggle']:where(:active) {

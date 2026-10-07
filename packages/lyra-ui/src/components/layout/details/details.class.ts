@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -53,7 +53,8 @@ export interface LyraDetailsEventMap {
  * nothing.
  *
  * A present host `aria-label`, including an explicitly empty value, names the native summary
- * trigger. When absent, the summary retains its native name-from-content behavior.
+ * trigger. When absent, the summary retains its native name-from-content behavior. Closing while
+ * focus is inside the content moves focus to the summary.
  *
  * @customElement lr-details
  * @slot summary - Summary content. Takes priority over `summary` when any light-DOM child
@@ -399,6 +400,8 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
 
   private applyOpenState(next: boolean): void {
     const old = this._open;
+    const gate = this.contentGate;
+    if (!next) this.disclosureMotion.repairFocus(gate, this.summaryElement);
     this._open = next;
     this.contentGateGeneration += 1;
     this.setContentGateMode(next ? 'open' : 'until-found');

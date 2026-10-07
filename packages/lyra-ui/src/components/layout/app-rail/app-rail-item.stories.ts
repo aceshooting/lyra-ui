@@ -8,6 +8,10 @@ const meta: Meta = { title: 'Navigation/App rail item', component: 'lr-app-rail-
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-app-rail-item href="/home">Home</lr-app-rail-item>` };
 
+export const ExternalLink: StoryObj = {
+  render: () => html`<lr-app-rail-item href="https://example.com/docs" target="_blank" rel="external">Docs</lr-app-rail-item>`,
+};
+
 export const ProgrammaticActivation: StoryObj = {
   name: 'Programmatic click()',
   parameters: {

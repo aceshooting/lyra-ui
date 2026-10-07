@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
+import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -57,7 +58,7 @@ export interface LyraAppRailGroupEventMap {
  *   control's own accessible name while `collapsible` is set.
  * @slot header-actions - Controls rendered beside the heading — an "add" button, an overflow menu.
  *   A SIBLING of the heading (and so of the collapse control inside it), matching `<lr-details>`'s
- *   header-actions shape, so activating one never toggles the group.
+ *   header-actions shape, so activating one never toggles the group or closes the rail's mobile overlay.
  * @event lr-toggle-request - Cancelable proposal emitted before `collapsed` changes from the
  *   built-in collapse control. Call `preventDefault()` to keep the current state, or assign
  *   `collapsed` from the listener to resolve it yourself — a write during the dispatch suppresses
@@ -181,6 +182,14 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
     if (name !== 'icon-only' || oldValue === newValue) return;
     this.syncOwnedItems();
     this.requestUpdate();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const content = this.renderRoot?.querySelector('[part="content"]');
+    if (changed.has('collapsed') && this._collapsed && content) {
+      repairComposedFocus(content, () => this.renderRoot.querySelector('[part="toggle"]'));
+    }
   }
 
   protected override updated(changed: PropertyValues): void {

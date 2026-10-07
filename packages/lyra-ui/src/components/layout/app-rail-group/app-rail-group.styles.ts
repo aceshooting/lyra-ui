@@ -59,7 +59,7 @@ export const styles = css`
   }
   [part="toggle"]:hover {
     background: var(--lr-app-rail-group-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-app-rail-group-hover-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-group-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   /* Pressed travels further along hover's own axis -- the same brand-quiet fill mixed toward
      --lr-color-mix-partner, which follows the text colour, so it deepens on a light theme and
@@ -73,7 +73,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-app-rail-group-active-color, var(--lr-color-brand));
+    color: var(--lr-app-rail-group-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="toggle"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

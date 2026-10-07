@@ -57,3 +57,20 @@ export const DisabledAndAction: StoryObj = {
     if (output) output.textContent = 'Help requested';
   }}>Help</lr-menubar-item></lr-menubar><output aria-live="polite"></output></div>`,
 };
+export const TopLayer: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A header with its own `z-index` is a stacking context: a menu inside it paints beneath a sibling surface stacked higher. `top-layer` opts every menu of the bar into the browser top layer, above that sibling, without moving any DOM node. Open File in each bar to compare.',
+      },
+    },
+  },
+  render: () => html`<div style="block-size:var(--lr-size-20rem)">
+    <div style="position:relative;z-index:1000;display:flex;gap:var(--lr-space-l);padding:var(--lr-space-s) var(--lr-space-m);background:var(--lr-color-surface-raised)">
+      <lr-menubar label="Unset"><lr-menubar-item>File<lr-menu slot="menu"><lr-menu-item>New tab</lr-menu-item><lr-menu-item>Print…</lr-menu-item></lr-menu></lr-menubar-item></lr-menubar>
+      <lr-menubar label="Top layer" top-layer><lr-menubar-item>File<lr-menu slot="menu"><lr-menu-item>New tab</lr-menu-item><lr-menu-item>Print…</lr-menu-item></lr-menu></lr-menubar-item></lr-menubar>
+    </div>
+    <div style="position:relative;z-index:1100;block-size:var(--lr-size-12rem);padding:var(--lr-space-m);background:var(--lr-color-surface)">Sibling surface (z-index: 1100)</div>
+  </div>`,
+};

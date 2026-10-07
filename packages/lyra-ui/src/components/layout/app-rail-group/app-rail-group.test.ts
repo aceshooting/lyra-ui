@@ -5,6 +5,8 @@ import './app-rail-group.js';
 import '../app-rail/app-rail-item.js';
 import '../app-rail/app-rail.js';
 import type { LyraAppRail } from '../app-rail/app-rail.js';
+import type { LyraAppRailItem } from '../app-rail/app-rail-item.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraAppRailGroup } from './app-rail-group.class.js';
 import {
   captureDeprecationWarnings,
@@ -614,5 +616,46 @@ describe('lr-app-rail-group: collapsed and the deprecated inverted open alias', 
       JSON.stringify({ expanded: true }),
       JSON.stringify({ expanded: true }),
     ]);
+  });
+});
+
+describe('app-rail-group collapse focus and glass hover', () => {
+  it('moves focus to the collapse control when collapsing hides a focused item', async () => {
+    const el = (await fixture<LyraAppRailGroup>(html`
+      <lr-app-rail-group heading="Projects" collapsible>
+        <lr-app-rail-item href="/one" id="one">One</lr-app-rail-item>
+      </lr-app-rail-group>
+    `)) as LyraAppRailGroup;
+    const item = el.querySelector('#one') as LyraAppRailItem;
+    await item.updateComplete;
+    item.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.focus();
+    el.collapsed = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle');
+  });
+
+  it('paints its hover foreground like the items beside it on a glass surface', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--_lr-glass-foreground-weight: 50%; --lr-theme-transition-fast: 0s">
+        <lr-app-rail-group heading="Projects" collapsible><lr-app-rail-item href="/one">One</lr-app-rail-item></lr-app-rail-group>
+      </div>
+    `);
+    const group = wrapper.querySelector<LyraAppRailGroup>('lr-app-rail-group')!;
+    const item = group.querySelector('lr-app-rail-item')!;
+    await item.updateComplete;
+    const toggle = group.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+    const base = item.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const hoverColor = async (target: HTMLElement, rest: string): Promise<string> => {
+      await hoverUntilMatched(target, 'the control receives the pointer');
+      await waitUntil(() => getComputedStyle(target).color !== rest, 'hover repaints the foreground');
+      return getComputedStyle(target).color;
+    };
+    try {
+      const itemColor = await hoverColor(base, getComputedStyle(base).color);
+      const toggleColor = await hoverColor(toggle, getComputedStyle(toggle).color);
+      expect(toggleColor).to.equal(itemColor);
+    } finally {
+      await resetMouse();
+    }
   });
 });

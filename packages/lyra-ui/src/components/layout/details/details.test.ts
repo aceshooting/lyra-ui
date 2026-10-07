@@ -2009,3 +2009,19 @@ describe('empty header-actions wrapper', () => {
     );
   });
 });
+
+describe('details focus repair and summary transition', () => {
+  it('moves focus to the summary when closing hides the focused content', async () => {
+    const el = await fixture<LyraDetails>(html`<lr-details summary="Advanced" open><button id="apply">Apply</button></lr-details>`);
+    el.querySelector<HTMLButtonElement>('#apply')!.focus();
+    await el.hide();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('summary');
+  });
+
+  it('eases the summary fill on hover and press like its siblings', async () => {
+    const el = await fixture<LyraDetails>(html`<lr-details summary="Advanced">Body</lr-details>`);
+    const style = getComputedStyle(summaryOf(el));
+    expect(style.transitionProperty).to.contain('background-color');
+    expect(Number.parseFloat(style.transitionDuration)).to.be.greaterThan(0);
+  });
+});

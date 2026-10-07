@@ -36,6 +36,8 @@ export type LyraBreadcrumbItemTarget = '_blank' | '_parent' | '_self' | '_top';
  *   current-page item (`current`/`aria-current="page"`). Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the current item
  *   without hijacking the library-wide `--lr-color-text-quiet` token.
+ * @cssprop [--lr-breadcrumb-item-color=var(--lr-color-text)] - Text color of a link or button; the
+ *   current-page item keeps `--lr-breadcrumb-current-color`.
  * @cssprop --lr-breadcrumb-item-active-bg - Link/button pressed background; defaults to the
  *   former transparent active mix.
  * @status stable
@@ -77,7 +79,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   private semanticFocusOrigin?: Element;
   override connectedCallback(): void {
     super.connectedCallback();
-    this.setAttribute('role', 'listitem');
+    if (!this.hasAttribute('role')) this.setAttribute('role', 'listitem');
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {

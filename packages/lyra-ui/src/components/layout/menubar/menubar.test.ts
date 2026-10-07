@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion, setForcedColors } from '../../../../test/wtr-media.js';
+import { headerFixture, hitBelongsTo, pointOverSibling } from '../../../../test/top-layer-header.js';
 import { activateNonmodalOverlay, deepActiveElement } from '../../../internal/nonmodal-overlay-manager.js';
 import type { LyraMenubar } from './menubar.class.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
@@ -55,10 +56,10 @@ describe('lr-menubar', () => {
     expect(Array.from(bar.children).filter(node => (node as HTMLElement).tabIndex === 0).length).to.equal(1);
   });
 
-  it('preserves absent and explicitly empty accessible names with host precedence', async () => {
+  it('names an absent label with the localized default and keeps an explicitly empty name with host precedence', async () => {
     const bar = await fixture<LyraMenubar>(html`<lr-menubar><lr-menubar-item>Help</lr-menubar-item></lr-menubar>`);
     const base = bar.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.hasAttribute('aria-label')).to.equal(false);
+    expect(base.getAttribute('aria-label')).to.equal('Menu');
     bar.label = 'App'; await bar.updateComplete;
     expect(base.getAttribute('aria-label')).to.equal('App');
     bar.label = ''; await bar.updateComplete;
@@ -445,5 +446,76 @@ describe('lr-menubar', () => {
     key(file, 'ArrowDown'); await waitUntil(() => active() === 'new'); expect(wrapper.inert).to.equal(false);
     key(bar.querySelector<HTMLElement>('#new')!, 'Tab'); expect(wrapper.inert).to.equal(false);
     file.focus(); await waitUntil(() => wrapper.inert);
+  });
+});
+
+describe('lr-menubar name, type-ahead and top-layer', () => {
+  it('names the bar from label, the localized default, or the host aria-label', async () => {
+    const [unnamed, empty, host, strings] = await Promise.all([
+      fixture<LyraMenubar>(html`<lr-menubar><lr-menubar-item>File</lr-menubar-item></lr-menubar>`),
+      fixture<LyraMenubar>(html`<lr-menubar label=""><lr-menubar-item>File</lr-menubar-item></lr-menubar>`),
+      fixture<LyraMenubar>(html`<lr-menubar label="App" aria-label="Primary"><lr-menubar-item>File</lr-menubar-item></lr-menubar>`),
+      fixture<LyraMenubar>(html`<lr-menubar .strings=${{ menuLabel: 'Barre' }}><lr-menubar-item>File</lr-menubar-item></lr-menubar>`),
+    ]);
+    const name = (bar: LyraMenubar): string | null => bar.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+    expect([name(unnamed), name(empty), name(host), name(strings)]).to.deep.equal(['Menu', '', 'Primary', 'Barre']);
+  });
+
+  it('matches type-ahead against cached titles without reading styles', async () => {
+    const bar = await fixture<LyraMenubar>(html`<lr-menubar label="App">
+      ${Array.from({ length: 12 }, (_, index) => html`<lr-menubar-item id=${`t${index}`}>Title ${index}</lr-menubar-item>`)}
+      <lr-menubar-item id="zeta">Zeta</lr-menubar-item></lr-menubar>`);
+    await waitUntil(() => item(bar, 't0').tabIndex === 0);
+    item(bar, 't0').focus();
+    await aTimeout(50);
+    const original = window.getComputedStyle;
+    let reads = 0;
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      reads += 1;
+      return original.call(window, element, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      key(item(bar, 't0'), 'z');
+    } finally {
+      window.getComputedStyle = original;
+    }
+    expect(active()).to.equal('zeta');
+    expect(reads).to.be.at.most(10);
+  });
+
+  describe('top-layer', () => {
+    async function mount(topLayer: boolean) {
+      const { wrapper, sibling } = await headerFixture(
+        html`<lr-menubar label="App" ?top-layer=${topLayer} style="--lr-transition-fast:0ms">
+          <lr-menubar-item id="file">File<lr-menu slot="menu"><lr-menu-item id="new">New</lr-menu-item><lr-menu-item id="open">Open</lr-menu-item></lr-menu></lr-menubar-item>
+        </lr-menubar>`,
+        '900px',
+      );
+      const bar = wrapper.querySelector('lr-menubar') as LyraMenubar;
+      await waitUntil(() => item(bar, 'file').hasMenu);
+      return { bar, sibling };
+    }
+
+    it('defaults off: a menu stays beneath a higher sibling', async () => {
+      const { bar, sibling } = await mount(false);
+      const file = item(bar, 'file');
+      expect(bar.topLayer).to.equal(false);
+      file.click();
+      await opened(file);
+      const [x, y] = pointOverSibling(surface(file), sibling);
+      expect(surface(file).matches(':popover-open')).to.equal(false);
+      expect(hitBelongsTo(bar, x, y)).to.equal(false);
+    });
+
+    it('paints above the higher sibling when opted in', async () => {
+      const { bar, sibling } = await mount(true);
+      const file = item(bar, 'file');
+      expect(bar.topLayer).to.equal(true);
+      file.click();
+      await opened(file);
+      await waitUntil(() => surface(file).matches(':popover-open'), 'the menu is promoted');
+      const [x, y] = pointOverSibling(surface(file), sibling);
+      expect(hitBelongsTo(bar, x, y)).to.equal(true);
+    });
   });
 });

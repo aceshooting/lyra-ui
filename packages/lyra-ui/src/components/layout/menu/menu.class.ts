@@ -1,6 +1,6 @@
 import { maxCssTime } from '../../../internal/css-motion-time.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import type { Placement } from '@floating-ui/dom';
 import {
@@ -9,6 +9,8 @@ import {
 } from '../../../internal/lyra-element.js';
 import {
   deferredPlaceReady as place,
+  syncTopLayerRelease,
+  topLayerPlacement,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -34,7 +36,6 @@ import {
   type MenuItemOwner,
   type SubmenuPanelController,
 } from './menu-shared.js';
-import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -258,7 +259,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     menuLabel: LYRA_DEFAULT_menuLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-select',
@@ -340,6 +341,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
 
   private cleanup?: DeferredOperationHandle;
   private presentationPositioned = false;
+  private placedTopLayer?: boolean;
   private itemStateObserver?: MutationObserver;
   private pointerDocument?: Document;
   private menubarAnchored = false;
@@ -568,12 +570,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       const placement = this.menubarAnchored
         ? MENUBAR_PLACEMENT
         : rtlAwarePlacement(SUBMENU_PLACEMENT, this);
+      const bar = this.submenuAnchor.closest<HTMLElement & { topLayer?: boolean }>(tag('menubar'));
+      const topLayer = bar?.topLayer === true;
+      this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, topLayer);
       this.cleanup = place(this.submenuAnchor, popup, {
         placement,
         flipFallbackPlacements: this.menubarAnchored
           ? undefined
           : SUBMENU_FALLBACK_PLACEMENTS.map(candidate => rtlAwarePlacement(candidate, this)),
-        strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
+        ...topLayerPlacement(topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
       });
     }
   }
@@ -1064,7 +1069,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const target = e.target;
     if (!isLyraMenuItemElement(target)) return;
     const index = this.items.indexOf(target);
-    if (index === -1 || index === this.activeIndex) return;
+    if (index === -1 || index === this.activeIndex || !this.isNavigable(target)) return;
     this.activeIndex = index;
     this.applyRovingTabIndex();
     // Focus landing on a different row is the same intent as an arrow key moving there: whatever
@@ -1077,7 +1082,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // Everything below is scoped to this menu's own level: a keydown from inside a nested submenu
     // is that submenu's to handle, and driving both menus from one keypress would move two roving
     // highlights (or close two menus) at once.
-    if (this.isForeignEvent(e)) return;
+    if (this.isForeignEvent(e) || e.altKey || e.ctrlKey || e.metaKey || e.isComposing) return;
     const isItemTarget = isLyraMenuItemElement(e.target);
     if (e.key === 'Escape' && isItemTarget && !this.hasStandalonePresentation) {
       e.preventDefault();
@@ -1161,9 +1166,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // "Tab moves within the surface" apart from "Tab leaves the surface". 'Tab'
       // is longer than one character, so the type-ahead default arm ignores it.
       default:
-        if (e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
-          this.typeAhead(e.key);
-        }
+        if (e.key.length === 1) this.typeAhead(e.key);
         return;
     }
   };
@@ -1335,7 +1338,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       const candidate = navigable[(currentIndex + step + n) % n];
       if (!candidate) continue; // modulo n keeps the index in-bounds; guard satisfies the checker
       if (
-        this.itemText(candidate)
+        candidate
+          .getTextLabel()
           .toLocaleLowerCase(this.effectiveLocale)
           .startsWith(this.typeAheadBuffer)
       ) {
@@ -1353,13 +1357,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.typeAheadBuffer = '';
   }
 
-  /** What type-ahead matches against: the row's accessible name where it has one, its text
-   *  otherwise. The distinction is load-bearing for a submenu parent, whose `textContent` also
-   *  contains every label inside the submenu. */
-  private itemText(item: LyraMenuItem): string {
-    return composedAccessibilityText(item).trim();
-  }
-
   /** Resolves `label`'s effective text: a host-level `aria-label` attribute wins first
    *  (unset by default, so this is a no-op for every existing consumer), then an explicit menu
    *  `label`, then a containing dropdown's label. With none of those supplied, it routes through
@@ -1373,7 +1370,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     return this.localize('menuLabel');
   }
 
-  private renderContents(): TemplateResult {
+  private renderContents(bindPointerOver = true): TemplateResult {
     return html`
       <div part="header">
         <slot name="header" @slotchange=${this.onRegionSlotChange}></slot>
@@ -1385,7 +1382,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         aria-label=${this.effectiveLabel}
         @keydown=${this.onListKeyDown}
         @focusin=${this.onListFocusIn}
-        @pointerover=${this.onPopupPointerOver}
+        @pointerover=${bindPointerOver ? this.onPopupPointerOver : nothing}
         @pointerleave=${this.onPopupPointerLeave}
         @lr-menu-item-state-change=${this.onItemStateChangeEvent}
         @lr-select=${this.onNestedSelect}
@@ -1410,7 +1407,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         @pointerover=${this.onPopupPointerOver}
         @pointerleave=${this.onPopupPointerLeave}
       >
-        ${this.renderContents()}
+        ${this.renderContents(false)}
       </div>
     `;
   }

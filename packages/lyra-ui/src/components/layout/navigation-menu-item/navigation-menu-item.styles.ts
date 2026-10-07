@@ -59,7 +59,7 @@ export const styles = css`
 
   [part~='base']:where(:hover) {
     background: var(--lr-navigation-menu-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-navigation-menu-item-hover-color, var(--lr-color-brand));
+    color: var(--lr-navigation-menu-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
 
   [part~='base']:where(:active) {
@@ -76,14 +76,14 @@ export const styles = css`
   }
 
   [part~='base-current'] {
-    color: var(--lr-navigation-menu-item-current-color, var(--lr-color-brand));
+    color: var(--lr-navigation-menu-item-current-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
     font-weight: var(--lr-navigation-menu-item-current-font-weight, var(--lr-font-weight-semibold));
     transition: var(--lr-transition-interactive);
   }
 
   [part~='base-current']:where(:hover) {
     background: var(--lr-navigation-menu-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-navigation-menu-item-hover-color, var(--lr-color-brand));
+    color: var(--lr-navigation-menu-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
 
   [part~='base-current']:where(:active) {
@@ -101,7 +101,7 @@ export const styles = css`
 
   [part~='base-open']:where(:hover) {
     background: var(--lr-navigation-menu-item-hover-bg, var(--lr-color-brand-quiet));
-    color: var(--lr-navigation-menu-item-hover-color, var(--lr-color-brand));
+    color: var(--lr-navigation-menu-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
 
   [part~='base-open']:where(:active) {

@@ -23,7 +23,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
-    color: var(--lr-color-text);
+    color: var(--lr-breadcrumb-item-color, var(--lr-color-text));
     text-decoration: none;
     border-radius: var(--lr-radius);
     min-inline-size: 0;

@@ -1616,3 +1616,125 @@ describe('collecting already-slotted panels without relying on the initial slotc
     }
   });
 });
+
+describe('accordion events, keys, availability and findability', () => {
+  const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  it('reports the proposed state as expanded beside collapsed on lr-toggle-request', async () => {
+    const { accordion, items } = await renderAccordion();
+    const seen: Array<{ collapsed: boolean; expanded: boolean }> = [];
+    accordion.addEventListener('lr-toggle-request', (event) => {
+      const { collapsed, expanded } = (event as CustomEvent<{ collapsed: boolean; expanded: boolean }>).detail;
+      seen.push({ collapsed, expanded });
+    });
+    const expanded = oneEvent(accordion, 'lr-after-expand');
+    buttonFor(items[0]!).click();
+    await expanded;
+    const collapsed = oneEvent(accordion, 'lr-after-collapse');
+    buttonFor(items[0]!).click();
+    await collapsed;
+    expect(seen).to.deep.equal([
+      { collapsed: false, expanded: true },
+      { collapsed: true, expanded: false },
+    ]);
+  });
+
+  it('leaves Alt, Ctrl, Meta and composition keys to the browser', async () => {
+    const { items } = await renderAccordion();
+    buttonFor(items[0]!).focus();
+    for (const init of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }, { isComposing: true }]) {
+      for (const key of ['ArrowDown', 'ArrowRight', 'Home', 'End']) {
+        expect(press(buttonFor(items[0]!), key, init).defaultPrevented, `${key} with ${Object.keys(init)[0]}`).to.equal(false);
+      }
+    }
+    expect(document.activeElement?.id).to.equal('one');
+  });
+
+  it('reads each composed ancestor style once per availability pass rather than once per item', async () => {
+    const root = await fixture<HTMLElement>(html`<div></div>`);
+    let parent: HTMLElement = root;
+    for (let level = 0; level < 12; level += 1) parent = parent.appendChild(document.createElement('div'));
+    const accordion = parent.appendChild(document.createElement('lr-accordion')) as LyraAccordion;
+    const items = Array.from({ length: 10 }, (_, index) => {
+      const item = accordion.appendChild(document.createElement('lr-accordion-item')) as LyraAccordionItem;
+      item.label = `Item ${index}`;
+      return item;
+    });
+    await Promise.all(items.map((item) => item.updateComplete));
+    buttonFor(items[0]!).focus();
+    const original = window.getComputedStyle;
+    let reads = 0;
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      reads += 1;
+      return original.call(window, element, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      press(buttonFor(items[0]!), 'ArrowDown');
+    } finally {
+      window.getComputedStyle = original;
+    }
+    expect(document.activeElement === items[1]).to.equal(true);
+    expect(reads).to.be.at.most(200);
+  });
+
+  it('moves focus to the trigger when collapsing hides the focused content', async () => {
+    const item = await fixture<LyraAccordionItem>(html`<lr-accordion-item label="Q" expanded style=${quickMotion}><button id="inside">Inside</button></lr-accordion-item>`);
+    item.querySelector<HTMLButtonElement>('#inside')!.focus();
+    await item.collapse();
+    expect(item.shadowRoot!.activeElement?.id).to.equal('trigger');
+  });
+
+  describe('findable collapsed content', () => {
+    const clipOf = (item: LyraAccordionItem): HTMLElement => item.shadowRoot!.querySelector<HTMLElement>('.panel-clip')!;
+    const panelOf = (item: LyraAccordionItem): HTMLElement => item.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+
+    it('keeps settled collapsed content behind hidden=until-found and open content unhidden', async () => {
+      const item = await fixture<LyraAccordionItem>(html`<lr-accordion-item label="Q" style=${quickMotion}><p id="needle">needle</p></lr-accordion-item>`);
+      expect(clipOf(item).getAttribute('hidden')).to.equal('until-found');
+      expect(getComputedStyle(clipOf(item)).contentVisibility).to.equal('hidden');
+      expect(panelOf(item).hasAttribute('inert')).to.equal(false);
+      await item.expand();
+      expect(clipOf(item).hasAttribute('hidden')).to.equal(false);
+      expect(panelOf(item).hasAttribute('inert')).to.equal(false);
+      const collapsing = item.collapse();
+      await item.updateComplete;
+      expect(clipOf(item).hasAttribute('hidden')).to.equal(false);
+      expect(panelOf(item).hasAttribute('inert')).to.equal(true);
+      await collapsing;
+      await item.updateComplete;
+      expect(clipOf(item).getAttribute('hidden')).to.equal('until-found');
+      expect(panelOf(item).hasAttribute('inert')).to.equal(false);
+    });
+
+    it('expands through the group request when the browser finds text inside', async () => {
+      const { accordion, items } = await renderAccordion();
+      const requests: string[] = [];
+      accordion.addEventListener('lr-expand', (event) => requests.push(event.detail.item.id));
+      clipOf(items[1]!).dispatchEvent(new Event('beforematch'));
+      await waitUntil(() => items[1]!.expanded);
+      expect(requests).to.deep.equal(['two']);
+    });
+
+    it('keeps a vetoed match collapsed and findable', async () => {
+      const { accordion, items } = await renderAccordion();
+      accordion.addEventListener('lr-expand', (event) => event.preventDefault());
+      const clip = clipOf(items[0]!);
+      clip.dispatchEvent(new Event('beforematch'));
+      clip.removeAttribute('hidden');
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      expect(items[0]!.expanded).to.equal(false);
+      expect(clip.getAttribute('hidden')).to.equal('until-found');
+    });
+  });
+
+  it('eases the trigger fill on hover and press like its siblings', async () => {
+    const { items } = await renderAccordion();
+    const style = getComputedStyle(buttonFor(items[0]!));
+    expect(style.transitionProperty).to.contain('background-color');
+    expect(Number.parseFloat(style.transitionDuration)).to.be.greaterThan(0);
+  });
+});

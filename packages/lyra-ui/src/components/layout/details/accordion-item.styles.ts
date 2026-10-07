@@ -69,6 +69,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part~="button"]:where(:hover):where(:not(:disabled)) {
     background: var(
@@ -150,7 +151,6 @@ export const styles = css`
   [part~="panel"] {
     display: grid;
     grid-template-rows: 0fr;
-    visibility: hidden;
     opacity: 0;
     color: var(--lr-color-text-quiet);
     transition: grid-template-rows
@@ -176,20 +176,10 @@ export const styles = css`
         var(
           --easing,
           var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
-        ),
-      visibility
-        var(
-          --hide-duration,
-          var(
-            --lr-accordion-item-hide-duration,
-            var(--_lr-accordion-item-hide-duration)
-          )
-        )
-        step-end;
+        );
   }
   :host([expanded]) [part~="panel"] {
     grid-template-rows: 1fr;
-    visibility: visible;
     opacity: 1;
     transition: grid-template-rows
         var(
@@ -214,16 +204,7 @@ export const styles = css`
         var(
           --easing,
           var(--lr-accordion-item-easing, var(--_lr-accordion-item-easing))
-        ),
-      visibility
-        var(
-          --show-duration,
-          var(
-            --lr-accordion-item-show-duration,
-            var(--_lr-accordion-item-show-duration)
-          )
-        )
-        step-start;
+        );
   }
   .panel-clip {
     min-block-size: 0;

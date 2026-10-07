@@ -8,11 +8,12 @@ import {
 } from 'lit';
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, query, state } from 'lit/decorators.js';
+import { isAccessibilitySubtreeExcluded } from '../../../internal/a11y.js';
 import {
-  composedParentElement,
-  isAccessibilitySubtreeExcluded,
-} from '../../../internal/a11y.js';
-import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+  accessibleTextRecordsMatter,
+  bindAccessibleTextObserver,
+  composedAccessibilityText,
+} from '../../../internal/accessibility-visibility.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -416,6 +417,14 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     return this.disabled || this.loading;
   }
 
+  constructor() {
+    super();
+    // A press on a disabled row must not focus it and make it the roving stop.
+    this.addEventListener('mousedown', (event) => {
+      if (this.interactionDisabled) event.preventDefault();
+    });
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     // Seed the host's accessible name before the first visual slotchange. The rendered wrapper is
@@ -441,10 +450,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         attributes: true,
         attributeFilter: ['hidden', 'inert', 'aria-hidden'],
       });
-      this.labelObserver = new MutationObserverCtor(() => {
+      const observer = new MutationObserverCtor((records) => {
+        if (!accessibleTextRecordsMatter(observer, records)) return;
         this.observeLabelContent();
         this.syncSlottedLabel();
       });
+      this.labelObserver = observer;
       this.observeLabelContent();
     }
     this.addEventListener('slotchange', this.onForwardedLabelSlotChange);
@@ -717,16 +728,6 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     );
   }
 
-  private composedParentForNode(node: Node): Element | null {
-    const assignedSlot = (
-      node as Node & { assignedSlot?: HTMLSlotElement | null }
-    ).assignedSlot;
-    if (assignedSlot) return assignedSlot;
-    if (node.parentElement) return node.parentElement;
-    const root = node.getRootNode() as Document | ShadowRoot;
-    return 'host' in root && root.host.nodeType === 1 ? root.host : null;
-  }
-
   private isLabelSubtreeExcluded(element: Element): boolean {
     const presentationFence =
       element.getRootNode() === this.renderRoot &&
@@ -758,56 +759,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       .trim();
   }
 
-  private observeLabelAncestors(
-    node: Node,
-    options: MutationObserverInit
-  ): void {
-    const observer = this.labelObserver;
-    if (!observer) return;
-    let current = this.composedParentForNode(node);
-    while (current) {
-      // The full subtree observation below already owns this target. Calling observe() again with
-      // attribute-only options would replace that registration instead of adding another one.
-      if (current !== this && !this.contains(current))
-        observer.observe(current, options);
-      current = composedParentElement(current);
-    }
-  }
-
   private observeLabelContent(): void {
-    const observer = this.labelObserver;
-    if (!observer) return;
-    observer.disconnect();
-    const options: MutationObserverInit = {
-      attributes: true,
-      attributeFilter: [
-        'aria-hidden',
-        'aria-label',
-        'aria-labelledby',
-        'alt',
-        'class',
-        'data-hidden',
-        'hidden',
-        'inert',
-        'id',
-        'label',
-        'open',
-        'slot',
-        'style',
-      ],
-      characterData: true,
-      childList: true,
-      subtree: true,
-    };
-    observer.observe(this, options);
-    const slot = this.defaultLabelSlot();
-    for (const assigned of slot?.assignedNodes({ flatten: true }) ?? []) {
-      if (!this.contains(assigned)) observer.observe(assigned, options);
-      this.observeLabelAncestors(assigned, {
-        attributes: true,
-        attributeFilter: options.attributeFilter,
-      });
-    }
+    bindAccessibleTextObserver(this.labelObserver, this, ['data-hidden', 'label', 'slot']);
   }
 
   private syncSlottedLabel(
@@ -961,9 +914,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     if (panel) syncOwnedAriaLabel(panel, this.slottedLabel, this.panelName, panel.hasAttribute('label'));
   }
 
-  /** Text label used by type-ahead and Shoelace-compatible integrations. */
+  /** Text label used by type-ahead and Shoelace-compatible integrations. Kept live by the label
+   *  observer, so a read right after a label edit may lag it by one microtask. */
   getTextLabel(): string {
-    return this.readSlottedLabel();
+    return this.slottedLabel;
   }
 
   /** @internal The loading spinner's part tokens. A subclass registered under another tag may add

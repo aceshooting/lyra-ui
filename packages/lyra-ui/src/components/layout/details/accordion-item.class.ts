@@ -1,8 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { resolveHeadingLevel, type LyraResolvedHeadingLevel } from '../../../internal/heading-level.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { styles } from './accordion-item.styles.js';
@@ -22,7 +23,7 @@ import type {
 } from './accordion-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_details } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type {
@@ -40,6 +41,10 @@ export type {
  *
  * A present host `aria-label`, including an explicitly empty value, names the trigger button.
  * When absent, the trigger retains its native name-from-content behavior.
+ *
+ * Collapsed content stays findable by browser find-in-page (`hidden="until-found"`); a match expands
+ * the item through the owning group's request. Collapsing while focus is inside the content moves
+ * focus to the trigger.
  *
  * @customElement lr-accordion-item
  * @slot - Panel content.
@@ -99,7 +104,6 @@ export class LyraAccordionItem extends LyraElement {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -115,6 +119,8 @@ export class LyraAccordionItem extends LyraElement {
   private _expanded = false;
 
   @state() private hasLabel = false;
+  /** True once a collapse has finished, so closed content sits behind `hidden="until-found"`. */
+  @state() private settledClosed = true;
 
   constructor() {
     super();
@@ -164,6 +170,7 @@ export class LyraAccordionItem extends LyraElement {
 
   override disconnectedCallback(): void {
     this.disclosureMotion.cancel();
+    this.settledClosed = !this._expanded;
     super.disconnectedCallback();
   }
 
@@ -183,6 +190,9 @@ export class LyraAccordionItem extends LyraElement {
 
   private applyExpandedState(next: boolean): void {
     const old = this._expanded;
+    const panel = this.renderRoot?.querySelector('#panel');
+    if (next) this.settledClosed = false;
+    else if (panel) this.disclosureMotion.repairFocus(panel, this.button);
     this._expanded = next;
     this.requestUpdate('expanded', old);
   }
@@ -212,6 +222,7 @@ export class LyraAccordionItem extends LyraElement {
 
     this.applyExpandedState(expanded);
     if (!(await this.disclosureMotion.settle())) return;
+    this.settledClosed = !this._expanded;
     if (announceOwner) notifyAccordionItemTransitionSettled(this, expanded);
   }
 
@@ -257,8 +268,8 @@ export class LyraAccordionItem extends LyraElement {
         .length > 0;
   };
 
-  private heading(button: TemplateResult): TemplateResult {
-    switch (this.effectiveHeadingLevel) {
+  private heading(level: LyraResolvedHeadingLevel, button: TemplateResult): TemplateResult {
+    switch (level) {
       case '1':
         return html`<h1 part="heading">${button}</h1>`;
       case '2':
@@ -273,6 +284,15 @@ export class LyraAccordionItem extends LyraElement {
         return html`<h3 part="heading">${button}</h3>`;
     }
   }
+
+  /** Find-in-page matched closed content: open through the owner's request; a veto re-arms findability. */
+  private onBeforeMatch = (event: Event): void => {
+    const clip = event.currentTarget as HTMLElement;
+    void this.transitionTo(true, 'user');
+    queueMicrotask(() => {
+      if (!this._expanded && this.settledClosed) clip.setAttribute('hidden', 'until-found');
+    });
+  };
 
   private get effectiveAppearance(): LyraAccordionAppearance {
     return accordionItemOwnerContext(this)?.appearance ?? this.appearance;
@@ -289,6 +309,7 @@ export class LyraAccordionItem extends LyraElement {
   override render(): TemplateResult {
     const fallbackLabel = this.label || this.localize('details');
     const hostLabel = hostAriaLabel(this);
+    const level = resolveHeadingLevel(this.effectiveHeadingLevel);
     const button = html`<button
       id="trigger"
       part="button"
@@ -319,16 +340,20 @@ export class LyraAccordionItem extends LyraElement {
       data-appearance=${this.effectiveAppearance}
       data-icon-placement=${this.effectiveIconPlacement}
     >
-      ${this.effectiveHeadingLevel === 'none' ? button : this.heading(button)}
+      ${level ? this.heading(level, button) : button}
       <div
         id="panel"
         part="panel"
         role="region"
         aria-labelledby="trigger"
         aria-hidden=${this.expanded ? 'false' : 'true'}
-        ?inert=${!this.expanded}
+        ?inert=${!this.expanded && !this.settledClosed}
       >
-        <div class="panel-clip"><slot part="content"></slot></div>
+        <div
+          class="panel-clip"
+          hidden=${this.settledClosed ? 'until-found' : nothing}
+          @beforematch=${this.onBeforeMatch}
+        ><slot part="content"></slot></div>
       </div>
     </div>`;
   }

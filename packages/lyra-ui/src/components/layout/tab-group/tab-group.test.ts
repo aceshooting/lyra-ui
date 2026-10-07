@@ -13,7 +13,6 @@ import "./tab-panel.js";
 import type { LyraTabGroup } from "./tab-group.js";
 import type { LyraTab } from "./tab.js";
 import type { LyraTabPanel } from "./tab-panel.js";
-import { styles } from "./tab-group.styles.js";
 import {
   hoverUntilMatched,
   resetMouse,
@@ -92,25 +91,9 @@ it("never scrolls vertically -- overflow-x:auto alone lets the y axis compute to
   expect(getComputedStyle(tablist).overflowY).to.equal("hidden");
 });
 
-it("declares a themeable edge fade, gated on the tablist overflowing", () => {
-  const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.include("-webkit-mask-image: linear-gradient");
-  expect(css).to.include("mask-image: linear-gradient");
-  expect(css).to.include("var(--lr-scroll-fade-size)");
-  // The gradient must live behind the overflow gate, never on the bare [part~='tablist'] rule.
-  // The per-edge conditions sit inside :where() so they cannot outrank the forced-colors override
-  // below -- see the computed-style test that follows, which is what actually proves the cascade.
-  expect(css).to.include("[part~='tablist'][data-scroll-overflow]:where(");
-  expect(css).to.include("@media (forced-colors: active)");
-  expect(css).to.include("mask-image: none");
-});
-
 it("actually renders no mask under forced colors, in both LTR and RTL, while only one logical edge is reachable", async () => {
-  // The stylesheet-text assertions above cannot catch a specificity regression: they prove the
-  // forced-colors override EXISTS, not that it WINS. Before the :where()-wrapping, the one-sided
-  // mask rules carried four attribute selectors against the override's two, so the gradient mask
-  // stayed painted under forced-colors -- erasing tab labels in exactly the high-contrast mode
-  // that exists to make them legible. Assert the real computed style, not the source text.
+  // The forced-colors override must WIN the cascade, not merely exist: a painted gradient mask
+  // erases tab labels in exactly the high-contrast mode that exists to make them legible.
   try {
     await setForcedColors("active");
     for (const direction of ["ltr", "rtl"] as const) {

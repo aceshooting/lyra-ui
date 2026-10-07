@@ -1791,3 +1791,40 @@ describe('<lr-navigation-menu> top-layer escape', () => {
     outside.remove();
   });
 });
+
+describe('navigation menu label and glass foregrounds', () => {
+  it('names the nav from label, with the host aria-label winning and an empty label literal', async () => {
+    const labelled = await menuFixture(html`<lr-navigation-menu label="Main">${items('l-')}</lr-navigation-menu>`);
+    expect(part(labelled, 'base')!.getAttribute('aria-label')).to.equal('Main');
+    const empty = await menuFixture(html`<lr-navigation-menu label="">${items('m-')}</lr-navigation-menu>`);
+    expect(part(empty, 'base')!.getAttribute('aria-label')).to.equal('');
+    const both = await menuFixture(html`<lr-navigation-menu label="Main" aria-label="Primary">${items('b-')}</lr-navigation-menu>`);
+    expect(part(both, 'base')!.getAttribute('aria-label')).to.equal('Primary');
+  });
+
+  it('qualifies bar-item hover, current and collapsed-toggle foregrounds for a glass surface', async () => {
+    const menu = await menuFixture(html`
+      <div style="inline-size: 320px; --_lr-glass-foreground-weight: 100%; --lr-theme-color-text-normal: rgb(1, 2, 3); --lr-theme-transition-fast: 0s">
+        <lr-navigation-menu mobile-breakpoint="40rem">${items('g-')}</lr-navigation-menu>
+      </div>
+    `);
+    await waitUntil(() => menu.collapsed, 'menu never collapsed');
+    await settle(menu);
+    const isText = (target: Element): boolean =>
+      toRgba(getComputedStyle(target).color).slice(0, 3).every((channel, index) => Math.abs(channel - [1, 2, 3][index]!) <= 1);
+    try {
+      const toggle = part(menu, 'toggle')!;
+      await hoverUntilMatched(toggle, 'the collapsed toggle receives the pointer');
+      await waitUntil(() => isText(toggle), 'toggle hover foreground follows the glass token');
+      menu.expanded = true;
+      await settle(menu);
+      const current = base(item(menu, 'g-docs'));
+      await waitUntil(() => isText(current), 'the current item foreground follows the glass token');
+      const pricing = base(item(menu, 'g-pricing'));
+      await hoverUntilMatched(pricing, 'the item receives the pointer');
+      await waitUntil(() => isText(pricing), 'item hover foreground follows the glass token');
+    } finally {
+      await resetMouse();
+    }
+  });
+});

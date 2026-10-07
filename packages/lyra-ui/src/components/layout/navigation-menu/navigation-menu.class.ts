@@ -152,8 +152,12 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
 
   /** Accessible name of the `nav` landmark, mapped to the host `aria-label` attribute. Attribute
    * presence wins, so `aria-label=""` leaves the landmark deliberately unnamed; with no value the
-   * landmark is named with the localized "Navigation". */
+   * landmark is named from `label`, then the localized "Navigation". */
   @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+
+  /** Accessible name of the `nav` landmark when no host `aria-label` is set. A supplied string,
+   * including an empty one, is literal; only absence uses the localized "Navigation". */
+  @property() label?: string;
 
   /** Allocation breakpoint: the menu collapses while its content-box inline size is at or below
    * this length. Accepts a bare number or a `px`, `rem` or `em` length. Unset or unresolvable
@@ -1093,7 +1097,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
 
   override render(): TemplateResult {
     const hostLabel = hostAriaLabel(this);
-    const label = hostLabel ?? this.localize('navigation');
+    const label = hostLabel ?? this.label ?? this.localize('navigation');
     const collapsed = this.collapsedLayout;
     const box = this.indicatorBox;
     return html`<nav part="base" aria-label=${label}>

@@ -5,6 +5,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.js';
@@ -20,9 +21,6 @@ import type {
 import '../tab-group/tab-group.class.js';
 import '../tab-group/tab.class.js';
 import '../tab-group/tab-panel.class.js';
-import '../../viewers/document-preview/document-preview.class.js';
-import '../../retrieval/entity-card/entity-card.class.js';
-import '../../retrieval/source-card/source-card.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -172,6 +170,14 @@ const MAX_LABEL_LENGTH = 4_096;
 const MAX_TEXT_LENGTH = 65_536;
 const MAX_URL_LENGTH = 8_192;
 const ACTIVE_PAGE_SIZE = 8;
+
+/** Each data-gated child registers the first time its category renders. */
+const CHILD_REGISTRATIONS = {
+  evidence: () => import('../../retrieval/source-card/source-card.js'),
+  documents: () => import('../../viewers/document-preview/document-preview.js'),
+  entities: () => import('../../retrieval/entity-card/entity-card.js'),
+} as const;
+const registeredChildren = new Set<string>();
 
 const EMPTY_PATH: readonly LyraDrilldownNode[] = Object.freeze([]);
 const EMPTY_TYPES: readonly LyraNodeTypeStyle[] = Object.freeze([]);
@@ -786,6 +792,10 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     const node = this.currentNode;
     const categories = node ? this.categoriesFor(node) : [];
     const active = this.resolvedCategory(categories) ?? '';
+    if (active in CHILD_REGISTRATIONS && !registeredChildren.has(active)) {
+      registeredChildren.add(active);
+      CHILD_REGISTRATIONS[active as keyof typeof CHILD_REGISTRATIONS]().catch(() => registeredChildren.delete(active));
+    }
     const context = `${this.pathRevision}:${node?.nodeId ?? ''}:${active}`;
     if (context !== this.pageContext) {
       this.pageContext = context;
@@ -1045,11 +1055,16 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     });
   }
 
-  private changePage(delta: number, total: number): void {
+  private changePage(delta: number, total: number, label: string): void {
     const lastPage = Math.max(0, Math.ceil(total / ACTIVE_PAGE_SIZE) - 1);
-    this.categoryPage = Math.min(
-      lastPage,
-      Math.max(0, this.categoryPage + delta)
+    const page = Math.min(lastPage, Math.max(0, this.categoryPage + delta));
+    // The pressed button disables itself on the first or last page: hand focus to its partner first.
+    const [leaving, staying] = delta > 0 ? (['next', 'previous'] as const) : (['previous', 'next'] as const);
+    const button = (side: string) => this.renderRoot.querySelector<HTMLElement>(`[part="${side}-button"]`);
+    if (page === (delta > 0 ? lastPage : 0) && activeElementIn(this.shadowRoot) === button(leaving)) button(staying)?.focus();
+    this.categoryPage = page;
+    this.announcementSink?.announce(
+      this.rangeSummary(page * ACTIVE_PAGE_SIZE + 1, Math.min(total, (page + 1) * ACTIVE_PAGE_SIZE), total, label)
     );
   }
 
@@ -1127,14 +1142,14 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
               part="previous-button"
               size="s"
               ?disabled=${page === 0}
-              @click=${() => this.changePage(-1, items.length)}
+              @click=${() => this.changePage(-1, items.length, label)}
               >${this.localize('previous')}</lr-button
             >
             <lr-button
               part="next-button"
               size="s"
               ?disabled=${page === lastPage}
-              @click=${() => this.changePage(1, items.length)}
+              @click=${() => this.changePage(1, items.length, label)}
               >${this.localize('next')}</lr-button
             >
           </nav>`

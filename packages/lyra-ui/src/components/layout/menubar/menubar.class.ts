@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
@@ -15,6 +15,10 @@ import type { MenuFocusTarget } from '../menu/menu-shared.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
 import { menubarItemOwner, type MenubarItemOwner } from './menubar-shared.js';
 import { styles } from './menubar.styles.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraMenubarEventMap {
   'lr-select': CustomEvent<MenuItemSelectDetail>;
@@ -37,10 +41,28 @@ const TYPE_AHEAD_RESET_MS = 500;
  * @since 21.0.0
  */
 export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    menuLabel: LYRA_DEFAULT_menuLabel,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
   static override styles = [LyraElement.styles, sizes, styles];
 
-  /** Accessible name; a host aria-label takes precedence, including an explicit empty value. */
+  /** Accessible name; a host aria-label takes precedence, including an explicit empty value. A
+   *  supplied string, including an empty one, is literal; only absence uses the localized "Menu". */
   @property() label?: string;
+  /**
+   * Shows every menu this bar opens, nested submenus included, in the browser top layer wherever
+   * the native Popover API exists, so it paints above every page layer whatever the stacking
+   * contexts around it. Use it inside a fixed or sticky header with its own `z-index` that a
+   * higher sibling surface would otherwise cover. Menus are placed with the `fixed` strategy
+   * while set; no DOM node moves. Applies the next time a menu opens. Same contract as
+   * `<lr-navigation-menu>`'s `top-layer`.
+   * @default false
+   */
+  @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
   /** Shared control size inherited by every title. */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Card chrome or a transparent frame with identical geometry. */
@@ -271,6 +293,6 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   };
 
   override render(): TemplateResult {
-    return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.label ?? nothing}><slot @slotchange=${this.syncItems}></slot></div>`;
+    return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.label ?? this.localize('menuLabel')}><slot @slotchange=${this.syncItems}></slot></div>`;
   }
 }

@@ -1,6 +1,10 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
 import "./drilldown-panel.js";
+import "../../viewers/document-preview/document-preview.js";
+import "../../retrieval/entity-card/entity-card.js";
+import "../../retrieval/source-card/source-card.js";
 import type {
   LyraDrilldownEntity,
   LyraDrilldownNode,
@@ -11,6 +15,7 @@ import type { LyraSourceCard } from "../../retrieval/source-card/source-card.js"
 import type { LyraDocumentPreview } from "../../viewers/document-preview/document-preview.js";
 import type { LyraEntityCard } from "../../retrieval/entity-card/entity-card.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
+import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -1643,5 +1648,59 @@ describe("lr-drilldown-panel contains the composed lr-tab-group's lr-activate", 
       escaped,
       "this panel's documented surface is lr-drilldown-category-change; the child's raw event never escapes"
     ).to.equal(0);
+  });
+});
+
+describe("drilldown paging and trail hooks", () => {
+  const paged = (count: number): LyraDrilldownNode[] => [
+    {
+      nodeId: "paged-node",
+      label: "Paged node",
+      documents: Array.from({ length: count }, (_, index) => ({
+        documentId: `doc-${index}`,
+        name: `doc-${index}.txt`,
+        mimeType: "text/plain",
+      })),
+    },
+  ];
+
+  it("keeps focus on the enabled pager button and announces each range when paging reaches the last page", async () => {
+    const el = (await fixture(
+      html`<lr-drilldown-panel active-category="documents" .path=${paged(20)}></lr-drilldown-panel>`
+    )) as LyraDrilldownPanel;
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`) as HTMLElement;
+    const button = (side: string) => el.shadowRoot!.querySelector<HTMLElement & { disabled: boolean }>(`[part="${side}-button"]`)!;
+    button("next").focus();
+    await sendKeys({ press: "Enter" });
+    await waitUntil(() => sink.lastElementChild?.textContent?.includes("9–16") === true, "the second range was not announced");
+    await sendKeys({ press: "Enter" });
+    await waitUntil(() => sink.lastElementChild?.textContent?.includes("17–20") === true, "the last range was not announced");
+    await el.updateComplete;
+    expect(button("next").disabled).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("previous-button");
+    await sendKeys({ press: "Enter" });
+    await sendKeys({ press: "Enter" });
+    await el.updateComplete;
+    expect(button("previous").disabled).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("next-button");
+  });
+
+  it("lets a consumer's breadcrumb-item hooks reach the trail it renders", async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div style="--lr-breadcrumb-item-active-bg: rgb(1, 2, 3)">
+      <lr-drilldown-panel .path=${[{ nodeId: "a", label: "Root" }, { nodeId: "b", label: "Leaf" }]}></lr-drilldown-panel>
+    </div>`);
+    const panel = wrapper.querySelector("lr-drilldown-panel") as LyraDrilldownPanel;
+    const item = panel.shadowRoot!.querySelector("lr-breadcrumb-item:not([current])") as HTMLElement;
+    await (item as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const base = item.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    try {
+      await hoverUntilMatched(base, "the trail link receives the pointer");
+      await sendMouse({ type: "down" });
+      await waitUntil(() => base.matches(":active"), "the trail link never reported :active");
+      await waitUntil(() => getComputedStyle(base).backgroundColor === "rgb(1, 2, 3)", "the pressed fill ignored the item hook");
+    } finally {
+      await sendMouse({ type: "up" });
+      await resetMouse();
+    }
   });
 });

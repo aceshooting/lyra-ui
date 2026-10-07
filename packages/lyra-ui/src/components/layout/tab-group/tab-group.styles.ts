@@ -124,94 +124,6 @@ export const styles = css`
   :host(:dir(rtl)) [part~="scroll-button-end"] [part="scroll-button-glyph"] {
     transform: scaleX(-1);
   }
-  /* Edge affordance gated on real overflow: ScrollOverflowController toggles data-scroll-overflow
-     from a scrollWidth/clientWidth measurement; scrolling stays native, with no scroll listener.
-     Unconditional, it fades the first and last tab of a row that fits.
-     data-scroll-start/data-scroll-end sit in :where() to pin these rules to the plain
-     [data-scroll-overflow] baseline, so the later same-selector forced-colors override wins the
-     tie on source order rather than leaving the gradient mask painted. */
-  [part~="tablist"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part~="tablist"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part~="tablist"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part~="tablist"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part~="tablist"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
   [part="tab"] {
     position: relative;
     appearance: none;
@@ -459,12 +371,5 @@ export const styles = css`
   :host([placement="end"]) [part="panel"] {
     flex: 1 1 auto;
     min-inline-size: 0;
-  }
-  @media (forced-colors: active) {
-    [part~="tablist"][data-scroll-overflow],
-    :host(:dir(rtl)) [part~="tablist"][data-scroll-overflow] {
-      -webkit-mask-image: none;
-      mask-image: none;
-    }
   }
 `;

@@ -1,4 +1,5 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './menu.js';
 import './menu-item.js';
 import './menu-label.js';
@@ -104,5 +105,97 @@ describe('menu type-ahead reset debounce', () => {
     expect(bufferOf(el), 'a reconnected menu still accumulates').to.equal('e');
     await aTimeout(700);
     expect(bufferOf(el), 'and its reset still fires').to.equal('');
+  });
+});
+
+describe('menu keys, disabled press, type-ahead and label observation', () => {
+  const press = (target: HTMLElement, key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...init });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  it('leaves modified and composing keys to the browser', async () => {
+    const menu = await fixture<LyraMenu>(html`<lr-menu><lr-menu-item id="a">A</lr-menu-item><lr-menu-item id="b">B</lr-menu-item></lr-menu>`);
+    const a = menu.querySelector<LyraMenuItem>('#a')!;
+    a.focus();
+    await waitUntil(() => a.tabIndex === 0);
+    let selected = 0;
+    menu.addEventListener('lr-select', () => selected++);
+    for (const init of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }, { isComposing: true }]) {
+      for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ']) {
+        expect(press(a, key, init).defaultPrevented, `${key} with ${Object.keys(init)[0]}`).to.equal(false);
+      }
+    }
+    expect(selected).to.equal(0);
+    expect(document.activeElement?.id).to.equal('a');
+  });
+
+  it('keeps the roving stop when a disabled item is pressed with the mouse or focused by script', async () => {
+    const menu = await fixture<LyraMenu>(html`<lr-menu><lr-menu-item id="a">A</lr-menu-item><lr-menu-item id="b" disabled>B</lr-menu-item><lr-menu-item id="c">C</lr-menu-item></lr-menu>`);
+    const [a, b, c] = ['a', 'b', 'c'].map((id) => menu.querySelector<LyraMenuItem>(`#${id}`)!);
+    a!.focus();
+    await waitUntil(() => a!.tabIndex === 0);
+    try {
+      const rect = b!.getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)] });
+    } finally {
+      await resetMouse();
+    }
+    expect(document.activeElement?.id, 'the press leaves focus where it was').to.equal('a');
+    b!.focus();
+    await aTimeout(0);
+    expect([a!.tabIndex, b!.tabIndex, c!.tabIndex]).to.deep.equal([0, -1, -1]);
+    a!.focus();
+    press(a!, 'ArrowDown');
+    expect(document.activeElement?.id).to.equal('c');
+  });
+
+  it('matches type-ahead against cached labels without reading styles', async () => {
+    const root = await fixture<HTMLElement>(html`<div><div><div><div><lr-menu>
+      ${Array.from({ length: 24 }, (_, index) => html`<lr-menu-item id=${`i${index}`}>Row ${index}</lr-menu-item>`)}
+      <lr-menu-item id="zeta">Zeta</lr-menu-item>
+    </lr-menu></div></div></div></div>`);
+    const first = root.querySelector<LyraMenuItem>('#i0')!;
+    first.focus();
+    await waitUntil(() => first.tabIndex === 0);
+    await aTimeout(50);
+    const original = window.getComputedStyle;
+    let reads = 0;
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      reads += 1;
+      return original.call(window, element, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      press(first, 'z');
+    } finally {
+      window.getComputedStyle = original;
+    }
+    expect(document.activeElement?.id).to.equal('zeta');
+    expect(reads).to.be.at.most(10);
+  });
+
+  it('ignores ancestor writes that cannot change an item name but follows an ancestor that hides and shows it', async () => {
+    const wrap = await fixture<HTMLElement>(html`<div><lr-menu><lr-menu-item id="item"><span>Beta</span></lr-menu-item></lr-menu></div>`);
+    const item = wrap.querySelector<LyraMenuItem>('#item')!;
+    await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
+    wrap.style.width = '10px';
+    await aTimeout(50);
+    const access = item as unknown as { readSlottedLabel: (...args: unknown[]) => string };
+    const read = access.readSlottedLabel.bind(item);
+    let reads = 0;
+    access.readSlottedLabel = (...args: unknown[]) => {
+      reads += 1;
+      return read(...args);
+    };
+    wrap.style.left = '12px';
+    wrap.style.top = '4px';
+    wrap.className = 'moved';
+    await aTimeout(50);
+    expect(reads).to.equal(0);
+    wrap.style.display = 'none';
+    await waitUntil(() => !item.hasAttribute('aria-label'));
+    wrap.style.display = '';
+    await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
   });
 });
