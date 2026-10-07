@@ -1553,21 +1553,18 @@ it('tracks slotted label, hint and error content through slotchange', async () =
     </lr-locale-picker>
   `)) as LyraLocalePicker;
   await el.updateComplete;
-  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean;
-  };
-  expect(flags.hasLabelSlot).to.be.true;
-  expect(flags.hasHintSlot).to.be.true;
-  expect(flags.hasErrorSlot).to.be.true;
+  const chrome = (part: string) => el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+  expect(chrome('form-control-label').hidden).to.be.false;
+  expect(chrome('hint').hidden).to.be.false;
+  expect(chrome('error').hidden).to.be.false;
 
   for (const slot of ['label', 'hint', 'error']) el.querySelector(`[slot="${slot}"]`)!.remove();
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await el.updateComplete;
-  expect(flags.hasLabelSlot).to.be.false;
-  expect(flags.hasHintSlot).to.be.false;
-  expect(flags.hasErrorSlot).to.be.false;
+  await waitUntil(() => chrome('hint').hidden);
+  expect(chrome('form-control-label').hidden).to.be.true;
+  expect(chrome('error').hidden).to.be.true;
 });
 
-it('prevents mousedown on a listbox option but not on listbox chrome', async () => {
+it('prevents mousedown on every listbox press so a scrollbar or padding press cannot blur the trigger', async () => {
   const el = (await fixture(
     html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
@@ -1579,7 +1576,7 @@ it('prevents mousedown on a listbox option but not on listbox chrome', async () 
 
   const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
   el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
-  expect(onChrome.defaultPrevented).to.be.false;
+  expect(onChrome.defaultPrevented).to.be.true;
 });
 
 it('reports validity through the native surface', async () => {

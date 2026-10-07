@@ -6,6 +6,14 @@ import { COUNTRY_CODES } from '../../../countries.js';
 import './country-picker.js';
 
 describe('<lr-country-picker>', () => {
+  it('registers the combobox only once searchable is first enabled', async () => {
+    const el = await fixture<LyraCountryPicker>(html`<lr-country-picker label="Country" value="LU"></lr-country-picker>`);
+    expect(customElements.get('lr-combobox') === undefined, 'a plain picker never pays for the combobox').to.equal(true);
+    el.searchable = true;
+    await waitUntil(() => customElements.get('lr-combobox') !== undefined && el.shadowRoot!.querySelector('lr-combobox') !== null);
+    await waitUntil(() => el.input !== null);
+  });
+
   it('offers the pinned countries, names and decorative flags without a search field by default', async () => {
     const el = await fixture<LyraCountryPicker>(html`<lr-country-picker label="Country" value="LU"></lr-country-picker>`);
     expect(COUNTRY_CODES.length).to.equal(249);
@@ -112,4 +120,20 @@ describe('<lr-country-picker>', () => {
     expect(child.shadowRoot!.querySelectorAll('[part~="option"]').length).to.equal(2);
     await expect(el).to.be.accessible();
   });
+  it('badges a committed disabled country in the trigger, like the currency picker', async () => {
+    const el = await fixture<LyraCountryPicker>(html`<lr-country-picker value="FR" .countries=${[{ code: 'FR', disabled: true }, 'DE']}></lr-country-picker>`);
+    const badge = el.shadowRoot!.querySelector('lr-select > span[slot="end"]');
+    expect(badge?.textContent?.trim()).to.equal('not in catalog');
+  });
+
+  for (const searchable of [false, true]) {
+    it(`places the ${searchable ? 'searchable' : 'compact'} list with the select's absolute strategy until told otherwise`, async () => {
+      const el = await fixture<LyraCountryPicker>(html`<lr-country-picker .searchable=${searchable} .countries=${['LU', 'FR']}></lr-country-picker>`);
+      const child = el.shadowRoot!.querySelector<LyraSelect | LyraCombobox>(searchable ? 'lr-combobox' : 'lr-select')!;
+      child.open = true;
+      await child.updateComplete;
+      const listbox = child.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+      await waitUntil(() => getComputedStyle(listbox).position === 'absolute', 'the default strategy never applied');
+    });
+  }
 });

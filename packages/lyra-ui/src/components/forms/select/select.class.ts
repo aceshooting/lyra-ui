@@ -34,8 +34,10 @@ import {
   AnchoredValidityController,
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
-import { DebounceController } from '../../../internal/debounce-controller.js';
+import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { revealRow } from '../../../internal/reveal-row.js';
+import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -86,10 +88,6 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select, LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** How long the listbox type-ahead buffer survives without a keystroke. Unchanged from the
- *  inline literal this reset used before it moved onto the shared debounce controller. */
-const TYPE_AHEAD_RESET_MS = 500;
 
 function isLyraOptionElement(value: unknown): value is LyraOption {
   return isHtmlElement(value) && value.localName === tag('option');
@@ -145,6 +143,7 @@ export interface LyraSelectEventMap<Multiple extends boolean = boolean> {
   'lr-input': CustomEvent<
     LyraEventDetailSnapshot<{
       readonly value: LyraPickerDetailValue<Multiple>;
+      readonly previousValue: LyraPickerDetailValue<Multiple>;
       readonly data: readonly unknown[];
     }>
   >;
@@ -154,6 +153,7 @@ export interface LyraSelectEventMap<Multiple extends boolean = boolean> {
   'lr-change': CustomEvent<
     LyraEventDetailSnapshot<{
       readonly value: LyraPickerDetailValue<Multiple>;
+      readonly previousValue: LyraPickerDetailValue<Multiple>;
       readonly data: readonly unknown[];
     }>
   >;
@@ -277,10 +277,10 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   `<select>`'s own event name. Read the new selection from `value`.
  * @event {InputEvent} input - Fired alongside `change` on every
  *   selection change (native `<select>` doesn't meaningfully distinguish the two either).
- * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value, data }`, where
+ * @event lr-input - Prefixed compatibility alias for `input`; `detail: { value, previousValue, data }`, where
  *   `data` is the opaque `data` payload of each newly committed occurrence (see `selectedData`),
  *   by reference, never deep-cloned.
- * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} lr-change - Prefixed compatibility alias
+ * @event {CustomEvent<LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }>>} lr-change - Prefixed compatibility alias
  *   fired after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s
  *   `lr-change`. Not fired for a programmatic `value` assignment. `detail.data` mirrors `lr-input`.
  * @event lr-activate - Fired on every activation of an available listbox row -- a click, or
@@ -772,13 +772,15 @@ export class LyraSelect<
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private positionedDirection?: 'ltr' | 'rtl';
-  private pointerListenerDocument?: Document;
-  private pointerListener?: (event: PointerEvent) => void;
+  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
   @state() private listboxHidden = true;
+  /** Rows mount on first open, so a closed picker with hundreds of options stays cheap. */
+  @state() private listboxRendered = false;
   @state() private listboxPositioned = false;
 
   private _isFirstUpdate = true;
   private openVetoed = false;
+  private previousValue: string | string[] = '';
   // A disable-forced close has no vetoable lifecycle, but that suppression belongs only to the
   // exact `open` write that enforced the policy. A later enable + show in the same Lit batch is a
   // new transition and must still emit/settle normally.
@@ -842,24 +844,7 @@ export class LyraSelect<
   // `.defaultValue = …` property write the instant the *next* option connects, since neither one
   // has any other way to know the default was already set programmatically.
   private _defaultValueDirty = false;
-  // Standard listbox type-ahead: printable keystrokes accumulate into this
-  // buffer and reset ~500ms after the last one, so "b" then "a" narrows to
-  // "ba" instead of restarting the search on every keystroke.
-  private typeAheadBuffer = '';
-  /** The buffer's reset debounce. Every printable keystroke restarts it, so "b" then "a" narrows
-   *  to "ba"; the buffer clears only once the quiet window passes. Scheduled on -- and cancelled
-   *  through -- the realm this select lives in at the time, and the realm it was armed in is
-   *  re-checked at settle, so a select adopted into another document never clears a buffer that
-   *  now belongs to a different realm. Supersession is the controller's own generation guard: a
-   *  callback already queued when a newer keystroke restarted the timer arrives inert. */
-  private readonly typeAheadReset = new DebounceController<Window>(
-    TYPE_AHEAD_RESET_MS,
-    (armedIn) => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== armedIn) return;
-      this.typeAheadBuffer = '';
-    },
-    () => this.ownerDocument.defaultView,
-  );
+  private readonly typeBuffer = new TypeAheadBuffer(this);
 
   /** Focus the internal select trigger. */
   override focus(options?: FocusOptions): void {
@@ -1013,11 +998,15 @@ export class LyraSelect<
     }
     this.announceOpenTransition(changed);
     if (changed.has('open') && !this.openVetoed) this.listboxPositioned = false;
-    if (this.open) this.listboxHidden = false;
-    if (changed.has('open') && !this.open && !this.openVetoed) {
-      // The veto has already run synchronously. Clear only for an accepted close, so a vetoed
-      // listbox retains its active descendant for assistive technology and Enter.
-      this.setActiveIndex(-1);
+    if (this.open) {
+      this.listboxHidden = false;
+      this.listboxRendered = true;
+    }
+    if (changed.has('open') && !this.openVetoed) {
+      // An accepted open activates the committed option and a close clears it; a vetoed transition
+      // keeps its active descendant for assistive technology and Enter.
+      const navigable = this.navigableOptions();
+      this.setActiveIndex(this.open ? navigable.findIndex((option) => this._selectedOptions.includes(option)) : -1, navigable);
     }
   }
 
@@ -1316,6 +1305,7 @@ export class LyraSelect<
     const previousValues = this._selected;
     const previousOptions = this._selectedOptions;
     const old = this.multiple ? [...previousValues] : previousValues[0] ?? '';
+    this.previousValue = old;
     this._selected = values;
     this._selectedOptions = this.resolveOccurrences(values, preferred);
     this.syncFormValue();
@@ -1403,8 +1393,7 @@ export class LyraSelect<
       hasInteracted: this.hasInteracted,
       barred: this.barredFromValidation,
     });
-    if (this._selected.length === 0) this.internals.states?.add('blank');
-    else this.internals.states?.delete('blank');
+    setCustomState(this.internals, 'blank', this._selected.length === 0);
   }
 
   private syncFormValue(): void {
@@ -1558,8 +1547,7 @@ export class LyraSelect<
     this.cleanup?.();
     this.cleanup = undefined;
     this.positionedDirection = undefined;
-    this.clearTypeAheadTimer();
-    this.typeAheadBuffer = '';
+    this.typeBuffer.clear();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
     this.unbindDocumentPointer();
@@ -1583,7 +1571,7 @@ export class LyraSelect<
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
     this.unbindDocumentPointer();
-    this.clearTypeAheadTimer();
+    this.typeBuffer.clear();
     queueMicrotask(() => this.reconnectOpenPopup());
   }
 
@@ -1779,13 +1767,11 @@ export class LyraSelect<
   /** The matched label for one committed value, or `undefined` when no live option currently
    *  declares it -- the shared lookup behind both `labelFor()` and `isUnknownValue()`. */
   private resolvedLabelFor(value: string, occurrenceIndex = 0): string | undefined {
-    return (
-      (this._selectedOptions[occurrenceIndex]?.value === value
-        ? this._selectedOptions[occurrenceIndex]?.label
-        : undefined) ??
-      this._selectedOptions.find((option) => option.value === value)?.label ??
-      this.options.find((option) => option.value === value)?.label
-    );
+    const option =
+      (this._selectedOptions[occurrenceIndex]?.value === value ? this._selectedOptions[occurrenceIndex] : undefined) ??
+      this._selectedOptions.find((candidate) => candidate.value === value) ??
+      this.options.find((candidate) => candidate.value === value);
+    return option && (option.label || option.value);
   }
 
   /** The label to show for one committed value: the selected occurrence's own label, else any
@@ -2103,23 +2089,7 @@ export class LyraSelect<
     const listbox = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
     const activeId = this.triggerElement?.getAttribute('aria-activedescendant');
     const row = listbox?.querySelector<HTMLElement>('[part="option"][data-active]');
-    if (!listbox || !row || !activeId || row.id !== activeId || listbox.clientHeight === 0) return;
-    // Offset geometry and scrollTop share local CSS units, including under CSS zoom. Summing
-    // containing blocks also accommodates grouped rows without mixing viewport rectangles in.
-    let top = 0;
-    let node: HTMLElement | null = row;
-    while (node && node !== listbox) {
-      if (!listbox.contains(node)) return;
-      top += node.offsetTop;
-      node = node.offsetParent as HTMLElement | null;
-    }
-    if (node !== listbox) return;
-    const bottom = top + row.offsetHeight;
-    if (top < listbox.scrollTop || row.offsetHeight > listbox.clientHeight) {
-      listbox.scrollTop = top;
-    } else if (bottom > listbox.scrollTop + listbox.clientHeight) {
-      listbox.scrollTop = bottom - listbox.clientHeight;
-    }
+    if (listbox && row && activeId && row.id === activeId) revealRow(listbox, row);
   }
 
   private activateListboxOverlay(): void {
@@ -2155,37 +2125,11 @@ export class LyraSelect<
   }
 
   private bindDocumentPointer(): void {
-    if (!this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (this.pointerListenerDocument === ownerDocument && this.pointerListener)
-      return;
-    this.unbindDocumentPointer();
-    const listener = (event: PointerEvent): void => {
-      if (
-        this.pointerListener !== listener ||
-        this.pointerListenerDocument !== ownerDocument ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onDocPointer(event);
-    };
-    this.pointerListenerDocument = ownerDocument;
-    this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener, true);
+    if (this.isConnected) this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener(
-        'pointerdown',
-        this.pointerListener,
-        true
-      );
-    }
-    this.pointerListenerDocument = undefined;
-    this.pointerListener = undefined;
+    this.pointer.unbind();
   }
 
   private reconnectOpenPopup(): void {
@@ -2329,7 +2273,7 @@ export class LyraSelect<
   /** Dispatches the native value-change pair and prefixed aliases. `input`/`change` stay deliberately unprefixed -- this
    *  control is a direct `<select>` counterpart, so its value-change events keep `<select>`'s own
    *  naming instead of the `lr-` prefix `<lr-slider>` uses for its analogous rename. See the class
-   *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value, data }`. */
+   *  doc's `change` entry for the full rule. The prefixed aliases carry `detail: { value, previousValue, data }`. */
   private emitValueEvents(): void {
     // Pinned to the un-narrowed class. Inside the class body `Multiple` is an unresolved type
     // parameter, which leaves the detail type an unresolved conditional that no concrete argument
@@ -2337,10 +2281,11 @@ export class LyraSelect<
     // against its base event map. The constraint already guarantees the payload's shape.
     const self = this as unknown as LyraSelect<boolean>;
     const data = this.selectedData;
+    const previousValue = this.previousValue as LyraPickerDetailValue<boolean>;
     dispatchNativeInputEvent(this);
-    self.emit('lr-input', { value: self.value, data });
+    self.emit('lr-input', { value: self.value, previousValue, data });
     dispatchNativeEvent(this, 'change');
-    self.emit('lr-change', { value: self.value, data });
+    self.emit('lr-change', { value: self.value, previousValue, data });
   }
 
   /**
@@ -2489,13 +2434,7 @@ export class LyraSelect<
    * `<select>`'s closed-state type-ahead.
    */
   private typeAhead(char: string): void {
-    this.clearTypeAheadTimer();
-    this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    const ownerWindow = this.ownerDocument.defaultView;
-    // A detached or realm-less select arms nothing at all, exactly as before: the controller would
-    // otherwise fall back to the ambient timer queue and clear a buffer through a document this
-    // element does not live in.
-    if (this.isConnected && ownerWindow) this.typeAheadReset.push(ownerWindow);
+    const buffer = this.typeBuffer.add(char, this.effectiveLocale);
 
     const navigable = this.navigableOptions();
     if (!navigable.length) return;
@@ -2511,7 +2450,7 @@ export class LyraSelect<
       if (
         candidate.label
           .toLocaleLowerCase(this.effectiveLocale)
-          .startsWith(this.typeAheadBuffer)
+          .startsWith(buffer)
       ) {
         if (this.open) {
           this.setActiveIndex(idx, navigable);
@@ -2527,12 +2466,6 @@ export class LyraSelect<
         return;
       }
     }
-  }
-
-  /** Discards an armed buffer reset. `cancel()`, never `dispose()`: a disconnect here may be a
-   *  re-parent, and a disposed controller would refuse every later keystroke's reset for good. */
-  private clearTypeAheadTimer(): void {
-    this.typeAheadReset.cancel();
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -2724,7 +2657,7 @@ export class LyraSelect<
               ></span>`
             : ''}
           <span part="option-label">
-            <span>${o.label}</span>
+            <span>${o.label || o.value}</span>
             ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
           </span>
           ${unknown
@@ -2966,7 +2899,7 @@ export class LyraSelect<
           @click=${this.onListboxClick}
         >
           <span class="glass-scroll-layer" aria-hidden="true"></span>
-          ${this.renderRows(options, activeId)}
+          ${this.listboxRendered ? this.renderRows(options, activeId) : nothing}
         </div>
         <div id="select-error" part="error" ?hidden=${!hasError}>
           ${this.errorText}<slot name="error"></slot>

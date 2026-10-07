@@ -275,17 +275,18 @@ it('renders lr-time-input start adornment collapsed first and reveals it after h
   expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
 });
 
-it('renders lr-locale-picker hint collapsed first and reveals it after hydration', async () => {
-  const el = await mountServerRendered(
+it('renders lr-locale-picker hint exposed first, keeping authored content and collapsing an empty slot after hydration', async () => {
+  const authored = await mountServerRendered(
     `<lr-locale-picker>${SERVER_SHADOW}<span slot="hint">Pick a locale</span></lr-locale-picker>`,
   );
-  await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.true;
+  const empty = await mountServerRendered(`<lr-locale-picker>${SERVER_SHADOW}</lr-locale-picker>`);
+  await Promise.all([authored.updateComplete, empty.updateComplete]);
+  const hint = (el: LyraElement) => el.shadowRoot?.querySelector('[part="hint"]');
+  expect(hint(authored)?.hasAttribute('hidden')).to.be.false;
+  expect(hint(empty)?.hasAttribute('hidden')).to.be.false;
 
-  await waitUntil(
-    () => !el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden'),
-  );
-  expect(el.shadowRoot?.querySelector('[part="hint"]')?.hasAttribute('hidden')).to.be.false;
+  await waitUntil(() => hint(empty)?.hasAttribute('hidden'));
+  expect(hint(authored)?.hasAttribute('hidden')).to.be.false;
 });
 
 it('renders lr-phone-input country-prefix collapsed first and reveals it after hydration', async () => {
@@ -301,17 +302,18 @@ it('renders lr-phone-input country-prefix collapsed first and reveals it after h
   expect(el.shadowRoot?.querySelector('[part="country-prefix"]')?.hasAttribute('hidden')).to.be.false;
 });
 
-it('renders lr-token-input start adornment collapsed first and reveals it after hydration', async () => {
-  const el = await mountServerRendered(
+it('renders lr-token-input start adornment exposed first, keeping authored content and collapsing an empty slot after hydration', async () => {
+  const authored = await mountServerRendered(
     `<lr-token-input>${SERVER_SHADOW}<span slot="start">S</span></lr-token-input>`,
   );
-  await el.updateComplete;
-  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.true;
+  const empty = await mountServerRendered(`<lr-token-input>${SERVER_SHADOW}</lr-token-input>`);
+  await Promise.all([authored.updateComplete, empty.updateComplete]);
+  const start = (el: LyraElement) => el.shadowRoot?.querySelector('[part="start"]');
+  expect(start(authored)?.hasAttribute('hidden')).to.be.false;
+  expect(start(empty)?.hasAttribute('hidden')).to.be.false;
 
-  await waitUntil(
-    () => !el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden'),
-  );
-  expect(el.shadowRoot?.querySelector('[part="start"]')?.hasAttribute('hidden')).to.be.false;
+  await waitUntil(() => start(empty)?.hasAttribute('hidden'));
+  expect(start(authored)?.hasAttribute('hidden')).to.be.false;
 });
 
 it('renders lr-code-editor hint collapsed first and reveals it after hydration', async () => {

@@ -1,7 +1,6 @@
 import { noChange, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import { html, unsafeStatic } from 'lit/static-html.js';
 import { property } from 'lit/decorators.js';
-import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation, type FormSubmissionValue } from '../../internal/form-associated.js';
 import { resolveValidityAnchor, SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
@@ -13,13 +12,14 @@ import { activeElementIn, deepActiveElementIn } from '../../internal/active-elem
 import { submitOnEnter } from '../../internal/submit-on-enter.js';
 import { SlotPresenceController } from '../../internal/slot-presence-controller.js';
 import { tag } from '../../internal/prefix.js';
+import { resolveEffectivePositioningStrategy } from '../../internal/positioning-strategy.js';
+import { hasCustomState } from '../../internal/custom-states.js';
 import { normalizeSelectionValue, type SelectionCatalogEntry, type SelectionCatalogRow } from '../../internal/selection-catalog.js';
 import type { PlaceStrategy } from '../../internal/positioner.js';
 import type { LyraSize } from '../../internal/variants.js';
 import type { LyraSelect } from './select/select.class.js';
 import type { LyraCombobox } from './combobox/combobox.class.js';
 import './select/select.class.js';
-import './combobox/combobox.class.js';
 import './combobox/option.class.js';
 import { styles } from './catalog-picker-base.styles.js';
 
@@ -40,6 +40,7 @@ export interface LyraCatalogPickerEventMap {
 
 type PickerControl = LyraSelect<false> | LyraCombobox<false>;
 class CatalogPickerElement extends LyraElement<LyraCatalogPickerEventMap> {}
+const resolvedRows = new WeakMap<readonly SelectionCatalogEntry[], Map<string, readonly SelectionCatalogRow[]>>();
 const pickerSpellcheckConverter = {
   ...spellcheckConverter,
   fromAttribute: (value: string | null): boolean => value === null ? false : spellcheckConverter.fromAttribute!(value, Boolean),
@@ -92,6 +93,10 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   protected abstract resolveRows(): readonly SelectionCatalogRow[];
   protected normalizeValue(value: unknown): string { return normalizeSelectionValue(value); }
   protected renderAdornment(_row: SelectionCatalogRow): TemplateResult | typeof nothing { return nothing; }
+  /** The option's visible label and secondary line. */
+  protected optionDisplay(row: SelectionCatalogRow): { label: string; sub: string } {
+    return { label: row.label, sub: [row.code, row.symbol].filter((text) => Boolean(text) && text !== row.label).join(' · ') };
+  }
   private renderStart(row: SelectionCatalogRow): TemplateResult | typeof nothing {
     const content = this.renderAdornment(row);
     return content === nothing ? nothing : html`<span slot="start">${content}</span>`;
@@ -117,9 +122,6 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private replacingControl?: PickerControl;
   private focusReplacement?: PickerControl;
   private readonly validationController: ReactiveController = { hostUpdated: () => this.projectValidation() };
-  private cachedEntries?: readonly SelectionCatalogEntry[];
-  private cachedLocale?: string;
-  private cachedRows?: readonly SelectionCatalogRow[];
 
   protected get control(): PickerControl | undefined {
     return this.renderRoot?.querySelector<PickerControl>(`${tag('select')},${tag('combobox')}`) ?? undefined;
@@ -129,12 +131,13 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   }
   private get liveDisabled(): boolean { return this.effectiveDisabled || this.matches(':disabled'); }
   private get rows(): readonly SelectionCatalogRow[] {
-    if (this.cachedEntries !== this.entries || this.cachedLocale !== this.effectiveLocale || !this.cachedRows) {
-      this.cachedEntries = this.entries;
-      this.cachedLocale = this.effectiveLocale;
-      this.cachedRows = this.resolveRows();
-    }
-    return this.cachedRows;
+    const entries = this.entries;
+    const locale = this.effectiveLocale;
+    let byLocale = resolvedRows.get(entries);
+    if (!byLocale) resolvedRows.set(entries, (byLocale = new Map()));
+    let rows = byLocale.get(locale);
+    if (!rows) byLocale.set(locale, (rows = this.resolveRows()));
+    return rows;
   }
 
   constructor() {
@@ -204,7 +207,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private projectValidation(): void {
     const child = this.validationChild;
     if (!child || !this.isConnected || child !== this.control || this.validationDocument !== this.ownerDocument) return;
-    resolveValidityAnchor(child)?.setAttribute('aria-invalid', this.internals.states?.has('user-invalid') ? 'true' : 'false');
+    resolveValidityAnchor(child)?.setAttribute('aria-invalid', hasCustomState(this.internals, 'user-invalid') ? 'true' : 'false');
   }
   private syncRelationships(): void {
     const anchor = this[VALIDITY_ANCHOR]();
@@ -215,15 +218,34 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     else this.labelLease = acquireResolvedAriaRelationship(this, anchor, 'aria-labelledby');
     if (anchor && this.projectedAnchor !== anchor) { this.projectedAnchor = anchor; this.requestUpdate(); }
   }
+  /** The filter control loads on first use, so a plain picker never ships the combobox. */
+  private get comboboxDefined(): boolean { return globalThis.customElements?.get(tag('combobox')) !== undefined; }
+  private comboboxLoad?: Promise<void>;
+  private usingCombobox = false;
+  /** `updateComplete` also waits for the lazily loaded filter control to take over. */
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const done = await super.getUpdateComplete();
+    const load = this.comboboxLoad;
+    if (!load) return done;
+    await load;
+    return this.getUpdateComplete();
+  }
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.searchable && !this.comboboxDefined && !this.comboboxLoad) {
+      const load = import('./combobox/combobox.js').then(() => this.requestUpdate(), () => undefined);
+      this.comboboxLoad = load;
+      void load.then(() => { if (this.comboboxLoad === load) this.comboboxLoad = undefined; });
+    }
     const child = this.control;
-    if (changed.has('searchable') && child) {
+    const combobox = this.searchable && this.comboboxDefined;
+    if (combobox !== this.usingCombobox && child) {
       this.replacingControl = child;
       this.restoreFocus = activeElementIn(this.shadowRoot) === child || this.focusReplacement === child;
       this.focusReplacement = undefined;
       this.clearTransientState();
     }
+    this.usingCombobox = combobox;
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -231,7 +253,6 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     if (this.restoreFocus) this.focusReplacement = child;
     this.restoreFocus = false;
     this.replacingControl = undefined;
-    if (changed.has('positioningStrategy')) child?.requestUpdate('positioningStrategy');
     if (this.validationChild !== child || this.validationDocument !== this.ownerDocument) {
       this.validationChild?.removeController(this.validationController);
       this.validationChild = child;
@@ -273,48 +294,48 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     this.validationChild = undefined;
     this.validationDocument = undefined;
     this.projectedAnchor = undefined;
-    this.cachedEntries = undefined;
-    this.cachedRows = undefined;
-    this.cachedLocale = undefined;
     this.labelLease?.release(); this.labelLease = undefined;
     this.descriptionLease?.release(); this.descriptionLease = undefined;
     super.disconnectedCallback();
   }
   override render(): TemplateResult {
-    const controlTag = unsafeStatic(tag(this.searchable ? 'combobox' : 'select'));
+    const controlTag = unsafeStatic(tag(this.usingCombobox ? 'combobox' : 'select'));
     const optionTag = unsafeStatic(tag('option'));
     const hasLabel = Boolean(this.label) || this.slots.has('label');
     const current = this.rows.find((row) => row.code === this.value);
     const exportParts = [
       'form-control,form-control-label',
-      this.searchable ? 'combobox:select-trigger,combobox-input:select-display-input' : 'trigger:select-trigger,display-input:select-display-input',
+      this.usingCombobox ? 'combobox:select-trigger,combobox-input:select-display-input' : 'trigger:select-trigger,display-input:select-display-input',
       'listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,flag,hint,error',
     ].join(',');
     return html`<${controlTag}
       exportparts=${exportParts}
-      style=${styleMap({ '--lr-positioning-strategy': this.positioningStrategy === 'fixed' || this.positioningStrategy === 'absolute' ? this.positioningStrategy : undefined })}
+      .positioningStrategy=${this.ownerDocument ? resolveEffectivePositioningStrategy(this, this.positioningStrategy, 'absolute') : this.positioningStrategy}
       .strings=${this.strings} .customError=${this.validity.valid ? null : this.validationMessage}
-      .value=${this.searchable ? this.value || null : this.value}
+      .value=${this.usingCombobox ? this.value || null : this.value}
       .label=${this.label} .hint=${this.hint} .errorText=${this.errorText}
       .placeholder=${this.placeholder ?? this.localize('select')}
       aria-label=${this.accessibleLabel ?? (hasLabel ? nothing : this.pickerLabel)}
       .required=${this.required} .disabled=${this.effectiveDisabled} .size=${this.size}
       .clearable=${this.clearable} .topLayer=${this.topLayer}
-      .maxRender=${this.searchable ? this.rows.length || 1 : noChange}
-      .autocomplete=${this.searchable ? this.autocomplete : noChange}
-      .inputMode=${this.searchable ? this.inputMode : noChange} .enterKeyHint=${this.searchable ? this.enterKeyHint : noChange}
-      .spellcheck=${this.searchable ? this.spellcheck : noChange}
-      .autocapitalize=${this.searchable ? this.autocapitalize : noChange} .autocorrect=${this.searchable ? this.autocorrect : noChange}
-      autocorrect=${this.searchable && this.hasAttribute('autocorrect') ? (this.autocorrect ? 'on' : 'off') : nothing}
+      .maxRender=${this.usingCombobox ? this.rows.length || 1 : noChange}
+      .autocomplete=${this.usingCombobox ? this.autocomplete : noChange}
+      .inputMode=${this.usingCombobox ? this.inputMode : noChange} .enterKeyHint=${this.usingCombobox ? this.enterKeyHint : noChange}
+      .spellcheck=${this.usingCombobox ? this.spellcheck : noChange}
+      .autocapitalize=${this.usingCombobox ? this.autocapitalize : noChange} .autocorrect=${this.usingCombobox ? this.autocorrect : noChange}
+      autocorrect=${this.usingCombobox && this.hasAttribute('autocorrect') ? (this.autocorrect ? 'on' : 'off') : nothing}
       @input=${this.onControlEvent} @lr-input=${this.onControlEvent} @lr-filter=${this.onControlEvent}
       @change=${this.onControlEvent} @lr-change=${this.onControlEvent}
       @focus=${this.onControlFocus} @blur=${this.onControlFocus} @focusout=${this.onControlFocusOut}
       @keydown=${this.onControlKeyDown}
-    >${this.rows.map((row) => html`<${optionTag} .value=${row.code} .label=${row.label}
-      .sub=${[row.code, row.symbol].filter((text) => Boolean(text) && text !== row.label).join(' · ')}
-      .searchText=${row.searchText} .group=${row.group ?? ''} .disabled=${Boolean(row.disabled)}>
-      ${this.renderStart(row)}${row.label}</${optionTag}>`)}
+    >${this.rows.map((row) => {
+      const { label, sub } = this.optionDisplay(row);
+      return html`<${optionTag} .value=${row.code} .label=${label} .sub=${sub}
+        .searchText=${row.searchText} .group=${row.group ?? ''} .disabled=${Boolean(row.disabled)}>
+        ${this.renderStart(row)}${label}</${optionTag}>`;
+    })}
       ${current ? this.renderStart(current) : nothing}
+      ${current?.disabled ? html`<span slot="end">${this.localize('notInCatalog')}</span>` : nothing}
       ${this.slots.has('label') ? html`<slot name="label" slot="label"></slot>` : nothing}
       ${this.slots.has('hint') ? html`<slot name="hint" slot="hint"></slot>` : nothing}
       ${this.slots.has('error') ? html`<slot name="error" slot="error"></slot>` : nothing}

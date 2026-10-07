@@ -520,7 +520,7 @@ it('sets value and fires lr-change when an emoji is picked', async () => {
   button.click();
   const event = await eventPromise;
   expect(el.value).to.equal('😀');
-  expect(event.detail).to.deep.equal({ value: '😀' });
+  expect(event.detail).to.deep.equal({ value: '😀', previousValue: '' });
 });
 
 it('keeps programmatic value assignments silent across native and prefixed value events', async () => {
@@ -727,7 +727,7 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ value: '😂' }); // second emoji, after one ArrowRight from index 0
+    expect(event.detail).to.deep.equal({ value: '😂', previousValue: '' }); // second emoji, after one ArrowRight from index 0
   });
 
   it('swaps ArrowLeft/ArrowRight under RTL so "forward" follows reading direction', async () => {
@@ -762,7 +762,7 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     third.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ value: '🐶' });
+    expect(event.detail).to.deep.equal({ value: '🐶', previousValue: '' });
   });
 
   it('emits native input/change once with typed prefixed value aliases when a user picks an emoji', async () => {
@@ -785,8 +785,8 @@ describe('keyboard navigation', () => {
     expect(inputEvent.target === el && changeEvent.target === el).to.be.true;
     expect(inputEvent.composed).to.be.true;
     expect(changeEvent.composed).to.be.true;
-    expect(lyraInputEvent.detail).to.deep.equal({ value: '😀' });
-    expect(lyraEvent.detail).to.deep.equal({ value: '😀' });
+    expect(lyraInputEvent.detail).to.deep.equal({ value: '😀', previousValue: '' });
+    expect(lyraEvent.detail).to.deep.equal({ value: '😀', previousValue: '' });
   });
 
   it('constructs the native input/change/focus/blur quartet in the adopted owner realm', async () => {
@@ -943,7 +943,7 @@ describe('keyboard navigation', () => {
     const eventPromise = oneEvent(el, 'lr-change');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const event = await eventPromise;
-    expect(event.detail).to.deep.equal({ value: '😂' });
+    expect(event.detail).to.deep.equal({ value: '😂', previousValue: '' });
   });
 
   it('keeps exactly one emoji tabbable (roving tabindex) and supports ArrowDown/ArrowUp/Home/End', async () => {

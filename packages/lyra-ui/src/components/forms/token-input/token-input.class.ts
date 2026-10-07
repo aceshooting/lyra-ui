@@ -15,6 +15,7 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import {
@@ -57,8 +58,8 @@ export interface LyraTokenInputEventMap {
   change: Event;
   focus: FocusEvent;
   blur: FocusEvent;
-  'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
-  'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-input': CustomEvent<Readonly<{ value: readonly string[]; previousValue: readonly string[] }>>;
+  'lr-change': CustomEvent<Readonly<{ value: readonly string[]; previousValue: readonly string[] }>>;
   /** Cancelable proposal to add one or more tokens in a single commit. */
   'lr-token-add-request': CustomEvent<Readonly<{ value: string; values: readonly string[] }>>;
   /** Cancelable proposal to remove one token. */
@@ -146,8 +147,8 @@ const stringArrayConverter = {
  * @slot end - Adornment at the inline-end of the token/input row, after the draft input.
  * @event input - Native `InputEvent` emitted after a user changes the token list.
  * @event change - Native commit `Event` emitted with `input`.
- * @event lr-input - Lyra input alias; detail is `{ value }` with the current token list.
- * @event lr-change - Lyra commit alias; detail is `{ value }` with the current token list.
+ * @event lr-input - Lyra input alias; detail is `{ value, previousValue }` with the current and prior token lists.
+ * @event lr-change - Lyra commit alias; detail is `{ value, previousValue }` with the current and prior token lists.
  * @event focus - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event blur - Native `FocusEvent` relayed from the draft input or inline token editor.
  * @event lr-token-add-request - One or more tokens are about to be added in a single commit.
@@ -341,15 +342,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   };
   /** One native blur can be followed by a teardown blur when its commit removes the focused editor. */
   private editorBlurRelayed = false;
-  // `[part]:empty` never matches -- the part always contains a literal
-  // `<slot>` child element regardless of assigned content -- so real
-  // emptiness is tracked in JS instead (mirrors lr-select's identical
-  // hasLabelSlot/hasHintSlot/hasErrorSlot) and reflected via `hidden`.
-  @state() private hasLabelSlot = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasStartSlot = false;
-  @state() private hasEndSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   // Selected by id rather than by tag: an open token editor is also an `input`, and it precedes
   // this one in DOM order, so a bare `input` selector would silently retarget `focus()`, `blur()`,
   // and the validity anchor at the editor while a token is being edited.
@@ -708,33 +701,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     this.draft = input.value;
   }
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
-    if (!this.hasUpdated) {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => {
-        this.hasLabelSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'label'
-        );
-        this.hasHintSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'hint'
-        );
-        this.hasErrorSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'error'
-        );
-        this.hasStartSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'start'
-        );
-        this.hasEndSlot = Array.from(this.children ?? []).some(
-          (el) => el.getAttribute('slot') === 'end'
-        );
-      });
-    }
-  }
-
   /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
   private get barredFromValidation(): boolean {
     return isBarredFromValidation(this, this.internals);
@@ -773,18 +739,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     );
   }
   private updateValue(next: readonly string[]): void {
+    const previousValue = Object.freeze([...this.value]);
     this.value = next;
     this.syncValidity();
+    const detail = (): Readonly<{ value: readonly string[]; previousValue: readonly string[] }> =>
+      Object.freeze({ value: Object.freeze([...this.value]), previousValue });
     dispatchNativeInputEvent(this);
-    this.emit(
-      'lr-input',
-      Object.freeze({ value: Object.freeze([...this.value]) })
-    );
+    this.emit('lr-input', detail());
     dispatchNativeEvent(this, 'change');
-    this.emit(
-      'lr-change',
-      Object.freeze({ value: Object.freeze([...this.value]) })
-    );
+    this.emit('lr-change', detail());
   }
   private addDraft(): void {
     if (this.liveDisabled || this.readonly) return;
@@ -1113,31 +1076,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private stopInternalChange(event: Event): void {
     event.stopPropagation();
   }
-  private onLabelSlotChange = (e: Event): void => {
-    this.hasLabelSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onHintSlotChange = (e: Event): void => {
-    this.hasHintSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onErrorSlotChange = (e: Event): void => {
-    this.hasErrorSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onStartSlotChange = (e: Event): void => {
-    this.hasStartSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onEndSlotChange = (e: Event): void => {
-    this.hasEndSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
   formResetCallback(): void {
     this.restoreLiveValueFromDefault();
     this.discardTransientState(true);
@@ -1217,6 +1155,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         label: token,
       })}
       ?disabled=${this.effectiveDisabled}
+      aria-disabled=${this.readonly ? 'true' : nothing}
       @click=${() => this.removeToken(index)}
     >
       ${closeIcon()}
@@ -1271,11 +1210,11 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     >`;
   }
   override render(): TemplateResult {
-    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
+    const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const hasAccessibleLabel =
       this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
-    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const described =
       [hasHint ? this.hintId : '', hasError ? this.errorId : '']
         .filter(Boolean)
@@ -1286,10 +1225,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
         ?hidden=${!hasLabel}
         for="input"
         id=${this.labelId}
-        >${this.label}<slot
-          name="label"
-          @slotchange=${this.onLabelSlotChange}
-        ></slot
+        >${this.label}<slot name="label"></slot
       ></label>
       <div
         part="input-wrapper"
@@ -1299,25 +1235,14 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           : nothing}
         aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
       >
-        <span part="start" ?hidden=${!this.hasStartSlot}
-          ><slot name="start" @slotchange=${this.onStartSlotChange}></slot
+        <span part="start" ?hidden=${!this.slotPresence.has('start')}
+          ><slot name="start"></slot
         ></span>
         ${this.value.map((token, index) =>
           this.editable
             ? this.renderEditableToken(token, index)
             : html`<span part="token"
-                ><span>${token}</span
-                ><button
-                  part="remove"
-                  type="button"
-                  aria-label=${this.localize('removeWithContext', undefined, {
-                    label: token,
-                  })}
-                  ?disabled=${this.effectiveDisabled}
-                  @click=${() => this.removeToken(index)}
-                >
-                  ${closeIcon()}
-                </button></span
+                ><span>${token}</span>${this.renderRemoveButton(token, index)}</span
               >`
         )}
         <input
@@ -1349,21 +1274,15 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
           @blur=${this.onBlur}
           @focus=${this.onFocus}
         />
-        <span part="end" ?hidden=${!this.hasEndSlot}
-          ><slot name="end" @slotchange=${this.onEndSlotChange}></slot
+        <span part="end" ?hidden=${!this.slotPresence.has('end')}
+          ><slot name="end"></slot
         ></span>
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
-        ${this.hint}<slot
-          name="hint"
-          @slotchange=${this.onHintSlotChange}
-        ></slot>
+        ${this.hint}<slot name="hint"></slot>
       </div>
       <div part="error" id=${this.errorId} ?hidden=${!hasError}>
-        ${this.errorText}<slot
-          name="error"
-          @slotchange=${this.onErrorSlotChange}
-        ></slot>
+        ${this.errorText}<slot name="error"></slot>
       </div>
     </div>`;
   }

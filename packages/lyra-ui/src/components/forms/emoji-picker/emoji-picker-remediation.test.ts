@@ -396,3 +396,109 @@ it('does not reacquire external-description observers from a queued update after
     expect(count()).to.equal(0);
   } finally { window.MutationObserver = Original; }
 });
+
+for (const count of [150, 300]) {
+  it(`emoji-picker reveals the active ${count > 200 ? 'windowed ' : ''}option by scrolling only its grid`, async () => {
+    const el = document.createElement('lr-emoji-picker');
+    el.groups = [{ key: 'many', label: 'Many', emojis: Array.from({ length: count }, (_, index) => ({ emoji: String.fromCodePoint(0x1F300 + index), name: `emoji ${index}`, shortcodes: [] })) }];
+    mounted.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+    const original = Element.prototype.scrollIntoView;
+    let calls = 0;
+    Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) {
+      calls += 1;
+      return original.apply(this, args);
+    };
+    try {
+      for (let step = 0; step < 12; step++) search(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+      await waitUntil(() => grid(el).scrollTop > 0);
+      await el.updateComplete;
+      const active = grid(el).querySelector<HTMLElement>('[part="emoji"][data-active]')!;
+      expect(active.getBoundingClientRect().bottom).to.be.at.most(grid(el).getBoundingClientRect().bottom + 1);
+      expect(active.getBoundingClientRect().top).to.be.at.least(grid(el).getBoundingClientRect().top - 1);
+      expect(calls, 'the page and its scrollers stay put').to.equal(0);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+}
+
+it('emoji-picker hover paints through CSS and leaves the keyboard-active option alone', async () => {
+  const el = await picker();
+  const buttons = grid(el).querySelectorAll<HTMLButtonElement>('[part="emoji"]');
+  const before = search(el).getAttribute('aria-activedescendant');
+  buttons[1]!.dispatchEvent(new MouseEvent('mouseenter'));
+  await el.updateComplete;
+  expect(buttons[0]!.hasAttribute('data-active')).to.equal(true);
+  expect(buttons[1]!.hasAttribute('data-active')).to.equal(false);
+  expect(search(el).getAttribute('aria-activedescendant')).to.equal(before);
+});
+
+it('emoji-picker hides forwarded hint and error slots that carry nothing', async () => {
+  const host = document.createElement('div');
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = '<lr-emoji-picker><slot name="hint" slot="hint"></slot><slot name="error" slot="error"></slot></lr-emoji-picker>';
+  document.body.append(host);
+  try {
+    const el = root.querySelector('lr-emoji-picker') as LyraEmojiPicker;
+    await el.updateComplete;
+    const chrome = (part: string) => el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    await waitUntil(() => chrome('hint').hidden && chrome('error').hidden);
+  } finally {
+    host.remove();
+  }
+});
+
+it('emoji-picker groups its options under their labelled headings', async () => {
+  const el = await picker();
+  const group = grid(el).querySelector<HTMLElement>('[role="group"]')!;
+  const heading = el.shadowRoot!.getElementById(group.getAttribute('aria-labelledby')!)!;
+  expect(heading.textContent!.trim()).to.equal('Caller heading');
+  expect(group.querySelectorAll('[part="emoji"]').length).to.equal(2);
+  expect(grid(el).querySelectorAll(':scope > [role="listbox"] > *, :scope > *:not([role])').length).to.equal(0);
+});
+
+it('emoji-picker virtualized rows are named by their group', async () => {
+  const el = document.createElement('lr-emoji-picker');
+  el.groups = [{ key: 'many', label: 'Many', emojis: Array.from({ length: 300 }, (_, index) => ({ emoji: String.fromCodePoint(0x1F300 + index), name: `emoji ${index}`, shortcodes: [] })) }];
+  mounted.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  const rows = [...grid(el).querySelectorAll<HTMLElement>('[part="virtual-row"]')];
+  expect(rows.length).to.be.greaterThan(1);
+  for (const row of rows) {
+    expect(row.getAttribute('role')).to.equal('group');
+    expect(row.getAttribute('aria-label')).to.equal('Many');
+  }
+});
+
+it('emoji-picker reports the previous value in its change details', async () => {
+  const el = await picker();
+  el.value = '😀';
+  const details: Array<{ value: string; previousValue: string }> = [];
+  el.addEventListener('lr-input', (event) => details.push(event.detail));
+  el.addEventListener('lr-change', (event) => details.push(event.detail));
+  grid(el).querySelectorAll<HTMLButtonElement>('[part="emoji"]')[1]!.click();
+  expect(details).to.deep.equal([{ value: '🐶', previousValue: '😀' }, { value: '🐶', previousValue: '😀' }]);
+});
+
+describe('emoji-picker load failure recovery', () => {
+  it('announces a failed load, offers a retry and reloads on demand', async () => {
+    const el = document.createElement('lr-emoji-picker');
+    let loads = 0;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups =
+      () => Promise.resolve(++loads === 1 ? null : samples);
+    const errors: number[] = [];
+    el.addEventListener('lr-load-error', () => errors.push(loads));
+    mounted.push(el);
+    document.body.append(el);
+    const retry = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-retry"]');
+    await waitUntil(() => retry() !== null, 'no retry control after a failed load');
+    expect(errors).to.deep.equal([1]);
+    retry()!.click();
+    await waitUntil(() => grid(el).querySelectorAll('[part="emoji"]').length === 2, 'the retry never reloaded');
+    expect(retry() === null).to.equal(true);
+    expect(loads).to.equal(2);
+  });
+});

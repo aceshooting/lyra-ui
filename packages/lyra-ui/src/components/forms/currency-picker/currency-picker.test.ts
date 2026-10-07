@@ -481,4 +481,21 @@ describe('lr-currency-picker composed field ownership', () => {
     expect(changes).to.equal(0);
   });
 
+  it('resolves the default catalog once per locale for every picker and spares the shared formatter cache', async () => {
+    const original = Intl.NumberFormat;
+    let constructions = 0;
+    Intl.NumberFormat = new Proxy(original, {
+      construct(target, args, newTarget) {
+        constructions += 1;
+        return Reflect.construct(target, args, newTarget);
+      },
+    });
+    try {
+      const host = await fixture<HTMLDivElement>(html`<div><lr-currency-picker locale="en"></lr-currency-picker><lr-currency-picker locale="en"></lr-currency-picker></div>`);
+      for (const picker of host.querySelectorAll<LyraCurrencyPicker>('lr-currency-picker')) await settled(picker);
+      expect(constructions, 'two currency formatters per code, built once').to.be.at.most(176 * 2 + 40);
+    } finally {
+      Intl.NumberFormat = original;
+    }
+  });
 });

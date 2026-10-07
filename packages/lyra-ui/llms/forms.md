@@ -143,9 +143,11 @@ does not echo as a consumer selected write.
 A mounted `option.selected` assignment updates the live picker value and form submission
 immediately, including deselection and equal-value writes; it emits no user input/change event.
 
-When `multiple` becomes false, the public value, live option flags, and popup `aria-selected` expose
-one selected occurrence. The retained multiple-selection history returns if multiple is enabled
-again without another selection write.
+When `multiple` becomes false, the public value, live option flags, popup `aria-selected`,
+`selectedRows`, event `data` and `with-unknown-option` rows expose one selected occurrence. The
+retained multiple-selection history returns if multiple is enabled again without another selection
+write. A populated `multiple` combobox describes its input by every committed label (visually
+hidden), so the tags collapsed behind "+N" are announced too.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -226,6 +228,8 @@ it rather than being moved into a shadow root as a side effect of opening a drop
 ```
 
 An async `source` row can carry the same two fields (`start`, `end`) alongside its existing `icon`.
+`icon`/`start`/`end` accept text, a DOM node, a Lit template result or a flat list of those; any
+other value (a plain object, a function) is dropped from the row instead of reaching the renderer.
 
 ### `lr-combobox`
 
@@ -250,7 +254,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected). Rows mount the first time the listbox opens. Disabling the
+  combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
+  close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
   localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
@@ -477,6 +483,11 @@ The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/da
 same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
 `data` field, reached by reference through `selectedRows` exactly the same way.
 
+ArrowDown/ArrowUp on a closed combobox opens it with the committed row (the first committed row in
+`multiple`) keyboard-active and scrolled into view; opening by focus or typing leaves no row active,
+so Enter still submits the form. The active row is revealed by scrolling only the listbox, never the
+page.
+
 When a local option is removed or becomes disabled, or an async response shrinks, an existing
 keyboard-active row clamps to the nearest enabled survivor. If every row is disabled or removed,
 `aria-activedescendant` clears; an untouched list with no active row remains untouched.
@@ -485,9 +496,10 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
-followed by the same shape of `change`, then a prefixed `lr-change` alias. All three carry
-`detail: { value; data: readonly unknown[] }` — `value` is the new committed selection (a string in
-single mode, a `string[]` in `multiple` mode); `data` is index-aligned with `value`: `data[i]`
+followed by a prefixed `lr-input` alias, the same shape of `change`, then a prefixed `lr-change`
+alias. All four carry `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
+new committed selection (a string in single mode, a `string[]` in `multiple` mode), `previousValue`
+the selection before this change in the same shape; `data` is index-aligned with `value`: `data[i]`
 describes `value[i]` — the opaque `data` payload of a light-DOM `<lr-option data>` or an async
 source row's own `data`, reached by reference and never deep-cloned — or `undefined` in that
 value's own slot when it currently matches no live row/option (see "Unknown committed values"
@@ -495,24 +507,24 @@ above; unlike `selectedRows`, which drops that entry instead). `lr-change` mirro
 want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity with a native
 control. Re-picking the current single value and programmatic/default/reset/restore writes are
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
-`input`/`change`/`lr-change` triple.
+`input`/`lr-input`/`change`/`lr-change` sequence.
 `lr-activate` (`detail: { value: string }`, bubbling/composed, non-cancelable) fires on **every**
 activation of an available listbox row — a click, or Enter on the active row — whether or not the
 selection actually moved. Its `value` is the activated option's own value, **always a single
-string**, even in `multiple` mode, where the `input`/`change`/`lr-change` triple carries the whole
-`string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
+string**, even in `multiple` mode, where the `input`/`lr-input`/`change`/`lr-change` sequence carries
+the whole `string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
 single-select repeat pick that `change`/`lr-change` deliberately stay silent for — "re-run that
 filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
 root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
-an activation _does_ move the selection, `input`/`change`/`lr-change` are emitted first, so either
-listener reads the settled selection. Not fired for typing, for a committed custom value matching no
+an activation _does_ move the selection, `input`/`lr-input`/`change`/`lr-change` are emitted first, so
+either listener reads the settled selection. Not fired for typing, for a committed custom value matching no
 row, for the clear button, or for a programmatic `value` assignment.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
 keystroke — the live as-you-typed search string, deliberately _not_ `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
-`lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
-carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
+`lr-input` carries the committed value (as on `<lr-input>` and `<lr-select>`), and the two must not
+share a name while carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
 the listbox, and a programmatic `value` write blank the filter silently. `setRangeText()` silently
 replaces the requested or selected native text range, synchronizes the resulting query and visible
 options, and refreshes an async source when present; it preserves the committed selection.
@@ -549,7 +561,7 @@ legal listbox child. A successful retry restores `role="listbox"`.
 committed selection and an in-progress filter query, so the button renders whenever either has
 something to clear, and one press clears both:
 
-- Clearing a selection emits `input`, then `change`, then `lr-change`, then `lr-clear` — and, if the
+- Clearing a selection emits `input`, `lr-input`, `change`, `lr-change`, then `lr-clear` — and, if the
   query was also non-empty, `lr-filter` with an empty `value`.
 - A **query-only** clear (nothing selected, just typed text) emits `lr-filter` with an empty
   `value` and deliberately **no** `change` and **no** `lr-clear`. There was no selection
@@ -623,11 +635,11 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-change`/native `input` event detail `value` narrow to `string` when `Multiple` is `false` and
-`string[]` (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored
-surface are unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`. Combobox has no
-dedicated `lr-input` custom event (unlike `lr-select`); the exported `LyraComboboxChangeEvent`/
-`LyraComboboxInputEvent` aliases type `lr-change` and the native `input` listener respectively.
+`lr-input`/`lr-change`/native `input` event detail `value` and `previousValue` narrow to `string` when
+`Multiple` is `false` and `string[]` (`readonly string[]` in a detail) when `true`. Types only; the
+runtime and the mirrored surface are unchanged, and an untyped `<lr-combobox>` keeps
+`string | string[]`. The exported `LyraComboboxChangeEvent`/`LyraComboboxInputEvent` aliases type
+`lr-change` and the native `input` listener respectively; `lr-input` shares `lr-change`'s detail.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -875,7 +887,10 @@ value/form/validity path as a programmatic value write and does not emit `input`
 
 **Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
 the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
-`[part="option"][role="option"]`, each with a `data-value` matching its represented value.
+`[part="option"][role="option"]`, each with a `data-value` matching its represented value. Rows
+mount the first time the listbox opens, so a closed select has none. Opening makes the committed
+option (the first committed one in `multiple`) the active row and scrolls it into view; with
+nothing committed no row is active until an arrow key.
 Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
 
 ```ts
@@ -1123,8 +1138,9 @@ state.
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
 read `event.target.value`. Both
-prefixed aliases carry `detail: { value: string | string[]; data: readonly unknown[] }` — `value`
-is the new committed selection, a string in single mode and a `string[]` in `multiple` mode; `data`
+prefixed aliases carry `detail: { value: string | string[]; previousValue: string | string[]; data: readonly unknown[] }` — `value`
+is the new committed selection, a string in single mode and a `string[]` in `multiple` mode,
+`previousValue` the selection before this change in the same shape; `data`
 is index-aligned with `value` exactly like `selectedData` above (the same reference, `undefined`
 for a value matching no live option), reached by reference and never deep-cloned. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus
@@ -5768,7 +5784,7 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 `start`/`end`.
 **Events:** native `InputEvent` `input`, `lr-input`, native `Event` `change`, then `lr-change` for
 each list mutation; native events have no detail and both aliases carry a frozen
-`{ value: readonly string[] }` snapshot.
+`{ value: readonly string[], previousValue: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
 `relatedTarget`. `lr-token-add-request`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
@@ -5838,7 +5854,8 @@ explicit focus destination outside the component is never reclaimed.
 input and the inline token editor, and blocks every other value-committing affordance: typing (or a
 programmatic `input`/`change` dispatch) into the draft, Enter/delimiter/Tab draft commits,
 Backspace-removes-last-token, clicking a remove button, and opening or committing the inline
-editor (`editable`). Unlike `disabled`, it never removes the draft input, a token label, or a
+editor (`editable`). The remove buttons stay focusable but render `aria-disabled="true"` and the
+disabled paint. Unlike `disabled`, it never removes the draft input, a token label, or a
 remove button from the tab order, never blocks `focus()`, and never excludes the current value from
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
@@ -6439,7 +6456,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
 **Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
+`lr-change`; both aliases carry `detail: { value, previousValue }`. `lr-load-error` (no detail,
+non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
 after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
@@ -6451,8 +6469,9 @@ tabbable). ArrowLeft/ArrowRight step the active item backward/forward following 
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
 `role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
-the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
-pointer also moves the active item to it. When a controlled `groups` replacement removes the
+the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
+The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
 its identity wins even if it moved. A replacement never pulls focus away from the search field or
 an external control. In a windowed grid, roving navigation materializes an off-window target before
@@ -6467,9 +6486,10 @@ content, overrides the `errorText` attribute when provided).
 field, replacing the native search-cancel glyph the component resets; rendered only while it has a
 value), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
-button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
+button; each group's options sit in a `role="group"` named by its `group-label`), `empty` (shown
+when the search matches nothing, or when a consumer deliberately opted out
 with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
-peer failed to load), `hint` (the hint message), `error` (the
+peer failed to load) with `load-retry` (its Retry button), `hint` (the hint message), `error` (the
 error message). The grid scrolls in the block axis and explicitly clips inline overflow, so an
 allocation narrower than one option does not introduce a second scrollbar. While windowing is
 active the rows are wrapped in `virtual-spacer`
@@ -6535,9 +6555,11 @@ supply `groups` directly instead. The loader never throws; a missing or failed p
 `console.warn` and leaves `groups` empty, and the picker then **fails closed and visibly**: the
 grid renders a distinct localized `[part="load-error"]` surface instead of the ordinary
 `[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
-zero-match search or a deliberate `groups = []` opt-out, and announces the same message once
+zero-match search or a deliberate `groups = []` opt-out, announces the same message once
 through the document's shared assertive live region (not a shadow-root `role="alert"`, which
-announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat
+announces unreliably) and emits `lr-load-error` (no detail). The failed load is not cached: the
+`load-retry` button (or a later locale change) loads again, and a successful retry clears the
+failure. Assigning `groups` also clears it. The adapter buckets the peer's flat
 entry list by numeric group id and returns only the public `{ key, label, emojis }` shape. The picker
 privately maps auto-loaded group ids 0–9 to the existing `emojiPickerGroup*` locale strings; override
 those through `registerLyraLocale()` or `.strings`. An unknown future group id uses `Group {id}`.
@@ -6680,8 +6702,10 @@ A closed-list locale switcher over the library's own locale registry. First-part
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
 plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
-trigger-button/`aria-activedescendant` listbox technique, not composed from it. Optional
-`searchable` adds a text filter; free text never becomes a locale selection.
+trigger-button/`aria-activedescendant` listbox technique, not composed from it. Opening makes the
+committed locale the active row and scrolls it into view (nothing is active while no locale is
+committed); the active row is revealed by scrolling only the listbox, below the sticky search field.
+Optional `searchable` adds a text filter; free text never becomes a locale selection.
 
 Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
 hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
@@ -6805,8 +6829,11 @@ the retry button with `load-retry`.
 **Events:** `lr-change-request` is cancelable and carries `{ value, previousValue, direction }`
 before the selected value, popup, or global locale changes. Prevent it to keep all three unchanged;
 a synchronous host value assignment also takes precedence. On acceptance, the component sets
-`value`, closes the popup, applies `setLyraLocale(value)`, then emits a non-cancelable `lr-change`
-with the captured values and the direction resolved after any catalog load. Preventing the notification has no effect. `focus`/`blur` relay once from the
+`value`, closes the popup, applies `setLyraLocale(value)`, then emits non-cancelable native `input`,
+`lr-input`, native `change` and `lr-change` (the prefixed pair carries the captured values and the
+direction resolved after any catalog load). Preventing the notifications has no effect. Picking the
+locale that is already committed and already the page locale only closes the popup: no request,
+event or `setLyraLocale()` call. `focus`/`blur` relay once from the
 trigger as native `FocusEvent`s preserving `relatedTarget`. `lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 
@@ -7465,8 +7492,9 @@ Each `LyraCurrencyEntry { readonly code: string; readonly label?: string; readon
 readonly group?: string; readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
 effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
 including explicit empty strings, override that presentation. The catalog is copied; reassign it
-to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
-entry for each normalized code wins. Caller order is preserved.
+to change options. At most 1024 rows are examined, invalid rows are skipped, and the first valid
+entry for each normalized code wins. Caller order is preserved. Names and symbols resolve once per
+catalog and locale and are shared by every picker using that catalog.
 
 **Unavailable values stay visible.** A value outside the configured catalog, a malformed nonempty
 value, or a selected entry that becomes disabled is retained and marked unavailable. It fails
@@ -7489,7 +7517,8 @@ constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 
 `topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
-overrides inherited `--lr-positioning-strategy`.
+overrides inherited `--lr-positioning-strategy`; with neither, the list uses `absolute` in both
+modes.
 Keyboard navigation and ISO-code type-ahead use the select contract by default. Set
 `searchable` (default `false`) to enable a text filter matching codes, localized names, literal
 labels, and regular/narrow symbols. Typing only filters; it does not change `value` or emit
@@ -7545,7 +7574,7 @@ and inherit shared form-control and surface tokens.
   [`lr-currency-picker`](#lr-currency-picker).
   `LyraCurrencyDisplayEntry { readonly code: string; readonly label: string; readonly symbol: string; readonly narrowSymbol: string; readonly disabled: boolean; readonly group?: string }`
   includes both ordinary and narrow symbols. Explicit caller labels/symbols take precedence;
-  unsupported display data falls back to the code. Input catalogs use the picker's 512-row bound.
+  unsupported display data falls back to the code. Input catalogs use the picker's 1024-row bound.
 
   `LyraCurrencyRateSnapshot { readonly base: string; readonly date: string | null; readonly rates: Readonly<Partial<Record<string, number>>> }`
   stores units of each quoted currency per one unit of `base`. Missing quotes remain unavailable.
@@ -7627,7 +7656,10 @@ otherwise labels or the localized Country, Time zone or Unit name apply. Externa
 `placeholder` defaults to localized Select; an explicit empty string stays empty.
 `size='m'`, `clearable=false`, `topLayer=false` (`top-layer`), and optional
 `positioningStrategy: 'fixed' | 'absolute'` (`positioning-strategy`) follow the select contract.
-An omitted positioning strategy inherits `--lr-positioning-strategy`.
+An omitted positioning strategy inherits `--lr-positioning-strategy`, else both modes use `absolute`.
+The filter control (`lr-combobox`) loads the first time `searchable` is enabled, so a plain picker
+never ships it; `await picker.updateComplete` resolves once it has taken over. A committed `disabled`
+entry stays visible and invalid with a "not in catalog" badge in all four pickers.
 
 `name`, `form`, `required`, `disabled`, `value`, `defaultValue`, fieldset disablement and native
 form submission/reset follow the shared form contracts. The form owns the committed identifier,

@@ -209,7 +209,7 @@ it("contains composed draft events while preserving its single public event sequ
 
   expect(el.value).to.deep.equal(["alpha"]);
   expect(inputs).to.equal(1);
-  expect(inputDetails).to.deep.equal([{ value: ["alpha"] }]);
+  expect(inputDetails).to.deep.equal([{ value: ["alpha"], previousValue: [] }]);
   expect(changes).to.equal(1);
   expect(focuses).to.equal(1);
   expect(blurs).to.equal(1);
@@ -262,7 +262,7 @@ it("contains composed inline-editor events while relaying its public focus lifec
 
   expect(el.value).to.deep.equal(["beta"]);
   expect(inputs).to.equal(1);
-  expect(inputDetails).to.deep.equal([{ value: ["beta"] }]);
+  expect(inputDetails).to.deep.equal([{ value: ["beta"], previousValue: ["alpha"] }]);
   expect(changes).to.equal(1);
   expect(focuses).to.equal(1);
   expect(blurs).to.equal(1);
@@ -1787,7 +1787,7 @@ describe("editable tokens", () => {
       order.push("input");
     });
     el.addEventListener("lr-input", (event) => {
-      expect((event as CustomEvent).detail).to.deep.equal({ value: ["beta"] });
+      expect((event as CustomEvent).detail).to.deep.equal({ value: ["beta"], previousValue: ["alpha"] });
       order.push("lr-input");
     });
     el.addEventListener("change", (event) => {
@@ -3119,9 +3119,7 @@ describe("start/end adornment slots", () => {
     glyph.slot = "start";
     glyph.textContent = "*";
     el.append(glyph);
-    await el.updateComplete;
-    await el.updateComplete;
-    expect(part(el, "start").hasAttribute("hidden")).to.be.false;
+    await waitUntil(() => !part(el, "start").hasAttribute("hidden"));
   });
 });
 

@@ -19,6 +19,7 @@ import { RESET_OPTION_SELECTED_FROM_OWNER, SET_OPTION_SELECTED_FROM_OWNER } from
 import { __setAnchoredOverlayRuntimeLoaderForTesting, type AnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
+import { settleComboboxSource } from '../../../../test/wtr-combobox.js';
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];
@@ -78,7 +79,7 @@ async function affectedStatusTexts(overrides: {
   loading.source = () => new Promise(() => {});
   loading.open = true;
   await loading.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(loading);
   await loading.updateComplete;
 
   const empty = (await fixture(
@@ -913,6 +914,8 @@ describe('collecting already-slotted options without relying on the initial slot
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
       ).to.equal(1);
+      el.open = true;
+      await el.updateComplete;
       const values = Array.from(
         el.renderRoot!.querySelectorAll<HTMLElement>('[part="option"]')
       ).map((row) => row.dataset['value']);
@@ -959,6 +962,8 @@ describe('collecting already-slotted options without relying on the initial slot
       // Same outcome as the suppressed-event test above: one seeded selection, no duplicated
       // rows, no thrown error from a second pass over an already-known element set.
       expect(el.value, 'the declaratively-selected option wins, exactly once').to.equal('b');
+      el.open = true;
+      await el.updateComplete;
       const values = Array.from(
         el.renderRoot!.querySelectorAll<HTMLElement>('[part="option"]')
       ).map((row) => row.dataset['value']);
@@ -1370,10 +1375,10 @@ it("ignores a stale source response that resolves after a newer query", async ()
   el.source = () => new Promise((r) => resolvers.push(r));
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   await typeQuery(el, "second");
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   expect(resolvers).to.have.length(2);
   requiredItem(resolvers, 0, 'stale source resolver')([{ value: "stale", label: "Stale result" }]);
@@ -1648,7 +1653,7 @@ it("clears the pending debounced source timer on disconnect so a detached elemen
   };
   await typeQuery(el, "ban");
   el.remove();
-  await aTimeout(250);
+  await settleComboboxSource(el);
   expect(called).to.be.false;
 });
 
@@ -1692,7 +1697,7 @@ it("resolves the loading message through .strings when loadingText is unset", as
   el.source = () => new Promise(() => {});
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector(".loading")!.textContent).to.equal(
@@ -1770,7 +1775,7 @@ it('normalizes a numeric badge and a disabled flag from an async source row', as
   ];
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const rows = [...el.shadowRoot!.querySelectorAll('[part="option"]')];
@@ -1821,7 +1826,7 @@ it('stops accepting rows once the cumulative text ceiling is exceeded, truncatin
   el.source = async () => hugeRowSet;
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(
@@ -1842,13 +1847,13 @@ it("retains a loaded async row when its value is selected programmatically befor
     query ? [] : [{ value: "lux", label: "Luxembourg", data: payload }];
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   el.value = "lux";
   await el.updateComplete;
   await typeQuery(el, "elsewhere");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(el.selectedRows).to.have.length(1);
@@ -2018,7 +2023,7 @@ it("recovers loading=false and does not throw when source() rejects", async () =
     };
     el.open = true;
     await el.updateComplete;
-    await aTimeout(250);
+    await settleComboboxSource(el);
     expect((el as unknown as { sourceLoading: boolean }).sourceLoading).to.be.false;
     expect(warnCalls.length).to.be.greaterThan(0);
     expect(String(requiredItem(requiredItem(warnCalls, 0, 'warning call'), 0, 'warning argument'))).to.include("rejected");
@@ -2041,7 +2046,7 @@ it("recovers loading=false when source() throws synchronously instead of returni
     ) => Promise<import("./combobox.js").ComboboxSourceRow[]>;
     el.open = true;
     await el.updateComplete;
-    await aTimeout(250);
+    await settleComboboxSource(el);
     expect((el as unknown as { sourceLoading: boolean }).sourceLoading).to.be.false;
   } finally {
     console.warn = originalWarn;
@@ -2207,7 +2212,7 @@ it("uses a custom loadingText instead of the hardcoded default while a source ca
   el.source = () => new Promise(() => {});
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector(".loading")!.textContent).to.equal(
@@ -2409,7 +2414,7 @@ it("prunes _selectedLabelCache back to the live selection instead of growing unb
   el.source = async () => [{ value: "lux", label: "Luxembourg" }];
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   // pickRow() -- driven here via a real row click, not a direct `value`
@@ -2941,10 +2946,10 @@ describe("source AbortSignal and configurable debounce", () => {
     };
     el.open = true;
     await el.updateComplete;
-    await aTimeout(250);
+    await settleComboboxSource(el);
 
     await typeQuery(el, "newer");
-    await aTimeout(250);
+    await settleComboboxSource(el);
 
     expect(signals.length).to.equal(2);
     expect(
@@ -2968,7 +2973,7 @@ describe("source AbortSignal and configurable debounce", () => {
     };
     el.open = true;
     await el.updateComplete;
-    await aTimeout(250);
+    await settleComboboxSource(el);
     expect(captured.aborted).to.equal(false);
 
     el.remove();
@@ -2988,7 +2993,7 @@ describe("source AbortSignal and configurable debounce", () => {
     el.source = legacy;
     el.open = true;
     await el.updateComplete;
-    await aTimeout(250);
+    await settleComboboxSource(el);
     await el.updateComplete;
     expect(
       el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!
@@ -3145,7 +3150,7 @@ it("preserves source query, rows, and active option when hide() is vetoed", asyn
       : [];
   await el.show();
   await typeQuery(el, "ban");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   const input = el.shadowRoot!.querySelector<HTMLInputElement>(
     '[part="combobox-input"]'
@@ -3220,7 +3225,7 @@ it("re-runs source on reconnect while closed with a stale selection and empty as
 
   el.value = "x"; // selects without ever opening -- triggers willUpdate()'s one-shot warm-up
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   expect(queries, "the initial warm-up fetch fired once").to.deep.equal([""]);
 
   el.remove();
@@ -3228,7 +3233,7 @@ it("re-runs source on reconnect while closed with a stale selection and empty as
   document.body.appendChild(el); // reconnect while still closed
   await new Promise<void>((resolve) => queueMicrotask(resolve));
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   expect(
     queries,
@@ -3272,7 +3277,7 @@ it("rebinds positioning and refreshes empty async rows when reconnected while op
     listbox.style.position,
     "reconnectOpenPopup() re-positions the listbox"
   ).to.not.equal("");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   expect(
     sourceCalls,
     "reconnecting while open with empty async rows refreshes them"
@@ -3288,7 +3293,7 @@ it("aborts an in-flight source request when adopted into a new document", async 
   };
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   expect(captured.aborted).to.equal(false);
 
   const iframe = document.createElement("iframe");
@@ -3356,7 +3361,7 @@ it("checks async source rows, not local options, for an exact match when allow-c
   await el.updateComplete;
 
   await typeQuery(el, "known row");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector("[data-create]") === null,
@@ -3364,7 +3369,7 @@ it("checks async source rows, not local options, for an exact match when allow-c
   ).to.equal(true);
 
   await typeQuery(el, "brand new");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   expect(
     el.shadowRoot!.querySelector("[data-create]"),
@@ -3379,7 +3384,7 @@ it("clears stale async rows when hide() dismisses a non-empty query in source mo
   el.open = true;
   await el.updateComplete;
   await typeQuery(el, "ban");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(1);
 
@@ -3388,7 +3393,7 @@ it("clears stale async rows when hide() dismisses a non-empty query in source mo
 
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   // Without the fix, the stale row would still be sitting in `asyncRows` and the reopen guard
   // (`asyncRows.length === 0`) would never even re-run source() to replace it.
@@ -3419,7 +3424,7 @@ it("clamps a stale activeIndex when a fresh source response has fewer navigable 
   };
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.length(3);
 
@@ -3446,7 +3451,7 @@ it("clamps a stale activeIndex when a fresh source response has fewer navigable 
 
   (el.shadowRoot!.querySelector('[part="option"]') as HTMLElement).click();
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const active = el.shadowRoot!.querySelector('[part="option"][data-active]');
@@ -3465,7 +3470,7 @@ it("silently drops a source rejection that arrives after disconnect", async () =
     });
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   el.remove();
   await el.updateComplete;
@@ -3504,7 +3509,7 @@ it("swallows an AbortError the source rejects with while its request is still cu
     });
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   const originalWarn = console.warn;
   let warned = false;
@@ -3699,7 +3704,7 @@ it("sets an inputValue programmatically while source is configured, triggering a
   await el.updateComplete;
   el.inputValue = "typed";
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   expect(el.inputValue).to.equal("typed");
   expect(queries).to.deep.equal(["typed"]);
@@ -3719,7 +3724,7 @@ it("runs source again after setRangeText() while source is configured", async ()
   input.value = "Apple";
   el.setRangeText("X", 0, 1);
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
 
   expect(el.inputValue).to.equal("Xpple");
   expect(queries).to.deep.equal(["Xpple"]);
@@ -3749,6 +3754,7 @@ it("contains the internal lr-option-change notification instead of leaking it pa
   const el = (await fixture(html`
     <lr-combobox><lr-option value="a">Apple</lr-option></lr-combobox>
   `)) as LyraCombobox;
+  el.open = true;
   await el.updateComplete;
   const option = el.querySelector("lr-option")!;
 

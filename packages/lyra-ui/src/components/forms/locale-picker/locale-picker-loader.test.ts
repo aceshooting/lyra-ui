@@ -119,7 +119,6 @@ it('catches synchronous callback failures and retries through a fresh request wi
   await focusByKeyboard(trigger(el));
   await sendKeys({ press: 'ArrowDown' });
   await sendKeys({ press: 'ArrowDown' });
-  await sendKeys({ press: 'ArrowDown' });
   await sendKeys({ press: 'Enter' });
   await waitUntil(() => el.shadowRoot!.querySelector('[part="load-retry"]') !== null);
   expect(el.open).to.equal(true);

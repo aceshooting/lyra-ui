@@ -57,7 +57,7 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
-     tracked in JS (hasLabelSlot/hasHintSlot/hasErrorSlot) and reflected as the hidden attribute. */
+     tracked by SlotPresenceController and reflected as the hidden attribute. */
   [part='form-control-label'][hidden],
   [part='hint'][hidden],
   [part='error'][hidden] {
@@ -185,6 +185,7 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='grid'] {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-emoji-picker-gap, var(--_lr-emoji-picker-gap-default));
@@ -330,6 +331,36 @@ export const styles = css`
      foreground -- the two states are otherwise the same box in the same place. */
   [part='load-error'] {
     color: var(--lr-color-danger);
+  }
+  .group {
+    display: contents;
+  }
+  [part='load-retry'] {
+    justify-self: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-button);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  [part='load-retry']:where(:hover:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-hover));
+  }
+  [part='load-retry']:where(:active:not(:disabled)) {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-text) var(--lr-color-mix-active));
+  }
+  [part='load-retry']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='load-retry']:where(:disabled) {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
   }
   [part='form-control'],
   [part='form-control-label'],

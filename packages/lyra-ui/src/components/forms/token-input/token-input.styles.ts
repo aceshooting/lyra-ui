@@ -238,6 +238,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part="remove"][aria-disabled="true"] {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
+  }
+  [part="remove"][aria-disabled="true"]:hover,
+  [part="remove"][aria-disabled="true"]:active {
+    background: transparent;
+  }
   /* Only rendered while [editable] is set, so a non-editable token row keeps its plain,
      non-focusable text span and its current metrics. */
   [part="token-label"] {

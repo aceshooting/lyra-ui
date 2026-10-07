@@ -50,6 +50,7 @@ function resolved(
 it("renders lr-option children as listbox rows with the placeholder shown as the trigger label", async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.placeholder = "Pick a fruit…";
+  el.open = true;
   await el.updateComplete;
 
   expect(rows(el).length).to.equal(3);
@@ -60,7 +61,7 @@ it("renders lr-option children as listbox rows with the placeholder shown as the
 
 it("rejects unsafe option dot colors while preserving valid CSS colors", async () => {
   const el = await fixture<LyraSelect>(html`
-    <lr-select>
+    <lr-select open>
       <lr-option value="a" dot-color="red;position:fixed">A</lr-option>
     </lr-select>
   `);
@@ -71,7 +72,7 @@ it("rejects unsafe option dot colors while preserving valid CSS colors", async (
   expect(dot.style.backgroundColor).to.equal("transparent");
 
   const safe = await fixture<LyraSelect>(html`
-    <lr-select>
+    <lr-select open>
       <lr-option value="a" dot-color="color-mix(in srgb, red 50%, blue)"
         >A</lr-option
       >
@@ -1057,19 +1058,20 @@ describe("selected-state theming tokens", () => {
     expect(getComputedStyle(selected).color).to.equal("rgb(1, 2, 3)");
   });
 
-  it("honours --lr-select-option-selected-bg on the selected row", async () => {
+  it("honours --lr-select-option-selected-bg on a selected row that is not the active one", async () => {
     const el = (await fixture(html`
       <lr-select
-        value="a"
+        multiple
         style="--lr-select-option-selected-bg: rgb(4, 5, 6);"
       >
-        <lr-option value="a">Apple</lr-option>
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b" selected>Banana</lr-option>
       </lr-select>
     `)) as LyraSelect;
     el.open = true;
     await el.updateComplete;
     const selected = el.shadowRoot!.querySelector(
-      '[part="option"][aria-selected="true"]'
+      '[part="option"][aria-selected="true"]:not([data-active])'
     ) as HTMLElement;
     expect(getComputedStyle(selected).backgroundColor).to.equal("rgb(4, 5, 6)");
   });
@@ -1784,4 +1786,25 @@ describe("lr-select popup adornment truncation", () => {
       expect(adornment.scrollWidth > adornment.clientWidth, "text overflows its box").to.equal(true);
     });
   }
+});
+
+
+it("names a chip, the trigger and the listbox row by the raw value when the option's label is blank", async () => {
+  const multi = (await fixture(html`
+    <lr-select multiple>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="x"></lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  multi.value = ["a", "x"];
+  await multi.updateComplete;
+  const remove = [...multi.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="tag__remove-button"]')];
+  expect(remove[1]!.getAttribute("aria-label")).to.equal("Remove x");
+  multi.open = true;
+  await multi.updateComplete;
+  expect(rows(multi)[1]!.textContent!.trim()).to.equal("x");
+
+  const single = (await fixture(html`<lr-select value="x"><lr-option value="x"></lr-option></lr-select>`)) as LyraSelect;
+  await single.updateComplete;
+  expect(trigger(single).textContent).to.contain("x");
 });

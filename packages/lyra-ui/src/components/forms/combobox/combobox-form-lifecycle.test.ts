@@ -11,6 +11,7 @@ import "../../layout/segmented/segmented.js";
 import type { ComboboxFilterDetail, LyraCombobox } from "./combobox.js";
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
+import { settleComboboxSource } from '../../../../test/wtr-combobox.js';
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];
@@ -59,6 +60,33 @@ const supportsStateSelector = (() => {
     return false;
   }
 })();
+
+for (const [cause, apply] of [
+  ["disabled", (el: LyraCombobox) => { el.disabled = true; }],
+  ["readonly", (el: LyraCombobox) => { el.readonly = true; }],
+  ["fieldset-disabled", (el: LyraCombobox) => (el as unknown as { formDisabledCallback(disabled: boolean): void }).formDisabledCallback(true)],
+] as const) {
+  it(`force-closes when ${cause} even when lr-hide is vetoed`, async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.open = true;
+    await el.updateComplete;
+    const pending = el.hide();
+    let hides = 0;
+    el.addEventListener("lr-hide", (event) => {
+      hides += 1;
+      event.preventDefault();
+    });
+    apply(el);
+    expect(el.open).to.be.false;
+    await el.updateComplete;
+    expect(hides, "a policy close is not an author-vetoable transition").to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="listbox"]')!.hasAttribute("hidden")).to.be.true;
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    document.body.dispatchEvent(escape);
+    expect(escape.defaultPrevented, "no overlay entry survives the close").to.be.false;
+    await pending;
+  });
+}
 
 it("rejects direct open writes while disabled or synchronously fieldset-disabled", async () => {
   const fieldset = await fixture<HTMLFieldSetElement>(html`
@@ -340,17 +368,17 @@ it("re-fetches with the reset query after picking a row, refreshing stale async 
   };
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   await typeQuery(el, "ban");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
 
   const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
   row.click();
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(calls).to.deep.equal(["", "ban", ""]);
@@ -377,11 +405,11 @@ it("re-fetches with the reset query after clear(), refreshing stale async result
   el.value = "b";
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   await typeQuery(el, "ban");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const clearBtn = el.shadowRoot!.querySelector(
@@ -389,7 +417,7 @@ it("re-fetches with the reset query after clear(), refreshing stale async result
   ) as HTMLButtonElement;
   setTimeout(() => clearBtn.click());
   await oneEvent(el, "lr-clear");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(calls).to.deep.equal(["", "ban", ""]);
@@ -983,6 +1011,38 @@ describe("validity custom states", () => {
       .true;
     expect(el.matches(":state(user-invalid)"), "user-invalid once satisfied").to
       .be.false;
+  });
+
+  it("counts committing, removing and clearing a selection as interaction before any blur", async function () {
+    if (!supportsCustomStates || !supportsStateSelector) this.skip();
+    const make = async (multiple: boolean) => (await fixture(html`
+      <lr-combobox required ?multiple=${multiple} clearable>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    const picked = await make(false);
+    await picked.show();
+    const key = (name: string) => picked.shadowRoot!.querySelector('input')!.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }));
+    key("ArrowDown");
+    key("Enter");
+    await picked.updateComplete;
+    expect(picked.value).to.equal("a");
+    expect(picked.matches(":state(user-valid)"), "user-valid after a keyboard pick").to.be.true;
+
+    const removed = await make(true);
+    removed.value = ["a"];
+    await removed.updateComplete;
+    removed.shadowRoot!.querySelector<HTMLButtonElement>('[part="tag__remove-button"]')!.click();
+    await removed.updateComplete;
+    expect(removed.matches(":state(user-invalid)"), "user-invalid after removing the last tag").to.be.true;
+
+    const cleared = await make(false);
+    cleared.value = "a";
+    await cleared.updateComplete;
+    cleared.shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]')!.click();
+    await cleared.updateComplete;
+    expect(cleared.matches(":state(user-invalid)"), "user-invalid after clearing").to.be.true;
   });
 
   it("counts a reportValidity() call as interaction, and a form reset as going pristine again", async function () {

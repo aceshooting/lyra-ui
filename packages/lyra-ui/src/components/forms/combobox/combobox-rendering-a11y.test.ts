@@ -18,6 +18,7 @@ import { setReducedMotion } from "../../../../test/wtr-media.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
+import { settleComboboxSource } from '../../../../test/wtr-combobox.js';
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];
@@ -67,7 +68,7 @@ const finishListboxAnimation = (el: LyraCombobox): void => {
 
 it("rejects unsafe option dot colors while preserving valid CSS colors", async () => {
   const el = await fixture<LyraCombobox>(html`
-    <lr-combobox>
+    <lr-combobox open>
       <lr-option value="a" dot-color="url(data:image/svg+xml,&lt;svg/&gt;)"
         >A</lr-option
       >
@@ -80,7 +81,7 @@ it("rejects unsafe option dot colors while preserving valid CSS colors", async (
   expect(dot.style.backgroundImage).to.not.contain("url(");
 
   const safe = await fixture<LyraCombobox>(html`
-    <lr-combobox>
+    <lr-combobox open>
       <lr-option value="a" dot-color="#123456">A</lr-option>
     </lr-combobox>
   `);
@@ -90,12 +91,12 @@ it("rejects unsafe option dot colors while preserving valid CSS colors", async (
   ).to.not.equal("");
 });
 
-it("emits lr-change with the new value alongside native-style change/input", async () => {
+it("emits lr-input and lr-change with the new and previous value alongside native-style input/change", async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.open = true;
   await el.updateComplete;
   const seen: Array<{ type: string; detail: unknown }> = [];
-  for (const type of ["input", "change", "lr-change"]) {
+  for (const type of ["input", "lr-input", "change", "lr-change"]) {
     el.addEventListener(type, (e) =>
       seen.push({ type, detail: (e as CustomEvent).detail })
     );
@@ -108,11 +109,12 @@ it("emits lr-change with the new value alongside native-style change/input", asy
 
   expect(seen.map((s) => s.type)).to.deep.equal([
     "input",
+    "lr-input",
     "change",
     "lr-change",
   ]);
   for (const s of seen) {
-    expect(s.detail).to.deep.equal({ value: 'b', data: [undefined] });
+    expect(s.detail).to.deep.equal({ value: 'b', previousValue: '', data: [undefined] });
     expect(Object.isFrozen(s.detail)).to.equal(true);
   }
 });
@@ -133,6 +135,40 @@ it("falls back to the raw value in a remove-tag's accessible name when the optio
   ];
   const blankOptionButton = removeButtons[1]!;
   expect(blankOptionButton.getAttribute("aria-label")).to.equal("Remove x");
+});
+
+it("describes a populated multiple combobox by every committed label, including collapsed ones", async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple max-options-visible="2" label="Fruit">
+      <lr-option value="a">Alpha</lr-option>
+      <lr-option value="b">Beta</lr-option>
+      <lr-option value="c">Gamma</lr-option>
+      <lr-option value="d">Delta</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.value = ["a", "b", "c", "d"];
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]')!;
+  const described = input
+    .getAttribute("aria-describedby")!
+    .split(" ")
+    .map((id) => el.shadowRoot!.getElementById(id)?.textContent?.trim())
+    .join(" ");
+  expect(described).to.contain("Alpha, Beta, Gamma, Delta");
+  for (const painted of el.shadowRoot!.querySelectorAll('[part="tag__content"], [part~="tag-overflow"]')) {
+    expect(painted.closest('[aria-hidden="true"]') !== null, "painted tag text stays out of the accessibility tree").to.be.true;
+  }
+});
+
+it("gives a blank-label option's listbox row the raw value as its name", async () => {
+  const el = (await fixture(html`
+    <lr-combobox>
+      <lr-option value="x"></lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"]')!.textContent!.trim()).to.equal("x");
 });
 
 it("renders the native autocomplete attribute only when configured", async () => {
@@ -515,7 +551,7 @@ it("calls source with the current query (debounced) and renders its rows", async
   };
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(calls).to.deep.equal([""]);
@@ -525,7 +561,7 @@ it("calls source with the current query (debounced) and renders its rows", async
   ).to.contain('Result for ""');
 
   await typeQuery(el, "ban");
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   expect(calls).to.deep.equal(["", "ban"]);
@@ -625,7 +661,7 @@ it("renders structured async-row adornments and preserves selected opaque data",
   ];
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
@@ -794,7 +830,7 @@ it("resolves a programmatically-set value to its label from asyncRows, warming t
   // `asyncRows` on its own, without the listbox ever having been opened.
   el.value = "b";
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const input = el.shadowRoot!.querySelector(
@@ -920,7 +956,7 @@ it("resolves a programmatically-set value to its label from asyncRows in multi-s
   ];
   el.value = ["a", "b"];
   await el.updateComplete;
-  await aTimeout(250);
+  await settleComboboxSource(el);
   await el.updateComplete;
 
   const tagLabels = Array.from(
@@ -1565,7 +1601,7 @@ describe("clear affordance on the filter axis", () => {
       }
       await sendMouse({ type: 'click', position: center(clearButton(el)!) });
       await waitUntil(() => el.value === '');
-      expect(reported.sort()).to.deep.equal(['change', 'input', 'lr-change', 'lr-clear', 'lr-filter:']);
+      expect(reported.sort()).to.deep.equal(['change', 'input', 'lr-change', 'lr-clear', 'lr-filter:', 'lr-input']);
       expect(inputEl(el).value).to.equal('');
     } finally {
       await resetMouse();

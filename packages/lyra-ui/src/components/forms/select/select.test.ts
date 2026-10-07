@@ -197,6 +197,8 @@ describe('collecting already-slotted options without relying on the initial slot
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
       ).to.equal(1);
+      el.open = true;
+      await el.updateComplete;
       const values = Array.from(rows(el)).map((row) => row.dataset['value']);
       expect(
         values,
@@ -241,6 +243,8 @@ describe('collecting already-slotted options without relying on the initial slot
       // Same outcome as the suppressed-event test above: one seeded selection, no duplicated
       // rows, no thrown error from a second pass over an already-known element set.
       expect(el.value, 'the declaratively-selected option wins, exactly once').to.equal('b');
+      el.open = true;
+      await el.updateComplete;
       const values = Array.from(rows(el)).map((row) => row.dataset['value']);
       expect(values).to.deep.equal(['a', 'b']);
     } finally {
@@ -314,8 +318,8 @@ describe("adoptedCallback", () => {
       "the old stack lease is released"
     ).to.equal("");
     expect(
-      (el as unknown as { pointerListenerDocument?: Document })
-        .pointerListenerDocument === undefined
+      (el as unknown as { pointer: { document?: Document } }).pointer
+        .document === undefined
     ).to.be.true;
 
     frameDocument.body.append(el);
@@ -334,8 +338,8 @@ describe("adoptedCallback", () => {
       "reconnect gets a new owner-document stack entry"
     ).to.be.false;
     expect(
-      (el as unknown as { pointerListenerDocument?: Document })
-        .pointerListenerDocument === frameDocument,
+      (el as unknown as { pointer: { document?: Document } }).pointer
+        .document === frameDocument,
       "the capture listener belongs only to the adopted document"
     ).to.be.true;
     expect(el.style.getPropertyValue("--lr-overlay-stack-index")).to.not.equal(
@@ -582,12 +586,12 @@ describe("bindDocumentPointer (internal, defensive guards)", () => {
   it("is idempotent for an already-bound owner document", async () => {
     const el = (await fixture(basic())) as LyraSelect;
     await el.show();
-    const before = (el as unknown as { pointerListener?: unknown })
-      .pointerListener;
+    const before = (el as unknown as { pointer: { listener?: unknown } })
+      .pointer.listener;
     expect(before, "show() already bound a listener").to.not.equal(undefined);
     (el as unknown as { bindDocumentPointer(): void }).bindDocumentPointer();
-    const after = (el as unknown as { pointerListener?: unknown })
-      .pointerListener;
+    const after = (el as unknown as { pointer: { listener?: unknown } })
+      .pointer.listener;
     expect(
       after,
       "rebinding for the same document is a no-op, not a fresh listener"
@@ -899,7 +903,7 @@ describe("multiple", () => {
     await el.updateComplete;
 
     expect(el.value).to.deep.equal(["b"]);
-    expect(detail).to.deep.equal([{ value: ["b"], data: [undefined] }]);
+    expect(detail).to.deep.equal([{ value: ["b"], previousValue: ["a", "b"], data: [undefined] }]);
   });
 
   it("renders one tag per selected option instead of a single label", async () => {
@@ -1990,6 +1994,7 @@ describe("lr-select mapped Select parity surface", () => {
     const started = performance.now();
     document.body.append(el);
     try {
+      el.open = true;
       await el.updateComplete;
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
@@ -2069,6 +2074,7 @@ it("contains the internal lr-option-change notification instead of leaking it pa
   const el = (await fixture(html`
     <lr-select><lr-option value="a">Apple</lr-option></lr-select>
   `)) as LyraSelect;
+  el.open = true;
   await el.updateComplete;
   const option = el.querySelector("lr-option") as LyraOption;
 

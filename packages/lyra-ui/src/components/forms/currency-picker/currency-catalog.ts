@@ -1,9 +1,5 @@
 import type { LyraCurrencyEntry } from './currency-types.js';
-import {
-  getOwnDataDescriptor,
-  MISSING_OWN_DATA_DESCRIPTOR,
-  UNSAFE_OWN_DATA_DESCRIPTOR,
-} from '../../../internal/data-descriptors.js';
+import { snapshotSelectionCatalog } from '../../../internal/selection-catalog.js';
 
 /**
  * ISO 4217 currency, fund and metal codes from SIX list one, published 2026-09-17.
@@ -56,70 +52,5 @@ export function normalizeCurrencyValue(value: unknown): string {
 
 /** Clone a bounded caller catalog; undefined means the pinned default catalog. */
 export function normalizeCurrencyCatalog(value: unknown): readonly LyraCurrencyEntry[] | undefined {
-  if (value == null) return undefined;
-  let length: number;
-  try {
-    if (!Array.isArray(value)) return Object.freeze([]);
-    const lengthDescriptor = getOwnDataDescriptor(value, 'length');
-    const ownLength = typeof lengthDescriptor === 'symbol' ? undefined : lengthDescriptor.value;
-    if (typeof ownLength !== 'number' || !Number.isSafeInteger(ownLength) || ownLength < 0) {
-      return Object.freeze([]);
-    }
-    length = Math.min(ownLength, 512);
-  } catch {
-    return Object.freeze([]);
-  }
-
-  const rows: LyraCurrencyEntry[] = [];
-  const seen = new Set<string>();
-  for (let index = 0; index < length; index++) {
-    let code: unknown;
-    let label: unknown;
-    let symbol: unknown;
-    let disabled: unknown;
-    let group: unknown;
-    try {
-      const indexDescriptor = getOwnDataDescriptor(value, String(index));
-      if (typeof indexDescriptor === 'symbol') continue;
-      const item = indexDescriptor.value;
-      if (typeof item === 'string') {
-        code = item;
-      } else if (item && typeof item === 'object' && !Array.isArray(item)) {
-        const codeDescriptor = getOwnDataDescriptor(item, 'code');
-        if (codeDescriptor === MISSING_OWN_DATA_DESCRIPTOR || codeDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
-        const labelDescriptor = getOwnDataDescriptor(item, 'label');
-        const symbolDescriptor = getOwnDataDescriptor(item, 'symbol');
-        const disabledDescriptor = getOwnDataDescriptor(item, 'disabled');
-        const groupDescriptor = getOwnDataDescriptor(item, 'group');
-        if (labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-            symbolDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-            disabledDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-            groupDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
-        code = codeDescriptor.value;
-        label = labelDescriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : labelDescriptor.value;
-        symbol = symbolDescriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : symbolDescriptor.value;
-        disabled = disabledDescriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : disabledDescriptor.value;
-        group = groupDescriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : groupDescriptor.value;
-      } else {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-    const normalized = normalizeCurrencyValue(code);
-    if (!/^[A-Z]{3}$/.test(normalized) || seen.has(normalized)) continue;
-    if (label !== undefined && typeof label !== 'string') continue;
-    if (symbol !== undefined && typeof symbol !== 'string') continue;
-    if (disabled !== undefined && typeof disabled !== 'boolean') continue;
-    if (group !== undefined && typeof group !== 'string') continue;
-
-    const row: LyraCurrencyEntry = { code: normalized };
-    if (label !== undefined) Object.assign(row, { label });
-    if (symbol !== undefined) Object.assign(row, { symbol });
-    if (disabled !== undefined) Object.assign(row, { disabled });
-    if (group !== undefined) Object.assign(row, { group });
-    rows.push(Object.freeze(row));
-    seen.add(normalized);
-  }
-  return Object.freeze(rows);
+  return snapshotSelectionCatalog(value, normalizeCurrencyValue, (code) => /^[A-Z]{3}$/.test(code));
 }

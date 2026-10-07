@@ -122,10 +122,10 @@ describe('currency catalog and presentation', () => {
     expect(row?.group).to.equal('Common');
   });
 
-  it('examines no more than 512 input rows even when earlier rows are invalid', () => {
-    const ignored = [...Array.from({ length: 512 }, () => 'invalid'), 'EUR'];
+  it('examines no more than 1,024 input rows even when earlier rows are invalid', () => {
+    const ignored = [...Array.from({ length: 1024 }, () => 'invalid'), 'EUR'];
     expect(normalizeCurrencyCatalog(ignored)).to.deep.equal([]);
-    ignored[511] = 'usd';
+    ignored[1023] = 'usd';
     expect(normalizeCurrencyCatalog(ignored)?.map((row) => row.code)).to.deep.equal(['USD']);
   });
 

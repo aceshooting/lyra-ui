@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LyraCombobox } from './combobox.js';
-import type { LyraOption } from './option.js';
+import { LyraOption as LyraOptionClass, type LyraOption } from './option.js';
 import type { LyraSelect } from '../select/select.js';
 import './combobox.js';
 import './option.js';
@@ -206,6 +206,21 @@ it('combobox exposes one effective selection while retaining multiple selection 
   expect(Array.from(el.querySelectorAll<LyraOption>('lr-option')).map((option) => option.selected)).to.deep.equal([true, true]);
 });
 
+it('combobox keeps hidden multiple history out of selectedRows and unknown rows in single mode', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick" multiple with-unknown-option>
+    <lr-option value="a">Alpha</lr-option><lr-option value="b">Beta</lr-option>
+  </lr-combobox>`);
+  await settle(el);
+  el.value = ['a', 'b', 'ghost'];
+  el.multiple = false;
+  await el.show();
+  expect(el.selectedRows.map((row) => row.value)).to.deep.equal(['a']);
+  expect(el.shadowRoot!.querySelectorAll('[data-unknown-value]').length).to.equal(0);
+  el.multiple = true;
+  await settle(el);
+  expect(el.selectedRows.map((row) => row.value)).to.deep.equal(['a', 'b']);
+});
+
 for (const legacy of [false, true]) {
   for (const custom of [false, true]) {
     it(`combobox leaves ${legacy ? 'legacy' : 'isComposing'} keys in the ${custom ? 'custom-value' : 'active-option'} filter`, async () => {
@@ -312,6 +327,18 @@ it('combobox exposes the exact mounted duplicate occurrence in single mode', asy
   expect(el.value).to.equal('');
 });
 
+it('combobox commits the clicked duplicate occurrence, not the last one sharing its value', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick">
+    <lr-option value="same">First</lr-option><lr-option value="same">Second</lr-option>
+  </lr-combobox>`);
+  await el.show();
+  const [a, b] = Array.from(el.querySelectorAll<LyraOption>('lr-option'));
+  if (!a || !b) throw new Error('Expected duplicate source options');
+  el.shadowRoot!.querySelectorAll<HTMLElement>('[part="option"]')[0]!.click();
+  await settle(el);
+  expect([a.selected, b.selected]).to.deep.equal([true, false]);
+});
+
 for (const slot of ['start', 'end', 'prefix', 'suffix']) {
   it(`combobox removes and reassigns decorative ${slot} presentation without a label change`, async () => {
     const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick"><lr-option value="a">Alpha</lr-option></lr-combobox>`);
@@ -416,3 +443,69 @@ for (const multiple of [false, true]) {
     });
   }
 }
+
+it('combobox reveals the active row by scrolling only its listbox', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick">${Array.from({ length: 40 }, (_, index) => html`<lr-option value=${String(index)}>Item ${index}</lr-option>`)}</lr-combobox>`);
+  await el.show();
+  const original = Element.prototype.scrollIntoView;
+  let calls = 0;
+  Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) {
+    calls += 1;
+    return original.apply(this, args);
+  };
+  try {
+    const input = el.shadowRoot!.querySelector('input')!;
+    for (let step = 0; step < 40; step++) input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await settle(el);
+    const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    const row = listbox.querySelector<HTMLElement>('[data-active]')!;
+    expect(row.textContent).to.contain('Item 39');
+    expect(row.getBoundingClientRect().bottom).to.be.at.most(listbox.getBoundingClientRect().bottom + 1);
+    expect(calls, 'the page and its scrollers stay put').to.equal(0);
+  } finally {
+    Element.prototype.scrollIntoView = original;
+  }
+});
+
+it('combobox derives its rows once per write and builds none for a printable key', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox multiple label="Pick">${Array.from({ length: 120 }, (_, index) => html`<lr-option value=${String(index)}>Item ${index}</lr-option>`)}</lr-combobox>`);
+  await settle(el);
+  const descriptor = Object.getOwnPropertyDescriptor(LyraOptionClass.prototype, 'label')!;
+  let reads = 0;
+  Object.defineProperty(LyraOptionClass.prototype, 'label', { ...descriptor, get(this: LyraOption) { reads += 1; return descriptor.get!.call(this); } });
+  try {
+    el.value = Array.from({ length: 30 }, (_, index) => String(index));
+    expect(reads, '30 selected values over 120 options').to.be.at.most(240);
+    await settle(el);
+    reads = 0;
+    el.shadowRoot!.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    expect(reads, 'a printable key needs no rows').to.equal(0);
+  } finally {
+    Object.defineProperty(LyraOptionClass.prototype, 'label', descriptor);
+  }
+});
+
+it('combobox opens by ArrowDown on the committed row, active and in view, and ArrowDown continues from it', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick" value="35">${Array.from({ length: 40 }, (_, index) => html`<lr-option value=${String(index)}>Item ${index}</lr-option>`)}</lr-combobox>`);
+  await settle(el);
+  const input = el.shadowRoot!.querySelector('input')!;
+  const press = (key: string) => input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  const active = () => el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  press('ArrowDown');
+  await settle(el);
+  await waitUntil(() => el.open && active() !== null);
+  expect(active()!.dataset['value']).to.equal('35');
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  await waitUntil(() => active()!.getBoundingClientRect().bottom <= listbox.getBoundingClientRect().bottom + 1);
+  press('ArrowDown');
+  await settle(el);
+  expect(active()!.dataset['value']).to.equal('36');
+});
+
+it('combobox mounts its option rows the first time the listbox opens', async () => {
+  const el = await fixture<LyraCombobox>(html`<lr-combobox label="Pick"><lr-option value="a">Alpha</lr-option><lr-option value="b">Beta</lr-option></lr-combobox>`);
+  const count = () => el.shadowRoot!.querySelectorAll('[part="option"]').length;
+  expect(count(), 'a closed combobox renders no rows').to.equal(0);
+  await el.show();
+  expect(count()).to.equal(2);
+});

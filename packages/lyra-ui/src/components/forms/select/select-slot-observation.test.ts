@@ -38,6 +38,7 @@ describe('lr-select observed option catalog', () => {
       badgeCount: unknownBadgeCount(select), labelCalls,
       display: select.shadowRoot?.querySelector('[part="display-input"]')?.textContent?.trim() ?? '',
     }) });
+    select.open = true;
     await fixture(html`${select}`);
     await waitUntil(() => unknownBadgeCount(select) === 1 && unknownRowCount(select) === 1);
     expect(phases[0]!.badgeCount).to.equal(0);
@@ -69,6 +70,7 @@ describe('lr-select observed option catalog', () => {
       <lr-option value="USD">US dollar</lr-option>
     </lr-select>`);
     await waitUntil(() => select.selectedOptions.length === 1);
+    select.open = true;
     select.querySelector('lr-option')!.remove();
     await waitUntil(() => unknownBadgeCount(select) === 1 && unknownRowCount(select) === 1);
     select.loading = true;
@@ -89,6 +91,7 @@ describe('lr-select observed option catalog', () => {
       <lr-option value="EUR">Euro</lr-option>
     </lr-select>`);
     await waitUntil(() => unknownBadgeCount(select) === 1);
+    select.open = true;
     select.querySelector('lr-option')!.remove();
     await waitUntil(() => unknownBadgeCount(select) === 2 && unknownRowCount(select) === 2);
     select.loading = true;

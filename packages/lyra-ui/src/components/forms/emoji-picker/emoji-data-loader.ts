@@ -82,14 +82,22 @@ export async function loadEmojiData(
 
 /** Cached per page **and per resolved locale**, mirroring `pdf-loader.ts`'s `loadPdfJs()`
  *  single-flight shape: a concurrent or repeated call for the same resolved locale shares one
- *  in-flight/settled promise instead of re-fetching, while a different locale gets its own cache
+ *  in-flight/successful promise instead of re-fetching, while a different locale gets its own cache
  *  slot instead of reusing whichever locale happened to load first. */
-export function loadEmojiDataCached(locale = 'en'): Promise<EmojiPickerGroup[] | null> {
+export function loadEmojiDataCached(
+  locale = 'en',
+  importData?: Parameters<typeof loadEmojiData>[1],
+): Promise<EmojiPickerGroup[] | null> {
   const key = resolveEmojiDataLocale(locale);
   let entry = cached.get(key);
   if (!entry) {
-    entry = loadEmojiData(key);
-    cached.set(key, entry);
+    const pending = loadEmojiData(key, importData);
+    entry = pending;
+    cached.set(key, pending);
+    // A failed load is not kept, so a transient import failure can be retried.
+    void pending.then((groups) => {
+      if (groups === null && cached.get(key) === pending) cached.delete(key);
+    });
   }
   return entry;
 }

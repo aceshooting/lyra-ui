@@ -13,6 +13,7 @@ import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DE
 export type { LyraTimeZoneCatalog, LyraTimeZoneEntry } from '../../../time-zones.js';
 export type LyraTimeZoneChangeDetail = LyraCatalogPickerChangeDetail;
 export interface LyraTimeZonePickerEventMap extends LyraCatalogPickerEventMap {}
+let defaultEntries: readonly LyraTimeZoneEntry[] | undefined;
 
 /**
  * `<lr-time-zone-picker>` — a form-associated time-zone identifier selector.
@@ -76,7 +77,6 @@ export class LyraTimeZonePicker extends LyraCatalogPickerBase {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  private readonly defaultEntries = Object.freeze(getTimeZoneCodes().map((code) => Object.freeze({ code })));
   private _timeZones?: readonly LyraTimeZoneEntry[];
 
   /** Clone-owned ordered catalog, capped at 1024 rows. Undefined/null restores runtime defaults; [] stays empty. */
@@ -89,7 +89,9 @@ export class LyraTimeZonePicker extends LyraCatalogPickerBase {
     this.requestUpdate('timeZones', previous);
   }
 
-  protected override get entries(): readonly LyraTimeZoneEntry[] { return this._timeZones ?? this.defaultEntries; }
+  protected override get entries(): readonly LyraTimeZoneEntry[] {
+    return this._timeZones ?? (defaultEntries ??= Object.freeze(getTimeZoneCodes().map((code) => Object.freeze({ code }))));
+  }
   protected override get pickerLabel(): string { return this.localize('timeZonePickerLabel'); }
   protected override resolveRows(): readonly SelectionCatalogRow[] {
     return Object.freeze(this.entries.map((entry) => {

@@ -324,3 +324,18 @@ describe('lr-combobox refresh()', () => {
     expect(errorRow(el) === null).to.equal(true);
   });
 });
+
+describe('lr-combobox async row content', () => {
+  it('drops icon, start and end values Lit cannot render instead of wedging the listbox', async () => {
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open></lr-combobox>`);
+    el.source = async () => [
+      { value: 'a', label: 'Brand-keyed', icon: { _$litType$: 1, strings: ['x'], values: [] } },
+      { value: 'b', label: 'Directive', start: { _$litDirective$: 'x', values: [] } },
+      { value: 'c', label: 'Node-like', end: { nodeType: 1 } },
+      { value: 'd', label: 'Genuine', icon: html`<b>i</b>`, start: ['text'] },
+    ];
+    await waitUntil(() => optionCount(el) === 4, 'every row renders');
+    expect(el.shadowRoot!.querySelector('[part="option-icon"] b')).to.not.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="option-start"]').length).to.equal(1);
+  });
+});

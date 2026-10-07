@@ -9,8 +9,8 @@ import type { LyraOption } from '../combobox/option.js';
 for (const kind of ['select', 'combobox'] as const) {
   it(`refreshes a batch of ${kind} option metadata without repeatedly scanning the catalog`, async () => {
     const control = await fixture<LyraSelect | LyraCombobox>(kind === 'select'
-      ? html`<lr-select label="Choice"></lr-select>`
-      : html`<lr-combobox label="Choice"></lr-combobox>`);
+      ? html`<lr-select label="Choice" open></lr-select>`
+      : html`<lr-combobox label="Choice" open></lr-combobox>`);
     const options = Array.from({ length: 64 }, (_, index) => {
       const option = document.createElement('lr-option') as LyraOption;
       option.value = String(index);

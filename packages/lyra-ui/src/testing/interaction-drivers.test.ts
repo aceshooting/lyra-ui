@@ -81,7 +81,7 @@ describe('chooseOption', () => {
 
     await chooseOption(el, 'b');
 
-    expect((await changed).detail).to.deep.equal({ value: 'b', data: [undefined] });
+    expect((await changed).detail).to.deep.equal({ value: 'b', previousValue: '', data: [undefined] });
     expect(el.value).to.equal('b');
   });
 

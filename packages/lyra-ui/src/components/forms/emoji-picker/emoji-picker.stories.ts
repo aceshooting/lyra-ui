@@ -145,7 +145,7 @@ export const WindowedWithRemGeometry: Story = {
 };
 
 // Leaves `groups` unset, exercising the optional emoji-picker-element-data auto-loader from
-// emoji-data-loader.ts. A missing peer shows the distinct localized load-error state; explicitly
+// emoji-data-loader.ts. A missing peer shows the distinct localized load-error state with a Retry button; explicitly
 // supplying groups = [] opts out of loading and shows the ordinary empty state.
 export const WithAutoLoadedData: Story = {
   render: () => html`<lr-emoji-picker></lr-emoji-picker>`,

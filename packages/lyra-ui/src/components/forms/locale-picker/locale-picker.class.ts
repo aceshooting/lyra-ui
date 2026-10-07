@@ -17,7 +17,7 @@ import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
-import { DebounceController } from '../../../internal/debounce-controller.js';
+import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
 import { getDisplayNames, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import {
@@ -25,6 +25,7 @@ import {
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import {
+  getLyraLocale,
   getLyraLocaleDirection,
   getRegisteredLyraLocales,
   subscribeLyraLocaleRegistry,
@@ -49,19 +50,14 @@ import {
   installInvalidEventAlias,
   withStaticValidityCheck,
 } from '../../../internal/invalid-event-alias.js';
-import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { revealRow } from '../../../internal/reveal-row.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library.
- *  `showFlags` (the only property using this converter) never reflects, so there's no
- *  `toAttribute` half -- Lit only calls it when reflecting. */
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
  *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
@@ -89,11 +85,6 @@ export type LyraLocaleTriggerDisplay = 'flag' | 'label' | 'flag-label';
 
 /** Visible content of each option row's label column; the trigger is unaffected. */
 export type LyraLocaleOptionDisplay = 'label' | 'label-tag';
-
-/** How long the listbox type-ahead buffer survives without a keystroke. Unchanged from the inline
- *  literal this reset used before it moved onto the shared debounce controller, and identical to
- *  `<lr-select>`'s. */
-const TYPE_AHEAD_RESET_MS = 500;
 
 const MAX_LOCALE_ENTRIES = 512;
 const localeSpellcheckConverter = {
@@ -152,7 +143,10 @@ export interface LyraLocaleChangeDetail {
 export interface LyraLocalePickerEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-change-request': CustomEvent<LyraLocaleChangeDetail>;
+  'lr-input': CustomEvent<LyraLocaleChangeDetail>;
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
+  input: Event;
+  change: Event;
   blur: FocusEvent;
   focus: FocusEvent;
 }
@@ -189,7 +183,7 @@ export interface LyraLocalePickerEventMap {
  * `event.preventDefault()`, the component applies the pick itself via `setLyraLocale()`. A host
  * that wants to intercept the pick (e.g. persist it to a profile first) calls
  * `event.preventDefault()`; the value, popup, and page-level locale then remain unchanged.
- * Accepted selections emit a non-cancelable `lr-change` after applying the locale.
+ * Accepted selections emit non-cancelable `input`, `lr-input`, `change` and `lr-change` after applying the locale; re-picking the committed locale changes nothing.
  *
  * Does not touch `document.documentElement.lang`/`dir` — applying a picked locale's writing
  * direction to the page is left to the host, which already has everything it needs from
@@ -206,6 +200,9 @@ export interface LyraLocalePickerEventMap {
  *
  * @customElement lr-locale-picker
  * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
+ * @event {Event} input - Native event after an accepted selection commits, before `lr-input`.
+ * @event lr-input - Non-cancelable notification after an accepted selection commits. Same detail as `lr-change`.
+ * @event {Event} change - Native event after an accepted selection commits, before `lr-change`.
  * @event lr-change - Non-cancelable notification after locale selection commits. The selection changed. `detail: { value, previousValue, direction }`, where
  *   `direction` is the picked locale's `'ltr'`/`'rtl'` writing direction. Veto through
  *   `lr-change-request`; preventing this notification does not reverse the commit.
@@ -458,12 +455,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @state() private activeIndex = -1;
   @state() private searchQuery = '';
   @state() private touched = false;
-  @state() private hasHintSlot = false;
-  @state() private hasErrorSlot = false;
-  @state() private hasLabelSlot = false;
-  // Bumped by subscribeLyraLocaleRegistry() -- its own state-property change is what triggers a
-  // re-render; normalizedEntries always recomputes fresh from getRegisteredLyraLocales(), so
-  // nothing in its body needs to read this field.
+  private readonly slotPresence = new SlotPresenceController(this);
+  // Bumped by subscribeLyraLocaleRegistry(): re-renders and invalidates the cached rows.
   @state() private registryTick = 0;
   @query('[part="trigger"]') private triggerElement?: HTMLButtonElement;
   @query('[part="search-input"]') private searchElement?: HTMLInputElement;
@@ -487,8 +480,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @state() private listboxHidden = true;
   private closeSettleToken = 0;
   private overlayHandle?: OverlayHandle;
-  private pointerListenerDocument?: Document;
-  private pointerListener?: (event: PointerEvent) => void;
+  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
   private stopRegistrySubscription?: () => void;
   private _value = '';
   private _open = false;
@@ -500,22 +492,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private _valueDirty = false;
   private settingDefaultValue = false;
   private reflectingDefaultValue = false;
-  // Standard listbox type-ahead: printable keystrokes accumulate into this buffer and reset
-  // ~500ms after the last one, matching lr-select's identical buffer/timer pair.
-  private typeAheadBuffer = '';
-  /** The buffer's reset debounce -- `<lr-select>`'s identical pair, on the shared controller.
-   *  Every printable keystroke restarts it; the buffer clears only once the quiet window passes.
-   *  Scheduled on -- and cancelled through -- the realm this picker lives in at the time, and the
-   *  realm it was armed in is re-checked at settle, so one adopted into another document never
-   *  clears a buffer that now belongs to a different realm. */
-  private readonly typeAheadReset = new DebounceController<Window>(
-    TYPE_AHEAD_RESET_MS,
-    (armedIn) => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== armedIn) return;
-      this.typeAheadBuffer = '';
-    },
-    () => this.ownerDocument.defaultView,
-  );
+  private readonly typeBuffer = new TypeAheadBuffer(this);
   private activeScrollGeneration = 0;
   private localizedValidityLocale = '';
   private localizedIntrinsicMessage = '';
@@ -632,9 +609,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.deactivatePopupOverlay(false);
     this.stopRegistrySubscription?.();
     this.stopRegistrySubscription = undefined;
-    this.clearTypeAheadTimer();
+    this.typeBuffer.clear();
     this.activeScrollGeneration += 1;
-    this.typeAheadBuffer = '';
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers updated()'s open-driven
     // branch -- without this, `open` stays `true` across the disconnect/reconnect and
     // `changed.has('open')` never fires again, leaving the listbox rendered open with no
@@ -654,7 +630,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.cleanup = undefined;
     this.unbindDocumentPointer();
     this.overlayHandle?.suspend();
-    this.clearTypeAheadTimer();
+    this.typeBuffer.clear();
     if (this.open) queueMicrotask(() => this.syncPopup());
   }
 
@@ -669,20 +645,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       this.clearSearch();
       if (this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement) this.focus();
     }
+    if (changed.has('open') && this.open) this.setActiveIndex(this.visibleEntries.findIndex((row) => row.tag === this._value));
     if (this.open && (this.searchable || changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
       this.activeIndex = Math.min(this.activeIndex, this.visibleEntries.length - 1);
       this.queueActiveScroll();
-    }
-    if (!this.hasUpdated) {
-      // Browser-only mounts still seed before their first paint. During hydration the base
-      // helper defers this browser-only light-DOM sample until the server render (which is
-      // handed no children at all) has been reproduced, so the hydrating client's first render
-      // matches the server's markup instead of tearing it down.
-      this.seedFirstRenderState(() => {
-        this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
-        this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
-        this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
-      });
     }
     if (this.open) this.listboxHidden = false;
   }
@@ -930,19 +896,24 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
    *  empty option row. */
   private get normalizedEntries(): NormalizedLocaleEntry[] {
     const raw = this.locales;
-    if (raw !== undefined) {
-      return raw.map((entry): NormalizedLocaleEntry =>
-        typeof entry === 'string'
-          ? { tag: entry, label: localeNativeName(entry) }
-          : {
-              tag: entry.tag,
-              label: entry.label !== undefined && entry.label.trim().length > 0 ? entry.label : localeNativeName(entry.tag),
-              country: entry.country,
-            },
-      );
-    }
-    return getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
+    const cached = this.entriesCache;
+    if (cached && cached.raw === raw && cached.tick === this.registryTick) return cached.rows;
+    const rows = raw !== undefined
+      ? raw.map((entry): NormalizedLocaleEntry =>
+          typeof entry === 'string'
+            ? { tag: entry, label: localeNativeName(entry) }
+            : {
+                tag: entry.tag,
+                label: entry.label !== undefined && entry.label.trim().length > 0 ? entry.label : localeNativeName(entry.tag),
+                country: entry.country,
+              },
+        )
+      : getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
+    this.entriesCache = { raw, tick: this.registryTick, rows };
+    return rows;
   }
+  private entriesCache?: { raw: unknown; tick: number; rows: NormalizedLocaleEntry[] };
+  private visibleCache?: { rows: NormalizedLocaleEntry[]; query: string; locale: string; result: NormalizedLocaleEntry[] };
 
   private normalizeSearch(text: string, locale = this.effectiveLocale): string {
     return text.toLocaleLowerCase(resolveIntlLocale(locale))
@@ -953,6 +924,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const rows = this.normalizedEntries;
     const query = this.searchable ? this.normalizeSearch(this.searchQuery) : '';
     if (!query) return rows;
+    const cached = this.visibleCache;
+    if (cached && cached.rows === rows && cached.query === this.searchQuery && cached.locale === this.effectiveLocale) return cached.result;
     let names: Intl.DisplayNames | undefined;
     try { names = getDisplayNames(this.effectiveLocale, { type: 'language' }); }
     catch { /* Tags, native names and caller labels remain available without Intl language names. */ }
@@ -961,7 +934,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     try { englishNames = getDisplayNames('en', { type: 'language' }); }
     catch { /* Native, custom and localized labels remain available without English aliases. */ }
     const invariantQuery = this.normalizeSearch(this.searchQuery, 'en');
-    return rows.filter(row => {
+    const result = rows.filter(row => {
       let localizedName = '';
       try { localizedName = names?.of(row.tag) ?? ''; }
       catch { /* A custom malformed tag remains searchable by its literal tag and label. */ }
@@ -972,6 +945,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         .some(text => this.normalizeSearch(text).includes(query)) ||
         [row.tag, englishName].some(text => this.normalizeSearch(text, 'en').includes(invariantQuery));
     });
+    this.visibleCache = { rows, query: this.searchQuery, locale: this.effectiveLocale, result };
+    return result;
   }
 
   private clearSearch(): void {
@@ -1056,32 +1031,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   };
 
   private bindDocumentPointer(): void {
-    if (!this.isConnected) return;
-    const ownerDocument = this.ownerDocument;
-    if (this.pointerListenerDocument === ownerDocument && this.pointerListener) return;
-    this.unbindDocumentPointer();
-    const listener = (event: PointerEvent): void => {
-      if (
-        this.pointerListener !== listener ||
-        this.pointerListenerDocument !== ownerDocument ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
-      this.onDocPointer(event);
-    };
-    this.pointerListenerDocument = ownerDocument;
-    this.pointerListener = listener;
-    ownerDocument.addEventListener('pointerdown', listener);
+    if (this.isConnected) this.pointer.bind();
   }
 
   private unbindDocumentPointer(): void {
-    if (this.pointerListenerDocument && this.pointerListener) {
-      this.pointerListenerDocument.removeEventListener('pointerdown', this.pointerListener);
-    }
-    this.pointerListenerDocument = undefined;
-    this.pointerListener = undefined;
+    this.pointer.unbind();
   }
 
   private activatePopupOverlay(): void {
@@ -1206,6 +1160,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   /** Requests a selection before loading or updating the control and the global locale. */
   private commit(tag: string): void {
     if (this.commitDispatching || this.liveDisabled || !this.entryFor(tag)) return;
+    if (tag === this._value && tag === getLyraLocale()) {
+      this.hide();
+      return;
+    }
     this.commitDispatching = true;
     try {
       const previousValue = this._value;
@@ -1222,7 +1180,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         this.value = tag;
         this.hide();
         setLyraLocale(tag);
-        this.emit('lr-change', Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) }));
+        const committed = Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) });
+        dispatchNativeEvent(this, 'input');
+        this.emit('lr-input', committed);
+        dispatchNativeEvent(this, 'change');
+        this.emit('lr-change', committed);
         if (searchFocus && this.isConnected && this.searchable && activeElementIn(this.shadowRoot) === searchFocus) this.focus();
       };
       if (loader === undefined) {
@@ -1330,33 +1292,13 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     }
   };
 
-  // Each reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
-  // snapshot: WebKit has been observed reporting the latter transiently empty for an unrelated
-  // forwarding-slot chain nested inside the assigned element (see `<lr-switch>`'s equivalent
-  // fix), even though the assigned child's own `slot` attribute never changed.
-  private onLabelSlotChange = (): void => {
-    this.hasLabelSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'label');
-  };
-  private onHintSlotChange = (): void => {
-    this.hasHintSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'hint');
-  };
-  private onErrorSlotChange = (): void => {
-    this.hasErrorSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'error');
-  };
-
   /** Standard listbox type-ahead: moves to the next row whose native name starts with the
    *  accumulated buffer, cycling from just after the "current" row (the active row while open,
    *  the preview tag while closed). While open this only moves `activeIndex` (a highlight,
    *  matching Arrow-key nav); while closed it commits immediately, matching `<lr-select>`'s
    *  identical closed-state type-ahead. */
   private typeAhead(char: string): void {
-    this.clearTypeAheadTimer();
-    this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
-    const ownerWindow = this.ownerDocument.defaultView;
-    // A detached or realm-less picker arms nothing at all, exactly as before: the controller would
-    // otherwise fall back to the ambient timer queue and clear a buffer through a document this
-    // element does not live in.
-    if (this.isConnected && ownerWindow) this.typeAheadReset.push(ownerWindow);
+    const buffer = this.typeBuffer.add(char, this.effectiveLocale);
 
     const rows = this.normalizedEntries;
     if (!rows.length) return;
@@ -1366,7 +1308,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     for (let step = 1; step <= n; step++) {
       const idx = (currentIndex + step + n) % n;
       const row = rows[idx]; // modulo n keeps idx in-bounds; guard satisfies the checker
-      if (row && row.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
+      if (row && row.label.toLocaleLowerCase(this.effectiveLocale).startsWith(buffer)) {
         if (this.open) {
           this.setActiveIndex(idx);
         } else {
@@ -1375,12 +1317,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         return;
       }
     }
-  }
-
-  /** Discards an armed buffer reset. `cancel()`, never `dispose()`: a disconnect here may be a
-   *  re-parent, and a disposed controller would refuse every later keystroke's reset for good. */
-  private clearTypeAheadTimer(): void {
-    this.typeAheadReset.cancel();
   }
 
   /** Updates active-descendant ownership and keeps the resulting row visible after render. */
@@ -1403,13 +1339,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         this.activeIndex !== index
       ) return;
       const row = this.shadowRoot?.getElementById(`${this.listId}-opt-${index}`);
-      row?.scrollIntoView({ block: 'nearest' });
-      const search = this.searchElement;
       const popup = this.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
-      if (row && search && popup) {
-        const overlap = search.getBoundingClientRect().bottom - row.getBoundingClientRect().top;
-        if (overlap > 0) popup.scrollTop -= overlap;
-      }
+      if (row && popup) revealRow(popup, row, this.searchElement?.offsetHeight);
     });
   }
 
@@ -1482,7 +1413,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   // resolves the target row via closest('[part="option"]') + a data-value lookup, mirroring
   // lr-select/lr-model-select.
   private onListboxMouseDown = (e: MouseEvent): void => {
-    if ((e.target as HTMLElement).closest('[part="option"]')) e.preventDefault();
+    if (e.composedPath()[0] !== this.searchElement) e.preventDefault();
   };
   private onListboxClick = (e: MouseEvent): void => {
     if (this.liveDisabled) return;
@@ -1525,16 +1456,16 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const previewTag = this.previewTag;
     const previewEntry = this.entryFor(previewTag);
     const flagOnly = this.triggerDisplay === 'flag' && !this.withoutFlags;
-    const hasLabel = this.hasLabelSlot || (this.label ?? '').length > 0;
-    const hasHint = this.hasHintSlot || (this.hint ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
+    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const describedBy = this.localDescriptionIds = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '', this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '']
       .filter(Boolean)
       .join(' ');
     return html`
       <div part="form-control">
         <label part="form-control-label" for=${this.controlId} ?hidden=${!hasLabel}>
-          ${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>
+          ${this.label}<slot name="label"></slot>
         </label>
         <button
           id=${this.controlId}
@@ -1617,10 +1548,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
               @blur=${this.searchable ? this.onTriggerBlur : nothing}>${this.localize('retry')}</button>` : nothing}
           </div>` : nothing}
         <div id="locale-picker-error" part="error" ?hidden=${!hasError}>
-          ${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot>
+          ${this.errorText}<slot name="error"></slot>
         </div>
         <div id="locale-picker-hint" part="hint" ?hidden=${!hasHint}>
-          ${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot>
+          ${this.hint}<slot name="hint"></slot>
         </div>
       </div>
     `;

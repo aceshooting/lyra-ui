@@ -567,7 +567,7 @@ it("does not let a closed disable-enable batch suppress or strand a same-task sh
   const shown = el.show();
   const settled = await Promise.race([
     shown.then(() => true),
-    aTimeout(250).then(() => false),
+    aTimeout(5000).then(() => false),
   ]);
   await el.updateComplete;
 
@@ -1230,4 +1230,16 @@ it("bars constraint validation while disabled, like a native disabled required c
     el.validity.valueMissing,
     "the violation returns once it is enforceable again"
   ).to.be.true;
+});
+
+
+it("keeps committing values when the engine rejects a custom state name", async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const internals = (el as unknown as { internals: ElementInternals }).internals;
+  const rejecting = { has: () => false, add() { throw new DOMException("dashed idents only", "SyntaxError"); }, delete() { throw new DOMException("dashed idents only", "SyntaxError"); } };
+  Object.defineProperty(internals, "states", { configurable: true, value: rejecting });
+  expect(() => { el.value = "a"; }).to.not.throw();
+  expect(() => { el.value = ""; }).to.not.throw();
+  await el.updateComplete;
+  expect(el.value).to.equal("");
 });

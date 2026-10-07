@@ -817,3 +817,46 @@ describe('lr-option slotted adornment truncation', () => {
     });
   }
 });
+
+describe('lr-option label observation cost', () => {
+  it('ignores ancestor attributes that cannot change a direct label but still reports ancestor inert', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-option value="a">Alpha</lr-option></div>`);
+    const el = wrapper.querySelector('lr-option') as LyraOption;
+    let updates = 0;
+    let changes = 0;
+    const requestUpdate = el.requestUpdate.bind(el);
+    el.requestUpdate = (...args: Parameters<LyraOption['requestUpdate']>) => {
+      updates += 1;
+      return requestUpdate(...args);
+    };
+    el.addEventListener('lr-option-change', () => changes++);
+    wrapper.classList.add('x');
+    wrapper.style.color = 'red';
+    wrapper.setAttribute('open', '');
+    await new Promise<void>((resolve) => setTimeout(resolve));
+    expect(updates, 'unrelated ancestor attributes do not re-render the option').to.equal(0);
+
+    wrapper.inert = true;
+    await waitUntil(() => changes > 0);
+  });
+
+  it('computes the accessible label once per content change, never per read', async () => {
+    const el = (await fixture(html`<lr-option value="a">Alpha <strong>Beta</strong></lr-option>`)) as LyraOption;
+    const childNodes = Object.getOwnPropertyDescriptor(Node.prototype, 'childNodes')!.get!;
+    let walks = 0;
+    Object.defineProperty(el, 'childNodes', {
+      configurable: true,
+      get(this: Node) {
+        walks += 1;
+        return childNodes.call(this);
+      },
+    });
+    for (let read = 0; read < 5; read++) expect(el.label).to.equal('Alpha Beta');
+    expect(walks, 'five reads of an unchanged label').to.equal(0);
+
+    el.append(' Gamma');
+    expect(el.label, 'a read right after a mutation is fresh').to.equal('Alpha Beta Gamma');
+    expect(el.label).to.equal('Alpha Beta Gamma');
+    expect(walks, 'one recomputation for the mutation').to.equal(1);
+  });
+});

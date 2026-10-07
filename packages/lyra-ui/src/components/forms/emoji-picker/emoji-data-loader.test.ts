@@ -205,3 +205,20 @@ describe('loadEmojiDataCached()', () => {
     expect(second).to.deep.equal(first);
   });
 });
+
+it('does not keep a failed load for the page lifetime', async () => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    let attempts = 0;
+    const importer = () =>
+      ++attempts === 1
+        ? Promise.reject(new Error('transient'))
+        : Promise.resolve([{ emoji: '😀', group: 0, annotation: 'grinning face' }]);
+    expect(await loadEmojiDataCached('en', importer)).to.equal(null);
+    expect(await loadEmojiDataCached('en', importer)).to.not.equal(null);
+    expect(attempts).to.equal(2);
+  } finally {
+    console.warn = originalWarn;
+  }
+});

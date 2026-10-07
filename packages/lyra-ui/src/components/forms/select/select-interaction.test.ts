@@ -367,9 +367,9 @@ it("emits exactly one native event pair and typed aliases with the new value", a
   const nativeChange = requiredItem(seen, 2, 'native change event');
   const changeAlias = requiredItem(seen, 3, 'change alias event');
   expect(nativeInput.detail).to.equal(0);
-  expect(inputAlias.detail).to.deep.equal({ value: "b", data: [undefined] });
+  expect(inputAlias.detail).to.deep.equal({ value: "b", previousValue: "", data: [undefined] });
   expect(nativeChange.detail).to.be.undefined;
-  expect(changeAlias.detail).to.deep.equal({ value: "b", data: [undefined] });
+  expect(changeAlias.detail).to.deep.equal({ value: "b", previousValue: "", data: [undefined] });
   expect(Object.isFrozen(inputAlias.detail)).to.equal(true);
   expect(Object.isFrozen(changeAlias.detail)).to.equal(true);
   expect(nativeInput.event instanceof InputEvent).to.be.true;
@@ -796,7 +796,7 @@ it("still resets its type-ahead buffer after a disconnect and reconnect", async 
   const el = (await fixture(basic())) as LyraSelect;
   const parent = el.parentElement!;
   const buffer = (): string =>
-    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+    (el as unknown as { typeBuffer: { text: string } }).typeBuffer.text;
 
   el.remove();
   parent.append(el);
@@ -816,7 +816,7 @@ it("leaves the type-ahead buffer alone when its reset timer fires after being su
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);
   const buffer = (): string =>
-    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+    (el as unknown as { typeBuffer: { text: string } }).typeBuffer.text;
   const type = (key: string): void => {
     btn.dispatchEvent(
       new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
@@ -1431,3 +1431,42 @@ describe("lr-select activation event", () => {
 
 // Cloned option adornments sit in a centred inline-flex part, so a long text clone was clipped on
 // both sides. Each direct child now carries its own shrinkable block with an ellipsis.
+
+it("opens on the committed option, active and scrolled into view, and ArrowDown continues from it", async () => {
+  const el = (await fixture(html`
+    <lr-select value="35">
+      ${Array.from({ length: 40 }, (_, index) => html`<lr-option value=${String(index)}>Item ${index}</lr-option>`)}
+    </lr-select>
+  `)) as LyraSelect;
+  const button = trigger(el);
+  const shown = oneEvent(el, "lr-after-show");
+  button.click();
+  await shown;
+  await el.updateComplete;
+  const active = () => el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
+  expect(active()?.dataset["value"]).to.equal("35");
+  expect(button.getAttribute("aria-activedescendant")).to.equal(active()?.id);
+  const list = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  await waitUntil(() => active()!.getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom + 1);
+
+  button.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(active()?.dataset["value"]).to.equal("36");
+
+  const empty = (await fixture(basic())) as LyraSelect;
+  empty.open = true;
+  await empty.updateComplete;
+  expect(empty.shadowRoot!.querySelector('[part="option"][data-active]') === null, "nothing committed, nothing active").to.equal(true);
+});
+
+it("mounts its option rows the first time the listbox opens", async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const count = () => el.shadowRoot!.querySelectorAll('[part="option"]').length;
+  expect(count(), "a closed select renders no rows").to.equal(0);
+  el.open = true;
+  await el.updateComplete;
+  expect(count()).to.equal(3);
+  el.open = false;
+  await el.updateComplete;
+  expect(count(), "rows stay mounted once opened").to.equal(3);
+});

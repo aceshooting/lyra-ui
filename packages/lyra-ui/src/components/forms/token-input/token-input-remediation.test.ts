@@ -202,3 +202,46 @@ describe('editable token alignment', () => {
     expect(plain.shadowRoot!.querySelectorAll('[part="token-label"]').length).to.equal(0);
   });
 });
+
+for (const editable of [false, true]) {
+  it(`token input marks ${editable ? 'editable ' : ''}remove buttons aria-disabled while readonly but keeps them focusable`, async () => {
+    const field = await fixture<LyraTokenInput>(html`<lr-token-input readonly ?editable=${editable} .value=${['alpha']}></lr-token-input>`);
+    const remove = () => field.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove"]')!;
+    expect(remove().getAttribute('aria-disabled')).to.equal('true');
+    expect(remove().disabled).to.equal(false);
+    remove().click();
+    expect(field.value).to.deep.equal(['alpha']);
+    field.readonly = false;
+    await field.updateComplete;
+    expect(remove().hasAttribute('aria-disabled')).to.equal(false);
+  });
+}
+
+it('token input hides forwarded hint, error, start and end slots that carry nothing', async () => {
+  const host = document.createElement('div');
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = '<lr-token-input><slot name="hint" slot="hint"><i>chrome</i></slot><slot name="error" slot="error"><i>chrome</i></slot><slot name="start" slot="start"><i>chrome</i></slot></lr-token-input>';
+  document.body.append(host);
+  try {
+    const field = root.querySelector('lr-token-input') as LyraTokenInput;
+    await field.updateComplete;
+    const part = (name: string) => field.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!;
+    await waitUntil(() => part('hint').hidden && part('error').hidden && part('start').hidden);
+  } finally {
+    host.remove();
+  }
+});
+
+it('token input reports the previous token list in its change details', async () => {
+  const field = await fixture<LyraTokenInput>(html`<lr-token-input .value=${['alpha']}></lr-token-input>`);
+  const details: Array<{ value: readonly string[]; previousValue: readonly string[] }> = [];
+  field.addEventListener('lr-input', (event) => details.push(event.detail));
+  field.addEventListener('lr-change', (event) => details.push(event.detail));
+  draft(field).value = 'beta';
+  draft(field).dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  press(draft(field), 'Enter');
+  expect(details).to.deep.equal([
+    { value: ['alpha', 'beta'], previousValue: ['alpha'] },
+    { value: ['alpha', 'beta'], previousValue: ['alpha'] },
+  ]);
+});
