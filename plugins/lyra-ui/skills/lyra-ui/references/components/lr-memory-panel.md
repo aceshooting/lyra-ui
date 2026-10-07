@@ -8,6 +8,7 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
+- **Deprecated event** `lr-memory-toggle` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window.
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,8 +40,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
   section headings; `'none'` keeps the visible text without heading semantics.
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
-  panel label. A non-empty host `aria-label`
-  makes the host the sole overall owner; an explicitly empty host label stays empty
+  panel label. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
+  empty host label stays empty
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
@@ -49,6 +50,8 @@ omitted without hiding later valid memories.
 
 At most 500 items per section render as `item` rows; a section's list past that length renders a
 localized `limit` notice after that section's list rather than mounting an unbounded number of rows.
+The primary Add action in short-term memory and Remove action in long-term memory each rove within
+their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain reachable by Tab.
 
 **Events:**
 
@@ -60,9 +63,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
   approved. Only rendered while `longTerm` is non-empty.
 - `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
 'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it.
-- The expanded item's `lr-provenance-panel` events cross the panel unchanged and are part of its
-  typed event map: `lr-toggle`, `lr-entity-select`, `lr-entity-activate` (deprecated alias),
+collapsing it; deprecated alias of `lr-toggle`.
+- `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
+  Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
+- The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
+  typed event map: `lr-entity-select`, `lr-entity-activate` (deprecated alias),
   `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.

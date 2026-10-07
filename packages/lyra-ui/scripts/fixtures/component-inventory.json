@@ -2948,6 +2948,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "metric",
             "deprecated": null
           },
@@ -4090,6 +4094,56 @@
             "default": null
           },
           {
+            "name": "composer-autocapitalize",
+            "property": "composerAutocapitalize",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composer-autocomplete",
+            "property": "composerAutocomplete",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composer-autocorrect",
+            "property": "composerAutocorrect",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "composer-enterkeyhint",
+            "property": "composerEnterKeyHint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composer-inputmode",
+            "property": "composerInputMode",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "composer-max-rows",
             "property": "composerMaxRows",
             "type": "number",
@@ -4098,6 +4152,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 8
+          },
+          {
+            "name": "composer-maxlength",
+            "property": "composerMaxLength",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "composer-min-rows",
@@ -4110,6 +4173,15 @@
             "default": 1
           },
           {
+            "name": "composer-minlength",
+            "property": "composerMinLength",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "composer-placeholder",
             "property": "composerPlaceholder",
             "type": "string | undefined",
@@ -4117,6 +4189,26 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "composer-readonly",
+            "property": "composerReadOnly",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composer-spellcheck",
+            "property": "composerSpellcheck",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
           },
           {
             "name": "composer-status",
@@ -4128,6 +4220,16 @@
             "hasDefault": false
           },
           {
+            "name": "composer-submit-disabled",
+            "property": "composerSubmitDisabled",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "composer-value",
             "property": "composerValue",
             "type": "string",
@@ -4136,6 +4238,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "composer-without-enter-submit",
+            "property": "composerWithoutEnterSubmit",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composer-without-stop",
+            "property": "composerWithoutStop",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composer-wrap",
+            "property": "composerWrap",
+            "type": "ChatComposerWrap",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           },
           {
             "name": "context-total",
@@ -4269,6 +4401,65 @@
             "default": "[]"
           },
           {
+            "name": "composerAutocapitalize",
+            "attribute": "composer-autocapitalize",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composerAutocomplete",
+            "attribute": "composer-autocomplete",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composerAutocorrect",
+            "attribute": "composer-autocorrect",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
+            "name": "composerEnterKeyHint",
+            "attribute": "composer-enterkeyhint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composerInputMode",
+            "attribute": "composer-inputmode",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "composerMaxLength",
+            "attribute": "composer-maxlength",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "composerMaxRows",
             "attribute": "composer-max-rows",
             "type": "number",
@@ -4277,6 +4468,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 8
+          },
+          {
+            "name": "composerMinLength",
+            "attribute": "composer-minlength",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "composerMinRows",
@@ -4298,6 +4498,26 @@
             "hasDefault": false
           },
           {
+            "name": "composerReadOnly",
+            "attribute": "composer-readonly",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composerSpellcheck",
+            "attribute": "composer-spellcheck",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "composerStatus",
             "attribute": "composer-status",
             "type": "ChatComposerStatus",
@@ -4305,6 +4525,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "composerSubmitDisabled",
+            "attribute": "composer-submit-disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "composerValue",
@@ -4315,6 +4545,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "composerWithoutEnterSubmit",
+            "attribute": "composer-without-enter-submit",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composerWithoutStop",
+            "attribute": "composer-without-stop",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "composerWrap",
+            "attribute": "composer-wrap",
+            "type": "ChatComposerWrap",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "soft"
           },
           {
             "name": "contextSegments",
@@ -7061,7 +7321,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-app-rail-item",
+            "kind": "slot",
+            "name": "icon",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "start",
+              "usage": "slot=\"start\""
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -7282,10 +7556,26 @@
           },
           {
             "name": "icon",
-            "deprecated": null
+            "deprecated": {
+              "tag": "lr-app-rail-item",
+              "kind": "slot",
+              "name": "icon",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "slot",
+                "name": "start",
+                "usage": "slot=\"start\""
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+            }
           },
           {
             "name": "meta",
+            "deprecated": null
+          },
+          {
+            "name": "start",
             "deprecated": null
           }
         ],
@@ -23812,15 +24102,15 @@
         "events": [
           {
             "name": "change",
-            "type": "CustomEvent<Readonly<{ value: readonly string[] }>>",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "Event"
           },
           {
             "name": "input",
-            "type": "CustomEvent<Readonly<{ value: readonly string[] }>>",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "Event"
           },
           {
             "name": "lr-change",
@@ -24973,7 +25263,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-chunk-inspector",
+            "kind": "event",
+            "name": "lr-chunk-toggle",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -25105,6 +25409,24 @@
             "default": ""
           },
           {
+            "name": "ordinalIndex",
+            "attribute": null,
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "ordinalTotal",
+            "attribute": null,
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "attribute": "size",
             "type": "LyraSize",
@@ -25156,6 +25478,25 @@
           {
             "name": "lr-chunk-toggle",
             "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-chunk-inspector",
+              "kind": "event",
+              "name": "lr-chunk-toggle",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<{ expanded: boolean; itemId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -25388,6 +25729,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "rovingTabIndex",
+            "attribute": null,
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "sourceId",
@@ -28686,7 +29036,7 @@
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<null>",
+            "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -30417,9 +30767,9 @@
           },
           {
             "name": "change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "Event",
             "bubbles": true,
             "composed": true
           },
@@ -30433,9 +30783,9 @@
           },
           {
             "name": "input",
-            "type": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
+            "type": "Event",
             "cancelable": "never",
-            "constructor": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
+            "constructor": "Event",
             "bubbles": true,
             "composed": true
           },
@@ -31344,15 +31694,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true
           },
           {
@@ -31938,6 +32288,10 @@
           },
           {
             "name": "hash",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -35199,17 +35553,17 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -36902,6 +37256,12 @@
           {
             "name": "lr-search-change",
             "type": "CustomEvent<LyraSearchChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-viewer-diagnostic",
+            "type": "CustomEvent<LyraViewerDiagnosticEventDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -39172,6 +39532,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-request",
+            "type": "CustomEvent<LyraEventDetailSnapshot<DataGridRequest>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-retry-request",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -39419,6 +39785,10 @@
           },
           {
             "name": "row-detail",
+            "deprecated": null
+          },
+          {
+            "name": "row-limit",
             "deprecated": null
           },
           {
@@ -40202,6 +40572,12 @@
           {
             "name": "lr-search-change",
             "type": "CustomEvent<LyraSearchChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-viewer-diagnostic",
+            "type": "CustomEvent<LyraViewerDiagnosticEventDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -41633,6 +42009,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -41642,6 +42024,12 @@
             "name": "lr-hide",
             "type": "CustomEvent<null>",
             "cancelable": "conditional",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -42920,6 +43308,12 @@
             "composed": true
           },
           {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -42928,6 +43322,12 @@
           {
             "name": "lr-focus-day",
             "type": "CustomEvent<{ date: Date }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45115,7 +45515,34 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-dock-panel",
+            "kind": "event",
+            "name": "lr-collapse-change",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
+          },
+          {
+            "tag": "lr-dock-panel",
+            "kind": "event",
+            "name": "lr-collapse-request",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle-request",
+              "usage": "@lr-toggle-request"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -45140,8 +45567,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "collapsible",
@@ -45160,8 +45586,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "280px"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -45222,8 +45647,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "collapsible",
@@ -45242,8 +45666,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "280px"
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -45307,12 +45730,44 @@
             "name": "lr-collapse-change",
             "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-dock-panel",
+              "kind": "event",
+              "name": "lr-collapse-change",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-collapse-request",
             "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-dock-panel",
+              "kind": "event",
+              "name": "lr-collapse-request",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle-request",
+                "usage": "@lr-toggle-request"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize",
+            "type": "CustomEvent<LyraDockPanelResizeDetail>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -45330,6 +45785,18 @@
           {
             "name": "lr-resize-request",
             "type": "CustomEvent<LyraDockPanelResizeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -45376,6 +45843,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-dock-panel-handle-hit-area",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
           },
           {
             "name": "--lr-dock-panel-handle-hover-color",
@@ -52130,6 +52603,16 @@
             "default": "360px"
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -52170,6 +52653,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "360px"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "locale",
@@ -53996,6 +54489,16 @@
             "default": false
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -54086,6 +54589,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "locale",
@@ -54219,7 +54732,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ section: Section; expanded: boolean }>",
+            "type": "CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -54778,15 +55291,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true
           },
           {
@@ -54847,6 +55360,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "remove-button",
             "deprecated": null
           },
@@ -54901,6 +55418,86 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-action-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-action-hover-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-fill",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-focus-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -57055,9 +57652,21 @@
             "composed": true
           },
           {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: readonly File[] }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-files",
             "type": "LyraFileInputFilesEvent",
             "cancelable": "never"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: readonly File[] }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-invalid",
@@ -57688,6 +58297,10 @@
         "parts": [
           {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           }
         ],
@@ -58850,7 +59463,7 @@
           },
           {
             "name": "lr-edge-activate",
-            "type": "CustomEvent<Readonly<{ edgeId: string; source: string; target: string }>>",
+            "type": "CustomEvent<Readonly<{ edgeId: string; sourceNodeId: string; targetNodeId: string; /** @deprecated Use `sourceNodeId`; it carries the same node id. */ source: string; /** @deprecated Use `targetNodeId`; it carries the same node id. */ target: string; }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -59691,7 +60304,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-flow-node",
+            "kind": "slot",
+            "name": "icon",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "start",
+              "usage": "slot=\"start\""
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -59975,6 +60602,22 @@
           },
           {
             "name": "icon",
+            "deprecated": {
+              "tag": "lr-flow-node",
+              "kind": "slot",
+              "name": "icon",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "slot",
+                "name": "start",
+                "usage": "slot=\"start\""
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+            }
+          },
+          {
+            "name": "start",
             "deprecated": null
           },
           {
@@ -62456,6 +63099,16 @@
             "default": 600
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "layout",
             "property": "layout",
             "type": "LyraGraphLayout",
@@ -62673,6 +63326,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "layout",
@@ -62926,6 +63589,10 @@
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -63648,6 +64315,24 @@
         ],
         "events": [
           {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-input",
             "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: GraphQuery }>>",
             "cancelable": "never",
@@ -64096,7 +64781,10 @@
           ]
         },
         "native": {
-          "forwardedEvents": [],
+          "forwardedEvents": [
+            "change",
+            "input"
+          ],
           "delegatedMethods": [
             "blur",
             "click",
@@ -66809,7 +67497,7 @@
                 "parameters": [
                   {
                     "name": "el",
-                    "type": "LyraHistogram",
+                    "type": "HistogramBucketSource",
                     "optional": false,
                     "hasDefault": false
                   }
@@ -68590,6 +69278,18 @@
             "constructor": "Event",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -72152,7 +72852,7 @@
           },
           {
             "name": "lr-search-change",
-            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number; }>",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -72886,7 +73586,68 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, 0)"
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -73597,7 +74358,7 @@
           },
           {
             "name": "lr-search-change",
-            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; }>",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -73647,6 +74408,10 @@
           },
           {
             "name": "search-empty",
+            "deprecated": null
+          },
+          {
+            "name": "search-limit",
             "deprecated": null
           },
           {
@@ -74344,9 +75109,9 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -74360,9 +75125,9 @@
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": false,
             "composed": true
           },
@@ -74373,6 +75138,18 @@
             "constructor": "InputEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraKnownDateEventDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<LyraKnownDateEventDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-invalid",
@@ -81222,6 +81999,19 @@
             },
             "removalNotBefore": "28.0.0",
             "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+          },
+          {
+            "tag": "lr-memory-panel",
+            "kind": "event",
+            "name": "lr-memory-toggle",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
           }
         ]
       },
@@ -81425,6 +82215,19 @@
             "name": "lr-memory-toggle",
             "type": "CustomEvent<LyraMemoryExpandDetail>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-memory-panel",
+              "kind": "event",
+              "name": "lr-memory-toggle",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -81441,7 +82244,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ section: Section; expanded: boolean }>",
+            "type": "CustomEvent<{ expanded: boolean; itemId?: string; memoryId?: string; scope?: MemoryScope; section?: 'entities' | 'relationships' | 'communities' | 'chunks' }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -81778,6 +82581,10 @@
           },
           {
             "name": "listbox",
+            "deprecated": null
+          },
+          {
+            "name": "more-results",
             "deprecated": null
           },
           {
@@ -83648,17 +84455,17 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "lr-feedback-change",
@@ -84182,7 +84989,7 @@
           },
           {
             "name": "lr-search-change",
-            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number; }>",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -84877,15 +85684,6 @@
             "hasDefault": false
           },
           {
-            "name": "effectiveDisabled",
-            "attribute": null,
-            "type": "boolean",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "enterKeyHint",
             "attribute": "enterkeyhint",
             "type": "string",
@@ -84924,15 +85722,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "input",
-            "attribute": null,
-            "type": "HTMLInputElement | null",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "inputMode",
@@ -85027,33 +85816,6 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionDirection",
-            "attribute": null,
-            "type": "LyraModelSelectSelectionDirection | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionEnd",
-            "attribute": null,
-            "type": "number | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionStart",
-            "attribute": null,
-            "type": "number | null",
-            "readonly": false,
-            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },
@@ -85155,6 +85917,12 @@
           },
           {
             "name": "lr-change",
+            "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
             "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -85330,6 +86098,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "dashed"
+          },
+          {
+            "name": "--lr-model-select-option-synthetic-font-style",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "italic"
           },
           {
             "name": "--lr-model-select-radius",
@@ -85572,6 +86346,17 @@
                     "type": "string",
                     "optional": false,
                     "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
                   },
                   {
                     "name": "start",
@@ -85618,17 +86403,6 @@
                     "name": "selectMode",
                     "type": "SelectionMode",
                     "optional": true,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              },
-              {
-                "parameters": [
-                  {
-                    "name": "replacement",
-                    "type": "string",
-                    "optional": false,
                     "hasDefault": false
                   }
                 ],
@@ -85655,7 +86429,7 @@
                   },
                   {
                     "name": "direction",
-                    "type": "LyraModelSelectSelectionDirection",
+                    "type": "LyraSelectionDirection",
                     "optional": true,
                     "hasDefault": false
                   }
@@ -88419,7 +89193,21 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-navigation-menu",
+            "kind": "event",
+            "name": "lr-expanded-change",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -88700,6 +89488,32 @@
             "name": "lr-expanded-change",
             "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-navigation-menu",
+              "kind": "event",
+              "name": "lr-expanded-change",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -88773,6 +89587,24 @@
         "methods": [
           {
             "name": "close",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "hide",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "show",
             "overloads": [
               {
                 "parameters": [],
@@ -89656,6 +90488,102 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+          },
+          {
+            "name": "--lr-icon-button-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, 0)"
+          },
+          {
+            "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-color, var(--lr-color-text-quiet))"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-hover-color, var(--lr-color-text))"
+          },
+          {
+            "name": "--lr-icon-button-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-input-action-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-input-action-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-input-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-input-fill",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-input-focus-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-strong)"
+          },
+          {
+            "name": "--lr-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-color, var(--lr-color-text-quiet))"
+          },
           {
             "name": "--lr-node-palette-search-font-size",
             "deprecated": null,
@@ -92876,6 +93804,12 @@
             "constructor": "InputEvent"
           },
           {
+            "name": "lr-change",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
@@ -92885,6 +93819,12 @@
             "name": "lr-complete",
             "type": "CustomEvent<{ value: string }>",
             "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: string }>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -104651,15 +105591,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true
           },
           {
@@ -105018,7 +105958,7 @@
           },
           {
             "name": "lr-toggle",
-            "type": "CustomEvent<{ section: Section; expanded: boolean }>",
+            "type": "CustomEvent<{ section: Section; expanded: boolean; itemId?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -105046,6 +105986,10 @@
           },
           {
             "name": "header",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -109151,19 +110095,19 @@
           },
           {
             "name": "lr-activate",
-            "type": "CustomEvent<{ value: string; radio: LyraRadio }>",
+            "type": "CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; radio: LyraRadio }>",
+            "type": "CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ value: string; radio: LyraRadio }>",
+            "type": "CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -109492,6 +110436,7 @@
         "direct": [
           "lr-button",
           "lr-citation-badge",
+          "lr-empty",
           "lr-grounding-summary",
           "lr-markdown",
           "lr-source-card",
@@ -109501,7 +110446,6 @@
         "transitive": [
           "lr-badge",
           "lr-claim-evidence",
-          "lr-empty",
           "lr-stat"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -109791,6 +110735,10 @@
           },
           {
             "name": "citations",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
             "deprecated": null
           },
           {
@@ -110988,6 +111936,14 @@
             "constructor": "FocusEvent"
           },
           {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-activate",
             "type": "CustomEvent<{ value: number }>",
             "cancelable": "never",
@@ -111004,6 +111960,12 @@
           {
             "name": "lr-hover",
             "type": "CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
+            "type": "CustomEvent<{ value: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -111283,7 +112245,8 @@
           "forwardedEvents": [
             "blur",
             "change",
-            "focus"
+            "focus",
+            "input"
           ],
           "delegatedMethods": [
             "blur",
@@ -112472,7 +113435,32 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-progress-indicator-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--indicator-color, var(--lr-progress-indicator-variant-color, var(--lr-color-brand-quiet)))"
+          },
+          {
+            "name": "--lr-progress-indicator-variant-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-progress-track-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--track-color, var(--lr-color-surface-raised))"
+          },
+          {
+            "name": "--lr-progress-track-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -112917,6 +113905,24 @@
                     "default": "api"
                   }
                 ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "hide",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "show",
+            "overloads": [
+              {
+                "parameters": [],
                 "returnType": "void"
               }
             ]
@@ -114521,7 +115527,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-retrieval-trace",
+            "kind": "event",
+            "name": "lr-stage-toggle",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -114534,10 +115554,10 @@
       "dependencies": {
         "direct": [
           "lr-chunk-inspector",
+          "lr-empty",
           "lr-span-waterfall"
         ],
         "transitive": [
-          "lr-empty",
           "lr-virtual-list"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -114634,6 +115654,25 @@
             "name": "lr-stage-toggle",
             "type": "CustomEvent<{ stageId: string; expanded: boolean }>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-retrieval-trace",
+              "kind": "event",
+              "name": "lr-stage-toggle",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           }
         ],
@@ -114644,6 +115683,10 @@
           },
           {
             "name": "chunk-inspector",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
             "deprecated": null
           },
           {
@@ -114684,6 +115727,22 @@
           },
           {
             "name": "evidence-toggle-icon",
+            "deprecated": null
+          },
+          {
+            "name": "metadata",
+            "deprecated": null
+          },
+          {
+            "name": "metadata-entry",
+            "deprecated": null
+          },
+          {
+            "name": "metadata-term",
+            "deprecated": null
+          },
+          {
+            "name": "metadata-value",
             "deprecated": null
           },
           {
@@ -115108,6 +116167,24 @@
         ],
         "events": [
           {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<Readonly<{ value: RubricValue }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-input",
             "type": "CustomEvent<Readonly<{ value: RubricValue }>>",
             "cancelable": "never",
@@ -115479,7 +116556,10 @@
           ]
         },
         "native": {
-          "forwardedEvents": [],
+          "forwardedEvents": [
+            "change",
+            "input"
+          ],
           "delegatedMethods": [
             "click",
             "focus"
@@ -116816,6 +117896,18 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-scroller-control-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-scroller-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-scroller-control-size",
             "deprecated": null,
             "hasDefault": true,
@@ -118142,6 +119234,12 @@
             "name": "lr-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -121780,7 +122878,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-source-card",
+            "kind": "event",
+            "name": "lr-expand",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -121992,11 +123104,30 @@
             "name": "lr-expand",
             "type": "CustomEvent<SourceCardExpandDetail>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-source-card",
+              "kind": "event",
+              "name": "lr-expand",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-open",
             "type": "CustomEvent<SourceCardOpenDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<{ expanded: boolean; itemId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -123702,6 +124833,24 @@
           },
           {
             "name": "lr-reposition-request",
+            "type": "CustomEvent<LyraSplitPanelRepositionDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize",
+            "type": "CustomEvent<LyraSplitPanelRepositionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize-change",
+            "type": "CustomEvent<LyraSplitPanelRepositionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize-request",
             "type": "CustomEvent<LyraSplitPanelRepositionDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -126283,26 +127432,7 @@
         "methods": [],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/conversation/streaming-text/streaming-text.class.ts",
-            "name": "looksLikeMarkdown",
-            "kind": "function",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "text",
-                    "type": "string",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "boolean"
-              }
-            ]
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [],
@@ -126854,26 +127984,7 @@
         "methods": [],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [
-          {
-            "module": "src/components/conversation/streaming-text/streaming-text-core.class.ts",
-            "name": "looksLikeMarkdown",
-            "kind": "function",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "text",
-                    "type": "string",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "boolean"
-              }
-            ]
-          }
-        ],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [],
@@ -128042,7 +129153,12 @@
             "default": "wrap"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "selected",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -130831,15 +131947,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
@@ -131087,6 +132203,10 @@
           },
           {
             "name": "row-expand-toggle",
+            "deprecated": null
+          },
+          {
+            "name": "row-limit",
             "deprecated": null
           },
           {
@@ -132124,6 +133244,10 @@
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -135340,17 +136464,17 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "lr-filter-change",
@@ -137382,13 +138506,13 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ start: number; end: number }>",
+            "type": "CustomEvent<{ value: Readonly<{ start: number; end: number }>; start: number; end: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
-            "type": "CustomEvent<{ start: number; end: number }>",
+            "type": "CustomEvent<{ value: Readonly<{ start: number; end: number }>; start: number; end: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -139978,7 +141102,12 @@
             "default": "var(--lr-form-control-radius)"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "pressed",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -141749,15 +142878,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "lr-approve-request",
@@ -142239,7 +143368,7 @@
           },
           {
             "name": "lr-search-change",
-            "type": "CustomEvent<{ query: string; matchCount: number; matchCountExact: boolean; activeIndex: number; }>",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "composed": true
@@ -142378,7 +143507,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-tool-call-chip",
+            "kind": "slot",
+            "name": "icon",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "status-icon",
+              "usage": "slot=\"status-icon\""
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -142580,6 +143723,22 @@
           },
           {
             "name": "icon",
+            "deprecated": {
+              "tag": "lr-tool-call-chip",
+              "kind": "slot",
+              "name": "icon",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "slot",
+                "name": "status-icon",
+                "usage": "slot=\"status-icon\""
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration."
+            }
+          },
+          {
+            "name": "status-icon",
             "deprecated": null
           }
         ],
@@ -142979,17 +144138,35 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
+          },
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent",
+            "constructor": "FocusEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "input",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ readonly value: ToolParamFormValue }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-input",
@@ -143247,7 +144424,9 @@
         "native": {
           "forwardedEvents": [
             "blur",
-            "focus"
+            "change",
+            "focus",
+            "input"
           ],
           "delegatedMethods": [
             "blur",
@@ -144223,15 +145402,15 @@
         "events": [
           {
             "name": "blur",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "focus",
-            "type": "CustomEvent<null>",
+            "type": "FocusEvent",
             "cancelable": "never",
-            "constructor": "CustomEvent"
+            "constructor": "FocusEvent"
           },
           {
             "name": "lr-change",
@@ -146809,6 +147988,10 @@
           },
           {
             "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -150381,6 +151564,36 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-border-width-thin)"
+          },
+          {
+            "name": "--lr-virtual-list-row-link-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "revert"
+          },
+          {
+            "name": "--lr-virtual-list-row-mark-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "revert"
+          },
+          {
+            "name": "--lr-virtual-list-row-mark-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "revert"
+          },
+          {
+            "name": "--lr-virtual-list-row-mark-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-virtual-list-row-mark-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           }
         ],
         "cssStates": [],
@@ -150903,15 +152116,6 @@
             "hasDefault": false
           },
           {
-            "name": "effectiveDisabled",
-            "attribute": null,
-            "type": "boolean",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "enterKeyHint",
             "attribute": "enterkeyhint",
             "type": "string",
@@ -150950,15 +152154,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
-          },
-          {
-            "name": "input",
-            "attribute": null,
-            "type": "HTMLInputElement | null",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "inputMode",
@@ -151053,33 +152248,6 @@
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionDirection",
-            "attribute": null,
-            "type": "LyraVoicePickerSelectionDirection | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionEnd",
-            "attribute": null,
-            "type": "number | null",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "selectionStart",
-            "attribute": null,
-            "type": "number | null",
-            "readonly": false,
-            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },
@@ -151191,6 +152359,12 @@
           },
           {
             "name": "lr-change",
+            "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-input",
             "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -151343,6 +152517,16 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-voice-picker-expand-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-voice-picker-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-voice-picker-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -151472,6 +152656,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-height)"
+          },
+          {
+            "name": "--lr-voice-picker-trigger-padding",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [
@@ -151644,6 +152833,17 @@
                     "type": "string",
                     "optional": false,
                     "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              },
+              {
+                "parameters": [
+                  {
+                    "name": "replacement",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
                   },
                   {
                     "name": "start",
@@ -151690,17 +152890,6 @@
                     "name": "selectMode",
                     "type": "SelectionMode",
                     "optional": true,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              },
-              {
-                "parameters": [
-                  {
-                    "name": "replacement",
-                    "type": "string",
-                    "optional": false,
                     "hasDefault": false
                   }
                 ],
@@ -151727,7 +152916,7 @@
                   },
                   {
                     "name": "direction",
-                    "type": "LyraVoicePickerSelectionDirection",
+                    "type": "LyraSelectionDirection",
                     "optional": true,
                     "hasDefault": false
                   }
@@ -151794,7 +152983,47 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-widget",
+            "kind": "event",
+            "name": "lr-collapse-change",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle",
+              "usage": "@lr-toggle"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+          },
+          {
+            "tag": "lr-widget",
+            "kind": "event",
+            "name": "lr-collapse-request",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-toggle-request",
+              "usage": "@lr-toggle-request"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+          },
+          {
+            "tag": "lr-widget",
+            "kind": "slot",
+            "name": "icon",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "slot",
+              "name": "start",
+              "usage": "slot=\"start\""
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -152091,10 +153320,26 @@
           },
           {
             "name": "icon",
-            "deprecated": null
+            "deprecated": {
+              "tag": "lr-widget",
+              "kind": "slot",
+              "name": "icon",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "slot",
+                "name": "start",
+                "usage": "slot=\"start\""
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+            }
           },
           {
             "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "start",
             "deprecated": null
           },
           {
@@ -152119,12 +153364,38 @@
             "name": "lr-collapse-change",
             "type": "CustomEvent<{ collapsed: boolean }>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-widget",
+              "kind": "event",
+              "name": "lr-collapse-change",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle",
+                "usage": "@lr-toggle"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-collapse-request",
             "type": "CustomEvent<{ collapsed: boolean }>",
             "cancelable": "always",
+            "deprecated": {
+              "tag": "lr-widget",
+              "kind": "event",
+              "name": "lr-collapse-request",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-toggle-request",
+                "usage": "@lr-toggle-request"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -152136,6 +153407,18 @@
           {
             "name": "lr-fullscreen-request",
             "type": "CustomEvent<{ fullscreen: boolean }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle",
+            "type": "CustomEvent<{ expanded: boolean }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<{ expanded: boolean }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -153099,6 +154382,10 @@
           },
           {
             "name": "highlight-action",
+            "deprecated": null
+          },
+          {
+            "name": "limit",
             "deprecated": null
           },
           {
@@ -210897,7 +212184,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-combobox",
       "classification": "warning-required",
-      "rationale": "Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.",
+      "rationale": "Native input/change notifications on lr-combobox are bubbling, composed Event instances without a detail payload. Its lr-input/lr-change aliases carry the frozen readonly value, previousValue and row data, narrowed by the picker value generic; migrated handlers reading or mutating upstream CustomEvent detail must use the prefixed aliases and review the narrower single-select type. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -211129,25 +212416,32 @@
           "actual": "LyraAppearance"
         },
         {
+          "code": "event-constructor-mismatch",
+          "section": "events",
+          "member": "change",
+          "expected": "CustomEvent",
+          "actual": "Event"
+        },
+        {
           "code": "event-type-mismatch",
           "section": "events",
           "member": "change",
           "expected": "CustomEvent<{ value: string | string[] }>",
-          "actual": "CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
+          "actual": "Event"
         },
         {
           "code": "event-constructor-mismatch",
           "section": "events",
           "member": "input",
           "expected": "InputEvent | CustomEvent<{ value: string | string[] }>",
-          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
+          "actual": "Event"
         },
         {
           "code": "event-type-mismatch",
           "section": "events",
           "member": "input",
           "expected": "InputEvent | CustomEvent<{ value: string | string[] }>",
-          "actual": "InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >"
+          "actual": "Event"
         }
       ]
     },
@@ -211356,7 +212650,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-data-grid",
       "classification": "warning-required",
-      "rationale": "Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed.",
+      "rationale": "Lyra snapshots collection inputs and event details synchronously into frozen readonly values, removes the redundant wa-data-request alias, and deprecates the unprefixed request event in favor of lr-request. Migrated code that mutates arrays or event details in place, assigns derived collections, listens for the removed alias, or relies on the unprefixed request event must be reviewed.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",

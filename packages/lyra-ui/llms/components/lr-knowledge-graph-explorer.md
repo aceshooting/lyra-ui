@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,7 +26,7 @@ and search dimming; an explicitly empty value remains empty and later queries wo
 Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
-`query`, `matchCount`, and `matchCountExact`.
+`query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
@@ -125,7 +125,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   field name. `matchCount` is the same live node-filter total the result list and its live-region
   announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
   this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
-  There is no `activeIndex`: this is a live node filter, not a cursor-based search. The component
+  `activeIndex` is `-1`: this is a live node filter with no search cursor. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-activate`
@@ -145,7 +145,8 @@ pin toggle; no effect while `details` is overridden.
 `search` (the search `lr-input`), `legend` (the
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
-`search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
+`search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
+shown/total notice when more than 50 nodes match), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 

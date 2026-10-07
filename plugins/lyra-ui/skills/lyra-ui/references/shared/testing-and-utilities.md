@@ -292,6 +292,27 @@ feature-request API described in "When no component fits" so it can be promoted 
   "Localization"), and protected `localize()` / `effectiveLocale` / `effectiveDirection`, all
   memoized once per update cycle. `LyraEmitOptions { cancelable?: boolean }` is the public options
   object accepted by `emit()`; set `cancelable` only for a real, branch-on-veto operation.
+  A subclass declaring `protected static deprecatedAliases` must call
+  `installDeprecatedAliases()` once in a static block. Import the installer from its granular
+  `@aceshooting/lyra-ui/utilities/deprecated-aliases.js` route:
+
+  ```ts
+  import { LyraElement } from '@aceshooting/lyra-ui/utilities/lyra-element.js';
+  import { installDeprecatedAliases } from '@aceshooting/lyra-ui/utilities/deprecated-aliases.js';
+
+  class MyElement extends LyraElement {
+    static { installDeprecatedAliases(); }
+    protected static override deprecatedAliases = { oldName: 'newName' };
+  }
+  ```
+
+  The installer adds alias synchronization to the base-class hooks; classes without alias tables
+  do not need it.
+- **`utilities-deprecated-aliases-contracts`** — The opt-in installer for a subclass's
+  `deprecatedAliases` table. Call it once from a static block on that subclass; it installs
+  property/attribute synchronization on the shared element hooks.
+  `installDeprecatedAliases(): void`
+  Import: `@aceshooting/lyra-ui/utilities/deprecated-aliases.js`.
 - **`catalog` → `LyraCatalogEntry` and `LyraCatalog<T>`** — type-only shared vocabulary for model,
   voice, and future catalog-backed controls. Import it from
   `@aceshooting/lyra-ui/utilities/catalog.js`; both types are also available from the package root

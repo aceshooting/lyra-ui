@@ -225,6 +225,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   /** How long the reasoning took, in milliseconds, once known. Omitted
    *  entirely (nothing rendered in `'post-hoc'`, a pulsing placeholder in
    *  `'live'`) while unset. */
+  // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
   @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
 
   private readonly bodyId = nextId('thinking-panel-body');

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,6 +39,8 @@ including an explicit empty string; removing it restores `label` or the localize
 **Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
 duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
 more rows than the composed tree's 1,000-row budget.
+When source normalization reaches its 10,000-node cap, the host shows a localized `limit` part;
+the composed tree shows its own 1,000-item notice when its valid-node cap is reached.
 
 **Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
 lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
@@ -55,4 +57,5 @@ row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unl
 expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
 `lr-selection-change` events stay inside the component.
 
-**CSS parts:** `base` — the root wrapper.
+**CSS parts:** `base` — the root wrapper; `limit` — localized notice when the source listing
+exceeds its 10,000-item snapshot.

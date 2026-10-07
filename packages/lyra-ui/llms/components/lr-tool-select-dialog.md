@@ -128,7 +128,10 @@ keyboard-focusable scroll region), `empty`, `category`, `category-heading`,
 `--lr-tool-select-dialog-search-padding-block` (default `var(--lr-space-s)`) and
 `--lr-tool-select-dialog-search-radius` (default `var(--lr-radius)`) size the search field; point
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob. The scrollable
+inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
+component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
+`--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
+The search field remains a filter toolbar, with the native editing hints listed above. The scrollable
 tool list's mouse-hover preview on `[part="body"]` has its own four-longhand outline shape:
 `--lr-tool-select-dialog-body-hover-outline-width` (default `var(--lr-border-width-thin)`),
 `--lr-tool-select-dialog-body-hover-outline-style` (default `solid`),

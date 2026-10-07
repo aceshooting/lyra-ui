@@ -172,8 +172,8 @@ describe('public collection snapshots at hostile input boundaries', () => {
       recordKey: (key) => key === 'opaque' ? 'preserve' : 'copy',
       onResult: (result) => results.push(result),
     }) as Record<string, unknown>;
-    expect(snapshot.safe).to.equal(1);
-    expect(snapshot.opaque).to.equal(value.opaque);
+    expect(snapshot['safe']).to.equal(1);
+    expect(snapshot['opaque']).to.equal(value['opaque']);
     expect('danger' in snapshot).to.equal(false);
     expect(reads).to.equal(0);
     expect(results).to.deep.equal([{ invalid: true, truncated: false }]);

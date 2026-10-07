@@ -259,6 +259,16 @@ function normalizeTimestamp(
  * @csspart error-description - Exported from the built-in error `<lr-empty>`'s `description` part.
  * @csspart error-actions - Exported from the built-in error `<lr-empty>`'s `actions` part.
  * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
+ * @cssprop [--lr-icon-button-bg=transparent] - Icon action background in the resting state.
+ * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Icon action background in the pressed state.
+ * @cssprop [--lr-icon-button-bg-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Icon action background in the hover state.
+ * @cssprop [--lr-icon-button-border=0] - Icon action border in the resting state.
+ * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))] - Icon action border in the pressed state.
+ * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, 0)] - Icon action border in the hover state.
+ * @cssprop [--lr-icon-button-color=var(--lr-color-text-quiet)] - Icon action foreground color in the resting state.
+ * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] - Icon action foreground color in the pressed state.
+ * @cssprop [--lr-icon-button-color-hover=var(--lr-color-text)] - Icon action foreground color in the hover state.
+ * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Icon action corner radius in the resting state.
  * @status stable
  * @since 4.1.0
  */

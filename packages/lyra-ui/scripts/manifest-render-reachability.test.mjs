@@ -65,6 +65,56 @@ test("render reachability follows an invoked render helper and a same-directory 
   assert.match(surface, /helper-owned/);
 });
 
+test("render reachability follows an invoked shared internal template", () => {
+  const sources = new Map([
+    ["src/components/x/example/example.class.ts", `
+      import { renderChrome } from '../../../internal/chrome.js';
+      export class Example { render() { return html\`\${renderChrome()}\`; } }
+    `],
+    ["src/internal/chrome.ts", `export function renderChrome() { return html\`<div part="shared-chrome"></div>\`; }`],
+  ]);
+  assert.match(renderSurfaceFor("src/components/x/example/example.class.ts", sources), /shared-chrome/);
+});
+
+test("render reachability follows a literal dynamic import inside an owned controller", () => {
+  const sources = new Map([
+    ["src/components/x/example/example.class.ts", `
+      import { LazyController } from './lazy.js';
+      export class Example {
+        // @renderController LazyController
+        controller = new LazyController(this);
+      }
+    `],
+    ["src/components/x/example/lazy.ts", `
+      export class LazyController {
+        constructor(host: HTMLElement) { void import('./paint.js'); }
+      }
+    `],
+    ["src/components/x/example/paint.ts", `export function paint() { el.setAttribute('part', 'lazy-owned'); }`],
+    ["src/components/x/example/unrelated.ts", `export function paint() { el.setAttribute('part', 'phantom-lazy'); }`],
+  ]);
+  const surface = renderSurfaceFor("src/components/x/example/example.class.ts", sources);
+  assert.match(surface, /lazy-owned/);
+  assert.doesNotMatch(surface, /phantom-lazy/);
+});
+
+test("render reachability excludes a component's unrelated lazy child import", () => {
+  const sources = new Map([
+    ["src/components/x/example/example.class.ts", `
+      export class Example {
+        render() { return html\`<div part="owned"></div>\`; }
+        loadChild() { return import('./child.js'); }
+      }
+    `],
+    ["src/components/x/example/child.ts", `
+      export class Child { render() { return html\`<div part="child-only"></div>\`; } }
+    `],
+  ]);
+  const surface = renderSurfaceFor("src/components/x/example/example.class.ts", sources);
+  assert.match(surface, /part="owned"/);
+  assert.doesNotMatch(surface, /child-only/);
+});
+
 test("render reachability terminates same-directory helper cycles", () => {
   const sources = new Map([
     [

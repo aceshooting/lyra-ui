@@ -16,6 +16,7 @@ import {
 import { positiveInitialMarginalGzipBytes } from './bundle-metrics.mjs';
 import { bundleCssMeasurement } from './bundle-css-entry.mjs';
 import { cssBudgetFinding, validateCssBundleConfig } from './bundle-css-policy.mjs';
+import './bundle-initial-entry.test.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
 const packageDir = path.join(scriptsDir, '..');
@@ -37,6 +38,7 @@ const checker = readFileSync(
   path.join(scriptsDir, 'check-bundle-size.mjs'),
   'utf8',
 );
+const initialEntry = readFileSync(path.join(scriptsDir, 'bundle-initial-entry.mjs'), 'utf8');
 const cssBudgets = JSON.parse(
   readFileSync(path.join(scriptsDir, 'bundle-css-budgets.json'), 'utf8'),
 );
@@ -276,16 +278,19 @@ const deferredPositionerConsumers = {
     'src/components/overlays/overlay/tooltip.class.ts',
   'dist/components/overlays/popup/popup.js':
     'src/components/overlays/popup/popup.class.ts',
-  'dist/components/retrieval/citation-badge/citation-badge.js':
-    'src/components/retrieval/citation-badge/citation-badge.class.ts',
-  'dist/components/retrieval/entity-chip/entity-chip.js':
-    'src/components/retrieval/entity-chip/entity-chip.class.ts',
   'dist/components/utility/export-button/export-button.js':
     'src/components/utility/export-button/export-button.class.ts',
   'dist/components/utility/mention-popover/mention-popover.js':
     'src/components/utility/mention-popover/mention-popover.class.ts',
   'dist/components/utility/tour/tour.js':
     'src/components/utility/tour/tour.class.ts',
+};
+
+const deferredPositionerControllerConsumers = {
+  'dist/components/retrieval/citation-badge/citation-badge.js':
+    'src/components/retrieval/citation-badge/citation-badge.class.ts',
+  'dist/components/retrieval/entity-chip/entity-chip.js':
+    'src/components/retrieval/entity-chip/entity-chip.class.ts',
 };
 
 const deferredCatalogPickerConsumers = {
@@ -310,6 +315,7 @@ assert.deepEqual(
     'dist/components/forms/combobox/combobox.js',
     'dist/components/overlays/overlay/popover.js',
     ...Object.keys(deferredPositionerConsumers),
+    ...Object.keys(deferredPositionerControllerConsumers),
     ...Object.keys(deferredCatalogPickerConsumers),
   ].sort(),
   'every anchored component route needs a splitting-aware initial budget',
@@ -343,6 +349,52 @@ for (const [entry, sourcePath] of Object.entries(deferredCatalogPickerConsumers)
     `${sourcePath} must keep its popup positioning on the shared catalog-picker controller`,
   );
 }
+for (const [entry, sourcePath] of Object.entries(deferredPositionerControllerConsumers)) {
+  assert.doesNotThrow(
+    () => budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry),
+    `${entry} needs a positive reviewed whole-byte initial-route ceiling`,
+  );
+  const source = readFileSync(path.join(scriptsDir, '..', sourcePath), 'utf8');
+  assert.match(
+    source,
+    /from\s+['"][^'"]*\/internal\/preview-disclosure-controller\.js['"]/u,
+    `${sourcePath} must use the shared preview disclosure controller`,
+  );
+  assert.equal(
+    runtimePositionerImports(source).length,
+    0,
+    `${sourcePath} must defer the Floating UI-backed positioning runtime`,
+  );
+}
+
+const previewDisclosureControllerSource = readFileSync(
+  path.join(scriptsDir, '..', 'src', 'internal', 'preview-disclosure-controller.ts'),
+  'utf8',
+);
+const anchoredOverlayRuntimeSource = readFileSync(
+  path.join(scriptsDir, '..', 'src', 'internal', 'anchored-overlay-runtime.ts'),
+  'utf8',
+);
+assert.match(
+  previewDisclosureControllerSource,
+  /from\s+['"]\.\/anchored-overlay-runtime\.js['"]/u,
+  'preview disclosure controllers must retain deferred positioning through the shared runtime',
+);
+assert.equal(
+  runtimePositionerImports(previewDisclosureControllerSource).length,
+  0,
+  'preview disclosure controllers must not eagerly import the Floating UI-backed positioner',
+);
+assert.match(
+  anchoredOverlayRuntimeSource,
+  /import\(['"]\.\/positioner\.js['"]\)/u,
+  'the shared anchored runtime must dynamically load the Floating UI-backed positioner',
+);
+assert.equal(
+  runtimePositionerImports(anchoredOverlayRuntimeSource).length,
+  0,
+  'the shared anchored runtime must not statically import the Floating UI-backed positioner',
+);
 const catalogPickerSource = readFileSync(
   path.join(scriptsDir, '..', 'src', 'internal', 'catalog-picker.ts'),
   'utf8',
@@ -509,12 +561,12 @@ assert.match(
   'bundle exclusion claims must inspect a real esbuild dependency graph',
 );
 assert.match(
-  checker,
+  initialEntry,
   /splitting:\s*true/,
   'initial-route budgets must measure a splitting-aware production graph',
 );
 assert.match(
-  checker,
+  initialEntry,
   /dynamic-import/,
   'initial-route traversal must exclude first-open dynamic chunks',
 );

@@ -5,6 +5,7 @@ export const modalHostStyles = css`
   display: none;
   position: fixed;
   inset: 0;
+  /* @internalcssprop --lr-overlay-stack-index - Leased by the overlay stack manager. */
   z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
   margin: 0;
   border: none;

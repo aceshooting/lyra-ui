@@ -24,12 +24,12 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_switchRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 export interface LyraSwitchEventMap {
   input: Event;

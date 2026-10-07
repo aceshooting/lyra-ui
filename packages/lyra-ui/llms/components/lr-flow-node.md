@@ -7,7 +7,7 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
-- **Deprecations** none
+- **Deprecated slot** `icon` since `unreleased`; use slot `slot="start"`; removal not before `28.0.0` — The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -56,7 +56,8 @@ owns none of that.
 
 **Events:** none — purely presentational, activation/drag/connect all live on `lr-flow-canvas`.
 
-**Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
+**Slots:** default (body content), `start` (leading header glyph; `icon` is the deprecated legacy
+slot), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
 while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,

@@ -9,19 +9,29 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-research-progress`
 
+The shared `--lr-progress-track-color`, `--lr-progress-track-radius`, `--lr-progress-indicator-color`, and `--lr-progress-indicator-variant-color` hooks control the progress track and indicator.
+
 `lr-research-progress` presents a read-only ordered list of host-owned research steps and an
 aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional
-`description`, a `status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
+`description`. It retains native progress and list markup so a small progress display need not
+load full control components. Its track and fill honor `--lr-progress-track-color`,
+`--lr-progress-track-radius`, and `--lr-progress-indicator-color`; percentage formatting shares the
+progress controls’ locale behavior. Shared row styling and status helpers keep its presentation aligned
+with neighboring agent-work lists. Each step also has a
+`status` of `pending`, `running`, `completed`, `failed`, or `incomplete` (a step that stopped
 without finishing, such as a cancelled run; it shows the localized `statusIncomplete` text and is not
-counted as completed; an unrecognized status renders as `pending` rather than dropping the step), and an optional
-nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
+counted as completed; `cancelled` maps to this state), and an optional
+nonnegative finite `sources` count. Source counts are displayed as supplied. The
+shared success spellings `success`, `done`, and `complete` map to `completed`, and `error` maps to
+`failed`. An unrecognized status renders as localized neutral “Unknown” rather than dropping the
+step. The component keeps its research-specific status wording and `.strings` overrides. The
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
 record, and renders at most 100 steps. `label` sets the visible group heading and names the group

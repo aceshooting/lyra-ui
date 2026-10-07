@@ -16,6 +16,9 @@
 
 ## `lr-swatch-picker`
 
+`:state(selected)` matches while the live value resolves to an option in the current palette.
+The selected option retains its `swatch-selected` part; removing that option clears the state.
+
 Keyboard navigation and item-update focus restoration reveal the complete focused swatch
 inside scrolling containers, including single-row `nowrap` palettes. Public
 `focus({ preventScroll: true })` continues to suppress scrolling.

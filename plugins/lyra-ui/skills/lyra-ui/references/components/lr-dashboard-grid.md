@@ -19,6 +19,11 @@
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
 move, resize, collision, and layout-change requests; the host owns persistence and applies updates.
 
+If every layout cell has authored `[cell-id]` content, use
+`components/layout/dashboard-grid/dashboard-grid-register.js`. It registers the grid and empty
+state; import `lr-widget.js` and `lr-widget-renderer.js` too when default cells can be created.
+The default entry registers that widget stack.
+
 Pointer move and resize gestures measure the rendered column/row pitch, including the gutter, so
 movement by four painted tracks proposes four logical columns in either LTR or RTL. Row-height and
 gap overrides also govern vertical pointer snapping. The component continues to emit controlled

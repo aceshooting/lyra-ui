@@ -34,7 +34,7 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../graph/graph.class.js';
@@ -318,20 +318,6 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @since 4.1.0
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
-  private readonly rovingActionByScope = new Map<MemoryScope, string>();
-
-  private onPrimaryKeyDown(event: KeyboardEvent): void {
-    const list = (event.currentTarget as HTMLElement).closest('[part="list"]');
-    const buttons = [...(list?.querySelectorAll<HTMLButtonElement>('[data-roving-primary]') ?? [])];
-    const current = buttons.indexOf(event.currentTarget as HTMLButtonElement);
-    const next = resolveListMove(event, {
-      count: buttons.length, current, orientation: 'vertical',
-      isAvailable: (candidate) => Boolean(buttons[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
-    });
-    if (next === null) return;
-    event.preventDefault();
-    buttons[next]?.focus();
-  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -341,9 +327,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
     citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
     collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
     memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
@@ -368,6 +356,21 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     showMore: LYRA_DEFAULT_showMore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private readonly rovingActionByScope = new Map<MemoryScope, string>();
+
+  private onPrimaryKeyDown(event: KeyboardEvent): void {
+    const list = (event.currentTarget as HTMLElement).closest('[part="list"]');
+    const buttons = [...(list?.querySelectorAll<HTMLButtonElement>('[data-roving-primary]') ?? [])];
+    const current = buttons.indexOf(event.currentTarget as HTMLButtonElement);
+    const next = resolveListMove(event, {
+      count: buttons.length, current, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons[next]?.focus();
+  }
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([

@@ -42,12 +42,12 @@ import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../../forms/form-validator.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 const DEFAULT_MAX = 5;
 /** No real-world star rating needs more stars than this; caps an untrusted `max` so it can't turn
@@ -133,6 +133,8 @@ function starSolid(): SVGTemplateResult {
  * Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
  *
  * @customElement lr-rating
+ * @event input - Bubbling, composed native `Event` emitted when a user edits the value,
+ * immediately before `lr-input`. Programmatic writes and no-op gestures are silent.
  * @event lr-input - Typed value edit notification; detail includes `value`.
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.

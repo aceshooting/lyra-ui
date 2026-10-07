@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,7 +50,9 @@ dropping it to `<body>`.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`
-regardless. `--lr-scroller-min-block-size` (default `var(--lr-size-10rem)`) — the vertical
+regardless. `--lr-scroller-control-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-scroller-control-active-bg` (default a deeper mix of the hover fill) independently theme
+the previous/next hover and pressed fills. `--lr-scroller-min-block-size` (default `var(--lr-size-10rem)`) — the vertical
 orientation's minimum block size, ignored while horizontal. `--shadow-color` (default
 `var(--lr-color-surface)`) and `--shadow-size` (default `var(--lr-size-2rem)`) theme each edge cue's
 base color and logical extent; `--lr-scroller-shadow-color` and `--lr-scroller-shadow-size` are

@@ -895,13 +895,15 @@ function directNestedCallables(callable) {
 
 function callableTree(roots) {
   const callables = [];
-  const pending = [...roots];
+  const parents = new Map();
+  const pending = roots.map((callable) => ({ callable, parent: undefined }));
   while (pending.length > 0) {
-    const callable = pending.shift();
+    const { callable, parent } = pending.shift();
     callables.push(callable);
-    pending.push(...directNestedCallables(callable));
+    if (parent) parents.set(callable, parent);
+    pending.push(...directNestedCallables(callable).map((child) => ({ callable: child, parent: callable })));
   }
-  return callables;
+  return { callables, parents };
 }
 
 function directClassBodies(node) {
@@ -939,7 +941,8 @@ function runtimeCancelabilityContexts(node) {
       // string parameter may be invoked externally with an arbitrary name and must fail closed.
       if (name && member.accessibility === 'private') methods.set(name, callable);
     }
-    return { classBody, scopes: callableTree(roots), methods };
+    const { callables, parents } = callableTree(roots);
+    return { classBody, scopes: callables, parents, methods };
   });
 }
 
@@ -1156,26 +1159,58 @@ function bindingForDeclaration(target, initializer, stack, booleanMembers, seede
 }
 
 /**
- * Walks one callable in lexical/source order. Nested callables are separate analysis scopes, so a
- * shadowed callback parameter or local can never inherit a same-spelled outer EventInit binding.
+ * Carry typed parameters into nested callbacks only when an intervening write or declaration
+ * cannot change their value. An opaque capture stays unresolved.
  */
-function walkCallableLexically(callable, seededNames, booleanMembers, onCall) {
+function capturedParameterBindings(callable, parents, seeds, booleanMembers) {
+  const captured = new Map();
+  const ancestors = [];
+  for (let parent = parents?.get(callable); parent; parent = parents.get(parent)) ancestors.unshift(parent);
+  for (const ancestor of ancestors) {
+    for (const parameter of ancestor.params ?? []) {
+      const target = callableParameterTarget(parameter);
+      if (target?.type !== 'Identifier') continue;
+      let reassignedOrShadowed = false;
+      walkAst(ancestor.body, (candidate) => {
+        if (candidate.type === 'VariableDeclarator' && candidate.id?.type === 'Identifier' &&
+            candidate.id.name === target.name) reassignedOrShadowed = true;
+        if (candidate.type === 'AssignmentExpression' && candidate.left?.type === 'Identifier' &&
+            candidate.left.name === target.name) reassignedOrShadowed = true;
+      });
+      if (reassignedOrShadowed) continue;
+      captured.set(target.name, bindingForDeclaration(
+        target,
+        parameter.type === 'AssignmentPattern' ? parameter.right : undefined,
+        [captured],
+        booleanMembers,
+        seeds?.get(ancestor)?.get(target.name),
+      ));
+    }
+  }
+  return captured;
+}
+
+function walkCallableLexically(callable, seededNames, booleanMembers, onCall, captured = new Map(), parameterInits = new Map()) {
   const parameters = new Map();
   for (const parameter of callable.params ?? []) {
     const target = callableParameterTarget(parameter);
     if (target?.type !== 'Identifier') continue;
+    const binding = bindingForDeclaration(
+      target,
+      parameter.type === 'AssignmentPattern' ? parameter.right : undefined,
+      [captured, parameters],
+      booleanMembers,
+      seededNames?.get(target.name),
+    );
+    if (binding.init.includes('unresolved') && parameterInits.has(target.name)) {
+      binding.init = parameterInits.get(target.name);
+    }
     parameters.set(
       target.name,
-      bindingForDeclaration(
-        target,
-        parameter.type === 'AssignmentPattern' ? parameter.right : undefined,
-        [parameters],
-        booleanMembers,
-        seededNames?.get(target.name),
-      ),
+      binding,
     );
   }
-  let stack = [parameters];
+  let stack = [captured, parameters];
 
   const visit = (node) => {
     if (!node || typeof node !== 'object') return;
@@ -1351,7 +1386,7 @@ function privateHelperEventNameSeeds(context, booleanMembers) {
             [...names],
           ) || changed;
         }
-      });
+      }, capturedParameterBindings(caller, context.parents, seeds, booleanMembers));
     }
   }
   return seeds;
@@ -1416,7 +1451,7 @@ function isThisEmitCall(candidate) {
   );
 }
 
-function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers) {
+function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers, contextualParameterInits = new Map()) {
   const observations = new Map();
   let unresolvedNames = 0;
   for (const context of runtimeCancelabilityContexts(node)) {
@@ -1454,7 +1489,7 @@ function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers) {
             unresolvedNames += 1;
           }
         }
-      });
+      }, capturedParameterBindings(scope, context.parents, seeds, booleanMembers), contextualParameterInits.get(scope));
     }
 
     for (const scope of context.scopes) {
@@ -1471,7 +1506,7 @@ function runtimeEventAnalysisFromNode(node, suppliedBooleanMembers) {
           for (const value of values) observed.add(value);
           observations.set(name, observed);
         }
-      });
+      }, capturedParameterBindings(scope, context.parents, seeds, booleanMembers), contextualParameterInits.get(scope));
     }
   }
   return {
@@ -2006,12 +2041,18 @@ function runtimeMixinAnalysis(graph, fromModule, localName, seen = new Set()) {
   const module = graph.get(imported.file);
   const observations = new Map();
   let unresolvedNames = 0;
-  const classBodies = [];
+  const classes = [];
   walkAst(module.program, (candidate) => {
-    if (candidate.type === 'ClassBody') classBodies.push(candidate);
+    if (candidate.type === 'ClassDeclaration' || candidate.type === 'ClassExpression') {
+      classes.push(candidate);
+    }
   });
-  for (const classBody of classBodies) {
-    const own = runtimeEventAnalysisFromNode(classBody);
+  for (const classDeclaration of classes) {
+    const own = runtimeEventAnalysisFromNode(
+      classDeclaration.body,
+      undefined,
+      contextualFormInvalidCallbackInits(graph, module, classDeclaration),
+    );
     mergeRuntimeCancelability(observations, own.events);
     unresolvedNames += own.unresolvedNames;
   }
@@ -2051,6 +2092,66 @@ function effectiveClassLiteralBooleanMembers(graph, module, classDeclaration, se
   return literalBooleanMembersForClassBody(classDeclaration.body, members);
 }
 
+/** Resolve the callback's exact EventInit contract from the controller declaration. */
+function formControlInvalidInitValues(controller) {
+  const constructor = controller.classes.get('FormControlController')?.body.body.find(
+    (member) => member.type === 'MethodDefinition' && member.kind === 'constructor',
+  );
+  const optionsType = callableParameterTarget(constructor?.value?.params?.[1])?.typeAnnotation?.typeAnnotation;
+  if (optionsType?.type !== 'TSTypeReference' || optionsType.typeName?.name !== 'FormControlOptions') {
+    return undefined;
+  }
+  const invalidOption = controller.interfaces.get('FormControlOptions')?.body.body.find(
+    (member) => member.type === 'TSPropertySignature' && propertyName(member.key) === 'invalid',
+  );
+  const invalidType = invalidOption?.typeAnnotation?.typeAnnotation;
+  if (invalidType?.type !== 'TSFunctionType') return undefined;
+  const invalidParameter = callableParameterTarget(invalidType.params?.[0]);
+  return eventInitValuesFromType(invalidParameter?.typeAnnotation);
+}
+
+export function formControlInvalidInitValuesFromSource(source) {
+  const parsed = parseSync('form-control-controller.ts', source);
+  if (parsed.errors.length > 0) throw new SyntaxError('Controller source could not be parsed.');
+  const interfaces = new Map();
+  const classes = new Map();
+  for (const statement of parsed.program.body) {
+    const declaration = unwrapDeclaration(statement);
+    if (declaration?.type === 'TSInterfaceDeclaration') interfaces.set(declaration.id.name, declaration);
+    if (declaration?.type === 'ClassDeclaration') classes.set(declaration.id.name, declaration);
+  }
+  return formControlInvalidInitValues({ interfaces, classes });
+}
+
+/** Read the imported API before treating a contextually typed `init` as known. */
+function contextualFormInvalidCallbackInits(graph, module, classDeclaration) {
+  const controllerFile = path.join(packageDir, 'src/internal/form-control-controller.ts');
+  const controllerImports = new Set(
+    [...module.imports].filter(([, imported]) =>
+      imported.imported === 'FormControlController' && imported.file === controllerFile,
+    ).map(([local]) => local),
+  );
+  if (controllerImports.size === 0) return new Map();
+  const allowedInit = formControlInvalidInitValues(graph.get(controllerFile));
+  if (!allowedInit) return new Map();
+
+  const callbacks = new Map();
+  walkAst(classDeclaration.body, (candidate) => {
+    if (candidate.type !== 'NewExpression' || candidate.callee?.type !== 'Identifier' ||
+        !controllerImports.has(candidate.callee.name)) return;
+    const options = unwrapExpression(candidate.arguments?.[1]);
+    if (options?.type !== 'ObjectExpression') return;
+    for (const property of options.properties) {
+      if (property.type !== 'Property' || objectPropertyName(property) !== 'invalid') continue;
+      const callback = unwrapExpression(property.value);
+      if (!isCallableNode(callback)) continue;
+      const parameter = callableParameterTarget(callback.params?.[0]);
+      if (parameter?.type === 'Identifier') callbacks.set(callback, new Map([[parameter.name, allowedInit]]));
+    }
+  });
+  return callbacks;
+}
+
 function effectiveClassRuntimeEventAnalysis(
   graph,
   module,
@@ -2063,7 +2164,11 @@ function effectiveClassRuntimeEventAnalysis(
   if (seen.has(key)) return { events: new Map(), unresolvedNames: 0 };
   seen.add(key);
 
-  const own = runtimeEventAnalysisFromNode(classDeclaration.body, booleanMembers);
+  const own = runtimeEventAnalysisFromNode(
+    classDeclaration.body,
+    booleanMembers,
+    contextualFormInvalidCallbackInits(graph, module, classDeclaration),
+  );
   const observations = new Map();
   mergeRuntimeCancelability(observations, own.events);
   let unresolvedNames = own.unresolvedNames;

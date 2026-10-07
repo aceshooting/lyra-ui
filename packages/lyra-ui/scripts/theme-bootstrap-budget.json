@@ -1,7 +1,7 @@
 {
-  "$comment": "Ceilings for the exact shipped lyraThemeBootstrap string, measured raw and with gzip level 9. Reviewed v2 style restoration includes mode branches, reversible ownership and packed token membership after removing duplicate setup and compacting serialized function locals. The build enforces reviewed measurements plus 2% rounded-up headroom; bundle re-minification is deliberately excluded.",
-  "reviewedRawBytes": 16872,
-  "reviewedGzipBytes": 6088,
-  "maxRawBytes": 17210,
-  "maxGzipBytes": 6210
+  "$comment": "Ceilings for the exact shipped lyraThemeBootstrap string, measured raw and with gzip level 9. Reviewed mode-only restoration adds validated factory/script configuration while preserving host-owned visual axes, inline styles and ownership records. The build enforces the reviewed measurements plus 2% rounded-up headroom; bundle re-minification is deliberately excluded.",
+  "reviewedRawBytes": 17239,
+  "reviewedGzipBytes": 6306,
+  "maxRawBytes": 17584,
+  "maxGzipBytes": 6433
 }

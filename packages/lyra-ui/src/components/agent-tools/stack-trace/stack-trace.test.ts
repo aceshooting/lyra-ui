@@ -11,7 +11,7 @@ async function settleClipboard(el: LyraStackTrace): Promise<void> {
   await Promise.resolve();
   await el.updateComplete;
 }
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const trace = [
   'TypeError: Cannot read properties of undefined',
@@ -548,6 +548,29 @@ describe('lr-stack-trace chrome', () => {
       });
       await waitUntil(() => getComputedStyle(frame).color === 'rgb(1, 2, 3)');
       expect(getComputedStyle(frame).color).to.equal('rgb(1, 2, 3)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('deepens the Copy border while pressed', async () => {
+    const el = await fixture<LyraStackTrace>(html`
+      <lr-stack-trace style="--lr-stack-trace-interactive-color: rgb(1, 2, 3)" .trace=${trace}></lr-stack-trace>
+    `);
+    const copy = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="copy-button"]')!;
+    copy.style.transition = 'none';
+    try {
+      await hoverUntilMatched(copy, 'copy button never reached hover');
+      await waitUntil(
+        () => getComputedStyle(copy).borderTopColor === 'rgb(1, 2, 3)',
+        'copy button never painted the scoped hover border',
+      );
+      const hovered = getComputedStyle(copy).borderTopColor;
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(
+        () => copy.matches(':active') && getComputedStyle(copy).borderTopColor !== hovered,
+        'copy button never painted a distinct pressed border',
+      );
     } finally {
       await resetMouse();
     }

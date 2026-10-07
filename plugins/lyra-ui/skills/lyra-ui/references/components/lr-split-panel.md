@@ -21,7 +21,7 @@ component when migrated markup has named `start` and `end` panes. The separate `
 Lyra's multi-panel layout: its direct default-slot children, responsive collapse modes, and
 multi-divider events are intentionally a different API.
 
-Both `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
+Both `lr-resize-request` and `lr-reposition-request` detail fields `position` and `positionInPixels` measure from the
 selected primary edge and agree with accepted public property readback, including `primary="end"`.
 Canceling preserves both prior values; direct property writes remain silent.
 
@@ -53,13 +53,16 @@ Canceling preserves both prior values; direct property writes remain silent.
   string snap point takes effect. Non-finite values fall back safely and negative values clamp to
   zero.
 
-**Events:** `lr-reposition-request` (cancelable; `detail: SplitPanelRepositionDetail`, where
+**Events:** `lr-resize-request` and the mirrored `lr-reposition-request` (both cancelable and
+fired before each pointer or keyboard resize step; `detail: SplitPanelRepositionDetail`, where
 `{ position, positionInPixels }` is the final snapped and constrained proposed position measured
 from the selected `primary` pane's edge. Call `preventDefault()` to leave both position properties
 unchanged. It is not emitted when a consumer assigns `position` or `positionInPixels` directly),
-`lr-reposition` (non-cancelable, no detail) — bubbling and composed, emitted after an accepted
-pointer or keyboard interaction commits the divider position; direct property assignments stay
-silent.
+`lr-resize` (non-cancelable with the accepted position detail) and the mirrored `lr-reposition`
+(non-cancelable, no detail) fire after each accepted step. `lr-resize-change` carries the accepted
+position after each keyboard step or on pointer release after a changed drag. Pointer cancellation
+and rejected steps do not settle. All events bubble and are composed; filter nested resize events
+with `event.target === event.currentTarget`. Direct property assignments stay silent.
 
 **Slots:** `start` (logical start pane), `end` (logical end pane), `divider` (optional decorative
 custom-handle content inside the separator; its assigned subtree is inert, so the separator remains

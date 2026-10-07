@@ -36,6 +36,8 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   `citation.sourceId ?? ''`; the visible label and span are not repeated in the badge's preview. A
   `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
   citation stays in the list
+  Evidence badges share one Tab stop; ArrowUp/ArrowDown/Home/End move among them. A focused badge
+  still activates and opens its preview with its existing keys.
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,

@@ -20,18 +20,6 @@ function trigger(el: LyraSelect): HTMLButtonElement {
   return el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
 }
 
-function requiredItem<T>(
-  items: ArrayLike<T>,
-  index: number,
-  description: string
-): T {
-  const item = items[index];
-  if (item === undefined) {
-    throw new Error(`Expected ${description} at index ${index}.`);
-  }
-  return item;
-}
-
 // `internals.states` (CustomStateSet) reached Chromium 125 / Safari 17.4 / Firefox 126, and the
 // `:state()` SELECTOR landed separately from the API. Both are guarded because the helper no-ops
 // where either is missing -- an unguarded assertion fails on WebKit rather than skipping.

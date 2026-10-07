@@ -16,7 +16,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -136,6 +136,22 @@ export interface LyraEvalDatasetEventMap {
  * @cssprop [--lr-eval-dataset-search-padding-block=var(--lr-space-xs)] - Block gutter of the search
  *   field.
  * @cssprop [--lr-eval-dataset-search-radius=var(--lr-radius)] - Corner radius of the search field.
+ * @cssprop --lr-icon-button-bg - Icon action background in the resting state.
+ * @cssprop --lr-icon-button-bg-active - Icon action background in the pressed state.
+ * @cssprop --lr-icon-button-bg-hover - Icon action background in the hover state.
+ * @cssprop --lr-icon-button-border - Icon action border in the resting state.
+ * @cssprop --lr-icon-button-border-active - Icon action border in the pressed state.
+ * @cssprop --lr-icon-button-border-hover - Icon action border in the hover state.
+ * @cssprop --lr-icon-button-color - Icon action foreground color in the resting state.
+ * @cssprop --lr-icon-button-color-active - Icon action foreground color in the pressed state.
+ * @cssprop --lr-icon-button-color-hover - Icon action foreground color in the hover state.
+ * @cssprop --lr-icon-button-radius - Icon action corner radius in the resting state.
+ * @cssprop --lr-input-action-color - Search field action and placeholder fallback color.
+ * @cssprop --lr-input-action-hover-color - Search clear action hover color.
+ * @cssprop --lr-input-border-color - Search field border color.
+ * @cssprop --lr-input-fill - Search field background.
+ * @cssprop --lr-input-focus-border-color - Search field hover border color.
+ * @cssprop --lr-input-placeholder-color - Search placeholder color.
  * @status stable
  * @since 4.1.0
  */
@@ -152,6 +168,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetEmpty: LYRA_DEFAULT_evalDatasetEmpty,
     evalDatasetImportLabel: LYRA_DEFAULT_evalDatasetImportLabel,
     evalDatasetLabel: LYRA_DEFAULT_evalDatasetLabel,
+    evalDatasetLimit: LYRA_DEFAULT_evalDatasetLimit,
     evalDatasetNoMatches: LYRA_DEFAULT_evalDatasetNoMatches,
     evalDatasetRemoveExample: LYRA_DEFAULT_evalDatasetRemoveExample,
     evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,

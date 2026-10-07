@@ -201,7 +201,7 @@ it('defines whole retrieval result-count and row-selection messages', () => {
     one: '{count} item',
     other: '{count} items',
   });
-  expect(LYRA_DEFAULT_STRINGS.retrievalResultsSelectRow).to.equal('Select {label}');
+  expect(LYRA_DEFAULT_STRINGS.retrievalResultsSelectRowOrdinal).to.equal('Select result {index} of {total}, {label}');
 });
 
 it('defines reorderable whole contact messages and known vCard type labels', () => {

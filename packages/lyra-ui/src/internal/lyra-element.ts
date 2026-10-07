@@ -10,7 +10,7 @@ import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { devWarnOnce, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
-import type { LyraDeprecatedAliases } from './deprecated-aliases.js';
+import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
 
 type DeprecatedAliasSyncHook = (host: LyraElement<any>, name: PropertyKey | undefined, oldValue: unknown) => void;
 type DeprecatedAliasAttributeHook = (host: LyraElement<any>, attribute: string) => (() => void) | undefined;

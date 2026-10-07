@@ -30,6 +30,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { SeparatorDragController, separatorArrowDirection, separatorDelta } from '../../../internal/separator-drag.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { computeAppRailMode } from './app-rail-mode.js';
+import type { LyraAppRailMode, LyraAppRailPreferredMode } from './app-rail-mode.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import {
   definePersistedProperty,
@@ -42,18 +43,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** The rail's effective presentation -- see the class doc for what each renders. */
-export type LyraAppRailMode = 'full' | 'icon-only' | 'mobile';
-
-/** {@link LyraAppRailMode} plus the `'auto'` release sentinel -- broader than `forceMode`'s own
- *  `LyraAppRailPreferredMode | 'auto'` type, since `forceMode` excludes `'mobile'` (the mobile
- *  breakpoint is always tracked automatically and can never be pinned; see its own doc). */
-export type LyraAppRailModeInput = LyraAppRailMode | 'auto';
-
-/** The non-mobile axis of {@link LyraAppRailMode} -- what `preferred-mode`/`forceMode` can
- *  manually prefer between, since the `mobile-breakpoint` continues to be tracked automatically
- *  regardless (see `preferredMode`'s own doc). */
-export type LyraAppRailPreferredMode = Exclude<LyraAppRailMode, 'mobile'>;
+export type { LyraAppRailMode, LyraAppRailModeInput, LyraAppRailPreferredMode } from './app-rail-mode.js';
 
 /** Whitespace-separated tokens accepted by the `persist` attribute. */
 export type LyraAppRailPersistField = 'open' | 'width' | 'preferred-mode';

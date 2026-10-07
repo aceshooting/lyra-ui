@@ -23,7 +23,11 @@ request cancellation. The component does not poll, schedule timers, start runs, 
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
 
-**Statuses and events:** the shared agent spellings `done`/`success` render as `completed` and `error` as `failed` instead of dropping the run. `lr-run-activate` (`detail: { runId }`) requests opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+**Statuses and events:** the shared agent spellings `done`/`success`/`complete` render as
+`completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
+neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
+`.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
+opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
 
 **CSS parts:**
 

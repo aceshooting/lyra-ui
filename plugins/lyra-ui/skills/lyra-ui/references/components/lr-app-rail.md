@@ -591,9 +591,10 @@ replacement. When that replacement is disabled or inert, focus returns to the av
 that led into the item, or to the stable owning rail surface when no return target exists. A newer
 external focus move is always preserved, and this repair dispatches no activation event.
 
-**Slots:** default (the visible label), `icon` (the leading decorative icon, always hidden from
+**Slots:** default (the visible label), `start` (the leading decorative icon, always hidden from
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
-names the native control, which remains the sole action).
+names the native control, which remains the sole action). The `icon` slot is its deprecated legacy
+alias.
 
 - `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
   SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a

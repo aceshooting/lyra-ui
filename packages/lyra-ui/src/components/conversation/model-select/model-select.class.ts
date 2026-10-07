@@ -24,12 +24,12 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelectNoModels, LYRA_DEFAULT_modelSelectRequired, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 export type { LyraCatalog, LyraCatalogEntry } from '../../../internal/catalog-picker.js';
 

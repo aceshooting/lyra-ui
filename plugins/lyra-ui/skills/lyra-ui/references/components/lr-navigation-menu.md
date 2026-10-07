@@ -7,7 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated event** `lr-expanded-change` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration.
 - **Optional peers** none
 - **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-navigation-menu-item` (same section below)
@@ -89,14 +89,17 @@ The three delays are JavaScript timer inputs, not CSS custom properties, and use
 `show-delay`/`hide-delay` vocabulary as `lr-tooltip`/`lr-popover`. Non-finite values fall back to
 the defaults and negative values clamp to `0` (a `0` show delay opens in the same turn).
 
-**Methods:** `close(): void` closes the open panel and collapses an expanded list (both announced
+**Methods:** `show(): void` expands the collapsed list, `hide(): void` aliases `close()`, and
+`close(): void` closes the open panel and collapses an expanded list (both announced
 with source `programmatic`), for single-page route changes. Focus moves only when the close would
 hide the focused element; a router's own later `focus()` still wins.
 
-**Events:** `lr-expanded-change` — `detail: LyraNavigationMenuExpandedChangeDetail`
-(`{ expanded, source: 'user' | 'programmatic' }`), not cancelable, fired after a change to
-`expanded` renders. `user` covers the toggle, Escape in the collapsed list, and a link or
-plain-button activation that collapses it. The menu never emits `lr-toggle` itself.
+**Events:** cancelable `lr-toggle-request` for user-initiated changes and accepted `lr-toggle`
+with `{ expanded, source: 'user' | 'programmatic' }`. The former can veto the change;
+programmatic changes emit only the accepted event. Deprecated `lr-expanded-change` remains
+available with the same accepted detail after rendering. `user` covers the toggle, Escape in the
+collapsed list, and a link or plain-button activation that collapses it. Nested item `lr-toggle`
+events retain the item as their target; filter by target when listening for the menu's event.
 
 **Slots:** default — `lr-navigation-menu-item` children only; `toggle-icon` — replaces the hamburger
 glyph (inert, `aria-hidden`). Every default-slot child renders inside the `role="list"`, so a

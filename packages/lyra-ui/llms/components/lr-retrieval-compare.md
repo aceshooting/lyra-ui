@@ -28,6 +28,8 @@ semantics); `label?: string` (fallback name for the overall comparison region; a
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
+Each set's chunk buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; the selected
+chunk remains controlled by `selectedChunkId`.
 
 Set ids and each set's nested chunk ids are canonicalized independently. Malformed/blank rows and
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,

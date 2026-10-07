@@ -313,9 +313,9 @@ structured points retain their y-value formatting.
 **Methods:** `renderChart()` requests a connected/visibility-gated render or incremental update.
 `resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
 a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
-built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme` flips or an
-ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
-theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
+built-in `ThemeWatcher` checks the live canvas theme inputs when `prefers-color-scheme` flips or an
+ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates, and redraws when they
+change. A consumer rarely needs to call it by hand; it remains public as the
 escape hatch for theme changes those signals can't observe. Canvas redraw remains visibility-gated;
 when a DOM legend is present its computed swatch colors are refreshed too.
 `exportData('csv' | 'png')` returns a spreadsheet-safe CSV snapshot or the current PNG data URL
@@ -562,10 +562,11 @@ announced. In particular, unavailable data labels do not remove generated table 
 - supported `type` values are normalized before reaching Chart.js; unknown runtime attribute or
   property values fall back to `bar`. Each typed `lr-*-chart` tag supplies its named chart type as
   a default while retaining the mirrored writable `type` surface.
-- a built-in `ThemeWatcher` automatically rethemes an already-drawn chart when
-  `prefers-color-scheme` flips or an ancestor's `class`/`style`/`data-theme`/`data-color-scheme`
-  attribute mutates (coalesced to one redraw). `refreshTheme()` stays public for out-of-band theme
-  changes those signals can't observe.
+- a built-in `ThemeWatcher` automatically rethemes an already-drawn chart when its canvas theme
+  changes after `prefers-color-scheme` flips or an ancestor's
+  `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates (coalesced to one redraw, with
+  unchanged theme inputs skipped). `refreshTheme()` stays public for out-of-band changes those
+  signals can't observe.
 - the focusable canvas is an interactive `application`, not a static image: Arrow keys move through
   finite data, Home/End jump to the endpoints, and Enter/Space activates the current datum. Its
   localized `aria-roledescription` identifies the application as a chart; the generated table is

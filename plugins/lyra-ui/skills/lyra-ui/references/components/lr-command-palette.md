@@ -71,8 +71,9 @@ overlay exposes), `registerCommand(command)` — appends to `commands` and retur
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
 cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
 page, as in `lr-combobox`; the active row is scrolled into view within the list. Enter selects.
-Hovering a non-disabled row also makes it active. A query matching nothing announces the localized
-`commandPaletteEmpty` text politely.
+Hovering a non-disabled row also makes it active. A non-empty query announces its localized result
+count through the shared polite announcement sink; a query matching nothing announces
+`commandPaletteEmpty`. Unchanged results and the initial render are silent.
 
 **Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
 with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable

@@ -41,9 +41,12 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing reports an error. Up to
-100 recoverable PapaParse diagnostics may accompany the rendered grid; exceeding that budget is a
-resource-limit error instead.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+`lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
+`detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
+`severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial grid remains rendered.
+Exceeding that diagnostic budget is a resource-limit error. Valid single-column files do not
+generate an undetectable-delimiter diagnostic.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from

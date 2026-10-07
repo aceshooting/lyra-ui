@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-rag-answer`
+
+The `empty` CSS part exposes the empty-state container.
 
 Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
 assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
@@ -66,5 +68,6 @@ the Markdown renderer's housekeeping events stay inside.
 source list. Either slot renders from its assigned content without requiring the corresponding
 `answer` or `sources` data property; a slotted answer remains visible while `loading`.
 
-**CSS parts:** `base`, `answer`, `loading`, `error` (neutral visible error message), `retry`,
+**CSS parts:** `base`, `answer`, `empty` (an `lr-empty` with a localized idle heading when no answer or evidence exists),
+`loading`, `error` (neutral visible error message), `retry`,
 `grounding`, `citations`, `citation-list`, `sources`, `source-list`, `section-heading`.

@@ -23,6 +23,10 @@ state includes attachments, source scope, model, voice, and queued turns rather 
 string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the submission
 request. `label` names the prompt section; it is not generic field chrome.
 
+`components/conversation/prompt-input/prompt-input-register.js` registers the composer, attachments
+and mention popover. Import model-select, voice-picker, source-picker and prompt-queue entries when
+their corresponding data can be supplied. The default entry registers all children.
+
 **Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
 `placeholder: string = ''`; `disabled: boolean = false` (reflected); `readOnly: boolean = false`
 (attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and

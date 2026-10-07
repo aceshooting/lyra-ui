@@ -67,39 +67,95 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
-      "tag": "lr-app-rail-item", "kind": "slot", "name": "icon", "since": "unreleased",
-      "replacement": { "kind": "slot", "name": "start", "usage": "slot=\"start\"" },
-      "removalNotBefore": "28.0.0", "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+      "tag": "lr-app-rail-item",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
     },
     {
-      "tag": "lr-dock-panel", "kind": "event", "name": "lr-collapse-change", "since": "unreleased",
-      "replacement": { "kind": "event", "name": "lr-toggle", "usage": "@lr-toggle" },
-      "removalNotBefore": "28.0.0", "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
+      "tag": "lr-dock-panel",
+      "kind": "event",
+      "name": "lr-collapse-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
     },
     {
-      "tag": "lr-dock-panel", "kind": "event", "name": "lr-collapse-request", "since": "unreleased",
-      "replacement": { "kind": "event", "name": "lr-toggle-request", "usage": "@lr-toggle-request" },
-      "removalNotBefore": "28.0.0", "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
+      "tag": "lr-dock-panel",
+      "kind": "event",
+      "name": "lr-collapse-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle-request",
+        "usage": "@lr-toggle-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
     },
     {
-      "tag": "lr-navigation-menu", "kind": "event", "name": "lr-expanded-change", "since": "unreleased",
-      "replacement": { "kind": "event", "name": "lr-toggle", "usage": "@lr-toggle" },
-      "removalNotBefore": "28.0.0", "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
+      "tag": "lr-navigation-menu",
+      "kind": "event",
+      "name": "lr-expanded-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
     },
     {
-      "tag": "lr-widget", "kind": "event", "name": "lr-collapse-change", "since": "unreleased",
-      "replacement": { "kind": "event", "name": "lr-toggle", "usage": "@lr-toggle" },
-      "removalNotBefore": "28.0.0", "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+      "tag": "lr-widget",
+      "kind": "event",
+      "name": "lr-collapse-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
     },
     {
-      "tag": "lr-widget", "kind": "slot", "name": "icon", "since": "unreleased",
-      "replacement": { "kind": "slot", "name": "start", "usage": "slot=\"start\"" },
-      "removalNotBefore": "28.0.0", "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+      "tag": "lr-widget",
+      "kind": "event",
+      "name": "lr-collapse-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle-request",
+        "usage": "@lr-toggle-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
     },
     {
-      "tag": "lr-widget", "kind": "event", "name": "lr-collapse-request", "since": "unreleased",
-      "replacement": { "kind": "event", "name": "lr-toggle-request", "usage": "@lr-toggle-request" },
-      "removalNotBefore": "28.0.0", "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+      "tag": "lr-widget",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
     }
   ]
 }

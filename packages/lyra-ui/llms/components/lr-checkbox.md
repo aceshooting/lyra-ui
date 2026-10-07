@@ -196,10 +196,8 @@ checkmark/dash color and scale.
 </script>
 ```
 
-Form-associated via a directly-attached `ElementInternals` (not the shared `FormAssociated` mixin,
-whose `value` accessor assumes a plain string default flow) with its own hand-rolled
-`updateValidity()` — same shape as `<lr-combobox>`'s and `<lr-switch>`'s direct-`ElementInternals`
-handling.
+Form-associated through shared internals and validation support, with a checked-state adapter
+that keeps the submitted token independent of whether the control is checked.
 Session-history/autofill restoration uses four explicit state tokens: `checked`, `unchecked`,
 `checked/indeterminate`, and `unchecked/indeterminate`. This preserves both public booleans while
 keeping an unchecked control distinguishable from a checked control whose submitted value is an

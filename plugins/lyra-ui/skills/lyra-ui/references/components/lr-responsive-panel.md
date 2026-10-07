@@ -54,7 +54,8 @@ an unsized host hugs the content. First-party invention (no `wa-*`/`sl-*` counte
   the component's allocated inline size in `mode="auto"`; at or below it, the effective presentation
   is `'overlay'`.
 
-**Methods:** `close(reason: LyraResponsivePanelCloseReason = 'api'): void` — requests a close by
+**Methods:** `show(): void` opens the panel; `hide(): void` is an alias for `close()`.
+`close(reason: LyraResponsivePanelCloseReason = 'api'): void` requests a close by
 emitting `lr-close-request` with `{ reason }` before changing `open`. A listener can call `preventDefault()` to
 keep the panel open; otherwise it sets `open = false` and — only in the overlay presentation —
 returns focus to whichever element triggered the open. No-op if already closed. Built-in overlay

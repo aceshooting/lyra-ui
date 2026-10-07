@@ -847,6 +847,35 @@ bytes; build plugins must not prepend the bootstrap ahead of it.
 
 For a strict CSP that disallows inline scripts, the package also publishes theme-bootstrap.js, a classic script asset with identical bytes. Load it synchronously after the charset declaration and before stylesheets. Its optional data-lr-theme-storage-key and data-lr-theme-attributes attributes select an application-owned storage key or mode-attribute list; values are validated and fall back to defaults when invalid.
 
+**Fixed host axes with saved mode.** Set `data-lr-theme-restore="mode"` on the classic
+bootstrap to restore only light, dark, or System while keeping the host's look, surface,
+density, accent, and inline styles. Declare those fixed axes on `<html>`:
+
+~~~html
+<html data-lr-look="shadcn" data-lr-surface="solid" data-lr-accent="none">
+  <head>
+    <meta charset="utf-8" />
+    <script src="/theme-bootstrap.js" data-lr-theme-restore="mode"></script>
+    <link rel="stylesheet" href="/theme.css" />
+  </head>
+</html>
+~~~
+
+Serve the package's `@aceshooting/lyra-ui/theme-bootstrap.js` asset at the script URL.
+Keep it synchronous, before stylesheets; no import of the full `theme.js` runtime is required.
+For server-generated inline scripts, use `createLyraThemeBootstrap({ restore: 'mode' })`.
+`restore: 'all'` is the default and retains whole-profile restoration. A valid script attribute
+(`all` or `mode`) overrides the factory option; an absent or invalid attribute keeps that option.
+The existing `data-lr-theme-storage-key` and `data-lr-theme-attributes` configuration also applies.
+
+Mode-only restoration ignores saved visual axes and token maps without changing the saved record.
+Missing, invalid, or inaccessible saved mode defaults to System, resolved against the current
+`prefers-color-scheme` before paint. Legacy `auto` maps to System; saved `unset` leaves mode
+selection unset and clears the configured resolved-mode attributes. The bootstrap applies an
+initial snapshot; it does not install a live system-mode listener. This option configures only
+the bootstrap. Later runtime calls such as `setLyraStyle()` follow their own style and persistence
+policy, so choose that policy explicitly if the application initializes the runtime afterward.
+
 **Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
 
 Historical v1 stored records remain readable by the runtime and bootstrap. The removed JavaScript functions, preset subpaths, preset event, root marker, and fixed stylesheet are not available in the current API.

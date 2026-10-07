@@ -30,7 +30,7 @@ import {
   type VirtualAnchor,
 } from '../../../internal/positioner-geometry.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
@@ -47,6 +47,8 @@ import {
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import {
+  accessibleTextRecordsMatter,
+  bindAccessibleTextObserver,
   composedAccessibilityTextResult,
   type AccessibilityElementState,
 } from '../../../internal/accessibility-visibility.js';
@@ -615,15 +617,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.contentObserver?.disconnect();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.contentObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records, observer) => {
+          if (!accessibleTextRecordsMatter(observer, records)) return;
           this.syncNamedTriggerMode();
           this.updateInteractiveContent();
         })
       : undefined;
     // The light-DOM description proxy is consumed while closed: a focused trigger must already
     // have its current accessible description before any delayed show. Keep this one bounded
-    // content pass (the shared text walk caps nodes and characters), while the observer below
-    // watches content only until focus/open and never wakes on ancestor theme/scroll writes.
+    // content pass (the shared text walk caps nodes and characters). Ancestor visibility changes
+    // also refresh closed descriptions; the shared observer filter ignores unrelated style writes.
     this.updateInteractiveContent();
     this.syncInteractionTrigger();
     // A cross-document move can connect before the adopted shadow slot has redistributed. Refresh
@@ -1385,35 +1388,12 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     // ever runs -- reproducible on WebKit. Draining first and scheduling one more pass for any
     // record that was about to be lost keeps that mutation from going unobserved.
     const pendingRecords = this.contentObserver.takeRecords();
-    this.contentObserver.disconnect();
-    if (pendingRecords.length > 0) queueMicrotask(() => this.updateInteractiveContent());
-    const ancestorFilter = {
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'class', 'hidden', 'inert', 'style'],
-    };
-    for (const ancestor of this.open || this.focusDescribesTrigger ? snapshot.composedAncestors : []) {
-      if (
-        ancestor === this
-        || ancestor.getRootNode() === this.renderRoot
-        || snapshot.externalRoots.has(ancestor)
-      ) continue;
-      this.contentObserver.observe(ancestor, ancestorFilter);
-    }
-    // Additive, independent of the accessible-text walk's own `composedAncestors` above (which can
-    // stop climbing once it has found the nearest exclusion, so a *further* composed ancestor --
-    // this host's own light-DOM ancestry outside its shadow root -- can go unobserved on some
-    // engines while another engine's walk keeps climbing; observed on WebKit for
-    // tooltip.test.ts's forwarded-content coverage). Re-observing an already-observed node with
-    // the same options is a harmless no-op, so this only ever adds coverage.
-    if (this.open || this.focusDescribesTrigger) {
-      for (
-        let ancestor = composedParentElement(this), hops = 0;
-        ancestor && hops < 64;
-        ancestor = composedParentElement(ancestor), hops++
-      ) {
-        this.contentObserver.observe(ancestor, ancestorFilter);
-      }
-    }
+    const pendingMatter = pendingRecords.length > 0 && accessibleTextRecordsMatter(this.contentObserver, pendingRecords);
+    const observer = this.contentObserver;
+    bindAccessibleTextObserver(observer, this);
+    if (pendingMatter) queueMicrotask(() => {
+      if (this.isConnected && this.contentObserver === observer) this.updateInteractiveContent();
+    });
     this.observeContentNode(this);
     for (const root of snapshot.externalRoots) this.observeContentNode(root);
     for (const root of snapshot.shadowRoots) this.observeContentNode(root);

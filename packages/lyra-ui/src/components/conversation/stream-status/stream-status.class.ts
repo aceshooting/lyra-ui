@@ -10,7 +10,7 @@ import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_audioVisualizerIdle, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled, LYRA_DEFAULT_streamStatusConnecting, LYRA_DEFAULT_streamStatusIdle, LYRA_DEFAULT_streamStatusStalled } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type StreamConnectionState = Exclude<LyraStreamPhase, 'stalled'> | 'interrupted';
@@ -141,8 +141,6 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    audioVisualizerIdle: LYRA_DEFAULT_audioVisualizerIdle,
-    realtimeSessionConnecting: LYRA_DEFAULT_realtimeSessionConnecting,
     statusRunning: LYRA_DEFAULT_statusRunning,
     streamInterrupted: LYRA_DEFAULT_streamInterrupted,
     streamRecoverAnnounce: LYRA_DEFAULT_streamRecoverAnnounce,
@@ -150,6 +148,9 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     streamStallAnnounce: LYRA_DEFAULT_streamStallAnnounce,
     streamStallClearedAnnounce: LYRA_DEFAULT_streamStallClearedAnnounce,
     streamStalled: LYRA_DEFAULT_streamStalled,
+    streamStatusConnecting: LYRA_DEFAULT_streamStatusConnecting,
+    streamStatusIdle: LYRA_DEFAULT_streamStatusIdle,
+    streamStatusStalled: LYRA_DEFAULT_streamStatusStalled,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

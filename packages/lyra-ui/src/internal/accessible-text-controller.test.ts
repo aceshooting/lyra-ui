@@ -2,11 +2,18 @@ import { expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { AccessibleTextController } from './accessible-text-controller.js';
 
+function controllerHost(onAdd: (controller: ReactiveController) => void): HTMLElement & ReactiveControllerHost {
+  return Object.assign(document.createElement('div'), {
+    addController: onAdd,
+    removeController: (_controller: ReactiveController) => undefined,
+    requestUpdate: () => undefined,
+    updateComplete: Promise.resolve(true),
+  });
+}
+
 it('tracks assigned label text and releases its observer across lifecycle changes', async () => {
-  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
   let lifecycle: ReactiveController | undefined;
-  host.addController = (controller) => { lifecycle = controller; };
-  host.removeController = () => undefined;
+  const host = controllerHost((controller) => { lifecycle = controller; });
   const root = host.attachShadow({ mode: 'open' });
   root.append(document.createElement('slot'));
   const label = document.createElement('span');
@@ -45,10 +52,8 @@ it('ignores unrelated style writes on a forwarded label ancestor', async () => {
   const label = document.createElement('span');
   label.textContent = 'Forwarded';
   wrapper.append(label);
-  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
   let lifecycle: ReactiveController | undefined;
-  host.addController = (controller) => { lifecycle = controller; };
-  host.removeController = () => undefined;
+  const host = controllerHost((controller) => { lifecycle = controller; });
   host.append(document.createElement('slot'));
   wrapper.attachShadow({ mode: 'open' }).append(host);
   document.body.append(wrapper);

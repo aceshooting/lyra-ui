@@ -765,18 +765,39 @@ function expandHitTarget(source) {
   return source;
 }
 
-function guardResultForPart(styleSources, partName) {
+function attributeSelectorMatches(compound, candidate) {
+  // The first rule in a raw TypeScript sheet includes its declaration prefix.
+  compound = compound.replace(/^[\s\S]*\bcss`/, '').trim();
+  // Shared action sheets address the same button through its static data attribute.
+  // Only an exact target compound is evidence: descendants, pseudo-elements and
+  // attributes on another element cannot authorize the target floor. State-qualified
+  // overrides are checked conservatively in every state they could affect.
+  if (compound.includes('::') || lastCompound(compound) !== compound) return false;
+  const match = compound.match(/^([a-z][a-z0-9-]*)?((?:\[data-[a-z0-9-]+(?:=['"][^'"]*['"])?\])+)((?::[a-z-]+(?:\([\s\S]*\))?)*)$/);
+  if (!match || (match[1] && match[1] !== candidate.tagName)) return false;
+  for (const attribute of match[2].matchAll(/\[(data-[a-z0-9-]+)(?:=(['"])(.*?)\2)?\]/g)) {
+    const actual = getAttr(candidate.attrText, attribute[1]);
+    if (!actual || actual.kind !== 'static' || (attribute[3] !== undefined && actual.value !== attribute[3])) return false;
+  }
+  return { unconditional: match[3] === '' };
+}
+
+function guardResultForPart(styleSources, partName, candidate) {
   const blocks = [];
   for (const css of styleSources) {
     for (const block of parseRuleBlocks(css)) {
       const selectors = splitTopLevel(block.selector, /,/g);
-      if (selectors.some((selector) => partSelectorMatches(lastCompound(selector), partName))) {
-        blocks.push(block);
+      const partMatch = selectors.some((selector) => partSelectorMatches(lastCompound(selector), partName));
+      const attributeMatches = selectors.map((selector) => attributeSelectorMatches(selector.trim(), candidate)).filter(Boolean);
+      if (partMatch || attributeMatches.length) {
+        // State-only attribute rules can invalidate a floor, but cannot establish
+        // the minimum size of the resting target. Preserve the existing part path.
+        blocks.push({ ...block, establishesFloor: partMatch || attributeMatches.some((match) => match.unconditional) });
       }
     }
   }
   if (blocks.length === 0) return { found: false, offending: [] };
-  if (blocks.some((block) => hasPositiveFlexGrow(block.body))) return { found: true, offending: [], sawInline: true, sawBlock: true };
+  if (blocks.some((block) => block.establishesFloor && hasPositiveFlexGrow(block.body))) return { found: true, offending: [], sawInline: true, sawBlock: true };
 
   const localVars = collectLocalVars(styleSources.join('\n'));
   const offending = [];
@@ -785,8 +806,10 @@ function guardResultForPart(styleSources, partName) {
   for (const block of blocks) {
     for (const match of block.body.matchAll(/(?:^|;)\s*(min-inline-size|min-block-size)\s*:\s*([^;]+)(?=;|$)/g)) {
       const property = match[1];
-      if (property === 'min-inline-size') sawInline = true;
-      else sawBlock = true;
+      if (block.establishesFloor) {
+        if (property === 'min-inline-size') sawInline = true;
+        else sawBlock = true;
+      }
       const resolved = resolveLength(match[2], localVars);
       if (!isCompliant(resolved)) offending.push({ selector: block.selector.trim(), property, raw: match[2].trim(), resolved });
     }
@@ -882,23 +905,79 @@ function findCandidates(strippedSource, styleSources) {
     if (hasFullWidthClassOverride(styleSources, resolveClassNames(tag.attrText))) continue;
     if (hasInlineSizeStyle(tag.attrText)) continue;
 
-    candidates.push({ tagName: tag.tagName, tagStart: tag.tagStart, partNames });
+    candidates.push({ tagName: tag.tagName, tagStart: tag.tagStart, attrText: tag.attrText, partNames });
   }
   return candidates;
 }
 
-function resolveStylesSources(classFilePath, classSource) {
+export function resolveStylesSources(classFilePath, classSource, readSource = (file) => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined) {
   const dir = path.dirname(classFilePath);
-  const specifiers = [...classSource.matchAll(/from\s+['"](\.\/[\w-]+\.styles)\.js['"]/g)].map((m) => m[1]);
-  const basenames = new Set(specifiers.map((s) => s.replace(/^\.\//, '')));
-  if (basenames.size === 0) {
-    const fallback = `${path.basename(classFilePath, '.class.ts')}.styles`;
-    basenames.add(fallback);
+  const program = parseProgram(classFilePath, classSource);
+  const imports = new Map();
+  const adopted = new Set();
+  let hasExplicitStyles = false;
+  const collectNames = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'Identifier') adopted.add(node.name);
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(collectNames);
+      else if (value && typeof value === 'object') collectNames(value);
+    }
+  };
+  for (const statement of program.body) {
+    if (statement.type === 'ImportDeclaration' && /^\..*\.styles\.js$/.test(statement.source.value)) {
+      for (const specifier of statement.specifiers) imports.set(specifier.local.name, {
+        file: path.resolve(dir, statement.source.value).replace(/\.js$/, '.ts'),
+        binding: specifier.type === 'ImportDefaultSpecifier' ? 'default' : specifier.imported?.name,
+      });
+    }
+    const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
+    if (declaration?.type === 'ClassDeclaration') {
+      for (const member of declaration.body.body) if (member.static && member.key?.name === 'styles') {
+        hasExplicitStyles = true;
+        collectNames(member.value);
+      }
+    }
   }
   const sources = [];
-  for (const base of basenames) {
-    const stylesPath = path.join(dir, `${base}.ts`);
-    if (fs.existsSync(stylesPath)) sources.push(fs.readFileSync(stylesPath, 'utf8'));
+  const resolved = new Set();
+  const resolveBinding = (imported) => {
+    const key = `${imported.file}#${imported.binding}`;
+    if (resolved.has(key)) return;
+    resolved.add(key);
+    const source = readSource(imported.file);
+    if (source === undefined) throw new Error(`Cannot read adopted stylesheet ${imported.file}`);
+    const statements = parseProgram(imported.file, source).body;
+    const importText = statements.filter((item) => item.type === 'ImportDeclaration').map((item) => source.slice(item.start, item.end)).join('\n');
+    let found = false;
+    for (const statement of statements) {
+      if (statement.type === 'ExportNamedDeclaration' && statement.source) {
+        for (const specifier of statement.specifiers) if (specifier.exported.name === imported.binding) {
+          resolveBinding({ file: path.resolve(path.dirname(imported.file), statement.source.value).replace(/\.js$/, '.ts'), binding: specifier.local.name });
+          found = true;
+        }
+      }
+      const declaration = statement.type === 'ExportNamedDeclaration' ? statement.declaration : statement;
+      if (declaration?.type === 'VariableDeclaration') {
+        for (const variable of declaration.declarations) if (variable.id.name === imported.binding) {
+          sources.push(`${importText}\nconst ${source.slice(variable.start, variable.end)};`);
+          found = true;
+        }
+      } else if (statement.type === 'ExportDefaultDeclaration' && imported.binding === 'default') {
+        sources.push(`${importText}\nconst styles = ${source.slice(statement.declaration.start, statement.declaration.end)};`);
+        found = true;
+      }
+    }
+    if (!found) throw new Error(`Cannot resolve adopted stylesheet ${imported.binding} in ${imported.file}`);
+  };
+  for (const name of adopted) {
+    const imported = imports.get(name);
+    if (imported) resolveBinding(imported);
+  }
+  if (sources.length === 0 && !hasExplicitStyles) {
+    const fallback = path.join(dir, path.basename(classFilePath).replace(/(?:\.class)?\.ts$/, '.styles.ts'));
+    const source = readSource(fallback);
+    if (source !== undefined) sources.push(source);
   }
   return sources;
 }
@@ -941,7 +1020,7 @@ export function checkStaticHitAreaFixture(
     // never matches, and demanding a sized rule per state token would penalise that.
     for (const group of candidate.partNames) {
       const shown = group.join(' ');
-      const guards = group.map((partName) => ({ partName, guard: guardResultForPart(styleSources, partName) }));
+      const guards = group.map((partName) => ({ partName, guard: guardResultForPart(styleSources, partName, candidate) }));
       const satisfied = guards.find(({ guard }) => guard.found && guard.sawInline && guard.sawBlock);
       if (satisfied) {
         for (const offense of satisfied.guard.offending) {

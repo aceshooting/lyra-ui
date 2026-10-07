@@ -27,7 +27,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_newMessageCount, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -112,17 +112,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     chatViewportLabel: LYRA_DEFAULT_chatViewportLabel,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     jumpToLatest: LYRA_DEFAULT_jumpToLatest,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    newMessageCount: LYRA_DEFAULT_newMessageCount,
     newMessages: LYRA_DEFAULT_newMessages,
     newMessagesCount: LYRA_DEFAULT_newMessagesCount,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

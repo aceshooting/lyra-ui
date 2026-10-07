@@ -861,6 +861,7 @@ export type {
 } from './components/agent-tools/thinking-panel/thinking-panel.class.js';
 export type {
   GenerationMetricsStatus,
+  GenerationMetricsStatusInput,
   LyraGenerationMetricsEventMap,
 } from './components/conversation/generation-metrics/generation-metrics.class.js';
 export type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './components/conversation/code-block/code-block-shared.js';

@@ -9,7 +9,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { OwnedInterval } from '../../../internal/owned-timer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokenCount, LYRA_DEFAULT_generationStatusTokensCount, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokens, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -185,8 +185,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     elapsedMinutesSecondsTemplate: LYRA_DEFAULT_elapsedMinutesSecondsTemplate,
     generationStatusElapsedSeconds: LYRA_DEFAULT_generationStatusElapsedSeconds,
     generationStatusThroughput: LYRA_DEFAULT_generationStatusThroughput,
-    generationStatusTokenCount: LYRA_DEFAULT_generationStatusTokenCount,
-    generationStatusTokensCount: LYRA_DEFAULT_generationStatusTokensCount,
+    generationStatusTokens: LYRA_DEFAULT_generationStatusTokens,
     stopGenerating: LYRA_DEFAULT_stopGenerating,
   };
   // GENERATED DEFAULT-STRING SLICE: END

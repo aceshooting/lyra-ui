@@ -12,7 +12,7 @@ describe('TableViewerScrollController', () => {
 
   it('waits for the virtual row to render before scrolling the addressed column', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
-    const list = document.createElement('div') as HTMLElement & { updateComplete: Promise<void> };
+    const list = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
     const shadow = list.attachShadow({ mode: 'open' });
     host.append(list);
     let finishUpdate!: () => void;
@@ -37,7 +37,7 @@ describe('TableViewerScrollController', () => {
 
   it('settles a canceled frame without scrolling a stale row', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
-    const list = document.createElement('div') as HTMLElement & { updateComplete: Promise<void> };
+    const list = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
     list.updateComplete = Promise.resolve();
     const row = document.createElement('div');
     row.setAttribute('part', 'row');
@@ -59,7 +59,7 @@ describe('TableViewerScrollController', () => {
 
   it('drops a canceled pending update even when it resolves later', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
-    const list = document.createElement('div') as HTMLElement & { updateComplete: Promise<void> };
+    const list = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
     let resolveUpdate!: () => void;
     list.updateComplete = new Promise<void>((resolve) => { resolveUpdate = resolve; });
     let scrolled = false;
@@ -82,11 +82,11 @@ describe('TableViewerScrollController', () => {
 
   it('lets a newer scroll supersede an older pending update', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
-    const oldList = document.createElement('div') as HTMLElement & { updateComplete: Promise<void> };
+    const oldList = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
     let resolveOld!: () => void;
     oldList.updateComplete = new Promise<void>((resolve) => { resolveOld = resolve; });
     host.append(oldList);
-    const newList = document.createElement('div') as HTMLElement & { updateComplete: Promise<void> };
+    const newList = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
     newList.updateComplete = Promise.resolve();
     const row = document.createElement('div');
     row.setAttribute('part', 'row');

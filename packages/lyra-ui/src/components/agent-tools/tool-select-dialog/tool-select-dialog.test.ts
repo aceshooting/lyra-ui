@@ -99,14 +99,17 @@ it('keeps the pre-hook body hover outline when each scoped property is unset', a
   const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
 
   const expectedWidth = resolvedInShadow(
+    el,
     'outline-width: var(--lr-border-width-thin)',
     'outline-width',
   );
   const expectedColor = resolvedInShadow(
+    el,
     'outline-color: var(--lr-color-border)',
     'outline-color',
   );
   const expectedOffset = resolvedInShadow(
+    el,
     'outline-offset: calc(-1 * var(--lr-border-width-thin))',
     'outline-offset',
   );

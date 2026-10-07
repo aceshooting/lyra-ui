@@ -12,7 +12,7 @@ import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_copy, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from '../trace-tree/span.js';
@@ -108,6 +108,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     agentTraceFilterLabel: LYRA_DEFAULT_agentTraceFilterLabel,
+    copy: LYRA_DEFAULT_copy,
     handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
     handoffToAgent: LYRA_DEFAULT_handoffToAgent,
     map: LYRA_DEFAULT_map,

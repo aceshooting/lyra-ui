@@ -542,6 +542,10 @@ dockPanel.addEventListener('lr-resize-change', (event) => {
   const extent: string = event.detail.extent;
   void extent;
 });
+dockPanel.addEventListener('lr-resize', (event) => {
+  const extent: string = event.detail.extent;
+  void extent;
+});
 dockPanel.addEventListener('lr-collapse-request', (event) => {
   const expanded: boolean = event.detail.expanded;
   // @ts-expect-error The proposed state uses expanded, not the retired collapsed field.
@@ -556,8 +560,7 @@ dockPanel.addEventListener('lr-collapse-change', (event) => {
   void expanded;
   void collapsed;
 });
-// @ts-expect-error lr-resize was replaced by the explicit input/commit event pair.
-export type _RemovedDockPanelResizeEvent = LyraDockPanelEventMap['lr-resize'];
+export type _DockPanelResizeEvent = LyraDockPanelEventMap['lr-resize'];
 
 declare const modelSettings: LyraModelSettingsPanel;
 modelSettings.addEventListener('lr-change', (event) => {

@@ -58,10 +58,10 @@ localized label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. A fragment is
 an exact DOM `id` lookup: Lyra generates no ids for message headers or a plain-text body, while an
 HTML message can resolve only an id retained from its sanitized body. Without such an id the jump
-reports `found: false`; text-quote anchors work across all rendered message text.
+reports `found: false`; text-quote anchors use the rendered message body.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
-`scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
+`scrollToAnchor()` operate on the rendered message body and emit the shared search/anchor events.
 
 **Events:**
 
@@ -70,7 +70,7 @@ reports `found: false`; text-quote anchors work across all rendered message text
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
   replaces the mutable `Uint8Array` event field.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
-  whenever rendered-message search state changes.
+  whenever message-body search state changes.
 - `lr-anchor-result` — `detail: { found: boolean }` — fired after an `anchor` assignment or
   `scrollToAnchor()` call is applied.
 - `lr-text-select` — `detail: TextSelectDetail` (`{ text: string; anchor: LyraAnchor | null; rects:

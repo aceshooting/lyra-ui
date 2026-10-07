@@ -176,8 +176,8 @@ Plus shared tokens
 </script>
 ```
 
-Form-associated the same way as `<lr-checkbox>`: a directly-attached `ElementInternals` with a
-hand-rolled `updateValidity()`, not the shared `FormAssociated` mixin. The thumb animates the
+Form-associated with the same shared internals and checked-state handling as `<lr-checkbox>`.
+The thumb animates the
 logical `inset-inline-start` property (not a physical `transform: translateX()`), so the slide
 direction mirrors correctly under `dir="rtl"`.
 Session-history/autofill restoration uses the same explicit `checked`/`unchecked` state tokens as

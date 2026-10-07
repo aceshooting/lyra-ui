@@ -231,7 +231,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.searchable && !this.comboboxDefined && !this.comboboxLoad) {
-      const load = import('./combobox/combobox.js').then(() => this.requestUpdate(), () => undefined);
+      const load = import('./combobox/combobox-catalog.js').then(() => this.requestUpdate(), () => undefined);
       this.comboboxLoad = load;
       void load.then(() => { if (this.comboboxLoad === load) this.comboboxLoad = undefined; });
     }

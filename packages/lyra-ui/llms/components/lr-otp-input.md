@@ -100,7 +100,8 @@ writes and range-method calls are safe no-ops. Native selection, Home/End, click
 host facade changes all move the fixed-cell keyboard target, so printable, Delete, and Backspace
 edit the cell at the live compact caret rather than a stale internal index.
 
-**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
+**Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`,
+their typed aliases `lr-input` and `lr-change` (`detail: { value }`), and
 `lr-clear` (no detail) after `clear()`'s `input`/`change` — editing the field empty with
 Backspace/Delete or typing never emits it. Fixed-cell edits
 emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME

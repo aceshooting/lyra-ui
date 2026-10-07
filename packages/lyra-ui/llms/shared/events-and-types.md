@@ -1616,6 +1616,7 @@ These named interfaces and helper signatures are available to typed integrations
   `createLyraThemeBootstrap(options?: LyraThemeBootstrapOptions): string`
   `LyraThemeBootstrapOptions {
   storageKey?: string;
+  restore?: 'all' | 'mode';
 }`
   `LyraThemeSemanticRole = 'brand' | 'success' | 'warning' | 'danger' | 'neutral'`
   `LyraThemeAccentValue = string | null | { light?: string | null; dark?: string | null }`

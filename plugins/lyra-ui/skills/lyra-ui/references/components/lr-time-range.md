@@ -72,9 +72,9 @@ label: string; start: number; end: number; id?: string }`; a bounded frozen arra
   endpoint writes and reassigning the same `presets` array preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
-**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
+**Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { value: { start, end }, start, end }`),
 both fired continuously while dragging or on each arrow/Home/End/PageUp/PageDown key press; and a
-native-style composed `change` (no detail) then `lr-change` (`detail: { start, end }`), both fired
+native-style composed `change` (no detail) then `lr-change` (`detail: { value: { start, end }, start, end }`), both fired
 on pointer release, keyboard keyup, handle blur while a changed keyboard gesture is still pending,
 or when a preset button is clicked. A blur commit retires the gesture before the later physical
 keyup, so it cannot emit a duplicate change. The focused handle's native `focus` and `blur` are

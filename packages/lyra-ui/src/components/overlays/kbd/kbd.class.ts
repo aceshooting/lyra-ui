@@ -5,13 +5,13 @@ import { detectPlatform } from '../../../internal/platform.js';
 import { hasRealContent, hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './kbd.styles.js';
 import { parseShortcut } from './kbd-shortcut.js';
-export { shortcutTokenLabel, parseShortcut } from './kbd-shortcut.js';
-export type { KbdKeyLabel, KbdLocalize } from './kbd-shortcut.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_kbdAltWord, LYRA_DEFAULT_kbdArrowDownWord, LYRA_DEFAULT_kbdArrowLeftWord, LYRA_DEFAULT_kbdArrowRightWord, LYRA_DEFAULT_kbdArrowUpWord, LYRA_DEFAULT_kbdBackspaceWord, LYRA_DEFAULT_kbdCommandWord, LYRA_DEFAULT_kbdControlVisual, LYRA_DEFAULT_kbdControlWord, LYRA_DEFAULT_kbdDeleteVisual, LYRA_DEFAULT_kbdDeleteWord, LYRA_DEFAULT_kbdEndWord, LYRA_DEFAULT_kbdEnterWord, LYRA_DEFAULT_kbdEscapeVisual, LYRA_DEFAULT_kbdEscapeWord, LYRA_DEFAULT_kbdHomeWord, LYRA_DEFAULT_kbdMinusWord, LYRA_DEFAULT_kbdOptionWord, LYRA_DEFAULT_kbdPageDownVisual, LYRA_DEFAULT_kbdPageDownWord, LYRA_DEFAULT_kbdPageUpVisual, LYRA_DEFAULT_kbdPageUpWord, LYRA_DEFAULT_kbdPlusWord, LYRA_DEFAULT_kbdShiftWord, LYRA_DEFAULT_kbdSpaceWord, LYRA_DEFAULT_kbdTabWord } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export { shortcutTokenLabel, parseShortcut } from './kbd-shortcut.js';
+export type { KbdKeyLabel, KbdLocalize } from './kbd-shortcut.js';
 
 /** Platform vocabulary used to resolve the platform-neutral `mod` and `alt` shortcut tokens. */
 export type KbdPlatform = 'auto' | 'mac' | 'windows' | 'linux';

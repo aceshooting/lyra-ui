@@ -24,6 +24,12 @@ uppercased, and no country is inferred. `.countries` accepts
 catalog helper are documented in the
 [catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
+Country, currency, unit and time-zone pickers also expose `<name>-picker-register.js` under their
+granular component directory. These lean entries register the picker alone; import `lr-select.js`
+and `lr-option.js` for both ordinary and searchable controls. The searchable `lr-combobox` loads when needed
+without registering option itself.
+The default picker entries register select and option synchronously.
+
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the
 trigger and offered rows. Emoji need no optional peer, assets or network request. Platform fonts
 may display regional-indicator letters; the visible country name remains the identifying text.

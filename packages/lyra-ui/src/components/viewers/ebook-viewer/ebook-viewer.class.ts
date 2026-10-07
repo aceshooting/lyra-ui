@@ -46,7 +46,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_L
 import { boundedSelectionRects, boundedSelectionText } from '../../../internal/text-quote.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_ebookViewerLoadError, LYRA_DEFAULT_ebookViewerMissingLibrary, LYRA_DEFAULT_ebookViewerNextChapter, LYRA_DEFAULT_ebookViewerPreviousChapter, LYRA_DEFAULT_ebookViewerRegionLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -577,29 +577,16 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDocument: LYRA_DEFAULT_documentPreviewTypeDocument,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     ebookViewerLoadError: LYRA_DEFAULT_ebookViewerLoadError,
+    ebookViewerMissingLibrary: LYRA_DEFAULT_ebookViewerMissingLibrary,
     ebookViewerNextChapter: LYRA_DEFAULT_ebookViewerNextChapter,
     ebookViewerPreviousChapter: LYRA_DEFAULT_ebookViewerPreviousChapter,
     ebookViewerRegionLabel: LYRA_DEFAULT_ebookViewerRegionLabel,
-    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
-    previous: LYRA_DEFAULT_previous,
-    remove: LYRA_DEFAULT_remove,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
-    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
-    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
-    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

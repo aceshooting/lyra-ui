@@ -1,4 +1,11 @@
-import type { LyraAppRailMode, LyraAppRailPreferredMode } from './app-rail.class.js';
+/** The rail's effective presentation. */
+export type LyraAppRailMode = 'full' | 'icon-only' | 'mobile';
+
+/** The effective mode plus the automatic breakpoint sentinel. */
+export type LyraAppRailModeInput = LyraAppRailMode | 'auto';
+
+/** The manually preferred non-mobile mode. */
+export type LyraAppRailPreferredMode = Exclude<LyraAppRailMode, 'mobile'>;
 
 /** Resolves viewport breakpoints and the preferred non-mobile mode. */
 export function computeAppRailMode(

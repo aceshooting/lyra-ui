@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,6 +22,8 @@ component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no
 several steps may be `running` at once. By default it is a status report; `reorderable` adds
 controlled keyboard reorder requests without changing ownership of `items`. Status changes and
 confirmed moves are announced through an internal `<lr-live-region>`.
+The list renders at most 500 tasks across top-level rows and direct children; `[part="limit"]`
+explains when more were supplied. The summary still counts every top-level task.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
@@ -72,7 +74,8 @@ otherwise, within the configured semantic heading), `label` (the `heading` text)
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
 `item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
-valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, and `item-children` (the
+valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (shown when the task
+render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.

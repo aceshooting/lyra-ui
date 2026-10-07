@@ -9,7 +9,7 @@ import { styles } from './permission-rules.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_permissionRulesAllow, LYRA_DEFAULT_permissionRulesAsk, LYRA_DEFAULT_permissionRulesDecisionFor, LYRA_DEFAULT_permissionRulesEmpty, LYRA_DEFAULT_permissionRulesLabel, LYRA_DEFAULT_permissionRulesLimit, LYRA_DEFAULT_permissionRulesScope, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_permissionRulesAllow, LYRA_DEFAULT_permissionRulesAsk, LYRA_DEFAULT_permissionRulesDecisionFor, LYRA_DEFAULT_permissionRulesEmpty, LYRA_DEFAULT_permissionRulesLabel, LYRA_DEFAULT_permissionRulesLimit, LYRA_DEFAULT_permissionRulesScope, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type PermissionRuleDecision = 'allow' | 'ask' | 'deny';
@@ -69,6 +69,7 @@ export class LyraPermissionRules extends LyraElement<LyraPermissionRulesEventMap
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
     map: LYRA_DEFAULT_map,

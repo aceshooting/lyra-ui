@@ -35,6 +35,8 @@ while an explicitly empty host label stays empty on the region);
 `LyraRagEvaluationMetric = { id, label, category, format? }`, where category is
 `'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
 `LyraRagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+The bounded run-history buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End;
+activation still emits the existing run events.
 
 Metrics and runs are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
@@ -51,8 +53,8 @@ corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
-`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice shown when the filtered runs
-exceed the 500-run render ceiling), `empty`.
+`chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
+filtered runs are shown), `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.

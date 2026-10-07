@@ -55,7 +55,7 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Probes for a real WebGL2 context without ever touching maplibre-gl's own (unreliable) failure
@@ -2304,11 +2304,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     legendTypeShown: LYRA_DEFAULT_legendTypeShown,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
+    mapFeedback: LYRA_DEFAULT_mapFeedback,
     mapInitializationFailed: LYRA_DEFAULT_mapInitializationFailed,
     mapLegend: LYRA_DEFAULT_mapLegend,
+    mapMarker: LYRA_DEFAULT_mapMarker,
     mapMissingLibrary: LYRA_DEFAULT_mapMissingLibrary,
     mapResetNorth: LYRA_DEFAULT_mapResetNorth,
     mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
+    mapToggleAttribution: LYRA_DEFAULT_mapToggleAttribution,
     mapWebglUnavailable: LYRA_DEFAULT_mapWebglUnavailable,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     zoomIn: LYRA_DEFAULT_zoomIn,

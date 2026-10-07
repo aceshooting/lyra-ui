@@ -28,6 +28,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 
 **Events:** exactly one owner-realm, bubbling/composed native `input` (`Event`) after every live
 range update, and exactly one owner-realm native `change` (`Event`) after a gesture commits.
+Each is followed by `lr-input` or `lr-change` respectively, with `detail: { value: number }`
+containing the current percentage position.
 `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s preserving
 `relatedTarget`; a dirty keyboard edit commits its `change` before `blur`.
 

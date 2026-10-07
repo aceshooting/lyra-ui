@@ -159,11 +159,14 @@ for the native download action's hover and pressed backgrounds.
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
-`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`), which installs
+`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
+`dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
+`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
-registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all nine at once, for
+registers. `@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer-kinds.js`
+imports and re-exports all built-in kinds at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
 individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
 A lazy registration's declared capabilities apply unless its loaded definition declares its own.

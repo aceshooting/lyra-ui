@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated slot** `icon` since `unreleased`; use slot `slot="status-icon"`; removal not before `28.0.0` — The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -59,9 +59,8 @@ interaction.
 
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
-slot is empty), `icon` (overrides the built-in per-status glyph entirely via native slot-fallback
-content — assigned content wins; otherwise the `icon` prop is rendered as a literal hint; otherwise
-the built-in glyph for the current `status` is used)
+slot is empty), `status-icon` (overrides the built-in per-status glyph; otherwise the `icon` prop or
+built-in glyph appears), `icon` (deprecated slot alias for `status-icon`)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),

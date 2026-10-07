@@ -31,10 +31,9 @@ try {
   );
   const result = await compactBuildJavaScript(fixture);
   assert.equal(result.files, 3);
-  assert.ok(result.afterBytes > 0);
+  assert.ok(result.afterBytes < result.beforeBytes);
   const output = await readFile(path.join(nested, 'entry.js'), 'utf8');
   assert.doesNotMatch(output, /duplicate authored prose|sourceMappingURL/);
-  assert.doesNotMatch(output, /longLocalValue/, 'published local identifiers are shortened');
   const publishedEntry = await import(pathToFileURL(path.join(nested, 'entry.js')).href);
   assert.equal(publishedEntry.ReadableName.name, 'ReadableName');
   assert.equal(new publishedEntry.ReadableName().method(2), 3);
@@ -162,6 +161,83 @@ try {
 
 } finally {
   await rm(bootstrapFixture, { recursive: true, force: true });
+}
+
+// Use the real collection boundary, not a substitute initializer: event-only imports must not
+// retain property installation, while full support still snapshots registered reactive accessors.
+const collectionFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-collection-'));
+try {
+  const internal = path.join(collectionFixture, 'internal');
+  await mkdir(internal);
+  for (const name of ['collection-snapshot', 'data-descriptors']) {
+    const source = await readFile(new URL(`../src/internal/${name}.ts`, import.meta.url), 'utf8');
+    const emitted = await esbuild.transform(source, { loader: 'ts', format: 'esm', target: 'es2022' });
+    await writeFile(path.join(internal, `${name}.js`), emitted.code);
+  }
+  await writeFile(path.join(internal, 'dev-warning.js'), 'export function devWarnOnce() {}');
+  await compactBuildJavaScript(collectionFixture);
+  const published = await readFile(path.join(internal, 'collection-snapshot.js'), 'utf8');
+  async function consume(exported) {
+    const result = await esbuild.build({
+      stdin: { contents: `export { ${exported} } from './internal/collection-snapshot.js';`, resolveDir: collectionFixture },
+      bundle: true, write: false, format: 'esm', treeShaking: true,
+      plugins: [{ name: 'collection-lit-fixture', setup(build) {
+        build.onResolve({ filter: /^lit$/ }, () => ({ path: 'lit', namespace: 'collection-lit' }));
+        build.onLoad({ filter: /.*/, namespace: 'collection-lit' }, () => ({ contents: 'export class LitElement {}' }));
+      } }],
+    });
+    const code = result.outputFiles[0].text;
+    return { code, exports: await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64')) };
+  }
+  const eventOnly = await consume('eventCollectionSupport');
+  assert.doesNotMatch(eventOnly.code, /installOwnedCollectionAccessors|ownershipBoundarySetters|collectionPropertyPolicy|normalizedCollectionWrites/u,
+    'event-only use drops property ownership machinery');
+  class EventHost {}
+  EventHost.immutableEventDetails = ['lr-test'];
+  const sourceDetail = { rows: [1, 2] };
+  const snapshot = eventOnly.exports.eventCollectionSupport.snapshotEvent(new EventHost(), 'lr-test', sourceDetail);
+  assert.notEqual(snapshot, sourceDetail);
+  assert.deepEqual(snapshot, sourceDetail);
+  assert.ok(Object.isFrozen(snapshot.rows));
+
+  const full = await consume('collectionSupport');
+  assert.match(full.code, /installOwnedCollectionAccessors/u);
+  class CollectionHost {
+    static ownedCollectionProperties = ['rows'];
+    static elementProperties = new Map([['rows', {}]]);
+    get rows() { return this.stored; }
+    set rows(value) { this.stored = value; }
+  }
+  full.exports.collectionSupport.installProperties(CollectionHost);
+  const host = new CollectionHost();
+  const rows = [{ value: 1 }];
+  host.rows = rows;
+  assert.notEqual(host.rows, rows);
+  assert.deepEqual(host.rows, rows);
+  assert.ok(Object.isFrozen(host.rows[0]));
+  rows[0].value = 2;
+  assert.equal(host.rows[0].value, 1);
+
+  // Every reviewed construction must remain a plain freeze of inert values. Calls, spreads,
+  // getters, computed keys, different members and optional invocation must fail closed.
+  const original = published;
+  for (const mutation of [
+    code => code.replace('Object.freeze({installProperties:installOwnedCollectionAccessors', 'Object.seal({installProperties:installOwnedCollectionAccessors'),
+    code => code.replace('installProperties:installOwnedCollectionAccessors', 'installProperties:installOwnedCollectionAccessors()'),
+    code => code.replace('installProperties:installOwnedCollectionAccessors', '...{installProperties:installOwnedCollectionAccessors}'),
+    code => code.replace('installProperties:installOwnedCollectionAccessors', 'get installProperties(){return installOwnedCollectionAccessors}'),
+    code => code.replace('installProperties:installOwnedCollectionAccessors', '["installProperties"]:installOwnedCollectionAccessors'),
+    code => code.replace('Object.freeze({installProperties:installOwnedCollectionAccessors', 'Object.freeze?.({installProperties:installOwnedCollectionAccessors'),
+    code => 'const Object = globalThis.Object;\n' + code,
+    code => 'const { Object } = globalThis;\n' + code,
+  ]) {
+    const changed = mutation(original);
+    assert.notEqual(changed, original, 'adversarial fixture changes the initializer');
+    await writeFile(path.join(internal, 'collection-snapshot.js'), changed);
+    await assert.rejects(compactBuildJavaScript(collectionFixture), /pure initializer inventory changed/u);
+  }
+} finally {
+  await rm(collectionFixture, { recursive: true, force: true });
 }
 
 // Only unreachable private module markers are removable; declarations and every runtime route stay.

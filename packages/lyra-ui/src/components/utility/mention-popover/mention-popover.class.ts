@@ -22,7 +22,7 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mentionMoreResults, LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_VISIBLE_MENTION_ITEMS = 50;
@@ -329,6 +329,7 @@ export interface LyraMentionPopoverEventMap {
  *   `fixed` default, read from computed style when it is (re)positioned. Set it once on `:root`,
  *   a theme, or one clipping ancestor to change every unset mention popover beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @csspart more-results - The additional-results message.
  * @status stable
  * @since 4.0.0
  */
@@ -337,6 +338,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    mentionMoreResults: LYRA_DEFAULT_mentionMoreResults,
     mentionResultCount: LYRA_DEFAULT_mentionResultCount,
     mentionResultPosition: LYRA_DEFAULT_mentionResultPosition,
     mentionSuggestions: LYRA_DEFAULT_mentionSuggestions,

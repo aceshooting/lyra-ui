@@ -1,11 +1,12 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './agent-run.js';
 import type { LyraAgentRun } from './agent-run.js';
 import type { LyraGenerationMetrics } from '../../conversation/generation-metrics/generation-metrics.js';
 import type { LyraTaskList } from '../task-list/task-list.js';
 import type { AgentRun, AgentStep, AgentStatusKind, CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function makeRun(overrides: Partial<AgentRun> = {}): AgentRun {
   return {
@@ -755,6 +756,27 @@ it('keeps the Cancel/Retry buttons visibly interactive under plain (their chrome
   const s = getComputedStyle(cancel);
   expect(s.borderTopWidth).to.equal('1px');
   expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+});
+
+it('deepens the Cancel and Retry borders while pressed', async () => {
+  for (const [status, part] of [['running', 'cancel-button'], ['error', 'retry-button']] as const) {
+    const el = await fixture<LyraAgentRun>(html`
+      <lr-agent-run .run=${makeRun({ status: { kind: status } })}></lr-agent-run>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!;
+    button.style.transition = 'none';
+    try {
+      await hoverUntilMatched(button, `${part} never reached hover`);
+      const hovered = getComputedStyle(button).borderTopColor;
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(
+        () => button.matches(':active') && getComputedStyle(button).borderTopColor !== hovered,
+        `${part} never painted a distinct pressed border`,
+      );
+    } finally {
+      await resetMouse();
+    }
+  }
 });
 
 it('is accessible in the populated dense + plain states', async () => {

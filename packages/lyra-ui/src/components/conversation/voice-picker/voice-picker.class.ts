@@ -25,12 +25,12 @@ import {
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { CATALOG_ROW_LIMIT } from '../../../internal/selection-catalog.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 /** A catalog row: a selectable TTS voice. */
 export interface LyraVoiceCatalogEntry extends LyraCatalogEntry {
@@ -308,6 +308,9 @@ export interface LyraVoicePickerEventMap {
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
  * the listbox only as the middle arm of `--lr-voice-picker-radius`, which still wins when set.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
+ * @cssprop --lr-voice-picker-expand-size - Maximum minimum hit-area size of the expand control; capped by the shared icon target size.
+ * @cssprop --lr-voice-picker-font-size - Trigger text size, defaulting to the selected component size.
+ * @cssprop --lr-voice-picker-trigger-padding - Trigger padding, defaulting to the selected component size.
  * @status stable
  * @since 4.0.0
  */

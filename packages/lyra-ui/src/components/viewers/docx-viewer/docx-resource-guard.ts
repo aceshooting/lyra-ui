@@ -192,8 +192,8 @@ function joinPartPath(base: string, target: string): string {
  */
 export async function assertDocxArchiveWithinLimits(
   source: ArrayBuffer,
-  maxEntries = DEFAULT_MAX_DOCX_ENTRIES,
-  maxUncompressedBytes = DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES,
+  maxEntries: number = DEFAULT_MAX_DOCX_ENTRIES,
+  maxUncompressedBytes: number = DEFAULT_MAX_DOCX_UNCOMPRESSED_BYTES,
   options: DocxResourceGuardOptions = {},
 ): Promise<void> {
   if (options.strictAdmission) {

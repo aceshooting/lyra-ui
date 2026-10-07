@@ -27,7 +27,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import '../../overlays/empty/empty.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerEmpty, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRagAnswerState = 'idle' | 'loading' | 'answer' | 'error';
@@ -86,6 +86,7 @@ export interface LyraRagAnswerEventMap {
  * @csspart sources - The source section.
  * @csspart source-list - The data-driven source list.
  * @csspart section-heading - A localized section heading.
+ * @csspart empty - The empty-state container.
  * @status stable
  * @since 6.2.0
  */
@@ -95,6 +96,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     ragAnswerCitations: LYRA_DEFAULT_ragAnswerCitations,
+    ragAnswerEmpty: LYRA_DEFAULT_ragAnswerEmpty,
     ragAnswerLabel: LYRA_DEFAULT_ragAnswerLabel,
     ragAnswerRetry: LYRA_DEFAULT_ragAnswerRetry,
     ragAnswerSources: LYRA_DEFAULT_ragAnswerSources,

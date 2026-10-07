@@ -95,3 +95,17 @@ marker" above).
   <button>Submit</button>
 </form>
 ```
+
+### Value notifications
+
+Form value controls expose native `input` and `change` events alongside typed `lr-input` and
+`lr-change` notifications. Native events are `Event` or `InputEvent`; read typed values from the
+prefixed event's `detail.value`. Combobox and checkbox-group native events no longer carry custom
+selection details. Programmatic writes and reset/restore remain silent. Live edits emit input;
+commits emit change, and discrete selections emit both. Composite controls contain child events
+and publish their complete aggregate value once.
+
+Date-picker, date-input, OTP-input, rating, model-select, voice-picker, and rubric-form include the
+typed pair. Time-range adds `detail.value: { start, end }` while keeping top-level `start`/`end`.
+Color-picker's `lr-input` includes `{ value }`. Combobox filter typing keeps its separate `lr-filter`
+contract; typed value events describe committed selections, not the filter query.

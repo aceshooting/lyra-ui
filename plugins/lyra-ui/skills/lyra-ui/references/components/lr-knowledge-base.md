@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-knowledge-base`
+
+Its icon actions honor the shared `--lr-icon-button-*` action hooks listed in the component reference.
 
 Controlled source list for a retrieval knowledge base: sync status, indexing health, permissions, and
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
@@ -56,7 +58,8 @@ errorMessage?: string }` (all four types exported here), where
 Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
 before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
 missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
-names.
+names. Row action triggers stay mounted; their three menu items mount only while the dropdown is
+open and clear after it closes.
 
 **Events:** `lr-source-create` (`detail: null` — nothing exists yet to reference),
 `lr-source-sync` (`detail: { sourceId: string }`), `lr-source-pause` (`detail: { sourceId: string }`),
@@ -91,7 +94,12 @@ they are styleable as `lr-knowledge-base::part(actions-trigger)`. `actions-trigg
 kebab button: it inherits the row font, has the shared `--lr-icon-button-size` minimum hit area
 (40px by default), and keeps independent hover, pressed, and focus treatment.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** the row action trigger accepts
+`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
+`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
+`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-radius` for its resting, hover, and pressed paint; other styling uses shared
+tokens.
 
 **Optional peer deps:** none.
 

@@ -1147,7 +1147,8 @@ reset/restoration, and a single-select re-pick of the current occurrence emit no
 
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
-read `event.target.value`. Both
+read `event.target.value`. `lr-change-request` is the cancelable precommit proposal described
+under Selection veto above; it precedes this sequence and suppresses it when canceled. Both
 prefixed aliases carry `detail: { value: string | string[]; previousValue: string | string[]; data: readonly unknown[] }` — `value`
 is the new committed selection, a string in single mode and a `string[]` in `multiple` mode,
 `previousValue` the selection before this change in the same shape; `data`
@@ -6710,7 +6711,9 @@ extra host controls rendered in the footer beside Submit/Skip.
 
 **Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
 
-**Events:** `lr-input` (`detail: { value }`), `lr-change` (`detail: { value }` after a user commit),
+**Events:** rubric-owned native `input` and `change` notifications precede their `lr-input`
+(`detail: { value }`) and `lr-change` (`detail: { value }` after a user commit) aliases;
+the native events carry no detail, so read the aggregate `event.target.value`.
 `lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
@@ -7710,7 +7713,8 @@ catalog helper are documented in the
 
 Country, currency, unit and time-zone pickers also expose `<name>-picker-register.js` under their
 granular component directory. These lean entries register the picker alone; import `lr-select.js`
-and `lr-option.js` for the ordinary control. The searchable `lr-combobox` loads when needed.
+and `lr-option.js` for both ordinary and searchable controls. The searchable `lr-combobox` loads when needed
+without registering option itself.
 The default picker entries register select and option synchronously.
 
 `flags` defaults to `true`; set `.flags = false` or `flags="false"` to hide flags in both the

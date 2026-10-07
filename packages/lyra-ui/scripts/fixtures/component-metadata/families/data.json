@@ -41,9 +41,17 @@
   },
   "deprecations": [
     {
-      "tag": "lr-flow-node", "kind": "slot", "name": "icon", "since": "unreleased",
-      "replacement": { "kind": "slot", "name": "start", "usage": "slot=\"start\"" },
-      "removalNotBefore": "28.0.0", "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+      "tag": "lr-flow-node",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
     },
     {
       "tag": "lr-sparkline",

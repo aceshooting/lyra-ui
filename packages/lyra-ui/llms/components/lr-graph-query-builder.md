@@ -20,8 +20,9 @@ Form-associated editor for a typed graph relationship/path query, including enti
 relationship and node-type filters, hop limits, validation, and saved queries.
 
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
-and saved-query updates continue normally. Each edit updates the query once and emits one
-`lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value events, prefixed value
+and saved-query updates continue normally. Each edit updates the query once and emits
+`input`/`lr-input` and `change`/`lr-change` on commits, with the complete
+`{ value: GraphQuery }` snapshot on the prefixed events. Native value events, prefixed value
 aliases and listbox show/hide lifecycle events from every child control are contained; events from
 slotted content pass through. Programmatic query assignments remain silent.
 
@@ -80,7 +81,7 @@ The matching request/accepted pair reuses one frozen payload: `{ query }` for ru
 Run validates before its request. Save veto preserves the draft name. Load requests frozen
 `{ queryId, query }` before changing `value`, so veto preserves the current query; its accepted event
 fires after the new value is applied. Delete remains controlled, so the host removes the accepted
-id from `savedQueries`. The full set is `lr-input`, `lr-validity-change`, `lr-invalid`, and the
+id from `savedQueries`. The full set is native `input`/`change`, `lr-input`/`lr-change`, `lr-validity-change`, `lr-invalid`, and the
 eight phased action events (four requests and four accepted notifications).
 
 Migration note: veto save in `lr-query-save-request`, not `lr-query-save`; the existing

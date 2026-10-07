@@ -7,6 +7,7 @@ import { SeparatorDragController, separatorArrowDirection, separatorCoordinate, 
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './split-panel.styles.js';
+import type { LyraSplitPanelSnapFunction } from './split-panel-snap.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings.generated.js';
@@ -25,17 +26,7 @@ const POSITION_EPSILON = 0.000_1;
 export type LyraSplitPanelOrientation = LyraOrientation;
 export type LyraSplitPanelPrimary = 'start' | 'end';
 
-export interface LyraSplitPanelSnapFunctionParams {
-  /** Proposed position in pixels, measured from the primary panel's edge. */
-  pos: number;
-  /** Split-panel size in pixels along its resize axis. */
-  size: number;
-  /** The configured snap threshold in pixels. */
-  snapThreshold: number;
-}
-
-export type LyraSplitPanelSnapFunction = (options: LyraSplitPanelSnapFunctionParams) => number;
-
+export type { LyraSplitPanelSnapFunctionParams, LyraSplitPanelSnapFunction } from './split-panel-snap.js';
 export { SNAP_NONE } from './split-panel-snap.js';
 
 /** A proposed user-driven divider position, normalized after constraints and snapping. */

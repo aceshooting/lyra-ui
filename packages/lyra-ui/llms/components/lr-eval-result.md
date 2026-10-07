@@ -18,6 +18,12 @@
 
 Rubric scoring and human-review surface for comparing the runs of one evaluation example.
 
+For a table-only state, import `components/agent-tools/eval-result/eval-result-register.js` and
+set `selectedRunId` to an unmatched id. It registers the table; import `lr-rubric-form.js` and
+`lr-diff-view.js` before allowing a run to become selected. A null selection automatically selects
+the first run, so a normal populated evaluation needs both children. The default entry registers
+all three.
+
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
 The table uses `label` or the localized purpose-specific evaluation-runs name. A host `aria-label`

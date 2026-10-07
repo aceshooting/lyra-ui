@@ -16,6 +16,9 @@
 
 ## `lr-toggle`
 
+The live `:state(pressed)` hook follows user and programmatic `pressed` writes; the reflected
+`pressed` attribute remains available. State publication does not emit value events.
+
 A two-state button that owns its `pressed` state — the self-managed counterpart of
 `<lr-button aria-pressed>`. It renders a native `<button type="button">` whose `aria-pressed` is
 always `"true"` or `"false"`, and takes the shared `variant`/`appearance`/`size` vocabulary. It is

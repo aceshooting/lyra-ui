@@ -32,7 +32,7 @@ import {
   isolateScaleTickLabels,
   isolateTooltipLines,
 } from './chart-bidi.js';
-import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE, type AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -862,8 +862,9 @@ describe('bounded chart surface regressions', () => {
     const originalMatchMedia = window.matchMedia;
     let listener: ((event: MediaQueryListEvent) => void) | undefined;
     let removals = 0;
+    let reduced = false;
     window.matchMedia = ((query: string) => ({
-      matches: false,
+      get matches() { return reduced; },
       media: query,
       onchange: null,
       addListener() {},
@@ -878,17 +879,19 @@ describe('bounded chart surface regressions', () => {
       },
       dispatchEvent: () => false,
     })) as typeof window.matchMedia;
+    const el = document.createElement('lr-chart') as LyraChart;
     try {
-      const el = document.createElement('lr-chart') as LyraChart;
       let draws = 0;
       (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { draws += 1; };
       document.body.append(el);
       const before = draws;
+      reduced = true;
       listener?.({ matches: true, media: '(prefers-reduced-motion: reduce)' } as MediaQueryListEvent);
       expect(draws).to.equal(before + 1);
       el.remove();
       expect(removals).to.be.greaterThan(0);
     } finally {
+      el.remove();
       window.matchMedia = originalMatchMedia;
     }
   });
@@ -896,8 +899,9 @@ describe('bounded chart surface regressions', () => {
   it('ignores a stale reduced-motion change event that arrives after disconnect', () => {
     const originalMatchMedia = window.matchMedia;
     let listener: ((event: MediaQueryListEvent) => void) | undefined;
+    let reduced = false;
     window.matchMedia = ((query: string) => ({
-      matches: false,
+      get matches() { return reduced; },
       media: query,
       onchange: null,
       addListener() {},
@@ -910,8 +914,8 @@ describe('bounded chart surface regressions', () => {
       removeEventListener() {},
       dispatchEvent: () => false,
     })) as typeof window.matchMedia;
+    const el = document.createElement('lr-chart') as LyraChart;
     try {
-      const el = document.createElement('lr-chart') as LyraChart;
       let draws = 0;
       (el as unknown as { drawIfVisible(): void }).drawIfVisible = () => { draws += 1; };
       document.body.append(el);
@@ -920,11 +924,13 @@ describe('bounded chart surface regressions', () => {
       );
       el.remove();
       const before = draws;
+      reduced = true;
       listener?.({ matches: true, media: '(prefers-reduced-motion: reduce)' } as MediaQueryListEvent);
       expect(draws, 'a stale listener firing after disconnect must not trigger a redraw').to.equal(
         before,
       );
     } finally {
+      el.remove();
       window.matchMedia = originalMatchMedia;
     }
   });
@@ -2058,6 +2064,12 @@ it('routes [part="canvas"]:hover’s rendered outline through scoped width and c
         return computed.outlineWidth === '7px' && computed.outlineColor === 'rgb(1, 2, 3)';
       },
       'the rendered canvas hover outline never picked up the scoped tokens',
+    );
+    const hovered = getComputedStyle(canvas).outlineColor;
+    await sendMouse({ type: 'down', button: 'left' });
+    await waitUntil(
+      () => canvas.matches(':active') && getComputedStyle(canvas).outlineColor !== hovered,
+      'the canvas never painted a distinct pressed outline',
     );
   } finally {
     await resetMouse();
@@ -4501,12 +4513,14 @@ describe('data labels and stack totals', () => {
     // A labelled chart and a plain chart on the same page. Per-instance
     // registration means the plugin attaches ONLY to the labelled one; a global
     // registration would attach to (and crash the next update of) the plain one.
-    const labelled = (await fixture(
-      html`<lr-chart data-labels type="bar"></lr-chart>`,
-    )) as LyraChart;
+    const pair = await fixture<HTMLElement>(html`<div style="display:flex;width:640px;max-width:100%;height:240px">
+      <lr-chart data-labels type="bar" style="width:50%;height:240px"></lr-chart>
+      <lr-chart type="bar" style="width:50%;height:240px"></lr-chart>
+    </div>`);
+    const labelled = pair.querySelector<LyraChart>('lr-chart[data-labels]')!;
     labelled.labels = ['Jan', 'Feb'];
     labelled.datasets = [{ label: 'Revenue', data: [10, 20] }];
-    const plain = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    const plain = pair.querySelector<LyraChart>('lr-chart:not([data-labels])')!;
     plain.labels = ['Jan', 'Feb'];
     plain.datasets = [{ label: 'Cost', data: [5, 8] }];
 
@@ -5523,15 +5537,15 @@ describe('coverage: resize/animation-frame and lifecycle defensive branches', ()
     }
   });
 
-  it('syncAnnouncementSinks() is a no-op re-entry when both sinks are already held in the current owner document', async () => {
+  it('retains each lazily acquired announcement channel across repeated access in the current owner document', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
-    const polite = (el as any).politeAnnouncementSink;
-    const assertive = (el as any).assertiveAnnouncementSink;
-    expect(polite).to.exist;
-    expect(assertive).to.exist;
-    (el as any).syncAnnouncementSinks();
-    expect((el as any).politeAnnouncementSink).to.equal(polite);
-    expect((el as any).assertiveAnnouncementSink).to.equal(assertive);
+    const controller = (el as unknown as { announcements: AnnouncementSinkController }).announcements;
+    const polite = controller.current('polite');
+    const assertive = controller.current('assertive');
+    expect(polite !== undefined).to.equal(true);
+    expect(assertive !== undefined).to.equal(true);
+    expect(controller.current('polite') === polite).to.equal(true);
+    expect(controller.current('assertive') === assertive).to.equal(true);
   });
 
   it('skips the queued zoom-plugin redraw if the element disconnects after the load starts but before it resolves', async () => {
@@ -5632,10 +5646,14 @@ describe('coverage: color resolution and forced-colors defensive fallbacks', () 
   });
 
   it('applies a forced-colors pattern per array entry and to a single resolved background color', async () => {
-    const el = (await fixture(html`<lr-chart type="line" area></lr-chart>`)) as LyraChart;
+    const pair = await fixture<HTMLElement>(html`<div style="display:flex;width:640px;max-width:100%;height:240px">
+      <lr-chart type="line" area style="width:50%;height:240px"></lr-chart>
+      <lr-chart type="bar" style="width:50%;height:240px"></lr-chart>
+    </div>`);
+    const el = pair.querySelector<LyraChart>('lr-chart[area]')!;
     el.labels = ['A', 'B'];
     el.datasets = [{ label: 'array', data: [1, 2], color: ['rgb(10, 20, 30)', 'rgb(40, 50, 60)'] }];
-    const bar = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    const bar = pair.querySelector<LyraChart>('lr-chart[type="bar"]')!;
     bar.labels = ['A'];
     bar.datasets = [{ label: 'single', data: [1] }];
     await el.updateComplete;

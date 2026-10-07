@@ -22,6 +22,11 @@ grounding, and context state: transcript + composer in the main pane, and a deta
 `lr-context-inspector`. Performs no network requests, model calls, retrieval, or persistence —
 assign new data to the properties as the host receives updates.
 
+`components/conversation/agent-workspace/agent-workspace-register.js` registers the conversation
+shell and its ordinary message/composer children. Import the run, timeline, retrieval-results,
+grounding-summary and context-inspector entries too when those panels can receive data. The default
+entry registers them all.
+
 This is the single component that binds the most of the provider-neutral vocabulary exported from
 `@aceshooting/lyra-ui/ai` at once; a host that already holds `ChatMessage[]`,
 `AgentRun`, `RetrievalChunk[]`, `Citation[]`, and `GroundingAssessment` can wire this up with no
@@ -86,6 +91,22 @@ Citation; truncated?: boolean; omittedTokens?: number; redactions?: ContextInspe
 - `composerPlaceholder?: string` (attribute `composer-placeholder`)
 - `composerMinRows: number = 1` (attribute `composer-min-rows`), `composerMaxRows: number = 8`
   (attribute `composer-max-rows`)
+- `composerSubmitDisabled: boolean = false` (`composer-submit-disabled`) gates Send while leaving
+  editing and the busy Stop action available; `composerWithoutStop: boolean = false`
+  (`composer-without-stop`) shows a disabled Send action instead of Stop while busy; and
+  `composerWithoutEnterSubmit: boolean = false` (`composer-without-enter-submit`) makes plain Enter
+  insert a newline.
+- `composerReadOnly: boolean = false` (`composer-readonly`), `composerMinLength?: number`
+  (`composer-minlength`) and `composerMaxLength?: number` (`composer-maxlength`) forward the native
+  textarea's editing constraints.
+- `composerSpellcheck: boolean = true` (`composer-spellcheck`, string-aware true default),
+  `composerAutocapitalize: string = ''` (`composer-autocapitalize`),
+  `composerAutocorrect: boolean = true` (`composer-autocorrect`, accepts `off`/`false` writes),
+  `composerWrap: 'hard' | 'soft' | 'off' = 'soft'` (`composer-wrap`),
+  `composerAutocomplete: string = ''` (`composer-autocomplete`),
+  `composerInputMode: string = ''` (`composer-inputmode`) and
+  `composerEnterKeyHint: string = ''` (`composer-enterkeyhint`) forward native editing hints to the
+  built-in composer. A slotted composer remains independently configured.
 - `label?: string` — accessible name and visible heading; omission uses the localized default and an explicit empty string suppresses it
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host-level accessible-name
   override for the internal `role="region"` root

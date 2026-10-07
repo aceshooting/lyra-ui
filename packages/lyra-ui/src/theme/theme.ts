@@ -19,6 +19,8 @@ const STORAGE_KEY = 'lyra-theme';
 export interface LyraThemeBootstrapOptions {
   /** The localStorage key holding a `{ mode, accent, surface, tokens? }` theme record. */
   storageKey?: string;
+  /** Restore the whole saved profile (default), or only mode while retaining host-owned style axes. */
+  restore?: 'all' | 'mode';
 }
 
 /**
@@ -905,7 +907,7 @@ function applyStoredStyleBeforePaint(
   readOwnership: typeof readStyleOwnership,
   resolveStartup: typeof resolveStyleStartup,
   material: typeof styleMaterial,
-  model: { defaults: typeof STYLE_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrast: typeof STYLE_CONTRAST_SURFACES; accent: typeof STYLE_GEMSTONES },
+  model: { restore: 'all' | 'mode'; defaults: typeof STYLE_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrast: typeof STYLE_CONTRAST_SURFACES; accent: typeof STYLE_GEMSTONES },
 ): void {
   const { surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES } = model;
   // Store each property suffix once. The leading digit carries density/follow/accent membership.
@@ -934,6 +936,8 @@ function applyStoredStyleBeforePaint(
 
   try {
     const script = document.currentScript;
+    const configuredRestore = script?.getAttribute('data-lr-theme-restore');
+    const modeOnly = (configuredRestore === 'all' || configuredRestore === 'mode' ? configuredRestore : model.restore) === 'mode';
     const configuredKey = script?.getAttribute('data-lr-theme-storage-key');
     const key = configuredKey && configuredKey.length <= 200 ? configuredKey : defaultStorageKey;
     const names = script?.getAttribute('data-lr-theme-attributes')?.trim().split(/\s+/);
@@ -941,6 +945,10 @@ function applyStoredStyleBeforePaint(
     let saved: unknown;
     try { saved = JSON.parse(localStorage.getItem(key) ?? 'null'); }
     catch { /* A corrupt or inaccessible record uses the built-in profile. */ }
+    if (modeOnly) {
+      const value = saved as Record<string, unknown> | null | undefined;
+      saved = { version: value?.['version'], mode: value?.['mode'] };
+    }
     const root = document.documentElement;
     const [normalizeMap, normalizeColor, paint] = createPaint();
     const record = resolveStartup(saved, model.defaults, normalizeMap,
@@ -948,7 +956,7 @@ function applyStoredStyleBeforePaint(
     const mode = record['mode'] as LyraMode;
     const resolved = mode === 'unset' ? null : mode === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode;
     const desiredAttributes: Record<string, string> = {};
-    const resolver = getComputedStyle(root).getPropertyValue('--_lr-style-resolver').trim() === '1';
+    const resolver = !modeOnly && getComputedStyle(root).getPropertyValue('--_lr-style-resolver').trim() === '1';
     // Saved backgrounds and token branches have already passed the shared startup normalizer.
     const modeValue = (value: unknown, branch: 'light' | 'dark'): unknown =>
       typeof value === 'string' ? value : (value as Record<string, unknown> | null | undefined)?.[branch];
@@ -956,21 +964,23 @@ function applyStoredStyleBeforePaint(
     const overrides = record['overrides'] as LyraThemeTokens | undefined;
     const tokens: LyraThemeTokens = { ...lookTokens, ...overrides };
     const look = record['look'] as string;
-    desiredAttributes['data-lr-look'] = look;
-    desiredAttributes['data-lr-density'] = record['density'] as string;
-    desiredAttributes['data-lr-surface'] = record['treatment'] as string;
+    if (!modeOnly) {
+      desiredAttributes['data-lr-look'] = look;
+      desiredAttributes['data-lr-density'] = record['density'] as string;
+      desiredAttributes['data-lr-surface'] = record['treatment'] as string;
+    }
     if (mode !== 'unset') desiredAttributes['data-lr-mode'] = mode;
     if (resolved) for (const name of attributes) desiredAttributes[name] = resolved;
     const accentName = record['accentName'] as string | undefined;
     let accent = record['accent'] as LyraThemeAccent;
     if (mode !== 'unset' && accent && typeof accent === 'object' && !Object.values(accent).some(value =>
       typeof value === 'string' || (value && Object.values(value).some(Boolean)))) accent = null;
-    desiredAttributes['data-lr-accent'] = accentName ?? (accent ? 'custom' : 'none');
+    if (!modeOnly) desiredAttributes['data-lr-accent'] = accentName ?? (accent ? 'custom' : 'none');
     const desired = new Map<string, string>();
     if (mode === 'unset') for (const [name, value] of Object.entries(tokens)) {
       if (typeof value === 'string') desired.set(name, value);
     }
-    for (const branch of ['light', 'dark'] as const) {
+    for (const branch of modeOnly ? [] : ['light', 'dark'] as const) {
       const background = modeValue(record['surface'], branch);
       const surfaceToken = modeValue(tokens['--lr-theme-color-surface-default'], branch);
       const colors = (STYLE_REFERENCE_SURFACES[look] ?? STYLE_REFERENCE_SURFACES['lyra'])![branch];
@@ -999,7 +1009,7 @@ function applyStoredStyleBeforePaint(
       }
     }
     if (desired.size || (mode === 'unset' && accent && !accentName)) desiredAttributes['data-lr-theme-scope'] = '';
-    if (!resolver) material(desired, record['treatment'] as LyraSurface);
+    if (!modeOnly && !resolver) material(desired, record['treatment'] as LyraSurface);
     const ownershipKey = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
     const node = root as unknown as Record<symbol, unknown>;
     let previous: StyleOwnership | undefined;
@@ -1011,7 +1021,7 @@ function applyStoredStyleBeforePaint(
     try {
       const legacyKey = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');
       const legacy = node[legacyKey];
-      if (Array.isArray(legacy)) {
+      if (!modeOnly && Array.isArray(legacy)) {
         const names = legacy.slice(0, 528).filter(name => typeof name === 'string' && name.length <= 80 && /^--lr-theme-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name));
         for (const name of [...names, ...STYLE_SLOTTED.filter(name => membership.get(name)! & 4), '--lr-theme-accent']) {
           if (!ownership.properties.has(name) && root.style.getPropertyValue(name)) {
@@ -1023,6 +1033,7 @@ function applyStoredStyleBeforePaint(
     } catch { /* Ignore inaccessible legacy ownership. */ }
 
     for (const [name, old] of ownership.attributes) {
+      if (modeOnly && name !== 'data-lr-mode' && !attributes.includes(name)) continue;
       if (Object.hasOwn(desiredAttributes, name)) continue;
       if (root.getAttribute(name) === old.written) { if (old.before === null) root.removeAttribute(name); else root.setAttribute(name, old.before); }
       ownership.attributes.delete(name);
@@ -1033,7 +1044,7 @@ function applyStoredStyleBeforePaint(
       ownership.attributes.get(name)!.written = value;
     }
     for (const [name, old] of ownership.properties) {
-      if (desired.has(name)) continue;
+      if (modeOnly || desired.has(name)) continue;
       if (root.style.getPropertyValue(name) === old.written && !root.style.getPropertyPriority(name)) {
         if (old.before) root.style.setProperty(name, old.before, old.priority); else root.style.removeProperty(name);
       }
@@ -1067,6 +1078,9 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
  * first paint -- including the stored token map, validated and contrast-floored exactly as the runtime
  * does. Missing and invalid fields independently use the built-in Shadcn/Glass/Emerald/System
  * profile. Explicit saved choices, including Solid surfaces and null accents, take precedence.
+ * Set `restore: 'mode'` to restore only the saved mode, keeping host-owned look, surface, density,
+ * accent, and inline styles intact. Missing/invalid mode still defaults to System. This configures
+ * the bootstrap only; later runtime calls apply their own style policy.
  * The serialized options escape HTML script terminators and JavaScript line separators.
  * Pass an application-owned `storageKey` to reuse the no-flash bootstrap independently of this
  * v1 theme records and the current style API's `lyra-theme` persistence key.
@@ -1074,7 +1088,8 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
  * The returned value is deliberately a plain string (not a function) so it can be inlined without
  * shipping or parsing this whole module in an unbundled `<script>` context. Whichever `<script>`
  * element ends up running the string -- inline or, for the static `theme-bootstrap.js` asset,
- * external -- may itself carry `data-lr-theme-storage-key`/`data-lr-theme-attributes` attributes
+ * external -- may itself carry `data-lr-theme-restore="all|mode"`,
+ * `data-lr-theme-storage-key`/`data-lr-theme-attributes` attributes
  * to override `storageKey`/the mode attribute list at parse time without regenerating the string;
  * see `applyStoredThemeBeforePaint`'s config-resolution prelude for the validation rules. Absent
  * or invalid attributes keep this call's own `storageKey`/the default mode attributes, so ordinary
@@ -1090,7 +1105,7 @@ export function createLyraThemeBootstrap(
       | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
     return `${flags}${name.slice(11)}`;
   }).join(' ');
-  const model = JSON.stringify({ defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
+  const model = JSON.stringify({ restore: options.restore === 'mode' ? 'mode' : 'all', defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
   // These self-contained helpers do not recurse. Their module bindings stay named and hoisted;
   // only the serialized function expressions omit names unused by the standalone script.
   const functions = [applyStoredStyleBeforePaint, applyStoredThemeBeforePaint, styleTokenAllowed, readStyleOwnership, resolveStyleStartup, styleMaterial]

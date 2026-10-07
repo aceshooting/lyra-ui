@@ -30,7 +30,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRow, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueInvalid, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../graph/graph.class.js';
@@ -203,9 +203,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
     loadMore: LYRA_DEFAULT_loadMore,
-    retrievalResultsSelectRow: LYRA_DEFAULT_retrievalResultsSelectRow,
+    retrievalResultsSelectRowOrdinal: LYRA_DEFAULT_retrievalResultsSelectRowOrdinal,
     untitledSource: LYRA_DEFAULT_untitledSource,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
+    valueTruncated: LYRA_DEFAULT_valueTruncated,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

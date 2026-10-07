@@ -29,9 +29,6 @@ import type {
   LyraAnchorKind,
 } from '../../viewers/document-viewer/anchors.js';
 import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
-import type { MarkdownVariantContext } from './markdown-variant-context.js';
-export { createMarkdownVariantContext } from './markdown-variant-context.js';
-export type { MarkdownVariantContext } from './markdown-variant-context.js';
 import type {
   LyraMarkedParser,
   MarkdownDeps,
@@ -74,6 +71,7 @@ import {
   setCachedHighlight,
   type MarkdownHeadingItem,
   type MarkdownHtmlMode,
+  type MarkdownKatexState,
   type PendingHighlight,
   type ResolvedHighlightRange,
 } from './markdown-shared.js';
@@ -81,6 +79,27 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+/** Per-tag parser state shared by the full and core Markdown elements. */
+export interface MarkdownVariantContext {
+  readonly tag: 'lr-markdown' | 'lr-markdown-core';
+  readonly connectedInstances: Set<MarkdownRuntimeBase>;
+  readonly sharedParser: MarkdownParserController;
+  readonly katexState: MarkdownKatexState;
+}
+
+export function createMarkdownVariantContext(
+  tag: MarkdownVariantContext['tag'],
+  katexState: MarkdownKatexState
+): MarkdownVariantContext {
+  return {
+    tag,
+    connectedInstances: new Set(),
+    sharedParser: new MarkdownParserController(),
+    katexState,
+  };
+}
 
 const HIGHLIGHT_FAILURE_WARNING_KEY = 'lyra-markdown-highlight-failed';
 const HIGHLIGHT_FAILURE_WARNING =

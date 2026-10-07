@@ -105,6 +105,7 @@ export class LyraUsageBadge extends LyraElement {
 
   /** Latency in milliseconds, formatted with the shared duration algorithm (or `formatLatency`,
    *  when set). */
+  // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
   @property({ type: Number, attribute: 'latency-ms' }) latencyMs?: number;
 
   /** Visible text used when there are no built-in token/cost/latency segments. Required to make a

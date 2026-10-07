@@ -434,7 +434,8 @@ function namesFromTemplates(source) {
 }
 
 const sourceByModule = new Map();
-for (const file of walk(sourceDir).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.stories.ts'))) {
+for (const file of [sourceDir, path.join(packageDir, 'src', 'internal')].flatMap((dir) => walk(dir))
+  .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.stories.ts'))) {
   // Relative to packageDir (not sourceDir) so this matches the manifest's own module.path
   // convention exactly (e.g. "src/components/chart/chart.class.ts") -- a prior sourceDir-relative
   // computation silently produced "src/chart/chart.class.ts" here, which never matched any real

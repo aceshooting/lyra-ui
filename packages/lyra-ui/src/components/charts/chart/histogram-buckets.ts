@@ -1,5 +1,9 @@
-import type { LyraHistogram } from './histogram.class.js';
 import { binValues, normalizeHistogramBinCount, type HistogramBucket } from './histogram-bin.js';
+
+interface HistogramBucketSource {
+  readonly bins: number;
+  readonly values: readonly number[];
+}
 
 // Both the `labels` and `datasets` accessors below derive from the same
 // `binValues(values, bins)` pass, and `LyraChart` reads `datasets` more than
@@ -8,11 +12,11 @@ import { binValues, normalizeHistogramBinCount, type HistogramBucket } from './h
 // own change detection for the `values` array) so an unrelated property
 // change doesn't re-run the O(n) bucketing loop from scratch on every access.
 const bucketCache = new WeakMap<
-  LyraHistogram,
+  HistogramBucketSource,
   { values: readonly number[]; bins: number; locale: string; buckets: HistogramBucket[] }
 >();
 
-export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
+export function binnedBuckets(el: HistogramBucketSource): HistogramBucket[] {
   const bins = normalizeHistogramBinCount(el.bins);
   const locale = (el as unknown as { effectiveLocale: string }).effectiveLocale;
   const cached = bucketCache.get(el);
@@ -28,4 +32,3 @@ export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
   bucketCache.set(el, { values: el.values, bins, locale, buckets });
   return buckets;
 }
-

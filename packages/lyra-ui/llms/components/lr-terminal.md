@@ -19,7 +19,8 @@
 A read-only ANSI console for streamed agent/tool output. Not a PTY: no stdin/keystroke handling, no
 cursor-addressed full-screen apps. An ANSI sequence split across chunks retains at most 4,096
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
-clean parser boundary.
+clean parser boundary. Carriage return and erase-in-line (`CSI K`, `0K`, `1K`, `2K`) support
+in-place progress updates; other cursor-addressing sequences remain unsupported.
 
 Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 

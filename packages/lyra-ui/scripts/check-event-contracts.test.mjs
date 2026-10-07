@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -10,6 +10,7 @@ import {
   eventNamesFromAuthoredSection,
   eventNamesFromComponentJsDoc,
   findEventContractDrift,
+  formControlInvalidInitValuesFromSource,
   runtimeEventCancelabilityFromSource,
   sourceEventTypeContracts,
   sourceEventMapReferences,
@@ -180,6 +181,55 @@ assert.deepEqual(
     ['lr-sometimes', 'conditional'],
   ],
   'runtime cancelability resolves local names and typed event parameters, then combines every reachable call path',
+);
+
+assert.deepEqual(
+  [...runtimeEventCancelabilityFromSource(`
+    class Fixture {
+      settle(event: 'lr-after-show' | 'lr-after-hide') {
+        settlePopupTransition({ onSettled: () => this.emit(event) });
+      }
+    }
+  `)],
+  [['lr-after-hide', 'never'], ['lr-after-show', 'never']],
+  'a nested callback retains its enclosing method’s literal event union',
+);
+assert.throws(
+  () => runtimeEventCancelabilityFromSource(`
+    class Fixture {
+      settle(event: 'lr-after-show' | 'lr-after-hide') {
+        settlePopupTransition({ onSettled: (event: string) => this.emit(event) });
+      }
+    }
+  `),
+  /statically resolve.*event name/u,
+  'a nested callback parameter shadows the enclosing literal event name',
+);
+assert.throws(
+  () => runtimeEventCancelabilityFromSource(`
+    class Fixture {
+      settle(event: 'lr-after-show' | 'lr-after-hide') {
+        { const event = window.name; settlePopupTransition({ onSettled: () => this.emit(event) }); }
+      }
+    }
+  `),
+  /statically resolve.*event name/u,
+  'a block-local write prevents an enclosing literal parameter from masking a dynamic capture',
+);
+
+const controllerSource = readFileSync(
+  new URL('../src/internal/form-control-controller.ts', import.meta.url), 'utf8',
+);
+assert.deepEqual(formControlInvalidInitValuesFromSource(controllerSource), [true]);
+assert.deepEqual(
+  formControlInvalidInitValuesFromSource(controllerSource.replace('init: { cancelable: true }', 'init: { cancelable: false }')),
+  [false],
+  'changing the imported controller callback contract changes the observed cancelability',
+);
+assert.equal(
+  formControlInvalidInitValuesFromSource(controllerSource.replace('init: { cancelable: true }', 'init: CustomEventInit')),
+  undefined,
+  'an opaque controller callback contract remains unresolved',
 );
 
 assert.deepEqual(

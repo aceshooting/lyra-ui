@@ -17,7 +17,7 @@ import {
 import { styles } from './research-progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'incomplete';
@@ -68,6 +68,10 @@ const STATUS_LABEL_KEY: Record<DisplayStep['status'], string> = {
  * @csspart sources - The localized number of sources for a step.
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid steps are supplied.
+ * @cssprop [--lr-progress-indicator-color=var(--indicator-color, var(--lr-progress-indicator-variant-color, var(--lr-color-brand-quiet)))] - Progress indicator fill.
+ * @cssprop [--lr-progress-indicator-variant-color=var(--lr-color-brand-quiet)] - Progress indicator variant fill when no indicator color is supplied.
+ * @cssprop [--lr-progress-track-color=var(--track-color, var(--lr-color-surface-raised))] - Progress track fill.
+ * @cssprop [--lr-progress-track-radius=var(--lr-radius-xs)] - Progress track corner radius.
  * @status experimental
  * @since 22.0.0
  */
@@ -77,6 +81,7 @@ export class LyraResearchProgress extends LyraElement {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     details: LYRA_DEFAULT_details,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
@@ -92,6 +97,7 @@ export class LyraResearchProgress extends LyraElement {
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusIncomplete: LYRA_DEFAULT_statusIncomplete,
+    statusUnknown: LYRA_DEFAULT_statusUnknown,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

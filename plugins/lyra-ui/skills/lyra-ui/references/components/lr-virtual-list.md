@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -246,6 +246,14 @@ pointer-transparent, and it shows nothing while the viewport is above the first 
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
+`--lr-virtual-list-row-mark-bg` (default `revert`),
+`--lr-virtual-list-row-mark-color` (default `revert`),
+`--lr-virtual-list-row-mark-radius` (default `0`), and
+`--lr-virtual-list-row-mark-padding` (default `0`) style `<mark>` inside callback content marked
+`data-lr-virtual-list-mark`;
+`--lr-virtual-list-row-link-color` (default `revert`) colors anchors inside callback content marked
+`data-lr-virtual-list-link`. These opt-in hooks apply only to shadow-rendered rows; light-projected
+rows remain styled by their light-DOM owner. Set the variables on `lr-virtual-list` or an ancestor,
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
 so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
 mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part

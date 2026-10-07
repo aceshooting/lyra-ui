@@ -1946,8 +1946,9 @@ generated framework members are removed rather than retained as aliases.
 - `status: GenerationMetricsStatus = 'idle'` (`'idle' | 'running' | 'complete'`, reflected) —
   generation lifecycle. `idle` is never-started/reset; `running` ticks and is the only state that
   exposes Stop; `complete` freezes the final metrics. Shared success spellings `success`, `done`,
-  and `completed` normalize to `complete`. Invalid attribute or property writes normalize
-  to `idle`.
+  and `completed` normalize to `complete`. The setter accepts `GenerationMetricsStatusInput`,
+  exported from the component class and package root; the getter returns `GenerationMetricsStatus`.
+  Invalid attribute or property writes normalize to `idle`.
 - `startedAt?: number` (attribute `started-at`) — epoch-ms timestamp of when generation began.
   Optional — when unset, or set to a value that fails to parse as a finite number (e.g. an ISO-8601
   date string, which `type: Number` conversion turns into `NaN`), while `status` is `running`, this
@@ -3702,6 +3703,8 @@ route supplies the same default type mappings while leaving component registrati
 consumer's control.
 
 ## `lr-voice-picker`
+
+Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
 
 The voice list follows the [shared surface treatment](shared/styles-and-tokens.md);
 its editing field retains an opaque fill.

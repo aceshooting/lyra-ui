@@ -37,12 +37,12 @@ import {
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_rangeEnd, LYRA_DEFAULT_rangeStart, LYRA_DEFAULT_sliderLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 /** Upper bound on the number of `step` intervals `with-markers` will draw.
  *  A legitimate fractional step (`step="1e-7"` over `[0, 1]`) implies ten

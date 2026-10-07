@@ -13,6 +13,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { collectStyleSources, declaredStyleTokens, sharedStyleHooks } from './manifest-style-reachability.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const manifest = expandManifestInheritance(
@@ -26,62 +27,10 @@ const legacyPublicPrefixes = new Map([
   ['lr-typing-indicator', ['--lr-typing-']],
 ]);
 
-/** Tokens/parts a component legitimately reads but does not own. */
-const isSharedToken = (token) =>
-  /^--lr-(color|space|radius|shadow|font|transition|opacity|focus-ring|size|layer|line-height|border-width|safe-area|no-data)/.test(
-    token,
-  );
-
-/**
- * The library-wide theme override layer (`--lr-theme-*`). Read as a `var()` fallback by the token
- * registry itself, never owned by a component, and documented once in `llms/tokens.md`.
- */
-const isThemeOverride = (token) => token.startsWith('--lr-theme-');
-
-/**
- * Relative `*.styles.js` imports of a stylesheet, resolved back to their `.ts` sources.
- *
- * A component's stylesheet composes shared sheets from `src/internal/` by interpolating them into
- * its own `css` template (`${formControlRequiredMarker}`), so the consumer-settable hooks those
- * sheets read are part of *this* component's public theming surface even though its own file never
- * names them. Scanning only the component's own text is how `--lr-form-control-required-content`
- * came to be advertised on three components and hidden on eighteen others that honour it
- * identically.
- */
-const resolveSheetGraph = (entry, seen = new Set()) => {
-  if (seen.has(entry) || !existsSync(entry)) return seen;
-  seen.add(entry);
-  const text = readFileSync(entry, 'utf8');
-  for (const m of text.matchAll(/from\s+['"](\.[^'"]*\.styles\.js)['"]/g)) {
-    resolveSheetGraph(path.resolve(path.dirname(entry), m[1]).replace(/\.js$/, '.ts'), seen);
-  }
-  return seen;
-};
-
-/**
- * Custom properties an imported shared sheet exposes to the components that compose it: every
- * `var(--lr-…)` it reads that it does not also declare itself.
- *
- * The "reads but never declares" shape is exactly what makes a property a consumer hook — a sheet
- * that declares `--lr-form-control-height-m` before reading it is resolving its own plumbing, while
- * `--lr-form-control-required-content` is read through an inline fallback precisely so a consumer
- * can set it. Shared tokens and the `--lr-theme-*` override layer are excluded as everywhere else.
- *
- * Comments are stripped first: these sheets carry long rationale blocks that quote token names and
- * whole `var()` expressions in prose (`internal/tokens.styles.ts`'s REQUIRED_MARKER note), and a
- * quoted name is not a read.
- */
-const sharedSheetHooks = (source) => {
-  const text = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  const declared = new Set([...text.matchAll(/(--lr-[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
-  const hooks = new Set();
-  for (const m of text.matchAll(/var\(\s*(--lr-[a-z0-9-]+)/g)) {
-    const token = m[1];
-    if (isSharedToken(token) || isThemeOverride(token) || declared.has(token)) continue;
-    hooks.add(token);
-  }
-  return hooks;
-};
+/** Base tokens are documented centrally, including names outside the common prefixes. */
+const baseTokens = declaredStyleTokens(readFileSync(path.join(packageDir, 'src/internal/tokens.styles.ts'), 'utf8'));
+const isSharedToken = (token) => baseTokens.has(token) ||
+  /^--lr-(color|space|radius|shadow|font|transition|opacity|focus-ring|size|layer|line-height|border-width|safe-area|no-data)/.test(token);
 
 const findings = [];
 
@@ -120,17 +69,19 @@ for (const mod of manifest.modules ?? []) {
       }
     }
     // Shared sheets composed into those entry sheets contribute their own consumer hooks — see
-    // `resolveSheetGraph`/`sharedSheetHooks`. The own-namespace prefix cannot apply here: a shared
+    // `collectStyleSources`/`sharedStyleHooks`. The own-namespace prefix cannot apply here: a shared
     // hook is shared precisely because it is not named after any one component.
     // Only sheets from *outside* the component's directory count. A same-directory import is a
     // component's own stylesheet under another name (`histogram.styles.ts` is one line re-exporting
     // `chart.styles.ts`), still governed by the own-namespace prefix above; treating it as shared
     // would demand a declaration for every unprefixed token a sibling happens to read.
-    const composed = new Set();
-    for (const file of entrySheets) for (const sheet of resolveSheetGraph(file)) composed.add(sheet);
-    for (const sheet of composed) {
-      if (path.dirname(sheet) === dir) continue;
-      for (const token of sharedSheetHooks(readFileSync(sheet, 'utf8'))) usedProps.add(token);
+    const composed = collectStyleSources(mod.path, (file) => {
+      const absolute = path.join(packageDir, file);
+      return existsSync(absolute) ? readFileSync(absolute, 'utf8') : undefined;
+    });
+    for (const [sheet, source] of composed) {
+      if (path.dirname(path.join(packageDir, sheet)) === dir) continue;
+      for (const token of sharedStyleHooks(source, isSharedToken)) usedProps.add(token);
     }
 
     // Parts rendered from a static `part="…"` attribute in the class module. Dynamic/computed part

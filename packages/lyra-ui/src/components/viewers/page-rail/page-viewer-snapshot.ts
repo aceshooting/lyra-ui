@@ -1,4 +1,17 @@
-import type { LyraPageViewerSnapshot } from './page-rail.class.js';
+/** Lifecycle state shared by page-addressed viewers and `<lr-page-rail>`. */
+export type LyraPageViewerStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+/**
+ * Atomic, readonly state for a page-addressed document. `identity` changes at the start of every
+ * load transaction, including a same-URL or same-page-count replacement, so consumers can discard
+ * cached thumbnails without trying to infer document identity from `src`.
+ */
+export interface LyraPageViewerSnapshot {
+  readonly identity: number;
+  readonly status: LyraPageViewerStatus;
+  readonly page: number;
+  readonly pageCount: number;
+}
 
 /** Owns the atomic snapshot and identity shared by page-addressed viewers. */
 export class PageViewerSnapshotController {

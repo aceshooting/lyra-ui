@@ -943,7 +943,7 @@ it('keeps Escape ownership when open interactive content stops being actionable'
 });
 
 it('refreshes closed content on trigger focus and observes ancestor visibility while open', async () => {
-  const wrapper = await fixture(html`
+  const wrapper = await fixture<HTMLDivElement>(html`
     <div style="visibility: hidden">
       <lr-tooltip manual>
         <button type="button" slot="trigger">Help</button>

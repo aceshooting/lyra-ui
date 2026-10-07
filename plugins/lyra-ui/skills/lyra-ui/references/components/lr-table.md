@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 46 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,16 +73,12 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
   Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
   exactly as the element-level `defaultSortDir` already does;
-  `priority` progressively hides that column once `[part='base']`'s content actually overflows it —
-  `'low'` hides first, and `'medium'` hides too if the table would still overflow with just `'low'`
-  gone — measured via the same `ResizeObserver`-driven overflow check `scroll-mode="auto"` uses, never
-  at a fixed container width (there is deliberately no themeable-token form of this: a `@container`
-  query, which is what a token-driven threshold would need, can only ever read ancestor inline-size,
-  never a measured overflow amount), reversible via
-  `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
-  end edge while the table scrolls horizontally — multiple sticky columns stack
-  in logical order (each measures every earlier sticky column's rendered width via
-  `--lr-table-sticky-offset`) instead of overlapping at the same edge. A sticky body cell's
+  `priority` hides a column when its `[part='base']` content overflows: `'low'` hides first,
+  then `'medium'` if overflow remains. It uses the `ResizeObserver` check from
+  `scroll-mode="auto"`, adapts to actual overflow rather than a fixed token threshold, and can be
+  reversed with `[part='reveal-columns-button']`; `sticky` pins headers/cells to the logical start
+  or end while scrolling. Sticky columns stack in logical order using
+  `--lr-table-sticky-offset` rather than overlap. A sticky body cell's
   background always matches its own row's effective fill — striped, selected, hovered, or pressed —
   rather than painting a flat opaque surface over that state; a sticky header cell is unaffected
   (headers are never striped/selected) and keeps its plain surface fill, see
@@ -220,7 +216,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
 - `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
-  rows the snapshot keeps; the rest are not shown, counted, paged or exported
+  rows the snapshot keeps; the rest are not shown, counted, paged or exported. The localized
+  `row-limit` part makes this visible alongside the table.
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -421,7 +418,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   (`[part='row-total-cell']`) on every body row holding this row's total. Same "consumer
   computes/renders, table only positions" contract as the existing per-column `footer(rows)` — does
   not assume addition, so a non-sum aggregate works identically. Omit for no trailing column at all
-  (unchanged output)
+  (unchanged output). Its column header uses the localized `tableRowTotal` name.
 - `grandTotal?: (rows: readonly T[]) => unknown` (attribute: false) — renders the bottom-right cell (row-total
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
@@ -502,7 +499,8 @@ from `columns`/`rows`. `error` — replaces the built-in failed-load state, incl
 button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-empty>` renders as
 this slot's fallback content.
 
-**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `cell`, `more-button`, `sort-icon`
+**CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `row-limit` (localized
+notice when the assigned row collection exceeds 10,000 entries), `cell`, `more-button`, `sort-icon`
 (each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
 `sort-icon-inactive` (the muted bidirectional indicator under `sort-indicators="all"`), `reveal-columns-button`
 (shown when priority columns are hidden or when a narrow allocation is currently force-visible),

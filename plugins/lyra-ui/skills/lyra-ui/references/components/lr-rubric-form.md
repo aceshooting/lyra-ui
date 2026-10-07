@@ -75,7 +75,10 @@ extra host controls rendered in the footer beside Submit/Skip.
 
 **Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
 
-**Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (frozen
+**Events:** rubric-owned native `input` and `change` notifications precede their `lr-input`
+(`detail: { value }`) and `lr-change` (`detail: { value }` after a user commit) aliases;
+the native events carry no detail, so read the aggregate `event.target.value`.
+`lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`
 (`detail: { itemId }`, `skippable` only). `lr-invalid` (no detail) is the one bubbling/composed,

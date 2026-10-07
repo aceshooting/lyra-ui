@@ -68,19 +68,6 @@ export interface LyraRetrievalCompareEventMap {
  * @since 7.0.0
  */
 export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventMap> {
-  private readonly rovingChunkBySet = new Map<string, string>();
-
-  private onChunkKeyDown(event: KeyboardEvent, index: number, count: number): void {
-    const buttons = (event.currentTarget as HTMLElement).closest('[part="chunks"]')
-      ?.querySelectorAll<HTMLButtonElement>('[part~="chunk"]');
-    const next = resolveListMove(event, {
-      count, current: index, orientation: 'vertical',
-      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
-    });
-    if (next === null) return;
-    event.preventDefault();
-    buttons?.[next]?.focus();
-  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -96,6 +83,20 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private readonly rovingChunkBySet = new Map<string, string>();
+
+  private onChunkKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const buttons = (event.currentTarget as HTMLElement).closest('[part="chunks"]')
+      ?.querySelectorAll<HTMLButtonElement>('[part~="chunk"]');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons?.[next]?.focus();
+  }
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sets']);

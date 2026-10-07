@@ -7,12 +7,18 @@ dispatched through `LyraElement`'s `protected emit<T>(name, detail?, options?)`:
 composed, and non-cancelable by default**, with the payload on `event.detail`. A component that
 offers a genuine veto point opts into `{ cancelable: true }` and checks `defaultPrevented` before
 acting (as `lr-export-request` on `<lr-export-button>` does) — that is called out per component.
-Native wrappers may additionally
-relay unprefixed `Event`, `InputEvent`, or `FocusEvent` instances; each component section documents
-the exact native names, constructors, bubbling, and cancelability it supports.
+Value-changing form controls expose native `input`/`change` plus typed `lr-input`/`lr-change`
+with `{ value, ... }` details. Input reports live edits; change reports commits; a discrete
+selection reports both. Programmatic writes and form reset/restore are silent. Composite forms
+publish their complete value and contain child notifications. Native input is an `Event` or
+`InputEvent`, preserving editing metadata when applicable; native change is an `Event`. Read
+structured values from the prefixed events. Known-date retains its documented native-event detail
+for compatibility, and documented primitive exceptions keep their own event contract.
 
-Never assume a native DOM event name works: a component mirrors a native contract only where its own
-section says so. `preventDefault()` on a non-cancelable event does nothing.
+Non-form widgets may publish only `lr-change`; do not assume every interactive component supports
+native form events. Submit/reset buttons have no value-edit quartet. Focus/blur bridges use native
+`FocusEvent`. Each component section documents its exact event details and phases.
+`preventDefault()` on a non-cancelable event does nothing.
 
 The veto rule applies to Lyra-only request actions. Shared overlay `show`, `hide`, `after-show` and
 `after-hide` lifecycle events, and native or upstream-pinned events, retain their own contracts.
@@ -1610,6 +1616,7 @@ These named interfaces and helper signatures are available to typed integrations
   `createLyraThemeBootstrap(options?: LyraThemeBootstrapOptions): string`
   `LyraThemeBootstrapOptions {
   storageKey?: string;
+  restore?: 'all' | 'mode';
 }`
   `LyraThemeSemanticRole = 'brand' | 'success' | 'warning' | 'danger' | 'neutral'`
   `LyraThemeAccentValue = string | null | { light?: string | null; dark?: string | null }`
@@ -2217,3 +2224,11 @@ These named interfaces and helper signatures are available to typed integrations
   type ButtonBindings = BindingsFor<"lr-button">;
   type ButtonElement = ElementFor<"lr-button">;
   ```
+
+Native `focus` and `blur` bridges use `FocusEvent`, preserving `relatedTarget` and bubbling across
+component boundaries exactly once. This includes command-palette, conversation-item, thread-list,
+message-feedback, known-date, table, eval-dataset, prompt-studio, tool-approval-dialog,
+tool-param-form, and tool-select-dialog. These events have no custom `detail`; use native focus
+properties. Value controls similarly reserve native `input`/`change` for Event/InputEvent and use
+`lr-input`/`lr-change` for typed `{ value }` details. Known-date keeps its native-event detail
+compatibility fields as well as the typed pair.

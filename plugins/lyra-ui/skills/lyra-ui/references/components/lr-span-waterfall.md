@@ -16,6 +16,11 @@
 
 ## `lr-span-waterfall`
 
+For `lr-span-waterfall`, `lr-trace-tree`, `lr-agent-trace`, `lr-tool-timeline`, `lr-activity-feed`,
+and `lr-test-results`, assigning a collection refreshes its rendered projection. A host can mutate
+an item and reassign the same source array to publish that change. Unrelated property updates
+reuse the current projection where possible.
+
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
@@ -25,15 +30,16 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
-startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete';
+startMs: number; endMs?: number; status: 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete' | 'unknown';
 tokensIn?: number; tokensOut?: number; costText?: string; detail?: string }`, exported from
 `trace-tree/span.ts`. `startMs`/`endMs` are milliseconds **relative to the trace start**, not
 wall-clock timestamps; `endMs` is absent while the span is still running. `costText` is preformatted
 by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. One flat array powers
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
-projection via `parentId`) — never two shapes. Foreign runtime `kind` and `status` values render
-as `'other'` and `'pending'` rather than throwing, although hosts should continue to use the
-documented literal sets. At most 500 unique valid spans mount; when `activeSpanId` resolves beyond
+projection via `parentId`) — never two shapes. Foreign runtime `kind` values render as `'other'`;
+explicitly unrecognized `status` values render the localized neutral `'unknown'` state, while an
+absent status renders `'pending'`. Raw provider status text is never shown. At most 500 unique valid
+spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
 controlled active state remains visible. A localized `[part="limit"]` note exposes truncation. The
 time axis always scales to the whole trace, measured before that 500-span cap is applied, so a

@@ -7,7 +7,9 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated event** `lr-collapse-change` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
+- **Deprecated event** `lr-collapse-request` since `unreleased`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
+- **Deprecated slot** `icon` since `unreleased`; use slot `slot="start"`; removal not before `28.0.0` — The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -66,13 +68,16 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
   assigns `false`, the default. The restore runs once, before the first paint, and is skipped for
   any property the consumer assigned; `lr-app-rail` and `lr-table` share the same mechanism. Without
   a `storageKey` there is no persistence and storage is never touched — listen for
-  `lr-collapse-change` and persist the state yourself.
+  `lr-toggle` and persist the state yourself.
 
-**Events:** `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
+**Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
+`collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
+built-in toggle. The legacy `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
 built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
 unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
 (non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly), `lr-fullscreen-request` (cancelable; `detail: {
+when a consumer assigns `collapsed` directly) remain available but are deprecated. Either request
+can veto the toggle. `lr-fullscreen-request` (cancelable; `detail: {
 fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
@@ -93,8 +98,9 @@ this shadow root, so a retargeted `click` names no view. When an activation _doe
 `lr-view-request` and `lr-view-change` are emitted first. Not emitted when a consumer sets
 `activeViewId` directly)
 
-**Slots:** default (the panel body, rendered only while `views` is empty), `icon` (optional leading
-icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
+**Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
+decorative icon in the title row; its flattened subtree is inert and aria-hidden; `icon` is the
+deprecated legacy slot), `label` (rich label content,
 overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
 attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the

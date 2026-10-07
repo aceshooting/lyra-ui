@@ -26,7 +26,7 @@ import {
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../graph/graph.class.js';
@@ -157,6 +157,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     ...super.defaultStrings,
     chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
+    chunkInspectorOpenOrdinal: LYRA_DEFAULT_chunkInspectorOpenOrdinal,
     chunkScore: LYRA_DEFAULT_chunkScore,
     scoreTierHigh: LYRA_DEFAULT_scoreTierHigh,
     scoreTierLow: LYRA_DEFAULT_scoreTierLow,

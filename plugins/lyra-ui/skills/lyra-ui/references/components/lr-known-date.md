@@ -101,7 +101,9 @@ leaves all three fields, not per field-to-field Tab; each entry into the control
 exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
-`lr-invalid` (no detail) is emitted once as a bubbling/composed alias when native validity fails.
+`lr-input` and `lr-change` carry the same `{ value, day, month, year, field }` detail after their
+respective native events. `lr-invalid` (no detail) is emitted once as a bubbling/composed alias
+when native validity fails.
 
 **Slots:** `label`, `hint`, `error` (each rendered alongside its matching property).
 

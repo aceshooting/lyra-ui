@@ -24,12 +24,13 @@ import { styles } from './page-rail.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
-export { PageViewerSnapshotController } from './page-viewer-snapshot.js';
+import type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export { PageViewerSnapshotController } from './page-viewer-snapshot.js';
 
 const DIGIT_BUFFER_MS = 500;
 const MAX_PAGE_COUNT = 100_000;
@@ -48,20 +49,7 @@ const THUMB_WIDTH_CONVERTER: ComplexAttributeConverter<number | string> = {
   },
 };
 
-/** Lifecycle state shared by page-addressed viewers and `<lr-page-rail>`. */
-export type LyraPageViewerStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-/**
- * Atomic, readonly state for a page-addressed document. `identity` changes at the start of every
- * load transaction, including a same-URL or same-page-count replacement, so consumers can discard
- * cached thumbnails without trying to infer document identity from `src`.
- */
-export interface LyraPageViewerSnapshot {
-  readonly identity: number;
-  readonly status: LyraPageViewerStatus;
-  readonly page: number;
-  readonly pageCount: number;
-}
+export type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
 
 /** Detail for `lr-page-viewer-state-change`. */
 export interface LyraPageViewerStateChangeDetail {

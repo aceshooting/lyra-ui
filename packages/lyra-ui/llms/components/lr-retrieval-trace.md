@@ -7,14 +7,16 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-stage-toggle` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window.
 - **Optional peers** none
-- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-retrieval-trace`
+
+The `empty` CSS part exposes the empty-state container.
 
 A retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering)
 rendered through `lr-span-waterfall`, plus a disclosure list exposing each stage's evidence. Never
@@ -31,8 +33,8 @@ detail?: string; evidence?: RetrievalStageEvidence }` (exported
   default label for `kind`; `detail` is secondary text under the stage name. Pass in any order — the
   timeline sorts by `startMs`. Each stage projects to one `LyraSpan` with `kind` mapped
   `query-rewrite → 'llm'`, `embed → 'embedding'`, `retrieve → 'retriever'`,
-  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind keeps its literal
-  string as the visible label and uses the generic `'tool'` span kind instead of aborting the trace.
+  `rerank`/`filter` → `'tool'`. Without a `label` override, an unknown runtime kind uses a localized
+  “Unknown stage” label and the generic `'tool'` span kind instead of aborting the trace.
   Stage ids must be nonempty, nonblank, and unique: invalid records and later duplicates are
   omitted first-wins before timeline, evidence, controlled state, counts, or event paths
 - `RetrievalStageEvidence { text?: string; chunks?: RetrievalChunk[]; metadata?: Record<string,
@@ -51,18 +53,22 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   distinction
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
+Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
 toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
+first time), `lr-toggle` (`{ expanded, itemId }` for a stage or
+`{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
 explicit stage identity.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
+**CSS parts:** `base`, `empty` (an `lr-empty` with a localized heading when there are no stages), `timeline` (the internal `lr-span-waterfall`), `evidence-list` (omitted when
 no stage has evidence), `evidence-row` (omitted for a stage with no evidence), `evidence-toggle`,
 `evidence-toggle-icon`, `evidence-body` (hidden while collapsed), `evidence-text`,
+`metadata`, `metadata-entry`, `metadata-term`, `metadata-value` (shared metadata-list parts;
+the existing `evidence-metadata`, `evidence-metadata-row`, `evidence-metadata-key`, and
+`evidence-metadata-value` tokens remain on the same elements),
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 

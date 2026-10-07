@@ -160,4 +160,11 @@ export const styles = css`
       var(--lr-color-brand)
     );
   }
+  [part="copy-button"]:active {
+    border-color: color-mix(
+      in oklab,
+      var(--lr-stack-trace-interactive-color, var(--lr-color-brand)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
 `;

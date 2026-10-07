@@ -26,12 +26,12 @@ import {
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 export interface LyraRadioEventMap {
   'lr-invalid': CustomEvent<null>;

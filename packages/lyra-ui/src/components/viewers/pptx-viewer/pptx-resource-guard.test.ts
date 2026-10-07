@@ -1,5 +1,4 @@
 import { zipWithDeclaredSizes, forgedExpansionZip, expectResourceLimit } from '../../../../test/zip-fixtures.js';
-import { expect } from '@open-wc/testing';
 import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
 import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js';
 

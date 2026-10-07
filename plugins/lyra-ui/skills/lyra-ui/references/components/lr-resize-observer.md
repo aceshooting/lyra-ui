@@ -24,6 +24,8 @@ the default slot and emits a composed event, while adding no layout of its own.
 
 **Events:** `lr-resize` with a frozen `Readonly<{ entries: readonly ResizeObserverEntry[] }>`
 detail. The sequence is detached and bounded while each native observer entry retains identity.
+Because this event bubbles and is composed, a listener on a layout ancestor can distinguish its
+own resize event from an observed child's event with `event.target === event.currentTarget`.
 
 **Slots:** default observed elements. **CSS parts:** `base`.
 

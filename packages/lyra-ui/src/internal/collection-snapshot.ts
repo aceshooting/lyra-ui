@@ -1339,7 +1339,7 @@ function declaresOwnedCollections(ctor: typeof LyraElement): boolean {
 }
 
 /** Explicit support for components that own collections or immutable event details. */
-export const collectionSupport: LyraCollectionSupport = Object.freeze({
+export const collectionSupport: LyraCollectionSupport = /* @__PURE__ */ Object.freeze({
   installProperties: installOwnedCollectionAccessors,
   snapshotEvent: snapshotEnrolledEventDetail,
 });

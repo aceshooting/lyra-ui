@@ -42,3 +42,13 @@ its own localized accessible name.
 ```html
 <lr-budget-meter used="72000" limit="100000" unit="tokens"></lr-budget-meter>
 ```
+
+`lr-tool-param-form` publishes native `input` and typed `lr-input` after live field edits, followed
+by native `change` and typed `lr-change` when an edit commits. Discrete choices publish both pairs.
+The typed events contain the complete effective `{ value }` snapshot, including schema defaults;
+child value events remain contained. Programmatic value changes and form reset remain silent.
+
+The dataset search field and other small internal editors intentionally use native controls to
+keep granular imports lean. They share native field surface, focus, sizing, editing, and accessible
+relationship helpers while retaining their existing parts and geometry tokens. Composing a full
+form control is appropriate when its public validation, selection, or form behavior is needed.

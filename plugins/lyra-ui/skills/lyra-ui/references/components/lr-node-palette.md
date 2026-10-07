@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-node-palette`
+
+Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 The searchable, categorized node library for workflow editors: drag an item onto a canvas, or place
 it by keyboard. Never creates nodes or touches a canvas's data itself — the drop/place handshake ends
@@ -79,7 +81,16 @@ listbox), `group-header`, `item`, `item-icon`, `item-label`, `item-description`,
 the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The height
 hook can only raise the field — the shared tappable-target minimum stays underneath it, so no tier
 can shrink it past the WCAG floor. The trailing inline gutter is reserved for the overlaid
-`search-clear` button and is not a knob. Everything else is shared tokens.
+`search-clear` button and is not a knob. When a component-specific geometry hook is unset, the
+field also honors the matching `--lr-input-*` and `--lr-form-control-*` hooks. The clear action
+honors the shared `--lr-icon-button-*` paint hooks.
+The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
+`--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
+`--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
+`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
+`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
+`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-radius` for its resting, hover, and pressed paint.
 
 **Optional peer deps:** none.
 

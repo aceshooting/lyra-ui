@@ -14,27 +14,22 @@ import {
 } from '../../../internal/overlay-manager.js';
 import { styles } from './responsive-panel.styles.js';
 import { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
-export { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
+import type { LyraResponsivePanelMode, LyraResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+export { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 const DEFAULT_OVERLAY_BREAKPOINT = '768px';
 
-/** The `mode` property's literal value -- `'auto'` tracks the allocation
- * breakpoint live; `'inline'`/`'overlay'` force that presentation. */
-export type LyraResponsivePanelMode = 'inline' | 'overlay' | 'auto';
+export type { LyraResponsivePanelMode, LyraResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
 
 const RESPONSIVE_PANEL_MODE = literalSetConverter<LyraResponsivePanelMode>(
   ['inline', 'overlay', 'auto'],
   'auto'
 );
-
-/** What `mode` actually resolves to once the breakpoint is taken into
- *  account -- `'auto'` never appears here. */
-export type LyraResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
 export type LyraResponsivePanelShape = 'fullscreen' | 'bottom-sheet' | 'start' | 'end';
 

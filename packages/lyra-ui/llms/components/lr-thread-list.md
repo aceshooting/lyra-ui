@@ -236,7 +236,7 @@ lr-thread-list::part(row-actions) {
 `--lr-thread-list-excerpt-highlight-color` (default `inherit`),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
-internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
+internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style
 marks returned by `renderRowContent` or any other hook.
 
 **Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default

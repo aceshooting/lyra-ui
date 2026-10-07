@@ -439,16 +439,17 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  // The eight older mirrored hooks stay while their upstream counterparts exist, and the five
-  // entity-activate plus ten selection, source, run, metric and decision event aliases stay until
-  // their 28.0.0 removal floor. All 44 member notices with a 24.0.0 removal floor have retired.
+  // The eight older mirrored hooks stay while their upstream counterparts exist. The five
+  // entity-activate and ten selection, source, run, metric and decision event aliases, plus four
+  // legacy icon slots and nine normalized toggle-event aliases, stay until their 28.0.0 floor.
+  // All 44 member notices with a 24.0.0 removal floor have retired.
   const removalCohorts = {};
   for (const entry of state.metadata.deprecations) {
     removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
   }
   assert.deepEqual(removalCohorts, {
     '10.0.0': 8,
-    '28.0.0': 15,
+    '28.0.0': 28,
   });
   assert.deepEqual(state.metadata.exportDeprecations, []);
 });

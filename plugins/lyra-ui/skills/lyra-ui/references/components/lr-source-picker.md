@@ -79,7 +79,8 @@ badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMa
 empties the tree), `error` (a nonempty raw
 payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
-light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
+light-DOM polite sink; positive matches announce a localized count. The shadow messages are visible
+mirrors, never live regions.
 
 **Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and

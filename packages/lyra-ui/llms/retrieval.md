@@ -172,9 +172,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas).
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
-- `label?: string` — optional graph name. Naming precedence is an authored host `aria-label`
-  (including an explicitly empty value), then `label`, then the JS-only compatibility
-  `accessibleLabel`, then the localized graph name/count fallback.
+- `label: string | null = null` (attribute `label`) — optional graph name. Naming precedence is
+  an authored host `aria-label` (including an explicitly empty value), then `label`, then the JS-only
+  compatibility `accessibleLabel`, then the localized graph name/count fallback.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
   the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
@@ -424,6 +424,8 @@ polling its own `requestAnimationFrame` loop.
 
 ## `lr-node-palette`
 
+Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
+
 The searchable, categorized node library for workflow editors: drag an item onto a canvas, or place
 it by keyboard. Never creates nodes or touches a canvas's data itself — the drop/place handshake ends
 at `lr-node-add`/`lr-palette-place`; the host mutates `nodes`. Fully decoupled from
@@ -490,6 +492,13 @@ can shrink it past the WCAG floor. The trailing inline gutter is reserved for th
 `search-clear` button and is not a knob. When a component-specific geometry hook is unset, the
 field also honors the matching `--lr-input-*` and `--lr-form-control-*` hooks. The clear action
 honors the shared `--lr-icon-button-*` paint hooks.
+The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
+`--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
+`--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
+`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
+`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
+`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-radius` for its resting, hover, and pressed paint.
 
 **Optional peer deps:** none.
 
@@ -1682,8 +1691,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
   `lr-entity-card`.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
-- `label?: string` — names the overall dossier group after a host `aria-label`, before the localized
-  Details fallback. It does not rename the tab strip.
+- `label: string | null = null` (attribute `label`) — names the overall dossier group after a
+  host `aria-label`, before the localized Details fallback. It does not rename the tab strip.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
   `aria-label` names the dossier as a whole and is not cloned onto the strip
@@ -1897,6 +1906,8 @@ retheme the internal list via `lr-virtual-list { --lr-virtual-list-height: … }
 
 ## `lr-knowledge-base`
 
+Its icon actions honor the shared `--lr-icon-button-*` action hooks listed in the component reference.
+
 Controlled source list for a retrieval knowledge base: sync status, indexing health, permissions, and
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
@@ -1973,7 +1984,12 @@ they are styleable as `lr-knowledge-base::part(actions-trigger)`. `actions-trigg
 kebab button: it inherits the row font, has the shared `--lr-icon-button-size` minimum hit area
 (40px by default), and keeps independent hover, pressed, and focus treatment.
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** the row action trigger accepts
+`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
+`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
+`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-radius` for its resting, hover, and pressed paint; other styling uses shared
+tokens.
 
 **Optional peer deps:** none.
 
@@ -2187,8 +2203,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
   section headings; `'none'` keeps the visible text without heading semantics.
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
-  panel label. A non-empty host `aria-label`
-  makes the host the sole overall owner; an explicitly empty host label stays empty
+  panel label. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
+  empty host label stays empty
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
@@ -2528,6 +2544,8 @@ tokens.
 
 ## `lr-retrieval-trace`
 
+The `empty` CSS part exposes the empty-state container.
+
 A retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering)
 rendered through `lr-span-waterfall`, plus a disclosure list exposing each stage's evidence. Never
 fetches, ranks, or computes retrieval results itself.
@@ -2600,6 +2618,8 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
   it is expanded.
 
 ## `lr-rag-answer`
+
+The `empty` CSS part exposes the empty-state container.
 
 Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
 assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
@@ -2908,6 +2928,8 @@ document-viewer-compatible `anchor` in `lr-chunk-open`.
 ## Consumer integration notes
 
 ## `lr-research-progress`
+
+The shared `--lr-progress-track-color`, `--lr-progress-track-radius`, `--lr-progress-indicator-color`, and `--lr-progress-indicator-variant-color` hooks control the progress track and indicator.
 
 `lr-research-progress` presents a read-only ordered list of host-owned research steps and an
 aggregate completion progressbar. Each step has a stable `id`, visible `label`, optional

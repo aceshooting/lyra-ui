@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,7 +89,8 @@ boolean }`, fired after an `anchor` assignment or a `scrollToAnchor()` call is a
 `[part='highlight-action']` button is activated by click or Enter/Space. `lr-text-select` is not
 part of this structural tree viewer's event contract because it installs no selection binding.
 
-**CSS parts:** `base`, `toolbar` (the whole-document copy button row, only when `copyable`),
+**CSS parts:** `base`, `limit` (notice when the expanded tree exceeds the rendered-row limit),
+`toolbar` (the whole-document copy button row, only when `copyable`),
 `copy-button` (the whole-document one, or a per-node one), `tree`, `node` (`data-active` while it's
 the resolved anchor target, `data-match`, `data-active-match`, `data-highlight` carrying a resolved
 highlight's tone, `data-active-highlight`), `tag` (`data-match`), `attribute` (`data-active` while a
@@ -155,4 +156,7 @@ await viewer.search(query);
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
 tree. A collapsed element's child count includes element, text, comment, CDATA, and processing-
-instruction children rather than only element descendants.
+instruction children rather than only element descendants. Expanded rendering stops after 5,000
+rows and shows a localized `limit` notice; collapse state and the parsed document remain intact.
+Search still counts the complete parsed document, while a `node-path` outside the rendered window
+reports `found: false` until it can be rendered.

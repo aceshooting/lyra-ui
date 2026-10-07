@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged. Semantic popover trigger ownership measures 16,828 initial marginal gzip bytes versus 16,403 for published 25.5.0 under the same toolchain and dependencies. Its 17,038-byte ceiling preserves the previous 210-byte allowance; the 51,948-byte shell and every other route ceiling are unchanged. Changed initial routes use their exact measured marginal gzip sizes with failing ceilings rounded up to 64-byte boundaries; the shared shell and passing ceilings remain unchanged.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged. Semantic popover trigger ownership measures 16,828 initial marginal gzip bytes versus 16,403 for published 25.5.0 under the same toolchain and dependencies. Its 17,038-byte ceiling preserves the previous 210-byte allowance; the 51,948-byte shell and every other route ceiling are unchanged. Changed initial routes use their exact measured marginal gzip sizes with failing ceilings rounded up to 64-byte boundaries; the shared shell and passing ceilings remain unchanged. Callable loader routes retain their named exports during measurement: CDN 13,059 bytes, autoloader 12,878, locale loader 1,469, scoped-registry loader 11,201. These initial-route ceilings and the remaining native form, editing, disclosure and lifecycle costs use the next 64-byte boundary. Passing marginal ceilings, shell imports and peer exclusions remain unchanged. The final callable CDN and scoped-registry routes advance only their failing ceilings to the next 64-byte boundary; all passing initial and marginal ceilings remain unchanged.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -7,27 +7,32 @@
     "dist/components/overlays/skeleton/skeleton.js",
     "dist/components/utility/icon/icon.js"
   ],
-  "$routeGzipKb": {},
+  "$routeGzipKb": {
+    "dist/autoloader-cdn.js": 12.8125,
+    "dist/autoloader.js": 12.625,
+    "dist/locale-loader.js": 1.4375,
+    "dist/utilities/scoped-registry-loader.js": 11.0
+  },
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.0625,
-    "dist/components/conversation/model-select/model-select.js": 23.1875,
+    "dist/components/conversation/model-select/model-select.js": 25.3125,
     "dist/components/conversation/usage-badge/usage-badge.js": 4.25,
-    "dist/components/conversation/voice-picker/voice-picker.js": 21.25,
-    "dist/components/forms/color-picker/color-picker.js": 25.5,
-    "dist/components/forms/combobox/combobox.js": 37.1875,
-    "dist/components/forms/date-picker/date-input.js": 38.3125,
-    "dist/components/forms/input/time-input.js": 24.4375,
-    "dist/components/forms/locale-picker/locale-picker.js": 25.125,
-    "dist/components/forms/select/select.js": 31.1875,
+    "dist/components/conversation/voice-picker/voice-picker.js": 23.25,
+    "dist/components/forms/color-picker/color-picker.js": 25.9375,
+    "dist/components/forms/combobox/combobox.js": 38.0,
+    "dist/components/forms/date-picker/date-input.js": 39.5625,
+    "dist/components/forms/input/time-input.js": 24.6875,
+    "dist/components/forms/locale-picker/locale-picker.js": 26.1875,
+    "dist/components/forms/select/select.js": 33.0,
     "dist/components/layout/app-rail/app-rail-item.js": 7.1875,
     "dist/components/layout/menu/menu.js": 16.5,
     "dist/components/overlays/overlay/popover.js": 16.8125,
     "dist/components/overlays/overlay/tooltip.js": 15.4658203125,
-    "dist/components/overlays/popup/popup.js": 4.3125,
-    "dist/components/retrieval/citation-badge/citation-badge.js": 5.9375,
-    "dist/components/retrieval/entity-chip/entity-chip.js": 5.375,
-    "dist/components/utility/export-button/export-button.js": 12.375,
-    "dist/components/utility/mention-popover/mention-popover.js": 8.25,
-    "dist/components/utility/tour/tour.js": 16.875
+    "dist/components/overlays/popup/popup.js": 4.375,
+    "dist/components/retrieval/citation-badge/citation-badge.js": 6.125,
+    "dist/components/retrieval/entity-chip/entity-chip.js": 5.5625,
+    "dist/components/utility/export-button/export-button.js": 12.5625,
+    "dist/components/utility/mention-popover/mention-popover.js": 8.625,
+    "dist/components/utility/tour/tour.js": 17.0
   }
 }

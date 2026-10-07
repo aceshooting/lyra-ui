@@ -50,16 +50,19 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
   `lr-entity-card`.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
+- `label: string | null = null` (attribute `label`) — names the overall dossier group after a
+  host `aria-label`, before the localized Details fallback. It does not rename the tab strip.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — as a JS-only property while
   the host attribute is absent, names the internal `lr-tab-group` strip. Authored host
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
-**Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
+**Events:** composed child events reach the host (`composed: true`), with the direct supporting
+chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
 add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
+expanded }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
+inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
 host the same way and are typed here too: `lr-entity-open` (`detail: { entityId }`, an entity chip

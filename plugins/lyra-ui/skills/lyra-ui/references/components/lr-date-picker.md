@@ -171,7 +171,8 @@ and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
+values. Their typed aliases `lr-input` and `lr-change` carry `{ value }` after the corresponding
+native event. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
 `lr-clear` (no detail) follows `clear()`'s `input`/`change`.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
@@ -314,7 +315,8 @@ access.
 **Selection properties:** `selectionStart`, `selectionEnd`, and `selectionDirection` mirror the
 internal native date input.
 
-**Events:** `input` is an `InputEvent`, `change` is an `Event`, and `focus`/`blur` are
+**Events:** `input` is an `InputEvent`, `change` is an `Event`, and their typed aliases
+`lr-input` and `lr-change` carry `{ value }`. `focus`/`blur` are
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations

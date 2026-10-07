@@ -24,8 +24,9 @@ y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
 `selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
 including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
 `--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
-`accessibleLabel: string | null = null` (attribute `aria-label`). As a JS-only property with no host
-attribute, it names the plot. An authored host `aria-label` governs the plot name too (including an
+`label?: string` names the plot after an authored host `aria-label` and before the JS-only
+`accessibleLabel: string | null = null` compatibility property and localized fallback. As a JS-only property with no host
+attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
 explicitly empty value), so a competing internal generic label is not exposed. Non-finite
 coordinates are omitted.
 Blank point ids and later duplicates are also omitted first-wins before empty state, roving focus,

@@ -36,7 +36,7 @@ export type { LyraScoreThresholds } from '../graph/graph.class.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenanceChunks, LYRA_DEFAULT_provenanceCommunities, LYRA_DEFAULT_provenanceEmpty, LYRA_DEFAULT_provenanceEntities, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_provenancePanelLimit, LYRA_DEFAULT_provenanceRelationships, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraProvenance {
@@ -147,8 +147,10 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
@@ -158,6 +160,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     provenanceEmpty: LYRA_DEFAULT_provenanceEmpty,
     provenanceEntities: LYRA_DEFAULT_provenanceEntities,
     provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
+    provenancePanelLimit: LYRA_DEFAULT_provenancePanelLimit,
     provenanceRelationships: LYRA_DEFAULT_provenanceRelationships,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,

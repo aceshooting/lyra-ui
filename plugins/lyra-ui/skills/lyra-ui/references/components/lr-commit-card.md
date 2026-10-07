@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,6 +18,8 @@
 
 A compact commit summary (subject, author/time, diffstat, per-file changes) that links file rows out
 to a diff view.
+An expanded commit renders its first 500 files and shows `[part="limit"]` when more exist;
+the diffstat and fold count still reflect the full file list.
 
 Removing the `message` attribute clears the displayed subject and body; the property retains the
 normal `null` readback of a removed string attribute.
@@ -55,8 +57,8 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
-`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`), and
-`actions`.
+`file-additions`, `file-deletions`, `copy-button` (not rendered while `without-copy-button`),
+`limit` (shown when the expanded file list exceeds the render cap), and `actions`.
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to

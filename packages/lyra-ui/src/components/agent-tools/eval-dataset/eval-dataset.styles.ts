@@ -25,9 +25,13 @@ export const styles = css`
     align-items: center;
   }
   /* Keep the dataset's border cue alongside the shared action hover fill. */
-  :where([part='add-button']):hover:where(:not(:disabled)),
-  :where([part='remove-button']):hover:where(:not(:disabled)) {
+  button[data-agent-action][part='add-button']:where(:hover):where(:not(:disabled)),
+  button[data-agent-action][part='remove-button']:where(:hover):where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
+  }
+  button[data-agent-action][part='add-button']:where(:active):where(:not(:disabled)),
+  button[data-agent-action][part='remove-button']:where(:active):where(:not(:disabled)) {
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='import'] {
     flex: 0 1 auto;

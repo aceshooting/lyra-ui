@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-chunk-toggle` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window.
 - **Optional peers** none
 - **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -48,11 +48,15 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 - `label?: string` — fallback name for the populated result group; omission uses the localized
   default and an explicit empty string clears it. A non-empty host `aria-label` makes the host the
   sole overall owner; an explicitly empty host label stays empty
+- `ordinalIndex?: number` / `ordinalTotal?: number` (attribute: false) — optional one-based result
+  position and count supplied by a containing results list. Standalone rows use their position in
+  the sorted inspector list. The open-button name includes this ordinal, title, and score tier.
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
+  toggle was activated, expanding or collapsing it; deprecated alias), and `lr-toggle` (`detail: { expanded, itemId }`)
+for the same disclosure. The internal virtual list's scroll and range
 events stay inside the component.
 
 **Slots:** none.

@@ -47,8 +47,8 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
 
-**Events:** `lr-toggle` (`detail: { expanded: boolean }`) — the header was activated, expanding or
-collapsing the list.
+**Events:** `lr-toggle` carries `{ expanded }` for the list header or `{ expanded, itemId }`
+for a slotted source card's disclosure. The list re-emits one card toggle at its boundary.
 
 **Slots:** default — `<lr-source-card>` elements, neutral `<div>`/`<span>` wrappers, or
 author-owned `role="listitem"` entries. When every assigned child is one of those list-compatible
@@ -119,9 +119,11 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 **Events:**
 
-- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show
+- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`, deprecated alias of `lr-toggle`) — the per-card "Show
   more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
   expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
+- `lr-toggle` (`detail: { expanded, itemId }`) — the same per-card disclosure change, including
+  automatic collapse when the full slot empties.
 - `lr-open` (`detail: { sourceId: string; href?: string }`) — the title was activated. This
   component never navigates on its own (a controlled component, the same convention
   `<lr-tool-call-chip>`'s `lr-tool-call-chip-select` follows); a listener decides what "open"

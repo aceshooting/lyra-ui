@@ -32,11 +32,13 @@ is clamped to 0–1 for localized percent display. `Citation` is the shared AI c
 
 Claims and citations are canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, controlled selection, evidence lookup,
-rendering, or events. An unrecognized runtime claim status renders as localized “Unsupported” with
-the danger treatment instead of producing an empty or misleading badge.
+rendering, or events. An unrecognized runtime claim status renders as localized “Unknown” with
+the neutral treatment instead of asserting that evidence is unsupported.
 
 At most 500 claims render as `claim` rows; a `claims` array past that length renders a localized
 `limit` notice after the list rather than mounting an unbounded number of rows.
+Claim selection buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; each claim's
+evidence citation badges keep their own keyboard access.
 
 - `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) tightens the `claim-trigger` padding and column gap, for dense evidence lists — the

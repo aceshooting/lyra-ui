@@ -11,7 +11,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, discoverComponentSideEffectModules } from './generate-side-effects.mjs';
-import { sideEffectsCover } from './side-effects-patterns.mjs';
+import { sideEffectsCover, sideEffectPatternHasSource } from './side-effects-patterns.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
@@ -138,7 +138,15 @@ for (const barrelEntry of ['./src/all.ts', './dist/all.js', './src/ssr/all.ts', 
 // drift -- a rename that forgets to re-add the new path looks "covered" as long as the old path
 // still sits in the list. `dist/` is a build artifact that need not exist in a fresh checkout, so
 // dist entries are validated against the source file they are compiled from instead.
+const sourceEntries = walk(join(packageDir, 'src'))
+  .map((file) => `./src/${relative(join(packageDir, 'src'), file).replaceAll('\\', '/')}`);
 for (const entry of pkg.sideEffects) {
+  if (entry.includes('*')) {
+    if (!sideEffectPatternHasSource(entry, sourceEntries)) {
+      errors.push(`package.json#sideEffects entry "${entry}" is stale: no matching source file`);
+    }
+    continue;
+  }
   let sourcePath;
   if (entry.startsWith('./src/')) {
     sourcePath = join(packageDir, entry.slice('./'.length));

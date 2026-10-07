@@ -40,7 +40,7 @@ import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboar
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -966,6 +966,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     tableLoading: LYRA_DEFAULT_tableLoading,
     tableLoadingMore: LYRA_DEFAULT_tableLoadingMore,
+    tableRowLimit: LYRA_DEFAULT_tableRowLimit,
+    tableRowTotal: LYRA_DEFAULT_tableRowTotal,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -2647,7 +2647,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/agent-run/agent-run.styles.ts",
         "src/components/agent-tools/subagent-panel/subagent-panel.styles.ts",
         "src/components/agent-tools/tool-call-chip/tool-call-chip.styles.ts",
         "src/components/agent-tools/tool-result-dialog/tool-result-dialog.styles.ts",
@@ -3224,7 +3223,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/agent-run/agent-run.styles.ts",
         "src/components/agent-tools/span-waterfall/span-waterfall.styles.ts",
         "src/components/conversation/message-feedback/message-feedback.styles.ts",
         "src/components/conversation/model-select/model-select.class.ts",
@@ -3550,18 +3548,16 @@
       },
       "evidence": [
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
-        "src/components/data/pagination/pagination.styles.ts",
         "src/components/data/sequence-strip/sequence-strip.styles.ts",
         "src/components/data/table/table.styles.ts",
         "src/components/forms/slider/slider.styles.ts",
-        "src/components/forms/textarea/textarea.styles.ts",
         "src/components/forms/token-input/token-input.styles.ts",
         "src/components/layout/app-rail/app-rail-item.styles.ts",
         "src/components/media/image-comparer/image-comparer.class.ts",
         "src/components/media/image-comparer/image-comparer.styles.ts",
         "src/components/overlays/spinner/spinner.styles.ts",
-        "src/components/utility/copy-button/copy-button.styles.ts",
-        "src/components/utility/export-button/export-button.styles.ts"
+        "src/components/utility/export-button/export-button.styles.ts",
+        "src/internal/a11y.ts"
       ]
     },
     "--lr-size-1rem": {
@@ -3721,10 +3717,9 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/retrieval/citation-badge/citation-badge.styles.ts",
-        "src/components/retrieval/entity-chip/entity-chip.styles.ts",
         "src/components/utility/tour/tour.class.ts",
-        "src/components/utility/tour/tour.styles.ts"
+        "src/components/utility/tour/tour.styles.ts",
+        "src/internal/overlay-surface.styles.ts"
       ]
     },
     "--lr-size-24px": {
@@ -3812,9 +3807,8 @@
         "aliasOf": "--lr-chart-height"
       },
       "evidence": [
-        "src/components/charts/chart/box-plot.styles.ts",
+        "src/components/charts/chart/chart-surface.styles.ts",
         "src/components/charts/chart/chart.class.ts",
-        "src/components/charts/chart/chart.styles.ts",
         "src/components/charts/chart/lite-chart.styles.ts"
       ]
     },
@@ -4544,7 +4538,6 @@
       },
       "evidence": [
         "src/components/data/heatmap/heatmap.styles.ts",
-        "src/components/layout/dock-panel/dock-panel.styles.ts",
         "src/components/media/avatar-group/avatar-group.class.ts",
         "src/components/media/avatar-group/avatar-group.styles.ts"
       ]

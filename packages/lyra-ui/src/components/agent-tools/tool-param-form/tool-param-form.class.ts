@@ -35,12 +35,12 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldMustBeBoolean, LYRA_DEFAULT_fieldMustBeInteger, LYRA_DEFAULT_fieldMustBeNumber, LYRA_DEFAULT_fieldMustBeOneOf, LYRA_DEFAULT_fieldMustBeString, LYRA_DEFAULT_fieldMustEqual, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_schemaMustBeObject, LYRA_DEFAULT_schemaPropertiesMustBeFlat, LYRA_DEFAULT_toolParamBooleanFalse, LYRA_DEFAULT_toolParamBooleanTrue, LYRA_DEFAULT_toolParamBooleanUnset, LYRA_DEFAULT_toolParamFormat, LYRA_DEFAULT_toolParamInvalidConstraint, LYRA_DEFAULT_toolParamInvalidSelection, LYRA_DEFAULT_toolParamMaxItems, LYRA_DEFAULT_toolParamMaxLength, LYRA_DEFAULT_toolParamMaximum, LYRA_DEFAULT_toolParamMinItems, LYRA_DEFAULT_toolParamMinLength, LYRA_DEFAULT_toolParamMinimum, LYRA_DEFAULT_toolParamMissingProperty, LYRA_DEFAULT_toolParamSchemaLimit, LYRA_DEFAULT_unsupportedFieldType, LYRA_DEFAULT_valueMustBeSerializable } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 /** A single-choice selection error names its choices only up to this many. */
 const MAX_LISTED_CHOICES = 10;

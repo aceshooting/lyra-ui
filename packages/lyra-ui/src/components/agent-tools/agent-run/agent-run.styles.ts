@@ -165,9 +165,15 @@ export const styles = css`
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
   }
+  [part="cancel-button"]:active {
+    border-color: color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part="retry-button"]:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
+  }
+  [part="retry-button"]:active {
+    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part="body"] {
     display: flex;

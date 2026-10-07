@@ -67,9 +67,10 @@ label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
-both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
+both prefixed aliases carry `{ value, option, radio }`. `option` and its retained `radio` alias
+reference the same acted-on child. The selected child does not emit its standalone
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
-including one on the already-selected option — also emits `lr-activate` (`{ value, radio }`) after
+including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
 those events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity

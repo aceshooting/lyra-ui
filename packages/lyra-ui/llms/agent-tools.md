@@ -2872,6 +2872,8 @@ shown when `segments` exceeds the 500-row render ceiling).
 
 ## `lr-eval-dataset`
 
+Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
+
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
 If the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
@@ -2930,6 +2932,13 @@ the height at a `--lr-form-control-height-*` tier to match it to a themed search
 inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
 component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
 `--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
+The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
+`--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
+`--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
+`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
+`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
+`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-radius` for its resting, hover, and pressed paint.
 The search field remains a filter toolbar, with the native editing hints listed above.
 
 **Known gotchas:**

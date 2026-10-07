@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-mention-popover`
+
+The `more-results` CSS part exposes the additional-results message.
 
 Suggestion listboxes follow the [shared surface treatment](shared/styles-and-tokens.md);
 the caller-owned message field retains its fill.
@@ -63,7 +65,9 @@ preserving null readback; an explicitly empty query remains empty.
   reactive property) — matches the same fallback on `<lr-combobox>`/`<lr-table>`.
 - `filteredItems: readonly Readonly<LyraMentionItem>[]` — read-only getter; label-valid `items`
   filtered by `query` via `filter` (or the built-in default). An empty `query` skips the query
-  predicate but still omits malformed-label rows.
+  predicate but still omits malformed-label rows. This getter retains every match; the popup
+  renders and navigates the first 50, then adds a localized, non-option count of remaining matches
+  as the listbox description.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
   same-tree consumers; do not copy it to an external control as a string IDREF.
@@ -110,7 +114,8 @@ renders `open="false"` on first paint)
 **Slots:** none.
 
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
-`option-description` (when `description` is set), `empty`
+`option-description` (when `description` is set), `empty`, `more-results` (the localized count
+shown when more suggestions match than the list renders).
 
 **Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`

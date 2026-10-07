@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -181,6 +181,7 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 
 **Events:**
 
+- `lr-input` (`detail: { value: string }`) — typed value edit notification.
 - `lr-change` (`detail: { value: string; inCatalog: boolean }` — fired when a value is selected
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
@@ -251,6 +252,7 @@ configured once instead of per component. It is additive: the focus outline is t
 answer to focus and is never replaced by it. A synthetic stale-value row has independent
 `--lr-model-select-option-synthetic-border-style` (default `dashed`) and
 `--lr-model-select-option-synthetic-border-color` (default `var(--lr-color-border)`) hooks.
+`--lr-model-select-option-synthetic-font-style` (default `italic`) styles its label.
 `--lr-model-select-option-active-bg` (default `var(--lr-color-brand-quiet)`) — background of a
 hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback at the point of
 use, not on `:host`, so it isn't tied to `size`. The selected row

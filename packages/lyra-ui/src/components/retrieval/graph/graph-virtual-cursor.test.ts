@@ -58,8 +58,6 @@ it('bounds canvas accessibility DOM at 5,000 nodes and 10,000 links while reachi
   await graph.updateComplete;
   const root = graph.shadowRoot!;
   const cursor = root.querySelector<HTMLButtonElement>('[part="cursor-item"]')!;
-  expect(graph.simNodes.length).to.equal(5_000);
-  expect((graph as unknown as { simLinks: unknown[] }).simLinks.length).to.equal(10_000);
   expect(root.querySelectorAll('[part="data-list"] li').length).to.equal(200);
   expect(root.querySelectorAll('[part="cursor-item"]').length).to.equal(1);
   expect(root.querySelectorAll('*').length).to.be.below(250);
@@ -77,6 +75,8 @@ it('bounds canvas accessibility DOM at 5,000 nodes and 10,000 links while reachi
   internals.drawCanvas();
   internals.redrawPickCanvas();
   const scene = internals.canvasScene;
+  expect(scene!.nodes.length).to.equal(5_000);
+  expect(scene!.links.length).to.equal(10_000);
   const sceneNodes = scene!.nodes;
   expect(internals.pickDirty).to.equal(false);
   let edgeId = '';

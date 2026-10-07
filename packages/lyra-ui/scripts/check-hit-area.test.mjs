@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 import {
   checkStaticHitAreaFixture,
+  resolveStylesSources,
   findMeasuredHitAreaViolations,
   targetHitAreaContract,
 } from './check-hit-area.mjs';
@@ -270,7 +271,6 @@ assert.ok(
   "a nested conditional's condition literals are never treated as part names",
 );
 
-console.log('Hit-area checker self-tests passed.');
 
 const sharedHitTarget = `
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
@@ -306,3 +306,69 @@ assert.ok(checkStaticHitAreaFixture(compactIconClass, [
 
 assert.equal(checkStaticHitAreaFixture(compactIconClass, [sharedHitTarget.replace('../../../internal/interactive-control.styles.js', './interactive-control.styles.js')]).errors.length, 0,
   'internal styles resolve the same imported hit-target declaration');
+
+
+const adoptedActionClass = `
+  import { actionStyles as actions } from '../shared/action.styles.js';
+  import { unrelated } from '../shared/unrelated.styles.js';
+  class Fixture {
+    static styles = [actions];
+    render() { return html\`<button part="toggle" data-action="neutral">\${closeIcon()}</button>\`; }
+  }
+`;
+const actionSheet = `export const actionStyles = css\`
+  button[data-action] { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+\`;`;
+const fixtureSources = new Map([
+  ['/fixture/shared/action.styles.ts', actionSheet],
+  ['/fixture/shared/unrelated.styles.ts', `export const unrelated = css\`[part='toggle'] { min-inline-size: 100px; min-block-size: 100px; }\`;`],
+]);
+const resolveActionStyles = (source = adoptedActionClass, files = fixtureSources) =>
+  resolveStylesSources('/fixture/component/example.class.ts', source, (file) => files.get(file));
+assert.equal(resolveActionStyles().length, 1, 'only adopted stylesheet bindings count, not unrelated imports');
+assert.deepEqual(checkStaticHitAreaFixture(adoptedActionClass, resolveActionStyles()).errors, [],
+  'an adopted shared rule guards the matching data-attribute target');
+for (const [name, css] of [
+  ['undersized override', actionSheet.replace('min-block-size: var(--lr-icon-button-size); }', 'min-block-size: var(--lr-icon-button-size); } button[data-action]:hover { min-inline-size: 1px; }')],
+  ['conditional undersized override', actionSheet.replace('min-block-size: var(--lr-icon-button-size); }', 'min-block-size: var(--lr-icon-button-size); } button[data-action]:where(:not(:disabled)):hover { min-inline-size: 1px; }')],
+  ['wrong attribute value', actionSheet.replace('button[data-action]', "button[data-action='brand']")],
+  ['wrong element', actionSheet.replace('button[data-action]', 'a[data-action]')],
+  ['descendant target', actionSheet.replace('button[data-action]', 'button[data-action] span')],
+  ['pseudo-element', actionSheet.replace('button[data-action]', 'button[data-action]::before')],
+  ['one missing axis', actionSheet.replace('min-block-size: var(--lr-icon-button-size);', '')],
+]) {
+  assert.ok(checkStaticHitAreaFixture(adoptedActionClass, [css]).errors.length > 0, name);
+}
+assert.ok(checkStaticHitAreaFixture(adoptedActionClass.replace('data-action="neutral"', ''), [actionSheet]).errors.length > 0,
+  'the shared data attribute cannot guard a target that does not carry it');
+assert.ok(checkStaticHitAreaFixture(adoptedActionClass.replace('static styles = [actions]', 'static styles = []'),
+  resolveActionStyles(adoptedActionClass.replace('static styles = [actions]', 'static styles = []'))).errors.length > 0,
+  'importing without adopting a shared stylesheet cannot establish a floor');
+const mixedExports = new Map([['/fixture/shared/action.styles.ts',
+  `export const actionStyles = css\`button[data-action] { display: inline-flex; }\`;
+${actionSheet.replace('actionStyles', 'unusedStyles')}`]]);
+assert.ok(checkStaticHitAreaFixture(adoptedActionClass, resolveActionStyles(adoptedActionClass, mixedExports)).errors.length > 0,
+  'an unused export in an adopted module cannot supply the missing floor');
+assert.throws(() => resolveActionStyles(adoptedActionClass, new Map()), /Cannot read adopted stylesheet/,
+  'missing adopted sources fail closed');
+assert.throws(() => resolveActionStyles(adoptedActionClass, new Map([['/fixture/shared/action.styles.ts', 'export const wrong = 1;']])), /Cannot resolve adopted stylesheet/,
+  'unresolved adopted exports fail closed');
+assert.deepEqual(resolveStylesSources('/fixture/internal/native-search.ts', 'export function render() {}',
+  (file) => file === '/fixture/internal/native-search.styles.ts' ? actionSheet : undefined), [actionSheet],
+  'internal render helpers resolve the adjacent stylesheet without duplicating the .ts suffix');
+
+
+
+for (const qualifier of [':hover', ':where(:not(:disabled)):hover', ':focus-visible']) {
+  const stateOnly = actionSheet.replace('button[data-action]', `button[data-action]${qualifier}`);
+  assert.ok(checkStaticHitAreaFixture(adoptedActionClass, [stateOnly]).errors.length > 0,
+    `${qualifier} alone cannot establish the resting floor`);
+}
+const unrelatedSibling = new Map(fixtureSources);
+unrelatedSibling.set('/fixture/component/example.styles.ts', actionSheet);
+const explicitlyEmptyStyles = adoptedActionClass.replace('static styles = [actions]', 'static styles = []');
+assert.deepEqual(resolveActionStyles(explicitlyEmptyStyles, unrelatedSibling), [],
+  'an explicit empty styles array cannot fall back to an unrelated adjacent stylesheet');
+assert.ok(checkStaticHitAreaFixture(explicitlyEmptyStyles, resolveActionStyles(explicitlyEmptyStyles, unrelatedSibling)).errors.length > 0,
+  'a sibling floor cannot authorize an explicitly unstyled target');
+console.log('Hit-area checker self-tests passed.');

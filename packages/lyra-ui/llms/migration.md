@@ -840,6 +840,10 @@ hydration compares template strings.
 | `<lr-sequence-strip>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
 | `<lr-table>` | attribute | `accessible-label` | `aria-label` | Rewritten on the component; selectors reported (not reflected) |
 
+| Component | Event | Detail change in Lyra 23 (reported, never rewritten) |
+|---|---|---|
+| `<lr-flow-canvas>` | `lr-edge-activate` | Use sourceNodeId and targetNodeId; source and target remain deprecated aliases carrying the same node ids during migration. |
+
 | Component | Kind | Deprecated name | Replacement (manual) |
 |---|---|---|---|
 | `<lr-approval-queue>` | event | `lr-approval-decision` | `addEventListener('lr-approval-decision-request', event => { /* Call preventDefault() to veto the proposed action. */ })` |
@@ -1499,6 +1503,85 @@ need manual inspection. Review event detail, saved preferences and selector scop
 | window-event | `./theme.js#lr-theme-change` | event.detail.style and event.detail.changed | Removed in 24.0.0 |
 | window-event | `./theme/presets.js#lr-theme-preset-change` | event.detail.style and event.detail.changed | Removed in 24.0.0 |
 
+## Migrating from Lyra 25 to Lyra 26 (`--origin=lyra-v25`)
+
+Lyra 25 minor releases and Lyra 26 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Each previous name keeps working as a deprecated alias until
+Lyra 28 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading, within Lyra 25 or to Lyra 26. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
+
+```bash
+npx lyra-ui-migrate --origin=lyra-v25 --diff src > lyra-v25.patch
+npx lyra-ui-migrate --origin=lyra-v25 --check --report=lyra-v25-migration.json src
+```
+
+`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite
+cannot change what the site reaches: attribute, property and slot bindings on the component in
+HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute
+selectors that name the component; and calls rooted at `querySelector('lr-…')`, `closest()` or
+`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no
+other component already dispatches the new name, and an unowned listener or any custom-property
+use only when, in addition, every component with the old name renamed it the same way and the
+scanned code never dispatches the old name itself. Everything else is reported with a location;
+the old name keeps working meanwhile.
+
+| Code | Reported when |
+|---|---|
+| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |
+| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |
+| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
+| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
+| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
+| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
+| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
+
+After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
+`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before
+the element's opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile
+is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
+hydration compares template strings.
+
+| Component | Kind | Deprecated name | New name | Handling |
+|---|---|---|---|---|
+| `<lr-agent-eval-dashboard>` | event | `lr-metric-change` | `lr-metric-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-agent-run>` | event | `lr-cancel` | `lr-run-cancel` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-background-runs>` | event | `lr-run-open` | `lr-run-activate` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-change-review>` | event | `lr-change-decision` | `lr-change-decision-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-community-card>` | event | `lr-entity-activate` | `lr-entity-select` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-dock-panel>` | event | `lr-collapse-change` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-dock-panel>` | event | `lr-collapse-request` | `lr-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-navigation-menu>` | event | `lr-expanded-change` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-path-strip>` | event | `lr-entity-activate` | `lr-entity-select` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-rag-eval-dashboard>` | event | `lr-metric-change` | `lr-metric-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-rag-eval-dashboard>` | event | `lr-slice-change` | `lr-slice-change-request` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-source-picker>` | event | `lr-sources-change` | `lr-selection-change` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-subagent-panel>` | event | `lr-cancel` | `lr-run-cancel` | Rewritten where the reach is unchanged, otherwise reported |
+
+| Component | Kind | Deprecated name | Replacement (manual) |
+|---|---|---|---|
+| `<lr-app-rail-item>` | slot | `icon` | `slot="start"` |
+| `<lr-chunk-inspector>` | event | `lr-chunk-toggle` | `@lr-toggle` |
+| `<lr-entity-dossier>` | event | `lr-entity-activate` | `@lr-entity-select` |
+| `<lr-flow-node>` | slot | `icon` | `slot="start"` |
+| `<lr-memory-panel>` | event | `lr-entity-activate` | `@lr-entity-select` |
+| `<lr-memory-panel>` | event | `lr-memory-toggle` | `@lr-toggle` |
+| `<lr-provenance-panel>` | event | `lr-entity-activate` | `@lr-entity-select` |
+| `<lr-rag-eval-dashboard>` | event | `lr-run-change` | `@lr-run-activate` |
+| `<lr-retrieval-results>` | event | `lr-select` | `@lr-selection-change` |
+| `<lr-retrieval-trace>` | event | `lr-stage-toggle` | `@lr-toggle` |
+| `<lr-source-card>` | event | `lr-expand` | `@lr-toggle` |
+| `<lr-tool-call-chip>` | slot | `icon` | `slot="status-icon"` |
+| `<lr-widget>` | event | `lr-collapse-change` | `@lr-toggle` |
+| `<lr-widget>` | event | `lr-collapse-request` | `@lr-toggle-request` |
+| `<lr-widget>` | slot | `icon` | `slot="start"` |
+
 ## Upstream-protected compatibility spellings
 
 These 8 legacy spellings remain supported while their corresponding Web Awesome or Shoelace surface publishes them. Prefer the current Lyra spelling for new code. Their recorded `removalNotBefore` value is a minimum, not an automatic removal date or permission to remove a still-mirrored spelling.
@@ -1550,10 +1633,10 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. Form-associated group of checkboxes with array values and group validation. |
 | `<wa-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
-| `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Lyra snapshots each input/change event's value into a frozen readonly value at dispatch time, and since 16.0.0 narrows it through the picker value generic, so the detail reads as string when multiple is false rather than the upstream union; migrated handlers that mutate the event detail in place, or that rely on the union being present on a single-select combobox, must be reviewed. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review. |
+| `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Native input/change notifications on lr-combobox are bubbling, composed Event instances without a detail payload. Its lr-input/lr-change aliases carry the frozen readonly value, previousValue and row data, narrowed by the picker value generic; migrated handlers reading or mutating upstream CustomEvent detail must use the prefixed aliases and review the narrower single-select type. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review. |
 | `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. Before/after slotted surfaces with a keyboard-accessible range divider. |
 | `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error. |
-| `<wa-data-grid>` | `<lr-data-grid>` | `warning-required` | Manual: Lyra snapshots collection inputs and event details synchronously into frozen readonly values, and removes the redundant wa-data-request alias in favor of the typed request event. Migrated code that mutates arrays or event details in place, assigns derived collections, or listens for the removed alias must be reviewed. |
+| `<wa-data-grid>` | `<lr-data-grid>` | `warning-required` | Manual: Lyra snapshots collection inputs and event details synchronously into frozen readonly values, removes the redundant wa-data-request alias, and deprecates the unprefixed request event in favor of lr-request. Migrated code that mutates arrays or event details in place, assigns derived collections, listens for the removed alias, or relies on the unprefixed request event must be reviewed. |
 | `<wa-date-input>` | `<lr-date-input>` | `warning-required` | Manual: Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review. Its lr-hide is cancelable except when disabling the field or making it readonly closes an open popup, which a listener cannot veto; handlers that rely on vetoing every hide need review. |
 | `<wa-date-picker>` | `<lr-date-picker>` | `rewritten` | Automatic: tag/import plus events: wa-focus-day → lr-focus-day; events: wa-view-change → lr-view-change. |
 | `<wa-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. |

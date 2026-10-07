@@ -28,14 +28,14 @@ interface StubAnchorTargetBase {
 }
 
 class StubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {
-  protected async applyAnchor(_anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(_anchor: LyraAnchor): Promise<boolean> {
     this.applyCallCount++;
     return this.applyCallCount > this.applySucceedsAfter;
   }
 }
 
 class DecliningStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {
-  protected computeSelectionAnchor(): LyraAnchor | null {
+  protected override computeSelectionAnchor(): LyraAnchor | null {
     return null;
   }
 }
@@ -44,7 +44,7 @@ class DecliningStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBas
  *  OWN default safety net for a throwing `applyAnchor()`, per `anchor-target.ts`'s
  *  `scrollToAnchor()`/`performScrollToAnchor()` split. */
 class ThrowingStubAnchorTarget extends DocumentAnchorTarget(StubAnchorTargetBase) {
-  protected async applyAnchor(_anchor: LyraAnchor): Promise<boolean> {
+  protected override async applyAnchor(_anchor: LyraAnchor): Promise<boolean> {
     throw new Error('applyAnchor boom');
   }
 }

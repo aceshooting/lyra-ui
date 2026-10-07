@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecated event** `lr-metric-change` since `unreleased`; use event `@lr-metric-change-request`; removal not before `28.0.0` — lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major.
 - **Optional peers** none
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -32,6 +32,8 @@ explicit empty string renders no heading/name; `withoutChart: boolean = false` (
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds
 both the run list and the chart projection.
+Supply runs newest-first: when the list exceeds that window, `[part="limit"]` explains that the
+displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
@@ -41,7 +43,8 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
-`run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
+`run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
+`maxRenderedRuns`), `empty`.
 
 **Additional API surface:**
 

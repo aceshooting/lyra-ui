@@ -147,8 +147,10 @@ enabled buttons retain pointer feedback.
 `resetValidity()`; reset clears only consumer custom validity and restores current intrinsic
 `required` validity.
 
-**Events:** a user selection or removal emits native bubbling/composed `input`, then exactly one
-host `change`; programmatic `files` writes are silent (both still fire while `nonRetaining` is set,
+**Events:** a user selection or removal emits native bubbling/composed `input`, `lr-input`,
+native `change`, then `lr-change`; the typed pair carries `{ value: readonly File[] }` with a frozen
+snapshot of the current files and preserves each File identity. Programmatic `files` writes are
+silent (the event pairs still fire while `nonRetaining` is set,
 even though `files` itself is not written in that mode). `lr-files` (`detail:
 LyraFileInputFilesDetail`, with fresh frozen readonly `files` and `rejected` arrays and frozen
 rejected-file records, plus `remainingFiles`/`remainingTotalSize` reporting the allowance still left

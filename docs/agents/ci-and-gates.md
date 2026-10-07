@@ -890,6 +890,29 @@ initial-route imports and measurement settings remain unchanged. The complete Ja
 measures 1,198,776 gzip bytes against 1,196,595 in 24.2.0 and retains its existing ceiling; the
 charts, component P95 and component maximum canaries also retain their tighter ceilings.
 
+Native form and editing contracts, selection vetoes, disclosure lifecycle and localized feedback
+account for the latest reviewed bundle growth. Only the 21 failing direct/aggregate ceilings and
+14 failing marginal ceilings advance to their measured next 64-byte boundary. The percentile is
+`lr-data-grid` at 124,160 bytes, including resize cancellation and request behavior; the maximum is
+`lr-agent-workspace` at 251,374 bytes, including native composer passthrough. Preserved collection
+initializer annotations remove owned-property machinery from event-only consumers and restore
+the menu route to its existing budget. The pure root measures 132,649 bytes and its stale ceiling
+tightens to 132,672 bytes. Shared tooltip visibility observation subsequently reduces several
+bundles further while retaining those reviewed ceilings. Other passing ceilings, shell imports
+and all 16 peer-inclusive exclusion claims remain unchanged.
+
+Mode-only bootstrap configuration and distinct pressed borders/outlines bring the final pure root
+to 132,680 gzip bytes, the complete CDN/autoloader entries to 1,336,559/1,336,397 bytes, and the
+component maximum to 251,462 bytes. Only those four failing direct/aggregate ceilings advance to
+their next 64-byte boundary. Type-only dependency relocations preserve public routes; every other
+passing ceiling and all 16 peer-inclusive exclusion claims remain unchanged.
+
+Absolute loader routes retain their callable exports while excluding deferred chunks. Their
+reviewed initial gzip measurements are 13,059 bytes for the CDN entry, 12,878 for the autoloader,
+1,469 for the locale loader and 11,201 for the scoped-registry loader. Their hard ceilings also use
+the next 64-byte boundary, within the existing 4% maximum headroom. Bare imports remain the
+measurement shape for registration routes and the representative shell.
+
 `check:border-subtle` (blocking, in `contract-policy` next to `check:hit-area`) fails any literal
 `--lr-color-border-subtle` or `--lr-theme-color-surface-border-subtle` in `src/components/forms/**`
 or `src/internal/form-control.styles.ts`: that tier is decorative and may sit below the 3:1 a

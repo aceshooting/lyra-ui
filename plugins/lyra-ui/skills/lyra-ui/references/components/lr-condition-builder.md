@@ -19,10 +19,16 @@
 Composable flat condition builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
+`components/data/condition-builder/condition-builder-register.js` registers the controls used by
+ordinary string, number, boolean and single-value enum rows. Import `lr-date-input.js` for date
+fields and `lr-combobox.js` for multi-value enum operators. The default entry registers both.
+
 Each edit updates the builder once and emits one `lr-input` carrying the complete
 `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
 and listbox show/hide lifecycle events from every row control and the combinator stay inside the
-builder. Programmatic `value` assignments remain silent.
+builder; events from slotted consumer content pass through. Programmatic `value` assignments
+remain silent. Both builders use the same bounded, own-data option normalization, retaining each
+builder's public option type and first-value-wins behavior.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
 aliases to `lr-condition-builder` / `LyraConditionBuilder` / `ConditionBuilder*`. Update the tag,

@@ -12,14 +12,14 @@ import '../../overlays/skeleton/skeleton.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getFlagResolverGeneration, subscribeFlagResolver, loadFlagUrlResolver, warnMissingFlagResolver } from './flag-url-resolver.js';
+
+export type { LyraFlagFidelity, LyraFlagShape, LyraFlagUrlResolver } from './flag-url-resolver.js';
+import type { LyraFlagFidelity, LyraFlagShape } from './flag-url-resolver.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-
-export type { LyraFlagFidelity, LyraFlagShape, LyraFlagUrlResolver } from './flag-url-resolver.js';
-import type { LyraFlagFidelity, LyraFlagShape } from './flag-url-resolver.js';
 export { loadFlagUrl, loadBulkFlagUrl, setFlagUrlResolver } from './flag-url-resolver.js';
 const FLAG_LOAD_ERROR_KEY = 'flagLoadError' as LyraMessageKey;
 type LyraFlagSourceState =

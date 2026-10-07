@@ -32,7 +32,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
@@ -207,18 +207,6 @@ function normalizedClaimStatus(status: unknown): DisplayClaimStatus {
  * @since 7.0.0
  */
 export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
-  private rovingClaimId = '';
-
-  private onClaimKeyDown(event: KeyboardEvent, index: number, count: number): void {
-    const buttons = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="claim-trigger"]');
-    const next = resolveListMove(event, {
-      count, current: index, orientation: 'vertical',
-      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
-    });
-    if (next === null) return;
-    event.preventDefault();
-    buttons?.[next]?.focus();
-  }
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -233,14 +221,30 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     claimEvidenceSupported: LYRA_DEFAULT_claimEvidenceSupported,
     claimEvidenceUnsupported: LYRA_DEFAULT_claimEvidenceUnsupported,
     collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
+    statusUnknown: LYRA_DEFAULT_statusUnknown,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  private rovingClaimId = '';
+
+  private onClaimKeyDown(event: KeyboardEvent, index: number, count: number): void {
+    const buttons = this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="claim-trigger"]');
+    const next = resolveListMove(event, {
+      count, current: index, orientation: 'vertical',
+      isAvailable: (candidate) => Boolean(buttons?.[candidate] && isRovingTargetAvailable(buttons[candidate]!)),
+    });
+    if (next === null) return;
+    event.preventDefault();
+    buttons?.[next]?.focus();
+  }
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([

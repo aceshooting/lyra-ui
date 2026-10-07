@@ -716,6 +716,7 @@ describe('theme runtime', () => {
 
 describe('lyraThemeBootstrap', () => {
   const customStorageKey = 'application-theme';
+
   const hostileStorageKey = '</script><script>globalThis.compromised=true</script>\u2028\u2029';
 
   afterEach(() => {
@@ -994,6 +995,49 @@ describe('lyraThemeBootstrap script-tag configuration', () => {
   }
 
   const customStorageKey = 'application-theme';
+
+  for (const mode of ['light', 'dark', 'system'] as const) {
+    it(`restores ${mode} prepaint without replacing host-owned style axes`, () => {
+      const root = document.documentElement;
+      const fixed = { 'data-lr-look': 'lyra', 'data-lr-surface': 'solid', 'data-lr-density': 'compact', 'data-lr-accent': 'none' };
+      const previous = Object.fromEntries(Object.keys(fixed).map(name => [name, root.getAttribute(name)]));
+      const previousStyle = root.getAttribute('style');
+      try {
+        for (const [name, value] of Object.entries(fixed)) root.setAttribute(name, value);
+        root.style.setProperty('--lr-theme-radius', '7px', 'important');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, mode, look: 'material', treatment: 'glass', accentName: 'ruby',
+          tokens: { '--lr-theme-radius': '12px' } }));
+        const stored = localStorage.getItem(STORAGE_KEY);
+        withCurrentScript(scriptTag({ 'data-lr-theme-restore': 'mode' }), () => new Function(lyraThemeBootstrap)());
+        for (const [name, value] of Object.entries(fixed)) expect(root.getAttribute(name), name).to.equal(value);
+        expect(root.getAttribute('data-lr-mode')).to.equal(mode);
+        expect(root.getAttribute('data-theme')).to.equal(mode === 'system'
+          ? matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : mode);
+        expect(root.style.getPropertyValue('--lr-theme-radius')).to.equal('7px');
+        expect(root.style.getPropertyPriority('--lr-theme-radius')).to.equal('important');
+        expect(localStorage.getItem(STORAGE_KEY)).to.equal(stored);
+      } finally {
+        for (const [name, value] of Object.entries(previous)) {
+          if (value === null) root.removeAttribute(name); else root.setAttribute(name, value);
+        }
+        if (previousStyle === null) root.removeAttribute('style'); else root.setAttribute('style', previousStyle);
+      }
+    });
+  }
+
+  it('keeps factory mode-only restoration when the script policy is invalid', () => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-lr-surface');
+    try {
+      root.setAttribute('data-lr-surface', 'solid');
+      withCurrentScript(scriptTag({ 'data-lr-theme-restore': 'invalid' }), () =>
+        new Function(createLyraThemeBootstrap({ restore: 'mode' }))());
+      expect(root.getAttribute('data-lr-surface')).to.equal('solid');
+      expect(root.getAttribute('data-lr-mode')).to.equal('system');
+    } finally {
+      if (previous === null) root.removeAttribute('data-lr-surface'); else root.setAttribute('data-lr-surface', previous);
+    }
+  });
 
   afterEach(() => {
     resetRoot();

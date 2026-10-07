@@ -51,12 +51,12 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
  *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").

@@ -12,7 +12,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatCompleteAnnounce, LYRA_DEFAULT_chatFailedAnnounce, LYRA_DEFAULT_chatFailedToSend, LYRA_DEFAULT_chatResponding, LYRA_DEFAULT_chatSending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_collapseMessage, LYRA_DEFAULT_details, LYRA_DEFAULT_expandMessage, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_promptStudioRoleAssistant, LYRA_DEFAULT_promptStudioRoleSystem, LYRA_DEFAULT_promptStudioRoleUser, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ChatMessageRole = 'user' | 'assistant' | 'system';
@@ -173,6 +173,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     collapseMessage: LYRA_DEFAULT_collapseMessage,
     details: LYRA_DEFAULT_details,
     expandMessage: LYRA_DEFAULT_expandMessage,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,

@@ -416,6 +416,19 @@
       "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
     },
     {
+      "tag": "lr-app-rail-item",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+    },
+    {
       "tag": "lr-background-runs",
       "kind": "event",
       "name": "lr-run-open",
@@ -442,6 +455,19 @@
       "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
     },
     {
+      "tag": "lr-chunk-inspector",
+      "kind": "event",
+      "name": "lr-chunk-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+    },
+    {
       "tag": "lr-community-card",
       "kind": "event",
       "name": "lr-entity-activate",
@@ -453,6 +479,32 @@
       },
       "removalNotBefore": "28.0.0",
       "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-dock-panel",
+      "kind": "event",
+      "name": "lr-collapse-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
+    },
+    {
+      "tag": "lr-dock-panel",
+      "kind": "event",
+      "name": "lr-collapse-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle-request",
+        "usage": "@lr-toggle-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
     },
     {
       "tag": "lr-entity-dossier",
@@ -494,6 +546,19 @@
       "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-flow-node",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
+    },
+    {
       "tag": "lr-icon",
       "kind": "property",
       "name": "autoWidth",
@@ -532,6 +597,32 @@
       },
       "removalNotBefore": "28.0.0",
       "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-memory-panel",
+      "kind": "event",
+      "name": "lr-memory-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
+    },
+    {
+      "tag": "lr-navigation-menu",
+      "kind": "event",
+      "name": "lr-expanded-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
     },
     {
       "tag": "lr-path-strip",
@@ -625,6 +716,32 @@
       "rationale": "lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major."
     },
     {
+      "tag": "lr-retrieval-trace",
+      "kind": "event",
+      "name": "lr-stage-toggle",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
+    },
+    {
+      "tag": "lr-source-card",
+      "kind": "event",
+      "name": "lr-expand",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
+    },
+    {
       "tag": "lr-source-picker",
       "kind": "event",
       "name": "lr-sources-change",
@@ -664,6 +781,19 @@
       "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
     },
     {
+      "tag": "lr-tool-call-chip",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "status-icon",
+        "usage": "slot=\"status-icon\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration."
+    },
+    {
       "tag": "lr-video-playlist",
       "kind": "part",
       "name": "base",
@@ -675,6 +805,45 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-widget",
+      "kind": "event",
+      "name": "lr-collapse-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle",
+        "usage": "@lr-toggle"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+    },
+    {
+      "tag": "lr-widget",
+      "kind": "event",
+      "name": "lr-collapse-request",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-toggle-request",
+        "usage": "@lr-toggle-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
+    },
+    {
+      "tag": "lr-widget",
+      "kind": "slot",
+      "name": "icon",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "slot",
+        "name": "start",
+        "usage": "slot=\"start\""
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
     }
   ],
   "exportDeprecations": [],
@@ -27321,7 +27490,7 @@
     "current": {
       "version": "25.7.1",
       "sourceCommit": null,
-      "manifestSha256": "e2e93a62f84466624e97480e39ec36cb2d4c3ca910de006a4f49f1a934c07ff2",
+      "manifestSha256": "13c37d12c1bea5ae1a6bdcc0d78ec90d44ff58e3f4e021db85b10502f7d5d32e",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

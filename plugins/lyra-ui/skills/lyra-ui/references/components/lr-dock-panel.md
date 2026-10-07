@@ -7,9 +7,10 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecations** none
+- **Deprecated event** `lr-collapse-change` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event carries the same expanded detail; the older name remains emitted during migration.
+- **Deprecated event** `lr-collapse-request` since `unreleased`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration.
 - **Optional peers** none
-- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,24 +63,23 @@ resolved in the host's owner realm.
 **Events:**
 
 - `lr-resize-request` (cancelable; `detail: { extent }` is the proposed `px` CSS length string),
-  fired before a discrete keyboard step commits and before a pointer drag's final settle commits.
-  Call `preventDefault()` to reject it: a keyboard step simply does not apply, and a drag's final
-  settle snaps the panel back to the size it had before that drag gesture began. Not fired for a
-  continuous pointer drag's own intermediate ticks — checking a cancelable event on every
-  `pointermove` would make a live drag visibly stutter — only its final settle on release.
+  fired before every pointer or keyboard resize step. Call `preventDefault()` to reject that step
+  without changing the current extent.
+- `lr-resize` — frozen `detail: { extent }`, fired after each accepted step.
 - `lr-resize-input` — frozen `detail: { extent }` (a `px` CSS length string), fired for each genuine
   pointer or keyboard value transition. Fully clamped/no-op attempts emit nothing.
 - `lr-resize-change` — a fresh frozen detail snapshot, fired exactly once on genuine `pointerup`
-  after at least one value transition and the drag's `lr-resize-request` was not prevented, and
-  after each genuine keyboard step whose own `lr-resize-request` was not prevented. `pointercancel`,
+  after at least one accepted value transition, and after each genuine accepted keyboard step. `pointercancel`,
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
-- `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
+- `lr-toggle-request` (cancelable) and `lr-toggle` (accepted) are the shared disclosure pair;
+  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle.
+  `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
   built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
   unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
   (non-cancelable; `detail: { expanded }` is
-  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
-  details are fresh readonly/frozen snapshots.
+  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly)
+  remain available but are deprecated. Both details are fresh readonly/frozen snapshots.
 
 Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
 contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
@@ -87,9 +87,9 @@ is not the element it listens on. Keyboard: the arrow keys step by 16px and Home
 minimum/maximum extent, each through `lr-resize-request`; Alt, Ctrl and Meta chords are left to the
 browser. Collapsing while focus is in the content or on the handle moves focus to the collapse toggle.
 
-The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
-feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.
-Type imports likewise move from `DockPanel*` to `LyraDockPanel*`.
+`lr-resize-input` remains available for live layout feedback; `lr-resize` now provides the shared
+resize event name. Use `lr-resize-change` for persistence. Type imports move from `DockPanel*` to
+`LyraDockPanel*`.
 
 **Slots:** default — the panel's own content.
 
@@ -110,7 +110,8 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
+being dragged. `--lr-dock-panel-handle-hit-area` requests a resize target width (default
+`var(--lr-space-m)`, floored at `--lr-icon-button-size`) inside the panel's clipped edge. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
 `--lr-color-border-subtle`, `--lr-color-brand`, `--lr-color-brand-quiet`, `--lr-color-text`,
 `--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`,
 `--lr-icon-button-size`.

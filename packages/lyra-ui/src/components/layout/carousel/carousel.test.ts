@@ -897,14 +897,17 @@ it('keeps the pre-hook scroll-container hover outline when each scoped property 
   )!;
 
   const expectedWidth = resolvedInShadow(
+    el,
     'outline-width: var(--lr-border-width-thin)',
     'outline-width',
   );
   const expectedColor = resolvedInShadow(
+    el,
     'outline-color: var(--lr-color-border-strong)',
     'outline-color',
   );
   const expectedOffset = resolvedInShadow(
+    el,
     'outline-offset: var(--lr-focus-ring-offset)',
     'outline-offset',
   );

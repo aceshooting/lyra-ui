@@ -872,11 +872,11 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/retrieval/grounding-summary/grounding-summary.ts',
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
   // The searchable catalog pickers load the filter combobox on first use.
-  'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox.ts',
-  'src/components/forms/currency-picker/currency-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox.ts',
+  'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
+  'src/components/forms/currency-picker/currency-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
-  'src/components/forms/time-zone-picker/time-zone-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox.ts',
-  'src/components/forms/unit-picker/unit-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox.ts',
+  'src/components/forms/time-zone-picker/time-zone-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
+  'src/components/forms/unit-picker/unit-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   // The drilldown panel registers each category's card when the category first renders.
   'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/retrieval/entity-card/entity-card.ts',
   'src/components/layout/drilldown-panel/drilldown-panel.class.ts -> src/components/retrieval/source-card/source-card.ts',

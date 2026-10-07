@@ -903,6 +903,8 @@ called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announc
 
 ## `lr-mention-popover`
 
+The `more-results` CSS part exposes the additional-results message.
+
 Suggestion listboxes follow the [shared surface treatment](shared/styles-and-tokens.md);
 the caller-owned message field retains its fill.
 
@@ -999,7 +1001,8 @@ renders `open="false"` on first paint)
 **Slots:** none.
 
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
-`option-description` (when `description` is set), `empty`
+`option-description` (when `description` is set), `empty`, `more-results` (the localized count
+shown when more suggestions match than the list renders).
 
 **Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`

@@ -38,6 +38,7 @@ import {
   validateBundleBudgetPolicy,
 } from "./bundle-budget-policy.mjs";
 import { positiveInitialMarginalGzipBytes } from "./bundle-metrics.mjs";
+import { bundleInitialRoute as measureInitialRoute } from "./bundle-initial-entry.mjs";
 import { bundleCssMeasurement } from "./bundle-css-entry.mjs";
 import {
   cssBudgetFinding,
@@ -322,59 +323,6 @@ const bundleEntry = async (entry) => {
   return result.outputFiles[0].contents;
 };
 
-// Measures only the entry chunk and its transitively static imports. A first-open dynamic import
-// remains in the separately guarded no-splitting total above, but is deliberately absent from this
-// initial-route number -- exactly how a production code-splitting consumer pays for it.
-const bundleInitialRoute = async (name, imports) => {
-  const sourceFile = `bundle-initial-${name}.js`;
-  const result = await esbuild.build({
-    stdin: {
-      contents: imports.map((entry) => `import ${JSON.stringify(`./${entry}`)};`).join("\n"),
-      resolveDir: packageDir,
-      sourcefile: sourceFile,
-    },
-    bundle: true,
-    splitting: true,
-    format: "esm",
-    minify: true,
-    write: false,
-    outdir: ".bundle-initial",
-    metafile: true,
-    external,
-    absWorkingDir: packageDir,
-    logLevel: "silent",
-  });
-  const entryOutput = Object.entries(result.metafile.outputs).find(
-    ([, output]) => output.entryPoint === sourceFile
-  )?.[0];
-  if (!entryOutput) throw new Error(`${name}: splitting-aware bundle emitted no entry output`);
-
-  const pending = [entryOutput];
-  const initialOutputs = new Set();
-  while (pending.length > 0) {
-    const outputPath = pending.pop();
-    if (!outputPath || initialOutputs.has(outputPath)) continue;
-    initialOutputs.add(outputPath);
-    const output = result.metafile.outputs[outputPath];
-    if (!output) throw new Error(`${name}: missing metafile output ${outputPath}`);
-    for (const imported of output.imports) {
-      if (imported.external || imported.kind === "dynamic-import") continue;
-      pending.push(imported.path);
-    }
-  }
-
-  const filesByPath = new Map(
-    result.outputFiles.map((file) => [resolve(file.path), file.contents])
-  );
-  let gzipBytes = 0;
-  for (const outputPath of initialOutputs) {
-    const contents = filesByPath.get(resolve(packageDir, outputPath));
-    if (!contents) throw new Error(`${name}: no emitted bytes for ${outputPath}`);
-    gzipBytes += gzipBytesOf(contents);
-  }
-  return { gzipBytes, outputCount: initialOutputs.size };
-};
-
 // Level 9 approximates the static-hosting gzip a consumer actually ships. zlib patch releases can
 // vary these live counts slightly even when esbuild emits identical bytes, so each exact reviewed
 // measurement receives at most 4% whole-byte headroom. Published aggregate stats below use a wider
@@ -457,6 +405,8 @@ if (exclusionClaimsOnly) {
       if (finding) errors.push(`${line} -- ${finding}`);
       else console.log(line);
     }
+    const bundleInitialRoute = (name, imports, preserveExports = false) =>
+      measureInitialRoute(esbuild, packageDir, external, name, imports, preserveExports);
     const initialBaseline = await bundleInitialRoute("baseline", initialBaselineEntries);
     const initialMeasurements = [];
     for (const entry of Object.keys(initialMarginalBudgets).sort()) {
@@ -480,7 +430,8 @@ if (exclusionClaimsOnly) {
     for (const entry of [...new Set([...requiredInitialRouteEntries, ...Object.keys(initialRouteBudgets)])].sort()) {
       const route = await bundleInitialRoute(
         `route-${entry.replaceAll(/[^a-z0-9]+/giu, "-")}`,
-        [entry]
+        [entry],
+        true
       );
       initialRouteMeasurements.push({ entry, gzipBytes: route.gzipBytes, outputCount: route.outputCount });
     }

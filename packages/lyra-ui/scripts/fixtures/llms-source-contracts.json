@@ -1197,6 +1197,7 @@
         "src/components/agent-tools/agent-run/agent-run.class.ts",
         "src/components/agent-tools/agent-run/agent-run.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/agent-workspace/agent-workspace-register.ts",
         "src/components/conversation/agent-workspace/agent-workspace.class.ts",
         "src/components/conversation/agent-workspace/agent-workspace.ts",
         "src/components/conversation/index.ts",
@@ -1476,7 +1477,7 @@
       "module": "src/components/agent-tools/commit-card/commit-card.class.ts",
       "exportName": "CommitFileChange",
       "kind": "interface",
-      "fingerprint": "5204cfa715d58fcc799d",
+      "fingerprint": "9917784533c4280d2a88",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/commit-card/commit-card.class.ts",
@@ -1526,6 +1527,7 @@
         "src/components/agent-tools/context-inspector/context-inspector.class.ts",
         "src/components/agent-tools/context-inspector/context-inspector.ts",
         "src/components/agent-tools/index.ts",
+        "src/components/conversation/agent-workspace/agent-workspace-register.ts",
         "src/components/conversation/agent-workspace/agent-workspace.class.ts",
         "src/components/conversation/agent-workspace/agent-workspace.ts",
         "src/components/conversation/index.ts",
@@ -1571,6 +1573,7 @@
       "fingerprint": "72cfc3e88043c61fe2ce",
       "routes": [
         "src/all.ts",
+        "src/components/agent-tools/eval-result/eval-result-register.ts",
         "src/components/agent-tools/eval-result/eval-result.class.ts",
         "src/components/agent-tools/eval-result/eval-result.ts",
         "src/components/agent-tools/index.ts",
@@ -2221,7 +2224,7 @@
       }
     },
     {
-      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "module": "src/components/agent-tools/test-results/test-results-slots.ts",
       "exportName": "testResultDetailSlotName",
       "kind": "function",
       "fingerprint": "67c142cadcecd339e36a",
@@ -2627,6 +2630,7 @@
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
         "src/components/agent-tools/tool-timeline/tool-timeline.ts",
+        "src/components/conversation/agent-workspace/agent-workspace-register.ts",
         "src/components/conversation/agent-workspace/agent-workspace.class.ts",
         "src/components/conversation/agent-workspace/agent-workspace.ts",
         "src/components/conversation/index.ts",
@@ -2669,7 +2673,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "LyraSpan",
       "kind": "interface",
-      "fingerprint": "653b7428158364111020",
+      "fingerprint": "7cd9c7747749d41370db",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-trace/agent-trace.class.ts",
@@ -2698,7 +2702,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "LyraSpanProjection",
       "kind": "interface",
-      "fingerprint": "2c8ac86395e115a1dddf",
+      "fingerprint": "412db081a0ce01747f5e",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2742,7 +2746,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpans",
       "kind": "function",
-      "fingerprint": "f1966fa09ea52d2b443f",
+      "fingerprint": "28c45c63ee3ce63221c2",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2764,7 +2768,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpanStatus",
       "kind": "function",
-      "fingerprint": "1008d961686b9133cfa6",
+      "fingerprint": "ed7ee8f51ba393255f1d",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -3536,10 +3540,10 @@
       }
     },
     {
-      "module": "src/components/charts/chart/histogram.class.ts",
+      "module": "src/components/charts/chart/histogram-buckets.ts",
       "exportName": "binnedBuckets",
       "kind": "function",
-      "fingerprint": "bab04ba53a8f55160eb6",
+      "fingerprint": "95220c31de135c9db90d",
       "routes": [
         "src/components/charts/chart/histogram.class.ts",
         "src/components/charts/chart/histogram.ts",
@@ -3599,10 +3603,10 @@
       }
     },
     {
-      "module": "src/components/conversation/chat-composer/chat-composer.class.ts",
+      "module": "src/components/conversation/chat-composer/chat-composer-status.ts",
       "exportName": "normalizeChatComposerStatus",
       "kind": "function",
-      "fingerprint": "38ea05d596d642c94be3",
+      "fingerprint": "e321c487cf1d7ee0b1c9",
       "routes": [
         "src/components/conversation/chat-composer/chat-composer.class.ts",
         "src/components/conversation/chat-composer/chat-composer.ts",
@@ -4344,6 +4348,7 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input-register.ts",
         "src/components/conversation/prompt-input/prompt-input.class.ts",
         "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/lr-prompt-input.ts",
@@ -4366,6 +4371,7 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input-register.ts",
         "src/components/conversation/prompt-input/prompt-input.class.ts",
         "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/lr-prompt-input.ts",
@@ -4410,6 +4416,7 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input-register.ts",
         "src/components/conversation/prompt-input/prompt-input.class.ts",
         "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/conversation/prompt-queue/prompt-queue.class.ts",
@@ -4450,7 +4457,7 @@
       }
     },
     {
-      "module": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
+      "module": "src/components/conversation/streaming-text/markdown-detection.ts",
       "exportName": "looksLikeMarkdown",
       "kind": "function",
       "fingerprint": "84deb07cb3881c45c646",
@@ -4592,6 +4599,7 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input-register.ts",
         "src/components/conversation/prompt-input/prompt-input.class.ts",
         "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/conversation/voice-picker/voice-picker.class.ts",
@@ -4878,6 +4886,7 @@
       "fingerprint": "b9097bcb83c66e0ef8cb",
       "routes": [
         "src/all.ts",
+        "src/components/data/condition-builder/condition-builder-register.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
         "src/components/data/condition-builder/condition-builder.ts",
         "src/components/data/index.ts",
@@ -4900,6 +4909,7 @@
       "fingerprint": "adaf384ca0ac6aa486b6",
       "routes": [
         "src/all.ts",
+        "src/components/data/condition-builder/condition-builder-register.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
         "src/components/data/condition-builder/condition-builder.ts",
         "src/components/data/index.ts",
@@ -4922,6 +4932,7 @@
       "fingerprint": "48135b0da86d893f6fd3",
       "routes": [
         "src/all.ts",
+        "src/components/data/condition-builder/condition-builder-register.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
         "src/components/data/condition-builder/condition-builder.ts",
         "src/components/data/index.ts",
@@ -4944,6 +4955,7 @@
       "fingerprint": "9d55dc09ae9c19ef5bf4",
       "routes": [
         "src/all.ts",
+        "src/components/data/condition-builder/condition-builder-register.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
         "src/components/data/condition-builder/condition-builder.ts",
         "src/components/data/index.ts",
@@ -4966,6 +4978,7 @@
       "fingerprint": "9932d8ae6ec62994681f",
       "routes": [
         "src/all.ts",
+        "src/components/data/condition-builder/condition-builder-register.ts",
         "src/components/data/condition-builder/condition-builder.class.ts",
         "src/components/data/condition-builder/condition-builder.ts",
         "src/components/data/index.ts",
@@ -5711,7 +5724,7 @@
       "module": "src/components/data/file-tree/file-tree.class.ts",
       "exportName": "FileTreeNode",
       "kind": "interface",
-      "fingerprint": "43e0ae7ffa1a85aa4f30",
+      "fingerprint": "cbbf21039b9ad818ab13",
       "routes": [
         "src/all.ts",
         "src/components/data/file-tree/file-tree.class.ts",
@@ -6343,7 +6356,7 @@
       }
     },
     {
-      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "module": "src/components/data/heatmap/heatmap-colors.ts",
       "exportName": "hexToRgb",
       "kind": "function",
       "fingerprint": "787a466ced1d0cfb32ab",
@@ -6384,7 +6397,7 @@
       }
     },
     {
-      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "module": "src/components/data/heatmap/heatmap-limits.ts",
       "exportName": "normalizeBucketCount",
       "kind": "function",
       "fingerprint": "1177762e469d454fc0eb",
@@ -6403,7 +6416,7 @@
       }
     },
     {
-      "module": "src/components/data/heatmap/heatmap.class.ts",
+      "module": "src/components/data/heatmap/heatmap-colors.ts",
       "exportName": "resolveRgb",
       "kind": "function",
       "fingerprint": "9b5cabb75d82f8653ad8",
@@ -7472,10 +7485,10 @@
       }
     },
     {
-      "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "module": "src/components/layout/app-rail/app-rail-mode.ts",
       "exportName": "computeAppRailMode",
       "kind": "function",
-      "fingerprint": "57e50e39d8a48d67cd67",
+      "fingerprint": "f284f293e5c7b0b2d3bd",
       "routes": [
         "src/all.ts",
         "src/components/layout/app-rail/app-rail.class.ts",
@@ -7497,7 +7510,7 @@
       "module": "src/components/layout/app-rail/app-rail.class.ts",
       "exportName": "LyraAppRailModeChangeDetail",
       "kind": "interface",
-      "fingerprint": "5119c398c09e8341c2f3",
+      "fingerprint": "724eb96aa40079e70991",
       "routes": [
         "src/all.ts",
         "src/components/layout/app-rail/app-rail.class.ts",
@@ -7588,6 +7601,7 @@
       "fingerprint": "6bd9910c01003c66c305",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
@@ -7610,6 +7624,7 @@
       "fingerprint": "ff343f8ff6e2c59dcd43",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
@@ -7632,6 +7647,7 @@
       "fingerprint": "1d025303002629b1260b",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
@@ -7654,6 +7670,7 @@
       "fingerprint": "e64337895cd14a026726",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
@@ -7676,6 +7693,7 @@
       "fingerprint": "c6399f30685bea3c0c3d",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
         "src/components/lr-dashboard-grid.ts",
@@ -7697,6 +7715,7 @@
       "fingerprint": "5a72116f106bf31106c0",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
         "src/components/lr-dashboard-grid.ts",
@@ -7718,6 +7737,7 @@
       "fingerprint": "8dab8310c77c8f46ecce",
       "routes": [
         "src/all.ts",
+        "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
         "src/components/layout/dashboard-grid/dashboard-grid.ts",
         "src/components/layout/index.ts",
         "src/components/lr-dashboard-grid.ts",
@@ -8697,7 +8717,7 @@
       "module": "src/components/layout/responsive-panel/responsive-panel.class.ts",
       "exportName": "LyraResponsivePanelModeChangeDetail",
       "kind": "interface",
-      "fingerprint": "a61225800547f969a6cc",
+      "fingerprint": "196a09ca3bd8903540e6",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -8716,10 +8736,10 @@
       }
     },
     {
-      "module": "src/components/layout/responsive-panel/responsive-panel.class.ts",
+      "module": "src/components/layout/responsive-panel/responsive-panel-mode.ts",
       "exportName": "resolveResponsivePanelEffectiveMode",
       "kind": "function",
-      "fingerprint": "3b0817cb5a43ffa5deba",
+      "fingerprint": "6b94f58f3c78ba49ae9c",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -8782,7 +8802,7 @@
       }
     },
     {
-      "module": "src/components/layout/split-panel/split-panel.class.ts",
+      "module": "src/components/layout/split-panel/split-panel-snap.ts",
       "exportName": "LyraSplitPanelSnapFunctionParams",
       "kind": "interface",
       "fingerprint": "9d4047fe10344c75505b",
@@ -8804,10 +8824,10 @@
       }
     },
     {
-      "module": "src/components/layout/split-panel/split-panel.class.ts",
+      "module": "src/components/layout/split-panel/split-panel-snap.ts",
       "exportName": "SNAP_NONE",
       "kind": "function",
-      "fingerprint": "92123c7fffa387840d33",
+      "fingerprint": "43a3291af5faf5c6ee26",
       "routes": [
         "src/all.ts",
         "src/components/layout/index.ts",
@@ -9544,7 +9564,7 @@
       "module": "src/components/media/flag/flag-peer-bulk-standard.ts",
       "exportName": "registerLyraFlagStandardBulkPeer",
       "kind": "function",
-      "fingerprint": "3523e5f67318f635004c",
+      "fingerprint": "777d0bea2cfd6ae81dda",
       "routes": [
         "src/components/media/flag/flag-peer-bulk-standard.ts"
       ],
@@ -9560,7 +9580,7 @@
       "module": "src/components/media/flag/flag-peer-bulk.ts",
       "exportName": "registerLyraFlagBulkPeer",
       "kind": "function",
-      "fingerprint": "97d39b347c68df1fe95f",
+      "fingerprint": "dd3b9297148738e086ce",
       "routes": [
         "src/components/media/flag/flag-peer-bulk.ts"
       ],
@@ -9576,7 +9596,7 @@
       "module": "src/components/media/flag/flag-peer.ts",
       "exportName": "registerLyraFlagPeer",
       "kind": "function",
-      "fingerprint": "1215bb78af382efeeb77",
+      "fingerprint": "fa1ba3c7247391ae9ec0",
       "routes": [
         "src/components/media/flag/flag-peer.ts"
       ],
@@ -9589,10 +9609,10 @@
       }
     },
     {
-      "module": "src/components/media/flag/flag.class.ts",
+      "module": "src/components/media/flag/flag-url-resolver.ts",
       "exportName": "loadBulkFlagUrl",
       "kind": "function",
-      "fingerprint": "7eb18179b3be87c67edc",
+      "fingerprint": "29b0ebec903315108dcd",
       "routes": [
         "src/components/lr-flag.ts",
         "src/components/media/flag/flag.class.ts",
@@ -9608,10 +9628,10 @@
       }
     },
     {
-      "module": "src/components/media/flag/flag.class.ts",
+      "module": "src/components/media/flag/flag-url-resolver.ts",
       "exportName": "loadFlagUrl",
       "kind": "function",
-      "fingerprint": "14ff56a4d32fce6cda14",
+      "fingerprint": "1076c58ec469b6539109",
       "routes": [
         "src/components/lr-flag.ts",
         "src/components/media/flag/flag.class.ts",
@@ -9627,10 +9647,10 @@
       }
     },
     {
-      "module": "src/components/media/flag/flag.class.ts",
+      "module": "src/components/media/flag/flag-url-resolver.ts",
       "exportName": "setFlagUrlResolver",
       "kind": "function",
-      "fingerprint": "5d2b729c606184868537",
+      "fingerprint": "ad907b2bbaeaeb48df20",
       "routes": [
         "src/all.ts",
         "src/components/lr-flag.ts",
@@ -9881,10 +9901,10 @@
       }
     },
     {
-      "module": "src/components/media/map/map.class.ts",
+      "module": "src/components/media/map/map-geojson-diff.ts",
       "exportName": "buildGeoJsonPropertyDiff",
       "kind": "function",
-      "fingerprint": "c0bc8f0e1cecfd29f277",
+      "fingerprint": "a497259705a27b72b258",
       "routes": [
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
@@ -10708,7 +10728,7 @@
       }
     },
     {
-      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "module": "src/components/overlays/kbd/kbd-shortcut.ts",
       "exportName": "KbdKeyLabel",
       "kind": "interface",
       "fingerprint": "0d1dbe979f5ff2ee8eb6",
@@ -10730,10 +10750,10 @@
       }
     },
     {
-      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "module": "src/components/overlays/kbd/kbd-shortcut.ts",
       "exportName": "parseShortcut",
       "kind": "function",
-      "fingerprint": "a60a626a59f5019a6c40",
+      "fingerprint": "456037221d909cba76ca",
       "routes": [
         "src/all.ts",
         "src/components/lr-kbd.ts",
@@ -10752,10 +10772,10 @@
       }
     },
     {
-      "module": "src/components/overlays/kbd/kbd.class.ts",
+      "module": "src/components/overlays/kbd/kbd-shortcut.ts",
       "exportName": "shortcutTokenLabel",
       "kind": "function",
-      "fingerprint": "f4b0e4abf36b33c9fa32",
+      "fingerprint": "79ecf8b10458928e6d9a",
       "routes": [
         "src/all.ts",
         "src/components/lr-kbd.ts",
@@ -11782,7 +11802,7 @@
       "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
       "exportName": "RetrievalStage",
       "kind": "interface",
-      "fingerprint": "783c0da7d72f1f646019",
+      "fingerprint": "04f01a3dfce6f47017f2",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-trace.ts",
@@ -11870,7 +11890,7 @@
       "module": "src/components/retrieval/source-list/source-list.class.ts",
       "exportName": "SourceListToggleDetail",
       "kind": "interface",
-      "fingerprint": "31a2150f711535b38947",
+      "fingerprint": "06506b06602b1ca6f8f3",
       "routes": [
         "src/all.ts",
         "src/components/lr-source-list.ts",
@@ -11896,6 +11916,7 @@
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
+        "src/components/conversation/prompt-input/prompt-input-register.ts",
         "src/components/conversation/prompt-input/prompt-input.class.ts",
         "src/components/conversation/prompt-input/prompt-input.ts",
         "src/components/lr-prompt-input.ts",
@@ -13662,10 +13683,10 @@
       }
     },
     {
-      "module": "src/components/viewers/page-rail/page-rail.class.ts",
+      "module": "src/components/viewers/page-rail/page-viewer-snapshot.ts",
       "exportName": "LyraPageViewerSnapshot",
       "kind": "interface",
-      "fingerprint": "32f5e986e0fa2d8ce24c",
+      "fingerprint": "c90ec75d0e1052b6583c",
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
@@ -13687,7 +13708,7 @@
       "module": "src/components/viewers/page-rail/page-rail.class.ts",
       "exportName": "LyraPageViewerStateChangeDetail",
       "kind": "interface",
-      "fingerprint": "ff1437be00f9ed7715db",
+      "fingerprint": "426ed290d322d888b5f5",
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
@@ -13731,7 +13752,7 @@
       "module": "src/components/viewers/page-rail/page-rail.class.ts",
       "exportName": "PageThumbnailSource",
       "kind": "interface",
-      "fingerprint": "b2af8e553e1592d23d4f",
+      "fingerprint": "ea8b51910dd606053118",
       "routes": [
         "src/all.ts",
         "src/components/lr-page-rail.ts",
@@ -14040,11 +14061,17 @@
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnostic",
       "kind": "interface",
-      "fingerprint": "48de8bd3c690aaab4396",
+      "fingerprint": "98c5276401b4663658f0",
       "routes": [
         "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
         "src/components/lr-docx-viewer.ts",
         "src/components/lr-pptx-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
         "src/components/viewers/docx-viewer/docx-viewer.class.ts",
         "src/components/viewers/docx-viewer/docx-viewer.ts",
         "src/components/viewers/index.ts",
@@ -14065,11 +14092,17 @@
       "module": "src/components/viewers/viewer-diagnostics.ts",
       "exportName": "LyraViewerDiagnosticEventDetail",
       "kind": "interface",
-      "fingerprint": "f92f7bd00ec7bd165967",
+      "fingerprint": "6979380397c5ccc2da38",
       "routes": [
         "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
         "src/components/lr-docx-viewer.ts",
         "src/components/lr-pptx-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
         "src/components/viewers/docx-viewer/docx-viewer.class.ts",
         "src/components/viewers/docx-viewer/docx-viewer.ts",
         "src/components/viewers/index.ts",
@@ -14090,7 +14123,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "8dfb160e600c78cec143",
+      "fingerprint": "bc11b255cf9c9f724163",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14997,7 +15030,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "f3f0081427b07d30eaa9",
+      "fingerprint": "78946f66869de45f0cd4",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15131,7 +15164,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "f7e923609ec7e262420b",
+      "fingerprint": "b19ccf36b194945f3d8f",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15715,7 +15748,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "eaa8558d9a16fbf6f3d3",
+      "fingerprint": "09e2f247a41a3fd32f72",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15731,7 +15764,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "d4c6b917978b9f102c06",
+      "fingerprint": "48656666c116a21f6aa3",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15747,7 +15780,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "2041075b1cb870be6118",
+      "fingerprint": "6cd81218b3422d643e67",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -15946,7 +15979,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "createLyraThemeBootstrap",
       "kind": "function",
-      "fingerprint": "f18f55beb1dc02a7ec4f",
+      "fingerprint": "aa4950128d2707a871dd",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -15962,7 +15995,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraThemeBootstrapOptions",
       "kind": "interface",
-      "fingerprint": "e65e7152ac3b87f718a4",
+      "fingerprint": "68690da133e5147ea547",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -16274,7 +16307,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "f606dc384e477826dab3",
+      "fingerprint": "d7853c73b2e1af620e66",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16291,7 +16324,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "e5a90fcd7d13594d1819",
+      "fingerprint": "173489889054f40de50e",
       "routes": [
         "src/vue.ts"
       ],
@@ -16326,7 +16359,7 @@
       "module": "src/components/agent-tools/background-runs/background-runs.class.ts",
       "exportName": "BackgroundRun",
       "kind": "interface",
-      "fingerprint": "6d248272e4397fe1944f",
+      "fingerprint": "1be184c7d0eba0e151c3",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/background-runs/background-runs.class.ts",
@@ -16656,7 +16689,7 @@
       "module": "src/components/retrieval/research-progress/research-progress.class.ts",
       "exportName": "ResearchStep",
       "kind": "interface",
-      "fingerprint": "ed1aaf0ed34c123eaac6",
+      "fingerprint": "2239488625d53be9a0fb",
       "routes": [
         "src/all.ts",
         "src/components/lr-research-progress.ts",
@@ -16700,7 +16733,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "550a2ecc63576706cebf",
+      "fingerprint": "681f55ba37dae59472b5",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16725,7 +16758,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "24b0e1b0aab3ff2cd535",
+      "fingerprint": "7cb021143f8f4c0a2076",
       "routes": [
         "src/localization.ts"
       ],
@@ -17288,6 +17321,7 @@
       "fingerprint": "a8df6edddf975b7b0044",
       "routes": [
         "src/all.ts",
+        "src/components/forms/currency-picker/currency-picker-register.ts",
         "src/components/forms/currency-picker/currency-picker.class.ts",
         "src/components/forms/currency-picker/currency-picker.ts",
         "src/components/forms/index.ts",
@@ -17444,6 +17478,7 @@
       "fingerprint": "82c1db2b66c83e9cbd9e",
       "routes": [
         "src/all.ts",
+        "src/components/forms/country-picker/country-picker-register.ts",
         "src/components/forms/country-picker/country-picker.class.ts",
         "src/components/forms/country-picker/country-picker.ts",
         "src/components/forms/index.ts",
@@ -17487,6 +17522,7 @@
       "routes": [
         "src/all.ts",
         "src/components/forms/index.ts",
+        "src/components/forms/time-zone-picker/time-zone-picker-register.ts",
         "src/components/forms/time-zone-picker/time-zone-picker.class.ts",
         "src/components/forms/time-zone-picker/time-zone-picker.ts",
         "src/components/lr-time-zone-picker.ts",
@@ -17529,6 +17565,7 @@
       "routes": [
         "src/all.ts",
         "src/components/forms/index.ts",
+        "src/components/forms/unit-picker/unit-picker-register.ts",
         "src/components/forms/unit-picker/unit-picker.class.ts",
         "src/components/forms/unit-picker/unit-picker.ts",
         "src/components/lr-unit-picker.ts",
@@ -17615,6 +17652,71 @@
         "kind": "utility",
         "name": "catalog-picker-events",
         "declaration": "LyraCatalogPickerChangeDetail"
+      }
+    },
+    {
+      "module": "src/internal/deprecated-aliases.ts",
+      "exportName": "installDeprecatedAliases",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/utilities/deprecated-aliases.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-deprecated-aliases-contracts",
+        "declaration": "installDeprecatedAliases"
+      }
+    },
+    {
+      "module": "src/internal/docx-zip-admission.ts",
+      "exportName": "DocxZipEntry",
+      "kind": "interface",
+      "fingerprint": "dd56bee08ad18a34d4ee",
+      "routes": [
+        "src/internal/docx-zip-admission.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "utils-docx-zip-admission-contracts",
+        "declaration": "DocxZipEntry"
+      }
+    },
+    {
+      "module": "src/internal/docx-zip-admission.ts",
+      "exportName": "inspectDocxZip",
+      "kind": "function",
+      "fingerprint": "5c01d00a8f7012e7ede1",
+      "routes": [
+        "src/internal/docx-zip-admission.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "utils-docx-zip-admission-contracts",
+        "declaration": "inspectDocxZip"
+      }
+    },
+    {
+      "module": "src/internal/docx-zip-admission.ts",
+      "exportName": "validDocxZipName",
+      "kind": "function",
+      "fingerprint": "687853cc54e68ea2b651",
+      "routes": [
+        "src/internal/docx-zip-admission.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "utils-docx-zip-admission-contracts",
+        "declaration": "validDocxZipName"
       }
     }
   ],

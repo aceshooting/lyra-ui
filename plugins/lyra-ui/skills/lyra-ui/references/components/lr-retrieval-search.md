@@ -117,6 +117,7 @@ tokens.
   the removable chip label truncates while its remove action remains available.
 - Filter values use a cycle-aware formatter bounded to 128 visited values, six nesting levels,
   32 entries per container and 256 characters per string. Cycles use the localized invalid-value
-  sentinel and budget/depth truncation uses a stable ellipsis in both SSR and browser rendering.
+  sentinel and budget/depth truncation uses the localized `valueTruncated` sentinel in both SSR
+  and browser rendering. Accessor-backed metadata is never invoked.
 
 ---

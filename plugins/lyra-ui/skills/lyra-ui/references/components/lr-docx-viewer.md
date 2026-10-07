@@ -26,6 +26,19 @@ Converted markup then passes through the passive-document profile: anchors, form
 custom elements are unwrapped to ordinary text/children where safe, remote navigation/resource
 attributes are removed, and an `<a>` itself never remains. Images render only inline base64 GIF,
 JPEG, PNG, or WebP data; same-document SVG fragment references may remain.
+DOCX admission now shares the editor's ZIP checks: input and each expanded entry are capped at
+16 MiB, with at most 2,048 entries, 64 MiB total expansion, 250,000 XML nodes, and XML depth 128.
+The tighter entry and expansion ceilings can reject documents that this viewer previously opened.
+The shared `@aceshooting/lyra-ui/utils/docx-zip-admission.js` route exposes the ZIP metadata
+boundary to integrations that process DOCX bytes. `inspectDocxZip` checks archive structure,
+entry names, declared sizes, and the ZIP byte/count ceilings before expansion; by default it also
+requires the package content-types, relationships, and main document parts. Pass `false` for
+`requireParts` only when validating a partial ZIP independently of DOCX document admission.
+It returns entry metadata rather than expanded content. `validDocxZipName` checks one entry path;
+it does not validate an archive. Explicit admission rejections throw `DocxZipAdmissionError` with
+code `invalid-document`, `resource-limit`, or `aborted`; malformed UTF-8 may throw `TypeError`
+from the fatal decoder.
+`DOCX_ZIP_LIMITS` publishes the shared input, entry, expansion, XML, node, and depth ceilings.
 
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Duplicate

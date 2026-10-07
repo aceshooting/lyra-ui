@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 60 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,15 +55,15 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `columnOrder: readonly string[] = []` (JS-only) — empty preserves declaration order.
 - `columns: readonly DataGridColumn<Row>[] = []` (JS-only).
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
+  Flat input beyond 10,000 rows shows the localized `row-limit` notice; nested input retains its
+  `tree-limit` notice when the node or depth budget is reached.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
-- `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
-  becomes the built-in failed-load `<lr-empty>` (matching `<lr-table>`'s own `error` contract),
-  keeping the header/toolbar/pager mounted around it; `loading` beats `error` beats every
-  empty/no-columns/no-results branch. Host-controlled, like `<lr-table>`'s: the internal
-  `dataSource` request cycle's own `lr-data-error` does NOT set it (that event's contract keeps
-  prior rows rendered on a rejection), so a consumer that wants a specific rejection to replace the
-  row content sets `error = true` from its own `lr-data-error` listener.
+- `error: boolean = false` (`error`, reflected) — replaces the body row with the failed-load
+  `<lr-empty>` while keeping the header, toolbar, and pager mounted. `loading` takes precedence,
+  then `error`, then empty/no-column/no-result states. It is host-controlled: `dataSource`
+  rejections emit `lr-data-error` but retain prior rows. Set `error = true` in that listener if a
+  rejection should replace them.
 - `errorHeading?: string` (`error-heading`) — failed-load heading override. Omitted localizes
   `<lr-table>`'s own `tableLoadFailed` default.
 - `errorDescription: string = ''` (`error-description`) — failed-load supporting copy.
@@ -104,12 +104,9 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `selectedKeys` spelling remains a compatibility alias for this same state.
 - `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
   maps them to `selectedRowKeys`; detached rows are ignored and single-selection mode keeps the first.
-- `selectionMode: 'none' | 'single' | 'multiple'` (`selection-mode`) — alias of `selectable` using
-  `<lr-table>`'s `selectionMode`/`selection-mode` spelling for the same row-selection concept, so a
-  consumer migrating between the two grid components doesn't need to remember two names.
-  `selectable` remains canonical (mirrored from `wa-data-grid`); this alias reads and writes
-  `selectable` directly, so there is no separate value to fall out of sync, and the bare `''`
-  shorthand for `selectable`'s own `multiple` normalizes to `'multiple'` when read back through it.
+- `selectionMode: 'none' | 'single' | 'multiple'` (`selection-mode`) — `<lr-table>` spelling
+  for `selectable`; both names read and write the same state, so they cannot drift. `selectable`
+  remains canonical to mirror `wa-data-grid`; its bare `''` value reads as `'multiple'` here.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
@@ -129,10 +126,9 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 action column: its formatter receives `undefined`, and it is not sorted or searched by default.
 An omitted or explicitly blank (or whitespace-only) `label` both render the same humanized
 `field`/`id` fallback for the header cell — only a non-blank `label` overrides it.
-`cellTitle(row) => string | undefined` renders as the generated cell's native `title`, symmetrical
-with `<lr-table>`'s `columns[].cellTitle` — e.g. the untruncated text behind an ellipsized cell, or
-a formatted timestamp behind a relative one. Returning `undefined` or `''` omits the `title`
-attribute entirely rather than rendering `title=""`, which would suppress an ancestor's own tooltip.
+`cellTitle(row) => string | undefined` mirrors `<lr-table>`'s `columns[].cellTitle`, setting the
+native `title` for ellipsized text or a timestamp behind relative text. Returning `undefined` or
+`''` omits `title`, preserving an ancestor's tooltip.
 
 Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
 `textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
@@ -205,7 +201,8 @@ sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the
 Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
 descendants keep their own keys.
 
-**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` (canonical `rowKey`/
+**Events:** `lr-request` followed by `request` for a server-data request (each carries sort,
+filters, search, page, page size, and an abort signal); `lr-cell-click` and cancelable `lr-cell-contextmenu` (canonical `rowKey`/
 `columnId` plus row, column, value, and display index; vetoing the latter suppresses the native menu);
 `lr-column-move`, `lr-column-pin`, `lr-column-visibility-change`; `lr-column-resize`
 (`detail: { columnId, columnKey, width, finished }`; `columnKey` mirrors the table's name for the
@@ -260,7 +257,7 @@ glyph the component resets; rendered only while it has a value), `first-button`,
 and `search-clear`), `search-clear` (clears the global row-search input, replacing the native
 search-cancel glyph the component resets; rendered only while it has a value),
 `select-all-checkbox`, `sort-indicator`,
-`sort-number`, `table`, `toolbar`, `tree-limit`.
+`sort-number`, `table`, `toolbar`, `row-limit`, `tree-limit`.
 
 Each per-column disclosure opens an honestly named native-control `group`, not a false ARIA menu:
 its buttons have localized pin-to-start, pin-to-end, and unpin names; its visibility toggle has one

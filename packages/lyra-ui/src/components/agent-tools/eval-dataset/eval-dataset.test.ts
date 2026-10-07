@@ -4,7 +4,7 @@ import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
@@ -734,6 +734,31 @@ it('applies a consumer ::part(add-button):hover override in the rendered cascade
     expect(getComputedStyle(add).borderTopColor).to.equal('rgb(1, 2, 3)');
   } finally {
     await resetMouse();
+  }
+});
+
+it('deepens the Add and Remove borders while pressed', async () => {
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset .examples=${examples()}></lr-eval-dataset>
+  `);
+  const table = el.shadowRoot!.querySelector<LyraTable<EvalExample>>('lr-table')!;
+  table.shadowRoot!.querySelector<HTMLElement>('tbody tr[part="row"]')!.click();
+  await el.updateComplete;
+  for (const part of ['add-button', 'remove-button']) {
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!;
+    expect(button.disabled).to.equal(false);
+    button.style.transition = 'none';
+    try {
+      await hoverUntilMatched(button, `${part} never reached hover`);
+      const hovered = getComputedStyle(button).borderTopColor;
+      await sendMouse({ type: 'down', button: 'left' });
+      await waitUntil(
+        () => button.matches(':active') && getComputedStyle(button).borderTopColor !== hovered,
+        `${part} never painted a distinct pressed border`,
+      );
+    } finally {
+      await resetMouse();
+    }
   }
 });
 

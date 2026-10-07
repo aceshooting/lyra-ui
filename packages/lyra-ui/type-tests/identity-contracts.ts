@@ -204,6 +204,8 @@ const nodeActivation: LyraFlowCanvasEventMap['lr-node-activate']['detail'] = { n
 const legacyNodeActivation: LyraFlowCanvasEventMap['lr-node-activate']['detail'] = { id: 'node-a' };
 const edgeActivation: LyraFlowCanvasEventMap['lr-edge-activate']['detail'] = {
   edgeId: 'edge-a',
+  sourceNodeId: 'node-a',
+  targetNodeId: 'node-b',
   source: 'node-a',
   target: 'node-b',
 };

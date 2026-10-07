@@ -40,12 +40,12 @@ import {
 import { composedParentElement } from '../../../internal/active-element.js';
 import { measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
-installFormControlLabelSupport();
-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+installFormControlLabelSupport();
 
 export interface LyraRadioGroupEventMap {
   input: Event;

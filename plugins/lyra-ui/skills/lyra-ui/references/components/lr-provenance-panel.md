@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,8 +39,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
   label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
 
-**Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
-`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
+**Events:** `lr-toggle` carries `{ section, expanded }` for a section header or
+`{ section: 'chunks', expanded, itemId }` for an embedded chunk disclosure;
+`section` is `'entities' | 'relationships' | 'communities' | 'chunks'`. The panel
+re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
 part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
 entity chip, a community card member or a path-strip node — only the path strip carries
@@ -54,7 +56,8 @@ edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-c
 **Slots:** none.
 
 **CSS parts:** `base`, `section`, `header` (a section's disclosure `<button>`), `count` (a section's
-item-count badge), `body` (`hidden` while collapsed), `entity-row` (the wrapping row of entity chips
+full item-count badge), `body` (stable `aria-controls` target; heavy rows mount only while expanded),
+`limit` (localized notice above 500 rows per section), `entity-row` (the wrapping row of entity chips
 inside the entities section), `empty` (shown when every section is empty).
 
 **Themeable custom properties:** `--lr-provenance-panel-entity-justify` (default `flex-start`) —

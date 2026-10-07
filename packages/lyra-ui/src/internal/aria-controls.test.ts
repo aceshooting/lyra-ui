@@ -12,6 +12,15 @@ import {
 } from './aria-controls.js';
 import { resolveIdReferencesIn } from './aria-reflection.js';
 
+function controllerHost(onAdd: (controller: ReactiveController) => void): HTMLElement & ReactiveControllerHost {
+  return Object.assign(document.createElement('div'), {
+    addController: onAdd,
+    removeController: (_controller: ReactiveController) => undefined,
+    requestUpdate: () => undefined,
+    updateComplete: Promise.resolve(true),
+  });
+}
+
 type Reflected = HTMLElement & {
   ariaDescribedByElements?: Element[] | null;
   ariaLabelledByElements?: Element[] | null;
@@ -71,10 +80,8 @@ it('syncAriaControlsElements is a no-op when no control is supplied', async () =
 
 it('retargets host descriptions and releases them with the controller lifecycle', function () {
   if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
-  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
   let controller: ReactiveController | undefined;
-  host.addController = (value) => { controller = value; };
-  host.removeController = () => undefined;
+  const host = controllerHost((value) => { controller = value; });
   const help = document.createElement('span');
   help.id = 'host-description-controller-help';
   const first = document.createElement('button');
@@ -105,10 +112,8 @@ it('retargets host descriptions and releases them with the controller lifecycle'
 
 it('projects a host description added after the first render', async function () {
   if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
-  const host = document.createElement('div') as HTMLElement & ReactiveControllerHost;
   let controller: ReactiveController | undefined;
-  host.addController = (value) => { controller = value; };
-  host.removeController = () => undefined;
+  const host = controllerHost((value) => { controller = value; });
   const help = document.createElement('span');
   help.id = 'late-host-description-help';
   const target = document.createElement('button');

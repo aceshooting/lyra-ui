@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tree-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -83,7 +83,9 @@ deeply-nested node's own shadow root still reaches it).
   Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
-  was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
+  was omitted or the inspected-position ceiling was reached. When more than 1,000 valid nodes are
+  supplied, the localized `limit` part reports the retained-node cap; malformed input alone does
+  not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
@@ -172,7 +174,8 @@ the items `<lr-tree>` generates. `expand-icon` and `collapse-icon` provide tree-
 icons; an item-level slot with the same name takes precedence.
 
 **CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
-empty-state message shown when neither child model has any items.
+empty-state message shown when neither child model has any items; `limit` is the localized
+retained-node cap notice when more than 1,000 valid nodes are supplied.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,

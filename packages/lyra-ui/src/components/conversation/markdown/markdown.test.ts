@@ -8,7 +8,6 @@ import {
   oneEvent,
   aTimeout,
 } from "@open-wc/testing";
-import { sendKeys } from "@web/test-runner-commands";
 import "./markdown.js";
 import type { LyraMarkdown, MarkdownHeadingItem } from "./markdown.js";
 import { LyraMarkdown as LyraMarkdownClass } from "./markdown.class.js";

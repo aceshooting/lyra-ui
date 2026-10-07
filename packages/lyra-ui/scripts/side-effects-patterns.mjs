@@ -7,3 +7,14 @@ export function sideEffectsCover(entries, file) {
   if (/^\.\/dist\/components\/lr-[^/]+\.js$/u.test(file) && entries.has('./dist/components/lr-*.js')) return true;
   return false;
 }
+
+/** A declared glob must still cover a file in the source tree. */
+export function sideEffectPatternHasSource(pattern, sourceEntries) {
+  const declaration = new Set([pattern]);
+  return sourceEntries.some((sourceEntry) => {
+    const candidate = pattern.startsWith('./dist/')
+      ? sourceEntry.replace(/^\.\/src\//u, './dist/').replace(/\.ts$/u, '.js')
+      : sourceEntry;
+    return sideEffectsCover(declaration, candidate);
+  });
+}

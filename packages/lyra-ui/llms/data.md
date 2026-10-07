@@ -321,13 +321,11 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   `tree-limit` notice when the node or depth budget is reached.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
-- `error: boolean = false` (`error`, reflected) — reports a failed load. The body's single row
-  becomes the built-in failed-load `<lr-empty>` (matching `<lr-table>`'s own `error` contract),
-  keeping the header/toolbar/pager mounted around it; `loading` beats `error` beats every
-  empty/no-columns/no-results branch. Host-controlled, like `<lr-table>`'s: the internal
-  `dataSource` request cycle's own `lr-data-error` does NOT set it (that event's contract keeps
-  prior rows rendered on a rejection), so a consumer that wants a specific rejection to replace the
-  row content sets `error = true` from its own `lr-data-error` listener.
+- `error: boolean = false` (`error`, reflected) — replaces the body row with the failed-load
+  `<lr-empty>` while keeping the header, toolbar, and pager mounted. `loading` takes precedence,
+  then `error`, then empty/no-column/no-result states. It is host-controlled: `dataSource`
+  rejections emit `lr-data-error` but retain prior rows. Set `error = true` in that listener if a
+  rejection should replace them.
 - `errorHeading?: string` (`error-heading`) — failed-load heading override. Omitted localizes
   `<lr-table>`'s own `tableLoadFailed` default.
 - `errorDescription: string = ''` (`error-description`) — failed-load supporting copy.
@@ -368,12 +366,9 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `selectedKeys` spelling remains a compatibility alias for this same state.
 - `selectedRows: readonly Row[]` (writable, JS-only) — assigning rows that belong to the current source
   maps them to `selectedRowKeys`; detached rows are ignored and single-selection mode keeps the first.
-- `selectionMode: 'none' | 'single' | 'multiple'` (`selection-mode`) — alias of `selectable` using
-  `<lr-table>`'s `selectionMode`/`selection-mode` spelling for the same row-selection concept, so a
-  consumer migrating between the two grid components doesn't need to remember two names.
-  `selectable` remains canonical (mirrored from `wa-data-grid`); this alias reads and writes
-  `selectable` directly, so there is no separate value to fall out of sync, and the bare `''`
-  shorthand for `selectable`'s own `multiple` normalizes to `'multiple'` when read back through it.
+- `selectionMode: 'none' | 'single' | 'multiple'` (`selection-mode`) — `<lr-table>` spelling
+  for `selectable`; both names read and write the same state, so they cannot drift. `selectable`
+  remains canonical to mirror `wa-data-grid`; its bare `''` value reads as `'multiple'` here.
 - `server: boolean = false` (`server`, reflected).
 - `size: 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (`size`, reflected).
 - `sort: readonly Array<{ readonly id: string; readonly desc: boolean }> = []` (JS-only).
@@ -393,10 +388,9 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 action column: its formatter receives `undefined`, and it is not sorted or searched by default.
 An omitted or explicitly blank (or whitespace-only) `label` both render the same humanized
 `field`/`id` fallback for the header cell — only a non-blank `label` overrides it.
-`cellTitle(row) => string | undefined` renders as the generated cell's native `title`, symmetrical
-with `<lr-table>`'s `columns[].cellTitle` — e.g. the untruncated text behind an ellipsized cell, or
-a formatted timestamp behind a relative one. Returning `undefined` or `''` omits the `title`
-attribute entirely rather than rendering `title=""`, which would suppress an ancestor's own tooltip.
+`cellTitle(row) => string | undefined` mirrors `<lr-table>`'s `columns[].cellTitle`, setting the
+native `title` for ellipsized text or a timestamp behind relative text. Returning `undefined` or
+`''` omits `title`, preserving an ancestor's tooltip.
 
 Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
 `textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
@@ -676,16 +670,12 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   otherwise-ascending table (e.g. a "last updated" column) the opposite starting direction.
   Re-activating a column that is already `sortKey` still only toggles between `'asc'` and `'desc'`,
   exactly as the element-level `defaultSortDir` already does;
-  `priority` progressively hides that column once `[part='base']`'s content actually overflows it —
-  `'low'` hides first, and `'medium'` hides too if the table would still overflow with just `'low'`
-  gone — measured via the same `ResizeObserver`-driven overflow check `scroll-mode="auto"` uses, never
-  at a fixed container width (there is deliberately no themeable-token form of this: a `@container`
-  query, which is what a token-driven threshold would need, can only ever read ancestor inline-size,
-  never a measured overflow amount), reversible via
-  `[part='reveal-columns-button']`; `sticky` pins that column's header/cells to the logical start or
-  end edge while the table scrolls horizontally — multiple sticky columns stack
-  in logical order (each measures every earlier sticky column's rendered width via
-  `--lr-table-sticky-offset`) instead of overlapping at the same edge. A sticky body cell's
+  `priority` hides a column when its `[part='base']` content overflows: `'low'` hides first,
+  then `'medium'` if overflow remains. It uses the `ResizeObserver` check from
+  `scroll-mode="auto"`, adapts to actual overflow rather than a fixed token threshold, and can be
+  reversed with `[part='reveal-columns-button']`; `sticky` pins headers/cells to the logical start
+  or end while scrolling. Sticky columns stack in logical order using
+  `--lr-table-sticky-offset` rather than overlap. A sticky body cell's
   background always matches its own row's effective fill — striped, selected, hovered, or pressed —
   rather than painting a flat opaque surface over that state; a sticky header cell is unaffected
   (headers are never striped/selected) and keeps its plain surface fill, see
@@ -2840,8 +2830,7 @@ deeply-nested node's own shadow root still reaches it).
   was omitted or the inspected-position ceiling was reached. When more than 1,000 valid nodes are
   supplied, the localized `limit` part reports the retained-node cap; malformed input alone does
   not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
-  children while `aria-setsize` preserves the declared sibling count. The `limit` CSS part is the
-  localized retained-node cap notice when more than 1,000 valid nodes are supplied. `LyraTreeNodeData` is
+  children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
   `{ readonly id: string; readonly label: string; readonly children?: readonly LyraTreeNodeData[];
 readonly selected?: boolean; readonly disabled?: boolean; readonly lazy?: boolean; readonly
 badges?: readonly TreeBadge[]; readonly icon?: unknown; readonly description?: string; readonly
@@ -2929,7 +2918,8 @@ the items `<lr-tree>` generates. `expand-icon` and `collapse-icon` provide tree-
 icons; an item-level slot with the same name takes precedence.
 
 **CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
-empty-state message shown when neither child model has any items.
+empty-state message shown when neither child model has any items; `limit` is the localized
+retained-node cap notice when more than 1,000 valid nodes are supplied.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,

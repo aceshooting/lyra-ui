@@ -22,10 +22,18 @@ const serializedFunctions = new Map([
 ]);
 
 // The public export names survive identifier minification; local variable/function names do not.
-// Restore only the reviewed zero-argument initializer after resolving both public bindings.
-const pureInitializers = new Map([['theme/theme.js', [
-  { exported: 'lyraThemeBootstrap', callee: 'createLyraThemeBootstrap' },
-]]]);
+// Restore only reviewed zero-argument calls and exact inert object freezes.
+const pureInitializers = new Map([
+  ['theme/theme.js', [{ exported: 'lyraThemeBootstrap', callee: 'createLyraThemeBootstrap' }]],
+  ['internal/collection-snapshot.js', [
+    { exported: 'collectionSupport', frozenProperties: [
+      ['installProperties', 'installOwnedCollectionAccessors'], ['snapshotEvent', 'snapshotEnrolledEventDetail'],
+    ] },
+    { exported: 'eventCollectionSupport', frozenProperties: [
+      ['installProperties', null], ['snapshotEvent', 'snapshotEnrolledEventDetail'],
+    ] },
+  ]],
+]);
 
 function exportedBindings(program) {
   const bindings = new Map();
@@ -42,6 +50,29 @@ function exportedBindings(program) {
   return bindings;
 }
 
+function isReviewedFrozenObject(initializer, properties, program) {
+  const callee = initializer.callee;
+  if (callee.type !== 'MemberExpression' || callee.computed || callee.optional ||
+    callee.object.type !== 'Identifier' || callee.object.name !== 'Object' ||
+    callee.property.type !== 'Identifier' || callee.property.name !== 'freeze' ||
+    initializer.arguments.length !== 1) return false;
+  const object = initializer.arguments[0];
+  if (object.type !== 'ObjectExpression' || object.properties.length !== properties.length) return false;
+  // Only an unshadowed built-in and the exact reviewed function declarations are inert here.
+  const declarations = program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node);
+  if (program.body.some(node => node.type === 'ImportDeclaration' && node.specifiers.some(specifier => specifier.local.name === 'Object')) ||
+    declarations.some(node => node?.id?.name === 'Object' || node?.declarations?.some(item => item.id.type !== 'Identifier' || item.id.name === 'Object'))) return false;
+  return properties.every(([name, binding], index) => {
+    const property = object.properties[index];
+    if (property.type !== 'Property' || property.kind !== 'init' || property.computed ||
+      property.key.type !== 'Identifier' || property.key.name !== name) return false;
+    if (binding === null) return property.method && property.value.type === 'FunctionExpression' &&
+      !property.value.async && !property.value.generator;
+    return !property.method && property.value.type === 'Identifier' && property.value.name === binding &&
+      declarations.some(node => node?.type === 'FunctionDeclaration' && node.id.name === binding);
+  });
+}
+
 function restorePureAnnotations(code, relativePath) {
   const inventory = pureInitializers.get(relativePath.split(path.sep).join('/'));
   if (!inventory) return code;
@@ -51,12 +82,13 @@ function restorePureAnnotations(code, relativePath) {
   const declarations = parsed.program.body.flatMap(node =>
     (node.type === 'ExportNamedDeclaration' ? node.declaration : node)?.declarations ?? []);
   const positions = [];
-  for (const { exported, callee } of inventory) {
+  for (const { exported, callee, frozenProperties } of inventory) {
     const matches = declarations.filter(node => node.id.type === 'Identifier' && node.id.name === bindings.get(exported));
     const initializer = matches[0]?.init;
     if (matches.length !== 1 || initializer?.type !== 'CallExpression' || initializer.optional ||
-      initializer.callee.type !== 'Identifier' || !bindings.has(callee) ||
-      initializer.callee.name !== bindings.get(callee) || initializer.arguments.length !== 0) {
+      (frozenProperties ? !isReviewedFrozenObject(initializer, frozenProperties, parsed.program) :
+        initializer.callee.type !== 'Identifier' || !bindings.has(callee) ||
+        initializer.callee.name !== bindings.get(callee) || initializer.arguments.length !== 0)) {
       throw new Error(`${relativePath}: pure initializer inventory changed`);
     }
     positions.push(initializer.start);
@@ -72,25 +104,8 @@ async function compactSerializedFunctions(source, relativePath) {
   if (!names) return source;
   const parsed = parseSync(relativePath, source);
   if (parsed.errors.length) throw new Error(`${relativePath}: cannot parse serialized bootstrap functions`);
-  const functions = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
-    .filter(node => node?.type === 'FunctionDeclaration');
-  const bindings = exportedBindings(parsed.program);
-  // A repeated pass sees esbuild's short local names and its keepNames calls. Those calls retain
-  // each original function name, including private serialized functions with no public export.
-  for (const node of parsed.program.body) {
-    const call = node.type === 'ExpressionStatement' ? node.expression : null;
-    if (call?.type !== 'CallExpression' || call.arguments.length !== 2) continue;
-    const [binding, name] = call.arguments;
-    if (binding.type === 'Identifier' && typeof name.value === 'string' && names.has(name.value) &&
-      functions.some(declaration => declaration.id?.name === binding.name)) {
-      if (bindings.has(name.value) && bindings.get(name.value) !== binding.name) {
-        throw new Error(`${relativePath}: ambiguous serialized bootstrap function`);
-      }
-      bindings.set(name.value, binding.name);
-    }
-  }
-  const declarations = functions.filter(node =>
-    names.has(node.id?.name) || [...names].some(name => bindings.get(name) === node.id?.name));
+  const declarations = parsed.program.body.map(node => node.type === 'ExportNamedDeclaration' ? node.declaration : node)
+    .filter(node => node?.type === 'FunctionDeclaration' && names.has(node.id?.name));
   if (declarations.length !== names.size) throw new Error(`${relativePath}: serialized bootstrap function inventory changed`);
   for (const declaration of declarations.reverse()) {
     const compact = await esbuild.transform(source.slice(declaration.start, declaration.end), {
@@ -113,7 +128,8 @@ async function javascriptFiles(directory) {
 }
 
 /** Compacts shipped JavaScript while preserving exported bindings and class/function `.name`.
- * Local identifiers may be shortened; properties are never mangled. Declaration documentation
+ * Serialized bootstrap locals are shortened; module bindings keep their names without runtime
+ * name setters that would prevent consumer tree-shaking. Declaration documentation
  * stays in `.d.ts`, and the unbundled ESM tree keeps every granular export boundary. */
 export async function compactBuildJavaScript(directory) {
   const files = await javascriptFiles(directory);
@@ -122,13 +138,17 @@ export async function compactBuildJavaScript(directory) {
   await Promise.all(files.map(async (file) => {
     const source = await readFile(file, 'utf8');
     beforeBytes += Buffer.byteLength(source);
-    const prepared = await compactSerializedFunctions(source, path.relative(directory, file));
+    // Validate before syntax folding can turn a spread or computed key into an inert-looking
+    // object, then restore the reviewed annotation again after the printer removes comments.
+    const prepared = restorePureAnnotations(
+      await compactSerializedFunctions(source, path.relative(directory, file)), path.relative(directory, file));
     const result = await esbuild.transform(prepared, {
       format: 'esm',
       legalComments: 'none',
       loader: 'js',
-      minifyIdentifiers: true,
-      keepNames: true,
+      // Renaming module bindings with keepNames emits top-level name setters. Consumer bundlers
+      // treat those setters as side effects and retain otherwise-unused declarations.
+      minifyIdentifiers: false,
       minifySyntax: true,
       minifyWhitespace: true,
       // ES modules are UTF-8; esbuild's default ASCII charset would rewrite every non-ASCII

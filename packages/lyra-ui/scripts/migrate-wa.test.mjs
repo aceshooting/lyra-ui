@@ -320,8 +320,8 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
     runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
-    ['lyra-v21', 'lyra-v22'],
-    'the packaged CLI must carry every rename profile, projected from the authored ledger',
+    ['lyra-v21', 'lyra-v22', 'lyra-v25'],
+    'the packaged CLI must carry every reviewed rename profile, projected from the authored ledger',
   );
   assert.throws(
     () => createMigrationRuntimeInventory(checkedInventory),

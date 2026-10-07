@@ -20,10 +20,8 @@ Floating form-control panels follow the [shared surface treatment](shared/styles
 Editing fields and inline color editors retain opaque interiors.
 
 A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
-**Form-associated** (hand-rolled internals, not the shared `FormAssociated` mixin — same reasoning
-as `lr-combobox`: `multiple` re-shapes the committed `value` into a `string[]`, which the shared
-mixin — built for a single string value — can't model, so both controls attach their own
-`ElementInternals` and drive `setValidity()` directly instead). The trigger is a `<button>`, not a text
+**Form-associated**, with shared internals and validation plumbing. Like `lr-combobox`, it retains
+its own single/multiple value, reset, and option synchronization. The trigger is a `<button>`, not a text
 input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Options are
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does. The popup reuses `internal/positioner.ts` for placement and participates in Lyra's
@@ -282,9 +280,21 @@ every selection change and a `form.reset()` — like a native control, only anot
 required/selection validity without changing the selection/default or clearing prior interaction
 state.
 
+**Selection veto:** `lr-change-request` is a bubbling, composed, cancelable event before a user
+selection change. Its `{ value, previousValue, data }` describes the complete proposed selection,
+with frozen arrays and opaque `data` identities preserved. Call `preventDefault()` to retain the
+current selection, form value, validity, and popup state. Canceled requests produce no `input`,
+`lr-input`, `change`, `lr-change`, `lr-activate`, or `lr-clear` notification. The same request covers
+pointer and keyboard picks, closed-list type-ahead, single-option activation, chip removal, and
+clear. A listener's synchronous `value`, `selectedOptions`, or option `selected` write supersedes
+the proposal, including a same-value write; nested selection gestures during dispatch are ignored.
+Removing or disabling the proposed option also prevents its commit. Programmatic writes,
+reset/restoration, and a single-select re-pick of the current occurrence emit no request.
+
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
-read `event.target.value`. Both
+read `event.target.value`. `lr-change-request` is the cancelable precommit proposal described
+under Selection veto above; it precedes this sequence and suppresses it when canceled. Both
 prefixed aliases carry `detail: { value: string | string[]; previousValue: string | string[]; data: readonly unknown[] }` — `value`
 is the new committed selection, a string in single mode and a `string[]` in `multiple` mode,
 `previousValue` the selection before this change in the same shape; `data`
@@ -303,7 +313,7 @@ listener cannot hold a disabled popup open.
 `lr-after-show` and `lr-after-hide` fire after the corresponding listbox transition has settled; an
 interrupted transition drops its stale after-event.
 `lr-invalid` (no detail, cancelable) fires when a validity check finds the control invalid.
-`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every**
+`lr-activate` (`detail: { value: string }`, bubbling, composed, non-cancelable) fires on **every accepted**
 activation of an available listbox row — a click, or Enter/Space on the active row — whether or not
 the selection actually moved. Its `value` is the activated option's own value, **always a single
 string**, even in `multiple` mode, where `lr-input`/`lr-change` carry the whole `string[]` instead.

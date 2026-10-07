@@ -18,6 +18,7 @@ import {
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
+import { tag } from '../../../internal/prefix.js';
 import { projectGroundedClaim } from '../grounded-claim-projection.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraVariant } from '../../../internal/variants.js';
@@ -40,7 +41,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryCitationsLimit, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_citation, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_groundingSummaryCitationsLimit, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
@@ -322,10 +323,37 @@ function projectAssessment(value: unknown): CanonicalAssessment | undefined {
  * @since 4.1.0
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
+  // GENERATED DEFAULT-STRING SLICE: START
+  /** @internal */
+  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
+    ...super.defaultStrings,
+    citation: LYRA_DEFAULT_citation,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
+    groundingSummaryCitationsLimit: LYRA_DEFAULT_groundingSummaryCitationsLimit,
+    groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
+    groundingSummaryCoverageLabel: LYRA_DEFAULT_groundingSummaryCoverageLabel,
+    groundingSummaryEmpty: LYRA_DEFAULT_groundingSummaryEmpty,
+    groundingSummaryEvidenceHeading: LYRA_DEFAULT_groundingSummaryEvidenceHeading,
+    groundingSummaryEvidenceSpan: LYRA_DEFAULT_groundingSummaryEvidenceSpan,
+    groundingSummaryLabel: LYRA_DEFAULT_groundingSummaryLabel,
+    groundingSummarySupportedLabel: LYRA_DEFAULT_groundingSummarySupportedLabel,
+    groundingSummaryUnsupportedLabel: LYRA_DEFAULT_groundingSummaryUnsupportedLabel,
+    groundingSummaryWarningsHeading: LYRA_DEFAULT_groundingSummaryWarningsHeading,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+  };
+  // GENERATED DEFAULT-STRING SLICE: END
+
   private rovingEvidenceId = '';
 
   private onEvidenceKeyDown(event: KeyboardEvent, index: number, count: number): void {
-    const badges = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="evidence-list"] lr-citation-badge');
+    const badges = this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="evidence-list"] ${tag('citation-badge')}`);
     const next = resolveListMove(event, {
       count, current: index, orientation: 'vertical',
       isAvailable: (candidate) => {
@@ -339,30 +367,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     const badge = badges?.[next];
     badge?.shadowRoot?.querySelector<HTMLButtonElement>('[part="base"]')?.focus();
   }
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    citation: LYRA_DEFAULT_citation,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    groundingSummaryCitationsLimit: LYRA_DEFAULT_groundingSummaryCitationsLimit,
-    groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
-    groundingSummaryCoverageLabel: LYRA_DEFAULT_groundingSummaryCoverageLabel,
-    groundingSummaryEmpty: LYRA_DEFAULT_groundingSummaryEmpty,
-    groundingSummaryEvidenceHeading: LYRA_DEFAULT_groundingSummaryEvidenceHeading,
-    groundingSummaryEvidenceSpan: LYRA_DEFAULT_groundingSummaryEvidenceSpan,
-    groundingSummaryLabel: LYRA_DEFAULT_groundingSummaryLabel,
-    groundingSummarySupportedLabel: LYRA_DEFAULT_groundingSummarySupportedLabel,
-    groundingSummaryUnsupportedLabel: LYRA_DEFAULT_groundingSummaryUnsupportedLabel,
-    groundingSummaryWarningsHeading: LYRA_DEFAULT_groundingSummaryWarningsHeading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze([

@@ -324,7 +324,8 @@ rather than an approximation of them:
   shortcut (send-and-keep-open, insert-newline, open-in-new-tab), never a submission.
 - An Enter **during IME composition** commits the highlighted candidate; submitting there would
   throw away the word being typed, so it is skipped.
-- A keydown already `defaultPrevented` by a listener above stays vetoed.
+- A keydown `defaultPrevented` during propagation stays vetoed, including by a bubbling listener on
+  the host or an ancestor. Submission runs after those listeners have handled the keystroke.
 - The **submitter is resolved, not skipped**: the form's default button is the first submit
   control in `form.elements`, so its `name`/`value` entry and its
   `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button

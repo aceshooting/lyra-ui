@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-expand` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window.
 - **Optional peers** none
 - **Themeable via** 5 parts, 3 custom properties — see `lr-source-list.md`
 - **Documented with** `lr-source-list`: see [lr-source-list.md](./lr-source-list.md).

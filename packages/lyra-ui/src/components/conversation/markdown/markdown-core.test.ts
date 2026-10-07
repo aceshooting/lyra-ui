@@ -7,7 +7,6 @@ import {
   fixtureSync,
   aTimeout,
 } from "@open-wc/testing";
-import { sendKeys } from "@web/test-runner-commands";
 import "./markdown-core.js";
 import "./markdown.js";
 import { preloadMarkdown as preloadMarkdownCore } from "./markdown-core.js";

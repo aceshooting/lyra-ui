@@ -55,10 +55,12 @@ every body cell's raw string value, ordered row then column (empty/whitespace qu
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails. Up to 100
-PapaParse diagnostics also emit this event when the recoverable partial table remains rendered, so
-malformed or extra cells are never silently presented as a clean parse; exceeding that diagnostic
-budget is a resource-limit error instead.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+`lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
+`detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
+`severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial table remains rendered.
+Exceeding that diagnostic budget is a resource-limit error. Valid single-column files do not
+generate an undetectable-delimiter diagnostic.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from

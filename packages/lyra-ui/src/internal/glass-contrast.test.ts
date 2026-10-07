@@ -49,16 +49,16 @@ describe('rendered glass foreground qualification', () => {
   it('reuses its document canvas and returns independent bytes for cached colors', () => {
     const canvasPrototype = HTMLCanvasElement.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
     const contextPrototype = CanvasRenderingContext2D.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
-    const originalGetContext = canvasPrototype.getContext!;
-    const originalGetImageData = contextPrototype.getImageData!;
+    const originalGetContext = canvasPrototype['getContext']!;
+    const originalGetImageData = contextPrototype['getImageData']!;
     let contextCreations = 0;
     let pixelReads = 0;
     try {
-      canvasPrototype.getContext = function (this: HTMLCanvasElement, ...args: unknown[]) {
+      canvasPrototype['getContext'] = function (this: HTMLCanvasElement, ...args: unknown[]) {
         contextCreations++;
         return originalGetContext.apply(this, args);
       };
-      contextPrototype.getImageData = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+      contextPrototype['getImageData'] = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
         pixelReads++;
         return originalGetImageData.apply(this, args);
       };
@@ -71,8 +71,8 @@ describe('rendered glass foreground qualification', () => {
       expect(repeated).to.deep.equal([17, 93, 211, 255]);
       expect(repeated).to.not.equal(first);
     } finally {
-      canvasPrototype.getContext = originalGetContext;
-      contextPrototype.getImageData = originalGetImageData;
+      canvasPrototype['getContext'] = originalGetContext;
+      contextPrototype['getImageData'] = originalGetImageData;
     }
   });
 

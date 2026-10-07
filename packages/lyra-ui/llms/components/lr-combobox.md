@@ -18,8 +18,8 @@
 ## `lr-combobox` / `lr-option`
 
 Filterable single/multi-select combining a text input with a listbox. Mirrors the core
-`<wa-combobox>` API under the `lr-` prefix. **Form-associated** (hand-rolled internals, not the
-shared `FormAssociated` mixin — see gotchas).
+`<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
+single/multiple value and option synchronization.
 
 Consumer writes on mounted options immediately update the owning picker and its submission,
 without changing the reset default or emitting picker input/change events. Owner synchronization
@@ -380,9 +380,9 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
-clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
-followed by a prefixed `lr-input` alias, the same shape of `change`, then a prefixed `lr-change`
-alias. All four carry `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
+clear — emits one native `input` Event, then `lr-input`, one native `change` Event, then
+`lr-change`. The native events have no detail. Both typed events carry
+`detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
 new committed selection (a string in single mode, a `string[]` in `multiple` mode), `previousValue`
 the selection before this change in the same shape; `data` is index-aligned with `value`: `data[i]`
 describes `value[i]` — the opaque `data` payload of a light-DOM `<lr-option data>` or an async
@@ -520,11 +520,12 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-input`/`lr-change`/native `input` event detail `value` and `previousValue` narrow to `string` when
+`lr-input`/`lr-change` event detail `value` and `previousValue` narrow to `string` when
 `Multiple` is `false` and `string[]` (`readonly string[]` in a detail) when `true`. Types only; the
 runtime and the mirrored surface are unchanged, and an untyped `<lr-combobox>` keeps
 `string | string[]`. The exported `LyraComboboxChangeEvent`/`LyraComboboxInputEvent` aliases type
-`lr-change` and the native `input` listener respectively; `lr-input` shares `lr-change`'s detail.
+`lr-change` and the native `input` listener respectively; the latter is an `Event` without detail.
+`lr-input` shares `lr-change`'s detail.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so
@@ -629,7 +630,7 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `data?: unknown` (attribute: false) — opaque application payload, e.g. the backend record this
   option represents. Never read or rendered by this component; retained by reference, never
   deep-cloned, through the owning `lr-combobox`'s `selectedRows` and the owning `lr-select`'s
-  `selectedData`, and in both controls' `lr-input`/`lr-change`/`input`/`change` event details.
+  `selectedData`, and in both controls' `lr-input`/`lr-change` event details.
   Assigning it notifies the owning picker with `lr-option-change`, like `sub`/`dotColor`/`group`
 - `label: string` — settable WA-compatible plain-text label. A non-empty property/attribute wins;
   otherwise it resolves to `defaultLabel`. Property writes stay property-only (no reflection)

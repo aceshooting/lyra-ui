@@ -1,4 +1,8 @@
-import type { LyraResponsivePanelMode, LyraResponsivePanelEffectiveMode } from './responsive-panel.class.js';
+/** The configured mode; auto tracks the allocation breakpoint. */
+export type LyraResponsivePanelMode = 'inline' | 'overlay' | 'auto';
+
+/** The presentation after resolving the breakpoint. */
+export type LyraResponsivePanelEffectiveMode = 'inline' | 'overlay';
 
 /** Resolves the configured mode against the current allocation. */
 export function resolveResponsivePanelEffectiveMode(

@@ -191,6 +191,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   @property() summary = '';
 
   /** How long the call took, in milliseconds. Omitted from the chip entirely when unset. */
+  // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
   @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
 
   /** Literal icon hint (e.g. an emoji) used when the `icon` slot is empty — see the class doc's

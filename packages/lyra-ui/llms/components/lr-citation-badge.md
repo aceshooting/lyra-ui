@@ -36,7 +36,9 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   retaining the visible citation number (for example, `"Citation 3, Annual report"`). Authored host
   `aria-label` independently names the component and is not cloned onto that nested button. Host
   naming does not cross the shadow boundary, so the button retains its own localized
-  citation/index/status name
+  citation/index/status name.
+- `rovingTabIndex?: number` (attribute: false) — optional tab index for the internal citation
+  button when a parent owns keyboard movement across a list; unset keeps its normal Tab stop.
 
 **Events:**
 

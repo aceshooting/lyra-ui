@@ -123,6 +123,13 @@ export const chartSurfaceStyles = css`
       );
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='canvas']:active {
+    outline-color: color-mix(
+      in oklab,
+      var(--lr-chart-canvas-hover-outline-color, var(--lr-chart-grid-color, var(--lr-color-border))),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
   [part='canvas']:focus-visible {
     ${focusRing}
   }

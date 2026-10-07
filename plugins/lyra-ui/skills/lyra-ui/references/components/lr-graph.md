@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
 
 A zero-width canvas edge paints neither a stroke nor an arrowhead; its relationship remains in the
 nonvisual topology summary.
+
+When a public node or link collection exceeds the snapshot limit, `[part="limit"]` reports the
+retained and supplied counts with localized text. The notice clears after a complete assignment.
 
 In both renderers, roving navigation transfers real focus through nodes, operable edges, then
 community hulls; zero-width, fully transparent, and dangling edges remain outside that focus order.
@@ -92,8 +95,11 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `edgeDistance: number = 100` (attribute `edge-distance` — live-reactive, see gotchas).
 - `minZoom: number = 0.1` (attribute `min-zoom`)
 - `maxZoom: number = 8` (attribute `max-zoom`)
+- `label: string | null = null` (attribute `label`) — optional graph name. Naming precedence is
+  an authored host `aria-label` (including an explicitly empty value), then `label`, then the JS-only
+  compatibility `accessibleLabel`, then the localized graph name/count fallback.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — setting the JS property while
-  the host attribute is absent names the SVG/canvas owner. Authored host `aria-label` presence,
+  the host attribute and `label` are absent names the SVG/canvas owner. Authored host `aria-label` presence,
   including an explicitly empty value, instead makes the host the sole named graph owner; the
   inner renderer drops its parallel role/name. Removing the attribute restores the inner owner and
   its localized node/edge-count fallback
@@ -133,8 +139,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), no per-item hover/press tint (hover
   still emits its events and shows the tooltip), and a drawn focus ring instead of a
-  CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
+  CSS one. Keyboard roving/announcements use one stable offscreen `part="cursor-item"`
+  button in a semantic cursor list; `aria-posinset`/`aria-setsize` expose the logical position/count,
+  and arrows/Home/End reach every navigable node, link, and hull beyond the data-list cap. The canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
   least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
   only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
@@ -163,7 +170,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 drawn edge label, only rendered when `withEdgeLabels` is set),
 `expand-indicator` (the "+" badge on a node with `expandable: true`), `focus-halo` (the persistent
 ring tracking `focusNodeId`'s node), `hull` (a community hull), `community-label`,
-`live-region`, `data-list`, `empty`, `error` (neutral visible message shown instead of the graph when
+`live-region`, `limit` (shown when node or link snapshots truncate), `data-list` (the first 200 node/link/community data records in original order,
+including inert links, with a localized shown/total notice when capped), `empty`, `error` (neutral visible message shown instead of the graph when
 the optional `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers fail to load; that transition is
 announced through a shared assertive light-DOM region — distinct from the empty state, which means
 the peers loaded fine but `nodes` is empty),

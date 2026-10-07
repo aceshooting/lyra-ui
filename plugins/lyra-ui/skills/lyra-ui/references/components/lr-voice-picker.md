@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-voice-picker`
+
+Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
 
 The voice list follows the [shared surface treatment](shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
@@ -118,7 +120,8 @@ mirror the native input. `select()`, `setSelectionRange(start, end, direction?)`
 `input`/`change` events. Those text APIs return `null` or are no-ops in closed-dropdown mode and
 before the input renders.
 
-**Events:** `lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
+**Events:** `lr-input` — typed value edit notification with `detail: { value }`.
+`lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
@@ -181,6 +184,13 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `--lr-voice-picker-trigger-height` — An _exact_ trigger/combobox height that both floors and caps
   the control, for pixel-matching a sibling field in the same toolbar row. Takes precedence over
   `--lr-voice-picker-trigger-min-height`. Unset by default.
+- `--lr-voice-picker-trigger-padding` — Trigger/combobox padding shorthand. Default:
+  `var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`.
+- `--lr-voice-picker-font-size` — Trigger/combobox text size. Default:
+  `var(--lr-form-control-font-size)`.
+- `--lr-voice-picker-expand-size` — Decorative chevron box size. Default:
+  `var(--lr-size-1-75rem)`; compact `size` tiers reduce it, and `--lr-icon-button-size`
+  bounds the rendered box.
 - The `[part="preview-button"]` action follows whichever of those two names is in play, not just
   the exact height: `.control-row` is `align-items: stretch`, and stretch never applies to an item
   with a definite cross size, so an action that tracked only `--lr-voice-picker-trigger-height`
