@@ -20,7 +20,8 @@ The overlay presentation remains interactive when opened outside an existing nat
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
-First-party invention (no `wa-*`/`sl-*` counterpart).
+Docked inside a host with a definite block size, the panel stays within it and scrolls its body;
+an unsized host hugs the content. First-party invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 

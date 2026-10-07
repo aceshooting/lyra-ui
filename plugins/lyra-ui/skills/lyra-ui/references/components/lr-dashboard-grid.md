@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,8 +50,9 @@ accessibility tree.
 **Slots:** `cell-{cellId}`. **CSS parts:** `base`, `cell`, `empty`, `resize-handle`, `live-region` (an
 `aria-hidden` shadow mirror of the latest spoken message).
 
-`layout` is normalized into an immutable snapshot before rendering. Reads are bounded to the first
-1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
+`layout` is normalized into an immutable snapshot before rendering; assigning the same array again is
+ignored (assign a new array after changes), and a new array with unchanged cell geometry keeps a drag
+or resize in progress. Reads are bounded to the first 1,000 positions; foreign-realm arrays are accepted; malformed records, hostile accessors, and later
 duplicate cell IDs are skipped without discarding valid neighbors. Geometry and min/max constraints
 are finite and consistent, and neither the returned array nor its cells alias caller-owned objects.
 Each admitted `cell.widget` is also copied immediately through the canonical bounded widget-document
@@ -65,7 +66,7 @@ attribute for a library-owned node.
 The default content assigns a version-two document created from `cell.widget` to
 `<lr-widget-renderer>.document`; it never uses the legacy `tree` input. Pointer gestures admit only
 the primary button/pointer and ignore controls, links, labels, editable content, and interactive
-roles in the composed path. Keyboard resizing uses physical directions in both LTR and RTL:
+roles in the composed path; the press still propagates, so an open dropdown or popover light-dismisses. Keyboard resizing uses physical directions in both LTR and RTL:
 Right/Down grow and Left/Up shrink, while pointer resizing retains the logical inline-end handle.
 
 In the narrow stacked layout, a cell that currently owns a resize handle keeps at least the shared
@@ -99,3 +100,4 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
   interfaces used by `LyraDashboardGridEventMap`.
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 - `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow-m)`.
+- `--lr-dashboard-grid-resize-handle-hover-bg` — Background of `resize-handle` on hover, also mixed deeper for its pressed state. Default: `var(--lr-color-brand-quiet)`.

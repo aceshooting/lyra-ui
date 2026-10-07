@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,7 +73,8 @@ fallback before the shared token so a consumer can retint one variant without `-
 uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--lr-color-neutral)`),
 `--lr-gauge-brand-fill` (default `var(--lr-color-brand)`), `--lr-gauge-success-fill` (default
 `var(--lr-color-success)`), `--lr-gauge-warning-fill` (default `var(--lr-color-warning)`), and
-`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`).
+`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`). `--lr-gauge-track-color` (default
+`var(--lr-color-border)`) strokes the unfilled track.
 
 **Optional peer deps:** none.
 

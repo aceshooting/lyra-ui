@@ -27,7 +27,7 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `withoutCapture: boolean = false` (attribute `without-capture`, reflected) — hides native
-push-to-talk capture; `label?: string` — accessible name for the session shell. Omitting it localizes the
+push-to-talk capture and cancels a take in progress with `lr-record-cancel`; `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

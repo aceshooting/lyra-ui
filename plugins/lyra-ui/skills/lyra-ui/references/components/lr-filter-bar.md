@@ -67,12 +67,13 @@ until something else registers it, the same trade `icon-button-register.js` docu
   blank `label`) and later duplicate filter IDs are ignored deterministically. The first 10,000
   definitions and nested collection entries are detached and deeply frozen at assignment; the
   optional Lit `icon` payload retains its rendering identity. Create and reassign a new array after
-  changes. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
+  changes; reassigning the same array is ignored, so a parent re-render keeps a pending debounced edit. Writing `null` or `undefined` clears the schema; reads remain the canonical non-null
   empty array.
 - `value: LyraFilterBarValue = {}` (attribute: false) — sparse current values keyed by `filterId`.
   Cleared fields are omitted. Reads, writes, event details, and string-array fields are immutable
   snapshots rather than references to caller-owned data, capped at 10,000 record keys and 10,000
-  entries per string-array field. Create and reassign a new record after changes. Writing `null` or
+  entries per string-array field. Create and reassign a new record after changes (the same record is
+  ignored). Writing `null` or
   `undefined` clears the value; reads remain the canonical non-null empty record. Built-in controls
   use strings/string arrays; if an untyped boundary supplies a boolean, `false` is canonical empty
   and omitted while `true` remains set. Custom controls instead use their adapter's `isEmpty` or

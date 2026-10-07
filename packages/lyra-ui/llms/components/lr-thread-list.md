@@ -69,13 +69,16 @@ accepted). Invalid values and attribute removal restore `m`. Slotted rows retain
 The search gutter and clear button keep their own independent custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
-(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
+(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived; a future
+timestamp counts as Today, a missing or invalid one files under Previous 30 days), use the
 arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
 (attribute: false) derives each group id in `grouping="custom"`; rows whose callback throws or
 returns a malformed or blank ID are omitted from that grouped view, and omitting the callback leaves
 custom mode flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
 plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
-separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
+separate rich content beside the toggle without nesting it inside the button. Both are re-invoked
+when the threads, grouping inputs, locale or the callback itself change, or on `requestUpdate()`;
+other updates (selection, size, label) reuse the built item model. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 collapsed state for both date and custom groups, **self-managed by default**: activating the
@@ -209,7 +212,7 @@ prefix: `row-item-base`, `row-item-base-menu-open`, `row-item-active-indicator`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 
 **Row menu-open state:** `row-item-base-menu-open` is carried by `row-item-base` while a menu that
-`renderActions` opened from that row (`lr-dropdown`, `lr-popover` or `lr-context-menu`) is open,
+`renderActions` opened from that row (`lr-dropdown`, `lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`)) is open,
 however it was opened. That menu sits in the browser top layer, where Chromium and WebKit stop
 matching `:hover` and `:focus-within` on the row while the pointer or keyboard focus is inside it.
 A menu trigger revealed on row hover or focus must key on this state too, or it hides while its own
@@ -244,12 +247,15 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-group-toggle-active-color` (default
 `var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
 and pressed states. `--lr-thread-list-row-action-hover-bg` (default
-`var(--lr-color-surface-raised)`), `--lr-thread-list-row-action-hover-color` (default
-`var(--lr-color-text)`), `--lr-thread-list-row-action-active-bg` (default `color-mix(in oklab,
-var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
-var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
-`--lr-thread-list-row-action-active-color` (default
-`var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
+`var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
+(default `var(--lr-icon-button-color-hover, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
+(default `var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
+var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
+var(--lr-color-mix-active)))`), and `--lr-thread-list-row-action-active-color` (default
+`var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color,
+var(--lr-icon-button-color-hover, var(--lr-color-text))))`) do the same for row actions. Row actions
+and the search clear button otherwise read the shared `--lr-icon-button-*` tokens (`bg`, `color`,
+`radius` and their `-hover`/`-active` states), so an icon-button theme reaches them too.
 
 **Themeable search geometry:** `--lr-thread-list-search-padding` (default `var(--lr-space-s)`) is
 the gutter around the search row and `--lr-thread-list-search-gap` (default `var(--lr-space-xs)`)

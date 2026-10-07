@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,8 +26,9 @@ When the tour ends, focus returns to the element that held it when the tour star
 
 **Properties:**
 
-- `open: boolean = false` (reflected) — no separate `show()`/`hide()`; set this or call
-  `start()`/`end()`
+- `open: boolean = false` (reflected) — no separate `show()`/`hide()`; after the initial silent
+  render, writes run `start()`/`end('api')` with their events, so `open = false` can be vetoed through
+  `lr-tour-end-request`
 - `steps: readonly Readonly<LyraTourStep>[] = []` (attribute: false) — assignment takes a shallow
   frozen snapshot; empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
@@ -41,8 +42,8 @@ When the tour ends, focus returns to the element that held it when the tour star
   target's box and the cutout/ring: a number of px, or a CSS length in `px`, `rem`, `em`, `vw` or
   `vh`, resolved to px on every paint (`rem` against the root font size, `em` against the tour's
   own); any other value uses the 4px default. Overridable per step (in px)
-- `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
-  `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — matches `lr-dialog`'s opt-in
+  `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `withoutProgress: boolean = false` (attribute `without-progress`) — omits the "Step X of Y" text +
   dots.
@@ -76,9 +77,9 @@ ends with `'completed'` instead), `back()` (no-op on the first step), `goToStep(
 departure from `lr-carousel`'s non-cancelable `lr-slide-change`); `lr-tour-end-request`
 (`detail: { reason }`, cancelable before ordinary completion); `lr-tour-end`
 (`detail: { reason }`, non-cancelable after closing). Forced removal still notifies with reason
-`unmount`, without a request because removal cannot be vetoed. If deferred placement fails, the
-hidden panel closes with reason `unavailable`, also without a request; the host can use
-`lr-tour-end` to clear its own open state. Migrate old raw-detail reads to
+`unmount`, without a request because removal cannot be vetoed. If deferred placement fails, or
+`steps` becomes empty while open, the tour closes with reason `unavailable`, also without a
+request; the host can use `lr-tour-end` to clear its own open state. Migrate old raw-detail reads to
 `detail.reason` and move end vetoes to `lr-tour-end-request`.
 `lr-tour-target-missing` (`detail: { index, step }`, informational — the tour does **not** auto-end,
 it renders that step viewport-centered with no spotlight).
@@ -106,6 +107,9 @@ further capped by `--lr-popover-viewport-clamp` and the positioner's available s
 `progress-dot` for the current step. Component-scoped indirection over the shared `--lr-color-brand`
 token, so a consumer can retheme just the current-step dot without repainting every other component
 that reuses the same shared brand token.
+The step panel paints with the shared overlay-surface family, like `lr-dialog`:
+`--lr-overlay-surface` (default `var(--lr-color-surface-container-highest)`), `--lr-overlay-border`,
+`--lr-overlay-radius`, and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-l)` here).
 
 `--lr-popover-viewport-clamp` (default `92vw`, from `--lr-theme-popover-viewport-clamp`) is the
 shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tour`,

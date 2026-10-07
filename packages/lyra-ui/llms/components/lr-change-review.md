@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `22.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated event** `lr-change-decision` since `unreleased`; use event `@lr-change-decision-request`; removal not before `28.0.0` — lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major.
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,6 +29,8 @@ At most 200 files and 200 hunks total render, with a visible limit notice. Diff 
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
+**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+
 **CSS parts:**
 
 | Part | Purpose |
@@ -47,7 +49,7 @@ remain readable in both states. Optional `label` overrides the localized heading
 | `limit` | Render-limit notice. |
 
 
-**Events:** non-cancelable `lr-change-decision` (`detail: { fileId, hunkId, decision }`) reports a keep/discard action; the host applies it by replacing `files`.
+**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), followed by its deprecated alias `lr-change-decision`, reports a keep/discard action; the host applies it by replacing `files`.
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');

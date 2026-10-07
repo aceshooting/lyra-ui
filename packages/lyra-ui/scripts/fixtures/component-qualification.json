@@ -625,7 +625,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/activity-feed/activity-feed.class.ts",
-              "line": 507,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -1557,7 +1557,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/alert/alert.test.ts",
-              "test": "reduces show/hide and countdown motion when the user requests it",
+              "test": "transitions the close button hover fill like the other icon buttons",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -1749,7 +1749,7 @@
           "evidence": [
             {
               "file": "src/components/media/animated-image/animated-image.test.ts",
-              "test": "rebinds reduced-motion and DPR work to the adopted owner window and cleans up symmetrically",
+              "test": "rebinds reduced-motion work to the adopted owner window and cleans up symmetrically",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -3209,7 +3209,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
-              "line": 231,
+              "line": 232,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3300,7 +3300,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1245,
+              "line": 1286,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3560,7 +3560,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 364,
+              "line": 372,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3731,7 +3731,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.class.ts",
-              "line": 309,
+              "line": 312,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6658,8 +6658,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/calendar/calendar.test.ts",
-              "test": "rolls the view to the next month when ArrowDown moves focus past the bottom of the 6-week grid",
+              "file": "src/components/data/calendar/calendar-remediation.test.ts",
+              "test": "moves the day focus by month with PageUp/PageDown and to the month edges with Home/End",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -6797,9 +6797,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
-          "peerFailure",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -6838,9 +6836,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
+              "test": "wraps a long unbreakable location inside a 320px host",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -6890,8 +6893,14 @@
         },
         "peerFailure": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
+              "test": "rejects an over-ceiling event count before the peer parses the calendar",
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
           "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
@@ -6926,7 +6935,6 @@
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -8554,7 +8562,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.test.ts",
-              "test": "treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys",
+              "test": "treats PageUp/ArrowUp/Home/Shift+Space as a user scroll gesture, and ignores other keys",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -8645,7 +8653,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 839,
+              "line": 738,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11476,7 +11484,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 295,
+              "line": 298,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11877,7 +11885,7 @@
           "evidence": [
             {
               "file": "src/components/data/condition-builder/condition-builder-remediation.test.ts",
-              "test": "contains every child select alias for one real ${part} choice",
+              "test": "contains every child event while typing in the ${id} value control",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12392,7 +12400,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -12438,9 +12445,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/contact-viewer/contact-viewer.test.ts",
+              "test": "wraps a long unbreakable value inside a 320px host",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -12526,7 +12538,6 @@
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -13588,7 +13599,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 571,
+              "line": 569,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14176,8 +14187,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
-              "test": "keeps keyboard-navigation feedback silent when the host or a composed ancestor is accessibility-excluded",
+              "file": "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
+              "test": "leaves Alt+Arrow and Ctrl+Home/End to the browser",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -14188,7 +14199,7 @@
           "evidence": [
             {
               "file": "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
-              "line": 8,
+              "line": 10,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -15926,8 +15937,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/dock-panel/dock-panel.test.ts",
-              "test": "treats each genuine keyboard step as a frozen input/change transaction",
+              "file": "src/components/layout/dock-panel/dock-panel-remediation.test.ts",
+              "test": "leaves modified arrows to the browser",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -16047,6 +16058,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/dock-panel/dock-panel-remediation.test.ts",
           "src/components/layout/dock-panel/dock-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17841,7 +17853,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1135,
+              "line": 1142,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -18887,7 +18899,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 152,
+              "line": 151,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20903,7 +20915,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1481,
+              "line": 1489,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21140,8 +21152,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/flow-canvas/flow-canvas.test.ts",
-              "test": "uses owner CSS escaping and an exact-id fallback for adopted keyboard, drag, and connect paths",
+              "file": "src/components/data/flow-canvas/flow-canvas-remediation.test.ts",
+              "test": "derives the roving order and keyboard-connect target once per render",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -21237,7 +21249,7 @@
           "evidence": [
             {
               "file": "src/components/data/flow-canvas/flow-companion-controller.ts",
-              "line": 88,
+              "line": 90,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23630,7 +23642,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 1001,
+              "line": 1019,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24215,7 +24227,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2515,
+              "line": 2536,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24392,7 +24404,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-              "line": 192,
+              "line": 244,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27344,7 +27356,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 445,
+              "line": 421,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28835,7 +28847,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.ts",
-              "line": 50,
+              "line": 47,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29042,7 +29054,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/markdown/katex-loader.ts",
-              "line": 50,
+              "line": 47,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29763,7 +29775,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 988,
+              "line": 1000,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30957,7 +30969,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions-remediation.test.ts",
-              "line": 8,
+              "line": 12,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31032,7 +31044,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 855,
+              "line": 867,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31687,8 +31699,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/model-select/model-select.test.ts",
-              "test": "keeps omitted readonly editable across both catalog modes",
+              "file": "src/components/conversation/model-select/model-select-remediation.test.ts",
+              "test": "keeps the keyboard-active row visible and reopens on the committed row",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -31989,6 +32001,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -32036,8 +32049,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/multi-split/multi-split-trigger.test.ts",
-              "test": "returns focus to the external launcher on Escape after programmatic opening",
+              "file": "src/components/layout/multi-split/multi-split-remediation.test.ts",
+              "test": "leaves modified arrows to the browser",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -32054,10 +32067,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -32156,7 +32169,7 @@
         }
       },
       "knownLimitations": [
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -34228,7 +34241,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.test.ts",
-              "test": "typing a digit jumps to that page in mediated mode",
+              "test": "accepts the page digits of the effective locale in type-ahead",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -34325,7 +34338,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 610,
+              "line": 621,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36592,7 +36605,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1135,
+              "line": 1142,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37054,7 +37067,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/progress/progress.test.ts",
-              "test": "spins the indeterminate ring indicator and disables the animation under prefers-reduced-motion",
+              "test": "keeps an indeterminate bar and ring distinct from a determinate value when motion is off",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -37212,7 +37225,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/progress/progress.test.ts",
-              "test": "spins the indeterminate ring indicator and disables the animation under prefers-reduced-motion",
+              "test": "keeps an indeterminate bar and ring distinct from a determinate value when motion is off",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -37440,7 +37453,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 580,
+              "line": 615,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37492,7 +37505,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "narrowAllocation",
           "visual",
@@ -37516,9 +37528,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/prompt-queue/prompt-queue.test.ts",
+              "test": "keeps keyboard focus on the moved row after an accepted Move ${action} (row ${row})",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -37613,7 +37630,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
@@ -38269,7 +38285,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 427,
+              "line": 405,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40241,7 +40257,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 375,
+              "line": 371,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40418,7 +40434,7 @@
           "evidence": [
             {
               "file": "src/components/layout/reorder-list/reorder-list.class.ts",
-              "line": 375,
+              "line": 371,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42544,6 +42560,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/scroller/scroller-remediation.test.ts",
           "src/components/layout/scroller/scroller.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42560,6 +42577,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -42621,14 +42639,9 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/layout/segmented/segmented.test.ts",
-              "test": "forces behavior:auto by stubbing matchMedia to report prefers-reduced-motion: reduce",
-              "kind": "reduced-motion test signal"
-            }
-          ]
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -42636,7 +42649,7 @@
           "evidence": [
             {
               "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 905,
+              "line": 953,
               "kind": "320px allocation test signal"
             }
           ]
@@ -42716,6 +42729,7 @@
         }
       },
       "knownLimitations": [
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -43098,7 +43112,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 984,
+              "line": 955,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43459,7 +43473,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 451,
+              "line": 461,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45218,7 +45232,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-              "line": 11,
+              "line": 12,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45401,7 +45415,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 306,
+              "line": 309,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46708,7 +46722,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -46737,9 +46750,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/svg-viewer/svg-viewer.test.ts",
+              "test": "moves focus across region-highlight actions with arrow keys, Home and End",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -46832,8 +46850,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/svg-viewer/dompurify-loader.ts",
-              "line": 18,
+              "file": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
+              "line": 3,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46856,7 +46874,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -49360,8 +49377,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/thread-list/thread-list.test.ts",
-              "test": "keeps a focus-revealed trigger visible while keyboard focus is inside the open menu, and arrow keys stay in that menu",
+              "file": "src/components/conversation/thread-list/thread-list-remediation.test.ts",
+              "test": "moves ArrowDown/ArrowUp from a row action to the adjacent row",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -50537,7 +50554,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 511,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50571,7 +50588,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/toast/toast-item-first.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
+          "src/components/overlays/toast/toast-region-first.test.ts",
           "src/components/overlays/toast/toast.test.ts",
           "src/components/overlays/toast/toaster.test.ts"
         ],
@@ -50710,7 +50729,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 511,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50744,7 +50763,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/toast/toast-item-first.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
+          "src/components/overlays/toast/toast-region-first.test.ts",
           "src/components/overlays/toast/toast.test.ts",
           "src/components/overlays/toast/toaster.test.ts"
         ],
@@ -52276,7 +52297,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-result-view/tool-result-view.class.ts",
-              "line": 212,
+              "line": 211,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52832,7 +52853,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1135,
+              "line": 1142,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54420,7 +54441,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.test.ts",
-              "test": "inherits RTL while keeping elapsed-time progression physical and uses no nonessential motion",
+              "test": "inherits RTL while keeping elapsed-time progression physical and animating only pointer feedback",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -54691,7 +54712,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 571,
+              "line": 561,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54784,8 +54805,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "test": "cancels an estimate correction on manual scroll intent and source replacement",
+              "file": "src/components/layout/virtual-list/virtual-list-remediation.test.ts",
+              "test": "keeps the focused ${projection} row mounted outside the window until focus leaves it",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -54907,6 +54928,7 @@
         "tests": [
           "src/components/layout/virtual-list/virtual-list-border-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
+          "src/components/layout/virtual-list/virtual-list-remediation.test.ts",
           "src/components/layout/virtual-list/virtual-list-scaled-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
           "src/components/layout/virtual-list/virtual-list.test.ts"
@@ -55135,8 +55157,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/voice-picker/voice-picker.test.ts",
-              "test": "keeps omitted readonly editable across both catalog modes",
+              "file": "src/components/conversation/voice-picker/voice-picker-remediation.test.ts",
+              "test": "keeps the keyboard-active row visible and reopens on the committed row",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -55227,7 +55249,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 975,
+              "line": 955,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

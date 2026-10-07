@@ -49,7 +49,9 @@ mirror of the last step-transition announcement).
 announcement itself goes to the library's shared **light-DOM** polite region, appended to the
 consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
-document-level region rather than `::part(live-region)`.
+document-level region rather than `::part(live-region)`. Each step is named like the canvas names
+it (`accessibleLabel`, then `data.label`, then the id); more than five simultaneous step changes are
+announced as the run summary instead of a list.
 
 **Themeable custom properties:** shared `--lr-flow-status-color` and the explicit
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,

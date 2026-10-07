@@ -44,8 +44,10 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
   URL schemes keep the stat non-interactive. The anchor is stretched behind the visible content,
   so public slots remain semantic siblings rather than interactive descendants of the link
-- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
-  `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
+- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target always adds
+  `noopener noreferrer` to the anchor's `rel`
+- `rel?: string` — author link-relationship tokens (`nofollow`, `external`, …) merged with that
+  guard; `opener` is dropped
 - `variant: LyraVariant = 'neutral'` (reflected) — the library's shared
   one semantic-tone vocabulary, tinting `[part="value"]`. **`brand` is new in 8.0.0**, so a stat
   whose headline is the primary metric no longer has to borrow `emphasis` (which is a card-chrome

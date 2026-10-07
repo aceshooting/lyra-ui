@@ -2506,6 +2506,12 @@
             "type": "CustomEvent<ActivityFeedToggleDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<ActivityFeedToggleDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -2671,7 +2677,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-agent-eval-dashboard",
+            "kind": "event",
+            "name": "lr-metric-change",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-metric-change-request",
+              "usage": "@lr-metric-change-request"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -2714,6 +2734,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "USD"
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "label",
@@ -2785,6 +2815,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "USD"
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "label",
@@ -2860,6 +2900,25 @@
         "events": [
           {
             "name": "lr-metric-change",
+            "type": "CustomEvent<{ metricId: string }>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-agent-eval-dashboard",
+              "kind": "event",
+              "name": "lr-metric-change",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-metric-change-request",
+                "usage": "@lr-metric-change-request"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-metric-change-request",
             "type": "CustomEvent<{ metricId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -3005,6 +3064,16 @@
             "default": false
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -3073,6 +3142,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "label",
@@ -3235,7 +3314,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-agent-run",
+            "kind": "event",
+            "name": "lr-cancel",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-run-cancel",
+              "usage": "@lr-run-cancel"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -3445,13 +3538,32 @@
         "events": [
           {
             "name": "lr-cancel",
-            "type": "CustomEvent<CancelEventDetail>",
+            "type": "CustomEvent<AgentRunCancelDetail>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-agent-run",
+              "kind": "event",
+              "name": "lr-cancel",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-run-cancel",
+                "usage": "@lr-run-cancel"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-run-cancel",
+            "type": "CustomEvent<AgentRunCancelDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-retry",
-            "type": "CustomEvent<RetryEventDetail>",
+            "type": "CustomEvent<AgentRunRetryDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -4602,10 +4714,9 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-toast"
-        ],
+        "direct": [],
         "transitive": [
+          "lr-toast",
           "lr-toast-item"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -10916,7 +11027,21 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-background-runs",
+            "kind": "event",
+            "name": "lr-run-open",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-run-activate",
+              "usage": "@lr-run-activate"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -11008,6 +11133,12 @@
         "slots": [],
         "events": [
           {
+            "name": "lr-run-activate",
+            "type": "CustomEvent<{ runId: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-run-cancel",
             "type": "CustomEvent<{ runId: string }>",
             "cancelable": "never",
@@ -11017,6 +11148,19 @@
             "name": "lr-run-open",
             "type": "CustomEvent<{ runId: string }>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-background-runs",
+              "kind": "event",
+              "name": "lr-run-open",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-run-activate",
+                "usage": "@lr-run-activate"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
+            },
             "constructor": "CustomEvent"
           }
         ],
@@ -15214,6 +15358,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -15263,6 +15417,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -16953,6 +17117,10 @@
           },
           {
             "name": "day",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
             "deprecated": null
           },
           {
@@ -19069,7 +19237,21 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-change-review",
+            "kind": "event",
+            "name": "lr-change-decision",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-change-decision-request",
+              "usage": "@lr-change-decision-request"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -19098,6 +19280,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
           },
           {
             "name": "label",
@@ -19151,6 +19343,16 @@
             "default": "[]"
           },
           {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2"
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | undefined",
@@ -19184,6 +19386,25 @@
         "events": [
           {
             "name": "lr-change-decision",
+            "type": "CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-change-review",
+              "kind": "event",
+              "name": "lr-change-decision",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-change-decision-request",
+                "usage": "@lr-change-decision-request"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-decision-request",
             "type": "CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -21661,9 +21882,7 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-live-region"
-        ],
+        "direct": [],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -24322,6 +24541,12 @@
         ],
         "events": [
           {
+            "name": "lr-chip-change",
+            "type": "CustomEvent<ChipSelectDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-chip-toggle-request",
             "type": "CustomEvent<ChipSelectDetail>",
             "cancelable": "always",
@@ -24437,6 +24662,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-chip-remove-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, currentColor 16%, transparent)"
           }
         ],
         "cssStates": [],
@@ -30919,9 +31150,7 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-icon"
-        ],
+        "direct": [],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -31191,6 +31420,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-overlay-stack-index, var(--lr-layer-modal))"
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-xl)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
           }
         ],
         "cssStates": [],
@@ -31208,6 +31461,15 @@
                     "default": "api"
                   }
                 ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "hide",
+            "overloads": [
+              {
+                "parameters": [],
                 "returnType": "void"
               }
             ]
@@ -31234,6 +31496,15 @@
                   }
                 ],
                 "returnType": "() => void"
+              }
+            ]
+          },
+          {
+            "name": "show",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
               }
             ]
           }
@@ -31505,6 +31776,12 @@
             "name": "lr-toggle",
             "type": "CustomEvent<{ expanded: boolean; collapsed: boolean }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<{ expanded: boolean }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -34067,6 +34344,16 @@
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "aria-label",
+            "property": "hostAccessibleLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
           {
             "name": "interactive",
             "property": "interactive",
@@ -37821,6 +38108,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-shadow-m)"
+          },
+          {
+            "name": "--lr-dashboard-grid-resize-handle-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-dashboard-grid-row-height",
@@ -45248,6 +45541,13 @@
         "slots": [],
         "events": [
           {
+            "name": "lr-anchor-result",
+            "type": "CustomEvent<AnchorResultDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          },
+          {
             "name": "lr-copy",
             "type": "CustomEvent<LyraClipboardWriteSuccess>",
             "cancelable": "never",
@@ -45282,6 +45582,19 @@
             "type": "CustomEvent<{ error: unknown }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-search-change",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-text-select",
+            "type": "CustomEvent<TextSelectDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
           }
         ],
         "parts": [
@@ -45323,7 +45636,67 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "clearSearch",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "scrollToAnchor",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "target",
+                    "type": "LyraAnchor | string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "search",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "query",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<number>"
+              }
+            ]
+          },
+          {
+            "name": "searchNext",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "searchPrevious",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -54821,14 +55194,23 @@
       "surface": {
         "attributes": [
           {
-            "name": "label",
-            "property": "label",
-            "type": "string",
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": ""
+            "default": "4"
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -54863,14 +55245,23 @@
             "default": "[]"
           },
           {
-            "name": "label",
-            "attribute": "label",
-            "type": "string",
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": ""
+            "default": "4"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -55036,7 +55427,40 @@
         ],
         "cssProperties": [],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "finalizePendingApproval",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "exampleId",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "revertPendingApproval",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "exampleId",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -58585,6 +59009,18 @@
             "default": "var(--lr-opacity-disabled)"
           },
           {
+            "name": "--lr-flow-canvas-node-fallback-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-4rem)"
+          },
+          {
+            "name": "--lr-flow-canvas-node-fallback-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "calc(var(--lr-size-10rem) + var(--lr-size-1rem))"
+          },
+          {
             "name": "--lr-flow-canvas-node-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -58873,7 +59309,15 @@
             "deprecated": null
           }
         ],
-        "events": [],
+        "events": [
+          {
+            "name": "lr-readonly-change",
+            "type": "CustomEvent<Readonly<{ readonly: boolean }>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
+          }
+        ],
         "parts": [
           {
             "name": "base",
@@ -61266,6 +61710,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-success)"
+          },
+          {
+            "name": "--lr-gauge-track-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
           },
           {
             "name": "--lr-gauge-warning-fill",
@@ -63849,9 +64299,7 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-live-region"
-        ],
+        "direct": [],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -82424,7 +82872,6 @@
         ],
         "transitive": [
           "lr-chip",
-          "lr-live-region",
           "lr-tooltip"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -82732,8 +83179,7 @@
       },
       "dependencies": {
         "direct": [
-          "lr-chip",
-          "lr-live-region"
+          "lr-chip"
         ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -84622,7 +85068,7 @@
             "name": "--lr-model-select-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-form-control-radius)"
           },
           {
             "name": "--lr-model-select-trigger-border-color",
@@ -85743,6 +86189,14 @@
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-resize-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           },
           {
             "name": "lr-resize-request",
@@ -92896,6 +93350,12 @@
         ],
         "events": [
           {
+            "name": "lr-nav-open-change",
+            "type": "CustomEvent<{ open: boolean }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-nav-toggle-request",
             "type": "CustomEvent<{ open: boolean }>",
             "cancelable": "always",
@@ -99649,7 +100109,6 @@
       },
       "dependencies": {
         "direct": [
-          "lr-icon",
           "lr-live-region"
         ],
         "transitive": [],
@@ -102473,6 +102932,16 @@
             "default": ""
           },
           {
+            "name": "max-rows",
+            "property": "maxRows",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 8
+          },
+          {
             "name": "maxlength",
             "property": "maxLength",
             "type": "number | undefined",
@@ -102480,6 +102949,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "min-rows",
+            "property": "minRows",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "minlength",
@@ -102540,6 +103019,16 @@
             "hasDefault": false
           },
           {
+            "name": "submit-disabled",
+            "property": "submitDisabled",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string",
@@ -102561,6 +103050,16 @@
           {
             "name": "without-enter-submit",
             "property": "withoutEnterSubmit",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "without-stop",
+            "property": "withoutStop",
             "type": "boolean",
             "reflects": false,
             "inferred": false,
@@ -102717,6 +103216,16 @@
             "hasDefault": false
           },
           {
+            "name": "maxRows",
+            "attribute": "max-rows",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 8
+          },
+          {
             "name": "mentionItems",
             "attribute": null,
             "type": "readonly LyraPromptSuggestion[]",
@@ -102734,6 +103243,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "minRows",
+            "attribute": "min-rows",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "model",
@@ -102851,6 +103370,16 @@
             "hasDefault": false
           },
           {
+            "name": "submitDisabled",
+            "attribute": "submit-disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "value",
             "attribute": "value",
             "type": "string",
@@ -102881,6 +103410,16 @@
           {
             "name": "withoutEnterSubmit",
             "attribute": "without-enter-submit",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutStop",
+            "attribute": "without-stop",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -103329,6 +103868,16 @@
             "default": false
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -103378,6 +103927,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3"
           },
           {
             "name": "items",
@@ -103565,12 +104124,11 @@
           {
             "name": "heading",
             "property": "heading",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "heading-level",
@@ -103687,12 +104245,11 @@
           {
             "name": "heading",
             "attribute": "heading",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "headingLevel",
@@ -109221,9 +109778,7 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-icon"
-        ],
+        "direct": [],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -113407,7 +113962,6 @@
         ],
         "transitive": [
           "lr-empty",
-          "lr-live-region",
           "lr-virtual-list"
         ],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -115798,6 +116352,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -115839,6 +116403,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
           {
             "name": "items",
             "attribute": null,
@@ -116070,6 +116644,7 @@
         "form": {
           "associated": false,
           "properties": [
+            "disabled",
             "value"
           ],
           "methods": []
@@ -117966,15 +118541,6 @@
             "default": ""
           },
           {
-            "name": "playing",
-            "property": "playing",
-            "type": "boolean",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "without-loop",
             "property": "withoutLoop",
             "type": "boolean",
@@ -118038,10 +118604,10 @@
           },
           {
             "name": "playing",
-            "attribute": "playing",
+            "attribute": null,
             "type": "boolean",
-            "readonly": false,
-            "reflects": true,
+            "readonly": true,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },
@@ -118409,6 +118975,10 @@
           },
           {
             "name": "cell",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
             "deprecated": null
           },
           {
@@ -120974,8 +121544,7 @@
       },
       "dependencies": {
         "direct": [
-          "lr-empty",
-          "lr-live-region"
+          "lr-empty"
         ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
@@ -120996,12 +121565,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -121058,12 +121626,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -121155,10 +121722,6 @@
             "deprecated": null
           },
           {
-            "name": "live-region",
-            "deprecated": null
-          },
-          {
             "name": "meta",
             "deprecated": null
           },
@@ -121213,6 +121776,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-span-waterfall-row-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-span-waterfall-running-color",
@@ -122072,7 +122641,7 @@
             "name": "--lr-split-panel-divider-active-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-border-strong)"
+            "default": "color-mix(in oklab, var(--lr-split-panel-divider-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-split-panel-divider-hit-area",
@@ -122984,6 +123553,15 @@
             "default": false
           },
           {
+            "name": "rel",
+            "property": "rel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize | undefined",
@@ -123160,6 +123738,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "rows",
@@ -125208,7 +125795,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-subagent-panel",
+            "kind": "event",
+            "name": "lr-cancel",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-run-cancel",
+              "usage": "@lr-run-cancel"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -125346,11 +125947,30 @@
             "name": "lr-cancel",
             "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-subagent-panel",
+              "kind": "event",
+              "name": "lr-cancel",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-run-cancel",
+                "usage": "@lr-run-cancel"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
+            },
             "constructor": "CustomEvent"
           },
           {
             "name": "lr-run-activate",
             "type": "CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-run-cancel",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -125657,7 +126277,7 @@
             "name": "--lr-suggestion-chips-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
-            "default": 0.5
+            "default": "var(--lr-opacity-disabled)"
           },
           {
             "name": "--lr-suggestion-chips-hover-bg",
@@ -129741,6 +130361,15 @@
             "default": "m"
           },
           {
+            "name": "value",
+            "property": "value",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "variant",
             "property": "variant",
             "type": "TagVariant",
@@ -129833,6 +130462,15 @@
             "default": "m"
           },
           {
+            "name": "value",
+            "attribute": "value",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "variant",
             "attribute": "variant",
             "type": "TagVariant",
@@ -129870,7 +130508,7 @@
         "events": [
           {
             "name": "lr-remove",
-            "type": "CustomEvent<null>",
+            "type": "CustomEvent<{ value?: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -130093,7 +130731,9 @@
         "moduleExports": [],
         "form": {
           "associated": false,
-          "properties": [],
+          "properties": [
+            "value"
+          ],
           "methods": []
         },
         "native": {
@@ -130329,6 +130969,12 @@
             "name": "lr-toggle",
             "type": "CustomEvent<TaskListToggleDetail>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<TaskListToggleDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -131312,6 +131958,12 @@
             "name": "lr-toggle",
             "type": "CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-toggle-request",
+            "type": "CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           }
         ],
@@ -133869,25 +134521,25 @@
             "name": "--lr-thread-list-row-action-active-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+            "default": "var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner) var(--lr-color-mix-active)))"
           },
           {
             "name": "--lr-thread-list-row-action-active-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))"
+            "default": "var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-color-hover, var(--lr-color-text))))"
           },
           {
             "name": "--lr-thread-list-row-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-raised)"
+            "default": "var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))"
           },
           {
             "name": "--lr-thread-list-row-action-hover-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "var(--lr-icon-button-color-hover, var(--lr-color-text))"
           },
           {
             "name": "--lr-thread-list-search-clear-size",
@@ -137753,6 +138405,24 @@
             "name": "--hide-duration",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-high)"
           },
           {
             "name": "--lr-toast-accent-color",
@@ -143756,8 +144426,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "placement",
@@ -143838,8 +144507,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "placement",
@@ -143970,6 +144638,30 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-overlay-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-overlay-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-overlay-shadow-modal",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-overlay-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-container-highest)"
+          },
           {
             "name": "--lr-positioning-strategy",
             "deprecated": null,
@@ -144207,6 +144899,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "hiddenKinds",
+            "attribute": null,
+            "type": "readonly LyraSpan['kind'][]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "label",
@@ -147070,7 +147772,7 @@
           "upstream": "webawesome",
           "tag": "wa-video",
           "tier": "pro",
-          "classification": "exact"
+          "classification": "warning-required"
         }
       ],
       "surface": {
@@ -147168,16 +147870,6 @@
           {
             "name": "muted",
             "property": "muted",
-            "type": "boolean",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": false
-          },
-          {
-            "name": "playing",
-            "property": "playing",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -147349,13 +148041,12 @@
           },
           {
             "name": "playing",
-            "attribute": "playing",
+            "attribute": null,
             "type": "boolean",
-            "readonly": false,
-            "reflects": true,
+            "readonly": true,
+            "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": false
+            "hasDefault": false
           },
           {
             "name": "poster",
@@ -217682,8 +218373,8 @@
       "upstreamTag": "wa-video",
       "upstreamTier": "pro",
       "targetTag": "lr-video",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "warning-required",
+      "rationale": "Lyra exposes playing as read-only live state that is reflected but not observed as an attribute; migrated code that assigned playing or authored the playing attribute must call play() or pause() instead.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -217709,7 +218400,9 @@
           },
           "rationale": "wa-video and lr-video share the reviewed behavior profile: A named video exposes captions and keyboard-operable playback controls."
         },
-        "behaviorReviewFlags": []
+        "behaviorReviewFlags": [
+          "warning-required-mapping"
+        ]
       },
       "notes": "Lyra adds load(), validates media and thumbnail URLs, preserves consumer source/track nodes, caps thumbnail VTT input, and rejects unsupported fullscreen requests. These fail-closed additions do not change the documented safe-use contract.",
       "rewrites": {
@@ -217778,7 +218471,20 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "missing-attribute",
+          "section": "attributes",
+          "member": "playing"
+        },
+        {
+          "code": "readonly-mismatch",
+          "section": "properties",
+          "member": "playing",
+          "expected": false,
+          "actual": true
+        }
+      ]
     },
     {
       "upstream": "webawesome",

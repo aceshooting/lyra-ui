@@ -35,8 +35,10 @@ otherwise available direction.
   step and the only remaining room is the buttons' `--lr-icon-button-size` hit-area floor. The
   canonical type is `LyraFrame`; the former component-local appearance alias is removed.
 
-**Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
-`zoomOut()`/`fit()`, or toggles its `readonly` property.
+**Events:** `lr-readonly-change` (`detail: { readonly }`) after the lock button toggles the canvas's
+`readonly`; it bubbles through a canvas the cluster is slotted into, so a host that binds
+`.readonly` can keep its own state in sync. The zoom/fit buttons call the canvas's own `zoomIn()`/
+`zoomOut()`/`fit()`.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
 `<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:

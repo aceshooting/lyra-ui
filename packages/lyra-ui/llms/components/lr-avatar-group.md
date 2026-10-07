@@ -49,7 +49,7 @@ and remain untouched. Author-hidden/inert avatars do not consume visible capacit
 avatars are hidden through reversible component-owned state.
 
 **CSS parts:** `base` (the outer inline-flex container holding the slot and the badge),
-`overflow-badge` (the 40px-minimum action surface; only rendered while `max` is actively
+`overflow-badge` (the `--lr-icon-button-size`-minimum action surface; only rendered while `max` is actively
 overflowing), and `overflow-badge-visual` (the avatar-tier-sized painted disc inside it).
 
 **Themeable custom properties:** `--lr-avatar-group-avatar-size` (default `var(--lr-size-3rem)`,
@@ -79,8 +79,8 @@ authoritative for every hook.
 
 The overflow badge keeps a `--lr-icon-button-size` minimum activation target at every tier — a
 floor, not a cap, so the action surface grows past it to always contain the nested visual disc
-once `--lr-avatar-group-avatar-size` exceeds it (the default size and `l`/`xl`) — while small
-tiers still paint an exactly avatar-sized disc instead of an oversized 40px circle.
+once `--lr-avatar-group-avatar-size` exceeds it (every tier from `s` up) — while small
+tiers still paint an exactly avatar-sized disc instead of an oversized circle.
 
 **Optional peer deps:** none.
 

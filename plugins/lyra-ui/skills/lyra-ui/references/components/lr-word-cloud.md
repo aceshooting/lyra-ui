@@ -18,9 +18,9 @@
 
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
 out via an outward Archimedean-spiral search — heaviest word placed first, each word spiraling from
-the center until it clears every word already placed. Unlike sibling `lr-sparkline`/`lr-heatmap`
-(one `role="img"` glyph standing in for an aggregate value), the individual words here _are_ the
-meaningful interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
+the center until it clears every word already placed. Unlike sibling `lr-sparkline` (one `role="img"`
+glyph standing in for an aggregate value), the individual words here _are_ the meaningful
+interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
 its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`'s cells, the whole
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
 focus cursor to the next word in **declaration order** (not weight/placement order),
@@ -31,8 +31,9 @@ so immediate Enter/Space always works without requiring a preparatory arrow key.
 shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
 and repeated edge movements append repeated announcements even when their text is identical.
 `[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
-no live-region role of its own. Pointer input resolves the nearest word from the adequately-sized
-SVG surface; the potentially tiny text glyphs are not independent hit targets.
+no live-region role of its own. Pointer input resolves the word under the pointer (else the one
+with the nearest edge) from the adequately-sized SVG surface; the potentially tiny text glyphs are
+not independent hit targets.
 
 Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
 fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
@@ -49,7 +50,8 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   color across every word with the same `group` value. The component scans at most 10,000 input
   records, bounds each string to 256 characters and all retained word strings to 16,384 characters,
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
-  The returned sequence and records are frozen; reassign `words` after changes.
+  The returned sequence and records are frozen; assign a new array after changes (re-assigning the
+  same array is ignored).
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   a finite value is clamped to `[1, 512]` (so `0`/a negative value floors at `1px`, and an oversized
   value caps at `512px`); a non-finite value (`NaN`/`Infinity`) falls back to the default `12px`
@@ -70,14 +72,14 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   most 64), cycled by word index (or by
   `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
   all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens. The returned sequence is
-  frozen; reassign `palette` after changes
+  frozen; assign a new array after changes
 - `legend: readonly WordCloudLegendItem[] = []` (attribute: false) — clone-owned, frozen named
   readonly `{ label, color }` entries for explaining explicit `words[].color`/group color
   overrides; when omitted, the component derives entries from grouped and explicitly colored
   words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
   `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
-  sequence and records are frozen; reassign `legend` after changes.
+  sequence and records are frozen; assign a new array after changes.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection.

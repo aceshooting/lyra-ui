@@ -19,10 +19,12 @@
 The transcript scroll container: owns stick-to-bottom behavior while an answer streams, the "jump to
 latest" pill, and the unread divider. Two supported content shapes, auto-detected: ordinary element
 children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-virtual-list`
-(_virtual mode_, detected via `instanceof`). In virtual mode this component defers all scrolling to
-the slotted list's own `scrollToIndex()`. Follow/release state machine: while `follow` is engaged,
-content growth re-scrolls to the end; release happens only on a user-intent gesture (wheel,
-touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
+(_virtual mode_, detected by its `scrollToIndex()`/`scrollContainer` API, so custom prefixes and
+other realms work). In virtual mode this component defers all scrolling to the slotted list's own
+`scrollToIndex()` and follows its content extent (`items` or `source`) as rows are appended or grow.
+Follow/release state machine: while `follow` is engaged, content growth re-scrolls to the end;
+release happens only on a user-intent gesture (wheel, touchmove, scrollbar-drag, or
+PageUp/ArrowUp/Home/Shift+Space while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
 `follow`. The shadow `role="log"` always remains `aria-live="off"`, which avoids announcing every
@@ -36,7 +38,8 @@ sink and produces no announcements.
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
-counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
+counted as "at bottom," in both modes. While `follow` is released, the browser's native scroll
+anchoring keeps the reading position when content above it changes. `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself

@@ -243,9 +243,10 @@ Public DOM-anchored `lr-popover` instances form a same-root singleton. A later o
 first requests the existing peer's cancelable close and remains closed if that peer vetoes. Initial
 open markup stays lifecycle-silent: after the hydration-safe first-render boundary, the
 later-connected instance wins and the earlier peer closes structurally without a veto or lifecycle
-event. `lr-dropdown`, `showAt()` virtual surfaces, and popovers in separate document/shadow roots
-remain independent. Re-entering the same `show()` or `hide()` request from its own before-event
-coalesces onto one transition promise and emits the lifecycle once.
+event. `lr-dropdown`, `showAt()` virtual surfaces, popovers in separate document/shadow roots, and
+an open ancestor popover containing the newcomer or its trigger remain independent. Re-entering
+the same `show()` or `hide()` request from its own before-event coalesces onto one transition
+promise and emits the lifecycle once.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire _before_ the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and

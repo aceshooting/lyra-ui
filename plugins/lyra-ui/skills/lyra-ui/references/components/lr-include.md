@@ -112,7 +112,8 @@ never transcluded.
 
 Every inserted subtree is a clone. Its ids are rebased per Include instance, including references
 from labels, ARIA idrefs, fragment links, and `url(#id)` attributes, so repeating one source does
-not add duplicate document ids. Concurrent consumers lease shared work: disconnecting one aborts
+not add duplicate document ids. `name` attributes are dropped, so an included `<img name>` cannot
+shadow a `window` or `document` property. Concurrent consumers lease shared work: disconnecting one aborts
 the request only when no other subscriber still needs it. Rejected work is evicted and can be
 retried; a stale response never paints over a newer `src`.
 

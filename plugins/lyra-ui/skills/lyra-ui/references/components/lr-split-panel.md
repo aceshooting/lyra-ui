@@ -80,14 +80,15 @@ spellings are set, the Lyra-prefixed value wins. Constraint values may be length
 
 `--lr-split-panel-divider-hover-color` (default `var(--lr-color-brand)`) is the divider's background
 on hover/keyboard focus. `--lr-split-panel-divider-active-color` (default
-`var(--lr-color-border-strong)`) is its background while being dragged, or focused and pressed via
-the keyboard. Both are independent, component-scoped hooks rather than the bare shared token, so
+a `color-mix()` of the hover color, so the pressed divider deepens like the other splitters) is its
+background while being dragged. Both are independent, component-scoped hooks rather than the bare shared token, so
 retinting this divider does not also retint any other component that happens to default to the same
 color.
 
 Keyboard: focus the divider, then use Left/Right for a horizontal split or Up/Down for a vertical
 split. Each arrow moves one percent of the current allocation; horizontal arrows mirror under RTL.
-`Home` and `End` move to the current `--min` and `--max` bounds. Pointer dragging uses capture and
+`Home` and `End` move to the current `--min` and `--max` bounds; Alt, Ctrl and Meta chords are left to
+the browser. Pointer dragging uses capture and
 cleans up on pointer up, cancellation, capture loss, disconnect, and orientation changes.
 
 **Optional peer deps:** none.

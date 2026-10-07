@@ -78,8 +78,9 @@ boolean }[]`. `value` is an _absolute_
   non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
-using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
-meter owner, which retains its generated aggregate summary.
+using `effectiveLocale` (up to three fraction digits, more below one, so a small quantity never reads
+0). A host `aria-label`, else `label`, names the nested meter owner, which then speaks the generated
+aggregate summary as its `aria-valuetext`.
 
 **Events:** `lr-segment-activate-request` — a band or its legend row was activated while `interactive` is
 set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
@@ -118,8 +119,8 @@ sizes a legend chip on both axes. The `bar`-shape track is independently retunab
 `--lr-context-meter-track-size` (default `var(--lr-size-0-5rem)`) is its block size (and so the
 block size of its filled segments), `--lr-context-meter-track-radius` (default
 `calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
-`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
-remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
+`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the colour of its unfilled
+remainder (the ring track's stroke too), and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
 hairline seam painted between adjacent segments.
 `--lr-context-meter-selected-ring-color` (default `var(--lr-color-text)`) and
 `--lr-context-meter-selected-ring-width` (default `var(--lr-border-width-thick)`) paint the inset
@@ -162,8 +163,8 @@ tone stay in sync. Otherwise the component consumes shared tokens
 
 An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,
 `aria-valuemin`, and `aria-valuemax` whenever `total > 0`; without a valid positive total it uses
-`role="group"` and omits numeric meter attributes. Its accessible name is the generated summary;
-an authored host `aria-label` remains on the host as a distinct overall name. A separate
+`role="group"` and omits numeric meter attributes. Its accessible name is the host `aria-label`, else
+`label`, with the generated summary as `aria-valuetext`; with neither set, the summary is the name. A separate
 visually-hidden segment list exposes
 each labeled quantity, while the visible track, segments, ring SVG, and visible label remain
 `aria-hidden`. The summary's "used" figure is the sum of

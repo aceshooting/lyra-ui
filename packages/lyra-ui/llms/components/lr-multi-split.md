@@ -229,7 +229,8 @@ only the one beside the pane. `collapse="none"` (the default) is byte-for-byte i
 pre-collapse-feature behavior.
 
 `dividerLabel?: (index: number, panelCount: number) => string` (attribute: false) customizes the
-localized accessible label generated for each auto-inserted divider.
+localized accessible label generated for each auto-inserted divider; a blank result or a throw falls
+back to the localized default.
 
 **Events:** `lr-resize-request` (cancelable; `detail: { sizes }` is the proposed constrained size
 array from a divider drag or keyboard step. Call `preventDefault()` to leave `sizes` and its
@@ -237,8 +238,12 @@ persisted layout unchanged. It is not emitted when a consumer assigns `sizes` di
 keyboard/pointer proposal clamps to the already-current sizes),
 `lr-resize` (non-cancelable; the same `detail: { sizes }`, emitted after an accepted drag movement
 or keyboard step commits. A genuine pointer gesture has one terminal persistence write on
-`pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none. Pointer
-release emits no additional event; direct `sizes` assignments stay silent),
+`pointerup`; no-move, fully clamped, vetoed, canceled, and lost-capture gestures have none; direct
+`sizes` assignments stay silent), `lr-resize-change` (non-cancelable; `detail: { sizes }`, once after each
+keyboard step and once on pointer release after a drag that changed sizes, right after persistence — the
+hook for "save when the drag ends"). All three resize events bubble composed: a listener on an ancestor
+split should ignore events whose `target` is not the split (for example the `lr-resize-request` of an
+`lr-dock-panel` nested in a pane carries `{ extent }`, not `{ sizes }`),
 `lr-multi-split-collapse-change` (`detail: { state: 'wide'|'rail'|'floating' }`, fired only
 on a real `collapse`-state transition, never on every resize/render. It fires *after* the collapsing
 panel is decorated for the new state — its `data-collapse-state` marker, the closed drawer's `hidden`
@@ -253,8 +258,8 @@ preventing the event or making a synchronous reentrant mutation aborts the propo
 `lr-toggle` (non-cancelable; the same detail contains the resulting drawer state) fires after an
 accepted change, or after a responsive transition leaves `floating` and forces `open` to false.
 Forced closes emit no request. Direct `open` writes and no-op dismissals emit neither event,
-`lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once when the configured
-panel minimums/maximums cannot fit the track; the infeasible set is rejected for interaction and a
+`lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once per configuration when the
+configured panel minimums/maximums cannot fit the track; resizing the container does not repeat it; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
 fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
 

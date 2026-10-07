@@ -52,7 +52,9 @@ ownership even when the detach lasts past an event-loop turn.
 The four built-in actions are the shipped set, and `actions` only reorders or subsets them. A
 product-specific fifth action ("translate", "define", "search web") goes in the `actions` slot
 instead: slotted elements render after the built-ins **inside** the same `role="toolbar"` element
-and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
+and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored; keys a slotted control
+already handled, caret keys in a text field and items of a slotted menu or listbox are left to that
+control), so adding one does not mean
 reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
 its own accessible name and click handling; this component only manages its tab stop, and re-derives
 the group whenever the slot's assigned elements change. The group resolves actual composed action
@@ -61,7 +63,9 @@ stops, while multiple actionable descendants remain independently arrow-reachabl
 movement starts from the action that received the event rather than stale controlled state.
 
 `rect` is the sole public positioning input. Internal computed coordinates are intentionally
-private so controlled rect updates cannot be silently overridden by stale authored CSS.
+private so controlled rect updates cannot be silently overridden by stale authored CSS. The toolbar
+repositions itself only for viewport resizes: reassign `rect` on `selectionchange` and whenever the
+document or a scrolling ancestor (such as an `lr-chat-viewport` transcript) scrolls.
 **Themeable custom properties:** `--lr-selection-toolbar-placement-gap` (default
 `var(--lr-space-s)`) is the non-negative distance from the selection and from viewport edges while
 the toolbar avoids collisions. It accepts unitless pixel values, `px`, `rem`, and `em` values, and

@@ -49,7 +49,8 @@ Does **not** reset or restart the autoplay timer; call `restart()` afterwards or
 **Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
 snapshot of the exact elements now shown, in display order). Fires on first render, on
 `randomize()`, on a real slot-content change, and on
-each autoplay tick; never when the eligible pool is empty. `lr-pause-change`
+each autoplay tick; never when the eligible pool is empty, and not when the element is only moved
+within the document (it keeps the selection it showed). `lr-pause-change`
 (`detail: { paused: boolean }`) fires only when the built-in pause/resume button toggles `paused`, so a
 host mirroring or persisting that state stays in sync; a programmatic `paused` write stays silent,
 so a controlled binding can't echo itself. Same event name and payload shape as `<lr-poll-status>`'s
@@ -73,7 +74,8 @@ stay silent too. A nested forwarding slot contributes flattened assigned content
 fallback; later assignment and assigned-node text/style/visibility changes announce only when they
 change the currently exposed selection, while initial distribution remains silent. `pause-button`
 — the localized autoplay pause/resume action, rendered
-only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`. `next-button` — the
+only while `autoplay` is enabled, named by its action (`Pause`/`Resume`) with no pressed state.
+Pressing Resume restarts autoplay even while focus rests on the button. `next-button` — the
 opt-in localized action rendered while `with-next` is set, sharing the pause button's styling.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),

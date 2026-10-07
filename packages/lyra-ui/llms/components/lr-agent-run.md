@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated event** `lr-cancel` since `unreleased`; use event `@lr-run-cancel`; removal not before `28.0.0` — lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 25 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -78,13 +78,15 @@ assigned array or record has no effect; create and reassign a new value after ch
   and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
   name for the same union
 
-**Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
+**Events:** `lr-run-cancel` (`detail: { runId }`), and its deprecated alias `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
 
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
+
+**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id; `lr-cancel` is a deprecated alias of `lr-run-cancel`, dispatched right after it. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
 **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,

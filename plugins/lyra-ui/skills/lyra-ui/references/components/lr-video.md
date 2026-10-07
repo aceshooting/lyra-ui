@@ -30,9 +30,10 @@ its token-driven hover and press feedback.
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
 `currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
 accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
-'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`, `playing:
-boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload: 'auto' |
-'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
+'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`,
+`readonly playing: boolean` (live state reflected as the `playing` attribute; drive it with `play()`
+and `pause()`, since assigning it throws in strict-mode code), `poster: string = ''`, `preload: 'auto'
+| 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
 ''`, and `volume: number = 1`. The private native `<video>` always carries `playsinline`; native
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -46,9 +46,9 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   integer form is gone; the value is now one of the shared weekday-name tokens (`'auto'`, then
   `'sun'` through `'sat'`), which pins the week start independent of locale. Pass `'mon'` to keep
   the pre-10.0.0 rendering.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
-  section retains the localized purpose name rather than duplicating an authored host name; when
-  set programmatically without a host attribute, this value names the section
+- `accessibleLabel: string = ''` (attribute `aria-label`) — names the nested calendar section,
+  whether authored as the host attribute or set programmatically; unset, the section keeps the
+  localized purpose name
 
 At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
 events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
@@ -57,7 +57,8 @@ buttons.
 
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
-Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rendered grid rolls
+Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
+the day), Home/End to the month's first/last day; stepping past the rendered grid rolls
 `viewDate` to the target's month and emits `lr-view-change`. Enter/Space select.
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
@@ -70,8 +71,9 @@ month-navigation buttons; `previous-button` and `next-button` identify each dire
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
 `grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
 (localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
-ceiling), `agenda`, `agenda-event`, and `agenda-limit` (localized "+N more" notice shown in agenda
-view when the visible month's events exceed the 500-event render ceiling).
+ceiling), `agenda`, `agenda-event`, `agenda-limit` (localized "+N more" notice shown in agenda
+view when the visible month's events exceed the 500-event render ceiling), and `empty` (the agenda
+view's localized "no events" message).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size

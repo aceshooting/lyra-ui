@@ -28,7 +28,9 @@ feedback.
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
 - `intervalMs: number = 900` (attribute `interval-ms`)
-- `playing: boolean = false` (reflected)
+- `readonly playing: boolean` (reflected as the `playing` attribute) — whether playback is running.
+  Start and stop it with `play()`, `pause()` or `toggle()`; assigning it throws in strict-mode code
+  and an authored `playing` attribute starts nothing.
 - `withoutLoop: boolean = false` (attribute `without-loop`) — stops playback on the last item
   instead of wrapping back to the first; read on every tick.
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
@@ -99,9 +101,6 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
   values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling.
-- Initial `playing` and `item-count` attributes are resolved together on the first update, so
-  playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
-  clears the reflected `playing` state.
 - No _visible_ "N of M" position label beside the range input; the native one-based range still
   exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
   enhancement where the platform honors it.

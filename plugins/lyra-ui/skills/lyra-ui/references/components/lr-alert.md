@@ -61,7 +61,8 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
-top-end toast region, shows it, and resolves after it hides and is removed. Keep the reference to
+top-end toast region, shows it, and resolves after it hides and is removed. The first call on a page
+that has not registered `lr-toast` loads the toast elements first. Keep the reference to
 reuse the same identity with another `toast()` call. An alert adopted into another same-origin
 document uses that document's toast region, timers, motion preference, and focus realm. If external
 DOM reconciliation removes a toast without hiding it, the pending promise settles after that

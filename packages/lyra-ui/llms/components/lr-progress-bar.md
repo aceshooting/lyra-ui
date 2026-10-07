@@ -34,7 +34,9 @@ label overrides it; `with-value` controls only whether the locale-formatted perc
 Live label mutations and reassignment stay synchronized through nested forwarding slots. Hidden,
 inert, CSS-hidden and `aria-hidden` branches do not name the role; a visible descendant can restore
 text suppressed only by an ancestor's `visibility:hidden|collapse`. Host `aria-label` precedence is
-presence-based, so an explicitly empty value remains empty rather than invoking a fallback.
+presence-based, so an explicitly empty value remains empty rather than invoking a fallback. Under
+reduced motion an `indeterminate` bar (and ring) stops moving and renders full length, dimmed, so
+it never reads as a partial value.
 
 **Slots:** default — label content; `label` — compatibility alias for the default slot.
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,

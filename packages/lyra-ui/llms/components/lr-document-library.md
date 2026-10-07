@@ -33,8 +33,9 @@ by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary a
 10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
 and dates are snapshotted on assignment; malformed records (including missing/non-string names or
 non-string tag entries), blank ids, and later duplicate ids are omitted first-wins before filters,
-counts, selection, rows, and events; reads are detached so `Date`
-mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
+counts, selection, rows, and events; reads return one stable detached snapshot per assignment, so
+`Date` mutators cannot reach retained state; reassign a new array after changes; re-assigning the same
+array, as a re-rendering parent does, is no change), `filter`, `label`, `loading`,
 clone-owned frozen `selectedDocumentIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
 changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
@@ -75,9 +76,9 @@ button, while `error` is set.
 `error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
 `error-description`, `error-actions`, `retry-button`.
 
-`selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
-selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
-to the document's shared light-DOM polite sink, including zero and repeated equal counts.
+`selection-bar` is visible ordinary content, not a shadow live region. `selectedDocumentIds`
+assignments stay silent; each selection change the user makes (row or select-all checkbox, "Clear
+selection") appends the localized selected count to the document's shared light-DOM polite sink.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
 `lr-change` aliases, the checkboxes' `lr-checkbox-toggle-request` proposals, the tag combobox's
 lifecycle/filter/clear/invalid events, table pagination and priority-column visibility events, and

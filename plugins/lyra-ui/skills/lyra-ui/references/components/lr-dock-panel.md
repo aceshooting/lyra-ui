@@ -35,8 +35,9 @@ docked case.
 - `extent: string = '280px'` — the current docked size along the resize axis, as a CSS length.
 - `minExtent: string = '160px'` (attribute `min-extent`) — minimum resize bound, as a CSS length.
 - `maxExtent: string = ''` (attribute `max-extent`) — maximum resize bound. Empty means "no explicit
-  cap": the live extent of the containing element is used instead (falling back to the viewport if
-  there's no parent, e.g. not yet connected). An explicit maximum is still capped to that live
+  cap": the live extent of the containing element is used instead (the shadow host when the panel sits
+  at the top of a shadow root, looking through a slot; falling back to the viewport if there is no
+  container, e.g. not yet connected). An explicit maximum is still capped to that live
   containing extent, and an effective minimum above the maximum is reduced to the maximum, so the
   separator always exposes `min <= now <= max`.
 - `collapsible: boolean = false` (reflected)
@@ -79,6 +80,12 @@ resolved in the host's owner realm.
   (non-cancelable; `detail: { expanded }` is
   the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly). Both
   details are fresh readonly/frozen snapshots.
+
+Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
+contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
+is not the element it listens on. Keyboard: the arrow keys step by 16px and Home/End jump to the
+minimum/maximum extent, each through `lr-resize-request`; Alt, Ctrl and Meta chords are left to the
+browser. Collapsing while focus is in the content or on the handle moves focus to the collapse toggle.
 
 The Lyra-original v9 event migration is mechanical: listen for `lr-resize-input` for live layout
 feedback and `lr-resize-change` for persistence/telemetry instead of the removed `lr-resize` name.

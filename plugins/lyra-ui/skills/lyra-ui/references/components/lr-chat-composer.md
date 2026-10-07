@@ -67,7 +67,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
   forwarded native text-length constraints; invalid/unset values impose no bound
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
-  wins over placeholder and the localized composer label
+  wins over placeholder and the localized composer label. A host `aria-describedby` describes it.
 - `spellcheck: boolean = true` — forwarded to the internal `<textarea>`
 - `autocapitalize: string = ''` — forwarded to the internal `<textarea>`; empty omits the attribute
 - `autocorrect: boolean = true` — forwarded to the internal `<textarea>` and reflected canonically

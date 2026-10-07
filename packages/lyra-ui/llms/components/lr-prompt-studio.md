@@ -38,8 +38,8 @@ empty/blank message and version ids are omitted and later duplicates use determi
 identity before rendering, editing, focus, selection, and events;
 runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
-`heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
-label when unset; `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
+`heading?: string` — visible toolbar heading, falling back to the localized Prompt Studio
+label when omitted (an explicit `''` is kept); `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
 level (`none` keeps the visual heading text without heading semantics);
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
@@ -73,6 +73,8 @@ boundary, so without the re-dispatch an
 `editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
 focus movement, not a synthetic host-level focus signal: moving between two fields inside the
 studio emits a `blur` and then a `focus`.
+
+**Headings and malformed rows:** `heading` is used verbatim including `''` (omission localizes “Prompt studio”), and the Variables and Preview titles sit one level below `heading-level` (no heading semantics under `none`). A `null` variable row, or one without a string `name`/`value`, is skipped instead of blanking the studio.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,

@@ -21,7 +21,8 @@ in the default slot and emits a composed event, while adding no layout of its ow
 
 **Properties:** `disabled: boolean = false` (reflected), `rootMargin: string = '0px'` (attribute
 `root-margin`), `threshold: number | number[] | string = '0'` (the mapped attribute form accepts
-space-separated values), `root: Element | string | null = null` (an element or mapped element ID),
+space-separated values), `root: Element | string | null = null` (an element or mapped element ID, looked up in the host's
+tree before the document),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
 boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
 target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
@@ -34,7 +35,7 @@ failures are contained, so later valid targets and later rebuilds can still obse
 tied to the current owner document, so a detached or adopted wrapper cannot emit a stale batch.
 Threshold collections inspect at most their first 10,000 direct data entries. Malformed or
 accessor-backed entries are skipped; a valid prefix remains active, while an entirely unusable value
-falls back to threshold `0`.
+falls back to threshold `0`. A new array with the same thresholds does not rebuild the observer.
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen

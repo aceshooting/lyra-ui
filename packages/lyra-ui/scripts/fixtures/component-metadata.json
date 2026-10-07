@@ -389,6 +389,58 @@
       "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
     },
     {
+      "tag": "lr-agent-eval-dashboard",
+      "kind": "event",
+      "name": "lr-metric-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-metric-change-request",
+        "usage": "@lr-metric-change-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "event",
+      "name": "lr-cancel",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-cancel",
+        "usage": "@lr-run-cancel"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-background-runs",
+      "kind": "event",
+      "name": "lr-run-open",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-activate",
+        "usage": "@lr-run-activate"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-change-review",
+      "kind": "event",
+      "name": "lr-change-decision",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-change-decision-request",
+        "usage": "@lr-change-decision-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+    },
+    {
       "tag": "lr-community-card",
       "kind": "event",
       "name": "lr-entity-activate",
@@ -505,6 +557,19 @@
       },
       "removalNotBefore": "10.0.0",
       "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
+    },
+    {
+      "tag": "lr-subagent-panel",
+      "kind": "event",
+      "name": "lr-cancel",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-cancel",
+        "usage": "@lr-run-cancel"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
     },
     {
       "tag": "lr-video-playlist",
@@ -27164,7 +27229,7 @@
     "current": {
       "version": "25.7.1",
       "sourceCommit": null,
-      "manifestSha256": "b1d0485b825cafff45e819ab42d70f2b4cdfce3079cfcbdbabbabd7452245ce3",
+      "manifestSha256": "554873476be781e82d649bd5e154b9578bb8a99076005be2c67d8d150dad1384",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

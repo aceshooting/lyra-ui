@@ -22,8 +22,9 @@ property selects `{ kind: "matrix", rowLabels, colLabels, values }` (the default
 is independently addressable despite being
 canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
 with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
-with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
-cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
+with arrow-key roving focus (Home/End jump to the first/last interactive cell of the focused row,
+Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring is redrawn over the focused cell on
+every draw, and the cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
@@ -31,7 +32,11 @@ calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain 
 previous/next movement instead of swapping for RTL.
 Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
-environments without `IntersectionObserver` retain eager drawing.
+environments without `IntersectionObserver` retain eager drawing. A theme signal (any ancestor
+`style`/`class` write) repaints only when a theme token the canvas reads changed, or while `cellColor`
+is set. A grid whose backing store would exceed the engine's canvas limits (16,384 px per side,
+16,777,216 pixels) is painted at a lower resolution instead of blank, and `exportData('png')`
+follows it.
 
 Focus-only updates repaint a bounded neighborhood around the old and new cells, restoring all
 intersected neighboring fills and overlays while preserving the focus-ring geometry. Calendar axis
@@ -86,8 +91,8 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `rowHeight?: number` (attribute `row-height`) — independent matrix vertical row pitch in CSS
   pixels, including its trailing `cellGapY` separator. Unset, removed, `null`, `undefined`, and
   non-finite values restore square rows from the effective `cellSize`; finite values
-  clamp to the `1`–`4096` range. This bounds numeric outliers; browser canvas limits still apply
-  to the complete grid. `fitToWidth`, `minCellSize`, and `maxCellSize` continue to govern column pitch.
+  clamp to the `1`–`4096` range. This bounds numeric outliers; a grid beyond the canvas limits
+  paints at a lower resolution. `fitToWidth`, `minCellSize`, and `maxCellSize` continue to govern column pitch.
   Calendar mode ignores it and preserves its existing square geometry. With `accessibleCells`,
   width and height independently preserve the accessible target floor; dense columns can therefore
   overflow even when fitting is requested.
@@ -136,9 +141,10 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
   ignored
 - `colLabelRotation?: number` (attribute `col-label-rotation`, new in 11.0.0) — rotation, in
-  degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
-  In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
-  collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an
+  degrees, applied to matrix column labels. Unset or `0` paints them horizontally. A horizontal label
+  is truncated with an ellipsis to its own column (to its `colLabelInterval` columns, at most to the
+  canvas edge), so in a dense matrix labels shorten or drop rather than overprint their neighbours;
+  `45` or `90` is the standard remedy. Each label rotates about an
   anchor at its own column's centre with the label's *end* at that anchor, so it leans back over the
   columns to its left and the last column's label cannot overflow the canvas. Values outside
   `[0, 90]` clamp into that range and non-finite values normalize to `0`. Pair with
@@ -254,7 +260,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   or Enter/Space toggles one cell and retains `lr-cell-activate`. Pointer dragging paints or erases
   according to the starting cell, previews transient selection, and proposes once on release;
   pointer cancellation, Escape, disconnect, data/mode changes discard the gesture. A drag does
-  not emit a cell click. Shift+arrows extends/contracts a rectangle from the anchor while retaining
+  not emit a cell click. Shift+arrows (or Shift+Home/End) extends/contracts a rectangle from the anchor while retaining
   unrelated pre-range selection. Directions remain physical under RTL, matching the canvas.
 
   `toggleRowSelection(row: number): void` and `toggleColumnSelection(col: number): void` propose
@@ -277,7 +283,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
   full row/column counts, buttons expose localized `aria-label`s and explicit `aria-selected`, and
-  roving arrow navigation still reaches every canonical cell. The canvas remains the visual and
+  roving arrow and Home/End navigation still reaches every canonical cell. The canvas remains the visual and
   pointer surface but is hidden from the accessibility tree. Controlled refresh focus follows the
   preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
@@ -316,7 +322,9 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   math unchanged. Lets a consumer designate a value as categorically outside the ramp (e.g. a real
   zero-count day rendered as a neutral hairline, distinct from both "no data" and the ramp's own
   lightest step) without a synthetic ramp color, which can't safely reserve an exact value on a
-  skewed dataset. Unset (the default) reproduces the exact ramp/no-data behavior for every cell.
+  skewed dataset. A `var()`, `color-mix()` or `currentColor` result resolves in the heatmap's own
+  theme scope; one that does not resolve paints the no-data fill. Unset (the default) reproduces the
+  exact ramp/no-data behavior for every cell.
 - `data.weekdayLabelText?: (jsWeekday: number) => string | undefined` (calendar branch only) —
   overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it

@@ -191,7 +191,7 @@ import type {
   `registerLyraLocale()` (see `llms/shared.md`). Explicit `*-label` properties take precedence.
 - Native `dir`/`lang` remain inherited global attributes. The component is not form-associated.
 - No `size`/`compact` property: the built-in trigger's hit area is `<lr-icon-button>`'s shared
-  `--lr-icon-button-size` floor (2.5rem/40px). For a dense action row, lower
+  `--lr-icon-button-size` floor (2.25rem by default). For a dense action row, lower
   `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every `LyraElement` re-declares
   on its own `:host` and so never reaches a composed child) on this element or an ancestor, or reach
   the composed native control directly through `::part(base-control)`. A coarse-pointer/no-hover

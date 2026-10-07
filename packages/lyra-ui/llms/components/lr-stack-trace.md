@@ -69,6 +69,8 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
 
 **Slots:** none.
 
+**Parsing and patterns:** Python 3.11+ caret/tilde marker lines stay with their frame rather than the exception message, WebKit `global code`/`module code` frames are selectable, and `DEFAULT_INTERNAL_PATTERNS` no longer lists the never-matching `'(native)'`. Re-binding the same `internalPatterns` array keeps expanded internal runs open.
+
 **CSS parts:** `base` (the root wrapper; respects `max-height`, tightens its padding under
 `size="s"`, and drops its card chrome under `frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a selectable

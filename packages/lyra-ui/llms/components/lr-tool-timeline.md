@@ -103,6 +103,8 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 ```
 
 
+**Registration:** `lr-tool-result-view` registers when the first entry's details open, so a timeline that never opens one does not load it; it upgrades in place.
+
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,

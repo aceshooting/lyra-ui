@@ -97,7 +97,9 @@ properties:
 - `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
   `message-role="user"`.
 
-Prefer these over re-pointing the shared token a default happens to reference. Overriding
+Prefer these over re-pointing the shared token a default happens to reference.
+`[part='collapse-button']` reads the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states) first. Overriding
 `--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
 component, and which shared token backs each role's fill is not a stable contract — it changed
 between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
@@ -134,9 +136,8 @@ via `::part(bubble)`) so message bubbles stay visually distinct from the surroun
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
 > wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
-**Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
-component, auto-imported alongside this one, not an npm peer) for the status-transition
-announcements described below.
+**Optional peer deps:** none. The status-transition announcements described below go through the
+document's shared live region; no element is rendered per message.
 
 ```html
 <lr-chat-message message-role="assistant" status="streaming">
@@ -154,14 +155,11 @@ announcements described below.
 
 Accessibility of `status`: the current status is always available as plain visible text
 (`[part="status-text"]`), never color alone. A transition _to_ `"failed"`, or _from_ `"streaming"` to
-`"sent"` (a stream finishing), is additionally announced through the internal `<lr-live-region>` —
+`"sent"` (a stream finishing), is additionally announced through the document's shared live region —
 `"failed"` announces assertively (`"Message failed to send."`), a streaming→sent completion announces
 politely (`"Message complete."`) — so a screen-reader user not currently focused on this message
 still learns about it. No other status transition is announced (e.g. `streaming`→`sending`, or
-`sending`→`sent` without having passed through `streaming`, produce no announcement). This differs
-from `<lr-typing-indicator>`'s deliberately simpler `role="status"` approach, appropriate there
-since that component only ever announces once (its own mount); this component's `status` can flip
-between several values across a single element's lifetime.
+`sending`→`sent` without having passed through `streaming`, produce no announcement).
 
 **Known gotchas:**
 

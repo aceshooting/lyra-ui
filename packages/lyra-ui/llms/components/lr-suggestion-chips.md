@@ -52,7 +52,7 @@ cannot do (once the chips wrap, the row fills the available inline size and each
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
-on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `0.5`) — opacity of a chip whose
+on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.

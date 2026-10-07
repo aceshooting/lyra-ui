@@ -111,7 +111,7 @@ independent concepts.
   solid brand chip in all five, so the appearance never decides whether the current page is
   identifiable
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
-  selects the localized singular `item` or the CLDR plural form of `items` for the active locale
+  selects the CLDR plural form of the localized `items` message for the active locale
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
@@ -299,7 +299,7 @@ pagination.hrefTemplate = (page) =>
 - the numbered list keeps a constant slot count as the reader pages through, so the control does not
   jitter: `siblingCount`/`boundaryCount` fix the budget, every page renders when the page count fits
   inside it, and otherwise a side that turns out to need no gap hands its slot back as one more page
-  number. A gap is a named jump control, not decorative text; repeated activation advances through
+  number; a gap that would hide exactly one page shows that page instead. A gap is a named jump control, not decorative text; repeated activation advances through
   a large skipped run. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
   however large you set them the list never renders more than 103 slots
 - `appearance` does not reach the compact page-jump input — `[part="page-input"]` always draws with

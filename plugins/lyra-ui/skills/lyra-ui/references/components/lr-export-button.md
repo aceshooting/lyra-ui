@@ -24,12 +24,13 @@ The format menu follows the [shared surface treatment](shared/styles-and-tokens.
 **Properties:**
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
-  shallow frozen snapshots of the collection and row records; nested cell values remain opaque; the
+  shallow frozen snapshots of the collection and row records (assigning the same array again is
+  ignored; assign a new array to change the data); nested cell values remain opaque; the
   built-in download reads this **after** the cancelable `lr-export-request` event, so a listener that lets
   the download proceed may assign `.rows` from inside its own handler and that data is what gets
   downloaded
 - `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
-  shallow frozen snapshot. `{ key, label }` acts as a field allow-list **and**
+  shallow frozen snapshot (assigning the same array again is ignored). `{ key, label }` acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
   JSON fall back to the union of the rows' own keys (`key`/`label` both set to the key name) instead
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
@@ -52,7 +53,7 @@ The format menu follows the [shared surface treatment](shared/styles-and-tokens.
   changes nothing for them. Never applies to the built-in JSON download — RFC 8259 forbids a BOM
   there
 - `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
-  snapshot), where
+  snapshot; assigning the same array again is ignored), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
   `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
 extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
@@ -61,14 +62,15 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   event-only; no custom encoder is bundled
 - `size?: LyraSize` — optional density on the shared `2xs` through `xl` ladder, including the
   `small`/`medium`/`large` aliases. It changes trigger and menu-row typography and padding while
-  retaining the shared 40px minimum hit-area floor. Unset preserves the established geometry
+  retaining the shared `--lr-icon-button-size` minimum hit-area floor. Unset preserves the established geometry
 - `appearance?: LyraExportButtonAppearance` — `outlined` or `quiet` trigger treatment. Unset
   preserves the established surface, border, and text colors
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
-  not toggle it automatically
+  not toggle it automatically. Focus on the trigger while it turns on is held on the host and
+  returns to the trigger when it turns off
 - `label?: string` — trigger button text; omission uses the localized `exportButtonLabel` default.
   Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
   or whitespace-only visible label keeps the localized default as the trigger's accessible name;

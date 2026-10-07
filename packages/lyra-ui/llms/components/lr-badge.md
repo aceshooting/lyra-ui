@@ -36,8 +36,8 @@ the app level.
   (reflected) — the semantic palette. `primary` renders through the same brand palette while
   remaining `primary` on property reads, selectors, serialization and reflection. `lr-tag`
   additionally accepts and preserves `text`, rendering the neutral plain treatment.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the same visual-density scale
-  `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the shared
+  `2xs`–`xl` visual-density ladder (without `lr-chip`'s extra `3xs`), for typography/padding/minimum block size; `m` preserves the original badge
   dimensions. Both short and long upstream spellings round-trip verbatim while resolving to the
   same private effective size for rendering.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
@@ -60,6 +60,7 @@ the app level.
   treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
   intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
   because the two pinned upstreams disagree on both defaults.
+- `value?: string` — opaque bookkeeping value echoed in `lr-remove`'s detail; never rendered.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
@@ -68,10 +69,14 @@ the app level.
   attribute keeps removal enabled until both are absent. Assigning `false` through either property
   clears both attributes, while assigning `true` reflects that property's own spelling.
 
-**Events:** `lr-remove` — noncancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
-badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
-focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
-fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
+**Events:** `lr-remove` — noncancelable, bubbles and composes, `detail: { value }` echoing the tag's
+`value` property (`undefined` when never set), exactly like `lr-chip`'s, so one handler serves both.
+Emitted by `lr-tag` only (a badge emits nothing at all) when the remove button is activated by click
+or by Enter/Space while focused; it is a real native `<button>`, so both come for free. Only
+rendered, and therefore only fired, while `withRemove` / `removable` is set, and the event's
+`target` is the tag itself. `lr-tag` and `lr-chip` share the removable-pill contract: `lr-remove`
+with `{ value }`, the `removable` attribute (`with-remove` is `lr-tag`'s upstream-mirroring alias),
+`--lr-<tag>-remove-hover-bg` and the same × glyph size; only `lr-chip` has `disabled`.
 
 Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces the request. The
 tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),

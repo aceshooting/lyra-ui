@@ -46,7 +46,8 @@ viewer, allocation width, status, or document identity changes.
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
-numeric type-ahead buffer is cleared on detach. Alt/Ctrl/Meta-modified digits are left to browser or
+numeric type-ahead buffer is cleared on detach. Typed digits may be ASCII or the digits of the
+effective locale the page numbers are shown in. Alt/Ctrl/Meta-modified digits are left to browser or
 application shortcuts and never enter the buffer.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page

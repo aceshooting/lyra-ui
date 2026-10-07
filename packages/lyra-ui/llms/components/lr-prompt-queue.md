@@ -21,12 +21,15 @@ proposed queue; send-now emits the complete selected item.
 
 When a focused row action requests removal and the host applies the proposed queue, focus moves to
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
-receives focus. Removing an unfocused row does not move focus.
+receives focus. Removing an unfocused row does not move focus. An accepted Move up/down keeps focus on
+the moved row's action, or its nearest enabled action once that one is disabled at the queue's edge.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
 (reflected) — renders each queued prompt as read-only text instead of an editor;
 `disabled: boolean = false` (reflected);
-`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`);
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — the visible label's heading
+level; `'none'` renders it as plain text.
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
@@ -34,7 +37,7 @@ Item ids are occurrence identities. Empty ids and later duplicates are ignored b
 proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
 editable and read-only rows; the host `label` is also the visible queue heading. Omitting `label`
 localizes the default `promptQueueLabel` message; an explicit empty string suppresses that default
-and renders no visible heading (`accessibleLabel` still overrides the region's accessible name
+and renders no heading element at all (`accessibleLabel` still overrides the region's accessible name
 independently).
 
 Supported item and attachment fields are read once when `items` is assigned; create and reassign a

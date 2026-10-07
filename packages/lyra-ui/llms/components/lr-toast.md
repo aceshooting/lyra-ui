@@ -122,8 +122,12 @@ fill). Inherited or direct public values remain authoritative across every size 
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
 message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
-surface and accent-bar start corners. They are deliberately separate from `--lr-toast-gap`, which
-continues to control only the region's stack spacing.
+surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
+deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
+spacing. The item joins the shared overlay-surface family for its fill and edge
+(`--lr-overlay-surface`, `--lr-overlay-border`) but keeps its own unscrimmed `--lr-shadow-l`
+elevation. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
+accent color.
 
 The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
 `transparent`), `--lr-toast-close-button-hover-color` (default `var(--lr-color-text)`),

@@ -70,15 +70,17 @@ coalesce into one update.
   `[part='meta']`, `[part='base']` also switches to a reduced, symmetric padding sized for a lone
   thumbnail instead of the compact text row's padding — see
   `--lr-attachment-chip-compact-thumbnail-only-padding` below.
-- `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
-  name; omitting it reads back `undefined` and routes through the complete localized
+- `removeLabel?: string` (attribute `remove-label`) — the remove button's accessible name, with
+  `{label}` replaced by the file name; omitted or blank, it routes through the complete localized
   `removeWithContext` template
-- `retryLabel?: string` (attribute `retry-label`) — verb used in the retry button's accessible
-  name; omitting it reads back `undefined` and routes through the complete localized
+- `retryLabel?: string` (attribute `retry-label`) — the retry button's accessible name, with
+  `{label}` replaced by the file name; omitted or blank, it routes through the complete localized
   `attachmentRetryWithContext` template
-- `uploadingLabel?: string` (attribute `uploading-label`) — verb used in the visible uploading
-  status; omitting it reads back `undefined` and uses complete localized messages for progress,
-  indeterminate state, and filename context so translators can reorder every value
+- `uploadingLabel?: string` (attribute `uploading-label`) — the visible uploading status and the
+  progress bar's accessible name, with `{label}` replaced by the file name and `{percent}` by the
+  progress; omitted, it uses complete localized messages for progress, indeterminate state, and
+  filename context so translators can reorder every value. An explicit empty value hides the
+  visible status, and the progress bar keeps its localized name
 - `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
   `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
   localized default (`'Upload failed'` in English)
@@ -166,7 +168,9 @@ selected unit abbreviation; `numberLabel` formats the scaled value and receives 
 as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
 `"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
 exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
-an unknown size renders nothing instead of `"NaN B"`.
+an unknown size renders nothing instead of `"NaN B"`. The same module's
+`localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string` is the
+ready-made `numberLabel` for `locale`, rendering exactly the requested fraction digits.
 
 ```html
 <lr-attachment-chip

@@ -48,8 +48,10 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
   so progress never reports an impossible total
-- `label: string = ''` — header label and accessible-name source; falls back to a localized
-  "Evaluation run"
+- `label?: string` — header label and accessible-name source; omission localizes "Evaluation run",
+  and an explicit `''` is kept
+- `headingLevel: LyraHeadingLevel = '4'` (attribute `heading-level`) — level of each example's
+  section headings (input, output, grounding, tool trace); `'none'` drops heading semantics
 
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
@@ -65,6 +67,13 @@ child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
 `lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
 The cancelable `lr-example-tool-approval-decide-request` propagates its veto to the nested approval.
+
+**Methods:** `finalizePendingApproval(exampleId: string): void` closes the vetoed approval of that
+example's nested timeline after the host persisted it, and `revertPendingApproval(exampleId: string):
+void` releases it for a retry; both are no-ops while the example is collapsed or gone.
+
+**Registration:** the Markdown, code, grounding and tool-timeline children register when the first
+example expands, so a collapsed batch loads none of them; they upgrade in place.
 
 
 **CSS parts:** `base`, `header`,

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,11 +65,14 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
-`close()`, `registerCommand(command)` — appends to `commands` and returns an unregister function.
+`close()`, `show()`/`hide()` (aliases of `openPalette()`/`close('api')`, the surface every Lyra
+overlay exposes), `registerCommand(command)` — appends to `commands` and returns an unregister function.
 
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
-cycling) at the ends; the active row is scrolled into view. Enter selects. Hovering a non-disabled
-row also makes it active.
+cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
+page, as in `lr-combobox`; the active row is scrolled into view within the list. Enter selects.
+Hovering a non-disabled row also makes it active. A query matching nothing announces the localized
+`commandPaletteEmpty` text politely.
 
 **Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
 with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable
@@ -93,6 +96,10 @@ value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
 `description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
+
+The palette dialog paints with the shared overlay-surface family, like `lr-dialog`:
+`--lr-overlay-surface` (default `var(--lr-color-surface-container-highest)`), `--lr-overlay-border`,
+`--lr-overlay-radius`, and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)`).
 
 **Themeable custom properties:** `--lr-command-palette-z-index` (default
 `var(--lr-overlay-stack-index, var(--lr-layer-modal))`), `--lr-command-palette-offset-block-start`

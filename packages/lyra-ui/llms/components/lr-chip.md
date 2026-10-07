@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -49,7 +49,8 @@ relied on `<lr-chip selected>` to create an action.
   preserves the original chip dimensions. The `small`/`medium`/`large` spellings are exact aliases
   of `s`/`m`/`l` and round-trip unchanged. Unsupported attributes and untyped property writes
   normalize to reflected `m`.
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
+- `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
+  (reflected) — `primary` is an alias that renders as `brand`.
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
   loud-color-on-quiet-tint convention: background is the
@@ -87,7 +88,9 @@ relied on `<lr-chip selected>` to create an action.
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-toggle-request`
 (`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
 Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
-Calling `preventDefault()` keeps the current `selected` state unchanged).
+Calling `preventDefault()` keeps the current `selected` state unchanged), then `lr-chip-change`
+(`detail: { value, selected }` — non-cancelable, fired after an accepted request has changed
+`selected`; setting `selected` directly fires neither).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
@@ -149,6 +152,9 @@ that follow each `size`, so setting one on the element or a theme ancestor remai
 corner radius of both `[part='base']` and `[part='remove-button']`, kept in sync so retuning one
 retunes both, retunable without a `::part()` rule, and unlike the density quintet above it does not
 vary by `size`; the same `--lr-button-radius` pattern —
+`--lr-chip-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)`) — the
+remove button's hover fill, which its pressed fill mixes from, like `lr-tag`'s
+`--lr-tag-remove-hover-bg` —
 plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-fill-loud`/`-fill-quiet`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-text`,
 `--lr-color-mix-active`,

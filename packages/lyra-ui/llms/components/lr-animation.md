@@ -54,7 +54,9 @@ start/finish lifecycle, including reduced motion.
   `threshold: number | readonly number[] = 0` (both attribute: false) plus
   `rootMargin: string = '0px'` (attribute `root-margin`) configure that observer. Threshold arrays
   are frozen snapshots, retain only finite values from 0 through 1, and inspect at most 1,000
-  candidates per assignment; invalid scalar thresholds normalize to `0`.
+  candidates per assignment; invalid scalar thresholds normalize to `0`. Assigning the same array
+  again is a no-op, and `keyframes` is compared by reference: bind stable arrays (hoist them or use
+  Lit's `guard()`), because an inline literal restarts a running animation on every parent render.
 - `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 

@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [overlays](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/overlays.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 16 custom properties — see `lr-toast.md`
+- **Themeable via** 12 parts, 19 custom properties — see `lr-toast.md`
 - **Documented with** `lr-toast`: see [lr-toast.md](./lr-toast.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

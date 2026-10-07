@@ -36,7 +36,8 @@ capability as a row.
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
   means "any file type").
 - Host `aria-label` attribute (default absent) — overrides the localized accessible name on the
-  single-capability button or multi-capability menu trigger. An explicitly empty value stays empty.
+  single-capability button or multi-capability menu trigger. An explicitly empty value is ignored,
+  so the control keeps its localized name.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
@@ -50,9 +51,12 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
-**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
-once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
-owner-realm array snapshot, not a live reference to the input's own `.files`. `lr-camera-request`
+**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files, rejected, remainingFiles,
+remainingTotalSize }`, the same shape as `lr-file-input`'s) — fired once a file-backed capability's
+hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
+owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
+"All files" filter let through that do not match `accept` are listed in `rejected` with reason
+`'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated; this component implements no

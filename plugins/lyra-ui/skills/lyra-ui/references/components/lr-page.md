@@ -61,7 +61,9 @@ code migrating from `wa-page` should treat Lyra's always-finite `number` result 
 **Events:** `lr-nav-toggle-request` (cancelable; `detail: { open }` is the `navOpen` state proposed
 by `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
 click, Escape, or the default/custom navigation-toggle control, all of which route through those
-same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.), then `lr-nav-open-change`
+(non-cancelable; `detail: { open }`) once an accepted request has changed `navOpen`; setting
+`navOpen` directly fires neither.
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this

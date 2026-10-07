@@ -20,7 +20,7 @@ Compact, static resource strip for one message or run — tokens in/out, cost, l
 hover or keyboard-focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
 is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
 The tooltip reuses `lr-tool-call-chip`'s hover/keyboard-focus/Escape/`aria-describedby` contract
-wholesale; focus of any kind describes the badge.
+wholesale; focus of any kind describes the badge, and a host `aria-describedby` is merged with it.
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 

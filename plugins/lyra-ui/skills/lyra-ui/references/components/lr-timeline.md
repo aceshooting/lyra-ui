@@ -30,7 +30,8 @@ Horizontal time layouts using `collision="overlap"` or `collision="stack"` alloc
 from the actual item content and lane offsets. The height follows content growth, shrinkage, and
 changes in lane count. `--lr-timeline-time-extent` still controls only the main-axis distance, and
 horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its existing sizing
-behavior.
+behavior. Vertical time layouts keep the `--lr-timeline-time-extent` axis and reserve room after it
+for the latest item, which sits at the axis end, so it never overlaps the content that follows.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.

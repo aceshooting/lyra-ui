@@ -3960,7 +3960,7 @@
       "module": "src/components/conversation/markdown/markdown-loader.ts",
       "exportName": "loadMarkdownAndSanitizer",
       "kind": "function",
-      "fingerprint": "90cfc2c896f19c9b84ed",
+      "fingerprint": "1a76fb9bff25e312ccd1",
       "routes": [
         "src/components/conversation/markdown/markdown-loader.ts"
       ],
@@ -12443,7 +12443,7 @@
       "module": "src/components/viewers/calendar-viewer/calendar-loader.ts",
       "exportName": "loadIcalDeps",
       "kind": "function",
-      "fingerprint": "08b6c03b11a995fed740",
+      "fingerprint": "bad45b5c1a1ac1a0fbc3",
       "routes": [
         "src/all.ts",
         "src/components/lr-calendar-viewer.ts",
@@ -13414,7 +13414,7 @@
       "module": "src/components/viewers/email-viewer/email-loader.ts",
       "exportName": "loadEmailAndSanitizer",
       "kind": "function",
-      "fingerprint": "927d07caf33a473dd312",
+      "fingerprint": "e9debe44b4cea99c0efa",
       "routes": [
         "src/all.ts",
         "src/components/lr-email-viewer.ts",
@@ -13941,7 +13941,7 @@
       "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.ts",
       "exportName": "loadSheetJs",
       "kind": "function",
-      "fingerprint": "64052dafac17decff634",
+      "fingerprint": "013dbf5ffe3d2c25e21f",
       "routes": [
         "src/all.ts",
         "src/components/lr-spreadsheet-viewer.ts",
@@ -14075,7 +14075,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "9808cfaf6d863a56e711",
+      "fingerprint": "afe18c61b4c2ae7690e5",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15700,7 +15700,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "723548d215d2adc08567",
+      "fingerprint": "c2d232b3132481a922b8",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15716,7 +15716,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "7b6414e31d4886d95b30",
+      "fingerprint": "13b2d31629924de5c79d",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15732,7 +15732,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "623ac4150d4fca3eaaca",
+      "fingerprint": "6babdebadfab9ebae679",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16276,7 +16276,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "4ec367c5bc17e469b609",
+      "fingerprint": "57d2d81beb7ecec393e0",
       "routes": [
         "src/vue.ts"
       ],
@@ -16311,7 +16311,7 @@
       "module": "src/components/agent-tools/background-runs/background-runs.class.ts",
       "exportName": "BackgroundRun",
       "kind": "interface",
-      "fingerprint": "a9542c452cd4574d1faa",
+      "fingerprint": "6d248272e4397fe1944f",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/background-runs/background-runs.class.ts",
@@ -16685,7 +16685,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "fff3e659c4e3549fbc13",
+      "fingerprint": "48ba4a6cdbe9e27c91de",
       "routes": [
         "src/framework-types.ts"
       ],

@@ -19,8 +19,9 @@
 A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
 recording, optional chunked streaming, teardown. The one place in this library that touches the
 microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `mode="hold"` (the
-default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
-`aria-pressed`. Escape cancels the in-progress take in either mode.
+default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop, its label
+naming the next action. Escape cancels the in-progress take in either mode; an idle Escape is left to
+enclosing overlays. A host `aria-describedby` describes the trigger.
 
 For example, `<lr-push-to-talk><span slot="microphone-icon">MIC</span></lr-push-to-talk>` replaces
 the idle microphone glyph. Use `recording-icon` separately for the recording state.

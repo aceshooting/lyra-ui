@@ -25,7 +25,7 @@ moves focus already inside the body to `[part="header"]` before the body is hidd
 the specific `entries` row that held focus does the same once that render (and, while virtualized,
 the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that is elsewhere is
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
-At/above `virtualizeAt`
+Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
@@ -67,8 +67,10 @@ border, background, and corner radius so a feed nested inside existing message c
 double it. The header/body divider and entry-row padding are unaffected by `frame` — only the
 outer card goes.
 
-**Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
+
+**Toggle request, follow and threshold:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles. `follow` reflects like every `true`-defaulting boolean: absent while following, `follow="false"` once released. The body virtualizes when entries exceed (not equal) `virtualize-at`.
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries

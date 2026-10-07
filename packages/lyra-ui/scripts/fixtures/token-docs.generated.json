@@ -3547,7 +3547,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/test-results/test-results.styles.ts",
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
         "src/components/data/pagination/pagination.styles.ts",
         "src/components/data/sequence-strip/sequence-strip.styles.ts",

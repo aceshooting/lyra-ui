@@ -35,7 +35,8 @@ rather than a phantom success, and a header-row target scrolls with the same
 reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 `scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
 `scrollMode='page'` removes intervening scroll containers and the height cap, so a populated table's
-sticky header follows the page scrollport while rows continue below it. The border and rounded
+sticky header follows the page scrollport while rows continue below it, windowed against the
+page's own (window) scroll. The border and rounded
 header corners remain; a wide dataset can overflow its host in page mode.
 Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;

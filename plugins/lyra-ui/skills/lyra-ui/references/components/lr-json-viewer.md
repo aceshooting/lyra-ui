@@ -25,7 +25,7 @@ Rendering, searching, toolbar copy, and per-node copy all use that same owned gr
 mutation or revocation of the supplied object cannot change a displayed or copied value. Ordinary
 aliases, cycles, and sparse-array holes are retained. Expand/collapse state is keyed by structural path (not object
 identity), so it survives a `data` reassignment that keeps the same shape — e.g. a streaming result
-being patched in place. A container value that self-references (directly or through a longer cycle)
+reassigned as a fresh object per patch. A container value that self-references (directly or through a longer cycle)
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
@@ -61,7 +61,8 @@ the top-level copy button or a per-node one only after the owning browsing conte
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
 attempted text, a reason of `'unsupported' | 'denied' | 'failed'`, and the original error. Failures
-announce localized `copyFailed`; the raw platform error is never rendered. Copying a circular
+announce localized `copyFailed`; the raw platform error is never rendered. The activated button also
+shows the localized `copied`/`copyFailed` text for 1.5 s. Copying a circular
 `data` value serializes safely, substituting the same `Circular reference` marker the tree view
 renders, instead of throwing. `lr-search-change`
 (`detail: { query, matchCount, matchCountExact, activeIndex }`) —

@@ -54,7 +54,7 @@ never makes a row expandable; migrate by deriving the name with
 so appending matching slotted content after the component's first render immediately enables the
 row's disclosure.
 
-**Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
+**Events:** cancelable `lr-toggle-request` (`detail: { suiteId, testId, expanded }`, the requested state), `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
 and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
@@ -65,6 +65,8 @@ repeated row controls remain distinguishable.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.
+
+**Statuses, durations and toggles:** a result whose `status` is `error`, `timedOut` or `broken` counts as `failed` (other unknown values stay `skipped`), and durations use the shared short format (`850ms`, `65.4s`). `lr-toggle-request` (`detail: { suiteId, testId, expanded }`) is a cancelable proposal dispatched before a failure detail toggles; preventing it keeps the row unchanged.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries

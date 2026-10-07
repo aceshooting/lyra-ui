@@ -103,7 +103,10 @@ element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 ```
 
 Composing `lr-file-input` inside the wrapped region gives that region both a click-to-browse picker
-and a drop target covering the whole surrounding panel:
+and a drop target covering the whole surrounding panel. A drop on the nested input is handled by the
+input alone (the zone only ends its own drag session), so one drop fires one `lr-files`; the nested
+input's and `lr-attachment-trigger`'s `lr-files` still bubble through the zone with the same detail
+shape, so check `event.target` when a zone-level listener must react to the zone's own drops only:
 
 ```html
 <lr-drop-zone>
@@ -117,7 +120,7 @@ and a drop target covering the whole surrounding panel:
 
 - No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
   `without-paste` is set) — this component is drag/drop only.
-- Dragged folders are traversed recursively while `multiple` (the default), with the same
+- Dragged folders are traversed recursively while `multiple` (not the default here), with the same
   10,000-entry budget and `'read'`/`'limit'` failure reasons as `lr-file-input`. While not
   `multiple`, a dropped folder is rejected outright with reason `'directory'`.
 

@@ -42,6 +42,8 @@ accumulate into one search that resets after 500 ms without typing, and the next
 label starts with it (after the active row while the list is open, after the committed row while it
 is closed, wrapping) becomes the active row while open or is committed, with `lr-change`, while
 closed. Space joins a search already in progress; otherwise it keeps its activation meaning.
+Opening the closed dropdown starts on the committed row, and keyboard navigation scrolls only the
+listbox to keep the active row visible; a catalog refresh keeps the active row by id.
 
 When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
 focus follows the available replacement. If the new owner is disabled or inert, focus returns to
@@ -234,7 +236,7 @@ rather than a control metric, so the shared ladder has no equivalent and its per
 local. `size` is the primary lever; override a cssprop directly only to retune a single element or
 step outside the scale entirely. `--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the
 child gap in the trigger, combobox, and option rows; `--lr-model-select-radius` (default
-`var(--lr-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
+`var(--lr-form-control-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
 Both remain inheritable fallback arms, so set them on an ancestor to retheme a group without
 changing unrelated controls. `--lr-model-select-trigger-border-color` (default
 `var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)

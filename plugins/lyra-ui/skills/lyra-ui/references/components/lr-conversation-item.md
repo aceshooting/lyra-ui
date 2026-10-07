@@ -86,10 +86,12 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 **CSS parts:** `base`, `base-menu-open` (state alias on `base` while a menu opened from the
 `actions` slot is open), `active-indicator` (decorative, rendered only while `active`),
 `select-button`, `start`, `content`, `label`, `label-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
-`actions`
+`actions`. `rename-button` reads the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states), like `lr-thread-list`'s row actions beside it.
 
 **Custom state:** `menu-open` — the host matches `:state(menu-open)` while an `lr-dropdown`,
-`lr-popover` or `lr-context-menu` opened from the `actions` slot is open (including one composed
+`lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`,
+`lr-date-input`, `lr-time-input`, `lr-export-button`) opened from the `actions` slot is open (including one composed
 inside another component's shadow root), however it was opened; `[part="base"]` then also carries
 `base-menu-open`, and the row keeps its hover tint (an `active` row keeps its active tint). The menu
 sits in the browser top layer, where Chromium and WebKit stop matching `:hover` and `:focus-within`

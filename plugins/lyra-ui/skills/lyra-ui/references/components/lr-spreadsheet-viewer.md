@@ -81,7 +81,13 @@ Importing `spreadsheet-viewer.js` (this component's own registration entry) load
 installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
 (`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
 
-Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
-workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
-cumulative across a workbook. Exceeding any ceiling surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the workbook.
+Cells render through their workbook number formats: date and time cells localize with the
+effective locale, other formatted numbers (percent, currency, zero-padded codes) show the
+workbook's formatted text, and General numbers use locale digits without grouping.
+
+Remote resources are capped at 25 MB, each sheet's used range at 10,000 rows and 1,000 columns, and
+each workbook at 256 sheets and 1,000,000 aggregate cells in those ranges; the ranges are checked
+before the grid is expanded. Row limits are per sheet, not cumulative across a workbook. Exceeding
+any ceiling surfaces the localized `documentPreviewResourceTooLarge` message instead of the
+workbook. ZIP input must be an Office Open XML workbook: OpenDocument and Numbers packages are
+refused, and binary (`.bin`) parts count against the cell ceiling by size.

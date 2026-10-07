@@ -44,7 +44,8 @@ reads as stalled.
 
 An interrupted connection disarms the stall timer. `lr-resume` (`detail: null`, bubbling and
 composed) requests host-managed resume; the component never reconnects or changes state in response
-to the click. The host must update `connectionState` after handling the request.
+to the click. The host must update `connectionState` after handling the request; a focused resume
+button hands focus to the `base` container as it unmounts.
 
 **Methods:**
 

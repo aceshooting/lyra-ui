@@ -43,10 +43,10 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 
 **Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
-`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle. The background is also the
-base its hover/press mixes from.
+`var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
+base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
+and carries no `aria-pressed`, so its name never contradicts a pressed state.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
-can be set on the element _or any ancestor_. They exist because
-`::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
-selector after `::part()` — so restyling the pressed state otherwise required overriding the
+can be set on the element _or any ancestor_. They exist because Shadow Parts forbids an attribute
+selector after `::part()`, so restyling the revealed state otherwise required overriding the
 library-wide brand tokens.

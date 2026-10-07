@@ -46,10 +46,12 @@ exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+**Events:** `lr-file-select` (`detail: { filePath: string }`), cancelable `lr-toggle-request` (`detail: { expanded: boolean }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
 'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.
+
+**Toggle request and colours:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the file list folds; preventing it keeps the list as is. File rows, the copy button and the per-file counts follow `--lr-color-text`, `--lr-color-success` and `--lr-color-danger`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,

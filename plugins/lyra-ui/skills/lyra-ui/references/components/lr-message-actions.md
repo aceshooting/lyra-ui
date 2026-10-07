@@ -34,8 +34,10 @@ becomes unavailable, focus moves to the nearest survivor or the stable toolbar, 
 newer external focus move. Keyboard movement starts from the action that actually received the event,
 even after a controlled state write changed the remembered stop.
 
-ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys.
-Roving navigation still operates on the actual toolbar and thumb actions.
+ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor, or any slotted text field,
+remain native editing keys, and a key a slotted control already handled (`preventDefault()`, as an
+open `lr-menu` does) stays with it. Items of a slotted composite widget (an open menu, a listbox)
+are never toolbar stops. Roving navigation still operates on the actual toolbar and thumb actions.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
@@ -48,8 +50,8 @@ opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only whil
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus. It
-also stays revealed while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from a slotted
-control is open, since that menu sits in the browser top layer, where focus inside it does not
+also stays revealed while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`) opened
+from a slotted control is open, since that menu sits in the browser top layer, where focus inside it does not
 count as focus within the toolbar in Chromium and WebKit.
 `label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no

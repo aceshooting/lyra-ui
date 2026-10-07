@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 29 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -85,7 +85,9 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit.
+  window pointer listeners so a later release cannot commit. The one-shot initial framing still
+  applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
+  closed dialog is framed when it is first shown).
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
@@ -115,7 +117,8 @@ live node/edge/viewport geometry without this canvas ever importing the minimap.
 All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
-edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
+edge geometry/status arrays (shared between observers and reused, by identity, across
+viewport-only frames until the structure changes), viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
 effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
@@ -214,6 +217,9 @@ four above. Set it to `transparent` to opt out of the hover treatment.
   host applies back. Selection is hybrid state: `selectedNodeIds`/`selectedEdgeIds` accept external
   replacement, while node/edge activation and clear-selection gestures update them internally and
   emit `lr-selection-change`.
+- Re-assigning the identical array or record to `nodes`, `edges`, `selectedNodeIds`,
+  `selectedEdgeIds` or `decorations` is a no-op, so a parent re-render never cancels a drag or
+  connection, re-runs layout, or resets selection. Assign a new array/record to change it.
 - Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
   missing an explicit `position`; a node the host has already positioned is left exactly where it is
   and, when its resolved center is nonnegative and within the safe-integer range, is used as a fixed
@@ -236,5 +242,8 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 - `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
   `disabled`. Default: `var(--lr-opacity-disabled)`.
+- `--lr-flow-canvas-node-fallback-inline-size` / `--lr-flow-canvas-node-fallback-block-size` — card
+  size assumed for layout and fitting before a node is measured. Defaults:
+  `calc(var(--lr-size-10rem) + var(--lr-size-1rem))` / `var(--lr-size-4rem)`.
 
 ---

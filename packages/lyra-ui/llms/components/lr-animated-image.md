@@ -28,15 +28,16 @@ automatically under `prefers-reduced-motion: reduce`.
   independent play/pause action still uses localized context when no nonempty `alt` is available.
 - `play: boolean = false` — the caller's _intent_ (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the _effective_
-  state after reduced-motion arbitration: `play && (ignoreReducedMotion || !<OS prefers reduce>)`.
+  state after reduced-motion arbitration:
+  `play && (ignoreReducedMotion || a play-button press || !<OS prefers reduce>)`.
   It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
   `TypeError`; drive playback via `play`.
 - `ignoreReducedMotion: boolean = false` (reflected, attribute `ignore-reduced-motion`) — a
   deliberate page-author override that lets `play` take effect even when the OS reports
-  `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen and
-  `[part="play-button"]` `disabled` regardless of `play`.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
-  including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
+  `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen regardless of
+  `play`, until the user presses `[part="play-button"]` (an explicit press always plays).
+- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present
+  and nonempty, it overrides `[part="play-button"]`'s computed Play/Pause label
   verbatim in _both_ states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
@@ -71,7 +72,7 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 **Known gotchas:**
 
 - the freeze frame is captured once per successful `src` load, in the `<img>`'s own `load` handler
-  (a DPR-aware `drawImage()`), not re-captured on each pause — pausing always reverts to that first
+  (at the image's natural size, not scaled by the device pixel ratio), not re-captured on each pause — pausing always reverts to that first
   frame, never to the frame that was on screen.
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`

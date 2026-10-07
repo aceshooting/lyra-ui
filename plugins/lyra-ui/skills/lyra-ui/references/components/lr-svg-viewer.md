@@ -21,7 +21,9 @@ The shared `passive-svg` profile (the same post-sanitization engine used for emb
 removes author `<style>`/`style`, SVG animation elements, and external
 resource or paint-server references before insertion, preventing fetched SVG content from escaping
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
-raster data remain available.
+raster data remain available. A document whose local `<use>` references (nested ones included)
+would clone more than 100,000 elements is refused with the localized
+`documentPreviewResourceTooLarge` message instead of freezing the page.
 
 Fitting SVG content stays centered. In a capped nonzoomable viewer, overflowing content begins
 inside the body's reachable scroll range, keeping both its top and bottom available.

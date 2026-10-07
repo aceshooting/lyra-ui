@@ -33,7 +33,8 @@ plain marker with no button.
 `withoutRestoreConfirmation: boolean = false` (attribute `without-restore-confirmation`) — skips
 the inline confirm step so Restore fires the event immediately.
 `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
-`aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
+`aria-disabled="true"` with a spinner beside the localized "Restoring…" text, which is then also
+its accessible name.
 
 **Slots:** default — optional supplemental content under the marker row (e.g. what changed since
 this point).

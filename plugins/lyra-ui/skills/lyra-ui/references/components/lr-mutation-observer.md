@@ -38,7 +38,8 @@ throwing constructor, leaves that rebuild inert rather than leaking an exception
 Callbacks from a retired document are ignored after disconnect or adoption. `attributeFilter` is
 likewise a bounded own-data snapshot (examining at most its first 10,000 direct data entries);
 malformed or accessor-backed entries are skipped, a valid prefix remains active, and an entirely
-unusable value falls back to an empty filter.
+unusable value falls back to an empty filter. A new array with the same names does not rebuild the
+observer.
 
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native

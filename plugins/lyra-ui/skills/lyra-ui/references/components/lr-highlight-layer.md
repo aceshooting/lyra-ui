@@ -40,8 +40,10 @@ re-click of the same source citation).
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
 (transparent activation geometry with a minimum pointer/focus area independent of the visual
 rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
-individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
-one `highlight-action` button per rendered highlight.
+individual targets are replaced by `highlight-actions` (a non-overlapping action list, at most half
+the box tall and scrolling) containing one `highlight-action` button per rendered highlight;
+highlights whose hit areas do not overlap keep their in-place targets. Keyboard focus and the roving
+tab stop follow a highlight's `id` when `items` is re-sorted or prepended.
 
 **Themeable custom properties:**
 `--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,

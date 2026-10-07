@@ -95,11 +95,10 @@ off it — untouched.
 ```
 
 Accessibility: since this indicator typically mounts and unmounts around a real generation lifecycle
-(appears when a response starts, disappears once one arrives) rather than emitting a stream of
-updates of its own, it does **not** route through `<lr-live-region>`/the internal `Announcer` —
-that machinery exists to coalesce many rapidly-changing announcements into one, and there is only
-ever a single announcement here: the mount itself. `role="status"` plus an accessible name derived
-from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
+(appears when a response starts, disappears once one arrives), it announces its label once per
+mount (and again when `label` changes) through the document's shared polite announcement sink — a
+live region that already exists before the text arrives. `role="status"` plus an accessible name
+derived from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
 (`.sr-only`) in the shadow tree, so the name survives even if only one of the two is picked up by a
 given assistive-tech/browser pairing. The animated shape itself is `aria-hidden="true"` — it's
 decorative; `label` is the entire accessible content, nothing narrates individual animation frames.

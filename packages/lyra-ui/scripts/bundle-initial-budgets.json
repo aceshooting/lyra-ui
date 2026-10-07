@@ -9,8 +9,8 @@
   ],
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.0625,
-    "dist/components/conversation/model-select/model-select.js": 23.0,
-    "dist/components/conversation/usage-badge/usage-badge.js": 4.1875,
+    "dist/components/conversation/model-select/model-select.js": 23.125,
+    "dist/components/conversation/usage-badge/usage-badge.js": 4.25,
     "dist/components/conversation/voice-picker/voice-picker.js": 21.1875,
     "dist/components/forms/color-picker/color-picker.js": 24.9375,
     "dist/components/forms/combobox/combobox.js": 36.625,
@@ -20,13 +20,13 @@
     "dist/components/forms/select/select.js": 31.0,
     "dist/components/layout/app-rail/app-rail-item.js": 4.5986328125,
     "dist/components/layout/menu/menu.js": 16.5,
-    "dist/components/overlays/overlay/popover.js": 16.6875,
+    "dist/components/overlays/overlay/popover.js": 16.75,
     "dist/components/overlays/overlay/tooltip.js": 15.4658203125,
     "dist/components/overlays/popup/popup.js": 4.3125,
     "dist/components/retrieval/citation-badge/citation-badge.js": 5.9375,
     "dist/components/retrieval/entity-chip/entity-chip.js": 5.375,
     "dist/components/utility/export-button/export-button.js": 12.3125,
-    "dist/components/utility/mention-popover/mention-popover.js": 8.181640625,
-    "dist/components/utility/tour/tour.js": 16.5625
+    "dist/components/utility/mention-popover/mention-popover.js": 8.25,
+    "dist/components/utility/tour/tour.js": 16.875
   }
 }

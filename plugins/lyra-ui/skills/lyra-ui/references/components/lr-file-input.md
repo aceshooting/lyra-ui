@@ -30,7 +30,8 @@ enabled buttons retain pointer feedback.
 
 **Properties:**
 
-- `multiple: boolean = false` (reflected)
+- `multiple: boolean = false` (reflected) — a plain HTML boolean like `wa-file-input`'s, so
+  `multiple="false"` is still true here; `lr-drop-zone` and `lr-attachment-trigger` read it as false
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
@@ -54,12 +55,12 @@ enabled buttons retain pointer feedback.
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
-  retained files (unless `nonRetaining`) plus `heldFileCount` plus the current batch; `0` disables
-  the check. An excess file in the batch is rejected with reason `'maxFiles'`, in the same
+  retained files (unless `nonRetaining`; a single-file input replaces its file, so it retains
+  none) plus `heldFileCount` plus the current batch; `0` disables the check. An excess file in the batch is rejected with reason `'maxFiles'`, in the same
   `[part="rejection"]` shape as `maxFileSize`.
 - `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
-  summing retained files (unless `nonRetaining`) plus `heldTotalSize` plus the current batch; `0`
-  disables the check. Same rejection-UI shape and fail-safe invalid-override behavior as
+  summing retained files (unless `nonRetaining` or a single-file input) plus `heldTotalSize` plus
+  the current batch; `0` disables the check. Same rejection-UI shape and fail-safe invalid-override behavior as
   `maxFileSize` (see gotchas).
 - `heldFileCount: number = 0` (attribute `held-file-count`) — externally held file count added to
   the running count `maxFiles` evaluates against, in both retaining and `nonRetaining` modes — the
@@ -181,8 +182,8 @@ the region is cleared (and unrendered) as soon as a subsequent selection rejects
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
-control: the semantic button's accessible name comes from a host `aria-label` (or `accessibleLabel`),
-then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
+control: the semantic button's accessible name comes from a non-empty host `aria-label` (or
+`accessibleLabel`), then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
 content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom

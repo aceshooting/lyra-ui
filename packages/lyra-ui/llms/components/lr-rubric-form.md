@@ -73,6 +73,8 @@ live value but never overwrites a dirty edit.
 `error` — aggregate validation content; `actions` —
 extra host controls rendered in the footer beside Submit/Skip.
 
+**Rebinding:** re-binding the same `keys`, `value` or `defaultValue` object (every Lit parent render does) is ignored, so the reviewer's entries survive; assign a new object to replace the value.
+
 **Events:** `lr-input` (`detail: { value }`), `lr-validity-change` (frozen
 `detail: { valid, errors }`, deduplicated on effective native validity including consumer custom
 errors and own/fieldset validation barring), `lr-submit` (`detail: { value, itemId }`), and `lr-skip`

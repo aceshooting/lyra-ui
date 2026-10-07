@@ -75,7 +75,9 @@ preserving null readback; an explicitly empty query remains empty.
 **Methods:**
 
 - `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown` handler calls
-  this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
+  this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight),
+  `Home`/`End` (first/last row, only once `focusActiveOption()` has moved focus into the list, so the
+  text control keeps its caret keys) and
   `Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no
   `preventDefault()` when `filteredItems` is empty, letting the keystroke fall through to the
   host's own control unchanged. `Escape` closes with no selection. Returns `true` whenever the key

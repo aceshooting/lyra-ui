@@ -31,7 +31,7 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `highlights?: LyraHighlight[]` for its own preview pane. Each assignment becomes a frozen
   snapshot: own string `id` and `name` are required or that pane is unset; valid string optional
   fields are retained and other values are omitted. Its highlights use the shared snapshot too, so
-  mutation requires reassignment.
+  mutation requires reassigning a new object; re-assigning the same object is a no-op.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
   preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
   attribute.
@@ -45,8 +45,9 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
   side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
   turns that off.
-- `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
-  preview panes; repeated assignment of the same value still re-runs.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — jumps the diff view, or both
+  side-by-side preview panes, to the target. Re-assigning the identical object or id does not jump
+  again; call `scrollToAnchor()` for a repeat jump.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides
   `--lr-document-compare-pane-max-height` declaratively, giving each `view="side-by-side"` pane its
   maximum block size before it scrolls internally. The value is sanitized as a CSS length, so an
@@ -62,11 +63,17 @@ highlight, while the original `lr-highlight-activate`
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
+**Methods:** `scrollToAnchor(target)` jumps the diff view (a `line-range` anchor indexes its rendered
+lines) or both side-by-side panes, resolving whether any found the target. `search(query)`,
+`searchNext()`, `searchPrevious()` and `clearSearch()` forward to the diff view; side by side,
+`search()` resolves `0`.
+
 **Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
 clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
 `lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
-`lr-render-error` (`detail: { error }`).
+`lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
+(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`.
 
 **Slots:** none.
 

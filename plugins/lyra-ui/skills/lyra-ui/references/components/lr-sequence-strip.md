@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,8 +23,9 @@ consistently with the sparkline/heatmap family, and read as a glanceable aggrega
 is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
-Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does. That tooltip is positioned from the
+Home/End move the stop — direction-aware, so the arrows swap under RTL — and keyboard focus on a
+cell shows the same `[part="tooltip"]` detail that pointer hover does (a click-focused cell keeps no
+tooltip once the pointer leaves). That tooltip is positioned from the
 active cell, not from the center of the whole strip. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
@@ -123,10 +124,12 @@ library event.
 
 **CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
 background-colored by its category, carrying the roving `tabindex`, and activatable by click or
-Enter/Space — it has a pointer cursor plus paired hover/press treatments, and `[data-selected]` when
+Enter/Space — it has a pointer cursor, a thin quiet hover outline distinct from the focus ring, a
+press treatment, and `[data-selected]` when
 it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
-item's label, hidden until a cell is hovered or focused),
+item's label, hidden until a cell is hovered or keyboard-focused), `empty` (visible localized "No
+items" text, rendered only while `items` is empty),
 `legend` (the static category key rendered below the strip when `withLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the

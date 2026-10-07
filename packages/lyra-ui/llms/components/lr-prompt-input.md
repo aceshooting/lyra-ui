@@ -28,6 +28,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 (attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and
 `maxLength?: number` (attribute `maxlength`);
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
+`submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
+(attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
+(attribute `max-rows`) forward to the composed `lr-chat-composer` with its semantics;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
@@ -47,7 +50,7 @@ readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `
 `label?: string` — accessible name for the prompt section. Omitting it localizes the default
 `promptInputLabel` message; an explicit empty string suppresses that default and renders no label.
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
-localized default.
+localized default. A host `aria-describedby` describes the composed textarea.
 Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
 duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
 source ids use the same unique nonblank projection.
@@ -74,7 +77,8 @@ are no-ops before the textarea has rendered.
 **Events:** native `input`, `change`, `focus`, and `blur` are each relayed once from the primary
 textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-stop` (`null`), `lr-mention-select` (`{ suggestionId, index, label, trigger }`),
-`lr-attachments-add` (`{ capability, files }`), `lr-attachment-remove` (`{ attachmentId }`),
+`lr-attachments-add` (`lr-attachment-trigger`'s `lr-files` detail: `{ capability, files, rejected,
+remainingFiles, remainingTotalSize }`), `lr-attachment-remove` (`{ attachmentId }`),
 `lr-model-change`/`lr-voice-change`
 (`{ value, inCatalog }`), `lr-sources-change` (`{ selectedSourceIds }`), `lr-queue-change`
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,

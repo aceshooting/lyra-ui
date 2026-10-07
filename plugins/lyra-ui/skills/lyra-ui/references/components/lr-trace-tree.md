@@ -50,6 +50,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 **Events:** `lr-span-select` (`detail: { spanId: string }`, a row was activated) and `lr-span-toggle`
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
+**Hidden kinds and focus:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and the 500-row limit notice keep following the whole trace (`lr-agent-trace` forwards its own `hiddenKinds` here). `spans` is kept by item identity, so a large trace with opaque provider metadata is never cut by a field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
+
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,

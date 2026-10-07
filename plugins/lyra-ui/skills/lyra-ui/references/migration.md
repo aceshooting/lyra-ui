@@ -1520,9 +1520,9 @@ For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 34 | 37 | 16 | 0 | 0 | 71 | 16 |
+| Web Awesome | 33 | 37 | 17 | 0 | 0 | 70 | 17 |
 | Shoelace | 18 | 28 | 12 | 0 | 0 | 46 | 12 |
-| **Total** | **52** | **65** | **28** | **0** | **0** | **117** | **28** |
+| **Total** | **51** | **65** | **29** | **0** | **0** | **116** | **29** |
 
 ## Web Awesome (87)
 
@@ -1614,7 +1614,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-tooltip>` | `<lr-tooltip>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-show → lr-show. Equivalent surface representation: for defaults null ≡ ; no source rewrite. |
 | `<wa-tree>` | `<lr-tree>` | `warning-required` | Manual: Lyra freezes each selection snapshot and exposes it as readonly so listeners cannot mutate component-owned selection state. Migrated handlers that modify the event array in place must create their own copy. |
 | `<wa-tree-item>` | `<lr-tree-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand; events: wa-lazy-change → lr-lazy-change; events: wa-lazy-load → lr-lazy-load. |
-| `<wa-video>` | `<lr-video>` | `exact` | Automatic: tag and supported side-effect registration import. Lyra adds load(), validates media and thumbnail URLs, preserves consumer source/track nodes, caps thumbnail VTT input, and rejects unsupported fullscreen requests. These fail-closed additions do not change the documented safe-use contract. |
+| `<wa-video>` | `<lr-video>` | `warning-required` | Manual: Lyra exposes playing as read-only live state that is reflected but not observed as an attribute; migrated code that assigned playing or authored the playing attribute must call play() or pause() instead. |
 | `<wa-video-playlist>` | `<lr-video-playlist>` | `rewritten` | Automatic: tag/import plus events: wa-video-change → lr-video-change. |
 | `<wa-zoomable-frame>` | `<lr-zoomable-frame>` | `warning-required` | Manual: Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference. |
 

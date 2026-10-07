@@ -32,11 +32,13 @@ paint on hover and press.
 
 - `value: string` — canonical `YYYY-MM-DD` or `''`. Assignment goes through a strict-ISO gate:
   a non-zero-padded (`"2007-3-27"`) or calendar-invalid (`"2007-02-30"`) literal sanitizes to `''`
-  and clears all three fields. Programmatic assignment never emits `input`/`change`
+  and clears all three fields. Programmatic assignment never emits `input`/`change`. Assigning the
+  date the control already holds keeps the typed field text and the pending `change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
 - `parts: LyraKnownDateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
-  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
+  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`.
+  Assigning the same object, or one with the current field text, is ignored
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
   date constraints
@@ -156,7 +158,7 @@ of which the ladder re-points per `size` tier. That is what keeps the three fiel
 as an `<lr-input>`/`<lr-date-input>` in the same form row at every tier; the
 `--lr-known-date-field-*` names are unchanged and are still the documented override point. The
 min-height resolves to 24px at `2xs`/`xs` (WCAG 2.2 SC 2.5.8's pointer-target floor, above the
-ladder's own 1.25rem/1.5rem there), 1.875rem at `s`, 2.5rem at `m`, 3rem at `l`, 3.5rem at `xl`.
+ladder's own 1.25rem/1.5rem there), 2rem at `s`, 2.25rem at `m`, 2.5rem at `l`, 3.5rem at `xl`.
 Also `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)

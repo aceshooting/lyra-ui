@@ -60,8 +60,8 @@ unset it still emits the manual event but no countdown is armed.
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
-"Refreshing…", text), `pause-button` (the built-in pause/resume toggle), `refresh-button` (the
-optional built-in manual refresh action).
+"Refreshing…", text), `pause-button` (the built-in pause/resume action, named `Pause`/`Resume` with no pressed state),
+`refresh-button` (the optional built-in manual refresh action; its glyph is drawn inline).
 
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared

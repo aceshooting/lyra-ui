@@ -33,8 +33,10 @@ contract.
 
 - `items: readonly unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
-  source whenever `source` is unset. Its sequence is copied, bounded, and frozen while generic row
-  identities are retained; reassign a new array after sequence changes.
+  source whenever `source` is unset. Its sequence is copied, bounded (the first 10,000 rows; a
+  development warning names the property), and frozen while generic row identities are retained;
+  reassign a new array after sequence changes. Re-committing the same rows re-renders them without
+  moving any row or cancelling a pending `scrollToIndex()` correction.
 - `source?: LyraVirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
@@ -43,7 +45,8 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   for synthetic, paged, or remote collections. `indexOfKey` is required when `active-item-id` should
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
-  and row-identity contract as `items`; an indexed-source object passes through by identity.
+  and row-identity contract as `items`; an indexed-source object passes through by identity and is
+  not capped, so use one beyond 10,000 rows. `groups` keeps at most 10,000 entries and 50,000 nested values.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only. The returned value
   is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM, so
@@ -125,7 +128,8 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   `'listitem'` mode.
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
-  runtime value cannot disable windowing and render the entire collection.
+  runtime value cannot disable windowing and render the entire collection. The row holding focus stays
+  mounted outside this window until focus leaves it, so keyboard scrolling never drops focus to `<body>`.
 - `activeItemId: string | number | '' = ''` (attribute `active-item-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever

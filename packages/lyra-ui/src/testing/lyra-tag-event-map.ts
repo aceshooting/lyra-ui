@@ -86,6 +86,7 @@ import type { LyraDocumentLibraryEventMap } from '../components/data/document-li
 import type { LyraEnvListEventMap } from '../components/data/env-list/env-list.class.js';
 import type { LyraFileTreeEventMap } from '../components/data/file-tree/file-tree.class.js';
 import type { LyraFlowCanvasEventMap } from '../components/data/flow-canvas/flow-canvas.class.js';
+import type { LyraFlowControlsEventMap } from '../components/data/flow-controls/flow-controls.class.js';
 import type { LyraGraphQueryBuilderEventMap } from '../components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmapEventMap } from '../components/data/heatmap/heatmap.class.js';
 import type { LyraPaginationEventMap } from '../components/data/pagination/pagination.class.js';
@@ -366,6 +367,7 @@ export interface LyraTagEventTypes {
   'lr-file-tree': LyraFileTreeEventMap;
   'lr-filter-bar': LyraFilterBarEventMap;
   'lr-flow-canvas': LyraFlowCanvasEventMap;
+  'lr-flow-controls': LyraFlowControlsEventMap;
   'lr-generation-metrics': LyraGenerationMetricsEventMap;
   'lr-geojson-viewer': LyraGeoJsonViewerEventMap;
   'lr-graph': LyraGraphEventMap;
@@ -535,6 +537,7 @@ export const LYRA_EVENT_CANCELABLE: {
   readonly [tag: string]: { readonly [name: string]: boolean } | undefined;
 } = {
   'lr-accordion': { 'lr-collapse': true, 'lr-expand': true, 'lr-toggle-request': true },
+  'lr-activity-feed': { 'lr-toggle-request': true },
   'lr-alert': { 'lr-hide': true, 'lr-show': true },
   'lr-app-rail': { 'lr-rail-resize-request': true, 'lr-toggle-request': true },
   'lr-app-rail-group': { 'lr-toggle-request': true },
@@ -557,6 +560,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-color-picker': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-combobox': { 'lr-create': true, 'lr-hide': true, 'lr-invalid': true, 'lr-retry-request': true, 'lr-show': true },
   'lr-command-palette': { 'lr-close-request': true, 'lr-show': true },
+  'lr-commit-card': { 'lr-toggle-request': true },
   'lr-compare-panel': { 'lr-vote-request': true },
   'lr-confirm-bar': { 'lr-approve-request': true, 'lr-deny-request': true },
   'lr-context-inspector': { 'lr-export-request': true },
@@ -620,7 +624,9 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-split-panel': { 'lr-reposition-request': true },
   'lr-switch': { 'lr-invalid': true, 'lr-switch-toggle-request': true },
   'lr-table': { 'lr-column-resize-request': true, 'lr-retry-request': true, 'lr-row-expand-request': true, 'lr-sort-request': true },
+  'lr-task-list': { 'lr-toggle-request': true },
   'lr-terminal': { 'lr-download-request': true },
+  'lr-test-results': { 'lr-toggle-request': true },
   'lr-textarea': { 'lr-invalid': true },
   'lr-thinking-panel': { 'lr-toggle-request': true },
   'lr-thread-list': { 'lr-group-toggle-request': true, 'lr-retry-request': true },

@@ -20,10 +20,10 @@ Form-associated editor for a typed graph relationship/path query, including enti
 relationship and node-type filters, hop limits, validation, and saved queries.
 
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
-and saved-query updates continue normally. Each minimum/maximum-hop select choice updates the query
-once and emits one `lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value
-events, prefixed value aliases and listbox show/hide lifecycle events from those child selects are
-contained. Programmatic query assignments remain silent.
+and saved-query updates continue normally. Each edit updates the query once and emits one
+`lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value events, prefixed value
+aliases and listbox show/hide lifecycle events from every child control are contained; events from
+slotted content pass through. Programmatic query assignments remain silent.
 
 The normalized `value` present at the first update is the form reset default. Later property writes
 and user edits change only the live query; `form.reset()` restores that initial model, clears

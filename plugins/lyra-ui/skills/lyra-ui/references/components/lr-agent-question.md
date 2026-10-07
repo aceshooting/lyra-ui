@@ -39,6 +39,8 @@ Changing `requestId` resets draft and status, preserving explicit same-update pr
 Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
 the composed parameter form owns field validation. Collection values and emitted details are owned.
 
+**Heading and rebinding:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. Re-binding the same `schema` or `value` object does not discard the typed draft; assign a new object to replace it.
+
 **CSS parts:**
 
 | Part | Purpose |

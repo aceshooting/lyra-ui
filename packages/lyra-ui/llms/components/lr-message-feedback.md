@@ -75,7 +75,9 @@ toolbar actions change availability or order.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
-`submit-button`.
+`submit-button`. The thumbs read the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states), matching the `lr-icon-button` actions beside them in
+`lr-message-actions`.
 
 **Themeable custom properties:** six pressed-state hooks, three per thumb —
 `--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),

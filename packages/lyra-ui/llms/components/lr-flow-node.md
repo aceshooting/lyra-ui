@@ -59,9 +59,10 @@ owns none of that.
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
-while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open, because that menu
-sits in the browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on
-the node).
+while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,
+`lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`) opened from it is open,
+because that overlay sits in the browser top layer, where Chromium and WebKit stop matching
+`:hover`/`:focus-within` on the node).
 
 **CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
 carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
@@ -76,8 +77,10 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 `--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
 while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
 fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any
-ancestor_ (a canvas retunes every card at once); overriding the selection color otherwise means
+ancestor_; overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
+Inside `lr-flow-canvas` this card ring is off: the canvas draws the one selection ring, colored by
+`--lr-flow-canvas-node-selected-outline-color`.
 `--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
 `status="running"`, independent of `--lr-flow-node-selected-outline-color` so a consumer can retint
 just one of the two states without the other following along — and `--lr-flow-node-running-glow` (default

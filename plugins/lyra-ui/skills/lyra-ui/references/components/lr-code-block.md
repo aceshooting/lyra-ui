@@ -88,7 +88,7 @@ highlighted markup.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
-  second near-identical grammar) still highlights under that key.
+  second near-identical grammar) still highlights under that key, for a lazy loader entry too.
 
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always

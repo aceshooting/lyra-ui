@@ -372,9 +372,10 @@ if (ok) deleteConversation();
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
-backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
+backdrop-click branch survives 8.0.0's flip of that property's own default to `false`, and
+`withoutCloseButton = true`, so it renders no header close button. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
-of the call and removes it once settled, rather than reusing a persistent page-level region
+of the call and removes it after its exit animation, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
 `lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
@@ -396,8 +397,8 @@ their `data-lr-confirm-action` attribute.
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
-  `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
-  dispatch and remains pending/mounted when a listener calls `preventDefault()`.
+  `.remove()` itself. `lr-close` is not cancelable: veto a dismissal through `lr-hide` or
+  `lr-close-request`, which leaves `confirm()` pending and mounted.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
   variant pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
   variant's row of the semantic grid (`--lr-color-<variant>-fill-loud` /

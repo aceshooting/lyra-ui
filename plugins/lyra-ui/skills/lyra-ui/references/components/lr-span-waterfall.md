@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,7 +42,7 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
-`label: string = ''`.
+`label?: string` (omission localizes the default; `''` is used verbatim).
 
 The granular `@aceshooting/lyra-ui/components/lr-trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
@@ -52,6 +52,8 @@ exports.
 
 **Events:** `lr-span-select` — `detail: { spanId: string }`, a bar/row was activated (click, Enter,
 Space).
+
+**Accessible name, label and active colour:** each bar's accessible name includes its start offset, and moving between bars no longer announces through a live region (the `live-region` part is removed). `label` is used verbatim including `''` (omission localizes the default, as in `lr-trace-tree`). `--lr-span-waterfall-row-active-color` (default `var(--lr-color-text)`) colours the active row's status and duration text.
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned

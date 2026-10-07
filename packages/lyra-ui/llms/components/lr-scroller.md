@@ -44,7 +44,9 @@ scroller's own event shape, not `lr-virtual-list`'s `lr-virtual-scroll` event
 each, mirrored under RTL). Each shadow is hidden at its corresponding measured edge and uses
 logical positioning, so both cues and gradients mirror under RTL and rotate to the block axis in a
 vertical scroller. Before the first client measurement, both cues are hidden and both optional
-controls are disabled, so server-rendered markup never advertises a false scroll direction.
+controls are disabled, so server-rendered markup never advertises a false scroll direction. A control
+that has focus when it reaches its edge and disables hands focus to the viewport rather than
+dropping it to `<body>`.
 
 **Themeable custom properties:** `--lr-scroller-control-size` (default `var(--lr-size-2rem)`) — the
 previous/next control's box size; the interactive target never shrinks below `--lr-icon-button-size`

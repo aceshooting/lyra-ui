@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecations** none
+- **Deprecated event** `lr-cancel` since `unreleased`; use event `@lr-run-cancel`; removal not before `28.0.0` — lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -39,8 +39,10 @@ inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 
-**Events:** `lr-run-activate` (`{ runId, run }`), `lr-cancel` (`{ runId }`), and
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), its deprecated alias `lr-cancel` (`{ runId }`), and
 `lr-run-retry` (`{ runId }`).
+
+**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request; `lr-cancel` is a deprecated alias dispatched right after it. Unknown status kinds render title-cased.
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.

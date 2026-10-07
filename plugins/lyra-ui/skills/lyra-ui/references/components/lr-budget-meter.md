@@ -23,6 +23,8 @@ price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as 
 values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
 its own localized accessible name.
 
+**Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
+
 **CSS parts:**
 
 | Part | Purpose |

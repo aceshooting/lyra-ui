@@ -57,13 +57,15 @@ retained as a name for the same union.
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 
-**Events:** `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
 expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
 own sibling list. `detail: { taskId, parentTaskId, fromIndex, toIndex }`; `parentTaskId` is `null`
 for a top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique,
 nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
+
+**Toggle request:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles; preventing it keeps the panel as is.
 
 **CSS parts:** `base`, `header` (a `<button>` unless `without-collapse` is set, plain content
 otherwise, within the configured semantic heading), `label` (the `heading` text),

@@ -18,13 +18,14 @@
 
 A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
 to Research Agent"), with an optional agent avatar. Purely presentational: no events, no
-interactivity, no restore semantics. The computed label is announced once, on first connect,
-through an internal `<lr-live-region>`.
+interactivity, no restore semantics. It never announces itself: like other transcript content it is
+silent on mount, so a live container such as `<lr-chat-viewport live="polite">` announces a newly
+appended handoff.
 
 **Properties:** `toAgent: string = ''` (attribute `to-agent`), `fromAgent: string = ''` (attribute
 `from-agent`), and `label: string = ''`. With both agent names the localized text is “Transferred
 from {from} to {to}”; `label` overrides it. An explicit host `aria-label`, including an empty one,
-wins for the separator and mount-time announcement.
+wins for the separator.
 
 **Slots:** `avatar` — the incoming agent's `<lr-avatar>` (or icon), hidden entirely while empty.
 

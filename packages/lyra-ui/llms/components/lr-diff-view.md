@@ -102,9 +102,11 @@ retires an older pending outcome, so stale writes cannot confirm or fail a hidde
 `layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
 marker — plus `data-match`/`data-active-match` while a search result covers it, and
 `data-highlight` (the resolved tone, default `accent`) with `data-active-highlight` while a
-`highlights` entry covers it), `line-highlight-action` (the focusable button a resolved
+`highlights` entry covers it; an added or removed line wraps its text in `<ins>`/`<del>` so assistive
+technology exposes the change), `line-highlight-action` (the focusable button a resolved
 `highlights` entry adds to the line it first covers; emits `lr-highlight-activate`), `copy-button`
-(the copy affordance, only rendered while `copyable`), `limit` (the localized over-`maxLines`
+(the copy affordance, only rendered while `copyable`; it stays pinned at the top while the view
+scrolls), `limit` (the localized over-`maxLines`
 fallback), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
 (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is
 appended to the shared document-level polite sink only while the viewer and its composed ancestors
@@ -156,9 +158,11 @@ consumer can compute or unit-test the same alignment without instantiating the e
   so files that differ only by line-ending convention do not appear wholly changed.
 - An empty document contains zero logical lines. A genuine trailing newline is still represented,
   so empty/one-sided diffs and copied unified text do not gain a phantom blank operation.
-- alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
-  memory. The 5,000-line per-side default, aggregate character ceiling, and comparison-work ceiling
-  bound pathological inputs; `Infinity` opts out of only the first of those limits.
+- the identical leading and trailing lines are matched directly; alignment of the lines between
+  them uses Hirschberg longest-common-subsequence matching: O(k·l) time with linear working
+  memory. The 5,000-line per-side default, aggregate character ceiling, and a comparison-work
+  ceiling on those changed lines bound pathological inputs, so two long files that differ in a few
+  lines still diff; `Infinity` opts out of only the first of those limits.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 - Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.

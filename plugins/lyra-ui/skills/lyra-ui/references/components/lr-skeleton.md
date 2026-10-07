@@ -29,15 +29,15 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
-- `label?: string` — accessible name used when `announce` is set (rendered as visually-hidden text
-  inside `[part="base"]`). Only absence uses the localized loading default; every explicit caller
-  value—including `label="Loading…"` and `label=""`—is preserved literally. Prefer a description
-  of what's actually loading, e.g. `label="Loading chart"`.
-- `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
-  and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
-  skeleton contract and prevents repeated placeholders from producing duplicate announcements.
-  An author-supplied host role remains authoritative; the component adds and removes the status
-  role only when it owns that opt-in role.
+- `label?: string` — text announced when `announce` is set. Only absence uses the localized
+  loading default; every explicit caller value—including `label="Loading…"`—is preserved
+  literally. Prefer a description of what's actually loading, e.g. `label="Loading chart"`.
+- `announce: boolean = false` (reflected) — opt one meaningful placeholder into a polite
+  announcement of its label through the shared light-DOM sink (once after it mounts, and again
+  when `label` changes), the same mechanism as `lr-callout`/`lr-empty`. The false default
+  preserves the decorative bare Web Awesome/Shoelace skeleton contract and prevents repeated
+  placeholders from producing duplicate announcements. The component adds no host role or shadow
+  text; an author-supplied role remains authoritative.
 
 **Events:** none.
 
