@@ -118,6 +118,20 @@ it('strips event-handler and href attributes when cloning slotted custom SVG con
   expect(anchor === null || !anchor.hasAttribute('href')).to.be.true;
 });
 
+it('keeps a same-document href on slotted use elements, written as an unprefixed href', async () => {
+  const el = (await fixture(html`
+    <lr-icon>
+      <defs><path id="glyph" d="M0 0h4v4z"></path></defs>
+      <use id="same" href="#glyph"></use>
+      <use id="legacy" xlink:href="#glyph"></use>
+      <use id="external" href="https://tracker.test/a.svg#x"></use>
+    </lr-icon>
+  `)) as LyraIcon;
+  await el.updateComplete;
+  const href = (id: string) => el.shadowRoot!.querySelector(`#${id}`)!.getAttribute('href');
+  expect([href('same'), href('legacy'), href('external')]).to.deep.equal(['#glyph', '#glyph', null]);
+});
+
 it('rejects executable and embedded elements and secondary resource sinks from inert slotted SVG', async () => {
   const flag = window as unknown as Record<string, unknown>;
   delete flag['__lrIconSlotXss'];

@@ -6,7 +6,7 @@ const manifest = { modules: [
 ] };
 const graph = { entries: [{ tag: 'lr-example', registers: ['lr-example', 'lr-child'] }, { tag: 'lr-child', registers: ['lr-child'] }] };
 const output = generateScopedDefinitions(manifest, graph);
-assert.match(output, /import\('\.\.\/components\/utility\/example\/example\.class\.js'\)/);
+assert.doesNotMatch(output, /import\(/);
 assert.match(output, /'lr-example': \['lr-child', 'lr-example'\]/);
 assert.doesNotMatch(output, /from '\.\.\/components\//);
 assert.equal(generateScopedDefinitions({ modules: [...manifest.modules].reverse() }, { entries: [...graph.entries].reverse() }), output);

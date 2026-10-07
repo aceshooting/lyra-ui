@@ -8,7 +8,6 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/a
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { isRtl } from '../../../internal/rtl.js';
 import {
-  decimalPlaces,
   finiteAdd,
   finiteInterpolate,
   finiteNumber,
@@ -16,6 +15,7 @@ import {
   finiteRatio,
   isSliderKey,
 } from '../../../internal/numbers.js';
+import { clampSteppedValue } from '../../../internal/step-value.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -683,34 +683,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   private clamp(handle: TimeRangeHandle, value: number): number {
     const { lo, hi } = this.domain();
-    // A non-positive or non-finite step (e.g. a transient `step={0}` while a
-    // caller derives it as `(max-min)/tickCount`) would otherwise divide by
-    // zero/NaN below and permanently poison start/end with NaN, since the
-    // other handle's clamp cross-references this one's (already-NaN) value.
-    // Treat it as "unstepped" instead of propagating NaN.
-    // Anchor the step grid at the domain's own `lo` (matching native
-    // `<input type=range>`) instead of absolute 0 — otherwise a `min` that
-    // isn't itself a multiple of `step` makes the very first nudge off `min`
-    // jump to the nearest multiple-of-step-from-zero instead of moving by
-    // one `step`. Round the result back to `step`'s own decimal precision
-    // (rather than leaving raw `value / step` binary-float noise in place)
-    // so repeated steps land on exact values like 20.1 instead of
-    // 20.200000000000003.
-    let stepped = finiteNumber(value, lo);
-    const step = finiteRange(this.step, 0, 0);
-    if (Number.isFinite(step) && step > 0) {
-      const stepsFromLo = Math.round((stepped - lo) / step);
-      if (Number.isFinite(stepsFromLo)) {
-        const candidate = lo + stepsFromLo * step;
-        const factor = 10 ** Math.min(decimalPlaces(step), 15);
-        if (Number.isFinite(candidate)) {
-          stepped = Number.isFinite(candidate * factor)
-            ? Math.round(candidate * factor) / factor
-            : candidate;
-        }
-      }
-    }
-    const bounded = Math.min(hi, Math.max(lo, stepped));
+    const bounded = clampSteppedValue(value, lo, hi, this.step);
     if (handle === 'start') return Math.min(bounded, finiteRange(this.end, hi, lo, hi));
     return Math.max(bounded, finiteRange(this.start, lo, lo, hi));
   }

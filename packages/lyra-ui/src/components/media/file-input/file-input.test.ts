@@ -585,6 +585,17 @@ it("accepts pasted files by default", async () => {
   expect(event.defaultPrevented).to.be.true;
 });
 
+it("ignores clipboard values that are not real Files", async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const event = new Event("paste", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "clipboardData", { value: { files: [{ name: "fake.txt", size: 1, type: "text/plain" }] } });
+  let fired = false;
+  el.addEventListener("lr-files", () => { fired = true; });
+  el.shadowRoot!.querySelector('[part~="base"]')!.dispatchEvent(event);
+  expect(fired).to.be.false;
+  expect(event.defaultPrevented).to.be.false;
+});
+
 /** Dispatches a clipboard paste carrying one file and reports whether `lr-files` fired. */
 function pasteOneFile(el: LyraFileInput): boolean {
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;

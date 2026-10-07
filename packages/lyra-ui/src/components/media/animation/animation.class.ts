@@ -1,3 +1,4 @@
+import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -250,24 +251,11 @@ function resolveTimingToken(
       ?.getComputedStyle(el)
       .getPropertyValue(`--lr-transition-${preset}`)
       .trim() ?? '';
-  const match = /^((?:\d+(?:\.\d*)?)|(?:\.\d+))(ms|s)\s+(.+)$/.exec(raw);
-  if (!match) return { duration: 1000, easing: 'linear' };
-  // safe: all three capture groups are non-optional, so a successful match fills them.
-  const num = match[1]!;
-  const unit = match[2]!;
-  const easing = match[3]!;
-  const duration = (unit === 's' ? 1000 : 1) * Number(num);
-  const resolvedEasing = easing.trim();
-  if (
-    !Number.isFinite(duration) ||
-    !el.ownerDocument.defaultView?.CSS?.supports(
-      'animation-timing-function',
-      resolvedEasing
-    )
-  ) {
+  const token = parseCssTimeToken(raw);
+  if (!token?.rest || !el.ownerDocument.defaultView?.CSS?.supports('animation-timing-function', token.rest)) {
     return { duration: 1000, easing: 'linear' };
   }
-  return { duration, easing: resolvedEasing };
+  return { duration: Math.max(0, token.ms), easing: token.rest };
 }
 
 /**

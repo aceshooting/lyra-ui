@@ -30,7 +30,7 @@ const SVG_URL_PRESENTATION_ATTRIBUTES = new Set([
   'stroke',
 ]);
 
-function isLocalSvgFragment(value: string): boolean {
+export function isLocalSvgFragment(value: string): boolean {
   return /^#[^\s"'()<>]+$/.test(value.trim());
 }
 
@@ -59,14 +59,19 @@ export function isUnsafeSvgCloneElement(name: string): boolean {
  * Rejects an attribute that should never survive a raw DOM clone of consumer-supplied SVG content.
  * Event-handler attributes execute as inline JS once connected; style and secondary resource
  * attributes can apply attacker-controlled CSS or initiate fetches; and href attributes can carry
- * script URLs or external document references. URL-bearing presentation attributes retain only
- * same-document fragment references, so ordinary icon geometry and local paint servers continue
- * to work.
+ * script URLs or external document references. Only a `<use>` (named by `element`) keeps a
+ * same-document fragment href, and URL-bearing presentation attributes retain only same-document
+ * fragment references, so ordinary icon geometry and local paint servers continue to work.
  */
-export function isUnsafeSvgCloneAttribute(name: string, value = ''): boolean {
+export function isUnsafeSvgCloneAttribute(name: string, value = '', element = ''): boolean {
   const lower = name.toLowerCase();
   if (lower.startsWith('on')) return true;
   if (lower === 'style' || lower === 'src' || lower === 'srcset' || lower === 'poster') return true;
-  if (lower === 'href' || lower === 'xlink:href') return true;
-  return SVG_URL_PRESENTATION_ATTRIBUTES.has(lower) && hasUnsafeCssResource(value);
+  if (lower === 'href' || lower === 'xlink:href') return !(element.toLowerCase() === 'use' && isLocalSvgFragment(value));
+  return isUnsafeSvgPresentationValue(lower, value);
+}
+
+/** Whether a URL-bearing presentation attribute carries anything but same-document fragments. */
+export function isUnsafeSvgPresentationValue(name: string, value: string): boolean {
+  return SVG_URL_PRESENTATION_ATTRIBUTES.has(name.toLowerCase()) && hasUnsafeCssResource(value);
 }

@@ -327,8 +327,8 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     if (isUnsafeSvgCloneElement(element.localName)) return null;
     const copy = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', element.localName);
     for (const attribute of element.attributes) {
-      if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value)) continue;
-      copy.setAttribute(attribute.name, attribute.value);
+      if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value, element.localName)) continue;
+      copy.setAttribute(attribute.name === 'xlink:href' ? 'href' : attribute.name, attribute.value);
     }
     for (const child of element.childNodes) {
       const childCopy = this.cloneSvgNode(child);

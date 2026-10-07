@@ -1,3 +1,4 @@
+import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
@@ -31,12 +32,8 @@ const DEFAULT_AMBIENT_DURATION_MS = 1800; // mirrors --lr-duration-ambient's def
  * keep their raw token sequence until their consuming declaration is evaluated, so deliberately
  * reject compound transition values (such as `1.8s ease-in-out`) rather than accepting a prefix. */
 function parseAmbientDuration(value: string): number | undefined {
-  const match = /^\+?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:e[+-]?\d+)?(ms|s)$/i.exec(value.trim());
-  if (!match) return undefined;
-  const unit = match[1]!.toLowerCase();
-  const numeric = Number(value.trim().slice(0, -unit.length));
-  const milliseconds = finiteNumber(numeric * (unit === 's' ? 1000 : 1), 0);
-  return milliseconds > 0 ? milliseconds : undefined;
+  const token = parseCssTimeToken(value);
+  return token && !token.rest && token.ms > 0 ? token.ms : undefined;
 }
 
 /** Multiplies two untrusted canvas inputs without allowing an overflowing intermediate to escape

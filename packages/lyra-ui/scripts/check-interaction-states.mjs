@@ -787,7 +787,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/data/table/table.styles.ts:row-expand-toggle',
   'src/components/data/table/table.styles.ts:more-button',
   'src/components/data/table/table.styles.ts:reveal-columns-button',
-  'src/components/data/table/table.styles.ts:retry-button',
   'src/components/forms/color-picker/color-picker.styles.ts:slider',
   'src/components/forms/combobox/combobox.styles.ts:tag__remove-button',
   'src/components/forms/combobox/combobox.styles.ts:clear-button',

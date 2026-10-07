@@ -193,6 +193,8 @@ export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[
   { tag: 'lr-calendar', property: 'events' },
   { tag: 'lr-virtual-list', property: 'items' },
   { tag: 'lr-virtual-list', property: 'source' },
+  { tag: 'lr-eval-dataset', property: 'examples' },
+  { tag: 'lr-eval-run', property: 'examples' },
 ]);
 
 /** Accessor-backed collection properties with their component/domain-specific synchronous caps. */
@@ -266,6 +268,22 @@ function createDynamicElement(tagName: `lr-${string}`): DynamicElement {
 }
 
 describe('original component collection ownership contracts', () => {
+  // Every loop below deliberately assigns past the public limits, which warns once per property.
+  before(() => {
+    const cases = [
+      ...APP_OWNED_ARRAY_PROPERTY_CASES,
+      ...APP_OWNED_RECORD_PROPERTY_CASES,
+      ...APP_IDENTITY_ARRAY_PROPERTY_CASES,
+      ...APP_BESPOKE_ARRAY_PROPERTY_CASES,
+      ...(['selectedRowKeys', 'expandedRowKeys'] as const).map((property) => ({ tag: 'lr-table', property })),
+      ...['lr-flow-canvas', 'lr-flow-run-status'].map((tag) => ({ tag, property: 'decorations' })),
+      { tag: 'lr-filter-bar', property: 'value' },
+      { tag: 'lr-tool-param-form', property: 'value' },
+      { tag: 'lr-voice-picker', property: 'catalog' },
+    ];
+    for (const { tag, property } of cases) expectDevWarning(collectionTruncationWarningKey(tag, property));
+  });
+
   for (const { tag, property } of APP_OWNED_ARRAY_PROPERTY_CASES) {
     it(`${tag}.${property} owns a bounded, recursively frozen array snapshot`, () => {
       const element = createDynamicElement(tag);

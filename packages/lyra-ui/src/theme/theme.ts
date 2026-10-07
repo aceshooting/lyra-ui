@@ -347,6 +347,10 @@ function parseResolvedRgb(value: string, background: Rgb, owner: Document = docu
   }
 }
 
+function hexRgb(color: string): Rgb {
+  return [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16)];
+}
+
 function mixRgb(base: Rgb, color: Rgb, colorWeight: number): Rgb {
   return [
     Math.round(base[0] * (1 - colorWeight) + color[0] * colorWeight),
@@ -415,10 +419,7 @@ function createRoleRamp(
   background: Rgb,
   owner: Document = document,
 ): Record<string, string> | null {
-  const references = STYLE_CONTRAST_SURFACES[mode].flatMap(color => {
-    const value = parseResolvedRgb(color, MODE_SURFACES[mode], owner);
-    return value ? [value] : [];
-  });
+  const references = STYLE_CONTRAST_SURFACES[mode].map(hexRgb);
   const resolved = parseResolvedRgb(base, background, owner);
   if (!resolved) return null;
   const quiet = mixRgb(background, resolved, mode === 'dark' ? 0.24 : 0.14);
@@ -1961,4 +1962,4 @@ export function applyLyraStyleScope(element: Element, choices: LyraStyleScopeCho
 }
 
 /** Default-key pre-paint bootstrap; importing this string does not access browser globals. */
-export const lyraThemeBootstrap = createLyraThemeBootstrap();
+export const lyraThemeBootstrap = /* @__PURE__ */ createLyraThemeBootstrap();

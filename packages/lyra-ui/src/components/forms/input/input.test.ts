@@ -570,6 +570,17 @@ describe('lr-input', () => {
       expect(input.type).to.equal('password');
     });
 
+    it('names the password toggle by its action and carries no pressed state', async () => {
+      const el = (await fixture(
+        html`<lr-input type="password" password-toggle label="Password"></lr-input>`,
+      )) as LyraInput;
+      const toggle = el.shadowRoot!.querySelector('[part="password-toggle"]') as HTMLButtonElement;
+      expect([toggle.getAttribute('aria-label'), toggle.hasAttribute('aria-pressed')]).to.deep.equal(['Show password', false]);
+      toggle.click();
+      await el.updateComplete;
+      expect([toggle.getAttribute('aria-label'), toggle.hasAttribute('aria-pressed')]).to.deep.equal(['Hide password', false]);
+    });
+
     it('omits the password-toggle button for every other type', async () => {
       const el = (await fixture(html`<lr-input type="email" password-toggle></lr-input>`)) as LyraInput;
       expect(el.shadowRoot!.querySelectorAll('[part="password-toggle"]').length).to.equal(0);

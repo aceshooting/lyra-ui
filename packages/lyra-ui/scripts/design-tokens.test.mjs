@@ -19,12 +19,12 @@ const source = readCanonicalTokens(packageDir);
 
 assert.deepEqual(validateCanonicalTokens(source), []);
 assert.equal(source.schemaVersion, 1);
-assert.equal(source.valueNamedTokenPolicy.frozenCount, 89);
+assert.equal(source.valueNamedTokenPolicy.frozenCount, 88);
 assert.ok(Object.keys(source.tokens).length >= 300, 'the canonical source must cover every shared token');
 assert.deepEqual(verifyRuntimeTokenParity(source, packageDir), []);
 
 const valueNamed = Object.entries(source.tokens).filter(([name]) => /^--lr-size-/.test(name));
-assert.equal(valueNamed.length, 89);
+assert.equal(valueNamed.length, 88);
 for (const [name, token] of valueNamed) {
   assert.ok(
     ['semantic-global', 'component-role', 'audited-fixed-geometry'].includes(token.valueNameClassification),

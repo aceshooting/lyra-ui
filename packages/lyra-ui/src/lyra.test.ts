@@ -58,3 +58,8 @@ it('still registers each excluded family when imported directly from its own sub
     expect(customElements.get(`lr-${t}`), `lr-${t}`).to.exist;
   }
 });
+
+it('keeps runtime test seams off the root barrel', async () => {
+  const root = await import('./lyra.js');
+  expect(Object.keys(root).filter((name) => name.startsWith('__'))).to.deep.equal([]);
+});

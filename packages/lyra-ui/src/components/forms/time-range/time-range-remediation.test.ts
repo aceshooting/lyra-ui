@@ -108,3 +108,21 @@ it('time-range releases pointer capture when disabling aborts a drag', async () 
   el.disabled = true;
   expect(released, 'the aborted drag gives the pointer back').to.deep.equal([7]);
 });
+
+it('time-range keeps a fractional min as the step grid anchor for keyboard and pointer input', async () => {
+  const el = await fixture<LyraTimeRange>(html`<lr-time-range min="0.5" max="10" start="0.5" end="10" step="1"></lr-time-range>`);
+  const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  const stops: number[] = [];
+  for (const key of ['ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft', 'ArrowLeft']) {
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    stops.push(el.start);
+  }
+  expect(stops).to.deep.equal([1.5, 2.5, 3.5, 2.5, 1.5, 0.5]);
+  const rect = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.getBoundingClientRect();
+  handle.setPointerCapture = () => {};
+  el.shadowRoot!.querySelector<HTMLElement>('[part="track"]')!.dispatchEvent(new PointerEvent('pointerdown', {
+    bubbles: true, pointerId: 61, pointerType: 'mouse', button: 0, clientX: rect.left + rect.width * (0.9 / 9.5),
+  }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 61, pointerType: 'mouse', button: 0 }));
+  expect(el.start).to.equal(1.5);
+});

@@ -128,25 +128,30 @@ export function renderAutoloaderTags(entries) {
   ].join('\n');
 }
 
-export function renderAutoloaderManifest(entries) {
+export function renderComponentLoaders(entries) {
   return [
     '// Generated from scripts/fixtures/component-inventory.json by generate-autoloader-manifest.mjs.',
     '// Literal imports are intentional: they preserve per-component code splitting. Do not edit by hand.',
     '',
     "import type { AutoloadableTagName } from './autoloader-tags.js';",
     '',
-    'export interface AutoloaderManifestEntry {',
-    '  readonly optionalPeers: readonly string[];',
-    '  readonly load: () => Promise<CustomElementConstructor>;',
-    '}',
+    'export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promise<CustomElementConstructor>>> = {',
+    ...entries.map((entry) => `  '${entry.tag}': () => import('${entry.specifier}').then((module) => module.${entry.className}),`),
+    '};',
     '',
-    'export const AUTOLOADER_MANIFEST: Readonly<Record<AutoloadableTagName, AutoloaderManifestEntry>> = {',
-    ...entries.flatMap((entry) => [
-      `  '${entry.tag}': {`,
-      `    optionalPeers: ${renderStringArray(entry.optionalPeers)},`,
-      `    load: () => import('${entry.specifier}').then((module) => module.${entry.className}),`,
-      '  },',
-    ]),
+  ].join('\n');
+}
+
+export function renderAutoloaderManifest(entries) {
+  return [
+    '// Generated from scripts/fixtures/component-inventory.json by generate-autoloader-manifest.mjs.',
+    '// Do not edit by hand.',
+    '',
+    "import type { AutoloadableTagName } from './autoloader-tags.js';",
+    '',
+    '/** Optional-peer packages each autoloadable tag needs; a tag absent from this table needs none. */',
+    'export const AUTOLOADER_OPTIONAL_PEERS: Readonly<Partial<Record<AutoloadableTagName, readonly string[]>>> = {',
+    ...entries.filter((entry) => entry.optionalPeers.length > 0).map((entry) => `  '${entry.tag}': ${renderStringArray(entry.optionalPeers)},`),
     '};',
     '',
   ].join('\n');
@@ -157,6 +162,7 @@ function artifactPaths(packageDir) {
     inventory: join(packageDir, 'scripts', 'fixtures', 'component-inventory.json'),
     tags: join(packageDir, 'src', 'internal', 'autoloader-tags.ts'),
     manifest: join(packageDir, 'src', 'internal', 'autoloader-manifest.ts'),
+    loaders: join(packageDir, 'src', 'internal', 'component-loaders.generated.ts'),
   };
 }
 
@@ -169,6 +175,7 @@ function expectedArtifacts(packageDir) {
     entries,
     tags: renderAutoloaderTags(entries),
     manifest: renderAutoloaderManifest(entries),
+    loaders: renderComponentLoaders(entries),
   };
 }
 
@@ -181,6 +188,9 @@ export function checkAutoloaderManifest(packageDir = defaultPackageDir) {
   if (!existsSync(expected.paths.manifest) || readFileSync(expected.paths.manifest, 'utf8') !== expected.manifest) {
     findings.push('src/internal/autoloader-manifest.ts is stale');
   }
+  if (!existsSync(expected.paths.loaders) || readFileSync(expected.paths.loaders, 'utf8') !== expected.loaders) {
+    findings.push('src/internal/component-loaders.generated.ts is stale');
+  }
   return { findings, ...expected };
 }
 
@@ -188,6 +198,7 @@ export function generateAutoloaderManifest(packageDir = defaultPackageDir) {
   const expected = expectedArtifacts(packageDir);
   writeFileSync(expected.paths.tags, expected.tags);
   writeFileSync(expected.paths.manifest, expected.manifest);
+  writeFileSync(expected.paths.loaders, expected.loaders);
   return expected.entries;
 }
 

@@ -21,6 +21,18 @@ const serializedFunctions = new Map([
   ['theme/style-ownership.js', new Set(['readStyleOwnership'])],
 ]);
 
+// esbuild prints pure annotations only with whitespace kept, so restore the one that lets a
+// consumer's bundler drop the pre-paint bootstrap string (and the generators it references).
+const pureInitializers = new Map([['theme/theme.js', ['lyraThemeBootstrap=createLyraThemeBootstrap()']]]);
+
+function restorePureAnnotations(code, relativePath) {
+  for (const initializer of pureInitializers.get(relativePath.split(path.sep).join('/')) ?? []) {
+    if (!code.includes(initializer)) throw new Error(`${relativePath}: pure initializer inventory changed`);
+    code = code.replace(initializer, initializer.replace('=', '=/* @__PURE__ */'));
+  }
+  return code;
+}
+
 async function compactSerializedFunctions(source, relativePath) {
   const names = serializedFunctions.get(relativePath.split(path.sep).join('/'));
   if (!names) return source;
@@ -82,7 +94,7 @@ export async function compactBuildJavaScript(directory) {
     // entirely once asked to minify whitespace, since it exports nothing -- silently turning a
     // real (if inert) ES module into a 0-byte non-module file. Restore the marker whenever a
     // non-empty source would otherwise compact to nothing.
-    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : result.code;
+    const code = result.code.trim() === '' && source.trim() !== '' ? 'export {};\n' : restorePureAnnotations(result.code, path.relative(directory, file));
     afterBytes += Buffer.byteLength(code);
     await writeFile(file, code);
   }));

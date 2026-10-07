@@ -94,7 +94,7 @@ interface ElementWork {
   readonly depth: number;
 }
 
-function nativeNodeType(node: Node): number | undefined {
+export function nativeNodeType(node: Node): number | undefined {
   try {
     const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
     const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'nodeType')?.get;
@@ -104,11 +104,11 @@ function nativeNodeType(node: Node): number | undefined {
   }
 }
 
-function isElement(node: Node): node is Element {
+export function isElement(node: Node): node is Element {
   return nativeNodeType(node) === 1;
 }
 
-function ownerDocumentFor(node: Node): Document | undefined {
+export function ownerDocumentFor(node: Node): Document | undefined {
   if (nativeNodeType(node) === 9) return node as Document;
   try {
     const ambientGetter =
@@ -152,7 +152,7 @@ function childElements(node: Node): readonly Element[] {
 }
 
 /** Returns only an open shadow root and fails soft for consumer-shadowed native accessors. */
-function openShadowRoot(element: Element): ShadowRoot | undefined {
+export function openShadowRoot(element: Element): ShadowRoot | undefined {
   try {
     const ownerWindow = ownerDocumentFor(element)?.defaultView;
     const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);

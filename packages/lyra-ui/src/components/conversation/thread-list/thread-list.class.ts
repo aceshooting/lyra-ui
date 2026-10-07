@@ -21,6 +21,7 @@ import { styles } from './thread-list.styles.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
+import { calendarDaysAgo, startOfLocalDay } from '../../../internal/group-by-recency.js';
 import {
   optionalSizeConverter,
   type LyraSize,
@@ -154,10 +155,6 @@ function trashIcon(): SVGTemplateResult {
       <path d="M9 7V4h6v3"></path>
     </svg>
   `;
-}
-
-function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
 function defaultFilter(
@@ -816,7 +813,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       ? undefined
       : normalizeLyraTimestamp(thread.timestamp);
     if (!ts) return 'previous30';
-    const diffDays = Math.round((today - startOfDay(ts)) / 86_400_000);
+    const diffDays = calendarDaysAgo(today, ts);
     if (diffDays <= 0) return 'today';
     if (diffDays === 1) return 'yesterday';
     if (diffDays <= 7) return 'previous7';
@@ -1624,7 +1621,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** The visible threads and item model, rebuilt only when one of their inputs changes. */
   private model(): ThreadListModel {
-    const today = startOfDay(new Date());
+    const today = startOfLocalDay(new Date());
     const key = [
       this.normalizedThreads, this.searchText, this.filter, this.withArchived, this.grouping,
       this.groupBy, this.groupOrder, this.collapsedGroupIds, this.getGroupLabel,

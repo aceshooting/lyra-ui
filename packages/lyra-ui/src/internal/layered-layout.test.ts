@@ -403,3 +403,15 @@ it('normalizes fractional, negative, and non-finite waypoint budgets', () => {
   expect(nonFinite.truncated).to.be.false;
   expect(nonFinite.virtualWaypointCount).to.equal(2);
 });
+
+it('allocates one waypoint chain per node pair, however many parallel or reciprocal edges there are', () => {
+  const nodes = [box('a'), box('b'), box('c')];
+  const spine = [{ source: 'a', target: 'b' }, { source: 'b', target: 'c' }, { source: 'a', target: 'c' }];
+  const single = layeredLayout({ nodes, edges: spine });
+  expect(single.virtualWaypointCount).to.equal(1);
+  for (const extra of [{ source: 'a', target: 'c' }, { source: 'c', target: 'a' }]) {
+    const result = layeredLayout({ nodes, edges: [...spine, extra] });
+    expect(result.virtualWaypointCount, `${extra.source}->${extra.target}`).to.equal(1);
+    expect([...result.positions.values()]).to.deep.equal([...single.positions.values()]);
+  }
+});

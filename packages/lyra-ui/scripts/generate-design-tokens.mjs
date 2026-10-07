@@ -752,7 +752,7 @@ function buildEditorInput(source) {
   return { schemaVersion: 1, properties: [...properties.values()].sort((a, b) => a.name.localeCompare(b.name)) };
 }
 
-/** Design exports describe the effective default profile; authored Lyra remains a selectable look. */
+/** CSS, editor and preview exports carry the effective default profile; design-tokens.json keeps the authored Lyra tree and names the default in `defaultStyle`. */
 export function projectDefaultTokenSource(source, packageDir = defaultPackageDir) {
   const projected = structuredClone(source);
   const inputs = defaultStyleInputs(readStyleModel(packageDir));

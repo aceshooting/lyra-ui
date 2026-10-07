@@ -44,18 +44,23 @@ const DEFAULT_LABELS: Required<RecencyLabels> = {
 /** Midnight (start of the local calendar day) for `d`, as epoch millis —
  *  built from `d`'s own local-timezone Y/M/D fields, so this is a calendar-
  *  day boundary, not a rolling 24-hour offset from `d` itself. */
-function startOfLocalDay(d: Date): number {
+export function startOfLocalDay(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** Whole local calendar days from `date` back to the day starting at `todayStart`; 0 or negative
+ *  for today or later. */
+export function calendarDaysAgo(todayStart: number, date: Date): number {
+  return Math.round((todayStart - startOfLocalDay(date)) / MS_PER_DAY);
 }
 
 /**
  * Buckets `items` into Today / Yesterday / Previous 7 Days / Older, using
  * calendar-day boundaries in the local timezone — "yesterday" means the
  * previous calendar date, not "24-48 hours ago". Mirrors the bucketing a
- * chat sidebar's conversation-history list commonly groups by (this
- * library's own `<lr-conversation-item>` is the intended consumer, though
- * this function is deliberately DOM/component-free — plain data in, plain
- * data out).
+ * chat sidebar's conversation-history list commonly groups by (`<lr-thread-list>`
+ * shares its day boundaries; this function is deliberately DOM/component-free
+ * — plain data in, plain data out).
  *
  * Only buckets that end up with at least one item are included in the
  * returned array, in Today/Yesterday/Previous-7-Days/Older order; each
@@ -91,7 +96,7 @@ export function groupByRecency<T>(items: T[], options: GroupByRecencyOptions<T> 
       continue;
     }
 
-    const dayDiff = Math.round((todayStart - startOfLocalDay(date)) / MS_PER_DAY);
+    const dayDiff = calendarDaysAgo(todayStart, date);
     if (dayDiff <= 0) {
       // <= 0 (not === 0) also covers a timestamp dated in the future
       // relative to `now` -- there's no "upcoming" bucket, so it reads as

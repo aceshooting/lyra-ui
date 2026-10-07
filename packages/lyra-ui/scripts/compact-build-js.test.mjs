@@ -86,6 +86,8 @@ try {
       const resolvedValue = materialCallback(startupCallback(longInputValue));
       return allowedCallback(resolvedValue) ? ownershipCallback(paintCallback(resolvedValue)) : 0;
     }
+    export function createLyraThemeBootstrap() { return publicBootstrap(7); }
+    export const lyraThemeBootstrap = /* @__PURE__ */ createLyraThemeBootstrap();
     export function publicBootstrap(value) {
       return '(' + applyStoredStyleBeforePaint.toString() + ')(' + value + ',' +
         applyStoredThemeBeforePaint.toString() + ',' + styleTokenAllowed.toString() + ',' +
@@ -111,6 +113,7 @@ try {
   const compressed = after.publicBootstrap(7);
   assert.ok(compressed.length < uncompressed.length);
   assert.doesNotMatch(compressed, /longInputValue|longPaintValue|longTokenValue|longOwnershipValue|longStartupValue|longMaterialValue/u);
+  assert.match(compactedSource, /lyraThemeBootstrap=\/\* @__PURE__ \*\/createLyraThemeBootstrap\(\)/u, 'the bootstrap constant stays droppable by bundlers');
   assert.equal(after.publicBootstrap.name, 'publicBootstrap');
   assert.equal(after.preservedLabel, 'Résumé 🦉');
   assert.equal(Function('return ' + compressed)(), 15);

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from './safe-svg.js';
+import { isLocalSvgFragment, isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement, isUnsafeSvgPresentationValue } from './safe-svg.js';
 
 describe('isUnsafeSvgCloneAttribute', () => {
   it('rejects event-handler attributes regardless of case', () => {
@@ -12,6 +12,23 @@ describe('isUnsafeSvgCloneAttribute', () => {
     for (const name of ['href', 'HREF', 'xlink:href', 'XLink:Href']) {
       expect(isUnsafeSvgCloneAttribute(name), name).to.be.true;
     }
+  });
+
+  it('keeps a same-document fragment href only on use', () => {
+    expect(isUnsafeSvgCloneAttribute('href', '#glyph', 'use')).to.be.false;
+    expect(isUnsafeSvgCloneAttribute('XLink:Href', '#glyph', 'USE')).to.be.false;
+    expect(isUnsafeSvgCloneAttribute('href', '#glyph', 'a')).to.be.true;
+    for (const value of ['https://tracker.test/a.svg#x', 'javascript:alert(1)', '#a b', '']) {
+      expect(isUnsafeSvgCloneAttribute('href', value, 'use'), value).to.be.true;
+    }
+  });
+
+  it('exposes the shared fragment and presentation guards', () => {
+    expect(isLocalSvgFragment(' #local ')).to.be.true;
+    expect(isLocalSvgFragment('https://tracker.test/#x')).to.be.false;
+    expect(isUnsafeSvgPresentationValue('FILL', 'url(https://tracker.test/p.svg#x)')).to.be.true;
+    expect(isUnsafeSvgPresentationValue('fill', 'url(#local)')).to.be.false;
+    expect(isUnsafeSvgPresentationValue('d', 'url(https://tracker.test/p.svg#x)')).to.be.false;
   });
 
   it('rejects style and secondary resource attributes', () => {

@@ -502,18 +502,8 @@ it('defines the shared typography, chart, layer, and overlay token surface', asy
   expect(await probeVar('--lr-color-overlay-strong')).to.equal('rgb(0 0 0 / 0.92)');
 });
 
-// --- the dark overlay surface is DERIVED from the dark page surface --------------------
-//
-// Light mode resolves --lr-color-surface-overlay straight to --lr-color-surface, so one
-// --lr-theme-color-surface-default override carries every dropdown, listbox, menu, toast and
-// drawer with it. Dark mode cannot do that -- both would land on the same near-black and an open
-// dialog would read as a scrim with text floating on it, no panel at all -- so it used to pin a
-// literal instead, and a re-skinned dark base left every floating surface at the stock colour.
-// Mixing the base towards a fixed light accent keeps the elevation delta while following the base.
-//
-// Every assertion here reads a RENDERED colour: a custom property's computed value is its token
-// stream after var() substitution, so getPropertyValue hands back the color-mix() SOURCE and
-// comparing that text would prove nothing about what gets painted.
+// --- the overlay surface is its own input, not derived from the page surface ---------------
+// Assertions read a RENDERED colour: a custom property's computed value is its unresolved token stream.
 
 /** A probe pinned to dark mode through the shipped `data-lr-theme` route, with optional inline style. */
 async function darkProbe(style = ''): Promise<TokenProbe> {
@@ -542,12 +532,11 @@ it('lets an explicit --lr-theme-color-surface-overlay win outright in dark mode'
   expect(toHex(resolvedColor(el, '--lr-color-surface-overlay'))).to.equal('#3f2b56');
 });
 
-it('leaves the light overlay surface resolving to the page surface', async () => {
-  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
+it('keeps the light overlay surface white, independent of a page-surface override', async () => {
+  const el = (await fixture(html`<lr-token-probe style="--lr-theme-color-surface-default: #101820"></lr-token-probe>`)) as TokenProbe;
   await el.updateComplete;
-  const overlay = toHex(resolvedColor(el, '--lr-color-surface-overlay'));
-  expect(overlay).to.equal(toHex(resolvedColor(el, '--lr-color-surface')));
-  expect(overlay).to.equal('#ffffff');
+  expect(toHex(resolvedColor(el, '--lr-color-surface'))).to.equal('#101820');
+  expect(toHex(resolvedColor(el, '--lr-color-surface-overlay'))).to.equal('#ffffff');
 });
 
 it('provides central reduced-motion fallbacks', () => {

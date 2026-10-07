@@ -69,14 +69,19 @@ export const contextualVariants = css`
  * Explicit-only form-control size mappings. A host without a `size` attribute inherits the six
  * generic size slots from its containing context; each explicit tier resets every slot so no
  * value leaks from a differently-sized ancestor. Consumers provide standalone `m` fallbacks where
- * they read the generic slots.
+ * they read the generic slots. Tier values, the padding cap and the coarse-pointer height floor
+ * mirror `sizes`.
  */
 export const contextualSizes = css`
-  :host([size='2xs']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-2xs,
-      var(--lr-theme-form-control-height-2xs, var(--lr-size-1-25rem))
+  :host {
+    --_lr-form-control-padding-block-limit: max(
+      0px,
+      calc((var(--lr-form-control-height) - 1lh - 2 * var(--lr-border-width-thin)) / 2)
     );
+  }
+  :host([size='2xs']) {
+    --_lr-form-control-tier-height: var(--lr-form-control-height-2xs, var(--lr-theme-form-control-height-2xs, var(--lr-size-1-25rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-2xs);
     --lr-form-control-padding-inline: var(--lr-space-2xs);
     --lr-form-control-padding-block: 0;
@@ -84,10 +89,8 @@ export const contextualSizes = css`
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius-xs));
   }
   :host([size='xs']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-xs,
-      var(--lr-theme-form-control-height-xs, var(--lr-size-1-5rem))
-    );
+    --_lr-form-control-tier-height: var(--lr-form-control-height-xs, var(--lr-theme-form-control-height-xs, var(--lr-size-1-5rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-xs);
     --lr-form-control-padding-inline: var(--lr-space-xs);
     --lr-form-control-padding-block: 0;
@@ -96,49 +99,54 @@ export const contextualSizes = css`
   }
   :host([size='s']),
   :host([size='small']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-s,
-      var(--lr-theme-form-control-height-s, var(--lr-size-1-875rem))
-    );
+    --_lr-form-control-tier-height: var(--lr-form-control-height-s, var(--lr-theme-form-control-height-s, var(--lr-size-2rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-sm);
     --lr-form-control-padding-inline: var(--lr-space-s);
-    --lr-form-control-padding-block: var(--lr-space-2xs);
+    --lr-form-control-padding-block: min(var(--lr-space-2xs), var(--_lr-form-control-padding-block-limit));
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='m']),
   :host([size='medium']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-m,
-      var(--lr-theme-form-control-height-m, var(--lr-size-2-5rem))
-    );
+    --_lr-form-control-tier-height: var(--lr-form-control-height-m, var(--lr-theme-form-control-height-m, var(--lr-size-2-25rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-m);
     --lr-form-control-padding-inline: var(--lr-space-m);
-    --lr-form-control-padding-block: var(--lr-space-xs);
+    --lr-form-control-padding-block: min(var(--lr-space-xs), var(--_lr-form-control-padding-block-limit));
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='l']),
   :host([size='large']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-l,
-      var(--lr-theme-form-control-height-l, var(--lr-size-3rem))
-    );
+    --_lr-form-control-tier-height: var(--lr-form-control-height-l, var(--lr-theme-form-control-height-l, var(--lr-size-2-5rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-lg);
     --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
+    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
   }
   :host([size='xl']) {
-    --lr-form-control-height: var(
-      --lr-form-control-height-xl,
-      var(--lr-theme-form-control-height-xl, var(--lr-size-3-5rem))
-    );
+    --_lr-form-control-tier-height: var(--lr-form-control-height-xl, var(--lr-theme-form-control-height-xl, var(--lr-size-3-5rem)));
+    --lr-form-control-height: var(--_lr-form-control-tier-height);
     --lr-form-control-font-size: var(--lr-font-size-xl);
     --lr-form-control-padding-inline: var(--lr-space-l);
-    --lr-form-control-padding-block: var(--lr-space-s);
+    --lr-form-control-padding-block: min(var(--lr-space-s), var(--_lr-form-control-padding-block-limit));
     --lr-form-control-gap: var(--lr-space-2xs);
     --lr-form-control-radius: var(--lr-theme-form-control-radius, var(--lr-radius));
+  }
+  @media (hover: none), (pointer: coarse) {
+    :host([size='2xs']),
+    :host([size='xs']),
+    :host([size='s']),
+    :host([size='small']),
+    :host([size='m']),
+    :host([size='medium']),
+    :host([size='l']),
+    :host([size='large']),
+    :host([size='xl']) {
+      --lr-form-control-height: max(var(--_lr-form-control-tier-height), var(--_lr-touch-target-min));
+    }
   }
 `;

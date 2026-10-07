@@ -1742,7 +1742,19 @@ export type {
   LyraEmailAttachmentOpenDetail,
   LyraEmailViewerEventMap,
 } from './components/viewers/email-viewer/email-viewer.class.js';
-export * from './components/viewers/email-viewer/email-loader.js';
+export {
+  clearEmailDepsCache,
+  getEmailDepsIfLoaded,
+  loadEmailAndSanitizer,
+  loadEmailDeps,
+} from './components/viewers/email-viewer/email-loader.js';
+export type {
+  EmailDeps,
+  PostalAddressApi,
+  PostalAttachmentApi,
+  PostalMessageApi,
+  PostalMimeApi,
+} from './components/viewers/email-viewer/email-loader.js';
 export type {
   ParsedCalendarTimeKind,
   ParsedCalendarEvent,

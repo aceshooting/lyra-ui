@@ -203,7 +203,6 @@ const baseTokens = css`
     --lr-size-1-5em: var(--lr-theme-size-1-5em, 1.5em);
     --lr-size-1-5rem: var(--lr-theme-size-1-5rem, 1.5rem);
     --lr-size-1-75rem: var(--lr-theme-size-1-75rem, 1.75rem);
-    --lr-size-1-875rem: var(--lr-theme-size-1-875rem, 1.875rem);
     --lr-size-10px: var(--lr-theme-size-10px, 10px);
     --lr-size-10rem: var(--lr-theme-size-10rem, 10rem);
     --lr-size-12em: var(--lr-theme-size-12em, 12em);
@@ -363,6 +362,7 @@ const baseTokens = css`
        fails WCAG 2.2 SC 2.5.8 (Target Size (Minimum)).
        ICON_BUTTON_SIZE_SCOPE -- why there are two ancestor inputs here. */
     --lr-icon-button-size: var(--lr-icon-button-size-scope, var(--lr-theme-icon-button-size, 2.25rem));
+    --_lr-touch-target-min: 2.75rem;
 
     font-family: var(--lr-font);
     line-break: var(--lr-line-break);
@@ -419,20 +419,6 @@ const baseTokens = css`
  *                          :not([data-lr-theme='light']) appended to :host-context() matches
  *                          nothing at all, because the shadow host is featureless.
  *
- * DARK_OVERLAY_SURFACE -- why the dark panel colour is mixed rather than pinned.
- * Light mode resolves --lr-color-surface-overlay straight to --lr-color-surface, so ONE
- * --lr-theme-color-surface-default override carries every dropdown, listbox, menu, toast, popover,
- * dialog and mobile drawer with it. Dark mode cannot do that -- panel and page would land on the
- * same near-black and an open dialog reads as a scrim with text floating on it -- so it used to pin
- * a literal, and the cost was that re-skinning the dark base left every floating surface at the
- * stock colour: a mismatched panel rather than a themed one. Mixing the page surface towards a
- * fixed light accent keeps the elevation delta the note beside the declaration is about while
- * following the base: 85 percent surface plus 15 percent accent lifts the panel a fixed amount
- * above whatever the base happens to be, instead of asserting one absolute colour. The pair is
- * chosen so that at the built-in #1a1a1a base it resolves to rgb(43 48 56) -- the #2b3038 this
- * token has always shipped -- so no existing dark theme moves. A real
- * --lr-theme-color-surface-overlay still wins outright, for a panel unrelated to the page surface.
- *
  * Placement note: `scripts/check-contrast.mjs` and `scripts/generate-chart-palette.mjs` split this
  * file at the first occurrence of the string `@media (prefers-color-scheme: dark)` and read
  * everything after it as the dark set. The media rule that consumes this fragment is composed
@@ -454,11 +440,7 @@ const darkTokens = css`
     --_lr-glass-qualified-border-strong: color-mix(in srgb, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)), var(--lr-color-text) var(--_lr-glass-border-weight));
     --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)));
       --lr-color-border-subtle: var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border))));
-      /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
-         near-black, so an open dialog reads as a scrim with text floating on it and no panel at
-         all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
-         separated by the scrim around it, and changing it would be churn for no legibility gain.
-         DARK_OVERLAY_SURFACE (above) -- why the delta is mixed rather than pinned to a literal. */
+      /* The floating-panel role is its own input; it does not follow the page surface. */
       --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #171717);
       /* A 50% black scrim over an already-dark page barely darkens it, so the modal/non-modal
          boundary the scrim exists to draw disappears. Both scrims go heavier in dark mode. */

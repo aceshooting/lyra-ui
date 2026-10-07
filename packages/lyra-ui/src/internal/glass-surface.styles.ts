@@ -82,19 +82,23 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
         --lr-color-border-strong: var(--_lr-glass-qualified-border-strong, var(--_lr-glass-original-border-strong));
         --_lr-glass-brand-text: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-text) var(--_lr-glass-foreground-weight));
         --_lr-glass-danger-text: color-mix(in srgb, var(--lr-color-danger), var(--lr-color-text) var(--_lr-glass-foreground-weight));
-        /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops. */
-        --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
-        --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), var(--_lr-glass-dark-anchor)));
-        --_lr-glass-background: color-mix(
-          in srgb,
-          ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
-          color-mix(
+      }
+      @supports (color: light-dark(Canvas, CanvasText)) {
+        ${surface} {
+          /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops. */
+          --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
+          --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), var(--_lr-glass-dark-anchor)));
+          --_lr-glass-background: color-mix(
             in srgb,
-            var(--_lr-glass-fill) calc(var(--_lr-glass-effective-opacity) * 100%),
-            transparent
-          )
-        );
-        background: var(--_lr-glass-background, ${restingFill});
+            ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),
+            color-mix(
+              in srgb,
+              var(--_lr-glass-fill) calc(var(--_lr-glass-effective-opacity) * 100%),
+              transparent
+            )
+          );
+          background: var(--_lr-glass-background, ${restingFill});
+        }
       }
       ${layer} {
         content: var(--_lr-surface-content, '');

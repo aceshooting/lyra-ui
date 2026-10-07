@@ -35,11 +35,20 @@ function freezeScale(colors: readonly string[]): LyraChartScale {
   return Object.freeze([colors[0]!, colors[1]!, colors[2]!]);
 }
 
+const CONCRETE_RGB = /^(?:#([\da-f]{2})([\da-f]{2})([\da-f]{2})|rgb\((\d+)(?:, | )(\d+)(?:, | )(\d+)\))$/i;
+
+function rgbChannels(color: string): number[] | undefined {
+  const match = CONCRETE_RGB.exec(color);
+  if (!match) return undefined;
+  return match[1] ? [1, 2, 3].map(index => Number.parseInt(match[index]!, 16)) : [4, 5, 6].map(index => Number(match[index]));
+}
+
 /**
  * Samples a three-stop scale at 0..1 using sRGB interpolation; 0.5 is the exact middle stop.
  * Supply the same result to canvas paint and SVG fill/stroke. Non-finite positions use zero.
- * With no DOM, stops must be six-digit hex colors (as all built-in palettes are); otherwise
- * the nearest stop is returned. Domain normalization and a diverging midpoint belong to the caller.
+ * Six-digit hex and plain `rgb()` stops (every built-in palette and every resolved palette)
+ * interpolate without touching the DOM; any other stop resolves through a live `scope`, and with no
+ * DOM returns the nearest stop. Domain normalization and a diverging midpoint belong to the caller.
  */
 export function sampleLyraChartScale(scope: Element | null, scale: LyraChartScale, position: number): string {
   const t = finiteRange(position, 0, 0, 1) * 2;
@@ -51,13 +60,9 @@ export function sampleLyraChartScale(scope: Element | null, scale: LyraChartScal
   const fraction = t - index;
   const low = scale[index]!;
   const high = scale[index + 1]!;
+  const from = rgbChannels(low);
+  const to = rgbChannels(high);
+  if (from && to) return `rgb(${from.map((start, channel) => Math.round(start + (to[channel]! - start) * fraction)).join(', ')})`;
   const nearest = fraction < 0.5 ? low : high;
-  if (scope) return resolveCanvasColor(scope, `color-mix(in srgb, ${low} ${(1 - fraction) * 100}%, ${high})`, nearest);
-  if (![low, high].every(color => /^#[\da-f]{6}$/i.test(color))) return nearest;
-  const channels = [1, 3, 5].map(offset => {
-    const start = Number.parseInt(low.slice(offset, offset + 2), 16);
-    const end = Number.parseInt(high.slice(offset, offset + 2), 16);
-    return Math.round(start + (end - start) * fraction);
-  });
-  return `rgb(${channels.join(', ')})`;
+  return scope ? resolveCanvasColor(scope, `color-mix(in srgb, ${low} ${(1 - fraction) * 100}%, ${high})`, nearest) : nearest;
 }

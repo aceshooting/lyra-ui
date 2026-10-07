@@ -50,7 +50,7 @@ type DroppedDirectoryBatchResult =
   | { status: 'cancelled' }
   | { status: 'error' };
 
-function isFileValue(value: unknown): value is File {
+export function isFileValue(value: unknown): value is File {
   if (value === null || typeof value !== 'object') return false;
   try {
     const candidate = value as Partial<File>;
@@ -151,7 +151,7 @@ export class DropSessionController implements ReactiveController {
     if (this.callbacks.isDisabled()) return undefined;
     this.reset();
     const token = this.token;
-    const files = [...(e.dataTransfer?.files ?? [])];
+    const files = readFileList(e.dataTransfer?.files);
     const folders: FileSystemEntry[] = [];
     const items = e.dataTransfer?.items;
     // Inspect at most one item beyond the traversal budget. Besides avoiding an unbounded spread,

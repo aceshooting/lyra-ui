@@ -32,6 +32,7 @@ import {
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
+import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import {
   omittedEmptyStringConverter,
@@ -1065,11 +1066,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.hasAttribute(attribute) || value !== fallback) return finiteDuration(value, fallback);
     const property = showing ? '--show-delay' : '--hide-delay';
     const raw = this.ownerDocument.defaultView?.getComputedStyle(this).getPropertyValue(property).trim() ?? '';
-    const match = raw.match(/^(-?(?:\d+\.?\d*|\.\d+))(ms|s)$/i);
-    if (!match) return fallback;
-    const amount = Number(match[1]);
-    const milliseconds = match[2]?.toLowerCase() === 's' ? amount * 1000 : amount;
-    return finiteDuration(milliseconds, fallback);
+    const token = parseCssTimeToken(raw);
+    return token && !token.rest ? finiteDuration(token.ms, fallback) : fallback;
   }
   private cancelPendingTransition(): void {
     if (this.timer !== undefined) this.timerView?.clearTimeout(this.timer);

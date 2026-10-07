@@ -1866,8 +1866,8 @@ svgMark.style.fill = color;
 
 Sampling uses sRGB interpolation, clamps positions to `0..1`, maps non-finite values to zero,
 and returns the exact midpoint at `0.5`. Normalize your numeric domain before sampling; a
-meaningful diverging center need not be the arithmetic middle of your domain. Without a DOM,
-sampling interpolates six-digit hex colors; other color syntaxes return the nearest stop.
+meaningful diverging center need not be the arithmetic middle of your domain. Six-digit hex and plain
+`rgb()` stops interpolate without a DOM read; with no DOM, other color syntaxes return the nearest stop.
 `lr-heatmap` retains its two-endpoint defaults; its `cellColor` callback can consume a precomputed
 sampled scale when three-stop or diverging encoding is needed. Resolve/sample once per ramp,
 then index cached colors from the callback, avoiding DOM probes per cell.

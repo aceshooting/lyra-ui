@@ -13,7 +13,7 @@
     "reducedMotion"
   ],
   "valueNamedTokenPolicy": {
-    "frozenCount": 89,
+    "frozenCount": 88,
     "allowedClassifications": [
       "semantic-global",
       "component-role",
@@ -3242,24 +3242,6 @@
         "src/components/overlays/chip/chip.styles.ts"
       ]
     },
-    "--lr-size-1-875rem": {
-      "type": "dimension",
-      "group": "size",
-      "scope": "shared",
-      "description": "Canonical shared component token for size 1 875rem.",
-      "values": {
-        "light": "var(--lr-theme-size-1-875rem, 1.875rem)"
-      },
-      "themeInput": "--lr-theme-size-1-875rem",
-      "valueNameClassification": "audited-fixed-geometry",
-      "compatibility": {
-        "name": "--lr-size-1-875rem",
-        "status": "retained"
-      },
-      "evidence": [
-        "src/internal/contextual-vocabulary.styles.ts"
-      ]
-    },
     "--lr-size-10px": {
       "type": "dimension",
       "group": "size",
@@ -3634,7 +3616,8 @@
       },
       "evidence": [
         "src/components/agent-tools/tool-select-dialog/tool-select-dialog.styles.ts",
-        "src/components/forms/date-picker/date-picker.styles.ts"
+        "src/components/forms/date-picker/date-picker.styles.ts",
+        "src/internal/contextual-vocabulary.styles.ts"
       ]
     },
     "--lr-size-2-5ch": {
@@ -3940,14 +3923,15 @@
         "src/components/layout/command-palette/command-palette.styles.ts",
         "src/components/layout/scroller/scroller.class.ts",
         "src/components/layout/scroller/scroller.styles.ts",
-        "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/avatar-group/avatar-group.styles.ts",
+        "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/file-icon/file-icon.class.ts",
         "src/components/media/file-icon/file-icon.styles.ts",
         "src/components/overlays/chip/chip.styles.ts",
         "src/components/viewers/document-preview/document-preview.styles.ts",
         "src/components/viewers/document-viewer/document-viewer.styles.ts",
-        "src/components/viewers/pptx-viewer/pptx-viewer.styles.ts"
+        "src/components/viewers/pptx-viewer/pptx-viewer.styles.ts",
+        "src/internal/contextual-vocabulary.styles.ts"
       ]
     },
     "--lr-size-3-5em": {
@@ -4145,8 +4129,7 @@
         "src/components/media/av-player/av-player.styles.ts",
         "src/components/media/avatar/avatar.class.ts",
         "src/components/media/avatar/avatar.styles.ts",
-        "src/components/media/avatar-group/avatar-group.styles.ts",
-        "src/internal/contextual-vocabulary.styles.ts"
+        "src/components/media/avatar-group/avatar-group.styles.ts"
       ]
     },
     "--lr-size-48rem": {
@@ -6685,15 +6668,6 @@
       "description": "Application theme input for --lr-size-1-75rem.",
       "values": {
         "light": "1.75rem"
-      }
-    },
-    "--lr-theme-size-1-875rem": {
-      "type": "dimension",
-      "group": "size",
-      "scope": "theme-input",
-      "description": "Application theme input for --lr-size-1-875rem.",
-      "values": {
-        "light": "1.875rem"
       }
     },
     "--lr-theme-size-10px": {

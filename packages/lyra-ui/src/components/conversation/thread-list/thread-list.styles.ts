@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
   :host {
@@ -302,4 +303,5 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-2xs);
   }
+  ${dataStateRetryStyles}
 `;

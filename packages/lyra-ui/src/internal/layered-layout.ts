@@ -211,6 +211,13 @@ export function layeredLayout(input: {
   const DONE = 2;
   const state = new Map<string, number>(order.map((id) => [id, UNVISITED]));
   const dagEdges: LayeredLayoutEdge[] = [];
+  const dagKeys = new Set<string>();
+  const addDagEdge = (source: string, target: string): void => {
+    const key = `${source}\u0000${target}`;
+    if (dagKeys.has(key)) return;
+    dagKeys.add(key);
+    dagEdges.push({ source, target });
+  };
 
   interface DfsFrame {
     id: string;
@@ -232,13 +239,13 @@ export function layeredLayout(input: {
       frame.nextTarget += 1;
       const targetState = state.get(target);
       if (targetState === UNVISITED) {
-        dagEdges.push({ source: frame.id, target });
+        addDagEdge(frame.id, target);
         state.set(target, ON_STACK);
         stack.push({ id: target, nextTarget: 0 });
       } else if (targetState === ON_STACK) {
-        dagEdges.push({ source: target, target: frame.id }); // back edge -- reversed
+        addDagEdge(target, frame.id); // back edge -- reversed
       } else {
-        dagEdges.push({ source: frame.id, target });
+        addDagEdge(frame.id, target);
       }
     }
   }
@@ -282,7 +289,7 @@ export function layeredLayout(input: {
 
   let waypointCounter = 0;
   let truncated = false;
-  const waypointChains = new Map<string, string[]>();
+  const waypointChains = new Map<LayeredLayoutEdge, string[]>();
   for (const e of dagEdges) {
     const sourceLayer = layer.get(e.source) ?? 0;
     const targetLayer = layer.get(e.target) ?? 0;
@@ -298,7 +305,7 @@ export function layeredLayout(input: {
       layers[l]!.push({ id: waypointId, virtual: true, width: 1, height: 1 });
       chain.push(waypointId);
     }
-    waypointChains.set(`${e.source}->${e.target}`, chain);
+    waypointChains.set(e, chain);
   }
 
   const orderingDown = new Map<string, string[]>();
@@ -312,7 +319,7 @@ export function layeredLayout(input: {
     if (span === 1) {
       addOrderingEdge(e.source, e.target);
     } else if (span > 1) {
-      const hops = [e.source, ...(waypointChains.get(`${e.source}->${e.target}`) ?? []), e.target];
+      const hops = [e.source, ...(waypointChains.get(e) ?? []), e.target];
       for (let i = 0; i < hops.length - 1; i++) addOrderingEdge(hops[i]!, hops[i + 1]!);
     }
   }

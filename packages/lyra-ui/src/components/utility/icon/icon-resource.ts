@@ -5,6 +5,7 @@ import {
   type OwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { BoundedResourceCache, type ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
+import { isLocalSvgFragment, isUnsafeSvgPresentationValue } from '../../../internal/safe-svg.js';
 import { loadIconSanitizer } from './dompurify-loader.js';
 
 export type IconResourceErrorReason = 'load' | 'too-large' | 'sanitizer';
@@ -24,34 +25,6 @@ const resources = new BoundedResourceCache<SVGSVGElement | null>(ICON_CACHE_ENTR
 const ownerDocumentIds = new WeakMap<Document, number>();
 let nextOwnerId = 1;
 
-const SVG_URL_PRESENTATION_ATTRIBUTES = new Set([
-  'clip-path',
-  'cursor',
-  'fill',
-  'filter',
-  'marker',
-  'marker-end',
-  'marker-mid',
-  'marker-start',
-  'mask',
-  'stroke',
-]);
-
-function isLocalFragment(value: string): boolean {
-  return /^#[^\s"'()<>]+$/.test(value.trim());
-}
-
-function hasUnsafeCssResource(value: string): boolean {
-  // Backslash escapes can spell url without containing the literal token. URL-bearing
-  // presentation values containing escapes therefore fail closed. Ordinary colors and local
-  // paint-server fragments remain supported.
-  if (value.includes('\\')) return true;
-  const urls = [...value.matchAll(/url\(\s*(["']?)(.*?)\1\s*\)/gi)];
-  if (urls.length === 0) return false;
-  const withoutUrls = value.replace(/url\(\s*(["']?)(.*?)\1\s*\)/gi, '').trim();
-  return withoutUrls !== '' || urls.some((match) => !isLocalFragment(match[2] ?? ''));
-}
-
 /** Removes every secondary request/navigation sink that SVG DOMPurify intentionally leaves for
  * ordinary documents. Icons are a single-resource surface: only same-document fragment
  * references on use and paint/filter presentation attributes survive. */
@@ -66,12 +39,12 @@ function stripExternalResourceSinks(svg: SVGSVGElement): void {
         continue;
       }
       if (name === 'href') {
-        if (element.localName.toLowerCase() !== 'use' || !isLocalFragment(value)) {
+        if (element.localName.toLowerCase() !== 'use' || !isLocalSvgFragment(value)) {
           element.removeAttributeNode(attribute);
         }
         continue;
       }
-      if (SVG_URL_PRESENTATION_ATTRIBUTES.has(name) && hasUnsafeCssResource(value)) {
+      if (isUnsafeSvgPresentationValue(name, value)) {
         element.removeAttributeNode(attribute);
       }
     }

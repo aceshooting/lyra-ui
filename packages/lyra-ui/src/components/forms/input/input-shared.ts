@@ -7,7 +7,7 @@ import {
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { lengthViolations } from '../../../internal/length-constraints.js';
+import { lengthLimitConverter, lengthViolations } from '../../../internal/length-constraints.js';
 import {
   MatchConstraintController,
   type LyraMatchTarget,
@@ -372,18 +372,12 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    *  `updateValidity()`). Defaults to `undefined` (no lower bound). Like native `minlength`, an
    *  empty value never violates it — pair it with `required` to also reject empty. Ignored by the
    *  native input for `type="number"`/`type="time"`, exactly as the platform specifies. */
-  // numeric-guard-exempt: forwarded straight through to the native <input minlength> attribute
-  // and read back only via that same native input's own ValidityState.tooShort, which applies the
-  // platform's "rules for parsing non-negative integers" (an unparseable value is ignored, not
-  // thrown on). Never used in arithmetic in this file.
-  @property({ type: Number }) minlength?: number;
+  @property({ converter: lengthLimitConverter }) minlength?: number;
   /** Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and the
    *  same default of `undefined`. Note that native `maxlength` also *prevents* typing beyond the
    *  limit; it reports `tooLong` for values that arrive some other way (paste of a longer value,
    *  a programmatic assignment). */
-  // numeric-guard-exempt: same rationale as `minlength` above, for the native <input maxlength>
-  // attribute and ValidityState.tooLong.
-  @property({ type: Number }) maxlength?: number;
+  @property({ converter: lengthLimitConverter }) maxlength?: number;
   /** A regular expression the value must match in full, forwarded to the internal native
    *  `<input>`'s own `pattern` and validated by it (`patternMismatch`). Defaults to `undefined`
    *  (no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so
@@ -395,8 +389,8 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   @property({ type: Boolean, attribute: 'password-toggle', reflect: true })
   passwordToggle = false;
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
-   *  built-in `password-toggle` button; also settable by a consumer up front, with or without
-   *  that button being rendered. */
+   *  built-in `password-toggle` button (named by its action, no `aria-pressed`); also settable by a
+   *  consumer up front, with or without that button being rendered. */
   @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible =
     false;
   /** `type="number"` only — suppresses the browser's own increment/decrement spin buttons. Left
@@ -1094,7 +1088,6 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
                 aria-label=${this.localize(
                   this.passwordVisible ? 'hidePassword' : 'showPassword'
                 )}
-                aria-pressed=${this.passwordVisible ? 'true' : 'false'}
                 @click=${this.onTogglePasswordVisible}
               >
                 <span part="password-toggle-button" aria-hidden="true" inert

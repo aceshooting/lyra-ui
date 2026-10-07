@@ -9,7 +9,7 @@ const quote = (value) => `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'
 
 /** The registration graph is the single authority for each root's transitive closure. */
 export function generateScopedDefinitions(manifest, graph) {
-  const classes = new Map();
+  const classes = new Set();
   for (const module of manifest.modules ?? []) {
     for (const declaration of module.declarations ?? []) {
       if (!declaration.tagName || !declaration.customElement || declaration.kind !== 'class') continue;
@@ -18,7 +18,7 @@ export function generateScopedDefinitions(manifest, graph) {
         throw new Error(`Invalid scoped class module: ${module.path}`);
       }
       if (classes.has(declaration.tagName)) throw new Error(`Duplicate scoped tag ${declaration.tagName}`);
-      classes.set(declaration.tagName, { name: declaration.name, path: `../${module.path.slice(4).replace(/\.ts$/, '.js')}` });
+      classes.add(declaration.tagName);
     }
   }
   const entries = [...graph.entries].sort((a, b) => a.tag.localeCompare(b.tag));
@@ -31,12 +31,6 @@ export function generateScopedDefinitions(manifest, graph) {
   }
   return [
     '// GENERATED FILE — do not edit. Regenerate with pnpm run scoped-definitions.',
-    "import type { LyraScopedElementConstructor } from '../utilities/scoped-registry.js';",
-    '',
-    'export const scopedDefinitionLoaders: Readonly<Record<string, () => Promise<LyraScopedElementConstructor>>> = Object.freeze({',
-    ...[...classes].filter(([tag]) => tags.has(tag)).sort(([a], [b]) => a.localeCompare(b)).map(([tag, declaration]) =>
-      `  ${quote(tag)}: () => import(${quote(declaration.path)}).then((module) => module.${declaration.name}),`),
-    '});',
     '',
     'export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]>> = Object.freeze({',
     ...entries.map((entry) => `  ${quote(entry.tag)}: [${[...new Set([entry.tag, ...entry.registers])].sort().map(quote).join(', ')}],`),

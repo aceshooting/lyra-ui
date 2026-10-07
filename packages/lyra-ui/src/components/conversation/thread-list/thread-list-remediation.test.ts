@@ -101,3 +101,9 @@ it('paints row actions and the clear button from the shared icon-button tokens',
   const clear = el.shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
   expect(getComputedStyle(clear).borderTopLeftRadius).to.equal('7px');
 });
+
+it('styles the failed-load retry button with the shared data-state treatment', async () => {
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list error></lr-thread-list>`);
+  const style = getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="retry-button"]')!);
+  expect([style.borderTopWidth, style.cursor]).to.deep.equal(['1px', 'pointer']);
+});

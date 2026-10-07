@@ -202,6 +202,22 @@ describe('convertCurrency', () => {
     expect(Object.hasOwn(input.rates, 'USD')).to.equal(false);
   });
 
+  it('validates a foreign snapshot on every call but trusts one it already normalized', () => {
+    const ownKeys = Reflect.ownKeys;
+    let reads = 0;
+    Reflect.ownKeys = (target: object) => { reads++; return ownKeys(target); };
+    try {
+      const trusted = normalizeCurrencyRates(snapshot());
+      reads = 0;
+      for (let call = 0; call < 3; call++) convertCurrency(1, 'USD', 'GBP', trusted);
+      expect(reads, 'normalized snapshot').to.equal(0);
+      for (let call = 0; call < 3; call++) convertCurrency(1, 'USD', 'GBP', snapshot());
+      expect(reads, 'foreign snapshot').to.equal(3);
+    } finally {
+      Reflect.ownKeys = ownKeys;
+    }
+  });
+
   it('requires both quotes even for zero or identical requested codes', () => {
     for (const amount of [0, 1]) {
       expect(() => convertCurrency(amount, 'JPY', 'EUR', snapshot())).to.throw(RangeError);

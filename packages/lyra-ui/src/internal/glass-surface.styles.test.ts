@@ -83,6 +83,19 @@ describe('glass surface composition', () => {
     expect(getComputedStyle(outer, '::before').backdropFilter).to.equal('none');
   });
 
+  it('keeps the resting fill where light-dark() is unsupported', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const sheet = new CSSStyleSheet();
+    const material = css`${tokens} .surface { min-block-size: 20px; } ${glassSurface('.surface', css`rgb(250 250 250)`)}`.cssText;
+    sheet.replaceSync(material.replaceAll('light-dark(', 'unsupported-fn('));
+    shadow.adoptedStyleSheets = [sheet];
+    const surface = document.createElement('div');
+    surface.className = 'surface';
+    shadow.append(surface);
+    expect(backgroundPixel(surface)).to.deep.equal([250, 250, 250, 255]);
+  });
+
   it('filters the decorative layer without capturing fixed descendants', async function () {
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
     const { outer, fixed } = await surfaces('glass');

@@ -1,5 +1,10 @@
-import { expect } from '@open-wc/testing';
-import { lengthViolations } from './length-constraints.js';
+import { expect, fixture } from '@open-wc/testing';
+import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from './length-constraints.js';
+import '../components/forms/input/input.js';
+import '../components/forms/textarea/textarea.js';
+import '../components/forms/code-editor/code-editor.js';
+import '../components/conversation/chat-composer/chat-composer.js';
+import '../components/conversation/prompt-input/prompt-input.js';
 
 it('reports no violation when neither limit is set, however long the value', () => {
   const long = 'x'.repeat(5000);
@@ -58,10 +63,10 @@ it('counts an unpaired surrogate as one code unit rather than dropping it', () =
   expect(lengthViolations(`a${lone}`, undefined, 1).tooLong).to.equal(true);
 });
 
-it('ignores a limit that is not a non-negative integer, matching the platform parsing rules', () => {
+it('ignores a limit that is not a finite non-negative number, matching the platform parsing rules', () => {
   // Native minlength/maxlength use the "rules for parsing non-negative integers"; anything else
   // is ignored outright rather than constraining (or throwing).
-  for (const bad of [NaN, -1, -5, 1.5, Number.POSITIVE_INFINITY]) {
+  for (const bad of [NaN, -1, -5, Number.POSITIVE_INFINITY]) {
     expect(lengthViolations('abcdef', undefined, bad), `maxlength ${bad}`).to.deep.equal({
       tooShort: false,
       tooLong: false,
@@ -87,3 +92,29 @@ it('evaluates both bounds independently when they are set together', () => {
   expect(lengthViolations('abcd', 3, 6)).to.deep.equal({ tooShort: false, tooLong: false });
   expect(lengthViolations('abcdefg', 3, 6)).to.deep.equal({ tooShort: false, tooLong: true });
 });
+
+it('truncates a fractional limit the way the platform parses it', () => {
+  expect(normalizeLengthLimit(2.7)).to.equal(2);
+  expect(lengthViolations('abc', undefined, 2.7).tooLong).to.equal(true);
+  expect(lengthViolations('a', 2.7, undefined).tooShort).to.equal(true);
+  expect(normalizeLengthLimit('2')).to.equal(undefined);
+});
+
+it('reads a blank length attribute as no limit and any other text as a number', () => {
+  for (const blank of ['', '  ', null]) expect(lengthLimitConverter.fromAttribute(blank), String(blank)).to.equal(undefined);
+  expect(lengthLimitConverter.fromAttribute('0')).to.equal(0);
+  expect(lengthLimitConverter.fromAttribute('12')).to.equal(12);
+});
+
+for (const tag of ['lr-input', 'lr-textarea', 'lr-code-editor', 'lr-chat-composer', 'lr-prompt-input']) {
+  it(`${tag} treats an empty minlength/maxlength attribute as no limit`, async () => {
+    const host = await fixture<HTMLElement & { value: string; updateComplete: Promise<boolean> }>(
+      `<${tag} minlength="" maxlength=" " value="abc"></${tag}>`,
+    );
+    await host.updateComplete;
+    const control = host.shadowRoot!.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement | null
+      ?? (host.shadowRoot!.querySelector('lr-chat-composer')!.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement);
+    expect(control.hasAttribute('maxlength'), 'maxlength forwarded').to.equal(false);
+    expect(control.hasAttribute('minlength'), 'minlength forwarded').to.equal(false);
+  });
+}

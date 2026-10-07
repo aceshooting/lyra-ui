@@ -18,8 +18,8 @@ import {
   isBarredFromValidation,
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
-import { lengthViolations } from '../../../internal/length-constraints.js';
-import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
 import {
   autocorrectConverter,
@@ -320,12 +320,9 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =
     false;
   /** Native minimum text length. Unset or invalid values impose no lower bound. */
-  // numeric-guard-exempt: every consumer routes through effectiveLengthLimit(), which rejects
-  // non-finite/negative values and finiteCount-normalizes the integer before validation or DOM use.
-  @property({ type: Number, attribute: 'minlength' }) minLength?: number;
+  @property({ converter: lengthLimitConverter, attribute: 'minlength' }) minLength?: number;
   /** Native maximum text length. Unset or invalid values impose no upper bound. */
-  // numeric-guard-exempt: same effectiveLengthLimit() finite normalization as minLength above.
-  @property({ type: Number, attribute: 'maxlength' }) maxLength?: number;
+  @property({ converter: lengthLimitConverter, attribute: 'maxlength' }) maxLength?: number;
   /** Accessible name for the internal textarea. Takes precedence over the placeholder-derived name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
@@ -383,14 +380,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
       this.effectiveMinRows,
       finiteInteger(this.maxRows, this.effectiveMinRows, 1)
     );
-  }
-
-  private effectiveLengthLimit(
-    declared: number | undefined
-  ): number | undefined {
-    if (declared === undefined || !Number.isFinite(declared) || declared < 0)
-      return undefined;
-    return finiteCount(Math.trunc(declared), 0);
   }
 
   constructor() {
@@ -565,11 +554,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     }
     const textarea = this.textareaEl;
     if (textarea && textarea.value !== this.value) textarea.value = this.value;
-    const own = lengthViolations(
-      this.value,
-      this.effectiveLengthLimit(this.minLength),
-      this.effectiveLengthLimit(this.maxLength)
-    );
+    const own = lengthViolations(this.value, this.minLength, this.maxLength);
     const tooShort = Boolean(textarea?.validity.tooShort) || own.tooShort;
     const tooLong = Boolean(textarea?.validity.tooLong) || own.tooLong;
     if (!tooShort && !tooLong) {
@@ -893,8 +878,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
-            minlength=${this.effectiveLengthLimit(this.minLength) ?? nothing}
-            maxlength=${this.effectiveLengthLimit(this.maxLength) ?? nothing}
+            minlength=${normalizeLengthLimit(this.minLength) ?? nothing}
+            maxlength=${normalizeLengthLimit(this.maxLength) ?? nothing}
             .value=${this.value}
             placeholder=${this.placeholder}
             rows=${this.effectiveMinRows}

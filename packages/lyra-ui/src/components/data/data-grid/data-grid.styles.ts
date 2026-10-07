@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
   :host {
@@ -779,6 +780,9 @@ export const styles = css`
       justify-content: center;
     }
   }
+
+  ${dataStateSurfaceStyles('error')}
+  ${dataStateRetryStyles}
 
   @media (prefers-reduced-motion: reduce) {
     button,

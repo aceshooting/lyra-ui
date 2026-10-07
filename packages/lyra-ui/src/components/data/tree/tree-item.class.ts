@@ -15,6 +15,7 @@ import {
 } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { parseCssTimeToken } from '../../../internal/css-motion-time.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
@@ -835,11 +836,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     const property = expanded ? '--show-duration' : '--hide-duration';
     const ownStyle = owner.getComputedStyle(this);
     const raw = ownStyle.getPropertyValue(property).trim() || ownStyle.getPropertyValue('--lr-duration-base').trim();
-    const match = /^([0-9]*\.?[0-9]+)(ms|s)$/.exec(raw);
-    if (!match) return 0;
-    const amount = Number(match[1]);
-    if (!Number.isFinite(amount) || amount < 0) return 0;
-    return finiteDuration(match[2] === 's' ? amount * 1000 : amount, 0);
+    return finiteDuration(parseCssTimeToken(raw)?.ms ?? 0, 0);
   }
 
   /** Collapse this node (no-op if already collapsed or a leaf). */

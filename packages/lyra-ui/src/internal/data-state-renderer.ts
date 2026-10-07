@@ -162,24 +162,6 @@ export function resolveDataState(
   return null;
 }
 
-/**
- * The `aria-busy` value the host binds on its OWN container while the ladder is resolving:
- * `aria-busy=${dataStateAriaBusy(config)}` on `part="base"`, the spelling `lr-table` and every
- * component in the viewers family already ship.
- *
- * Returns a string, never a boolean, because a stateful ARIA attribute renders both `'true'` and
- * `'false'`: a `?aria-busy=` directive removes the attribute on settle, which reads as "unknown"
- * rather than "finished".
- *
- * {@link renderDataState} cannot write it itself. `aria-busy` belongs on the element that owns the
- * region the assistive technology is waiting on, which is the host's own container — outside the
- * fragment this module returns — and setting a host attribute from inside a render function would
- * fight the host's own bindings on the next update.
- */
-export function dataStateAriaBusy(config: DataStateConfig): 'true' | 'false' {
-  return config.loading ? 'true' : 'false';
-}
-
 function prefixFor(
   partPrefix: LyraDataStatePartPrefix,
   branch: LyraDataStatePrecedence
@@ -239,8 +221,8 @@ function exportPartsFor(prefix: string): string {
  * own. Neither missing piece can be supplied from inside a render function, so an adopting host
  * must:
  *
- * - bind {@link dataStateAriaBusy} on its own container — the attribute belongs on the element
- *   that owns the waited-on region, which is outside the fragment returned here; and
+ * - bind `aria-busy="true"`/`"false"` (never `?aria-busy=`) on its own container — the attribute
+ *   belongs on the element that owns the waited-on region, outside the fragment returned here; and
  * - announce the transition from its own `updated()` through `acquireAnnouncementSink()`, the way
  *   `lr-table` announces its loading copy when `loading` turns on. A live region may not live in a
  *   shadow root, and a render function has no lifecycle hook on which to acquire and release the

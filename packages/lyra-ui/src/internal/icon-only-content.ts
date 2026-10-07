@@ -63,11 +63,13 @@ export function hasIconOnlyDefaultContent(host: Element): boolean {
  * `onChange` receives the freshly computed value and is called only when it differs from
  * `current()`.
  *
- * `arm()` is idempotent (call from every `updated()` and from a reconnect); it no-ops until the
- * label exists or when the realm has no `ResizeObserver` (SSR). `disarm()` on disconnect.
+ * `arm()` is idempotent and follows a replaced label (call from every `updated()` and from a
+ * reconnect); it no-ops until the label exists or when the realm has no `ResizeObserver` (SSR).
+ * `disarm()` on disconnect.
  */
 export class IconOnlyLabelObserver {
   private observer?: ResizeObserver;
+  private watched?: Element;
   private raf?: number;
   private rafOwner?: Window;
 
@@ -80,11 +82,12 @@ export class IconOnlyLabelObserver {
 
   arm(): void {
     const label = this.label();
-    if (this.observer || !label) return;
+    if (!label || label === this.watched) return;
     const view = this.host.ownerDocument.defaultView;
     const Ctor = view?.ResizeObserver;
     if (!view || !Ctor) return;
-    this.observer = new Ctor(() => {
+    if (this.watched) this.observer?.unobserve(this.watched);
+    this.observer ??= new Ctor(() => {
       if (!this.host.isConnected || this.host.ownerDocument.defaultView !== view) return;
       this.cancelFrame();
       this.rafOwner = view;
@@ -96,12 +99,12 @@ export class IconOnlyLabelObserver {
         if (next !== this.current()) this.onChange(next);
       });
     });
-    this.observer.observe(label);
+    this.observer.observe((this.watched = label));
   }
 
   disarm(): void {
     this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer = this.watched = undefined;
     this.cancelFrame();
   }
 

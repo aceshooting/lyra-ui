@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { LitElement, css } from 'lit';
 import { tag } from './prefix.js';
 import { sizes } from './sizes.styles.js';
+import { contextualSizes } from './contextual-vocabulary.styles.js';
 import { tokens } from './tokens.styles.js';
 import { palette } from './tokens/palette.styles.js';
 import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
@@ -29,6 +30,16 @@ class SizeLadderProbe extends LitElement {
   }
 }
 customElements.define(tag('size-ladder-probe'), SizeLadderProbe);
+
+class ContextualLadderProbe extends LitElement {
+  static override styles = [palette, tokens, contextualSizes, boxStyles];
+  static override properties = { size: { type: String, reflect: true } };
+  declare size?: string;
+  override render() {
+    return html`<div part="box"></div>`;
+  }
+}
+customElements.define(tag('contextual-ladder-probe'), ContextualLadderProbe);
 
 // This probe composes BOTH tokens.styles.ts's baseTokens (--lr-icon-button-size) and
 // sizes.styles.ts (--lr-form-control-height), each with its own copy of the coarse-pointer rule --
@@ -91,4 +102,34 @@ it('floors the unset (m) default at the platform touch-target size under a coars
   } finally {
     restore();
   }
+});
+
+it('renders the contextual size ladder at the sizes heights, floored under a coarse pointer', async () => {
+  for (const tier of [...TIERS, { size: 'm', px: 36 }]) {
+    const el = (await fixture(
+      html`<lr-contextual-ladder-probe size=${tier.size}></lr-contextual-ladder-probe>`,
+    )) as ContextualLadderProbe;
+    const box = el.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    expect(getComputedStyle(box).blockSize, `size=${tier.size}`).to.equal(`${tier.px}px`);
+    const restore = forceCoarsePointer(el);
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      expect(getComputedStyle(box).blockSize, `coarse size=${tier.size}`).to.equal(`${Math.max(tier.px, 44)}px`);
+    } finally {
+      restore();
+    }
+  }
+});
+
+it('caps the contextual block padding against the tier height like the sizes ladder', async () => {
+  const padding = async (probe: string) => {
+    const host = (await fixture(
+      `<${tag(probe)} size="l" style="line-height: 30px; --lr-theme-form-control-height-l: 36px"></${tag(probe)}>`,
+    )) as SizeLadderProbe;
+    const box = host.shadowRoot!.querySelector('[part="box"]') as HTMLElement;
+    box.style.paddingBlock = 'var(--lr-form-control-padding-block)';
+    return getComputedStyle(box).paddingBlockStart;
+  };
+  expect(await padding('size-ladder-probe')).to.equal('2px');
+  expect(await padding('contextual-ladder-probe')).to.equal('2px');
 });

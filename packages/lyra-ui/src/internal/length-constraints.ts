@@ -10,7 +10,7 @@
  * from the component's own `value`, to be OR-ed into the native flags.
  *
  * They deliberately reproduce the platform's own rules rather than a simpler approximation:
- * an absent or unparseable limit constrains nothing, an empty value is never too short, and
+ * an absent or unparseable limit constrains nothing (a fraction truncates), an empty value is never too short, and
  * lengths are counted in **UTF-16 code units** — the "code-unit length" the HTML spec measures
  * `minlength`/`maxlength` in, i.e. plain `String.prototype.length`. A single astral character such
  * as an emoji therefore counts as *two*, exactly as the native control counts it: a `<input
@@ -20,11 +20,18 @@
  * `input.class.ts`/`textarea.class.ts` depends on the two agreeing.
  */
 
-/** Whether `limit` is usable as a length bound, matching the platform's "rules for parsing
- *  non-negative integers": anything else (absent, `NaN`, negative, fractional) is ignored. */
-function isLengthLimit(limit: number | undefined): limit is number {
-  return typeof limit === 'number' && Number.isInteger(limit) && limit >= 0;
+import { finiteCount } from './numbers.js';
+
+/** `limit` as a usable non-negative integer, or `undefined` when it is not a finite non-negative
+ *  number; a fractional limit truncates, as the platform's integer parser does. */
+export function normalizeLengthLimit(limit: unknown): number | undefined {
+  return typeof limit === 'number' && Number.isFinite(limit) && limit >= 0 ? finiteCount(limit) : undefined;
 }
+
+/** Attribute converter for `minlength`/`maxlength`: a blank attribute means no limit, as natively. */
+export const lengthLimitConverter = {
+  fromAttribute: (value: string | null): number | undefined => (value?.trim() ? Number(value) : undefined),
+};
 
 /** The `tooShort`/`tooLong` conditions `value` violates under the supplied limits. */
 export function lengthViolations(
@@ -32,15 +39,14 @@ export function lengthViolations(
   minlength: number | undefined,
   maxlength: number | undefined,
 ): { tooShort: boolean; tooLong: boolean } {
-  const hasMin = isLengthLimit(minlength);
-  const hasMax = isLengthLimit(maxlength);
-  if (!hasMin && !hasMax) return { tooShort: false, tooLong: false };
+  const min = normalizeLengthLimit(minlength);
+  const max = normalizeLengthLimit(maxlength);
   // UTF-16 code units — the platform's "code-unit length". See the module comment.
   const length = value.length;
   return {
     // Native `minlength` never fires on an empty value — an optional field left blank stays
     // valid, and `required` is what rejects empty.
-    tooShort: hasMin && length > 0 && length < minlength,
-    tooLong: hasMax && length > maxlength,
+    tooShort: min !== undefined && length > 0 && length < min,
+    tooLong: max !== undefined && length > max,
   };
 }

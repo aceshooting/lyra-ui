@@ -55,6 +55,8 @@ export type LyraCurrencyRateLoader = (context: { readonly signal: AbortSignal })
 /** Static data or an explicit provider; the library does not select an exchange-rate service. */
 export type LyraCurrencyRateSource = LyraCurrencyRateSnapshot | LyraCurrencyRateLoader;
 
+const normalizedSnapshots = new WeakSet<object>();
+
 function requireRecord(value: unknown): object {
   if (value === null || typeof value !== 'object') throw new TypeError('Expected a currency data record.');
   let prototype: unknown;
@@ -121,7 +123,9 @@ export function normalizeCurrencyRates(input: unknown): LyraCurrencyRateSnapshot
     if (seen.size === 512) throw new RangeError('Currency rate tables are limited to 512 codes including base.');
     rates[base] = 1;
   }
-  return Object.freeze({ base, date, rates: Object.freeze(rates) });
+  const snapshot = Object.freeze({ base, date, rates: Object.freeze(rates) });
+  normalizedSnapshots.add(snapshot);
+  return snapshot;
 }
 
 /**
@@ -139,7 +143,7 @@ export function convertCurrency(
   if (typeof amount !== 'number' || !Number.isFinite(amount)) throw new TypeError('Currency amounts must be finite numbers.');
   const fromCode = requireCode(from);
   const toCode = requireCode(to);
-  const normalized = normalizeCurrencyRates(snapshot);
+  const normalized = normalizedSnapshots.has(snapshot) ? snapshot : normalizeCurrencyRates(snapshot);
   const fromRate = normalized.rates[fromCode];
   const toRate = normalized.rates[toCode];
   if (fromRate === undefined || toRate === undefined) throw new RangeError('A requested currency quote is unavailable.');

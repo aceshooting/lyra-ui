@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { observeReducedMotion } from './motion-observer.js';
 
 describe('shared scoped motion observation', () => {
@@ -96,6 +96,46 @@ describe('shared scoped motion observation', () => {
       slot.remove();
       await waitUntil(() => values.at(-1) === true);
       root.append(slot);
+      await waitUntil(() => values.at(-1) === false);
+    } finally {
+      stop();
+      window.matchMedia = original;
+    }
+  });
+  it('tests each changed node against one ancestor per subscription, not the whole ancestry', async () => {
+    const original = window.matchMedia;
+    const contains = Node.prototype.contains;
+    window.matchMedia = query => ({ media: query, matches: false } as MediaQueryList);
+    const scope = await fixture<HTMLElement>(html`<div><div><div><div><div><span></span><span></span><span></span><span></span><span></span></div></div></div></div><aside></aside></div>`);
+    const stops = [...scope.querySelectorAll('span')].map(span => observeReducedMotion(span, () => {}));
+    let calls = 0;
+    Node.prototype.contains = function (this: Node, other: Node | null) { calls++; return contains.call(this, other); };
+    try {
+      for (let index = 0; index < 10; index++) scope.lastElementChild!.append(document.createElement('p'));
+      await aTimeout(0);
+      expect(calls).to.be.at.most(stops.length * 10 + 10);
+    } finally {
+      Node.prototype.contains = contains;
+      stops.forEach(stop => stop());
+      window.matchMedia = original;
+    }
+  });
+
+  it('re-evaluates when a wrapper is inserted around the producer or an ancestor is removed', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = query => ({ media: query, matches: false } as MediaQueryList);
+    const scope = await fixture<HTMLElement>(html`<div><section><span></span></section></div>`);
+    const section = scope.firstElementChild!;
+    const child = section.firstElementChild!;
+    const values: boolean[] = [];
+    const stop = observeReducedMotion(child, value => values.push(value));
+    try {
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-lr-motion', 'reduce');
+      scope.append(wrapper);
+      wrapper.append(section);
+      await waitUntil(() => values.at(-1) === true);
+      section.remove();
       await waitUntil(() => values.at(-1) === false);
     } finally {
       stop();

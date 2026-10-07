@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { groupByRecency } from './group-by-recency.js';
+import { calendarDaysAgo, groupByRecency, startOfLocalDay } from './group-by-recency.js';
 
 // A fixed "now" (local time, noon on a Monday) so every test is deterministic
 // regardless of when/where the suite actually runs.
@@ -100,4 +100,11 @@ it('defaults `now` to the real current time when unset', () => {
   const result = groupByRecency([new Date()]);
   expect(result).to.have.length(1);
   expect(result[0]!.label).to.equal('Today');
+});
+
+it('counts whole local calendar days back from a day start, negative for later days', () => {
+  const start = startOfLocalDay(NOW);
+  expect(calendarDaysAgo(start, at(0, 0))).to.equal(0);
+  expect(calendarDaysAgo(start, at(1, 23))).to.equal(1);
+  expect(calendarDaysAgo(start, at(-1, 1))).to.equal(-1);
 });

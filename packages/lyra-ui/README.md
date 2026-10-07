@@ -541,10 +541,11 @@ The style API persists the independent look, surface, density, mode and accent c
 [style API guide](./llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density) for
 scoped styling, reset and saved-preference behavior.
 
-Tooling can consume the canonical DTCG interchange document from
-`@aceshooting/lyra-ui/design-tokens.json`. The generated
-`@aceshooting/lyra-ui/design-tokens.css` entry supplies explicit light/dark fixture selectors for
-previews and design-tool validation; it is not a replacement for the production `theme.css`.
+Tooling can consume the DTCG interchange document from `@aceshooting/lyra-ui/design-tokens.json`:
+the authored Lyra token tree (not the shadcn default), the look definitions and `defaultStyle`, which
+names the look and accent applied by default. The generated `@aceshooting/lyra-ui/design-tokens.css`
+entry supplies the resolved default values as explicit light/dark fixture selectors for previews and
+design-tool validation; it is not a replacement for the production `theme.css`.
 
 ```html
 <body class="lr-dark">

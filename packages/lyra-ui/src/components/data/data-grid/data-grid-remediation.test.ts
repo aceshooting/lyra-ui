@@ -136,6 +136,15 @@ describe('error state', () => {
     expect(cell.querySelector('[part="retry-button"]')).to.exist;
   });
 
+  it('paints the error cell and retry button with the shared data-state treatment', async () => {
+    const element = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
+      label="People" .rowKey=${'id'} .columns=${errorColumns} .data=${[row]} error
+    ></lr-data-grid>`);
+    const cell = getComputedStyle(element.shadowRoot!.querySelector<HTMLElement>('[part="error-cell"]')!);
+    const retry = getComputedStyle(element.shadowRoot!.querySelector<HTMLElement>('[part="retry-button"]')!);
+    expect([cell.paddingTop, retry.borderTopWidth, retry.cursor]).to.deep.equal(['8px', '1px', 'pointer']);
+  });
+
   it('lets `error` take precedence over the no-columns and no-rows empty branches', async () => {
     const noColumns = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
       label="People" .rowKey=${'id'} .columns=${[]} .data=${[]} error

@@ -10,7 +10,6 @@ import {
   LYRA_DEFAULT_tableLoadFailed,
 } from './default-strings.generated.js';
 import {
-  dataStateAriaBusy,
   renderDataState,
   resolveDataState,
   type DataStateConfig,
@@ -145,15 +144,6 @@ it('renders only the loading tier when every tier could apply', async () => {
     retryButton(element) === null,
     'a loading host must not render the failure tier retry control',
   ).to.equal(true);
-});
-
-it('reports the busy state to the host in both directions', () => {
-  expect(dataStateAriaBusy({ ...IDLE_STATE, loading: true })).to.equal('true');
-  expect(
-    dataStateAriaBusy({ ...IDLE_STATE, error: true, empty: true }),
-    'a settled state must say so rather than dropping the attribute',
-  ).to.equal('false');
-  expect(dataStateAriaBusy(IDLE_STATE)).to.equal('false');
 });
 
 it('keeps the transient loading tier out of the host document outline', async () => {

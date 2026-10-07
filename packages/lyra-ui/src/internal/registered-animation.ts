@@ -2,6 +2,7 @@ import {
   getAnimation,
   type LyraElementAnimation,
 } from '../utilities/animation-registry.js';
+import { parseCssTimeToken } from './css-motion-time.js';
 import { prefersReducedMotion } from './motion.js';
 
 export interface RegisteredAnimationSpec {
@@ -22,12 +23,8 @@ interface ParsedDuration {
 }
 
 function parseDuration(value: string): ParsedDuration | undefined {
-  const match = /^(-?(?:\d+(?:\.\d*)?|\.\d+))(ms|s)(?:\s+(.+))?$/i.exec(value.trim());
-  if (!match) return undefined;
-  const amount = Number(match[1]);
-  if (!Number.isFinite(amount)) return undefined;
-  const duration = Math.max(0, amount * (match[2]?.toLowerCase() === 's' ? 1000 : 1));
-  return { duration, easing: match[3]?.trim() || undefined };
+  const token = parseCssTimeToken(value);
+  return token && { duration: Math.max(0, token.ms), easing: token.rest || undefined };
 }
 
 function supportsEasing(value: string): boolean {

@@ -17,7 +17,7 @@ import {
 } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { lengthViolations } from '../../../internal/length-constraints.js';
+import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
@@ -31,7 +31,7 @@ import {
   spellcheckConverter,
 } from '../../../internal/converters.js';
 import { sanitizeCssResize } from '../../../internal/safe-css.js';
-import { finiteCount, finiteDuration, finiteNumber } from '../../../internal/numbers.js';
+import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -344,19 +344,12 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  `tooShort` by `updateValidity()`. Defaults to `undefined` (no lower bound). Like native
    *  `minlength`, an empty value never violates it — pair it with `required` to also reject
    *  empty. */
-  // numeric-guard-exempt: forwarded to the native <textarea minlength> attribute, which applies
-  // the platform's "rules for parsing non-negative integers" (an unparseable value is ignored,
-  // not thrown on); the same rule gates lengthViolations() before it is used in any comparison.
-  @property({ type: Number }) minlength?: number;
+  @property({ converter: lengthLimitConverter }) minlength?: number;
   /** Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and
    *  the same default of `undefined`. Note that native `maxlength` also *prevents* typing beyond
    *  the limit; it reports `tooLong` for values that arrive some other way (paste of a longer
    *  value, a programmatic assignment). */
-  // numeric-guard-exempt: same rationale as `minlength` above, for the native <textarea maxlength>
-  // attribute and ValidityState.tooLong. The one place this file *does* compute with it -- the
-  // remaining-characters readout behind `with-count` -- routes through countMaxlength(), which
-  // drops a non-finite value entirely rather than arithmetic-ing on it.
-  @property({ type: Number }) maxlength?: number;
+  @property({ converter: lengthLimitConverter }) maxlength?: number;
   /** How long (ms) to wait after the last keystroke before emitting one `lr-input-settled`,
    *  coalescing a burst of rapid edits into a single downstream commit -- the same predicate and
    *  `DebounceController` primitive `<lr-filter-bar>`'s own per-filter `debounce` uses, and shared
@@ -581,23 +574,6 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   /**
-   * `maxlength` as a usable non-negative integer, or `undefined` when it was never set or arrived
-   * unparseable — an attribute goes through `Number()`, so `maxlength="oops"` reaches this
-   * property as `NaN`, and subtracting from that would render a literal `NaN` in the count.
-   */
-  private effectiveLengthLimit(
-    declared: number | undefined
-  ): number | undefined {
-    if (declared === undefined || !Number.isFinite(declared) || declared < 0)
-      return undefined;
-    return finiteCount(Math.trunc(declared), 0);
-  }
-
-  private countMaxlength(): number | undefined {
-    return this.effectiveLengthLimit(this.maxlength);
-  }
-
-  /**
    * The character count's text. Lengths count UTF-16 code units (`String.length`) rather than
    * grapheme clusters, deliberately: that is exactly what the native `maxlength` the count is
    * reporting against enforces, and a count that disagreed with the limit it describes would be
@@ -609,7 +585,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    */
   private countText(): string {
     const format = getNumberFormat(this.effectiveLocale);
-    const max = this.countMaxlength();
+    const max = normalizeLengthLimit(this.maxlength);
     if (max !== undefined) {
       const remaining = Math.max(0, max - this.value.length);
       return this.localize('textareaCharactersRemaining', undefined, {
@@ -685,13 +661,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
     const native = this.textareaEl;
     if (native && native.value !== this.value) native.value = this.value;
-    const effectiveMinlength = this.effectiveLengthLimit(this.minlength);
-    const effectiveMaxlength = this.effectiveLengthLimit(this.maxlength);
-    const own = lengthViolations(
-      this.value,
-      effectiveMinlength,
-      effectiveMaxlength
-    );
+    const own = lengthViolations(this.value, this.minlength, this.maxlength);
     const tooShort = Boolean(native?.validity.tooShort) || own.tooShort;
     const tooLong = Boolean(native?.validity.tooLong) || own.tooLong;
     if (!tooShort && !tooLong) {
@@ -947,8 +917,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
             autocomplete=${this.autocomplete || nothing}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
-            minlength=${this.effectiveLengthLimit(this.minlength) ?? nothing}
-            maxlength=${this.effectiveLengthLimit(this.maxlength) ?? nothing}
+            minlength=${normalizeLengthLimit(this.minlength) ?? nothing}
+            maxlength=${normalizeLengthLimit(this.maxlength) ?? nothing}
             wrap=${this.wrap}
             .value=${this.value}
             ?required=${this.required}

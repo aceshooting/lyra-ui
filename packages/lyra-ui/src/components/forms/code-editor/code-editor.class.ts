@@ -21,7 +21,7 @@ import {
   autocorrectConverter,
   normalizeAutocorrect,
 } from '../../../internal/converters.js';
-import { lengthViolations } from '../../../internal/length-constraints.js';
+import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import {
   dispatchNativeInputEvent,
   relayNativeEvent,
@@ -208,29 +208,23 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Number, useDefault: true }) cols = 20;
   /** Native minimum and maximum code-unit length constraints. */
   private _minlength?: number;
-  @property({ type: Number })
+  @property({ converter: lengthLimitConverter })
   get minlength(): number | undefined {
     return this._minlength;
   }
   set minlength(next: number | undefined) {
     const previous = this._minlength;
-    this._minlength =
-      next !== undefined && Number.isFinite(next) && next >= 0
-        ? finiteInteger(next, 0, 0)
-        : undefined;
+    this._minlength = normalizeLengthLimit(next);
     this.requestUpdate('minlength', previous);
   }
   private _maxlength?: number;
-  @property({ type: Number })
+  @property({ converter: lengthLimitConverter })
   get maxlength(): number | undefined {
     return this._maxlength;
   }
   set maxlength(next: number | undefined) {
     const previous = this._maxlength;
-    this._maxlength =
-      next !== undefined && Number.isFinite(next) && next >= 0
-        ? finiteInteger(next, 0, 0)
-        : undefined;
+    this._maxlength = normalizeLengthLimit(next);
     this.requestUpdate('maxlength', previous);
   }
   /** Native CSS `resize` behavior. `auto` grows to content and scrolls at a consumer-supplied

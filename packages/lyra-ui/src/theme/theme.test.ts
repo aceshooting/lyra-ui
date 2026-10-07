@@ -302,6 +302,22 @@ describe('theme runtime', () => {
     }
   });
 
+  it('derives a custom accent ramp without a canvas per reference surface', () => {
+    const create = Document.prototype.createElement;
+    let canvases = 0;
+    Document.prototype.createElement = function (this: Document, name: string, options?: ElementCreationOptions) {
+      if (name === 'canvas') canvases++;
+      return create.call(this, name, options);
+    } as typeof Document.prototype.createElement;
+    try {
+      setStyleForTest({ mode: 'dark', accent: '#7c3aed' });
+    } finally {
+      Document.prototype.createElement = create;
+    }
+    expect(appliedThemeValue('--lr-theme-color-brand-fill-loud')).to.not.equal('');
+    expect(canvases).to.be.at.most(6);
+  });
+
   it('turns a valid accent into a complete contrast-checked semantic brand ramp', () => {
     setStyleForTest({ mode: 'light', accent: '#e63950' });
     for (const property of BRAND_RAMP_PROPERTIES) {
@@ -500,7 +516,7 @@ describe('theme runtime', () => {
       // of throwing or leaving a stale ramp; the cross-look contrast floor still applies.
       expect(
         appliedThemeValue('--lr-theme-color-brand-fill-loud'),
-      ).to.equal('rgb(102 102 102)');
+      ).to.equal('rgb(77 77 77)');
     } finally {
       CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
     }

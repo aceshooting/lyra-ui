@@ -36,6 +36,25 @@ describe('public selection catalogs', () => {
     expect(reads).to.equal(0);
   });
 
+  it('reuses resolved unit names across calls instead of rebuilding two formatters per unit', () => {
+    const Original = Intl.NumberFormat;
+    let constructed = 0;
+    Intl.NumberFormat = new Proxy(Original, {
+      construct(target, args, newTarget) {
+        constructed++;
+        return Reflect.construct(target, args, newTarget);
+      },
+    });
+    try {
+      resolveUnitNames(UNIT_CODES, 'sw');
+      constructed = 0;
+      for (let call = 0; call < 3; call++) resolveUnitNames(UNIT_CODES, 'sw');
+      expect(constructed).to.equal(0);
+    } finally {
+      Intl.NumberFormat = Original;
+    }
+  });
+
   it('localizes standard units while retaining custom identifiers and supplied symbols', () => {
     expect(UNIT_CODES).to.include('kilometer');
     expect(UNIT_CODES).to.include('microsecond');

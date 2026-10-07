@@ -14,6 +14,7 @@ import {
   LyraElement,
   type LyraEmitArgs,
 } from '../../../internal/lyra-element.js';
+import { lengthLimitConverter } from '../../../internal/length-constraints.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
@@ -255,11 +256,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true, attribute: 'readonly' }) readOnly =
     false;
-  // numeric-guard-exempt: pure pass-through to <lr-chat-composer>, which rejects non-finite and
-  // negative limits and finiteCount-normalizes integers before validation or native DOM use.
-  @property({ type: Number, attribute: 'minlength' }) minLength?: number;
-  // numeric-guard-exempt: same guarded <lr-chat-composer> pass-through as minLength above.
-  @property({ type: Number, attribute: 'maxlength' }) maxLength?: number;
+  @property({ converter: lengthLimitConverter, attribute: 'minlength' }) minLength?: number;
+  @property({ converter: lengthLimitConverter, attribute: 'maxlength' }) maxLength?: number;
   /** Forwarded to the composed composer: plain Enter inserts a newline instead of submitting. */
   @property({ type: Boolean, attribute: 'without-enter-submit' }) withoutEnterSubmit = false;
   /** Forwarded to the composed composer: gates Send without disabling the textarea or Stop. */

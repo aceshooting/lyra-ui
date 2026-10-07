@@ -1,5 +1,6 @@
 import { createScopedRegistry, supportsScopedRegistries, type LyraScopedDefinitions, type LyraScopedRegistry } from './scoped-registry.js';
-import { scopedDefinitionClosures, scopedDefinitionLoaders } from '../internal/scoped-definitions.generated.js';
+import { COMPONENT_LOADERS } from '../internal/component-loaders.generated.js';
+import { scopedDefinitionClosures } from '../internal/scoped-definitions.generated.js';
 
 /**
  * Loads registration-free classes for the requested full Lyra tags and their generated transitive
@@ -19,7 +20,7 @@ export async function loadScopedRegistry(
     for (const dependency of scopedDefinitionClosures[tag]!) closure.add(dependency);
   }
   const definitions = await Promise.all([...closure].map(async (tag) => {
-    const loader = scopedDefinitionLoaders[tag];
+    const loader = (COMPONENT_LOADERS as Readonly<Record<string, (() => Promise<CustomElementConstructor>) | undefined>>)[tag];
     if (!loader) throw new Error(`Missing scoped class loader for ${tag}.`);
     return [tag, await loader()] as const;
   }));

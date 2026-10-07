@@ -128,3 +128,10 @@ describe('tree object projection limits and names', () => {
     expect(row.nodeLabel).to.equal('Rich name');
   });
 });
+
+it('tree item reads the motion duration properties with the shared time grammar', async () => {
+  const el = (await fixture(html`<lr-tree-item label="Parent" style="--show-duration: .2S; --hide-duration: 1e2ms 1s"></lr-tree-item>`)) as LyraTreeItem;
+  const read = (expanded: boolean) => (el as unknown as { motionDuration(expanded: boolean, owner: Window): number }).motionDuration(expanded, window);
+  expect(read(true)).to.equal(200);
+  expect(read(false)).to.equal(100);
+});

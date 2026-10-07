@@ -54,18 +54,23 @@ try {
   execFileSync(process.execPath, [script], { cwd: fixtureRoot, stdio: 'pipe' });
   const tags = readFileSync(join(fixtureRoot, 'src', 'internal', 'autoloader-tags.ts'), 'utf8');
   const manifest = readFileSync(join(fixtureRoot, 'src', 'internal', 'autoloader-manifest.ts'), 'utf8');
+  const loaders = readFileSync(join(fixtureRoot, 'src', 'internal', 'component-loaders.generated.ts'), 'utf8');
   assert.ok(tags.indexOf("'lr-alpha'") < tags.indexOf("'lr-beta'"), 'tags must sort deterministically');
-  assert.match(manifest, /import\('\.\.\/components\/utility\/alpha\/alpha\.class\.js'\)/);
-  assert.match(manifest, /module\.LyraAlpha/);
-  assert.match(manifest, /optionalPeers: \['peer-a', 'peer-z'\]/);
-  assert.doesNotMatch(manifest, /alpha\.ts/);
+  assert.match(loaders, /import\('\.\.\/components\/utility\/alpha\/alpha\.class\.js'\)/);
+  assert.match(loaders, /module\.LyraAlpha/);
+  assert.match(manifest, /'lr-beta': \['peer-a', 'peer-z'\]/);
+  assert.doesNotMatch(manifest, /lr-alpha/, 'a tag without optional peers has no manifest row');
+  assert.doesNotMatch(manifest, /import\('/, 'the manifest shares the loader table instead of repeating it');
+  assert.doesNotMatch(loaders, /alpha\.ts/);
 
   execFileSync(process.execPath, [script, '--check'], { cwd: fixtureRoot, stdio: 'pipe' });
   const firstTags = tags;
   const firstManifest = manifest;
+  const firstLoaders = loaders;
   execFileSync(process.execPath, [script], { cwd: fixtureRoot, stdio: 'pipe' });
   assert.equal(readFileSync(join(fixtureRoot, 'src', 'internal', 'autoloader-tags.ts'), 'utf8'), firstTags);
   assert.equal(readFileSync(join(fixtureRoot, 'src', 'internal', 'autoloader-manifest.ts'), 'utf8'), firstManifest);
+  assert.equal(readFileSync(join(fixtureRoot, 'src', 'internal', 'component-loaders.generated.ts'), 'utf8'), firstLoaders);
 
   writeFileSync(join(fixtureRoot, 'src', 'internal', 'autoloader-tags.ts'), '// stale\n');
   assert.throws(

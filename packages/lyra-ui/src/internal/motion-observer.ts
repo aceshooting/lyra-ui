@@ -4,6 +4,8 @@ import { flattenedThemeParent } from './theme-observation.js';
 type Subscription = {
   element: Element;
   ancestors: Set<Element>;
+  /** The deepest ancestor per root: a node that contains any ancestor there also contains this one. */
+  nearest: Map<Node, Element>;
   roots: Set<Node>;
   refresh: () => void;
 };
@@ -11,6 +13,11 @@ type RootWatch = { subscribers: Set<Subscription>; observer: MutationObserver; o
 type MediaWatch = { subscribers: Set<Subscription>; query: MediaQueryList; changed: () => void };
 const rootWatches = new WeakMap<Node, RootWatch>();
 const mediaWatches = new WeakMap<Window, MediaWatch>();
+
+function touches(nodes: NodeList, { ancestors }: Subscription, nearest?: Element): boolean {
+  for (const node of nodes) if (ancestors.has(node as Element) || (nearest && node.contains(nearest))) return true;
+  return false;
+}
 
 function addRoot(root: Node, subscription: Subscription): void {
   let watch = rootWatches.get(root);
@@ -21,14 +28,14 @@ function addRoot(root: Node, subscription: Subscription): void {
     const onSlotChange = (): void => { for (const item of [...subscribers]) item.refresh(); };
     const observer = new view.MutationObserver(records => {
       for (const item of [...subscribers]) {
+        const nearest = item.nearest.get(root);
         if (records.some(record => {
           if (record.type === 'attributes') {
             return item.ancestors.has(record.target as Element) ||
               (record.attributeName === 'name' && (record.target as Element).localName === 'slot');
           }
           // Ordinary rendering elsewhere in the document does not change this inheritance path.
-          return [...record.addedNodes, ...record.removedNodes].some(node =>
-            [...item.ancestors].some(ancestor => node === ancestor || node.contains(ancestor)));
+          return touches(record.addedNodes, item, nearest) || touches(record.removedNodes, item, nearest);
         })) {
           item.refresh();
         }
@@ -85,18 +92,22 @@ export function observeReducedMotion(element: Element, changed: (reduced: boolea
   let stopped = false;
   let value = prefersReducedMotion(element);
   let view: Window | null = null;
-  const subscription: Subscription = { element, ancestors: new Set(), roots: new Set(), refresh };
+  const subscription: Subscription = { element, ancestors: new Set(), nearest: new Map(), roots: new Set(), refresh };
   function refresh(): void {
     if (stopped) return;
     const ancestors = new Set<Element>();
+    const nearest = new Map<Node, Element>();
     const roots = new Set<Node>();
     for (let current: Element | null = element; current; current = flattenedThemeParent(current)) {
+      const root = current.getRootNode();
       ancestors.add(current);
-      roots.add(current.getRootNode());
+      roots.add(root);
+      if (!nearest.has(root)) nearest.set(root, current);
       // A currently unassigned light child may acquire a slot when its parent next renders.
       if (current !== element && current.shadowRoot) roots.add(current.shadowRoot);
     }
     subscription.ancestors = ancestors;
+    subscription.nearest = nearest;
     for (const root of subscription.roots) if (!roots.has(root)) removeRoot(root, subscription);
     for (const root of roots) if (!subscription.roots.has(root)) addRoot(root, subscription);
     subscription.roots = roots;
@@ -119,6 +130,7 @@ export function observeReducedMotion(element: Element, changed: (reduced: boolea
     for (const root of subscription.roots) removeRoot(root, subscription);
     subscription.roots.clear();
     subscription.ancestors.clear();
+    subscription.nearest.clear();
     if (view) removeMedia(view, subscription);
     view = null;
   };

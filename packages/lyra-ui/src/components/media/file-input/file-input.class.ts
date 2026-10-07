@@ -25,7 +25,7 @@ import {
 } from '../../../internal/invalid-event-alias.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { DropSessionController, type DropSessionState } from '../../../internal/drop-session-controller.js';
+import { DropSessionController, isFileValue, readFileList, type DropSessionState } from '../../../internal/drop-session-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -122,21 +122,6 @@ const INTERACTIVE_CONTENT_SELECTOR =
 function isElementTarget(value: EventTarget): value is Element {
   const candidate = value as Partial<Element> & { nodeType?: number };
   return candidate.nodeType === 1 && typeof candidate.matches === 'function';
-}
-
-function isFileValue(value: unknown): value is File {
-  if (value === null || typeof value !== 'object') return false;
-  try {
-    const candidate = value as Partial<File>;
-    return Object.prototype.toString.call(value) === '[object File]'
-      && typeof candidate.name === 'string'
-      && typeof candidate.lastModified === 'number'
-      && typeof candidate.size === 'number'
-      && typeof candidate.type === 'string'
-      && typeof candidate.slice === 'function';
-  } catch {
-    return false;
-  }
 }
 
 export interface LyraFileInputRejectedFile {
@@ -1223,7 +1208,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private onPaste = (e: ClipboardEvent): void => {
     if (this.withoutPaste || this.liveDisabled) return;
-    const files = [...(e.clipboardData?.files ?? [])];
+    const files = readFileList(e.clipboardData?.files);
     if (files.length) { e.preventDefault(); this.emitFiles(files); }
   };
 

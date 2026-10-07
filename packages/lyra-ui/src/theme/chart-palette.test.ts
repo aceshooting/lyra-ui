@@ -59,6 +59,21 @@ describe('optional chart palettes', () => {
     } finally { applyLyraStyleScope(scope, null); }
   });
 
+  it('samples a resolved scale per point without a style recalculation', async () => {
+    const scope = await fixture<HTMLElement>(html`<section></section>`);
+    const palette = resolveLyraChartPalette(scope, { mode: 'light', palette: 'shadcn' });
+    const original = window.getComputedStyle;
+    let reads = 0;
+    window.getComputedStyle = ((...args: Parameters<typeof original>) => { reads++; return original(...args); }) as typeof original;
+    try {
+      const samples = Array.from({ length: 50 }, (_, point) => sampleLyraChartScale(scope, palette.sequential, (point + 0.5) / 50));
+      expect(new Set(samples).size).to.be.greaterThan(10);
+    } finally {
+      window.getComputedStyle = original;
+    }
+    expect(reads).to.equal(0);
+  });
+
   it('resolves nested CSS expressions and rejects invalid custom colors', async () => {
     const scope = await fixture<HTMLElement>(html`<section style="--sample: rgb(12, 34, 56); --lr-theme-color-chart-1: var(--sample); --lr-theme-color-chart-sequential-2: nonsense"></section>`);
     const palette = resolveLyraChartPalette(scope, { mode: 'dark' });

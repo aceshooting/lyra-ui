@@ -119,6 +119,17 @@ it('beginDrop separates synchronously available files from top-level directory e
   expect(stateChanges.at(-1)).to.equal('default');
 });
 
+it('beginDrop ignores values that are not real Files in dataTransfer.files', () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false,
+    previewRejects: () => false,
+    onStateChange: () => {},
+  });
+  const real = new File(['x'], 'a.txt', { type: 'text/plain' });
+  const transfer = { files: [{ name: 'not-a-file' }, real] as unknown as FileList, items: [] } as unknown as DataTransfer;
+  expect(controller.beginDrop(fakeDragEvent(transfer).event)?.files.map((f) => f.name)).to.deep.equal(['a.txt']);
+});
+
 it('readFolders walks nested directories and resolves the flattened file list', async () => {
   const controller = new DropSessionController(controllerHost(), {
     isDisabled: () => false,

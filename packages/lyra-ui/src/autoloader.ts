@@ -1,10 +1,14 @@
-import { AUTOLOADER_MANIFEST, type AutoloaderManifestEntry } from './internal/autoloader-manifest.js';
+import { AUTOLOADER_OPTIONAL_PEERS } from './internal/autoloader-manifest.js';
 import { loadAutoloaderConstructor } from './internal/autoloader-loaders.js';
 import { AUTOLOADER_TAG_SET, type AutoloadableTagName } from './internal/autoloader-tags.js';
 import { registryForRoot } from './internal/definition-registry.js';
 import {
   collectRenderedTree,
+  isElement,
   nativeElementLocalName,
+  nativeNodeType,
+  openShadowRoot,
+  ownerDocumentFor,
   renderedTreeTraversalLimits,
   RenderedTreeTraversalError,
   type RenderedTreeTraversalLimit,
@@ -136,35 +140,21 @@ function normalizeOptions(options: AutoloaderOptions | undefined): NormalizedOpt
   return { optionalPeers: new Set(peers), ...common };
 }
 
-function isEligible(entry: AutoloaderManifestEntry, options: NormalizedOptions): boolean {
+const NO_OPTIONAL_PEERS: readonly string[] = Object.freeze([]);
+
+function optionalPeersFor(tag: AutoloadableTagName): readonly string[] {
+  return AUTOLOADER_OPTIONAL_PEERS[tag] ?? NO_OPTIONAL_PEERS;
+}
+
+function isEligible(tag: AutoloadableTagName, options: NormalizedOptions): boolean {
+  const peers = optionalPeersFor(tag);
   const allowedPeers = options.optionalPeers;
-  if (entry.optionalPeers.length === 0 || allowedPeers === 'all') return true;
-  return entry.optionalPeers.every((peer) => allowedPeers.has(peer));
-}
-
-function nativeNodeType(node: Node): number | undefined {
-  try {
-    const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
-    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'nodeType')?.get;
-    return (getter?.call(node) as number | undefined) ?? node.nodeType;
-  } catch {
-    return undefined;
-  }
-}
-
-function ownerDocumentForNode(node: Node): Document | undefined {
-  if (nativeNodeType(node) === 9) return node as Document;
-  try {
-    const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
-    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'ownerDocument')?.get;
-    return (getter?.call(node) as Document | null | undefined) ?? undefined;
-  } catch {
-    return undefined;
-  }
+  if (peers.length === 0 || allowedPeers === 'all') return true;
+  return peers.every((peer) => allowedPeers.has(peer));
 }
 
 function eventConstructor(root: LyraDefinitionRoot): typeof CustomEvent | undefined {
-  const ownerDocument = ownerDocumentForNode(root);
+  const ownerDocument = ownerDocumentFor(root);
   const fromWindow = ownerDocument?.defaultView?.CustomEvent;
   if (fromWindow) return fromWindow;
   return typeof CustomEvent === 'undefined' ? undefined : CustomEvent;
@@ -287,11 +277,11 @@ async function defineTag(
   const existing = definitions.get(tag);
   if (existing) return existing;
 
-  const entry = AUTOLOADER_MANIFEST[tag];
+  const optionalPeers = optionalPeersFor(tag);
   const pending = (async () => {
     emit(context, 'lr-autoload-preload', {
       tag,
-      optionalPeers: entry.optionalPeers,
+      optionalPeers,
     });
     try {
       const constructor = await loadAutoloaderConstructor(tag);
@@ -302,12 +292,12 @@ async function defineTag(
       context.loadedTags.add(tag);
       emit(context, 'lr-autoload-loaded', {
         tag,
-        optionalPeers: entry.optionalPeers,
+        optionalPeers,
       });
     } catch (error) {
       emit(context, 'lr-autoload-error', {
         tag,
-        optionalPeers: entry.optionalPeers,
+        optionalPeers,
         error,
       });
       throw error;
@@ -367,12 +357,8 @@ function collectDiscoveryBatch(
   };
 }
 
-function isElement(node: Node): node is Element {
-  return nativeNodeType(node) === 1;
-}
-
 function observerConstructor(root: LyraDefinitionRoot): typeof MutationObserver | undefined {
-  const ownerDocument = ownerDocumentForNode(root);
+  const ownerDocument = ownerDocumentFor(root);
   const fromWindow = ownerDocument?.defaultView?.MutationObserver;
   if (fromWindow) return fromWindow;
   return typeof MutationObserver === 'undefined' ? undefined : MutationObserver;
@@ -380,7 +366,7 @@ function observerConstructor(root: LyraDefinitionRoot): typeof MutationObserver 
 
 function nativeParentNode(node: Node): Node | null {
   try {
-    const ownerWindow = ownerDocumentForNode(node)?.defaultView;
+    const ownerWindow = ownerDocumentFor(node)?.defaultView;
     const NodeConstructor = ownerWindow?.Node ?? (typeof Node === 'undefined' ? undefined : Node);
     const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'parentNode')?.get;
     return (getter?.call(node) as Node | null | undefined) ?? null;
@@ -394,7 +380,7 @@ function parentAcrossOpenShadowBoundary(node: Node): Node | null {
   if (parent) return parent;
   if (nativeNodeType(node) !== 11 || !('host' in node)) return null;
   try {
-    const ownerWindow = ownerDocumentForNode(node)?.defaultView;
+    const ownerWindow = ownerDocumentFor(node)?.defaultView;
     const ShadowRootConstructor =
       ownerWindow?.ShadowRoot ?? (typeof ShadowRoot === 'undefined' ? undefined : ShadowRoot);
     const getter =
@@ -480,22 +466,10 @@ function pruneDetachedObservedRoots(context: LoaderContext, state: DiscoveryStat
   for (const root of reachableRoots) observeRoot(context, root);
 }
 
-function openShadowRootFor(element: Element): ShadowRoot | undefined {
-  try {
-    const ownerWindow = element.ownerDocument?.defaultView;
-    const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
-    const getter =
-      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'shadowRoot')?.get;
-    return (getter?.call(element) as ShadowRoot | null | undefined) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 async function finishDiscoveredElement(context: LoaderContext, element: Element): Promise<ShadowRoot | undefined> {
   await waitForUpdate(element);
   if (!context.active) return undefined;
-  return openShadowRootFor(element);
+  return openShadowRoot(element);
 }
 
 interface DefinitionWork {
@@ -533,7 +507,6 @@ function prepareDiscoveryBatch(
     if (!tag) continue;
     if (!AUTOLOADER_TAG_SET.has(tag)) continue;
     const typedTag = tag as AutoloadableTagName;
-    const entry = AUTOLOADER_MANIFEST[typedTag];
     const registry = registryForRoot(element);
     if (!registry) {
       continue;
@@ -549,7 +522,7 @@ function prepareDiscoveryBatch(
       definedElements.push({ element, depth: elementDepths.get(element) ?? 0, markerClaim });
       continue;
     }
-    if (!isEligible(entry, context.options)) continue;
+    if (!isEligible(typedTag, context.options)) continue;
     markerClaims.set(element, markPending(context, element));
     let tags = grouped.get(registry);
     if (!tags) {
@@ -672,7 +645,7 @@ function queueObservedDiscovery(
     } catch {
       continue;
     }
-    if (!alreadyDefined && !isEligible(AUTOLOADER_MANIFEST[tag], context.options)) continue;
+    if (!alreadyDefined && !isEligible(tag, context.options)) continue;
     const claim = markPending(context, root);
     if (claim) queuedClaims.push(claim);
   }
