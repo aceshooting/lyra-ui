@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Land',
   timeZonePickerLabel: 'Tidszone',
   unitPickerLabel: 'Enhed',
+  signaturePad: 'underskriftsfelt',
+  signaturePadLabel: 'Underskrift',
+  signaturePadInstructions: 'Tegn med en markør, eller tryk på mellemrum for at sænke eller løfte pennen og brug piletasterne til at flytte den.',
+  signaturePadEmpty: 'Ingen underskrift',
+  signaturePadSigned: {
+    one: 'Underskrevet, antal streger: {count}',
+    other: 'Underskrevet, antal streger: {count}',
+  },
+  signaturePadPenDown: 'Pen nede',
+  signaturePadPenUp: 'Pen oppe',
 };
 
 registerLyraLocale('da', strings);

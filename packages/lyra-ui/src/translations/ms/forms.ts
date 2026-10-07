@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Negara',
   timeZonePickerLabel: 'Zon waktu',
   unitPickerLabel: 'Unit',
+  signaturePad: 'pad tandatangan',
+  signaturePadLabel: 'Tandatangan',
+  signaturePadInstructions: 'Lukis dengan penuding, atau tekan Space untuk menurunkan atau mengangkat pen dan kekunci anak panah untuk menggerakkannya.',
+  signaturePadEmpty: 'Tiada tandatangan',
+  signaturePadSigned: {
+    other: 'Telah ditandatangani, bilangan coretan: {count}',
+  },
+  signaturePadPenDown: 'Pen diturunkan',
+  signaturePadPenUp: 'Pen diangkat',
 };
 
 registerLyraLocale('ms', strings);

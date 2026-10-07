@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'దేశం',
   timeZonePickerLabel: 'సమయ మండలం',
   unitPickerLabel: 'ప్రమాణం',
+  signaturePad: 'సంతకం ప్యాడ్',
+  signaturePadLabel: 'సంతకం',
+  signaturePadInstructions: 'పాయింటర్‌తో గీయండి, లేదా పెన్ను కిందికి దించడానికి లేదా పైకి ఎత్తడానికి స్పేస్ నొక్కండి, కదిలించడానికి బాణం కీలు నొక్కండి.',
+  signaturePadEmpty: 'సంతకం లేదు',
+  signaturePadSigned: {
+    one: 'సంతకం చేయబడింది, గీతల సంఖ్య: {count}',
+    other: 'సంతకం చేయబడింది, గీతల సంఖ్య: {count}',
+  },
+  signaturePadPenDown: 'పెన్ను కింద',
+  signaturePadPenUp: 'పెన్ను పైన',
 };
 
 registerLyraLocale('te', strings);

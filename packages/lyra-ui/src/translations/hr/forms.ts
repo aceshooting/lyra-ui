@@ -105,6 +105,17 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Država',
   timeZonePickerLabel: 'Vremenska zona',
   unitPickerLabel: 'Jedinica',
+  signaturePad: 'polje za potpis',
+  signaturePadLabel: 'Potpis',
+  signaturePadInstructions: 'Crtajte pokazivačem ili pritisnite razmaknicu za spuštanje ili podizanje olovke, a tipkama sa strelicama pomičite je.',
+  signaturePadEmpty: 'Nema potpisa',
+  signaturePadSigned: {
+    one: 'Potpisano, broj poteza: {count}',
+    few: 'Potpisano, broj poteza: {count}',
+    other: 'Potpisano, broj poteza: {count}',
+  },
+  signaturePadPenDown: 'Olovka dolje',
+  signaturePadPenUp: 'Olovka gore',
 };
 
 registerLyraLocale('hr', strings);

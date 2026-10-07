@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ದೇಶ',
   timeZonePickerLabel: 'ಸಮಯ ವಲಯ',
   unitPickerLabel: 'ಏಕಮಾನ',
+  signaturePad: 'ಸಹಿ ಪ್ಯಾಡ್',
+  signaturePadLabel: 'ಸಹಿ',
+  signaturePadInstructions: 'ಪಾಯಿಂಟರ್‌ನಿಂದ ಬರೆಯಿರಿ, ಅಥವಾ ಪೆನ್ ಕೆಳಗಿಳಿಸಲು ಅಥವಾ ಮೇಲೆತ್ತಲು ಸ್ಪೇಸ್ ಮತ್ತು ಚಲಿಸಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು ಒತ್ತಿರಿ.',
+  signaturePadEmpty: 'ಸಹಿ ಇಲ್ಲ',
+  signaturePadSigned: {
+    one: 'ಸಹಿ ಮಾಡಲಾಗಿದೆ, ಗೆರೆಗಳ ಸಂಖ್ಯೆ: {count}',
+    other: 'ಸಹಿ ಮಾಡಲಾಗಿದೆ, ಗೆರೆಗಳ ಸಂಖ್ಯೆ: {count}',
+  },
+  signaturePadPenDown: 'ಪೆನ್ ಕೆಳಗೆ',
+  signaturePadPenUp: 'ಪೆನ್ ಮೇಲೆ',
 };
 
 registerLyraLocale('kn', strings);

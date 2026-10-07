@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Bansa',
   timeZonePickerLabel: 'Sona ng oras',
   unitPickerLabel: 'Yunit',
+  signaturePad: 'lagdaan',
+  signaturePadLabel: 'Lagda',
+  signaturePadInstructions: 'Gumuhit gamit ang pointer, o pindutin ang Space para ibaba o itaas ang panulat at ang mga arrow key para ilipat ito.',
+  signaturePadEmpty: 'Walang lagda',
+  signaturePadSigned: {
+    one: 'Nilagdaan, bilang ng mga guhit: {count}',
+    other: 'Nilagdaan, bilang ng mga guhit: {count}',
+  },
+  signaturePadPenDown: 'Nakababa ang panulat',
+  signaturePadPenUp: 'Nakataas ang panulat',
 };
 
 registerLyraLocale('tl', strings);

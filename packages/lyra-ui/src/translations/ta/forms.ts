@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'நாடு',
   timeZonePickerLabel: 'நேர மண்டலம்',
   unitPickerLabel: 'அலகு',
+  signaturePad: 'கையொப்பப் பலகை',
+  signaturePadLabel: 'கையொப்பம்',
+  signaturePadInstructions: 'சுட்டியால் வரையுங்கள், அல்லது பேனாவைக் கீழே இறக்க அல்லது உயர்த்த Space விசையையும் நகர்த்த அம்புக்குறி விசைகளையும் அழுத்துங்கள்.',
+  signaturePadEmpty: 'கையொப்பம் இல்லை',
+  signaturePadSigned: {
+    one: 'கையொப்பமிடப்பட்டது, கோடுகளின் எண்ணிக்கை: {count}',
+    other: 'கையொப்பமிடப்பட்டது, கோடுகளின் எண்ணிக்கை: {count}',
+  },
+  signaturePadPenDown: 'பேனா கீழே',
+  signaturePadPenUp: 'பேனா மேலே',
 };
 
 registerLyraLocale('ta', strings);

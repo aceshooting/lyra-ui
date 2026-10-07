@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Nchi',
   timeZonePickerLabel: 'Ukanda wa saa',
   unitPickerLabel: 'Kipimo',
+  signaturePad: 'ubao wa saini',
+  signaturePadLabel: 'Saini',
+  signaturePadInstructions: 'Chora kwa kielekezi, au bonyeza Space kushusha au kuinua kalamu na vitufe vya vishale kuisogeza.',
+  signaturePadEmpty: 'Hakuna saini',
+  signaturePadSigned: {
+    one: 'Imesainiwa, idadi ya mistari: {count}',
+    other: 'Imesainiwa, idadi ya mistari: {count}',
+  },
+  signaturePadPenDown: 'Kalamu chini',
+  signaturePadPenUp: 'Kalamu juu',
 };
 
 registerLyraLocale('sw', strings);

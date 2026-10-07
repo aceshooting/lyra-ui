@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'രാജ്യം',
   timeZonePickerLabel: 'സമയ മേഖല',
   unitPickerLabel: 'ഏകകം',
+  signaturePad: 'ഒപ്പ് പാഡ്',
+  signaturePadLabel: 'ഒപ്പ്',
+  signaturePadInstructions: 'പോയിന്റർ ഉപയോഗിച്ച് വരയ്ക്കുക, അല്ലെങ്കിൽ പേന താഴ്ത്താനോ ഉയർത്താനോ സ്പേസും നീക്കാൻ ആരോ കീകളും അമർത്തുക.',
+  signaturePadEmpty: 'ഒപ്പില്ല',
+  signaturePadSigned: {
+    one: 'ഒപ്പിട്ടു, വരകളുടെ എണ്ണം: {count}',
+    other: 'ഒപ്പിട്ടു, വരകളുടെ എണ്ണം: {count}',
+  },
+  signaturePadPenDown: 'പേന താഴെ',
+  signaturePadPenUp: 'പേന മുകളിൽ',
 };
 
 registerLyraLocale('ml', strings);

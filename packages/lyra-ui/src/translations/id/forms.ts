@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Negara',
   timeZonePickerLabel: 'Zona waktu',
   unitPickerLabel: 'Satuan',
+  signaturePad: 'papan tanda tangan',
+  signaturePadLabel: 'Tanda tangan',
+  signaturePadInstructions: 'Gambar dengan penunjuk, atau tekan Spasi untuk menurunkan atau mengangkat pena dan tombol panah untuk menggeraknya.',
+  signaturePadEmpty: 'Tidak ada tanda tangan',
+  signaturePadSigned: {
+    other: 'Telah ditandatangani, jumlah goresan: {count}',
+  },
+  signaturePadPenDown: 'Pena turun',
+  signaturePadPenUp: 'Pena naik',
 };
 
 registerLyraLocale('id', strings);

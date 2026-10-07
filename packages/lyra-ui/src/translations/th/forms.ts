@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ประเทศ',
   timeZonePickerLabel: 'เขตเวลา',
   unitPickerLabel: 'หน่วย',
+  signaturePad: 'แผ่นลายเซ็น',
+  signaturePadLabel: 'ลายเซ็น',
+  signaturePadInstructions: 'วาดด้วยตัวชี้ หรือกด Space เพื่อวางหรือยกปากกา และใช้ปุ่มลูกศรเพื่อเคลื่อนปากกา',
+  signaturePadEmpty: 'ไม่มีลายเซ็น',
+  signaturePadSigned: {
+    other: 'เซ็นแล้ว จำนวนเส้น: {count}',
+  },
+  signaturePadPenDown: 'วางปากกาแล้ว',
+  signaturePadPenUp: 'ยกปากกาแล้ว',
 };
 
 registerLyraLocale('th', strings);

@@ -107,6 +107,18 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Kraj',
   timeZonePickerLabel: 'Strefa czasowa',
   unitPickerLabel: 'Jednostka',
+  signaturePad: 'pole podpisu',
+  signaturePadLabel: 'Podpis',
+  signaturePadInstructions: 'Rysuj wskaźnikiem albo naciśnij spację, aby opuścić lub unieść pióro, a strzałkami je przesuwaj.',
+  signaturePadEmpty: 'Brak podpisu',
+  signaturePadSigned: {
+    one: 'Podpisano, liczba pociągnięć: {count}',
+    few: 'Podpisano, liczba pociągnięć: {count}',
+    many: 'Podpisano, liczba pociągnięć: {count}',
+    other: 'Podpisano, liczba pociągnięć: {count}',
+  },
+  signaturePadPenDown: 'Pióro opuszczone',
+  signaturePadPenUp: 'Pióro uniesione',
 };
 
 registerLyraLocale('pl', strings);

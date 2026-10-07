@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Ülke',
   timeZonePickerLabel: 'Saat dilimi',
   unitPickerLabel: 'Birim',
+  signaturePad: 'imza alanı',
+  signaturePadLabel: 'İmza',
+  signaturePadInstructions: 'İşaretçiyle çizin veya kalemi indirmek ya da kaldırmak için Boşluk, hareket ettirmek için ok tuşlarına basın.',
+  signaturePadEmpty: 'İmza yok',
+  signaturePadSigned: {
+    one: 'İmzalandı, çizgi sayısı: {count}',
+    other: 'İmzalandı, çizgi sayısı: {count}',
+  },
+  signaturePadPenDown: 'Kalem aşağıda',
+  signaturePadPenUp: 'Kalem yukarıda',
 };
 
 registerLyraLocale('tr', strings);

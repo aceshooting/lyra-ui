@@ -105,6 +105,17 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Pays',
   timeZonePickerLabel: 'Fuseau horaire',
   unitPickerLabel: 'Unité',
+  signaturePad: 'zone de signature',
+  signaturePadLabel: 'Signature',
+  signaturePadInstructions: 'Dessinez avec un pointeur, ou appuyez sur Espace pour abaisser ou lever le stylo et sur les flèches pour le déplacer.',
+  signaturePadEmpty: 'Aucune signature',
+  signaturePadSigned: {
+    one: 'Signé, nombre de traits : {count}',
+    many: 'Signé, nombre de traits : {count}',
+    other: 'Signé, nombre de traits : {count}',
+  },
+  signaturePadPenDown: 'Stylo baissé',
+  signaturePadPenUp: 'Stylo levé',
 };
 
 registerLyraLocale('fr', strings);

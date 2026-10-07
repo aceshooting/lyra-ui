@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Maa',
   timeZonePickerLabel: 'Aikavyöhyke',
   unitPickerLabel: 'Yksikkö',
+  signaturePad: 'allekirjoituskenttä',
+  signaturePadLabel: 'Allekirjoitus',
+  signaturePadInstructions: 'Piirrä osoittimella tai laske ja nosta kynää välilyönnillä ja liikuta sitä nuolinäppäimillä.',
+  signaturePadEmpty: 'Ei allekirjoitusta',
+  signaturePadSigned: {
+    one: 'Allekirjoitettu, vetojen määrä: {count}',
+    other: 'Allekirjoitettu, vetojen määrä: {count}',
+  },
+  signaturePadPenDown: 'Kynä alhaalla',
+  signaturePadPenUp: 'Kynä ylhäällä',
 };
 
 registerLyraLocale('fi', strings);

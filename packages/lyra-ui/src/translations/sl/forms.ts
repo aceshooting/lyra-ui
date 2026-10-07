@@ -107,6 +107,18 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Država',
   timeZonePickerLabel: 'Časovni pas',
   unitPickerLabel: 'Enota',
+  signaturePad: 'polje za podpis',
+  signaturePadLabel: 'Podpis',
+  signaturePadInstructions: 'Rišite s kazalcem ali pritisnite preslednico, da spustite ali dvignete pero, s smernimi tipkami pa ga premikate.',
+  signaturePadEmpty: 'Brez podpisa',
+  signaturePadSigned: {
+    one: 'Podpisano, število potez: {count}',
+    two: 'Podpisano, število potez: {count}',
+    few: 'Podpisano, število potez: {count}',
+    other: 'Podpisano, število potez: {count}',
+  },
+  signaturePadPenDown: 'Pero spuščeno',
+  signaturePadPenUp: 'Pero dvignjeno',
 };
 
 registerLyraLocale('sl', strings);

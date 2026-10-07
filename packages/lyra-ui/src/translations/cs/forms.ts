@@ -107,6 +107,18 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Země',
   timeZonePickerLabel: 'Časové pásmo',
   unitPickerLabel: 'Jednotka',
+  signaturePad: 'podpisová plocha',
+  signaturePadLabel: 'Podpis',
+  signaturePadInstructions: 'Kreslete ukazatelem, nebo mezerníkem spusťte či zvedněte pero a šipkami jím pohybujte.',
+  signaturePadEmpty: 'Žádný podpis',
+  signaturePadSigned: {
+    one: 'Podepsáno, počet tahů: {count}',
+    few: 'Podepsáno, počet tahů: {count}',
+    many: 'Podepsáno, počet tahů: {count}',
+    other: 'Podepsáno, počet tahů: {count}',
+  },
+  signaturePadPenDown: 'Pero dole',
+  signaturePadPenUp: 'Pero nahoře',
 };
 
 registerLyraLocale('cs', strings);

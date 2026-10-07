@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Land',
   timeZonePickerLabel: 'Zeitzone',
   unitPickerLabel: 'Einheit',
+  signaturePad: 'Unterschriftenfeld',
+  signaturePadLabel: 'Unterschrift',
+  signaturePadInstructions: 'Mit einem Zeigegerät zeichnen, oder die Leertaste drücken, um den Stift abzusenken oder anzuheben, und mit den Pfeiltasten bewegen.',
+  signaturePadEmpty: 'Keine Unterschrift',
+  signaturePadSigned: {
+    one: 'Unterschrieben, Anzahl der Striche: {count}',
+    other: 'Unterschrieben, Anzahl der Striche: {count}',
+  },
+  signaturePadPenDown: 'Stift unten',
+  signaturePadPenUp: 'Stift oben',
 };
 
 registerLyraLocale('de', strings);

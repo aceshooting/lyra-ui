@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'هېواد',
   timeZonePickerLabel: 'وخت زون',
   unitPickerLabel: 'د اندازه کولو واحد',
+  signaturePad: 'د لاسلیک پیډ',
+  signaturePadLabel: 'لاسلیک',
+  signaturePadInstructions: 'په پوائنټر سره وکاږئ، یا د قلم ښکته یا پورته کولو لپاره Space او د حرکت لپاره د غشي کلیډونه کېکاږئ.',
+  signaturePadEmpty: 'لاسلیک نشته',
+  signaturePadSigned: {
+    one: 'لاسلیک شو، د کرښو شمېر: {count}',
+    other: 'لاسلیک شو، د کرښو شمېر: {count}',
+  },
+  signaturePadPenDown: 'قلم ښکته',
+  signaturePadPenUp: 'قلم پورته',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

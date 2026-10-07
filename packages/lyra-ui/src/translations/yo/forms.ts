@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Orílẹ̀-èdè',
   timeZonePickerLabel: 'Agbègbè àkókò',
   unitPickerLabel: 'Ẹyọ ìwọ̀n',
+  signaturePad: 'pádì ìfọwọ́sí',
+  signaturePadLabel: 'Ìfọwọ́sí',
+  signaturePadInstructions: 'Fà pẹ̀lú atọ́ka, tàbí tẹ Space láti sọ ìkọ̀wé sílẹ̀ tàbí gbé e sókè àti àwọn kọ́kọ́rọ́ ọfà láti gbé e kiri.',
+  signaturePadEmpty: 'Kò sí ìfọwọ́sí',
+  signaturePadSigned: {
+    other: 'A ti fọwọ́sí, iye ìlà: {count}',
+  },
+  signaturePadPenDown: 'Ìkọ̀wé wà nísàlẹ̀',
+  signaturePadPenUp: 'Ìkọ̀wé wà lókè',
 };
 
 registerLyraLocale('yo', strings);

@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Land',
   timeZonePickerLabel: 'Tidssone',
   unitPickerLabel: 'Enhet',
+  signaturePad: 'signaturfelt',
+  signaturePadLabel: 'Signatur',
+  signaturePadInstructions: 'Tegn med en peker, eller trykk på mellomrom for å senke eller løfte pennen og piltastene for å flytte den.',
+  signaturePadEmpty: 'Ingen signatur',
+  signaturePadSigned: {
+    one: 'Signert, antall streker: {count}',
+    other: 'Signert, antall streker: {count}',
+  },
+  signaturePadPenDown: 'Penn ned',
+  signaturePadPenUp: 'Penn opp',
 };
 
 registerLyraLocale('nb', strings);

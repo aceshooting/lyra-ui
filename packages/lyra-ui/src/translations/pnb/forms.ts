@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ملک',
   timeZonePickerLabel: 'ویلے دا علاقہ',
   unitPickerLabel: 'پیمائش دی اکائی',
+  signaturePad: 'دستخط پیڈ',
+  signaturePadLabel: 'دستخط',
+  signaturePadInstructions: 'پوائنٹر نال بناؤ، یا قلم نوں تھلے یا اوتے کرن لئی سپیس تے ہلان لئی تیر والے بٹن دباؤ۔',
+  signaturePadEmpty: 'کوئی دستخط نئیں',
+  signaturePadSigned: {
+    one: 'دستخط ہو گئے، لکیراں دی گنتی: {count}',
+    other: 'دستخط ہو گئے، لکیراں دی گنتی: {count}',
+  },
+  signaturePadPenDown: 'قلم تھلے',
+  signaturePadPenUp: 'قلم اتے',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

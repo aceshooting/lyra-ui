@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Ország',
   timeZonePickerLabel: 'Időzóna',
   unitPickerLabel: 'Mértékegység',
+  signaturePad: 'aláírómező',
+  signaturePadLabel: 'Aláírás',
+  signaturePadInstructions: 'Rajzoljon mutatóeszközzel, vagy a szóközzel engedje le, illetve emelje fel a tollat, a nyílbillentyűkkel pedig mozgassa.',
+  signaturePadEmpty: 'Nincs aláírás',
+  signaturePadSigned: {
+    one: 'Aláírva, vonások száma: {count}',
+    other: 'Aláírva, vonások száma: {count}',
+  },
+  signaturePadPenDown: 'Toll lent',
+  signaturePadPenUp: 'Toll fent',
 };
 
 registerLyraLocale('hu', strings);

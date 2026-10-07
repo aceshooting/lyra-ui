@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'देश',
   timeZonePickerLabel: 'समय क्षेत्र',
   unitPickerLabel: 'इकाई',
+  signaturePad: 'हस्ताक्षर पैड',
+  signaturePadLabel: 'हस्ताक्षर',
+  signaturePadInstructions: 'पॉइंटर से बनाएँ, या पेन नीचे या ऊपर करने के लिए स्पेस और उसे हिलाने के लिए तीर कुंजियाँ दबाएँ।',
+  signaturePadEmpty: 'कोई हस्ताक्षर नहीं',
+  signaturePadSigned: {
+    one: 'हस्ताक्षर हो गए, रेखाओं की संख्या: {count}',
+    other: 'हस्ताक्षर हो गए, रेखाओं की संख्या: {count}',
+  },
+  signaturePadPenDown: 'पेन नीचे',
+  signaturePadPenUp: 'पेन ऊपर',
 };
 
 registerLyraLocale('hi', strings);

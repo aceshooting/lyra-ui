@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'દેશ',
   timeZonePickerLabel: 'સમય ઝોન',
   unitPickerLabel: 'એકમ',
+  signaturePad: 'સહી પેડ',
+  signaturePadLabel: 'સહી',
+  signaturePadInstructions: 'પોઇન્ટરથી દોરો, અથવા પેન નીચે કે ઉપર કરવા સ્પેસ અને ખસેડવા એરો કી દબાવો.',
+  signaturePadEmpty: 'કોઈ સહી નથી',
+  signaturePadSigned: {
+    one: 'સહી થઈ ગઈ, રેખાઓની સંખ્યા: {count}',
+    other: 'સહી થઈ ગઈ, રેખાઓની સંખ્યા: {count}',
+  },
+  signaturePadPenDown: 'પેન નીચે',
+  signaturePadPenUp: 'પેન ઉપર',
 };
 
 registerLyraLocale('gu', strings);

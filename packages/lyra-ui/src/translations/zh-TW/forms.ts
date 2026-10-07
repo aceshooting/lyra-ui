@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: '國家／地區',
   timeZonePickerLabel: '時區',
   unitPickerLabel: '單位',
+  signaturePad: '簽名板',
+  signaturePadLabel: '簽名',
+  signaturePadInstructions: '使用指標繪製，或按空白鍵落筆或抬筆，並以方向鍵移動筆。',
+  signaturePadEmpty: '無簽名',
+  signaturePadSigned: {
+    other: '已簽名，筆畫數：{count}',
+  },
+  signaturePadPenDown: '已落筆',
+  signaturePadPenUp: '已抬筆',
 };
 
 registerLyraLocale('zh-TW', strings);

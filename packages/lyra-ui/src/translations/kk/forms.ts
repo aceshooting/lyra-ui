@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Ел',
   timeZonePickerLabel: 'Уақыт белдеуі',
   unitPickerLabel: 'Өлшем бірлігі',
+  signaturePad: 'қол қою алаңы',
+  signaturePadLabel: 'Қолы',
+  signaturePadInstructions: 'Меңзермен сызыңыз немесе қаламды түсіру не көтеру үшін бос орын пернесін, жылжыту үшін көрсеткі пернелерін басыңыз.',
+  signaturePadEmpty: 'Қол жоқ',
+  signaturePadSigned: {
+    one: 'Қол қойылды, сызықтар саны: {count}',
+    other: 'Қол қойылды, сызықтар саны: {count}',
+  },
+  signaturePadPenDown: 'Қалам төмен',
+  signaturePadPenUp: 'Қалам жоғары',
 };
 
 registerLyraLocale('kk', strings);

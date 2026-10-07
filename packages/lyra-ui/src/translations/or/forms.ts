@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ଦେଶ',
   timeZonePickerLabel: 'ସମୟ ମଣ୍ଡଳ',
   unitPickerLabel: 'ଏକକ',
+  signaturePad: 'ସ୍ୱାକ୍ଷର ପ୍ୟାଡ୍',
+  signaturePadLabel: 'ସ୍ୱାକ୍ଷର',
+  signaturePadInstructions: 'ପଏଣ୍ଟର୍ ସହିତ ଆଙ୍କନ୍ତୁ, କିମ୍ବା କଲମ ତଳକୁ ବା ଉପରକୁ କରିବାକୁ ସ୍ପେସ୍ ଏବଂ ଚଳାଇବାକୁ ତୀର କି ଦାବନ୍ତୁ।',
+  signaturePadEmpty: 'ସ୍ୱାକ୍ଷର ନାହିଁ',
+  signaturePadSigned: {
+    one: 'ସ୍ୱାକ୍ଷର ହୋଇଛି, ରେଖା ସଂଖ୍ୟା: {count}',
+    other: 'ସ୍ୱାକ୍ଷର ହୋଇଛି, ରେଖା ସଂଖ୍ୟା: {count}',
+  },
+  signaturePadPenDown: 'କଲମ ତଳେ',
+  signaturePadPenUp: 'କଲମ ଉପରେ',
 };
 
 registerLyraLocale('or', strings);

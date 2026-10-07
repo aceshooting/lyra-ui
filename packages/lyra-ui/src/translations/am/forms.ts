@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'አገር',
   timeZonePickerLabel: 'የሰዓት ሰቅ',
   unitPickerLabel: 'መለኪያ አሃድ',
+  signaturePad: 'የፊርማ ሰሌዳ',
+  signaturePadLabel: 'ፊርማ',
+  signaturePadInstructions: 'በጠቋሚ ይሳሉ፣ ወይም እስክሪብቶውን ለማውረድ ወይም ለማንሳት ስፔስን እና ለማንቀሳቀስ የቀስት ቁልፎችን ይጫኑ።',
+  signaturePadEmpty: 'ፊርማ የለም',
+  signaturePadSigned: {
+    one: 'ተፈርሟል፣ የመስመሮች ብዛት፦ {count}',
+    other: 'ተፈርሟል፣ የመስመሮች ብዛት፦ {count}',
+  },
+  signaturePadPenDown: 'እስክሪብቶ ወርዷል',
+  signaturePadPenUp: 'እስክሪብቶ ተነስቷል',
 };
 
 registerLyraLocale('am', strings);

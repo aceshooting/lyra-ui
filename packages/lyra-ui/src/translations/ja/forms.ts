@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: '国',
   timeZonePickerLabel: 'タイムゾーン',
   unitPickerLabel: '単位',
+  signaturePad: '署名パッド',
+  signaturePadLabel: '署名',
+  signaturePadInstructions: 'ポインターで描くか、スペースキーでペンを下ろす／上げる操作、矢印キーで移動できます。',
+  signaturePadEmpty: '署名なし',
+  signaturePadSigned: {
+    other: '署名済み、ストローク数: {count}',
+  },
+  signaturePadPenDown: 'ペンを下ろしました',
+  signaturePadPenUp: 'ペンを上げました',
 };
 
 registerLyraLocale('ja', strings);

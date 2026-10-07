@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'देस',
   timeZonePickerLabel: 'समय क्षेत्र',
   unitPickerLabel: 'माप इकाई',
+  signaturePad: 'हस्ताक्षर पैड',
+  signaturePadLabel: 'हस्ताक्षर',
+  signaturePadInstructions: 'पॉइंटर से बनाईं, या कलम नीचे-ऊपर करे खातिर स्पेस दबाईं आ चलावे खातिर एरो कुंजी दबाईं।',
+  signaturePadEmpty: 'कवनो हस्ताक्षर नइखे',
+  signaturePadSigned: {
+    one: 'हस्ताक्षर हो गइल, रेखा के संख्या: {count}',
+    other: 'हस्ताक्षर हो गइल, रेखा के संख्या: {count}',
+  },
+  signaturePadPenDown: 'कलम नीचे',
+  signaturePadPenUp: 'कलम ऊपर',
 };
 
 registerLyraLocale('bho', strings);

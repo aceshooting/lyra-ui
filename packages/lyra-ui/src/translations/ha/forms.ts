@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Ƙasa',
   timeZonePickerLabel: 'Yankin lokaci',
   unitPickerLabel: 'Ma\'aunin awo',
+  signaturePad: 'allon sa hannu',
+  signaturePadLabel: 'Sa hannu',
+  signaturePadInstructions: 'Zana da maɓalli mai nuni, ko ka danna Space don sauke ko ɗaga alƙalami, sannan maɓallan kibiya don motsa shi.',
+  signaturePadEmpty: 'Babu sa hannu',
+  signaturePadSigned: {
+    one: 'An sa hannu, yawan layuka: {count}',
+    other: 'An sa hannu, yawan layuka: {count}',
+  },
+  signaturePadPenDown: 'Alƙalami a ƙasa',
+  signaturePadPenUp: 'Alƙalami a sama',
 };
 
 registerLyraLocale('ha', strings);

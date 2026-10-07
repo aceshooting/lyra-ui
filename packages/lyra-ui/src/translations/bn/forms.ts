@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'দেশ',
   timeZonePickerLabel: 'সময় অঞ্চল',
   unitPickerLabel: 'একক',
+  signaturePad: 'স্বাক্ষর প্যাড',
+  signaturePadLabel: 'স্বাক্ষর',
+  signaturePadInstructions: 'পয়েন্টার দিয়ে আঁকুন, অথবা কলম নামাতে বা তুলতে স্পেস এবং সরাতে তীর কী চাপুন।',
+  signaturePadEmpty: 'কোনো স্বাক্ষর নেই',
+  signaturePadSigned: {
+    one: 'স্বাক্ষর করা হয়েছে, রেখার সংখ্যা: {count}',
+    other: 'স্বাক্ষর করা হয়েছে, রেখার সংখ্যা: {count}',
+  },
+  signaturePadPenDown: 'কলম নামানো',
+  signaturePadPenUp: 'কলম তোলা',
 };
 
 registerLyraLocale('bn', strings);

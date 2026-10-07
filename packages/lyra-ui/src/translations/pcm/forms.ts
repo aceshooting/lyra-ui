@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Di country',
   timeZonePickerLabel: 'Di time zone',
   unitPickerLabel: 'Di unit',
+  signaturePad: 'sign pad',
+  signaturePadLabel: 'Sign',
+  signaturePadInstructions: 'Draw wit pointer, or press Space make you put down or lift di pen and use arrow keys make e move.',
+  signaturePadEmpty: 'No sign dey',
+  signaturePadSigned: {
+    one: 'E don sign, how many lines: {count}',
+    other: 'E don sign, how many lines: {count}',
+  },
+  signaturePadPenDown: 'Pen don go down',
+  signaturePadPenUp: 'Pen don go up',
 };
 
 registerLyraLocale('pcm', strings);

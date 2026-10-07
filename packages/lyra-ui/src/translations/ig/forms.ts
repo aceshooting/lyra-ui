@@ -103,6 +103,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Obodo',
   timeZonePickerLabel: 'Mpaghara oge',
   unitPickerLabel: 'Nkeji nha',
+  signaturePad: 'ebe mbinye aka',
+  signaturePadLabel: 'Mbinye aka',
+  signaturePadInstructions: 'Se ya na pointa, ma ọ bụ pịa Space ka ị wedata ma ọ bụ welie pen, jiri bọtịnụ akụ̀ iji kwaga ya.',
+  signaturePadEmpty: 'Enweghị mbinye aka',
+  signaturePadSigned: {
+    other: 'Ebinyela aka, ọnụọgụ ahịrị: {count}',
+  },
+  signaturePadPenDown: 'Pen dị n\'ala',
+  signaturePadPenUp: 'Pen dị elu',
 };
 
 registerLyraLocale('ig', strings);

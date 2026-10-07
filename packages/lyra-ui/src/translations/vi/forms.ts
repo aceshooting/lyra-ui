@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Quốc gia',
   timeZonePickerLabel: 'Múi giờ',
   unitPickerLabel: 'Đơn vị',
+  signaturePad: 'bảng chữ ký',
+  signaturePadLabel: 'Chữ ký',
+  signaturePadInstructions: 'Vẽ bằng con trỏ, hoặc nhấn Phím cách để hạ hoặc nhấc bút và phím mũi tên để di chuyển.',
+  signaturePadEmpty: 'Chưa có chữ ký',
+  signaturePadSigned: {
+    other: 'Đã ký, số nét: {count}',
+  },
+  signaturePadPenDown: 'Đã hạ bút',
+  signaturePadPenUp: 'Đã nhấc bút',
 };
 
 registerLyraLocale('vi', strings);

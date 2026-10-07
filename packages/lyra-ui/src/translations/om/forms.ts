@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Biyya',
   timeZonePickerLabel: 'Naannoo sa\'aatii',
   unitPickerLabel: 'Yuunitii',
+  signaturePad: 'gabatee mallattoo',
+  signaturePadLabel: 'Mallattoo',
+  signaturePadInstructions: 'Bakka agarsiisaatiin kaasi, yookaan Space tuqi qalama gadi buusuuf ykn ol kaasuuf, furtuu xiyyaa immoo sochoosuuf.',
+  signaturePadEmpty: 'Mallattoon hin jiru',
+  signaturePadSigned: {
+    one: 'Mallatteeffameera, baay\'ina sararaa: {count}',
+    other: 'Mallatteeffameera, baay\'ina sararaa: {count}',
+  },
+  signaturePadPenDown: 'Qalamni gadi',
+  signaturePadPenUp: 'Qalamni ol',
 };
 
 registerLyraLocale('om', strings);

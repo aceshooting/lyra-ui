@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ملک',
   timeZonePickerLabel: 'منطقۂ وقت',
   unitPickerLabel: 'پیمائش کی اکائی',
+  signaturePad: 'دستخط پیڈ',
+  signaturePadLabel: 'دستخط',
+  signaturePadInstructions: 'پوائنٹر سے بنائیں، یا قلم کو نیچے یا اوپر کرنے کے لیے اسپیس اور حرکت دینے کے لیے تیر والے بٹن دبائیں۔',
+  signaturePadEmpty: 'کوئی دستخط نہیں',
+  signaturePadSigned: {
+    one: 'دستخط ہو گئے، لکیروں کی تعداد: {count}',
+    other: 'دستخط ہو گئے، لکیروں کی تعداد: {count}',
+  },
+  signaturePadPenDown: 'قلم نیچے',
+  signaturePadPenUp: 'قلم اوپر',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

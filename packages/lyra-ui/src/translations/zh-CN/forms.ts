@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: '国家/地区',
   timeZonePickerLabel: '时区',
   unitPickerLabel: '单位',
+  signaturePad: '签名板',
+  signaturePadLabel: '签名',
+  signaturePadInstructions: '用指针绘制，或按空格键落笔或抬笔，并用方向键移动笔。',
+  signaturePadEmpty: '无签名',
+  signaturePadSigned: {
+    other: '已签名，笔画数：{count}',
+  },
+  signaturePadPenDown: '已落笔',
+  signaturePadPenUp: '已抬笔',
 };
 
 registerLyraLocale('zh-CN', strings);

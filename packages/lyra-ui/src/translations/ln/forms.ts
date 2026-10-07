@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Mboka',
   timeZonePickerLabel: 'Etando ya ngonga',
   unitPickerLabel: 'Liyoko lya lomeko',
+  signaturePad: 'esika ya elembo ya loboko',
+  signaturePadLabel: 'Elembo ya loboko',
+  signaturePadInstructions: 'Sala elilingi na pointeur, to finá Space mpo na kokitisa to komatisa stylo mpe bibongiseli ya mbango mpo na kotambolisa yango.',
+  signaturePadEmpty: 'Elembo ya loboko ezali te',
+  signaturePadSigned: {
+    one: 'Elembo ya loboko ekomami, motango ya milɔngɔ: {count}',
+    other: 'Elembo ya loboko ekomami, motango ya milɔngɔ: {count}',
+  },
+  signaturePadPenDown: 'Stylo na nse',
+  signaturePadPenUp: 'Stylo na likoló',
 };
 
 registerLyraLocale('ln', strings);

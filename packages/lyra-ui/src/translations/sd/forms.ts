@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ملڪ',
   timeZonePickerLabel: 'وقت جو علائقو',
   unitPickerLabel: 'ماپ جو ايڪو',
+  signaturePad: 'دستخط پيڊ',
+  signaturePadLabel: 'دستخط',
+  signaturePadInstructions: 'پوائنٽر سان ڪڍو، يا قلم هيٺ يا مٿي ڪرڻ لاءِ اسپيس ۽ هلائڻ لاءِ تير جون ڪيون دٻايو.',
+  signaturePadEmpty: 'ڪو دستخط ناهي',
+  signaturePadSigned: {
+    one: 'دستخط ٿي ويو، لڪيرن جو تعداد: {count}',
+    other: 'دستخط ٿي ويو، لڪيرن جو تعداد: {count}',
+  },
+  signaturePadPenDown: 'قلم هيٺ',
+  signaturePadPenUp: 'قلم مٿي',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

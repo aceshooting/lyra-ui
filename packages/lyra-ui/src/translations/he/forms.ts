@@ -105,6 +105,17 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'מדינה',
   timeZonePickerLabel: 'אזור זמן',
   unitPickerLabel: 'יחידת מידה',
+  signaturePad: 'לוח חתימה',
+  signaturePadLabel: 'חתימה',
+  signaturePadInstructions: 'ציירו באמצעות מצביע, או הקישו רווח כדי להוריד או להרים את העט ומקשי החיצים כדי להזיז אותו.',
+  signaturePadEmpty: 'אין חתימה',
+  signaturePadSigned: {
+    one: 'נחתם, מספר קווים: {count}',
+    two: 'נחתם, מספר קווים: {count}',
+    other: 'נחתם, מספר קווים: {count}',
+  },
+  signaturePadPenDown: 'העט למטה',
+  signaturePadPenUp: 'העט למעלה',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

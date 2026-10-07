@@ -107,6 +107,18 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Страна',
   timeZonePickerLabel: 'Часовой пояс',
   unitPickerLabel: 'Единица измерения',
+  signaturePad: 'поле подписи',
+  signaturePadLabel: 'Подпись',
+  signaturePadInstructions: 'Рисуйте указателем или нажмите пробел, чтобы опустить или поднять перо, и клавиши со стрелками, чтобы двигать его.',
+  signaturePadEmpty: 'Подписи нет',
+  signaturePadSigned: {
+    one: 'Подписано, число штрихов: {count}',
+    few: 'Подписано, число штрихов: {count}',
+    many: 'Подписано, число штрихов: {count}',
+    other: 'Подписано, число штрихов: {count}',
+  },
+  signaturePadPenDown: 'Перо опущено',
+  signaturePadPenUp: 'Перо поднято',
 };
 
 registerLyraLocale('ru', strings);

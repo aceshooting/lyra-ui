@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Izwe',
   timeZonePickerLabel: 'Izoni yesikhathi',
   unitPickerLabel: 'Iyunithi',
+  signaturePad: 'ipedi yesisayinda',
+  signaturePadLabel: 'Isisayinda',
+  signaturePadInstructions: 'Dweba ngesikhombi, noma cindezela i-Space ukuze wehlise noma uphakamise ipeni namakhiye emicibisholo ukuze alihambise.',
+  signaturePadEmpty: 'Asikho isisayinda',
+  signaturePadSigned: {
+    one: 'Kusayinwe, inani lemigqa: {count}',
+    other: 'Kusayinwe, inani lemigqa: {count}',
+  },
+  signaturePadPenDown: 'Ipeni phansi',
+  signaturePadPenUp: 'Ipeni phezulu',
 };
 
 registerLyraLocale('zu', strings);

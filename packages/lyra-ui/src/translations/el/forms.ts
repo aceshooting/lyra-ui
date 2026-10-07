@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Χώρα',
   timeZonePickerLabel: 'Ζώνη ώρας',
   unitPickerLabel: 'Μονάδα',
+  signaturePad: 'πεδίο υπογραφής',
+  signaturePadLabel: 'Υπογραφή',
+  signaturePadInstructions: 'Σχεδιάστε με δείκτη ή πατήστε Διάστημα για να κατεβάσετε ή να σηκώσετε την πένα και τα βέλη για να την μετακινήσετε.',
+  signaturePadEmpty: 'Καμία υπογραφή',
+  signaturePadSigned: {
+    one: 'Υπογράφηκε, αριθμός γραμμών: {count}',
+    other: 'Υπογράφηκε, αριθμός γραμμών: {count}',
+  },
+  signaturePadPenDown: 'Πένα κάτω',
+  signaturePadPenUp: 'Πένα πάνω',
 };
 
 registerLyraLocale('el', strings);

@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: '국가',
   timeZonePickerLabel: '시간대',
   unitPickerLabel: '단위',
+  signaturePad: '서명 패드',
+  signaturePadLabel: '서명',
+  signaturePadInstructions: '포인터로 그리거나, 스페이스 키로 펜을 내리거나 올리고 화살표 키로 이동하세요.',
+  signaturePadEmpty: '서명 없음',
+  signaturePadSigned: {
+    other: '서명됨, 획 수: {count}',
+  },
+  signaturePadPenDown: '펜 내림',
+  signaturePadPenUp: '펜 올림',
 };
 
 registerLyraLocale('ko', strings);

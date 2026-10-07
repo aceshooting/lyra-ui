@@ -111,6 +111,20 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'البلد',
   timeZonePickerLabel: 'المنطقة الزمنية',
   unitPickerLabel: 'وحدة القياس',
+  signaturePad: 'لوحة توقيع',
+  signaturePadLabel: 'التوقيع',
+  signaturePadInstructions: 'ارسم بمؤشر، أو اضغط على مفتاح المسافة لخفض القلم أو رفعه واستخدم مفاتيح الأسهم لتحريكه.',
+  signaturePadEmpty: 'لا يوجد توقيع',
+  signaturePadSigned: {
+    zero: 'تم التوقيع، عدد الخطوط: {count}',
+    one: 'تم التوقيع، عدد الخطوط: {count}',
+    two: 'تم التوقيع، عدد الخطوط: {count}',
+    few: 'تم التوقيع، عدد الخطوط: {count}',
+    many: 'تم التوقيع، عدد الخطوط: {count}',
+    other: 'تم التوقيع، عدد الخطوط: {count}',
+  },
+  signaturePadPenDown: 'القلم لأسفل',
+  signaturePadPenUp: 'القلم لأعلى',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

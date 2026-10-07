@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Nagara',
   timeZonePickerLabel: 'Zona waktu',
   unitPickerLabel: 'Satuan',
+  signaturePad: 'papan tanda tangan',
+  signaturePadLabel: 'Tanda tangan',
+  signaturePadInstructions: 'Gambar maké pointer, atawa pencét Spasi pikeun nurunkeun atawa ngangkat pulpén jeung tombol panah pikeun mindahkeunana.',
+  signaturePadEmpty: 'Euweuh tanda tangan',
+  signaturePadSigned: {
+    other: 'Geus ditandatanganan, jumlah garis: {count}',
+  },
+  signaturePadPenDown: 'Pulpén turun',
+  signaturePadPenUp: 'Pulpén naék',
 };
 
 registerLyraLocale('su', strings);

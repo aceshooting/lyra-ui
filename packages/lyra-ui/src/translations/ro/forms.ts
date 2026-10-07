@@ -105,6 +105,17 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Țară',
   timeZonePickerLabel: 'Fus orar',
   unitPickerLabel: 'Unitate',
+  signaturePad: 'câmp pentru semnătură',
+  signaturePadLabel: 'Semnătură',
+  signaturePadInstructions: 'Desenați cu un indicator sau apăsați Spațiu pentru a coborî ori a ridica stiloul și tastele săgeată pentru a-l muta.',
+  signaturePadEmpty: 'Fără semnătură',
+  signaturePadSigned: {
+    one: 'Semnat, număr de trăsături: {count}',
+    few: 'Semnat, număr de trăsături: {count}',
+    other: 'Semnat, număr de trăsături: {count}',
+  },
+  signaturePadPenDown: 'Stilou jos',
+  signaturePadPenUp: 'Stilou sus',
 };
 
 registerLyraLocale('ro', strings);

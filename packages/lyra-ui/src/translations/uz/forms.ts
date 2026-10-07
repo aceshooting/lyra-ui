@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Mamlakat',
   timeZonePickerLabel: 'Vaqt mintaqasi',
   unitPickerLabel: 'O‘lchov birligi',
+  signaturePad: 'imzo maydoni',
+  signaturePadLabel: 'Imzo',
+  signaturePadInstructions: 'Ko‘rsatkich bilan chizing yoki qalamni tushirish yoki ko‘tarish uchun Probel, siljitish uchun strelka tugmalarini bosing.',
+  signaturePadEmpty: 'Imzo yo‘q',
+  signaturePadSigned: {
+    one: 'Imzolandi, chiziqlar soni: {count}',
+    other: 'Imzolandi, chiziqlar soni: {count}',
+  },
+  signaturePadPenDown: 'Qalam pastda',
+  signaturePadPenUp: 'Qalam tepada',
 };
 
 registerLyraLocale('uz', strings);

@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Land',
   timeZonePickerLabel: 'Tidszon',
   unitPickerLabel: 'Enhet',
+  signaturePad: 'signaturfält',
+  signaturePadLabel: 'Signatur',
+  signaturePadInstructions: 'Rita med en pekare, eller tryck på mellanslag för att sänka eller lyfta pennan och piltangenterna för att flytta den.',
+  signaturePadEmpty: 'Ingen signatur',
+  signaturePadSigned: {
+    one: 'Signerad, antal streck: {count}',
+    other: 'Signerad, antal streck: {count}',
+  },
+  signaturePadPenDown: 'Penna ner',
+  signaturePadPenUp: 'Penna upp',
 };
 
 registerLyraLocale('sv', strings);

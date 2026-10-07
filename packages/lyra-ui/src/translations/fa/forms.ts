@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'کشور',
   timeZonePickerLabel: 'منطقهٔ زمانی',
   unitPickerLabel: 'واحد',
+  signaturePad: 'صفحه امضا',
+  signaturePadLabel: 'امضا',
+  signaturePadInstructions: 'با اشاره‌گر بکشید، یا برای پایین آوردن یا بالا بردن قلم Space و برای حرکت دادن آن کلیدهای جهت‌دار را فشار دهید.',
+  signaturePadEmpty: 'بدون امضا',
+  signaturePadSigned: {
+    one: 'امضا شد، تعداد خطوط: {count}',
+    other: 'امضا شد، تعداد خطوط: {count}',
+  },
+  signaturePadPenDown: 'قلم پایین',
+  signaturePadPenUp: 'قلم بالا',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

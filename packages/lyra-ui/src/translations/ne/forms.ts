@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'देश',
   timeZonePickerLabel: 'समय क्षेत्र',
   unitPickerLabel: 'एकाइ',
+  signaturePad: 'हस्ताक्षर प्याड',
+  signaturePadLabel: 'हस्ताक्षर',
+  signaturePadInstructions: 'पोइन्टरले कोर्नुहोस्, वा कलम तल वा माथि गर्न स्पेस र सार्न एरो कुञ्जी थिच्नुहोस्।',
+  signaturePadEmpty: 'हस्ताक्षर छैन',
+  signaturePadSigned: {
+    one: 'हस्ताक्षर गरियो, रेखाको संख्या: {count}',
+    other: 'हस्ताक्षर गरियो, रेखाको संख्या: {count}',
+  },
+  signaturePadPenDown: 'कलम तल',
+  signaturePadPenUp: 'कलम माथि',
 };
 
 registerLyraLocale('ne', strings);

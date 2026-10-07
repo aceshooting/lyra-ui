@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'ਦੇਸ਼',
   timeZonePickerLabel: 'ਸਮਾਂ ਖੇਤਰ',
   unitPickerLabel: 'ਇਕਾਈ',
+  signaturePad: 'ਦਸਤਖ਼ਤ ਪੈਡ',
+  signaturePadLabel: 'ਦਸਤਖ਼ਤ',
+  signaturePadInstructions: 'ਪੁਆਇੰਟਰ ਨਾਲ ਖਿੱਚੋ, ਜਾਂ ਪੈੱਨ ਨੂੰ ਹੇਠਾਂ ਜਾਂ ਉੱਪਰ ਕਰਨ ਲਈ ਸਪੇਸ ਅਤੇ ਹਿਲਾਉਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ ਦਬਾਓ।',
+  signaturePadEmpty: 'ਕੋਈ ਦਸਤਖ਼ਤ ਨਹੀਂ',
+  signaturePadSigned: {
+    one: 'ਦਸਤਖ਼ਤ ਹੋ ਗਏ, ਲਕੀਰਾਂ ਦੀ ਗਿਣਤੀ: {count}',
+    other: 'ਦਸਤਖ਼ਤ ਹੋ ਗਏ, ਲਕੀਰਾਂ ਦੀ ਗਿਣਤੀ: {count}',
+  },
+  signaturePadPenDown: 'ਪੈੱਨ ਹੇਠਾਂ',
+  signaturePadPenUp: 'ਪੈੱਨ ਉੱਪਰ',
 };
 
 registerLyraLocale('pa', strings);

@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'Land',
   timeZonePickerLabel: 'Tijdzone',
   unitPickerLabel: 'Eenheid',
+  signaturePad: 'handtekeningveld',
+  signaturePadLabel: 'Handtekening',
+  signaturePadInstructions: 'Teken met een aanwijzer, of druk op spatie om de pen neer te laten of op te tillen en op de pijltoetsen om hem te verplaatsen.',
+  signaturePadEmpty: 'Geen handtekening',
+  signaturePadSigned: {
+    one: 'Ondertekend, aantal streken: {count}',
+    other: 'Ondertekend, aantal streken: {count}',
+  },
+  signaturePadPenDown: 'Pen neer',
+  signaturePadPenUp: 'Pen omhoog',
 };
 
 registerLyraLocale('nl', strings);

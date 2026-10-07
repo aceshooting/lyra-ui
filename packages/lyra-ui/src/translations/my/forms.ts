@@ -101,6 +101,15 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'နိုင်ငံ',
   timeZonePickerLabel: 'အချိန်ဇုန်',
   unitPickerLabel: 'ယူနစ်',
+  signaturePad: 'လက်မှတ်ပြား',
+  signaturePadLabel: 'လက်မှတ်',
+  signaturePadInstructions: 'ညွှန်ပြကိရိယာဖြင့် ရေးဆွဲပါ၊ သို့မဟုတ် ဘောပင်ကို ချရန် သို့မဟုတ် မရန် Space ကိုနှိပ်ပြီး ရွှေ့ရန် မြှား ခလုတ်များကို နှိပ်ပါ။',
+  signaturePadEmpty: 'လက်မှတ်မရှိပါ',
+  signaturePadSigned: {
+    other: 'လက်မှတ်ထိုးပြီး၊ မျဉ်းအရေအတွက်- {count}',
+  },
+  signaturePadPenDown: 'ဘောပင်ချထားသည်',
+  signaturePadPenUp: 'ဘောပင်မထားသည်',
 };
 
 registerLyraLocale('my', strings);
