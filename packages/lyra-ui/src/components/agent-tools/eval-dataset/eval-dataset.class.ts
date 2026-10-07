@@ -20,6 +20,8 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_ev
 
 const MAX_RENDERED_EXAMPLES = 100;
 
+const rowKey = (row: EvalExample): string => row.id;
+
 /**
  * One row of an evaluation dataset -- a single labeled test case an eval run scores a
  * model/prompt against. Deliberately its own small shape rather than reusing anything from
@@ -153,6 +155,8 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['examples', 'exportFormats']);
+  /** Rows carry opaque `metadata` that is never read, so they are kept by identity, not cloned. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['examples']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -211,23 +215,25 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Accessible name for the nested example grid. This wins over the localized
-   *  `evalDatasetLabel` default; a host `aria-label` names the host itself and is not cloned onto
-   *  the independently interactive grid. */
+   *  `evalDatasetLabel` default, which also applies when it is empty since the grid needs a name; a
+   *  host `aria-label` names the host itself and is not cloned onto the independently interactive grid. */
   @property() label = '';
 
   @state() private searchText = '';
   @state() private activeTags = new Set<string>();
   @state() private selectedId: string | null = null;
 
+  private normalizedFor?: readonly EvalExample[];
+  private normalizedCache: EvalExample[] = [];
+
   private get normalizedExamples(): EvalExample[] {
-    const deduped = firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
-    // A foreign/parsed-data `tags` value (a bare string, number, boolean, or plain object instead
-    // of an array -- plausible after a JSON round-trip or an import) must not reach the
-    // unconditional per-render consumers below (allTags(), visibleExamples, buildColumns()'s
-    // sort/cell accessors): every one of them iterates or `.join()`s `tags` with no guard of its
-    // own, so an un-coerced malformed value throws inside this component's own willUpdate()/
-    // render() and blanks the whole dataset instead of just the one malformed row.
-    return deduped.map((example) => (Array.isArray(example.tags) ? example : { ...example, tags: undefined }));
+    if (this.normalizedFor !== this.examples) {
+      this.normalizedFor = this.examples;
+      const deduped = firstByIdentity(Array.isArray(this.examples) ? this.examples : [], (example) => example.id);
+      // A malformed `tags` value (string, number, object) must not reach the consumers below, which iterate it.
+      this.normalizedCache = deduped.map((example) => (Array.isArray(example.tags) ? example : { ...example, tags: undefined }));
+    }
+    return this.normalizedCache;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -254,6 +260,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     // A row can still exist in the controlled dataset but no longer be visible once a search or
     // tag filter narrows the grid. Clear its selection at that same boundary: leaving it active
     // would make Remove act on an invisible row with no way for the user to verify the target.
+    this.visibleExamples = this.filterExamples();
     const filtersChanged =
       changed.has('examples') || changed.has('searchText') || changed.has('activeTags') || changed.has('searchable');
     if (
@@ -280,7 +287,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   /** `examples` narrowed by the active tag filter (OR across `activeTags`) and the search text
    *  (AND with the tag filter -- both narrow the same list further). */
-  private get visibleExamples(): EvalExample[] {
+  private visibleExamples: EvalExample[] = [];
+
+  private filterExamples(): EvalExample[] {
     const query = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
     return this.normalizedExamples.filter((example) => {
       if (this.activeTags.size > 0 && !(example.tags ?? []).some((tag) => this.activeTags.has(tag))) return false;
@@ -518,7 +527,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .columns=${this.buildColumns()}
           .rows=${visible}
           .pageSize=${MAX_RENDERED_EXAMPLES}
-          .rowKey=${(row: EvalExample) => row.id}
+          .rowKey=${rowKey}
           .selectedRowKeys=${this.selectedId === null ? new Set() : new Set([this.selectedId])}
           .emptyHeading=${emptyText}
           @input=${this.stopOwnedEvent}

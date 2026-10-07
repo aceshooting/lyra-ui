@@ -11,6 +11,25 @@ const runs: BackgroundRun[] = [
 ];
 
 describe('lr-background-runs', () => {
+  it('shows the shared agent status spellings (done/success/error) as completed or failed instead of dropping the run', async () => {
+    const shared = [
+      { id: 'a', label: 'A', status: 'done' },
+      { id: 'b', label: 'B', status: 'success' },
+      { id: 'c', label: 'C', status: 'error' },
+    ] as BackgroundRun[];
+    const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${shared}></lr-background-runs>`);
+    const status = (id: string): string | undefined => el.shadowRoot!.querySelector(`[data-run-id="${id}"] [part="status"]`)?.textContent?.trim();
+    expect([status('a'), status('b'), status('c')]).to.deep.equal(['Completed', 'Completed', 'Failed']);
+  });
+
+  it('keeps a row\'s buttons on their own run when the host prepends a run', async () => {
+    const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
+    const before = el.shadowRoot!.querySelector('[data-run-id="running"]');
+    el.runs = [{ id: 'new', label: 'New', status: 'queued' }, ...runs];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-run-id="running"]') === before).to.equal(true);
+  });
+
   it('renders controlled run labels/statuses and only offers cancellation for active runs', async () => {
     const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
     expect(el.shadowRoot!.querySelectorAll('[part="run"]')).to.have.lengthOf(5);
@@ -129,4 +148,14 @@ describe('lr-background-runs', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="legend"]')?.textContent).to.equal('Background runs');
   });
+});
+
+it('opens a run through lr-run-activate, then the deprecated lr-run-open alias', async () => {
+  const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
+  const seen: string[] = [];
+  for (const name of ['lr-run-activate', 'lr-run-open']) {
+    el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ runId: string }>).detail.runId}`));
+  }
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="running"] [part="open"]')!.click();
+  expect(seen).to.deep.equal(['lr-run-activate:running', 'lr-run-open:running']);
 });

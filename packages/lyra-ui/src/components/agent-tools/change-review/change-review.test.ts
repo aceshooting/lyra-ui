@@ -107,3 +107,22 @@ describe('lr-change-review', () => {
     expect(el.shadowRoot!.textContent).to.include('Only the first 200 changes are shown.');
   });
 });
+
+it('follows heading-level and renders no heading for an empty label', async () => {
+  const el = await fixture<LyraChangeReview>(html`<lr-change-review heading-level="4"></lr-change-review>`);
+  const heading = (): Element | null => el.shadowRoot!.querySelector('[part="heading"]');
+  expect([heading()!.getAttribute('role'), heading()!.getAttribute('aria-level')]).to.deep.equal(['heading', '4']);
+  el.label = '';
+  await el.updateComplete;
+  expect(heading() === null).to.equal(true);
+});
+
+it('requests a decision through lr-change-decision-request, then the deprecated lr-change-decision alias', async () => {
+  const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
+  const seen: string[] = [];
+  for (const name of ['lr-change-decision-request', 'lr-change-decision']) {
+    el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ decision: string }>).detail.decision}`));
+  }
+  (el.shadowRoot!.querySelector('[data-decision="keep"]') as HTMLButtonElement).click();
+  expect(seen).to.deep.equal(['lr-change-decision-request:keep', 'lr-change-decision:keep']);
+});

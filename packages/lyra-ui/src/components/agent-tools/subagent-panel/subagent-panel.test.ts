@@ -270,7 +270,7 @@ it('still renders a controlled selection outside the render cap as selected (reg
   const selected = el.shadowRoot!.querySelector('[part~="run-selected"]');
   expect(selected, 'the selected run must render even past the first 500 array-order entries').to.not.equal(null);
   expect(selected!.getAttribute('data-run-id')).to.equal('run-599');
-  expect(selected!.querySelector('[part="run-trigger"]')!.getAttribute('aria-pressed')).to.equal('true');
+  expect(selected!.getAttribute('aria-selected')).to.equal('true');
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
     'Only the first 500 subagent runs are shown.',
   );
@@ -567,7 +567,7 @@ it('tracks roving focus when focus lands directly on a nested action button, byp
   expect(root.getAttribute('tabindex')).to.equal('-1');
 });
 
-it('keeps nested run-trigger/cancel/retry buttons in the native Tab order', async () => {
+it('keeps only the roving row\'s nested run-trigger/cancel/retry buttons in the Tab order', async () => {
   const withActionable: SubagentRun[] = [
     { id: 'active', label: 'Active', status: 'running' },
     { id: 'broken', label: 'Broken', status: 'error' },
@@ -577,15 +577,59 @@ it('keeps nested run-trigger/cancel/retry buttons in the native Tab order', asyn
   )) as LyraSubagentPanel;
   await el.updateComplete;
 
-  const actions = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
-    '[part="run-trigger"], [part="cancel"], [part="retry"]',
-  )];
-  expect(actions).to.have.length(4);
-  expect(actions.every((button) => button.getAttribute('tabindex') === null)).to.be.true;
-  expect(actions.every((button) => button.tabIndex === 0)).to.be.true;
+  const tabIndexes = (id: string): number[] => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
+    `[data-run-id="${id}"] button`,
+  )].map((button) => button.tabIndex);
+  expect(tabIndexes('active')).to.deep.equal([0, 0]);
+  expect(tabIndexes('broken')).to.deep.equal([-1, -1]);
+  el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="broken"]')!.focus();
+  await el.updateComplete;
+  expect(tabIndexes('active')).to.deep.equal([-1, -1]);
+  expect(tabIndexes('broken')).to.deep.equal([0, 0]);
 });
 
-it('caches tree ordering and only recomputes it when `runs` changes (regression)', async () => {
+it('moves to the first child with ArrowRight and to the parent with ArrowLeft, swapped under RTL', async () => {
+  const tree: SubagentRun[] = [
+    { id: 'root', label: 'Root', status: 'running' },
+    { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
+  ];
+  for (const [dir, forward, back] of [['ltr', 'ArrowRight', 'ArrowLeft'], ['rtl', 'ArrowLeft', 'ArrowRight']] as const) {
+    const wrapper = await fixture<HTMLElement>(html`<div dir=${dir}><lr-subagent-panel .runs=${tree}></lr-subagent-panel></div>`);
+    const el = wrapper.querySelector('lr-subagent-panel') as LyraSubagentPanel;
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+    const tabbable = (): string | null => el.shadowRoot!.querySelector('[role="treeitem"][tabindex="0"]')!.getAttribute('data-run-id');
+    list.dispatchEvent(new KeyboardEvent('keydown', { key: forward, bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(tabbable(), dir).to.equal('child');
+    list.dispatchEvent(new KeyboardEvent('keydown', { key: back, bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(tabbable(), dir).to.equal('root');
+  }
+});
+
+it('re-reserves a selection made after mount when it lies past the render cap', async () => {
+  const flat: SubagentRun[] = Array.from({ length: 600 }, (_, index) => ({
+    id: `run-${index}`,
+    label: `Run ${index}`,
+    status: 'done' as const,
+  }));
+  const el = (await fixture(html`<lr-subagent-panel .runs=${flat}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  el.selectedRunId = 'run-599';
+  await el.updateComplete;
+  const selected = el.shadowRoot!.querySelector('[part~="run-selected"]');
+  expect(selected?.getAttribute('data-run-id')).to.equal('run-599');
+});
+
+it('keeps each row\'s buttons on their own run when the host prepends a run', async () => {
+  const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  const before = el.shadowRoot!.querySelector('[data-run-id="review"]');
+  el.runs = [{ id: 'new', label: 'New', status: 'running' }, ...runs];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[data-run-id="review"]') === before).to.equal(true);
+});
+
+it('caches tree ordering across keydown handling and recomputes it when `runs` changes (regression)', async () => {
   const nested: SubagentRun[] = [
     { id: 'root', label: 'Root', status: 'running' },
     { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
@@ -601,18 +645,15 @@ it('caches tree ordering and only recomputes it when `runs` changes (regression)
   };
 
   const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
-  // Several keydowns and an unrelated re-render (selectedRunId change, not `runs`) must reuse the
-  // cached ordering rather than recomputing it.
+  // Several keydowns must reuse the cached ordering rather than recomputing it.
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
-  await el.updateComplete;
-  el.selectedRunId = 'child';
   await el.updateComplete;
   list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   await el.updateComplete;
 
-  expect(calls, 'ordered() must not be recomputed by keydown handling or unrelated re-renders').to.equal(0);
+  expect(calls, 'ordered() must not be recomputed by keydown handling').to.equal(0);
   // The cached ordering must still be correct across all of that -- Home moved focus back to root.
   expect(
     (el.shadowRoot!.querySelector('[data-run-id="root"]') as HTMLElement).getAttribute('tabindex'),
@@ -816,4 +857,14 @@ describe('lr-subagent-panel deprecated --lr-subagent-panel-background/-hover-bac
       'rgb(4, 5, 6)',
     );
   });
+});
+
+it('requests cancellation through lr-run-cancel, then the deprecated lr-cancel alias', async () => {
+  const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  const seen: string[] = [];
+  for (const name of ['lr-run-cancel', 'lr-cancel']) {
+    el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ runId: string }>).detail.runId}`));
+  }
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="research"] [part="cancel"]')!.click();
+  expect(seen).to.deep.equal(['lr-run-cancel:research', 'lr-cancel:research']);
 });

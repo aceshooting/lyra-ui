@@ -6,13 +6,12 @@ import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Whether the panel is streaming a run live or replaying a finished one -- the library's shared
@@ -169,15 +168,8 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     thinking: LYRA_DEFAULT_thinking,
     thinkingPanelLabel: LYRA_DEFAULT_thinkingPanelLabel,
     thoughtFor: LYRA_DEFAULT_thoughtFor,
@@ -413,13 +405,9 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private get durationDisplay(): { text: string; pending: boolean } | null {
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
-      const duration = durationMessageValue(durationMs);
-      const value = getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
-      }).format(duration.value);
       return {
         text: this.localize('thoughtFor', undefined, {
-          duration: this.localize(duration.key, undefined, { value }),
+          duration: formatShortDuration(this.localize.bind(this), this.effectiveLocale, durationMs),
         }),
         pending: false,
       };

@@ -76,6 +76,26 @@ describe('lr-agent-question', () => {
     expect(el.value).to.deep.equal({ name: 'new' });
   });
 
+  it('keeps the typed draft and rendered schema when a parent rebinds the same objects', async () => {
+    const initial = { name: 'Ada' };
+    const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" .schema=${schema} .value=${initial}></lr-agent-question>`);
+    const input = form(el).shadowRoot!.querySelector<HTMLInputElement>('input[type="text"]')!;
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const rendered = el.schema;
+    el.schema = schema;
+    el.value = initial;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ name: 'Grace' });
+    expect(el.schema === rendered).to.equal(true);
+    el.value = { name: 'Lin' };
+    expect(el.value).to.deep.equal({ name: 'Lin' });
+    el.requestId = 'next';
+    el.value = { name: 'Lin' };
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({ name: 'Lin' });
+  });
+
   it('blocks unknown schemas, still allows declining, and never submits hidden draft keys', async () => {
     const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" .schema=${{ ...schema, properties: { name: { ...schema.properties.name, pattern: '.*' } } }}></lr-agent-question>`);
     expect(action(el, 'accept').disabled).to.equal(true);
@@ -165,5 +185,16 @@ describe('lr-agent-question', () => {
     expect(action(el, 'accept').textContent).to.equal('Envoyer');
     expect(Array.from(el.shadowRoot!.querySelectorAll('button')).every((button) => button.disabled)).to.equal(true);
     expect(form(el).disabled).to.equal(true);
+  });
+});
+
+describe('lr-agent-question heading', () => {
+  it('follows heading-level and renders no heading for an empty label', async () => {
+    const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" heading-level="5" .schema=${schema}></lr-agent-question>`);
+    const heading = (): Element | null => el.shadowRoot!.querySelector('[part="heading"]');
+    expect([heading()!.getAttribute('role'), heading()!.getAttribute('aria-level')]).to.deep.equal(['heading', '5']);
+    el.label = '';
+    await el.updateComplete;
+    expect(heading() === null).to.equal(true);
   });
 });

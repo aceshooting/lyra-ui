@@ -2,17 +2,19 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
@@ -21,7 +23,7 @@ export type TestRunState = 'idle' | 'running' | 'complete';
 export interface TestCaseResult {
   id: string;
   name: string;
-  /** Foreign runtime values normalize once to the localized neutral `skipped` fallback. */
+  /** Foreign runtime values normalize once: `error`/`timedOut`/`broken` to `failed`, any other to `skipped`. */
   status: TestStatus;
   durationMs?: number;
   message?: string;
@@ -36,9 +38,9 @@ export interface TestSuiteResult {
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
 const MAX_RENDERED_TESTS = 1_000;
 
-/** Provider payloads can bypass the compile-time union. Unknown states use the neutral,
- * non-success `skipped` fallback so every accepted row retains a visible localized status and
- * participates in exactly one complete summary count. */
+/** Provider payloads can bypass the compile-time union. `error`, `timedOut` and `broken` count as
+ * `failed`; other unknown states use the neutral, non-success `skipped` fallback, so every accepted
+ * row retains a visible localized status and participates in exactly one summary count. */
 function normalizeTestStatus(value: unknown): TestStatus {
   switch (value) {
     case 'passed':
@@ -46,6 +48,10 @@ function normalizeTestStatus(value: unknown): TestStatus {
     case 'skipped':
     case 'running':
       return value;
+    case 'error':
+    case 'timedOut':
+    case 'broken':
+      return 'failed';
     default:
       return 'skipped';
   }
@@ -106,6 +112,7 @@ export function testResultDetailSlotName(suiteId: string, testId: string): strin
 export interface LyraTestResultsEventMap {
   'lr-test-select': CustomEvent<{ suiteId: string; testId: string }>;
   'lr-filter-change': CustomEvent<LyraEventDetailSnapshot<{ statuses: TestStatus[] }>>;
+  'lr-toggle-request': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
   'lr-toggle': CustomEvent<{ suiteId: string; testId: string; expanded: boolean }>;
 }
 
@@ -127,6 +134,8 @@ export interface LyraTestResultsEventMap {
  * @customElement lr-test-results
  * @event lr-test-select - `detail: { suiteId, testId }` — a test row's name was activated.
  * @event lr-filter-change - `detail: { statuses }` — the status-set filter changed.
+ * @event lr-toggle-request - Cancelable proposal before a row's failure detail changes. `detail: { suiteId, testId, expanded }`
+ *   is the requested state.
  * @event lr-toggle - `detail: { suiteId, testId, expanded }` — a row's failure detail was
  *   expanded/collapsed. The identity shape is invariant even when `testId` is globally unique.
  * @slot detail-{encodedSuiteId}:{encodedTestId} - Collision-free suite-scoped rich detail for a
@@ -181,6 +190,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
     expand: LYRA_DEFAULT_expand,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
@@ -446,6 +456,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   private toggleExpanded(suiteId: string, test: TestCaseResult): void {
     const expanded = !this.isExpanded(suiteId, test);
+    if (this.emit('lr-toggle-request', { suiteId, testId: test.id, expanded }, { cancelable: true }).defaultPrevented) return;
     const next = new Map(this.manualExpanded);
     next.set(this.testKey(suiteId, test.id), expanded);
     this.manualExpanded = next;
@@ -526,9 +537,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         </button>
         ${typeof test.durationMs === 'number' && Number.isFinite(test.durationMs) && test.durationMs >= 0
           ? html`<span part="test-duration"
-              >${this.localize('durationMilliseconds', undefined, {
-                value: getNumberFormat(this.effectiveLocale).format(test.durationMs),
-              })}</span
+              >${formatShortDuration(this.localize.bind(this), this.effectiveLocale, test.durationMs)}</span
             >`
           : nothing}
         ${canExpand
@@ -560,7 +569,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
       <div part="suite">
         <div part="suite-header">${suite.name}</div>
         <div role="list" aria-label=${suite.name || nothing}
-          >${visibleTests.map(({ test, testIndex }) =>
+          >${repeat(visibleTests, ({ test }) => test.id, ({ test, testIndex }) =>
             this.renderTest(suite.id, suite.name, test, suiteIndex, testIndex))}</div
         >
       </div>
@@ -583,7 +592,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               ${this.renderSummary(this.computeStatusCounts())}
               ${visibleSuites.length === 0
                 ? html`<lr-empty part="empty" heading=${this.localize('noMatches')}></lr-empty>`
-                : this.projectedSuitesCache.map((suite, index) => this.renderSuite(suite, index))}
+                : repeat(this.projectedSuitesCache, (suite) => suite.id, (suite, index) => this.renderSuite(suite, index))}
               ${this.projectionTruncated
                 ? html`<p part="limit" role="note">${this.localize('testResultsLimit', undefined, {
                     count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),

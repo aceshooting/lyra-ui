@@ -25,9 +25,9 @@ import type { LyraVirtualList, LyraVirtualListRange } from '../../layout/virtual
 import { styles } from './activity-feed.styles.js';
 import {
   literalSetConverter,
-  presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter,
+  trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_activityFeedCompletedStep, LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -65,6 +65,7 @@ export interface ActivityFeedFollowChangeDetail {
 }
 
 export interface LyraActivityFeedEventMap {
+  'lr-toggle-request': CustomEvent<ActivityFeedToggleDetail>;
   'lr-toggle': CustomEvent<ActivityFeedToggleDetail>;
   'lr-follow-change': CustomEvent<ActivityFeedFollowChangeDetail>;
 }
@@ -72,6 +73,7 @@ export interface LyraActivityFeedEventMap {
 /** Close enough to the body's own max scroll position to count as anchored there -- identical
  *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
+const entryId = (entry: ActivityEntry): unknown => entry.id;
 
 /** The variant dot's `part` list: the shared `variant-dot` name plus a variant-specific one. Shadow
  *  Parts forbids an attribute selector after `::part()`, so
@@ -115,7 +117,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * `<lr-task-list>` instead). Implements the shared follow (stick-to-bottom) contract: `follow`
  * is a component-managed, host-assignable property, released on user scroll-up and re-engaged at
  * the bottom. `lr-follow-change` reports user-driven transitions only; direct host assignments are
- * controlled input and never echo an event. At/above
+ * controlled input and never echo an event. Above
  * `virtualizeAt` entries, the body renders through an internal `<lr-virtual-list>`
  * instead of a plain keyed list — same list semantics either way, keyed by `id`. Empty/blank ids
  * are omitted and duplicates normalize before counts, follow calculations, and rendering; the
@@ -149,6 +151,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-activity-feed
+ * @event lr-toggle-request - Cancelable proposal before a header activation changes the body.
+ *   `detail: { expanded }` is the requested state.
  * @event lr-toggle - The header was activated, expanding or collapsing the body. `detail: {
  *   expanded }`.
  * @event lr-follow-change - A user scroll released or re-engaged `follow`. `detail: {
@@ -299,7 +303,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
    *  other descendant markup stays reachable only by inheritance or an inline style. */
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
-  /** At/above this entry count, the body renders through an internal `<lr-virtual-list>`. */
+  /** Above this entry count, the body renders through an internal `<lr-virtual-list>`. */
   @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 199;
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
@@ -370,7 +374,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   private get normalizedEntries(): ActivityEntry[] {
-    return firstByIdentity(Array.isArray(this.entries) ? this.entries : [], (entry) => entry.id);
+    return firstByIdentityMemo(Array.isArray(this.entries) ? this.entries : [], entryId);
   }
 
   private get isVirtualized(): boolean {
@@ -700,8 +704,10 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   }
 
   private toggle = (): void => {
-    this.expanded = !this.expanded;
-    this.emit('lr-toggle', { expanded: this.expanded });
+    const expanded = !this.expanded;
+    if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    this.expanded = expanded;
+    this.emit('lr-toggle', { expanded });
   };
 
   private setFollowFromUser(following: boolean): void {

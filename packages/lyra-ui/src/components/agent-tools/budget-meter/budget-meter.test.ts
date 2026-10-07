@@ -15,6 +15,13 @@ describe('lr-budget-meter', () => {
     expect((el.shadowRoot!.querySelector('[part="fill"]') as HTMLElement).style.inlineSize).to.equal('100%');
   });
 
+  it('joins the unit with one space and no trailing space when the unit is empty', async () => {
+    const withUnit = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="5" limit="10" unit="tokens"></lr-budget-meter>`);
+    expect(withUnit.shadowRoot!.querySelector('[part="meter"]')?.getAttribute('aria-valuetext')).to.equal('5 of 10 tokens');
+    const bare = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="5" limit="10"></lr-budget-meter>`);
+    expect(bare.shadowRoot!.querySelector('[part="value"]')?.textContent).to.equal('5 of 10');
+  });
+
   it('treats a zero or invalid limit as unavailable without a percentage or invalid arithmetic', async () => {
     const zero = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="12" limit="0"></lr-budget-meter>`);
     expect(Boolean(zero.shadowRoot!.querySelector('[part="meter"]'))).to.be.false;
@@ -59,5 +66,19 @@ describe('lr-budget-meter', () => {
     expect(value.left).to.be.at.least(host.left - 1);
     expect(value.right).to.be.at.most(host.right + 1);
     expect(getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!).direction).to.equal('rtl');
+  });
+});
+
+describe('lr-budget-meter heading', () => {
+  it('follows heading-level, drops heading semantics for none, and renders nothing for an empty label', async () => {
+    const heading = (el: LyraBudgetMeter): Element | null => el.shadowRoot!.querySelector('[part="label"]');
+    const el = await fixture<LyraBudgetMeter>(html`<lr-budget-meter used="1" limit="2" heading-level="4"></lr-budget-meter>`);
+    expect([heading(el)!.getAttribute('role'), heading(el)!.getAttribute('aria-level')]).to.deep.equal(['heading', '4']);
+    el.headingLevel = 'none';
+    await el.updateComplete;
+    expect(heading(el)!.getAttribute('role')).to.equal(null);
+    el.label = '';
+    await el.updateComplete;
+    expect(heading(el) === null).to.equal(true);
   });
 });

@@ -552,6 +552,9 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   // `.keys` normalizes against an empty schema and permanently discards every field.
   private _rawValue: unknown = EMPTY_VALUE;
   private _rawDefaultValue: unknown = EMPTY_VALUE;
+  // The last host-bound objects: re-binding the same reference must not discard the reviewer's entries.
+  private _boundKeys?: readonly RubricKey[];
+  private _boundValue?: unknown;
   private _valueDirty = false;
   private _itemId = '';
   private _hasNext = false;
@@ -639,6 +642,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return this._keys;
   }
   set keys(next: readonly RubricKey[]) {
+    if (next === this._boundKeys) return;
+    this._boundKeys = next;
     const old = this._keys;
     // Only the transition away from "no schema yet" re-normalizes from the caller's original,
     // pre-normalization input -- once a real schema is already in place, a later schema change
@@ -667,6 +672,8 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return cloneRubricValue(this._value);
   }
   set value(next: RubricValue) {
+    if (next === this._boundValue) return;
+    this._boundValue = next;
     this.setLiveValue(next, true);
   }
 
@@ -675,6 +682,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return cloneRubricValue(this._defaultValue);
   }
   set defaultValue(next: RubricValue) {
+    if (next === this._rawDefaultValue) return;
     const old = this._defaultValue;
     this._rawDefaultValue = next ?? EMPTY_VALUE;
     this._defaultValue = normalizeRubricValue(this._rawDefaultValue, this._keys);
@@ -997,7 +1005,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
 
   private setFieldValue(key: string, val: number | string | string[]): void {
     if (this.effectiveDisabled) return;
-    this.value = { ...this._value, [key]: val };
+    this.setLiveValue({ ...this._value, [key]: val }, true);
     this.emit('lr-input',
       Object.freeze({ value: cloneRubricValue(this._value) })
     );

@@ -1,8 +1,10 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { styles } from './agent-eval-dashboard.styles.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -10,21 +12,23 @@ import {
   agentStatusKind,
   agentStatusLabel,
   agentStatusMessage,
+  agentStatusText,
   agentStatusVariant,
   type AgentStatusValue,
 } from '../agent-status-presentation.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentity } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
 export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
-export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
+export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': CustomEvent<{ metricId: string }>; 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
 /**
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
  * and run-status history. It never launches or scores evaluations. Duplicate metric or run ids
@@ -34,7 +38,9 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change': CustomEven
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-agent-eval-dashboard
- * @event lr-metric-change - A host-controlled metric selection changed. `detail: { metricId }`.
+ * @event lr-metric-change-request - A metric card was activated; the host decides whether to change `metricId`.
+ *   `detail: { metricId }`.
+ * @event lr-metric-change - Deprecated alias of `lr-metric-change-request`, dispatched right after it.
  * @event lr-run-activate - A run row was activated. `detail: { runId, run }`.
  * @csspart base - The root dashboard wrapper.
  * @csspart heading - The visible heading.
@@ -70,6 +76,8 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
     collapse: LYRA_DEFAULT_collapse,
     details: LYRA_DEFAULT_details,
+    durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
+    durationSeconds: LYRA_DEFAULT_durationSeconds,
     evaluationDashboardLabel: LYRA_DEFAULT_evaluationDashboardLabel,
     evaluationDashboardNoRuns: LYRA_DEFAULT_evaluationDashboardNoRuns,
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
@@ -102,10 +110,14 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
    *  `evaluationDashboardLabel` message; an explicit empty string renders no visible/accessible
    *  label. */
   @property() label?: string;
+  /** Level of the visible heading, with the run history heading one level below it: `'1'`-`'6'`, or
+   *  `'none'` for no heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Suppresses the metric trend chart. */
   @property({ type: Boolean, attribute: 'without-chart', reflect: true }) withoutChart = false;
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
-  /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. */
+  /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. The
+   *  first N runs in input order are kept, so pass newest-first history to chart the most recent runs. */
   @property({ type: Number, attribute: 'max-rendered-runs' }) maxRenderedRuns = 100;
   private get normalizedMetrics(): AgentEvaluationMetric[] {
     return firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);
@@ -120,11 +132,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
       : metrics.find((metric) => metric.id === this.metricId) ?? metrics[0];
   }
   private statusLabel(status: AgentStatusValue): string {
-    const override = agentStatusLabel(status);
-    if (override !== undefined) return override;
-    const kind = agentStatusKind(status);
-    const keys: Record<string, string> = { idle: 'agentRunStatusIdle', queued: 'agentRunStatusQueued', running: 'statusRunning', collecting: 'agentRunStatusCollecting', 'waiting-input': 'agentRunStatusWaitingInput', 'waiting-approval': 'agentRunStatusWaitingApproval', done: 'agentRunStatusDone', error: 'statusError', cancelled: 'agentRunStatusCancelled' };
-    return keys[kind] ? this.localize(keys[kind]) : kind.replace(/[-_]+/g, ' ');
+    return agentStatusLabel(status) ?? agentStatusText(this.localize.bind(this), agentStatusKind(status));
   }
   private get projectedRuns(): AgentEvaluationDashboardRun[] {
     const limit = Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500));
@@ -139,12 +147,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
           maximumFractionDigits: 1,
         }).format(safe);
       case 'milliseconds':
-        return getNumberFormat(this.effectiveLocale, {
-          style: 'unit',
-          unit: 'millisecond',
-          unitDisplay: 'short',
-          maximumFractionDigits: 0,
-        }).format(safe);
+        return formatShortDuration(this.localize.bind(this), this.effectiveLocale, safe);
       case 'currency': {
         try {
           return getNumberFormat(this.effectiveLocale, {
@@ -167,7 +170,9 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   private renderRuns(runs: AgentEvaluationDashboardRun[]): TemplateResult {
     if (!runs.length) return html`<p part="empty">${this.localize('evaluationDashboardNoRuns')}</p>`;
     const active = this.activeMetric;
-    return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><h3 part="runs-heading">${this.localize('evaluationDashboardRunsLabel')}</h3>${runs.map((run) => {
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const runsLevel = level && String(Math.min(6, Number(level) + 1));
+    return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><div part="runs-heading" role=${runsLevel ? 'heading' : nothing} aria-level=${runsLevel || nothing}>${this.localize('evaluationDashboardRunsLabel')}</div>${repeat(runs, (run) => run.id, (run) => {
       const kind = agentStatusKind(run.status);
       const message = agentStatusMessage(run.status);
       return html`<button part="run" type="button" @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${agentStatusVariant(run.status, AGENT_STATUS_VARIANTS[kind] ?? 'neutral')}>${this.statusLabel(run.status)}</lr-badge>${message !== undefined ? html`<span part="run-status-message">${message}</span>` : nothing}${active && run.metrics?.[active.id] != null ? html`<span>${this.formatMetric(active, run.metrics[active.id])}</span>` : nothing}</span></button>`;
@@ -183,10 +188,11 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
       const value = active ? run.metrics?.[active.id] : undefined;
       return value != null && Number.isFinite(value) ? value : null;
     });
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`<section part="base" aria-label=${semanticLabel ?? nothing}>
-      <h2 part="heading">${label}</h2>
+      ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${metrics.length
-        ? html`<div part="metrics">${metrics.map((metric) => {
+        ? html`<div part="metrics">${repeat(metrics, (metric) => metric.id, (metric) => {
             const value = this.formatMetric(metric);
             return html`<button
               part="metric"
@@ -194,7 +200,10 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
               data-metric-id=${metric.id}
               aria-pressed=${active?.id === metric.id ? 'true' : 'false'}
               aria-label=${this.localize('chartValueLabel', undefined, { label: metric.label, value })}
-              @click=${() => this.emit('lr-metric-change', { metricId: metric.id })}
+              @click=${() => {
+                this.emit('lr-metric-change-request', { metricId: metric.id });
+                this.emit('lr-metric-change', { metricId: metric.id });
+              }}
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}

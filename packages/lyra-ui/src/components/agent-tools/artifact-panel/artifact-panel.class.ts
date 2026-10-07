@@ -165,9 +165,9 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
+    this.seedFirstRenderState(() => {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
-    }
+    });
     if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
     if (
       this.activeVersionId !== null &&
@@ -193,6 +193,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   }
 
   private setView(view: ArtifactPanelView): void {
+    if (view === this.view) return;
     this.view = view;
     this.emit('lr-view-change', { view });
   }

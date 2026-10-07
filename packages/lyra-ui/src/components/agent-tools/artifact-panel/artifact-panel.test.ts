@@ -100,6 +100,28 @@ describe('lr-artifact-panel', () => {
     expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
   });
 
+  it('does not re-emit lr-view-change when the already active view is pressed again', async () => {
+    const el = (await fixture(html`<lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>`)) as LyraArtifactPanel;
+    let changes = 0;
+    el.addEventListener('lr-view-change', () => changes++);
+    (el.shadowRoot!.querySelector('[part="view-button"][data-view="preview"]') as HTMLButtonElement).click();
+    expect(changes).to.equal(0);
+    (el.shadowRoot!.querySelector('[part="view-button"][data-view="code"]') as HTMLButtonElement).click();
+    expect(changes).to.equal(1);
+  });
+
+  it('paints its resting buttons with the themed text colour instead of the system button colour', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel style="--lr-color-text: rgb(1, 2, 3)" copy-text="x" download-src="https://example.test/a.txt">
+        <pre slot="code">code</pre>
+      </lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    const colors = ['[part="view-button"][aria-pressed="false"]', '[part="copy-button"]', '[part="download-button"]']
+      .map((selector) => getComputedStyle(el.shadowRoot!.querySelector(selector)!).color);
+    expect(colors).to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(1, 2, 3)']);
+  });
+
   it('view-button activation emits lr-view-change and updates view', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>

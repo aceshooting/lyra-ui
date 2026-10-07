@@ -180,8 +180,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   /** Accessible name for the studio region. It is independent from the visible `heading`; when
    * absent, the heading text names the region. A host `aria-label` remains authoritative. */
   @property() label = '';
-  /** Visible toolbar heading. Falls back to the localized “Prompt studio” string. */
-  @property() heading = '';
+  /** Visible toolbar heading. Omission localizes “Prompt studio”; any supplied string, including
+   *  `''`, is rendered verbatim. */
+  @property() heading?: string;
   /** Semantic level of the visible toolbar heading. Use `none` to keep the visual heading text
    *  without exposing it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
@@ -233,7 +234,9 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private variableItems(source: unknown = this.variables): readonly PromptStudioVariable[] {
-    return Array.isArray(source) ? source : [];
+    return Array.isArray(source)
+      ? source.filter((variable) => typeof variable?.name === 'string' && typeof variable.value === 'string')
+      : [];
   }
 
   private uniqueMessages(source: unknown = this.messages): PromptStudioMessage[] {
@@ -292,7 +295,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         return false;
       }
       this.messages = proposal.messages;
-      this.variables = proposal.variables;
+      if (variables !== previousVariables) this.variables = proposal.variables;
     } finally {
       this.changeRequestPending = false;
     }
@@ -558,6 +561,13 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     </button>`;
   }
 
+  /** A section title one level below the toolbar heading; `none` keeps the text without heading semantics. */
+  private renderSubheading(text: string): TemplateResult {
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
+    const sub = level && String(Math.min(6, Number(level) + 1));
+    return html`<div class="subheading" role=${sub ? 'heading' : nothing} aria-level=${sub || nothing}>${text}</div>`;
+  }
+
   /** The toolbar heading at `headingLevel`; `none` keeps the text without heading semantics. */
   private renderHeading(text: string): TemplateResult {
     switch (resolveHeadingLevel(this.headingLevel ?? '2')) {
@@ -579,7 +589,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   override render(): TemplateResult {
-    const heading = this.heading || this.localize('promptStudioLabel');
+    const heading = this.heading ?? this.localize('promptStudioLabel');
     const label = this.label || heading;
     const messages = this.uniqueMessages();
     const variables = this.variableItems();
@@ -615,7 +625,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
           ${variables.length
             ? html`
                 <section part="variables" aria-label=${this.localize('promptStudioVariables')}>
-                  <h3>${this.localize('promptStudioVariables')}</h3>
+                  ${this.renderSubheading(this.localize('promptStudioVariables'))}
                   ${variables.map((variable, index) => {
                     const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
                     return html`
@@ -672,7 +682,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
             : nothing}
         </div>
         <section part="preview" aria-label=${this.localize('promptStudioPreview')}>
-          <h3>${this.localize('promptStudioPreview')}</h3>
+          ${this.renderSubheading(this.localize('promptStudioPreview'))}
           ${previews === null
             ? html`<p>${this.localize('promptStudioPreviewLimit')}</p>`
             : messages.map(

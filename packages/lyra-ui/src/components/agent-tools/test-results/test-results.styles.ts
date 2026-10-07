@@ -27,7 +27,7 @@ export const styles = css`
   [part='filter-toggle'] {
     font: inherit;
     font-size: var(--lr-font-size-xs);
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
@@ -84,7 +84,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: baseline;
     column-gap: var(--lr-space-xs);
-    border-block-start: var(--lr-size-1px) solid var(--lr-color-border-subtle);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     padding-block: var(--lr-space-xs);
   }
   [part='test-status'] {
@@ -126,7 +126,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     background: none;
-    border: var(--lr-size-1px) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     color: var(--lr-color-text-quiet);
     cursor: pointer;

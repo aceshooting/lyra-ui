@@ -124,11 +124,12 @@ describe('lr-agent-trace', () => {
     const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${malformed}></lr-agent-trace>`);
     await el.updateComplete;
     const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
-    expect(tree.spans.length).to.be.at.most(500);
-    expect(tree.spans.filter((span) => span.id === 'span-0')).to.have.length(1);
-    expect(tree.spans.find((span) => span.id === 'span-1')!.kind).to.equal('other');
-    expect(tree.spans.find((span) => span.id === 'span-2')!.status).to.equal('pending');
-    expect(tree.spans.some((span) => span.id === 'not-finite')).to.be.false;
+    const root = tree.shadowRoot!;
+    expect(root.querySelectorAll('[part="row"]').length).to.be.at.most(500);
+    expect(root.querySelectorAll('[data-id="span-0"]')).to.have.length(1);
+    expect(root.querySelector('[data-id="span-1"]')!.getAttribute('aria-label')).to.contain('Other');
+    expect(root.querySelector('[data-id="span-2"] [part="status-text"]')!.textContent).to.equal('Pending');
+    expect(root.querySelector('[data-id="not-finite"]') === null).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('[part="handoff"]')).to.have.length(1);
   });
 
@@ -148,7 +149,7 @@ describe('lr-agent-trace', () => {
     );
   });
 
-  it('filters the spans passed into lr-trace-tree when a filter legend item is toggled off, and reflects hiddenKinds', async () => {
+  it('hides a kind in lr-trace-tree when a filter legend item is toggled off, and reflects hiddenKinds', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
     const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
@@ -159,8 +160,10 @@ describe('lr-agent-trace', () => {
     await el.updateComplete;
     expect(el.hiddenKinds).to.deep.equal(['tool']);
     const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
-    expect(tree.spans.map((s) => s.id)).to.not.include('search');
-    expect(tree.spans.length).to.equal(SPANS.length - 1);
+    await tree.updateComplete;
+    expect(tree.hiddenKinds).to.deep.equal(['tool']);
+    expect(tree.shadowRoot!.querySelector('[data-id="search"]') === null).to.equal(true);
+    expect(tree.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(SPANS.length - 1);
   });
 
   it('contains the graph event and emits the agent-owned span visibility contract', async () => {
@@ -473,6 +476,33 @@ describe('lr-agent-trace', () => {
     expect(tree.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
     expect(tree.shadowRoot!.querySelector('[data-id="reserved-parent"]') !== null).to.equal(true);
     expect(tree.shadowRoot!.querySelector('[data-id="reserved-active"]')?.getAttribute('aria-current')).to.equal('true');
+  });
+
+  it('shows the span limit notice and keeps the bars on the whole trace while a kind is hidden', async () => {
+    const spans: LyraSpan[] = [
+      ...Array.from({ length: 500 }, (_unused, index) => ({
+        id: `early-${index}`, name: `Early ${index}`, kind: index === 0 ? ('llm' as const) : ('tool' as const),
+        startMs: 0, endMs: 1000, status: 'success' as const,
+      })),
+      { id: 'late', name: 'Late', kind: 'tool', startMs: 9000, endMs: 10_000, status: 'success' },
+    ];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans} .hiddenKinds=${['llm']}></lr-agent-trace>`);
+    const tree = el.shadowRoot!.querySelector('lr-trace-tree') as LyraTraceTree;
+    await tree.updateComplete;
+    expect(tree.shadowRoot!.querySelector('[part="limit"]') !== null).to.equal(true);
+    expect(tree.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('style')).to.contain('inline-size:10%');
+  });
+
+  it('keeps a handoff entry on its own span when an earlier agent span is added', async () => {
+    const agents: LyraSpan[] = [
+      { id: 'a1', name: 'Planner', kind: 'agent', status: 'success', startMs: 1 },
+      { id: 'a2', name: 'Writer', kind: 'agent', status: 'success', startMs: 2 },
+    ];
+    const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${agents}></lr-agent-trace>`);
+    const before = el.shadowRoot!.querySelectorAll('[part="handoff"]')[1];
+    el.spans = [{ id: 'a0', name: 'Router', kind: 'agent', status: 'success', startMs: 0 }, ...agents];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="handoff"]')[2] === before).to.equal(true);
   });
 
   it('renders lr-trace-tree even with an empty spans array, deferring to its own empty state', async () => {

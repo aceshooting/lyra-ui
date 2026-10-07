@@ -907,3 +907,19 @@ for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3
     }
   });
 }
+
+it('lets a host veto a header toggle through lr-toggle-request', async () => {
+  const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+  const requests: boolean[] = [];
+  let toggles = 0;
+  el.addEventListener('lr-toggle-request', (event) => {
+    requests.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+    event.preventDefault();
+  });
+  el.addEventListener('lr-toggle', () => toggles++);
+  (el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(requests).to.deep.equal([false]);
+  expect(el.collapsed).to.equal(false);
+  expect(toggles).to.equal(0);
+});

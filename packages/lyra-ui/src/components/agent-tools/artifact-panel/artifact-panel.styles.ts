@@ -54,6 +54,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     background: var(--lr-color-surface);
+    color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
@@ -65,7 +66,7 @@ export const styles = css`
   }
   [part='restore-button'], [part='copy-button'], [part='download-button'] {
     box-sizing: border-box; min-block-size: var(--lr-size-1-5rem);
-    font: inherit; font-size: var(--lr-font-size-xs); background: var(--lr-color-surface);
+    font: inherit; font-size: var(--lr-font-size-xs); background: var(--lr-color-surface); color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
     padding: var(--lr-space-2xs) var(--lr-space-s); cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);

@@ -363,6 +363,23 @@ describe('lr-eval-result', () => {
   });
 });
 
+it('keeps an in-progress review across a runs refresh and re-seeds it when another run is selected', async () => {
+  const el = await fixture<LyraEvalResult>(html`
+    <lr-eval-result .runs=${RUNS} .columns=${COLUMNS} .rubricKeys=${RUBRIC_KEYS} selected-run-id="run-b"></lr-eval-result>
+  `);
+  const form = el.shadowRoot!.querySelector<LyraRubricForm>('lr-rubric-form')!;
+  form.shadowRoot!.querySelector('[data-key="notes"] lr-textarea')!.dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'Draft' }, bubbles: true, composed: true }),
+  );
+  el.runs = RUNS.map((run) => ({ ...run, review: run.review && { ...run.review } }));
+  el.disabled = true;
+  await el.updateComplete;
+  expect(form.value).to.deep.equal({ accuracy: 5, notes: 'Draft' });
+  el.selectedRunId = 'run-a';
+  await el.updateComplete;
+  expect(form.value).to.deep.equal({});
+});
+
 it('normalizes duplicate run, column, and rubric identities first-wins before composition', async () => {
   const el = await fixture<LyraEvalResult>(html`
     <lr-eval-result

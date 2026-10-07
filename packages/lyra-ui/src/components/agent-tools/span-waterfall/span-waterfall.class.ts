@@ -1,14 +1,14 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { durationMessageValue } from '../../../internal/duration.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { styles } from './span-waterfall.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -116,7 +116,6 @@ export interface LyraSpanWaterfallEventMap {
  * @csspart duration - The formatted duration text.
  * @csspart empty - The empty-state message shown when `spans` is empty.
  * @csspart limit - Localized notice shown when the shared 500-span projection ceiling is reached.
- * @csspart live-region - The internal focus/status-announcement live region.
  * @cssprop [--lr-span-waterfall-name-width=8rem] - Width of the name gutter column.
  * @cssprop [--lr-span-waterfall-stripe-speed=var(--lr-duration-ambient)] - Animation duration for a
  *   `running` span's striped bar. The fallback is the bare-duration `--lr-duration-ambient`, not the
@@ -125,6 +124,8 @@ export interface LyraSpanWaterfallEventMap {
  * @cssprop [--lr-span-waterfall-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-span-waterfall-row-active-color=var(--lr-color-text)] - Status and duration text colour
+ *   of the active row.
  * @cssprop [--lr-span-waterfall-success-color=var(--lr-color-success)] - Success bar fill.
  * @cssprop [--lr-span-waterfall-error-color=var(--lr-color-danger)] - Error bar fill.
  * @cssprop [--lr-span-waterfall-denied-color=var(--lr-color-warning)] - Denied bar fill.
@@ -192,7 +193,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
   /** Hides the time-ruler row (`[part="axis"]`). */
   @property({ type: Boolean, attribute: 'without-axis' }) withoutAxis = false;
-  @property() label = '';
+  /** Accessible name of the list. Omission localizes the default; any supplied string, including
+   *  `''`, is used verbatim. A host `aria-label` wins. */
+  @property() label?: string;
 
   private focusedId: string | null = null;
   private sortedSource?: readonly LyraSpan[];
@@ -201,13 +204,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private sortedCacheTruncated = false;
   /** Trace extent measured before the projection cap, so a truncated tail cannot shrink the axis. */
   private sortedCacheExtentEndMs = 0;
+  private axisSignature = '';
   private axisObserver?: ResizeObserver;
   private observedAxis?: Element;
   private limitAnnouncementSink?: AnnouncementSink;
   private limitAnnouncementInitialized = false;
   private previouslyTruncated = false;
-
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -291,12 +293,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private formatDuration(ms: number | undefined): string {
     if (ms == null || !Number.isFinite(ms)) return '';
-    const duration = durationMessageValue(ms);
-    return this.localize(duration.key, undefined, {
-      value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
-      }).format(duration.value),
-    });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   private projectionLimitText(): string {
@@ -309,24 +306,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     if (!span) return;
     const previous = this.renderRoot.querySelector<HTMLElement>('[part="bar"][tabindex="0"]');
     this.focusedId = span.id;
-    this.announceFocus(span);
     previous?.setAttribute('tabindex', '-1');
     const next = this.renderedBarById(span.id);
     next?.setAttribute('tabindex', '0');
     next?.focus();
-  }
-
-  private announceFocus(span: LyraSpan): void {
-    const parts = [
-      span.name,
-      this.localize(KIND_LABEL_KEY[span.kind]),
-      this.localize(STATUS_LABEL_KEY[span.status]),
-      this.localize('spanStartedAtOffset', undefined, {
-        value: this.formatDuration(span.startMs) || this.localize('durationMilliseconds', undefined, { value: 0 }),
-      }),
-    ];
-    if (span.endMs != null) parts.push(this.formatDuration(span.endMs - span.startMs));
-    this.liveRegion?.announce(parts.join(this.localize('accessibleLabelSeparator')), { force: true });
   }
 
   private selectRow(id: string): void {
@@ -426,7 +409,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.sortedCacheTruncated;
     this.observeAxis();
-    if ([...changed.keys()].some((key) => key !== 'activeSpanId' && key !== 'focusedId')) this.fitAxisLabels();
+    const view = this.viewWindow();
+    const axisSignature = `${view.start}|${view.end}|${this.effectiveLocale}`;
+    if (axisSignature !== this.axisSignature) {
+      this.axisSignature = axisSignature;
+      this.fitAxisLabels();
+    }
   }
 
   private observeAxis(): void {
@@ -514,6 +502,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       span.name,
       this.localize(KIND_LABEL_KEY[span.kind]),
       this.localize(STATUS_LABEL_KEY[span.status]),
+      this.localize('spanStartedAtOffset', undefined, {
+        value: this.formatDuration(span.startMs) || this.localize('durationMilliseconds', undefined, { value: 0 }),
+      }),
       durationLabel,
     ].filter(Boolean);
     return html`
@@ -553,18 +544,17 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${hostAriaLabel(this) ?? (this.label || this.localize('spanWaterfall'))}
+        aria-label=${hostAriaLabel(this) ?? this.label ?? this.localize('spanWaterfall')}
         @keydown=${this.onKeyDown}
       >
         ${!this.withoutAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
+          : repeat(rows, (span) => span.id, (span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
       </div>
       ${this.sortedCacheTruncated
         ? html`<p part="limit" role="note">${this.projectionLimitText()}</p>`
         : nothing}
-      <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;
   }
 }

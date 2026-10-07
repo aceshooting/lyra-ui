@@ -124,6 +124,8 @@ interface CanonicalToolTimelineEntry {
   readonly approved?: boolean;
 }
 
+let resultViewRegistration: Promise<unknown> | undefined;
+
 const MAX_RENDERED_ENTRIES = 500;
 const TOOL_STATUSES: ReadonlySet<ToolCallStatus> = new Set<ToolCallStatus>(TOOL_CALL_STATUSES);
 
@@ -438,6 +440,11 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Registered on first need, so a timeline whose details never open never loads the result view.
+    if (this.openedEntryIds.size > 0)
+      resultViewRegistration ??= import('../tool-result-view/tool-result-view.js').catch(
+        () => (resultViewRegistration = undefined)
+      );
     if (!changed.has('entries')) return;
     this.rebuildProjection();
     const projected = this.projectedEntriesCache;

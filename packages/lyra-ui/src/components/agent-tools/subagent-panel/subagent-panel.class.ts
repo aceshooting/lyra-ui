@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { AgentStatusKind } from '../../../ai/types.js';
 import {
@@ -13,6 +14,8 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { agentStatusText } from '../agent-status-presentation.js';
+import { isRtl } from '../../../internal/rtl.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import '../../overlays/badge/badge.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -20,7 +23,7 @@ import { styles } from './subagent-panel.styles.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_subagentPanelCancelRun, LYRA_DEFAULT_subagentPanelEmpty, LYRA_DEFAULT_subagentPanelLabel, LYRA_DEFAULT_subagentPanelLimit, LYRA_DEFAULT_subagentPanelRetry, LYRA_DEFAULT_subagentPanelRetryRun } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface SubagentRun {
@@ -38,6 +41,7 @@ export interface SubagentRun {
 }
 export interface LyraSubagentPanelEventMap {
   'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>;
+  'lr-run-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
   'lr-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
   'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
@@ -68,7 +72,8 @@ interface OrderedRuns {
  *
  * @customElement lr-subagent-panel
  * @event lr-run-activate - A complete subagent run was activated. `detail: { runId, run }`.
- * @event lr-cancel - Cancellation was requested for an active run.
+ * @event lr-run-cancel - Cancellation was requested for an active run. `detail: { runId }`.
+ * @event lr-cancel - Deprecated alias of `lr-run-cancel`, dispatched right after it.
  * @event lr-run-retry - Retry was requested for an errored/cancelled run.
  * @csspart base - The named subagent region.
  * @csspart list - Hierarchical run list.
@@ -124,7 +129,14 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
     agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
     agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
+    collapse: LYRA_DEFAULT_collapse,
+    details: LYRA_DEFAULT_details,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
     progress: LYRA_DEFAULT_progress,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     subagentPanelCancelRun: LYRA_DEFAULT_subagentPanelCancelRun,
@@ -143,6 +155,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
+    'lr-run-cancel',
     'lr-cancel',
     'lr-run-retry',
   ]);
@@ -171,7 +184,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
   @state() private focusedId: string | null = null;
   /**
-   * Cache of `ordered()`'s result, refreshed only in `willUpdate()` when `runs` changes. Reading
+   * Cache of `ordered()`'s result, refreshed only in `willUpdate()` when `runs` or `selectedRunId` changes. Reading
    * this instead of recomputing avoids re-flattening/re-validating the whole tree on every
    * keystroke (`onKeyDown`) and every render.
    */
@@ -207,18 +220,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   }
 
   private statusLabel(status: AgentStatusKind): string {
-    switch (status) {
-      case 'idle': return this.localize('agentRunStatusIdle');
-      case 'queued': return this.localize('agentRunStatusQueued');
-      case 'running': return this.localize('statusRunning');
-      case 'collecting': return this.localize('agentRunStatusCollecting');
-      case 'waiting-input': return this.localize('agentRunStatusWaitingInput');
-      case 'waiting-approval': return this.localize('agentRunStatusWaitingApproval');
-      case 'done': return this.localize('agentRunStatusDone');
-      case 'error': return this.localize('statusError');
-      case 'cancelled': return this.localize('agentRunStatusCancelled');
-      default: return status;
-    }
+    return agentStatusText(this.localize.bind(this), status);
   }
 
   private ordered(): OrderedRuns {
@@ -306,7 +308,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('runs')) {
+    if (changed.has('runs') || changed.has('selectedRunId')) {
       this.orderedRunsCache = this.ordered();
       const rows = this.orderedRunsCache.rows;
       const ids = new Set(rows.map((row) => row.run.id));
@@ -361,6 +363,8 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const { rows } = this.orderedRunsCache;
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((r) => r.run.id === this.focusedId);
+    const depth = rows[currentIndex]?.depth ?? 0;
+    const [childKey, parentKey] = isRtl(this) ? ['ArrowLeft', 'ArrowRight'] : ['ArrowRight', 'ArrowLeft'];
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -377,6 +381,16 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
       case 'End':
         e.preventDefault();
         this.focusRow(rows[rows.length - 1]);
+        break;
+      case childKey: {
+        e.preventDefault();
+        const child = rows[currentIndex + 1];
+        if (child && child.depth > depth) this.focusRow(child);
+        break;
+      }
+      case parentKey:
+        e.preventDefault();
+        this.focusRow(rows.slice(0, Math.max(currentIndex, 0)).reverse().find((row) => row.depth < depth));
         break;
       case 'Enter':
       case ' ': {
@@ -408,6 +422,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     const progress = typeof run.progressRatio === 'number' ? finiteRange(run.progressRatio, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
     const tabbable = this.focusedId === run.id || (this.focusedId == null && run.id === firstId);
+    const buttonTabindex = tabbable ? nothing : '-1';
     return html`
       <li
         part=${runPart}
@@ -415,6 +430,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
         data-depth=${depth}
         role="treeitem"
         tabindex=${tabbable ? '0' : '-1'}
+        aria-selected=${selected ? 'true' : 'false'}
         aria-level=${depth + 1}
         aria-posinset=${posInSet}
         aria-setsize=${setSize}
@@ -424,7 +440,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
           <button
             part="run-trigger"
             type="button"
-            aria-pressed=${selected ? 'true' : 'false'}
+            tabindex=${buttonTabindex}
             @click=${() => this.emit('lr-run-activate', { runId: run.id, run })}
           >
             <span part="label">${run.label}</span>
@@ -447,14 +463,19 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               ? html`<button
                   part="cancel"
                   type="button"
+                  tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
-                  @click=${() => this.emit('lr-cancel', { runId: run.id })}
+                  @click=${() => {
+                    this.emit('lr-run-cancel', { runId: run.id });
+                    this.emit('lr-cancel', { runId: run.id });
+                  }}
                 >×</button>`
               : nothing}
             ${run.status === 'error' || run.status === 'cancelled'
               ? html`<button
                   part="retry"
                   type="button"
+                  tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
                   @click=${() => this.emit('lr-run-retry', { runId: run.id })}
                 >${this.localize('subagentPanelRetry')}</button>`
@@ -480,7 +501,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
               aria-label=${label}
               @keydown=${this.onKeyDown}
               @focusin=${this.onFocusIn}
-            >${ordered.rows.map((row) => this.renderRun(row, firstId))}</ul>
+            >${repeat(ordered.rows, (row) => row.run.id, (row) => this.renderRun(row, firstId))}</ul>
               ${ordered.truncated
                 ? html`<p part="limit">${this.localize('subagentPanelLimit', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),

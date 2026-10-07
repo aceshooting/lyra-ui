@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { firstByIdentity } from '../collection-identity.js';
 import { styles } from './change-review.styles.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings.generated.js';
@@ -27,6 +28,7 @@ export interface ChangeReviewFile {
   hunks: readonly ChangeReviewHunk[];
 }
 export interface LyraChangeReviewEventMap {
+  'lr-change-decision-request': CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>;
   'lr-change-decision': CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>;
 }
 const MAX_CHANGES = 200;
@@ -41,7 +43,8 @@ const MAX_CHANGES = 200;
  * `<lr-diff-view>`'s input ceiling. Readonly retains file disclosure and diff reading.
  *
  * @customElement lr-change-review
- * @event lr-change-decision - A keep/discard request. `detail: { fileId, hunkId, decision }`.
+ * @event lr-change-decision-request - A keep/discard request. `detail: { fileId, hunkId, decision }`.
+ * @event lr-change-decision - Deprecated alias of `lr-change-decision-request`, dispatched right after it.
  * @csspart base - The named review group.
  * @csspart heading - The review heading.
  * @csspart file - A file disclosure.
@@ -82,6 +85,8 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
   @property({ attribute: false }) files: readonly ChangeReviewFile[] = [];
   /** Disable decision controls while preserving readable changes and disclosure. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Level of the visible title: `'1'`-`'6'`, or `'none'` for no heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Hide decision actions while preserving their current state. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Visible heading and accessible name. Omission uses the localized default. */
@@ -104,6 +109,7 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
     if (file !== renderedFile || hunk !== renderedHunk || this.decision(hunk) === decision) return;
     this.decisionDispatching = true;
     try {
+      this.emit('lr-change-decision-request', { fileId: file.id, hunkId: hunk.id, decision });
       this.emit('lr-change-decision', { fileId: file.id, hunkId: hunk.id, decision });
     } finally {
       this.decisionDispatching = false;
@@ -139,8 +145,9 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
       return { file, hunks: retained };
     });
     const label = this.label ?? this.localize('changeReviewLabel');
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`<div part="base" role="group" aria-label=${this.getAttribute('aria-label') ?? label}>
-      <h2 part="heading">${label}</h2>
+      ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${visible.length === 0 ? html`<p part="empty">${this.localize('changeReviewEmpty')}</p>` : repeat(visible, ({ file }) => file.id, ({ file, hunks }) => html`
         <details part="file" open>
           <summary part="file-header">${file.path}${file.previousPath ? html`<span part="previous-path">${file.previousPath}</span>` : nothing}</summary>

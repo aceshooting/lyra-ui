@@ -6,6 +6,7 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './budget-meter.styles.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_budgetMeterExceeded, LYRA_DEFAULT_budgetMeterLabel, LYRA_DEFAULT_budgetMeterPercent, LYRA_DEFAULT_budgetMeterUnavailable, LYRA_DEFAULT_budgetMeterValue } from '../../../internal/default-strings.generated.js';
@@ -50,6 +51,8 @@ export class LyraBudgetMeter extends LyraElement {
   @property({ type: Number }) limit = 0;
   /** Optional host-supplied unit label, shown with the actual quantities. */
   @property() unit?: string;
+  /** Level of the visible title: `'1'`-`'6'`, or `'none'` for no heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Accessible group name and visible label. */
   @property() label?: string;
 
@@ -69,8 +72,8 @@ export class LyraBudgetMeter extends LyraElement {
     return this.localize('budgetMeterValue', undefined, {
       used: this.formatValue(this.safeUsed),
       limit: this.formatValue(this.safeLimit),
-      unit: this.unit ? ` ${this.unit}` : '',
-    });
+      unit: this.unit ?? '',
+    }).trim();
   }
 
   override render(): TemplateResult {
@@ -85,9 +88,10 @@ export class LyraBudgetMeter extends LyraElement {
       maximumFractionDigits: 0,
     }).format(ratio) : '';
     const ariaValueNow = Math.min(used, limit);
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`
       <section part="base" role="group" aria-label=${hostLabel === null ? nothing : hostLabel}>
-        <h2 part="label">${visibleLabel}</h2>
+        ${visibleLabel === '' ? nothing : html`<div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>`}
         ${available
           ? html`
               <div

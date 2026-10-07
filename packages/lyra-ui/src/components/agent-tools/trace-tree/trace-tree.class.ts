@@ -1,8 +1,10 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, svg, nothing, type TemplateResult, type PropertyValues, type SVGTemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
@@ -192,7 +194,9 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['spans']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['spans', 'hiddenKinds']);
+  /** Span records carry opaque provider metadata, so they are kept by identity, not deep-cloned. */
+  protected static override readonly identityCollectionProperties = Object.freeze(['spans']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -206,6 +210,9 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * marks a span that ended without a result.
    */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
+  /** Span kinds left out of the tree. A span whose parent is hidden becomes a root, and the bars keep
+   *  scaling to the whole trace. */
+  @property({ attribute: false }) hiddenKinds: readonly LyraSpan['kind'][] = [];
   /** Controlled selection — the matching row carries `aria-current`/`data-active` and scrolls into view. */
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Optional accessible-name override for the `role="tree"` element. Omission localizes the
@@ -257,8 +264,27 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     this.limitAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
   }
 
+  private hierarchyKey?: readonly unknown[];
+  private hierarchyCache?: SpanHierarchy;
+
+  private hierarchy(): SpanHierarchy {
+    const key = this.hierarchyKey;
+    if (!key || key[0] !== this.spans || key[1] !== this.activeSpanId || key[2] !== this.hiddenKinds) {
+      this.hierarchyKey = [this.spans, this.activeSpanId, this.hiddenKinds];
+      this.hierarchyCache = this.buildHierarchy();
+    }
+    return this.hierarchyCache!;
+  }
+
   private buildHierarchy(): SpanHierarchy {
-    const { spans, byId, truncated, extentEndMs } = normalizeLyraSpans(this.spans, this.activeSpanId);
+    const projection = normalizeLyraSpans(this.spans, this.activeSpanId);
+    const { truncated, extentEndMs } = projection;
+    let { spans, byId } = projection;
+    if (this.hiddenKinds.length > 0) {
+      const hidden = new Set(this.hiddenKinds);
+      spans = spans.filter((span) => !hidden.has(span.kind));
+      byId = new Map(spans.map((span) => [span.id, span]));
+    }
 
     const childrenOf = new Map<string, LyraSpan[]>();
     const parentOf = new Map<string, string>();
@@ -293,7 +319,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     return { spans, byId, childrenOf, parentOf, roots, truncated, extentEndMs };
   }
 
-  private buildRows(hierarchy = this.buildHierarchy()): SpanRow[] {
+  private buildRows(hierarchy = this.hierarchy()): SpanRow[] {
     const rows: SpanRow[] = [];
     const stack = [...hierarchy.roots]
       .reverse()
@@ -334,16 +360,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * the denominator and stretched every bar to fill its track -- a 1s span in a 10s trace drew at
    * 100% width. Capping the ROWS is a resource bound; rescaling the axis under them is a misreport.
    */
-  private traceExtent(hierarchy = this.buildHierarchy()): number {
+  private traceExtent(hierarchy = this.hierarchy()): number {
     return finiteNumber(hierarchy.extentEndMs, 0) || 1;
   }
 
   private formatDuration(ms: number | undefined): string {
-    if (ms == null) return '';
-    const number = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: ms < 1000 ? 0 : 1 });
-    return ms < 1000
-      ? this.localize('durationMilliseconds', undefined, { value: number.format(ms) })
-      : this.localize('durationSeconds', undefined, { value: number.format(ms / 1000) });
+    return ms == null ? '' : formatShortDuration(this.localize.bind(this), this.effectiveLocale, ms);
   }
 
   private formatNumber(n: number): string {
@@ -379,7 +401,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   /** Collapse every row that has children. */
   collapseAll(): void {
     const next = new Set<string>();
-    const hierarchy = this.buildHierarchy();
+    const hierarchy = this.hierarchy();
     const { byId, parentOf } = hierarchy;
     const hasChild = new Set(hierarchy.childrenOf.keys());
     for (const id of hasChild) next.add(id);
@@ -388,12 +410,13 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     // now-hidden descendant, re-point roving tabindex to its topmost ancestor (always a root, and
     // always still rendered) rather than leaving it pointed at a row that no longer exists.
     if (this.focusedId != null) {
-      let current = byId.get(this.focusedId);
+      const before = this.focusedId;
+      let current = byId.get(before);
       while (current && parentOf.has(current.id)) {
         current = byId.get(parentOf.get(current.id)!);
       }
       this.focusedId = current?.id ?? null;
-      if (current) {
+      if (current && current.id !== before && this.shadowRoot?.activeElement) {
         this.renderedRowById(current.id)?.focus();
       }
     }
@@ -475,8 +498,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('spans') || changed.has('activeSpanId') || changed.has('collapsedIds')) {
-      const hierarchy = this.buildHierarchy();
+    if (changed.has('spans') || changed.has('hiddenKinds') || changed.has('activeSpanId') || changed.has('collapsedIds')) {
+      const hierarchy = this.hierarchy();
       const ids = new Set(hierarchy.byId.keys());
       let pruned: Set<string> | null = null;
       for (const id of this.collapsedIds) {
@@ -535,7 +558,12 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         }
         return null;
       };
-      this.focusedId = visibleAncestor(this.activeSpanId) ?? visibleAncestor(this.focusedId) ?? rows[0]?.span.id ?? null;
+      this.focusedId =
+        visibleAncestor(changed.has('activeSpanId') ? this.activeSpanId : null) ??
+        visibleAncestor(this.focusedId) ??
+        visibleAncestor(this.activeSpanId) ??
+        rows[0]?.span.id ??
+        null;
     }
   }
 
@@ -553,7 +581,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if ((changed.has('activeSpanId') || changed.has('spans') || changed.has('collapsedIds')) && this.activeSpanId) {
+    if (changed.has('activeSpanId') && this.activeSpanId) {
       const row = this.renderedRowById(this.activeSpanId);
       if (row) {
         const ownerWindow = row.ownerDocument.defaultView;
@@ -682,7 +710,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   override render(): TemplateResult {
-    const hierarchy = this.buildHierarchy();
+    const hierarchy = this.hierarchy();
     this.renderedProjectionTruncated = hierarchy.truncated;
     const rows = this.buildRows(hierarchy);
     const firstId = rows[0]?.span.id;
@@ -696,7 +724,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       >
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : html`${this.withTokens || this.withCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
+          : html`${this.withTokens || this.withCost ? this.renderHeader() : nothing}${repeat(rows, (row) => row.span.id, (row) => this.renderRow(row, firstId, extent))}`}
         ${hierarchy.truncated
           ? html`<p part="limit" role="note">${this.localize('spanProjectionLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_LYRA_SPANS),

@@ -983,3 +983,47 @@ it('reads each failure-message line in its own direction under RTL', async () =>
   // than per line, so the per-line right-to-left behavior is asserted only where engines implement it.
   if (!isWebKit) expect(glyphRect(message, 'فشل').left).to.be.greaterThan(glyphRect(message, 'الاختبار').left);
 });
+
+describe('lr-test-results remediation', () => {
+  const rows = (statuses: string[]): never => [{
+    id: 's', name: 'Suite',
+    tests: statuses.map((status, index) => ({ id: `t${index}`, name: `Test ${index}`, status, message: 'boom' })),
+  }] as never;
+
+  it('counts error, timedOut and broken results as failed and opens their failure detail', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${rows(['error', 'timedOut', 'broken', 'weird'])}></lr-test-results>`);
+    const statuses = [...el.shadowRoot!.querySelectorAll('[part="test"]')].map((row) => row.getAttribute('data-status'));
+    expect(statuses).to.deep.equal(['failed', 'failed', 'failed', 'skipped']);
+    expect(el.shadowRoot!.querySelectorAll('[part="failure"]:not([hidden])').length).to.equal(3);
+  });
+
+  it('lets a host veto a failure-detail toggle through lr-toggle-request', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${rows(['failed'])} without-auto-expand-failures></lr-test-results>`);
+    const requests: unknown[] = [];
+    let toggles = 0;
+    el.addEventListener('lr-toggle-request', (event) => {
+      requests.push((event as CustomEvent).detail);
+      event.preventDefault();
+    });
+    el.addEventListener('lr-toggle', () => toggles++);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="test-expand-toggle"]')!.click();
+    await el.updateComplete;
+    expect(requests).to.deep.equal([{ suiteId: 's', testId: 't0', expanded: true }]);
+    expect(toggles).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="failure"]:not([hidden])').length).to.equal(0);
+  });
+
+  it('draws its filter and row borders from the border-width ladder', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results style="--lr-border-width-thin: 3px" .suites=${rows(['failed'])}></lr-test-results>`);
+    const width = (selector: string): string => getComputedStyle(el.shadowRoot!.querySelector(selector)!).borderTopWidth;
+    expect([width('[part="filter-toggle"]'), width('[part="test-expand-toggle"]')]).to.deep.equal(['3px', '3px']);
+  });
+
+  it('keeps a test row on its own test when the host prepends one', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${rows(['passed', 'failed'])}></lr-test-results>`);
+    const before = el.shadowRoot!.querySelectorAll('[part="test"]')[1];
+    el.suites = [{ id: 's', name: 'Suite', tests: [{ id: 'new', name: 'New', status: 'passed' }, ...(rows(['passed', 'failed']) as never as { tests: never[] }[])[0]!.tests] }] as never;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="test"]')[2] === before).to.equal(true);
+  });
+});

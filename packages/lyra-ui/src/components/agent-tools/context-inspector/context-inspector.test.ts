@@ -480,3 +480,13 @@ describe('template whitespace', () => {
     expect(textRect.top - partRect.top).to.be.lessThan(lineHeightPx(plainPart!));
   });
 });
+
+it('renders a segment whose redactions field is malformed instead of blanking the inspector', async () => {
+  const el = await fixture<LyraContextInspector>(html`
+    <lr-context-inspector .segments=${[
+      { id: 'a', label: 'A', text: 'abc', tokens: 1, redactions: {} },
+      { id: 'b', label: 'B', text: 'def', tokens: 1, redactions: [null, { start: 0, end: 1 }] },
+    ] as unknown as ContextInspectorSegment[]}></lr-context-inspector>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[part="segment"]').length).to.equal(2);
+});

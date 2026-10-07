@@ -5,7 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { durationMessageValue } from '../../../internal/duration.js';
+import { formatShortDuration } from '../../../internal/duration.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
@@ -15,7 +15,7 @@ import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
 import { firstByIdentity } from '../collection-identity.js';
-import { agentStatusKind, agentStatusMessage } from '../agent-status-presentation.js';
+import { agentStatusKind, agentStatusMessage, agentStatusText } from '../agent-status-presentation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings.generated.js';
@@ -30,25 +30,6 @@ const TICKING_KINDS: ReadonlySet<string> = new Set(['running', 'collecting', 'wa
 /** Terminal statuses for which a static (not live-ticking) duration applies, and for which the
  *  built-in Retry button becomes relevant (a subset -- see `canRetry`). */
 const TERMINAL_KINDS: ReadonlySet<string> = new Set(['done', 'error', 'cancelled']);
-
-/** Badge label per status. `running`/`error` reuse this library's existing generic `statusRunning`/
- *  `statusError` keys (identical wording already used by `<lr-task-list>`'s own per-item status
- *  text) rather than duplicating them. The other seven built-in kinds use agent-run-specific keys.
- *  `<lr-task-list>`'s own vocabulary (`pending`/`running`/`success`/`error`) is
- *  deliberately narrower than `AgentStatusKind` (see `AgentStatus`'s own doc comment in
- *  `src/ai/types.ts`) and collapsing e.g. `waiting-input`/`waiting-approval` down to it would
- *  discard exactly the distinction a host most needs to act on. */
-const STATUS_LABEL: Record<string, { key: string }> = {
-  idle: { key: 'agentRunStatusIdle' },
-  running: { key: 'statusRunning' },
-  queued: { key: 'agentRunStatusQueued' },
-  collecting: { key: 'agentRunStatusCollecting' },
-  'waiting-input': { key: 'agentRunStatusWaitingInput' },
-  'waiting-approval': { key: 'agentRunStatusWaitingApproval' },
-  done: { key: 'agentRunStatusDone' },
-  error: { key: 'statusError' },
-  cancelled: { key: 'agentRunStatusCancelled' },
-};
 
 /** Coarsens the broader `AgentStatusKind` down to `<lr-task-list>`'s own narrower `TaskStatus`
  *  vocabulary, for the default tasks-slot content only (see `defaultTaskItems()`). Both
@@ -90,9 +71,20 @@ export interface AgentRunMetric {
 /** Visual chrome for `<lr-agent-run>`'s root — the library's shared container-frame vocabulary. */
 export type AgentRunAppearance = LyraFrame;
 
+/** `detail` for `lr-run-cancel` and its deprecated alias `lr-cancel`. */
+export interface AgentRunCancelDetail extends CancelEventDetail {
+  runId: string;
+}
+
+/** `detail` for `lr-run-retry`. */
+export interface AgentRunRetryDetail extends RetryEventDetail {
+  runId: string;
+}
+
 export interface LyraAgentRunEventMap {
-  'lr-cancel': CustomEvent<CancelEventDetail>;
-  'lr-run-retry': CustomEvent<RetryEventDetail>;
+  'lr-run-cancel': CustomEvent<AgentRunCancelDetail>;
+  'lr-cancel': CustomEvent<AgentRunCancelDetail>;
+  'lr-run-retry': CustomEvent<AgentRunRetryDetail>;
 }
 
 /**
@@ -173,10 +165,10 @@ export interface LyraAgentRunEventMap {
  * @slot reasoning - Reasoning/thinking content. No default content.
  * @slot output - The run's final output content. No default content.
  * @slot actions - Extra header actions alongside the built-in Cancel/Retry buttons.
- * @event lr-cancel - The built-in Cancel button was activated. `detail: CancelEventDetail`
- *   (`{ reason }`, always `undefined` from the built-in button itself).
- * @event lr-run-retry - The built-in Retry button was activated. `detail: RetryEventDetail`
- *   (`{ attempt }`, a 1-based counter reset per `run.id`).
+ * @event lr-run-cancel - The built-in Cancel button was activated. `detail: { runId }`.
+ * @event lr-cancel - Deprecated alias of `lr-run-cancel`, dispatched right after it with the same detail.
+ * @event lr-run-retry - The built-in Retry button was activated. `detail: { runId, attempt }`
+ *   (`attempt` is a 1-based counter reset per `run.id`).
  * @csspart base - The root container.
  * @csspart empty - The `<lr-empty>` shown when `run` is `null`.
  * @csspart header - The header row wrapping status, elapsed time, current step, summary, and actions.
@@ -332,10 +324,10 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated) {
+    this.seedFirstRenderState(() => {
       this.hasHeaderSlot = this.hasSlotted('header');
       this.hasSummarySlot = this.hasSlotted('summary');
-    }
+    });
     if (changed.has('run') && this.run?.id !== this.previousRunId) {
       this.retryAttempt = 0;
     }
@@ -365,7 +357,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
 
   private handleRunChange(): void {
     const runId = this.run?.id;
-    const kind = this.run?.status.kind;
+    const kind = this.runKind;
     const isFreshRun = runId !== this.previousRunId;
     if (!isFreshRun && kind !== undefined && kind !== this.previousStatusKind && this.isAttentionKind(kind)) {
       this.announceStatus(kind);
@@ -388,11 +380,11 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private statusLabel(kind: AgentStatusKind): string {
-    const custom = this.statusLabels[kind];
-    if (custom) return custom;
-    const builtIn = STATUS_LABEL[kind];
-    if (builtIn) return this.localize(builtIn.key);
-    return kind.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+    return this.statusLabels[kind] || agentStatusText(this.localize.bind(this), kind);
+  }
+
+  private get runKind(): AgentStatusKind | undefined {
+    return this.run ? agentStatusKind(this.run.status) : undefined;
   }
 
   private get currentStep(): AgentStep | undefined {
@@ -404,7 +396,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private get isTicking(): boolean {
-    const kind = this.run?.status.kind;
+    const kind = this.runKind;
     return kind !== undefined && TICKING_KINDS.has(kind) && Number.isFinite(this.run?.startedAt);
   }
 
@@ -413,18 +405,13 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
    *  doc's "elapsed time" section for why a terminal run doesn't reuse the live ticker). */
   private get staticElapsedText(): string | undefined {
     const run = this.run;
-    if (!run || !TERMINAL_KINDS.has(run.status.kind)) return undefined;
+    if (!run || !TERMINAL_KINDS.has(agentStatusKind(run.status))) return undefined;
     const startedAt = run.startedAt;
     const endedAt = run.endedAt;
     if (startedAt == null || endedAt == null || !Number.isFinite(startedAt) || !Number.isFinite(endedAt)) {
       return undefined;
     }
-    const d = durationMessageValue(Math.max(0, endedAt - startedAt));
-    return this.localize(d.key, undefined, {
-      value: getNumberFormat(this.effectiveLocale, {
-        maximumFractionDigits: d.key === 'durationSeconds' ? 1 : 0,
-      }).format(d.value),
-    });
+    return formatShortDuration(this.localize.bind(this), this.effectiveLocale, endedAt - startedAt);
   }
 
   private get costText(): string {
@@ -436,22 +423,24 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   }
 
   private get canCancel(): boolean {
-    const kind = this.run?.status.kind;
+    const kind = this.runKind;
     return !this.withoutCancel && kind !== undefined && TICKING_KINDS.has(kind);
   }
 
   private get canRetry(): boolean {
-    const kind = this.run?.status.kind;
+    const kind = this.runKind;
     return !this.withoutRetry && (kind === 'error' || kind === 'cancelled');
   }
 
   private onCancelClick = (): void => {
-    this.emit('lr-cancel', {});
+    const runId = this.run?.id ?? '';
+    this.emit('lr-run-cancel', { runId });
+    this.emit('lr-cancel', { runId });
   };
 
   private onRetryClick = (): void => {
     this.retryAttempt += 1;
-    this.emit('lr-run-retry', { attempt: this.retryAttempt });
+    this.emit('lr-run-retry', { runId: this.run?.id ?? '', attempt: this.retryAttempt });
   };
 
   override render(): TemplateResult {
@@ -460,7 +449,8 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
 
-    const kind = run.status.kind;
+    const kind = agentStatusKind(run.status);
+    const message = agentStatusMessage(run.status);
     const step = this.currentStep;
     const ticking = this.isTicking;
     const staticElapsed = this.staticElapsedText;
@@ -481,7 +471,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
                     variant=${this.statusVariants[kind] ?? AGENT_STATUS_VARIANTS[kind] ?? 'neutral'}
                     >${this.statusLabel(kind)}</lr-badge
                   >
-                  ${run.status.message ? html`<span part="status-message">${run.status.message}</span>` : nothing}
+                  ${message ? html`<span part="status-message">${message}</span>` : nothing}
                 </div>
                 ${ticking
                   ? html`<lr-generation-metrics

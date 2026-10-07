@@ -62,6 +62,7 @@ const GIT_STATUS_KEY: Record<GitStatus, string> = {
 
 export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ filePath: string }>;
+  'lr-toggle-request': CustomEvent<{ expanded: boolean }>;
   'lr-toggle': CustomEvent<{ expanded: boolean; collapsed: boolean }>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
@@ -83,6 +84,8 @@ export interface LyraCommitCardEventMap {
  *
  * @customElement lr-commit-card
  * @event lr-file-select - `detail: { filePath }` — a file row was activated.
+ * @event lr-toggle-request - Cancelable proposal before the file-list fold changes. `detail: { expanded }` is the
+ *   requested state.
  * @event lr-toggle - `detail: { expanded, collapsed }` — the file-list fold changed.
  * @event lr-copy - `detail: { ok: true, text }` — the full-hash clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
@@ -304,8 +307,10 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   }
 
   private toggleFiles = (): void => {
-    this.filesExpanded = !this.filesExpanded;
-    this.emit('lr-toggle', { expanded: this.filesExpanded, collapsed: !this.filesExpanded });
+    const expanded = !this.filesExpanded;
+    if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    this.filesExpanded = expanded;
+    this.emit('lr-toggle', { expanded, collapsed: !expanded });
   };
 
   override render(): TemplateResult {

@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -7,6 +7,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import type { FlatToolParamSchema, LyraToolParamForm, ToolParamFormValue } from '../tool-param-form/tool-param-form.class.js';
 import { snapshotFormValue } from '../tool-param-form/tool-param-snapshot.js';
 import { styles } from './agent-question.styles.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentQuestionAccept, LYRA_DEFAULT_agentQuestionDecline, LYRA_DEFAULT_agentQuestionLabel, LYRA_DEFAULT_agentQuestionSubmitted, LYRA_DEFAULT_agentQuestionUnsupported, LYRA_DEFAULT_cancel } from '../../../internal/default-strings.generated.js';
@@ -73,7 +74,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze(['lr-question-input', 'lr-question-response']);
   static override styles = [LyraElement.styles, styles];
   /** Correlation identity. Blank identities disable all responses. */
@@ -84,10 +85,14 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   @property() message = '';
   /** Visible heading and accessible name; omission localizes the default. */
   @property() label?: string;
+  /** Level of the visible heading: `'1'`-`'6'`, or `'none'` for no heading semantics. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
   /** Supported flat primitive form schema. Unknown keywords block acceptance. */
   @property({ attribute: false })
   get schema(): FlatToolParamSchema { return this._schema; }
   set schema(value: FlatToolParamSchema) {
+    if (value === this.assignedSchema) return;
+    this.assignedSchema = value;
     const previous = this._schema;
     const snapshot = snapshotFormValue(value);
     this.schemaInvalid = snapshot.invalid || snapshot.truncated;
@@ -95,6 +100,8 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     this.requestUpdate('schema', previous);
   }
   private _schema: FlatToolParamSchema = Object.freeze({ type: 'object', properties: Object.freeze({}) });
+  // The last host-assigned objects: re-binding the same reference must not discard the typed draft.
+  private assignedSchema: unknown = this._schema;
   private schemaInvalid = false;
   private valueInvalid = false;
   /** Current draft. Nested input updates it; host assignments can replace it. */
@@ -102,9 +109,12 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   get value(): ToolParamFormValue { return this._value; }
   set value(value: ToolParamFormValue) {
     this.valueAssignedInCommit = true;
+    if (value === this.assignedValue) return;
+    this.assignedValue = value;
     this.setDraft(value);
   }
   private _value: ToolParamFormValue = Object.freeze({});
+  private assignedValue: unknown = this._value;
   private valueAssignedInCommit = false;
   private setDraft(value: ToolParamFormValue): void {
     const previous = this._value;
@@ -133,7 +143,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('requestId') && this.hasUpdated) {
-      if (!this.valueAssignedInCommit) this.setDraft(Object.freeze({}));
+      this.setDraft(this.valueAssignedInCommit ? (this.assignedValue as ToolParamFormValue) : Object.freeze({}));
       if (!this.statusAssignedInCommit) this.setStatus('pending');
     }
     this.valueAssignedInCommit = false;
@@ -209,8 +219,9 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
   override render(): TemplateResult {
     const requestId = this.requestId;
     const label = this.label ?? this.localize('agentQuestionLabel');
+    const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`<div part="base" role="group" aria-label=${this.getAttribute('aria-label') ?? label}>
-      <h2 part="heading">${label}</h2>
+      ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
       ${this.requester ? html`<p part="requester">${this.requester}</p>` : nothing}
       ${this.message ? html`<p part="message">${this.message}</p>` : nothing}
       ${this.supportedSchema ? html`<lr-tool-param-form .schema=${this.schema} .value=${this.value}

@@ -1,3 +1,4 @@
+/** @deprecated Import @aceshooting/lyra-ui/components/lr-change-review.js to register this component. */
 export * from './change-review.class.js';
 import { LyraChangeReview } from './change-review.class.js';
 import { defineElement } from '../../../internal/prefix.js';

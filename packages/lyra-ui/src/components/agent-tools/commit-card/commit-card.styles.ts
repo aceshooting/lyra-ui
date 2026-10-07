@@ -76,10 +76,12 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
   }
-  [part='additions'] {
+  [part='additions'],
+  [part='file-additions'] {
     color: var(--lr-color-success);
   }
-  [part='deletions'] {
+  [part='deletions'],
+  [part='file-deletions'] {
     color: var(--lr-color-danger);
   }
   [part='files-toggle'] {
@@ -116,6 +118,7 @@ export const styles = css`
     max-inline-size: 100%;
     background: none;
     border: none;
+    color: var(--lr-color-text);
     font: inherit;
     font-family: var(--lr-font-mono);
     text-align: start;
@@ -146,6 +149,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-font-size-xs);
     background: none;
+    color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);

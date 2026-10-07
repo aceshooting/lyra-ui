@@ -17,7 +17,6 @@ export interface StackGroup {
 export const DEFAULT_INTERNAL_PATTERNS: readonly (string | RegExp)[] = Object.freeze([
   'node_modules/',
   'node:internal',
-  '(native)',
   'site-packages/',
   'dist-packages/',
   '/usr/lib/python',
@@ -156,7 +155,7 @@ function matchFirefoxFrame(line: string): FirefoxFrame | null {
   const at = line.indexOf('@');
   if (at === -1) return null;
   const fn = line.slice(0, at);
-  if (/\s/.test(fn)) return null;
+  if (/\s/.test(fn) && !/^(?:global|module) code$/.test(fn)) return null;
   const rest = line.slice(at + 1);
   const lastColon = rest.lastIndexOf(':');
   const secondLastColon = lastColon === -1 ? -1 : rest.lastIndexOf(':', lastColon - 1);
@@ -172,13 +171,7 @@ function matchFirefoxFrame(line: string): FirefoxFrame | null {
 }
 
 function isInternal(file: string | undefined, patterns: readonly (string | RegExp)[]): boolean {
-  if (!file) return false;
-  return patterns.some((pattern) => {
-    if (typeof pattern === 'string') return file.includes(pattern);
-    // Test a clone without the stateful flags. Besides keeping classification deterministic, this
-    // preserves the caller's lastIndex even when RegExp.prototype.test throws.
-    return new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')).test(file);
-  });
+  return !!file && patterns.some((pattern) => (typeof pattern === 'string' ? file.includes(pattern) : pattern.test(file)));
 }
 
 /** Produces a selectable frame only when every supplied coordinate is a finite safe integer.
@@ -284,6 +277,10 @@ function parsePython(lines: string[], internalPatterns: readonly (string | RegEx
       if (isContinuation) {
         frame.raw += `\n${maybeSource}`;
         i++;
+        while (lines[i] !== undefined && /^[\s~^]+$/.test(lines[i]!) && /[~^]/.test(lines[i]!)) {
+          frame.raw += `\n${lines[i]}`;
+          i++;
+        }
       }
       continue;
     }
@@ -364,9 +361,11 @@ export function parseStackTrace(trace: string, options: StackTraceParseOptions =
   // A standalone Python-looking frame is not a traceback. Requiring the header also makes mixed
   // provider logs deterministic instead of choosing Python based on one incidental line.
   const isPython = bounded.lines.some((line) => PYTHON_HEADER.test(line));
-  const parsed = isPython
-    ? parsePython(bounded.lines, options.internalPatterns ?? DEFAULT_INTERNAL_PATTERNS)
-    : parseJs(bounded.lines, options.internalPatterns ?? DEFAULT_INTERNAL_PATTERNS);
+  // Clones without the stateful flags: classification stays deterministic and the caller's lastIndex is never touched.
+  const patterns = (options.internalPatterns ?? DEFAULT_INTERNAL_PATTERNS).map((pattern) =>
+    typeof pattern === 'string' ? pattern : new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')),
+  );
+  const parsed = isPython ? parsePython(bounded.lines, patterns) : parseJs(bounded.lines, patterns);
   const limited = boundedGroups(parsed);
   return {
     groups: limited.groups,

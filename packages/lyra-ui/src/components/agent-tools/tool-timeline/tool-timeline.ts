@@ -8,7 +8,6 @@
 // icon-button-register.ts's own header comment for the full trade.
 export * from './tool-timeline.class.js';
 import '../tool-call-chip/tool-call-chip.js';
-import '../tool-result-view/tool-result-view.js';
 import '../tool-approval-dialog/tool-approval-dialog.js';
 import '../../layout/details/details.js';
 import '../../overlays/empty/empty.js';

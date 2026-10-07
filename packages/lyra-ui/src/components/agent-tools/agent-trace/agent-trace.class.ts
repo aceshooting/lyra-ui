@@ -2,6 +2,8 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -257,7 +259,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   private renderHandoffs(spans: readonly LyraSpan[], byId: ReadonlyMap<string, LyraSpan>): TemplateResult | typeof nothing {
     const handoffs = this.handoffSpans(spans);
     if (handoffs.length === 0) return nothing;
-    return html`<div part="handoffs">${handoffs.map((span) => this.renderHandoff(span, byId))}</div>`;
+    return html`<div part="handoffs">${repeat(handoffs, (span) => span.id, (span) => this.renderHandoff(span, byId))}</div>`;
   }
 
   override render(): TemplateResult {
@@ -268,7 +270,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         ${this.renderFilter(projection.spans)} ${this.renderHandoffs(filteredSpans, projection.byId)}
         <lr-trace-tree
           part="tree"
-          .spans=${filteredSpans}
+          .spans=${guard([this.spans], () => this.spans)}
+          .hiddenKinds=${this.hiddenKinds}
           .activeSpanId=${this.activeSpanId}
           .label=${this.label}
           ?with-tokens=${this.withTokens}

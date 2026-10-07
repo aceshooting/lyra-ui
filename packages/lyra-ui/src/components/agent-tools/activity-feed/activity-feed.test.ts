@@ -57,7 +57,10 @@ it('defaults to entries=[], mode="live", follow=true, expanded=false, and a loca
   expect(el.entries).to.deep.equal([]);
   expect(el.mode).to.equal('live');
   expect(el.follow).to.be.true;
-  expect(el.hasAttribute('follow')).to.be.true;
+  expect(el.hasAttribute('follow')).to.be.false;
+  el.follow = false;
+  await el.updateComplete;
+  expect(el.getAttribute('follow')).to.equal('false');
   expect(el.expanded).to.be.false;
   expect(el.label).to.be.undefined;
   expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Activity');
@@ -1803,3 +1806,20 @@ for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3
     }
   });
 }
+
+it('lets a host veto a header toggle through lr-toggle-request', async () => {
+  const el = (await fixture(html`<lr-activity-feed></lr-activity-feed>`)) as LyraActivityFeed;
+  const requests: boolean[] = [];
+  let toggles = 0;
+  el.addEventListener('lr-toggle-request', (event) => {
+    requests.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+    event.preventDefault();
+  });
+  el.addEventListener('lr-toggle', () => toggles++);
+  const before = el.expanded;
+  (el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(requests).to.deep.equal([!before]);
+  expect(el.expanded).to.equal(before);
+  expect(toggles).to.equal(0);
+});

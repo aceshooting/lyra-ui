@@ -126,3 +126,20 @@ describe('rubric aggregate external descriptions', () => {
     await waitUntil(() => refs()[0] === target);
   });
 });
+
+describe('rubric same-object rebinds', () => {
+  it('keeps the reviewer edits when a parent rebinds the same keys and value, and still takes a new object', async () => {
+    const saved = { tags: ['a'] };
+    const field = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${keys} .value=${saved}></lr-rubric-form>`);
+    const boxes = Array.from(field.shadowRoot!.querySelectorAll<LyraCheckbox>('lr-checkbox'));
+    await Promise.all(boxes.map((box) => box.updateComplete));
+    boxes[1]!.click();
+    expect(field.value).to.deep.equal({ tags: ['a', 'b'] });
+    field.keys = keys;
+    field.value = saved;
+    await field.updateComplete;
+    expect(field.value).to.deep.equal({ tags: ['a', 'b'] });
+    field.value = { tags: ['a'] };
+    expect(field.value).to.deep.equal({ tags: ['a'] });
+  });
+});

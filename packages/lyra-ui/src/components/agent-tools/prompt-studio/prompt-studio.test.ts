@@ -931,3 +931,32 @@ it('preserves host replacement during a reorder request and prevents recursive m
   expect(changes).to.equal(0);
   expect(el.messages.map(message => message.id)).to.deep.equal(['host']);
 });
+
+it('renders a studio whose variables carry null rows or a null value used by a message', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio
+      .messages=${[{ id: 'm', role: 'system', content: 'Hello {{x}}' }]}
+      .variables=${[null, { name: 'x', value: null }, { name: 'y', value: 'ok' }]}
+    ></lr-prompt-studio>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('[data-message-id]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('input[type="text"], input:not([type])').length).to.be.greaterThan(0);
+});
+
+it('does not re-snapshot the unchanged variables when a message is edited', async () => {
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio .messages=${messages} .variables=${[{ name: 'audience', value: 'learners' }]}></lr-prompt-studio>
+  `);
+  const before = el.variables;
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+  textarea.value = 'Edited';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  expect(el.messages[0]!.content).to.equal('Edited');
+  expect(el.variables === before).to.equal(true);
+});
+
+it('keeps an explicitly empty heading verbatim instead of the localized default', async () => {
+  const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading=""></lr-prompt-studio>`);
+  expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.firstElementChild!.textContent!.trim()).to.equal('');
+});

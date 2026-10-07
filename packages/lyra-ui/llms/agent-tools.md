@@ -924,6 +924,8 @@ Removing the `trace` attribute clears parsed content and copies empty text; the 
 
 **Slots:** none.
 
+**Parsing and patterns:** Python 3.11+ caret/tilde marker lines stay with their frame rather than the exception message, WebKit `global code`/`module code` frames are selectable, and `DEFAULT_INTERNAL_PATTERNS` no longer lists the never-matching `'(native)'`. Re-binding the same `internalPatterns` array keeps expanded internal runs open.
+
 **CSS parts:** `base` (the root wrapper; respects `max-height`, tightens its padding under
 `size="s"`, and drops its card chrome under `frame="plain"`), `message` (the leading error
 message text for a group), `group` (one chained-error group of frames), `frame` (a selectable
@@ -1640,7 +1642,7 @@ truncated tail can never shrink the axis and stretch the surviving bars across t
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
 window, `withoutAxis: boolean = false` (attribute `without-axis`) — hides the time-ruler row, and
-`label: string = ''`.
+`label?: string` (omission localizes the default; `''` is used verbatim).
 
 The granular `@aceshooting/lyra-ui/components/lr-trace-tree.js` entry also
 type-exports `LyraSpanKind` and `LyraSpanStatus`, and exports
@@ -1650,6 +1652,8 @@ exports.
 
 **Events:** `lr-span-select` — `detail: { spanId: string }`, a bar/row was activated (click, Enter,
 Space).
+
+**Accessible name, label and active colour:** each bar's accessible name includes its start offset, and moving between bars no longer announces through a live region (the `live-region` part is removed). `label` is used verbatim including `''` (omission localizes the default, as in `lr-trace-tree`). `--lr-span-waterfall-row-active-color` (default `var(--lr-color-text)`) colours the active row's status and duration text.
 
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
@@ -1730,13 +1734,15 @@ retained as a name for the same union.
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 
-**Events:** `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
 expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
 own sibling list. `detail: { taskId, parentTaskId, fromIndex, toIndex }`; `parentTaskId` is `null`
 for a top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique,
 nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
+
+**Toggle request:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles; preventing it keeps the panel as is.
 
 **CSS parts:** `base`, `header` (a `<button>` unless `without-collapse` is set, plain content
 otherwise, within the configured semantic heading), `label` (the `heading` text),
@@ -1966,6 +1972,8 @@ least their start, unknown kinds become `other`, and unknown statuses become `pe
 **Events:** `lr-span-select` (`detail: { spanId: string }`, a row was activated) and `lr-span-toggle`
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
+**Hidden kinds and focus:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and the 500-row limit notice keep following the whole trace (`lr-agent-trace` forwards its own `hiddenKinds` here). `spans` is kept by item identity, so a large trace with opaque provider metadata is never cut by a field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
+
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
@@ -2023,7 +2031,7 @@ moves focus already inside the body to `[part="header"]` before the body is hidd
 the specific `entries` row that held focus does the same once that render (and, while virtualized,
 the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that is elsewhere is
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
-At/above `virtualizeAt`
+Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
@@ -2065,8 +2073,10 @@ border, background, and corner radius so a feed nested inside existing message c
 double it. The header/body divider and entry-row padding are unaffected by `frame` — only the
 outer card goes.
 
-**Events:** `lr-toggle` (`detail: { expanded }`, the header was activated) and
+**Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` (`detail: { expanded }`, the header was activated) and
 `lr-follow-change` (`detail: { following }`, `follow` released or re-engaged).
+
+**Toggle request, follow and threshold:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles. `follow` reflects like every `true`-defaulting boolean: absent while following, `follow="false"` once released. The body virtualizes when entries exceed (not equal) `virtualize-at`.
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
 `summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
@@ -2150,10 +2160,12 @@ exported alias `CommitCardAppearance` is retained as a name for the same union.
 
 **Slots:** `actions` — trailing header controls (e.g. an "open PR" button).
 
-**Events:** `lr-file-select` (`detail: { filePath: string }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
+**Events:** `lr-file-select` (`detail: { filePath: string }`), cancelable `lr-toggle-request` (`detail: { expanded: boolean }`), `lr-toggle` (`detail: { expanded: boolean; collapsed: boolean }`), and `lr-copy` (`detail: { ok: true; text: string }`, fired only after the full-hash clipboard write
 resolves successfully). A failed or unavailable write emits the compatibility `lr-error` event
 (no detail) and `lr-copy-error` (`detail: { ok: false; text: string; reason:
 'unsupported'|'denied'|'failed'; error: unknown }`) instead; failure never emits `lr-copy`.
+
+**Toggle request and colours:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the file list folds; preventing it keeps the list as is. File rows, the copy button and the per-file counts follow `--lr-color-text`, `--lr-color-success` and `--lr-color-danger`.
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
 `deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
@@ -2215,7 +2227,7 @@ never makes a row expandable; migrate by deriving the name with
 so appending matching slotted content after the component's first render immediately enables the
 row's disclosure.
 
-**Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
+**Events:** cancelable `lr-toggle-request` (`detail: { suiteId, testId, expanded }`, the requested state), `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
 and `lr-toggle` (`detail: { suiteId: string; testId: string; expanded: boolean }`, a row's failure
@@ -2226,6 +2238,8 @@ repeated row controls remain distinguishable.
 
 Passed, failed, and skipped rows use language-neutral decorative marks (`✓`, `×`, and `–`); the
 adjacent localized status word carries the meaning. Running rows use the decorative spinner.
+
+**Statuses, durations and toggles:** a result whose `status` is `error`, `timedOut` or `broken` counts as `failed` (other unknown values stay `skipped`), and durations use the shared short format (`850ms`, `65.4s`). `lr-toggle-request` (`detail: { suiteId, testId, expanded }`) is a cancelable proposal dispatched before a failure detail toggles; preventing it keeps the row unchanged.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
@@ -2598,6 +2612,8 @@ versionId }`, fired by the restore-this-version button; mutates nothing itself),
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
 
+**View changes:** `lr-view-change` fires only when the view actually changes, and the `code` slot is read hydration-safely. Buttons follow `--lr-color-text`.
+
 **CSS parts:** `base`, `header`, `label`, `kind`, `view-toggle` (rendered only once the `code` slot
 has content), `view-button` (carries `data-view="preview"` or `data-view="code"`), `version-nav`
 (rendered only once `versions` is non-empty), `version-previous`, `version-previous-glyph` (the `‹`
@@ -2695,13 +2711,15 @@ assigned array or record has no effect; create and reassign a new value after ch
   and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
   name for the same union
 
-**Events:** `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
+**Events:** `lr-run-cancel` (`detail: { runId }`), and its deprecated alias `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
 
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
+
+**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id; `lr-cancel` is a deprecated alias of `lr-run-cancel`, dispatched right after it. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
 **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,
@@ -2977,8 +2995,10 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
   so progress never reports an impossible total
-- `label: string = ''` — header label and accessible-name source; falls back to a localized
-  "Evaluation run"
+- `label?: string` — header label and accessible-name source; omission localizes "Evaluation run",
+  and an explicit `''` is kept
+- `heading-level: LyraHeadingLevel = '4'` (attribute `heading-level`) — level of each example's
+  section headings (input, output, grounding, tool trace); `'none'` drops heading semantics
 
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
@@ -2994,6 +3014,13 @@ child events as `lr-example-claim-select` (`{ exampleId, claim }`),
 `lr-example-tool-activate` (`{ exampleId, invocationId, sourceKey? }`), and
 `lr-example-tool-render-error` (`{ exampleId, invocationId, sourceKey?, toolName, error }`).
 The cancelable `lr-example-tool-approval-decide-request` propagates its veto to the nested approval.
+
+**Methods:** `finalizePendingApproval(exampleId: string): void` closes the vetoed approval of that
+example's nested timeline after the host persisted it, and `revertPendingApproval(exampleId: string):
+void` releases it for a retry; both are no-ops while the example is collapsed or gone.
+
+**Registration:** the Markdown, code, grounding and tool-timeline children register when the first
+example expands, so a collapsed batch loads none of them; they upgrade in place.
 
 
 **CSS parts:** `base`, `header`,
@@ -3128,6 +3155,8 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 ```
 
 
+**Registration:** `lr-tool-result-view` registers when the first entry's details open, so a timeline that never opens one does not load it; it upgrades in place.
+
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
@@ -3180,8 +3209,10 @@ both the run list and the chart projection.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
-**Events:** `lr-metric-change` (`{ metricId }`, emitted when a metric selector is activated) and
+**Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), its deprecated alias `lr-metric-change`, and
 `lr-run-activate` (`{ runId, run }`).
+
+**Heading, events and window:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
@@ -3347,8 +3378,8 @@ empty/blank message and version ids are omitted and later duplicates use determi
 identity before rendering, editing, focus, selection, and events;
 runtime `null`/non-array values for any of the three not-yet-loaded collections render as empty;
 `selectedVersionId: string | null = null` (attribute `selected-version-id`); `label: string = ''`;
-`heading: string = ''` — visible toolbar heading, falling back to the localized Prompt Studio
-label when unset; `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
+`heading?: string` — visible toolbar heading, falling back to the localized Prompt Studio
+label when omitted (an explicit `''` is kept); `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) — its semantic
 level (`none` keeps the visual heading text without heading semantics);
 `running: boolean = false`, `disabled: boolean = false`, and `reorderable: boolean = false`
 (all reflected). `reorderable` adds native move-up/move-down controls for each message. A move first
@@ -3382,6 +3413,8 @@ boundary, so without the re-dispatch an
 `editor.addEventListener('focus', …)` would never fire at all. They are re-dispatches of real
 focus movement, not a synthetic host-level focus signal: moving between two fields inside the
 studio emits a `blur` and then a `focus`.
+
+**Headings and malformed rows:** `heading` is used verbatim including `''` (omission localizes “Prompt studio”), and the Variables and Preview titles sit one level below `heading-level` (no heading semantics under `none`). A `null` variable row, or one without a string `name`/`value`, is skipped instead of blanking the studio.
 
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `message-actions`, `move-message-up`, `move-message-down`, `remove-message`,
@@ -3498,8 +3531,10 @@ inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 
-**Events:** `lr-run-activate` (`{ runId, run }`), `lr-cancel` (`{ runId }`), and
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), its deprecated alias `lr-cancel` (`{ runId }`), and
 `lr-run-retry` (`{ runId }`).
+
+**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request; `lr-cancel` is a deprecated alias dispatched right after it. Unknown status kinds render title-cased.
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
@@ -4239,6 +4274,8 @@ At most 200 files and 200 hunks total render, with a visible limit notice. Diff 
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
+**Heading and events:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+
 **CSS parts:**
 
 | Part | Purpose |
@@ -4257,7 +4294,7 @@ remain readable in both states. Optional `label` overrides the localized heading
 | `limit` | Render-limit notice. |
 
 
-**Events:** non-cancelable `lr-change-decision` (`detail: { fileId, hunkId, decision }`) reports a keep/discard action; the host applies it by replacing `files`.
+**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), followed by its deprecated alias `lr-change-decision`, reports a keep/discard action; the host applies it by replacing `files`.
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');
@@ -4295,6 +4332,8 @@ and returns only schema-declared fields. Decline/cancel omit content. A response
 Changing `requestId` resets draft and status, preserving explicit same-update property assignments.
 Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
 the composed parameter form owns field validation. Collection values and emitted details are owned.
+
+**Heading and rebinding:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. Re-binding the same `schema` or `value` object does not discard the typed draft; assign a new object to replace it.
 
 **CSS parts:**
 
@@ -4475,6 +4514,8 @@ request cancellation. The component does not poll, schedule timers, start runs, 
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
 and mount no more than 100 rows. `disabled` gates every action. Host `aria-label` names the group.
 
+**Statuses and events:** the shared agent spellings `done`/`success` render as `completed` and `error` as `failed` instead of dropping the run. `lr-run-activate` (`detail: { runId }`) requests opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+
 **CSS parts:**
 
 | Part | Purpose |
@@ -4494,7 +4535,7 @@ and mount no more than 100 rows. `disabled` gates every action. Host `aria-label
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
 
-**Events:** non-cancelable `lr-run-open` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run, followed by its deprecated alias `lr-run-open`. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';
@@ -4517,6 +4558,8 @@ shows an unavailable state; usage above the limit shows an exceeded state. The c
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
 values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
 its own localized accessible name.
+
+**Heading and unit:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 
 **CSS parts:**
 

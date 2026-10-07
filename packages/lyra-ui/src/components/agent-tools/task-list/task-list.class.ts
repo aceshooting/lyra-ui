@@ -86,6 +86,7 @@ export interface TaskListToggleDetail {
 }
 
 export interface LyraTaskListEventMap {
+  'lr-toggle-request': CustomEvent<TaskListToggleDetail>;
   'lr-toggle': CustomEvent<TaskListToggleDetail>;
   'lr-reorder': CustomEvent<{
     taskId: string;
@@ -194,6 +195,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @slot detail-<id> - Dynamic, one per item id (e.g. `slot="detail-step-3"`). Rich detail under
  *   that item's label, after its `detail` text -- typically a `<lr-tool-call-chip>` or file
  *   `<lr-chip>`. Plain-HTML friendly, no render props.
+ * @event lr-toggle-request - Cancelable proposal before a header activation changes the panel.
+ *   `detail: { expanded }` is the requested state.
  * @event lr-toggle - The header was activated, expanding or collapsing the panel. `detail: {
  *   expanded }`.
  * @event lr-reorder - `detail: { taskId, parentTaskId, fromIndex, toIndex }` —
@@ -430,8 +433,10 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   private toggle = (): void => {
     if (this.withoutCollapse) return;
-    this.collapsed = !this.collapsed;
-    this.emit('lr-toggle', { expanded: !this.collapsed });
+    const expanded = this.collapsed;
+    if (this.emit('lr-toggle-request', { expanded }, { cancelable: true }).defaultPrevented) return;
+    this.collapsed = !expanded;
+    this.emit('lr-toggle', { expanded });
   };
 
   private idsAreUnique(): boolean {

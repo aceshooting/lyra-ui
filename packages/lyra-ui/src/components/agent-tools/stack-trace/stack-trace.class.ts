@@ -161,11 +161,14 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
    *  retains non-blank strings, clone-owns `RegExp`s, drops malformed entries without suppressing
    *  valid later entries, bounds the result, and freezes it. Reassign a new array after changes. */
   private _internalPatterns = snapshotInternalPatterns(DEFAULT_INTERNAL_PATTERNS);
+  private patternsSource: unknown = DEFAULT_INTERNAL_PATTERNS;
   @property({ attribute: false })
   get internalPatterns(): readonly (string | RegExp)[] {
     return this._internalPatterns;
   }
   set internalPatterns(value: readonly (string | RegExp)[]) {
+    if (value === this.patternsSource) return;
+    this.patternsSource = value;
     const previous = this._internalPatterns;
     this._internalPatterns = snapshotInternalPatterns(value);
     this.requestUpdate('internalPatterns', previous);

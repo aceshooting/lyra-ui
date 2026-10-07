@@ -12,7 +12,7 @@ export const styles = css`
   }
 
   :host([without-bars]) {
-    --_lr-trace-tree-bar-column: 0;
+    --_lr-trace-tree-bar-column: ;
   }
 
   :host([with-tokens]) {
@@ -343,7 +343,8 @@ export const styles = css`
     }
   }
   @container (max-inline-size: 359.98px) {
-    [part='bar-track'] {
+    [part='bar-track'],
+    [part='header'] .col-bar {
       display: none;
     }
     [part='header'],

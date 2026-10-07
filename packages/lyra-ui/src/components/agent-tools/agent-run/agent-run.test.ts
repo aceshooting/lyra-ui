@@ -58,6 +58,14 @@ it('renders summary run records without steps and defaults a step with no status
   expect(list.items[0]!.status).to.equal('pending');
 });
 
+it('renders a run whose status is missing or in the compact string form without throwing', async () => {
+  const missing = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${{ id: 'r', steps: [] } as unknown as AgentRun}></lr-agent-run>`);
+  expect(missing.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Idle');
+  const compact = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${{ id: 'r', status: 'running', steps: [] } as unknown as AgentRun}></lr-agent-run>`);
+  expect(compact.shadowRoot!.querySelector('[part="status-badge"]')!.textContent!.trim()).to.equal('Running');
+  expect(compact.shadowRoot!.querySelector('[part="cancel-button"]') != null).to.equal(true);
+});
+
 it('renders a lifecycle-status badge with the built-in generic labels for running/error', async () => {
   const running = (await fixture(
     html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`,
@@ -864,5 +872,24 @@ describe('lr-agent-run deprecated --lr-agent-run-background alias', () => {
     expect(fill(canonical)).to.equal('rgb(1, 2, 3)');
     expect(fill(alias)).to.not.equal('rgb(1, 2, 3)');
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
+  });
+});
+
+describe('run-scoped events', () => {
+  it('names cancel and retry with the run id, keeping lr-cancel as a deprecated alias fired after lr-run-cancel', async () => {
+    const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`);
+    const seen: string[] = [];
+    for (const name of ['lr-run-cancel', 'lr-cancel', 'lr-run-retry']) {
+      el.addEventListener(name, (event) => seen.push(`${name}:${JSON.stringify((event as CustomEvent).detail)}`));
+    }
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel-button"]')!.click();
+    el.run = makeRun({ status: { kind: 'error' } });
+    await el.updateComplete;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
+    expect(seen).to.deep.equal([
+      'lr-run-cancel:{"runId":"run-1"}',
+      'lr-cancel:{"runId":"run-1"}',
+      'lr-run-retry:{"runId":"run-1","attempt":1}',
+    ]);
   });
 });

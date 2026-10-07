@@ -66,6 +66,10 @@ export const styles = css`
     );
   }
 
+  [part="row"][data-active] :is([part="status-text"], [part="duration"]) {
+    color: var(--lr-span-waterfall-row-active-color, var(--lr-color-text));
+  }
+
   [part="name"] {
     overflow: hidden;
     text-overflow: ellipsis;

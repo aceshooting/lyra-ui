@@ -1,3 +1,5 @@
+import { getNumberFormat } from './intl-cache.js';
+
 /** Localization key plus normalized numeric value for a short elapsed duration. */
 export interface LyraDurationMessageValue {
   readonly key: 'durationMilliseconds' | 'durationSeconds';
@@ -21,4 +23,16 @@ export function durationMessageValue(milliseconds: number): LyraDurationMessageV
     key: 'durationSeconds',
     value: Math.round((safeMilliseconds / 1000) * 10) / 10,
   };
+}
+
+/** The localized short duration ("850 ms" / "1.2 s"), through the caller's `localize` and locale. */
+export function formatShortDuration(
+  localize: (key: string, fallback: undefined, values: { value: string }) => string,
+  locale: string,
+  milliseconds: number,
+): string {
+  const duration = durationMessageValue(milliseconds);
+  const seconds = duration.key === 'durationSeconds';
+  const value = getNumberFormat(locale, { maximumFractionDigits: seconds ? 1 : 0 }).format(duration.value);
+  return localize(seconds ? 'durationSeconds' : 'durationMilliseconds', undefined, { value });
 }

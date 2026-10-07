@@ -3,7 +3,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { Citation } from '../../../ai/types.js';
 import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-meter/context-meter.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -76,8 +76,9 @@ function normalizeRedactions(
   redactions: readonly ContextInspectorRedaction[] | undefined,
   length: number,
 ): NormalizedRedaction[] {
-  if (!redactions || redactions.length === 0) return [];
+  if (!Array.isArray(redactions) || redactions.length === 0) return [];
   const clamped = redactions
+    .filter((r) => r !== null && typeof r === 'object')
     .map((r) => ({
       start: finiteCount(Math.min(r.start, r.end), 0, length),
       end: finiteCount(Math.max(r.start, r.end), 0, length),
@@ -98,7 +99,7 @@ function normalizeRedactions(
 }
 
 function formatCount(n: number, locale: string): string {
-  return Math.round(finiteCount(n)).toLocaleString(resolveIntlLocale(locale));
+  return getNumberFormat(locale, { maximumFractionDigits: 0 }).format(finiteCount(n));
 }
 
 /** Ceiling on segment rows actually mounted into the DOM, matching this family's established
@@ -220,12 +221,19 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   /** Download filename (no extension) passed through to `<lr-export-button>`. */
   @property({ attribute: 'export-filename' }) exportFilename = 'context';
 
+  private normalizedFor?: readonly ContextInspectorSegment[];
+  private normalizedCache: ContextInspectorSegment[] = [];
+
   private get normalizedSegments(): ContextInspectorSegment[] {
-    return firstByIdentity(Array.isArray(this.segments) ? this.segments : [], (segment) => segment.id)
-      .map((segment) => ({
-        ...segment,
-        text: typeof segment.text === 'string' ? segment.text : '',
-      }));
+    if (this.normalizedFor !== this.segments) {
+      this.normalizedFor = this.segments;
+      this.normalizedCache = firstByIdentity(Array.isArray(this.segments) ? this.segments : [], (segment) => segment.id)
+        .map((segment) => ({
+          ...segment,
+          text: typeof segment.text === 'string' ? segment.text : '',
+        }));
+    }
+    return this.normalizedCache;
   }
 
   private get meterSegments(): ContextMeterSegment[] {

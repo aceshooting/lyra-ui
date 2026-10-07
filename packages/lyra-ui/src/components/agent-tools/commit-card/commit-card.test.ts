@@ -783,3 +783,34 @@ describe('lr-commit-card deprecated --lr-commit-card-background alias', () => {
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });
+
+it('lets a host veto the file-list toggle through lr-toggle-request', async () => {
+  const el = (await fixture(html`<lr-commit-card .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}></lr-commit-card>`)) as LyraCommitCard;
+  const requests: boolean[] = [];
+  let toggles = 0;
+  el.addEventListener('lr-toggle-request', (event) => {
+    requests.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+    event.preventDefault();
+  });
+  el.addEventListener('lr-toggle', () => toggles++);
+  (el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(requests).to.deep.equal([true]);
+  expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(0);
+  expect(toggles).to.equal(0);
+});
+
+it('paints its file rows, copy button and per-file counts from theme tokens', async () => {
+  const el = (await fixture(html`
+    <lr-commit-card
+      style="--lr-color-text: rgb(1, 2, 3); --lr-color-success: rgb(4, 5, 6); --lr-color-danger: rgb(7, 8, 9)"
+      hash="abcdef1234567"
+      .files=${[{ path: 'a.ts', additions: 1, deletions: 2 }]}
+    ></lr-commit-card>
+  `)) as LyraCommitCard;
+  (el.shadowRoot!.querySelector('[part="files-toggle"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const color = (selector: string): string => getComputedStyle(el.shadowRoot!.querySelector(selector)!).color;
+  expect([color('[part="file"]'), color('[part="copy-button"]'), color('[part="file-additions"]'), color('[part="file-deletions"]')])
+    .to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)', 'rgb(7, 8, 9)']);
+});

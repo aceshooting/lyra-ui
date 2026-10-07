@@ -12,6 +12,34 @@ function parseStackTrace(trace: string, internalPatterns: readonly (string | Reg
 const OVERFLOW_LOCATION = '9'.repeat(400);
 
 describe('parseStackTrace', () => {
+  it('keeps Python 3.11 caret lines with their frame instead of the exception message', () => {
+    const groups = parseStackTrace(
+      [
+        'Traceback (most recent call last):',
+        '  File "app.py", line 3, in <module>',
+        '    print(1 / 0)',
+        '          ~~^~~',
+        'ZeroDivisionError: division by zero',
+      ].join('\n'),
+      [],
+    );
+    expect(groups[0]!.message).to.equal('ZeroDivisionError: division by zero');
+    expect(groups[0]!.frames[0]!.raw).to.contain('~~^~~');
+  });
+
+  it('parses WebKit global and module code frames as selectable frames', () => {
+    const groups = parseStackTrace(
+      ['Error: boom', 'run@https://x.test/app.js:3:4', 'global code@https://x.test/app.js:9:1', 'module code@https://x.test/m.js:2:2'].join('\n'),
+      [],
+    );
+    expect(groups[0]!.frames.map((frame) => frame.functionName)).to.deep.equal(['run', 'global code', 'module code']);
+    expect(groups[0]!.frames.every((frame) => frame.file !== undefined)).to.equal(true);
+  });
+
+  it('does not list a default internal pattern that no parsed frame can match', () => {
+    expect(DEFAULT_INTERNAL_PATTERNS.includes('(native)')).to.equal(false);
+  });
+
   it('does not mutate caller-owned stateful RegExp patterns', () => {
     const pattern = /vendor/gy;
     pattern.lastIndex = 3;

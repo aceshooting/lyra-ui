@@ -10,6 +10,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 
 // The locale-formatting fixture deliberately retains the unregistered English messages.
 expectLocaleFallback('ar-EG', [
+  'agentRunStatusDone',
   'evaluationRunExampleLabel',
   'evaluationRunFailedCount',
   'evaluationRunLabel',
@@ -19,7 +20,6 @@ expectLocaleFallback('ar-EG', [
   'progress',
   'statusError',
   'statusRunning',
-  'statusSuccess',
 ]);
 
 const examples: EvalExampleResult[] = [
@@ -49,6 +49,8 @@ const toolTrace: ToolTimelineEntry[] = [
   { id: 'call-1', name: 'search', args: { query: 'refund policy' }, status: 'success', result: { hits: 2 } },
 ];
 
+const EXPANDED_TAGS = ['lr-markdown', 'lr-code-block', 'lr-grounding-summary', 'lr-tool-timeline'];
+
 async function expandExample(el: LyraEvalRun, index = 0): Promise<HTMLElement> {
   const row = el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
   row.dispatchEvent(new CustomEvent('lr-toggle', {
@@ -57,6 +59,7 @@ async function expandExample(el: LyraEvalRun, index = 0): Promise<HTMLElement> {
     detail: { expanded: true },
   }));
   await el.updateComplete;
+  await Promise.all(EXPANDED_TAGS.map((name) => customElements.whenDefined(name)));
   return el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
 }
 
@@ -66,11 +69,19 @@ it('registers as lr-eval-run (renamed to match eval-dataset/eval-result siblings
   expect(customElements.get('lr-eval-run')).to.exist;
 });
 
+it('registers the expansion-only children when an example first expands, not at import', async () => {
+  expect(EXPANDED_TAGS.filter((name) => customElements.get(name) !== undefined)).to.deep.equal([]);
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples}></lr-eval-run>`);
+  expect(EXPANDED_TAGS.filter((name) => customElements.get(name) !== undefined)).to.deep.equal([]);
+  await expandExample(el);
+  expect(EXPANDED_TAGS.filter((name) => customElements.get(name) === undefined)).to.deep.equal([]);
+});
+
 it('defaults to examples=[], total=null, label=""', async () => {
   const el = (await fixture(html`<lr-eval-run></lr-eval-run>`)) as LyraEvalRun;
   expect(el.examples).to.deep.equal([]);
   expect(el.total).to.equal(null);
-  expect(el.label).to.equal('');
+  expect(el.label).to.equal(undefined);
 });
 
 it('defaults a missing runtime example status to idle without losing the run', async () => {
@@ -187,7 +198,7 @@ it('uses the example label when provided, and a localized "Example N" fallback o
 it('renders a per-example status badge with the right text', async () => {
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
-  expect(rows[0]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Success');
+  expect(rows[0]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Done');
   expect(rows[1]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Running');
   expect(rows[2]!.querySelector('[part="example-status"]')!.textContent!.trim()).to.equal('Error');
 });
@@ -516,6 +527,67 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
   expect(dialog.pendingAction).to.equal('approve');
 });
 
+it('settles a vetoed nested approval through finalizePendingApproval/revertPendingApproval(exampleId)', async () => {
+  const pendingTrace: ToolTimelineEntry[] = [
+    { id: 'call-pending', name: 'search', args: { query: 'refund policy' }, status: 'pending', needsApproval: true },
+  ];
+  const withTrace: EvalExampleResult[] = [{ ...examples[0]!, toolTrace: pendingTrace }];
+  const el = (await fixture(html`<lr-eval-run .examples=${withTrace}></lr-eval-run>`)) as LyraEvalRun;
+  const row = await expandExample(el);
+  const timeline = row.querySelector<LyraToolTimeline>('[part="tool-trace"]')!;
+  timeline.shadowRoot!.querySelector('lr-tool-call-chip')!
+    .dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
+  await timeline.updateComplete;
+  const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  el.addEventListener('lr-example-tool-approval-decide-request', (event) => event.preventDefault());
+  dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await dialog.updateComplete;
+  expect(dialog.pendingAction).to.equal('approve');
+
+  el.revertPendingApproval('missing');
+  expect(dialog.pendingAction).to.equal('approve');
+  el.revertPendingApproval('ex-1');
+  await timeline.updateComplete;
+  await dialog.updateComplete;
+  expect(dialog.pendingAction).to.equal(null);
+  expect(dialog.open).to.be.true;
+
+  dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await dialog.updateComplete;
+  el.finalizePendingApproval('ex-1');
+  await timeline.updateComplete;
+  await dialog.updateComplete;
+  expect(dialog.open).to.be.false;
+});
+
+it('keeps every example of a large batch whose tool traces would exhaust a per-field budget', async () => {
+  const traced = (index: number): EvalExampleResult => ({
+    id: `ex-${index}`,
+    status: { kind: 'done' },
+    input: { text: `in ${index}` },
+    output: { text: `out ${index}` },
+    toolTrace: Array.from({ length: 20 }, (_, call) => ({
+      id: `call-${index}-${call}`,
+      name: 'search',
+      status: 'success' as const,
+      args: { a: 1, b: 2, c: 3, d: 4 },
+      result: call === 0 ? new URL('https://example.test/') : { hits: call },
+    })),
+  });
+  const batch = Array.from({ length: 400 }, (_, index) => traced(index));
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${batch}></lr-eval-run>`);
+  expect(el.shadowRoot!.querySelectorAll('[part="example"]')).to.have.lengthOf(400);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.equal('400 of 400 examples complete');
+});
+
+it('keeps an example row on its own example when the host prepends another', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run .examples=${examples}></lr-eval-run>`);
+  const before = el.shadowRoot!.querySelectorAll('[part="example"]')[1]!;
+  el.examples = [{ id: 'ex-new', status: { kind: 'idle' }, input: { text: 'n' }, output: { text: '' } }, ...examples];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="example"]')[2] === before).to.be.true;
+});
+
 describe('status-change announcements', () => {
   async function getLiveRegionText(el: LyraEvalRun): Promise<string> {
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -690,4 +762,19 @@ it('caps rendered example rows at the render ceiling and shows a localized limit
 it('renders no limit notice when examples stays within the render ceiling', async () => {
   const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
   expect((el.shadowRoot!.querySelector('[part="limit"]')) == null).to.be.true;
+});
+
+it('renders its example section headings at heading-level, and none as plain text', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run heading-level="3" .examples=${examples}></lr-eval-run>`);
+  const row = await expandExample(el);
+  const levels = (): (string | null)[] => [...row.querySelectorAll('[part="section-heading"]')].map((node) => node.getAttribute('aria-level'));
+  expect(levels().every((level) => level === '3')).to.equal(true);
+  el.headingLevel = 'none';
+  await el.updateComplete;
+  expect(levels().every((level) => level === null)).to.equal(true);
+});
+
+it('keeps an explicitly empty label verbatim instead of falling back to the default', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run label=""></lr-eval-run>`);
+  expect(el.shadowRoot!.querySelector('[part="header-label"]')!.textContent).to.equal('');
 });

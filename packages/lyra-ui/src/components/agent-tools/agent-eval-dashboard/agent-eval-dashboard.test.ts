@@ -10,10 +10,24 @@ expectLocaleFallback('de-DE', [
   'evaluationDashboardLabel',
   'chartValueLabel',
   'evaluationDashboardNoRuns',
+  'durationSeconds',
   'trendUnchanged',
 ]);
 describe('lr-agent-eval-dashboard', () => {
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
+
+  it('keeps a run row and a metric card on their own entry when the host prepends one', async () => {
+    const metrics = [{ id: 'a', label: 'A', value: 1 }, { id: 'b', label: 'B', value: 2 }];
+    const runs = [{ id: 'r1', label: 'Run 1', status: 'done', metrics: { a: 1 } }, { id: 'r2', label: 'Run 2', status: 'done', metrics: { a: 2 } }];
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-agent-eval-dashboard>`);
+    const row = el.shadowRoot!.querySelectorAll('[part="run"]')[1];
+    const card = el.shadowRoot!.querySelectorAll('[part="metric"]')[1];
+    el.runs = [{ id: 'r0', label: 'Run 0', status: 'done' }, ...runs];
+    el.metrics = [{ id: 'z', label: 'Z', value: 0 }, ...metrics];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="run"]')[2] === row).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part="metric"]')[2] === card).to.equal(true);
+  });
 
   it('suppresses the chart when without-chart is set', async () => {
     const props = {
@@ -140,7 +154,7 @@ describe('lr-agent-eval-dashboard', () => {
     const explicitEmpty = (await fixture(html`
       <lr-agent-eval-dashboard label=""></lr-agent-eval-dashboard>
     `)) as LyraAgentEvalDashboard;
-    expect(explicitEmpty.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('');
+    expect(explicitEmpty.shadowRoot!.querySelector('[part="heading"]') === null).to.equal(true);
 
     const explicitOverride = (await fixture(html`
       <lr-agent-eval-dashboard label="Custom heading"></lr-agent-eval-dashboard>
@@ -148,7 +162,7 @@ describe('lr-agent-eval-dashboard', () => {
     expect(explicitOverride.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Custom heading');
   });
 
-  it('formats percent, unit, and currency metrics with the effective locale and currency', async () => {
+  it('formats percent, duration, and currency metrics with the effective locale and currency', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard
         lang="de-DE"
@@ -163,7 +177,7 @@ describe('lr-agent-eval-dashboard', () => {
     const values = [...el.shadowRoot!.querySelectorAll('lr-stat')].map((stat) => (stat as HTMLElement & { value: string }).value);
     expect(values).to.deep.equal([
       new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 1 }).format(0.125),
-      new Intl.NumberFormat('de-DE', { style: 'unit', unit: 'millisecond', unitDisplay: 'short', maximumFractionDigits: 0 }).format(1200),
+      `${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(1.2)}s`,
       new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(2.5),
     ]);
   });
@@ -450,4 +464,29 @@ it('paints the selected metric from active-bg and ignores the retired active-bac
   expect(retired, 'the retired token cannot retint the resting selected metric').to.equal(baseline);
   expect(canonical).to.equal('rgb(4, 5, 6)');
   expect(both, 'the canonical token owns the selected fill').to.equal(canonical);
+});
+
+describe('lr-agent-eval-dashboard heading', () => {
+  it('follows heading-level with the run history one level below, and renders no title for an empty label', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`
+      <lr-agent-eval-dashboard heading-level="3" .runs=${[{ id: 'r', label: 'R', status: 'done' }]}></lr-agent-eval-dashboard>
+    `);
+    const level = (part: string): string | null => el.shadowRoot!.querySelector(`[part="${part}"]`)!.getAttribute('aria-level');
+    expect([level('heading'), level('runs-heading')]).to.deep.equal(['3', '4']);
+    el.label = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="heading"]') === null).to.equal(true);
+  });
+});
+
+describe('lr-agent-eval-dashboard metric requests', () => {
+  it('requests a metric change through lr-metric-change-request, then the deprecated lr-metric-change alias', async () => {
+    const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${[{ id: 'a', label: 'A', value: 1 }]}></lr-agent-eval-dashboard>`);
+    const seen: string[] = [];
+    for (const name of ['lr-metric-change-request', 'lr-metric-change']) {
+      el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ metricId: string }>).detail.metricId}`));
+    }
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="metric"]')!.click();
+    expect(seen).to.deep.equal(['lr-metric-change-request:a', 'lr-metric-change:a']);
+  });
 });

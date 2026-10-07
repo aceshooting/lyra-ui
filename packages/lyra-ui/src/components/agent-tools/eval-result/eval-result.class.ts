@@ -8,7 +8,7 @@ import {
 import { styles } from './eval-result.styles.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
 import type { AgentRunActivateDetail } from '../run-events.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../collection-identity.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import '../../forms/rubric-form/rubric-form.class.js';
 import '../../data/table/table.class.js';
@@ -22,7 +22,10 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 const EMPTY_RUNS: EvalRunResult[] = [];
 const EMPTY_COLUMNS: TableColumn<EvalRunResult>[] = [];
 const EMPTY_KEYS: RubricKey[] = [];
-const EMPTY_VALUE: RubricValue = {};
+const runId = (run: EvalRunResult): unknown => run.id;
+const columnKey = (column: TableColumn<EvalRunResult>): unknown => column.key;
+const rubricKey = (key: RubricKey): unknown => key.key;
+const rowKey = (row: EvalRunResult): string => row.id;
 
 /**
  * One model/prompt-version's output for a single evaluation example, plus whatever automated
@@ -159,17 +162,17 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   @property({ attribute: false }) rubricKeys: readonly RubricKey[] = EMPTY_KEYS;
 
   /** Accessible name for the independently interactive comparison grid. Falls back to the
-   *  localized evaluation-runs label when unset. */
+   *  localized evaluation-runs label when unset or empty, since the grid needs a name. */
   @property() label = '';
 
   private get normalizedRuns(): EvalRunResult[] {
-    return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
+    return firstByIdentityMemo(Array.isArray(this.runs) ? this.runs : [], runId);
   }
   private get normalizedColumns(): TableColumn<EvalRunResult>[] {
-    return firstByIdentity(Array.isArray(this.columns) ? this.columns : [], (column) => column.key);
+    return firstByIdentityMemo(Array.isArray(this.columns) ? this.columns : [], columnKey);
   }
   private get normalizedRubricKeys(): RubricKey[] {
-    return firstByIdentity(Array.isArray(this.rubricKeys) ? this.rubricKeys : [], (key) => key.key);
+    return firstByIdentityMemo(Array.isArray(this.rubricKeys) ? this.rubricKeys : [], rubricKey);
   }
 
   /** The run currently open for review, and the diff's "new" side. `null` falls back to the first
@@ -208,11 +211,21 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     event.stopPropagation();
   }
 
+  private reviewBinding?: { id: string; json: string; value: RubricValue };
+
+  /** One value object per run and stored review, so a re-render never re-seeds the form's draft. */
+  private reviewValue(run: EvalRunResult): RubricValue {
+    const json = JSON.stringify(run.review ?? null);
+    if (this.reviewBinding?.id !== run.id || this.reviewBinding.json !== json)
+      this.reviewBinding = { id: run.id, json, value: run.review ?? {} };
+    return this.reviewBinding.value;
+  }
+
   private renderReview(selected: EvalRunResult): TemplateResult {
     return html`<lr-rubric-form
       part="review"
       .keys=${this.normalizedRubricKeys}
-      .value=${selected.review ?? EMPTY_VALUE}
+      .value=${this.reviewValue(selected)}
       item-id=${selected.id}
       ?skippable=${this.reviewSkippable}
       ?disabled=${this.disabled}
@@ -275,7 +288,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           part="grid"
           .columns=${this.normalizedColumns}
           .rows=${runs}
-          .rowKey=${(row: EvalRunResult) => row.id}
+          .rowKey=${rowKey}
           .selectionMode=${'single'}
           .selectedRowKeys=${new Set([this.effectiveSelectedRunId])}
           aria-label=${this.label || this.localize('evaluationDashboardRunsLabel')}

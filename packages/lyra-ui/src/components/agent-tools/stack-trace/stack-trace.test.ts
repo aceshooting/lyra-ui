@@ -21,6 +21,18 @@ const trace = [
 
 const overflowLocation = '9'.repeat(400);
 
+it('keeps an expanded internal run open when a parent re-binds the same internalPatterns', async () => {
+  const patterns = ['node:internal'];
+  const el = await fixture<LyraStackTrace>(html`<lr-stack-trace .trace=${trace} .internalPatterns=${patterns}></lr-stack-trace>`);
+  el.shadowRoot!.querySelector<HTMLElement>('[part="internal-toggle"]')!.click();
+  await el.updateComplete;
+  const rows = (): number => el.shadowRoot!.querySelectorAll('[part="frame"]').length;
+  const open = rows();
+  el.internalPatterns = patterns;
+  await el.updateComplete;
+  expect(rows()).to.equal(open);
+});
+
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('ar-EG', [
   'stackTraceLabel',

@@ -46,6 +46,7 @@ async function openEntry(el: LyraToolTimeline, index = 0): Promise<HTMLElement> 
     new CustomEvent('lr-toggle', { detail: { expanded: true }, bubbles: true, composed: true }),
   );
   await el.updateComplete;
+  await customElements.whenDefined('lr-tool-result-view');
   return entryAt(el, index);
 }
 function dialog(el: LyraToolTimeline): LyraToolApprovalDialog {
@@ -61,6 +62,13 @@ function makeEntry(overrides: Partial<ToolTimelineEntry> = {}): ToolTimelineEntr
     ...overrides,
   };
 }
+
+it('registers lr-tool-result-view when an entry first opens, not at import', async () => {
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[{ id: 'a', name: 'search', status: 'success' }]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  expect(customElements.get('lr-tool-result-view') === undefined).to.equal(true);
+  await openEntry(el);
+  expect(customElements.get('lr-tool-result-view') !== undefined).to.equal(true);
+});
 
 it('suppresses the chip-selection event while opening a pending approval', async () => {
   const entry = makeEntry({ needsApproval: true, approved: undefined });

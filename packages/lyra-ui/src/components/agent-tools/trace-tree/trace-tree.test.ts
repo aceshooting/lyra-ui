@@ -1172,6 +1172,93 @@ describe('lr-trace-tree', () => {
   });
 });
 
+describe('lr-trace-tree remediation', () => {
+  const BRANCHES: LyraSpan[] = [
+    { id: 'root', name: 'Root', kind: 'agent', startMs: 0, endMs: 400, status: 'success' },
+    { id: 'a', parentId: 'root', name: 'A', kind: 'tool', startMs: 10, endMs: 100, status: 'success' },
+    { id: 'a1', parentId: 'a', name: 'A1', kind: 'tool', startMs: 20, endMs: 90, status: 'success' },
+    { id: 'b', parentId: 'root', name: 'B', kind: 'tool', startMs: 110, endMs: 200, status: 'success' },
+    { id: 'b1', parentId: 'b', name: 'B1', kind: 'tool', startMs: 120, endMs: 190, status: 'success' },
+  ];
+  const tabbable = (el: LyraTraceTree): string | null =>
+    el.shadowRoot!.querySelector('[part="row"][tabindex="0"]')!.getAttribute('data-id');
+
+  it('keeps the browsed row, and does not re-scroll, when an unrelated row collapses or spans are re-bound', async () => {
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${BRANCHES} active-span-id="a1"></lr-trace-tree>`);
+    let scrolls = 0;
+    el.shadowRoot!.querySelector<HTMLElement>('[data-id="a1"]')!.scrollIntoView = () => { scrolls++; };
+    el.shadowRoot!.querySelector<HTMLElement>('[data-id="b"]')!.click();
+    await el.updateComplete;
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(tabbable(el)).to.equal('b');
+    el.spans = [...BRANCHES];
+    await el.updateComplete;
+    expect(tabbable(el)).to.equal('b');
+    expect(scrolls).to.equal(0);
+  });
+
+  it('keeps every span of a large trace whose records carry opaque provider metadata', async () => {
+    const spans = Array.from({ length: 6000 }, (_, index) => ({
+      id: `s-${index}`, parentId: index === 0 ? undefined : 's-0', name: `Span ${index}`, kind: 'tool' as const,
+      startMs: index, endMs: index + 5, status: 'success' as const, tokensIn: 1, tokensOut: 2, costText: '$0', detail: 'd',
+      attributes: index === 1 ? new Uint8Array(2) : { a: 1 },
+    }));
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${spans}></lr-trace-tree>`);
+    expect(el.spans).to.have.lengthOf(6000);
+  });
+
+  it('keeps durations in their own column under without-bars and drops the header bar placeholder on a narrow container', async () => {
+    const wide = await fixture<HTMLDivElement>(html`<div style="inline-size: 900px"><lr-trace-tree .spans=${SPANS} with-tokens without-bars></lr-trace-tree></div>`);
+    const tree = wide.querySelector('lr-trace-tree') as LyraTraceTree;
+    const row = tree.shadowRoot!.querySelector('[data-id="root"]')!;
+    const duration = row.querySelector('[part="duration"]')!.getBoundingClientRect();
+    const tokens = row.querySelector('[part="tokens-in"]')!.getBoundingClientRect();
+    expect(duration.width).to.be.greaterThan(20);
+    expect(duration.right).to.be.at.most(tokens.left + 1);
+    const narrow = await fixture<HTMLDivElement>(html`<div style="inline-size: 300px"><lr-trace-tree .spans=${SPANS} with-tokens></lr-trace-tree></div>`);
+    const placeholder = narrow.querySelector('lr-trace-tree')!.shadowRoot!.querySelector('.col-bar') as HTMLElement;
+    expect(getComputedStyle(placeholder).display).to.equal('none');
+  });
+
+  it('builds the hierarchy once per update and not at all per key press', async () => {
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${BRANCHES}></lr-trace-tree>`);
+    const internals = el as unknown as { buildHierarchy: () => unknown };
+    const original = internals.buildHierarchy.bind(el);
+    let builds = 0;
+    internals.buildHierarchy = () => { builds++; return original(); };
+    el.spans = [...BRANCHES];
+    await el.updateComplete;
+    expect(builds).to.equal(1);
+    builds = 0;
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(builds).to.equal(0);
+  });
+
+  it('keeps a row on its own span when an earlier sibling is inserted', async () => {
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${BRANCHES}></lr-trace-tree>`);
+    const before = el.shadowRoot!.querySelector('[data-id="b"]');
+    el.spans = [...BRANCHES, { id: 'early', parentId: 'root', name: 'Early', kind: 'tool', startMs: 5, endMs: 6, status: 'success' }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-id="b"]') === before).to.equal(true);
+  });
+
+  it('hides kinds without rescaling the bars or losing the limit notice', async () => {
+    const spans: LyraSpan[] = [
+      ...Array.from({ length: MAX_RENDERED_LYRA_SPANS }, (_unused, index) => ({
+        id: `early-${index}`, name: `Early ${index}`, kind: index === 0 ? ('llm' as const) : ('tool' as const),
+        startMs: 0, endMs: 1000, status: 'success' as const,
+      })),
+      { id: 'late', name: 'Late', kind: 'tool', startMs: 9000, endMs: 10_000, status: 'success' },
+    ];
+    const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${spans} .hiddenKinds=${['llm']}></lr-trace-tree>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(MAX_RENDERED_LYRA_SPANS - 1);
+    expect(el.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('style')).to.contain('inline-size:10%');
+    expect(el.shadowRoot!.querySelector('[part="limit"]') !== null).to.equal(true);
+  });
+});
+
 describe('lr-trace-tree trace extent past the render cap', () => {
   it('scales the duration bars to the whole trace, not just the rows that fit under the cap', async () => {
     const spans: LyraSpan[] = [

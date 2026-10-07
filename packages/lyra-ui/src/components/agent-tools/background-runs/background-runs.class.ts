@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -18,10 +19,14 @@ export interface BackgroundRun {
   id: string;
   label: string;
   description?: string;
-  status: BackgroundRunStatus;
+  /** `done`/`success` (an `AgentStatusKind` or tool status) show as `completed`, `error` as `failed`. */
+  status: BackgroundRunStatus | 'done' | 'success' | 'error';
 }
 
+type NormalizedRun = Omit<BackgroundRun, 'status'> & { status: BackgroundRunStatus };
+
 export interface LyraBackgroundRunsEventMap {
+  'lr-run-activate': CustomEvent<{ runId: string }>;
   'lr-run-open': CustomEvent<{ runId: string }>;
   'lr-run-cancel': CustomEvent<{ runId: string }>;
 }
@@ -35,6 +40,7 @@ const STATUS_LABEL_KEY: Record<BackgroundRunStatus, string> = {
   failed: 'backgroundRunsStatusFailed',
   cancelled: 'agentRunStatusCancelled',
 };
+const STATUS_ALIASES: Readonly<Record<string, BackgroundRunStatus>> = { done: 'completed', success: 'completed', error: 'failed' };
 const CANCELLABLE_STATUSES: ReadonlySet<BackgroundRunStatus> = new Set(['queued', 'running']);
 
 /**
@@ -44,7 +50,8 @@ const CANCELLABLE_STATUSES: ReadonlySet<BackgroundRunStatus> = new Set(['queued'
  * the first valid item, and no more than 100 rows are mounted.
  *
  * @customElement lr-background-runs
- * @event lr-run-open - A run was requested for opening. `detail: { runId }`.
+ * @event lr-run-activate - A run was requested for opening. `detail: { runId }`.
+ * @event lr-run-open - Deprecated alias of `lr-run-activate`, dispatched right after it.
  * @event lr-run-cancel - A queued or running run was requested for cancellation. `detail: { runId }`.
  *   Terminal or missing runs cannot emit this event.
  * @csspart base - The fieldset and group.
@@ -102,22 +109,32 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
 
   private dispatchingRequest = false;
 
-  private get normalizedRuns(): BackgroundRun[] {
-    const runs = Array.isArray(this.runs) ? this.runs : [];
-    const valid = runs.filter((run): run is BackgroundRun => {
-      try {
-        return Boolean(run && typeof run.label === 'string' && STATUSES.includes(run.status));
-      } catch {
-        return false;
+  private normalizedFor?: readonly BackgroundRun[];
+  private normalizedCache: NormalizedRun[] = [];
+
+  private get normalizedRuns(): NormalizedRun[] {
+    if (this.normalizedFor !== this.runs) {
+      this.normalizedFor = this.runs;
+      const valid: NormalizedRun[] = [];
+      for (const run of Array.isArray(this.runs) ? this.runs : []) {
+        try {
+          const status = STATUS_ALIASES[run.status] ?? run.status;
+          if (typeof run.label === 'string' && (STATUSES as readonly string[]).includes(status))
+            valid.push({ ...run, status: status as BackgroundRunStatus });
+        } catch {
+          // A malformed row is skipped.
+        }
       }
-    });
-    return firstByIdentity(valid, (run) => run.id);
+      this.normalizedCache = firstByIdentity(valid, (run) => run.id);
+    }
+    return this.normalizedCache;
   }
 
   private requestOpen(runId: string): void {
     if (this.disabled || !this.normalizedRuns.some((run) => run.id === runId) || this.dispatchingRequest) return;
     this.dispatchingRequest = true;
     try {
+      this.emit('lr-run-activate', { runId });
       this.emit('lr-run-open', { runId });
     } finally {
       this.dispatchingRequest = false;
@@ -136,7 +153,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
     }
   }
 
-  private renderRun(run: BackgroundRun): TemplateResult {
+  private renderRun(run: NormalizedRun): TemplateResult {
     const cancellable = CANCELLABLE_STATUSES.has(run.status);
     return html`
       <div part="run" role="listitem" data-run-id=${run.id}>
@@ -177,7 +194,7 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
         ${runs.length === 0
           ? html`<p part="empty">${this.localize('backgroundRunsEmpty')}</p>`
           : html`<div part="list" role="list">
-              ${runs.slice(0, MAX_RENDERED_RUNS).map((run) => this.renderRun(run))}
+              ${repeat(runs.slice(0, MAX_RENDERED_RUNS), (run) => run.id, (run) => this.renderRun(run))}
             </div>`}
         ${runs.length > MAX_RENDERED_RUNS
           ? html`<p part="limit">${this.localize('backgroundRunsLimit', undefined, {

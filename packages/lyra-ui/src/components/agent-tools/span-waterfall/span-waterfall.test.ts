@@ -28,6 +28,7 @@ const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('ar-EG', [
   'spanWaterfall',
+  'spanStartedAtOffset',
   'durationMilliseconds',
   'spanKindTool',
   'statusSuccess',
@@ -35,6 +36,8 @@ expectLocaleFallback('ar-EG', [
 ]);
 expectLocaleFallback('de-DE', [
   'spanWaterfall',
+  'spanStartedAtOffset',
+  'durationMilliseconds',
   'durationSeconds',
   'spanKindTool',
   'statusSuccess',
@@ -515,11 +518,10 @@ describe('lr-span-waterfall', () => {
     expect(el.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('registers lr-live-region and lr-empty as a side effect of importing span-waterfall.js (regression)', async () => {
+  it('registers lr-empty as a side effect of importing span-waterfall.js (regression)', async () => {
     // Importing the *.class.js module alone never calls defineElement -- only the barrel (*.js)
     // does. Rendering an un-registered dependency silently produces a plain, un-upgraded
     // HTMLElement instead of the real component.
-    expect(customElements.get('lr-live-region')).to.exist;
     expect(customElements.get('lr-empty')).to.exist;
   });
 
@@ -694,15 +696,7 @@ it('normalizes foreign runtime enum values before rendering and focusing a span'
   expect(bar.getAttribute('aria-label')).to.include('Other');
   expect(status.getAttribute('data-status')).to.equal('pending');
   expect(status.textContent).to.equal('Pending');
-
-  const live = el.shadowRoot!.querySelector('lr-live-region')!;
-  live.throttleMs = 0;
-  await live.updateComplete;
-  (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).dispatchEvent(
-    new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }),
-  );
-  await new Promise((resolve) => setTimeout(resolve, 60));
-  expect(live.shadowRoot!.textContent).to.include('Pending');
+  expect(bar.getAttribute('aria-label')).to.include('Pending');
 });
 
 it('keeps a tabbable row when activeSpanId is dangling', async () => {
@@ -938,5 +932,51 @@ describe('lr-span-waterfall trace extent past the render cap', () => {
       tickLabels.some((label) => label.includes('10')),
       `the axis still runs to the full trace duration (ticks: ${tickLabels.join(', ')})`,
     ).to.equal(true);
+  });
+});
+
+describe('lr-span-waterfall remediation', () => {
+  it('names a bar with its start offset and no longer announces each focus move through a live region', async () => {
+    const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`);
+    expect(el.shadowRoot!.querySelector('[data-id="search"]')!.getAttribute('aria-label')).to.contain('10ms');
+    expect(el.shadowRoot!.querySelector('lr-live-region') === null).to.equal(true);
+  });
+
+  it('keeps a bar on its own span when an earlier span is inserted', async () => {
+    const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`);
+    const before = el.shadowRoot!.querySelector('[data-id="llm"]');
+    el.spans = [{ id: 'early', name: 'Early', kind: 'tool', startMs: 1, endMs: 2, status: 'success' }, ...SPANS];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-id="llm"]') === before).to.equal(true);
+  });
+
+  it('re-fits axis labels only when the ticks change, not on every same-data re-bind', async () => {
+    const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`);
+    const internals = el as unknown as { fitAxisLabels: () => void };
+    const original = internals.fitAxisLabels.bind(el);
+    let fits = 0;
+    internals.fitAxisLabels = () => { fits++; original(); };
+    el.spans = [...SPANS];
+    await el.updateComplete;
+    expect(fits).to.equal(0);
+    el.spans = [...SPANS, { id: 'late', name: 'Late', kind: 'tool', startMs: 900, endMs: 1000, status: 'success' }];
+    await el.updateComplete;
+    expect(fits).to.equal(1);
+  });
+
+  it('keeps the active row\'s status and duration at full text strength on the brand tint', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 400px"><lr-span-waterfall .spans=${SPANS} active-span-id="search"></lr-span-waterfall></div>`);
+    const el = wrapper.querySelector('lr-span-waterfall')!;
+    const row = el.shadowRoot!.querySelector('[part="row"][data-active]')!;
+    const name = getComputedStyle(row.querySelector('[part="name"]')!).color;
+    expect(getComputedStyle(row.querySelector('[part="duration"]')!).color).to.equal(name);
+    expect(getComputedStyle(row.querySelector('[part="status-text"]')!).color).to.equal(name);
+  });
+});
+
+describe('lr-span-waterfall label', () => {
+  it('uses an explicitly empty label verbatim, like lr-trace-tree', async () => {
+    const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall label="" .spans=${SPANS}></lr-span-waterfall>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
   });
 });

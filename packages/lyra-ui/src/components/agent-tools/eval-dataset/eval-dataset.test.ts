@@ -754,3 +754,14 @@ it('tolerates a bare-string `tags` field on one example without blanking the gri
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(2);
 });
+
+it('keeps every row of a large dataset whose metadata would exhaust a per-field budget', async () => {
+  const rows: EvalExample[] = Array.from({ length: 5000 }, (_, index) => ({
+    id: `ex-${index}`,
+    input: `in ${index}`,
+    tags: ['a', 'b', 'c'],
+    metadata: index === 0 ? { blob: new Uint8Array(2) } : { p: 1, q: 2, r: 3, s: 4 },
+  }));
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${rows}></lr-eval-dataset>`);
+  expect(el.examples).to.have.lengthOf(5000);
+});
