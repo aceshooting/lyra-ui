@@ -1,7 +1,7 @@
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
 import { normalizeImageInsertion, imageInsertionAborted, listenImageInsertionAbort } from './image-insertion-input.js';
-import { isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
+import { DOCX_LIMITS, isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
 import type {
   DocxAction, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
   DocxSaveReceipt, DocxSelection, DocxSelectionLease, DocxSession,
@@ -11,14 +11,16 @@ import type {
 } from './types.js';
 
 const commands: readonly DocxCommand[] = ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'undo', 'redo'];
-// Equal to the export cap, so every package this session saves can be reopened.
-const maxInputBytes = 16 * 1024 * 1024;
-const maxExportBytes = 16 * 1024 * 1024;
+// The input cap equals the export cap, so every package this session saves can be reopened.
+const maxInputBytes = DOCX_LIMITS.inputBytes;
+const maxExportBytes = DOCX_LIMITS.inputBytes;
 const emptyFormatting: Readonly<DocxFormatting> = Object.freeze({ paragraphStyleId: null, alignment: null,
   fontFamily: null, fontSizePoints: null, color: null, bulletList: false, numberedList: false });
 const ok = <T>(value: T): DocxResult<T> => Object.freeze({ ok: true, value });
 const refused = <T = never>(code: DocxRefusalCode): DocxResult<T> => Object.freeze({ ok: false, code });
 const disabled = (reason: DocxRefusalCode): DocxCommandAvailability => Object.freeze({ enabled: false, reason });
+// Page-unique and unguessable without `crypto.randomUUID()`, which only secure contexts expose.
+const randomId = () => Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4)), part => part.toString(36)).join('-');
 function safely(action: (() => void) | null | undefined) {
   try { action?.(); } catch { /* Continue releasing independently owned handles. */ }
 }
@@ -428,7 +430,7 @@ class InternalDocxSession implements DocxSession {
       this.updateFormatting(state.formatting);
       this.updateTable(state.table ?? null);
       this.updateImage(state.image ?? null, state.imageReady ?? false);
-      this.revision = Object.freeze({ documentId: globalThis.crypto.randomUUID(), value: 0 });
+      this.revision = Object.freeze({ documentId: randomId(), value: 0 });
     } catch { return this.failOpen(operation, 'open-failed'); }
     this.end(operation);
     // A fresh blank document has nothing to lose; it becomes dirty on its first committed change.
@@ -522,22 +524,21 @@ class InternalDocxSession implements DocxSession {
     const failure = this.completionFailure();
     return failure && this.cached !== initialSnapshot ? refused(failure) : result.ok ? ok(this.revision!) : result;
   }
+  /** `command` is already normalized by `execute()`. */
   private executeCommand(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
     const gate = this.gate();
     if (gate) return refused(gate);
-    const normalized = normalizeDocxAction(command);
-    if (!normalized.ok) return normalized;
     if (options.expectedRevision && !equalRevision(options.expectedRevision, this.revision)) return refused('stale-revision');
     const supplied = options.selection;
     if (supplied && (this.lease?.lease !== supplied || !equalRevision(this.lease.revision, this.revision))) return refused('stale-selection');
-    if (isDocxImageAction(normalized.value)) return this.executeImage(normalized.value, options);
-    if (isDocxTableAction(normalized.value)) return this.executeTable(normalized.value, options);
+    if (isDocxImageAction(command)) return this.executeImage(command, options);
+    if (isDocxTableAction(command)) return this.executeTable(command, options);
     const before = this.revision;
-    const available = this.can(normalized.value);
+    const available = this.availability(command);
     if (!available.enabled) return refused(available.reason ?? 'unsupported');
     if (!equalRevision(before, this.revision)) return refused('stale-revision');
     if (supplied && this.lease?.lease !== supplied) return refused('stale-selection');
-    const result = this.engine!.execute(normalized.value, supplied ? this.lease!.token : undefined);
+    const result = this.engine!.execute(command, supplied ? this.lease!.token : undefined);
     return result.ok ? ok(this.revision!) : result;
   }
   private executeTable(command: DocxTableAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
@@ -657,7 +658,7 @@ class InternalDocxSession implements DocxSession {
       if (failure) return refused(failure);
       if (generation !== this.searchVersion) return refused('stale-search');
       const matches = result.matches.map(match => {
-        const id = globalThis.crypto.randomUUID();
+        const id = randomId();
         this.matches.set(id, { token: match.token, revision });
         return Object.freeze({ id, text: match.text, before: match.before, after: match.after });
       });

@@ -1,4 +1,4 @@
-import type { DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
+import type { DocxEditorConfig, DocxEditorInstance, SelectionPin } from '@docx-editor.dev/core';
 import { isDocxImageAction, isDocxTableAction, normalizeDocxAction } from './commands.js';
 import { captureImageIntent, copyImage, qualifyImageCommand } from './eigenpal-images.js';
 import { selectImageTarget } from './eigenpal-image-navigation.js';
@@ -12,6 +12,17 @@ import { chartPlacements, type DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineModule } from './engine-loader.js';
 import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion } from './engine-port.js';
 import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
+
+/** Raster decode without `convertPreserved`, so Windows metafiles stay unparsed placeholders. */
+const rasterDecodePort = (view: Window | null): NonNullable<DocxEditorConfig['imageDecodePort']> => ({
+  async decode(bytes, type, limits) {
+    const bitmap = await view!.createImageBitmap(new Blob([new Uint8Array(bytes)], { type }), { imageOrientation: 'from-image' });
+    try {
+      if (!(bitmap.width > 0 && bitmap.height > 0 && bitmap.width * bitmap.height <= limits.maxPixels)) throw new Error('Image limits');
+      return Object.freeze({ pixelWidth: bitmap.width, pixelHeight: bitmap.height, dpiX: 96, dpiY: 96 });
+    } finally { bitmap.close(); }
+  },
+});
 
 /** The engine owns only this child, so teardown never removes later host-authored siblings. */
 export async function openEigenpalDocument(
@@ -247,7 +258,8 @@ export async function openEigenpalDocument(
 
   try {
     editor = module.createDocxEditor({ container: mount, mode: operation.readOnly ? 'view' : 'edit',
-      zoomMode: { type: 'fixed' }, locale: options.locale, translate: options.translate });
+      zoomMode: { type: 'fixed' }, locale: options.locale, translate: options.translate,
+      imageDecodePort: rasterDecodePort(options.mount.ownerDocument.defaultView) });
     releases.push(editor.on('change', change => {
       if (ready && !change.source) {
         editing.invalidateSearch();

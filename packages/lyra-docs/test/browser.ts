@@ -13,22 +13,24 @@ const test = {
   async sessionFactory() {
     return (await import('../src/docx/create-session.js')).createDocxSession;
   },
+  async registerLocale(locale: string, strings: Record<string, string>) {
+    (await import('./editor-entry.js')).registerLyraLocale(locale, strings);
+  },
   async imageBytes(kind: 'png' | 'jpeg' | 'gif') {
     return (await import('./corpus.js')).imageInsertionBytes(kind);
   },
-  async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'large' | 'basic-editing' | 'mixed-formatting' | 'search-limit' | 'chart') {
+  async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'basic-editing' | 'mixed-formatting' | 'search-limit' | 'chart') {
     if (kind === 'chart') return (await import('./corpus.js')).chartFixture();
     if (kind.startsWith('image-')) return (await import('./corpus.js')).imageFixture(kind);
     if (kind.startsWith('table-')) return (await import('./corpus.js')).tableFixture(kind);
-    if (kind === 'representative' || kind === 'large' || kind === 'basic-editing' || kind === 'mixed-formatting' || kind === 'search-limit') {
+    if (kind === 'representative' || kind === 'basic-editing' || kind === 'mixed-formatting' || kind === 'search-limit') {
       const corpus = await import('./corpus.js');
       if (kind === 'representative') return corpus.representativeFixture();
       if (kind === 'basic-editing') return corpus.basicEditingFixture();
       if (kind === 'mixed-formatting') return corpus.mixedFormattingFixture();
-      if (kind === 'search-limit') return corpus.searchLimitFixture();
-      return corpus.largeFixture();
+      return corpus.searchLimitFixture();
     }
-    const { docxFixture, relationship } = await import('../src/docx/admission-fixtures.js');
+    const { docxFixture, relationship } = await import('./admission-fixtures.js');
     if (kind === 'accepted') return docxFixture();
     if (kind === 'external') return docxFixture({ 'word/_rels/document.xml.rels': relationship('https://example.test/frame.html', 'frame') });
     return docxFixture({ 'word/document.xml': '<w:document><w:body><w:p></w:document>' });

@@ -56,7 +56,7 @@ export interface DocxEnginePort {
   refreshTableLabels?(labels: DocxTableLabels): boolean;
   /** Presentation only: body charts with cached series, read once per package revision. */
   charts?(): readonly DocxChartPlacement[];
-  /** Presentation only: page zoom as a factor (0.5–2) or the bounded page-width fit. */
+  /** Presentation only: page zoom as a factor (0.25–4) or the bounded page-width fit. */
   setZoom?(zoom: number | 'fit'): boolean;
   /** Presentation only: the painted node of the selected supported image, for pointer chrome. */
   selectedImageElement?(): HTMLElement | null;

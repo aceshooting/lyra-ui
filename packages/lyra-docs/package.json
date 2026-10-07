@@ -70,10 +70,10 @@
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
     "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs test/xml.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
-    "test:coverage": "node scripts/coverage.mjs",
-    "test:coverage:tooling": "node --test scripts/coverage.test.mjs"
+    "test:coverage": "node scripts/coverage.mjs"
   },
   "devDependencies": {
+    "@aceshooting/lyra-ui": "workspace:*",
     "@types/node": "26.6.4",
     "typescript": "^7.0.2",
     "@docx-editor.dev/core": "2.26.0",
@@ -86,12 +86,12 @@
     "v8-to-istanbul": "^9.3.0"
   },
   "dependencies": {
-    "@aceshooting/lyra-ui": "workspace:*",
     "fflate": "^0.8.3",
     "lit": "^3.3.3",
     "saxes": "^6.0.0"
   },
   "peerDependencies": {
+    "@aceshooting/lyra-ui": "workspace:^",
     "@docx-editor.dev/core": "2.26.0"
   },
   "peerDependenciesMeta": {

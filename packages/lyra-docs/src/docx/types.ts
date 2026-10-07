@@ -11,7 +11,7 @@ export type DocxAlignment = 'left' | 'center' | 'right' | 'justify';
  * Font families accept 1–64 Unicode letters, numbers, combining marks, spaces or - . + _.
  * Font sizes are 1–1638 points in half-point steps. Colors are #RRGGBB or auto; highlights use Word's named palette.
  * Line spacing is a multiple from 1 to 5 in 0.05 steps.
- * Links accept HTTPS without credentials, mailto or fragments, at most 2048 code units;
+ * Links accept HTTP(S) without credentials, mailto or fragments, at most 2048 code units;
  * optional link text is at most 4096 code units and must be valid XML 1.0 text.
  * Other URL schemes, whitespace and controls are refused.
  */

@@ -33,7 +33,7 @@ export async function preflightImageInsertion(pkg: OoxmlPackage,
     bytes = dependencies.writeOoxmlPackage(candidate.currentPackage());
     candidate = null;
     const serialized = current(); if (!serialized.ok) return serialized;
-    if (bytes.length > 4194304 || bytes.length > profile.value.upperZipBytes) return { ok: false, code: 'resource-limit' };
+    if (bytes.length > profile.value.upperZipBytes) return { ok: false, code: 'resource-limit' };
     const admitted = await admitDocx(bytes, signal);
     const afterAdmission = current(); if (!afterAdmission.ok) return afterAdmission;
     if (!admitted.ok) return admitted;

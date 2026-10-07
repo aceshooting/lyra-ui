@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { Zip, ZipPassThrough, unzipSync, zipSync } from 'fflate';
 import { crc32 } from 'node:zlib';
 import { admitDocx } from './admission.js';
-import { docxFixture } from './admission-fixtures.js';
+import { docxFixture } from '../../test/admission-fixtures.js';
 
 const accepted = { ok: true, value: undefined };
 const invalid = { ok: false, code: 'invalid-document' };

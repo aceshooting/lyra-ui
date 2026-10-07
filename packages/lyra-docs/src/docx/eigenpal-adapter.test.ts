@@ -100,6 +100,17 @@ test('adapter opens an inert surface and observes changes before enabling native
   assert.equal(h.removed(), true);
 });
 
+test('the engine decodes rasters only, so metafiles keep their placeholder', async () => {
+  const h = harness();
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
+    { readOnly: false, signal: new AbortController().signal }, () => true, h.loader);
+  assert(opened.ok);
+  const port = h.creation()?.imageDecodePort;
+  assert.equal(typeof port?.decode, 'function');
+  assert.equal(port && 'convertPreserved' in port, false);
+  opened.value.destroy();
+});
+
 test('factory or synchronous load failures destroy only the owned surface and return typed refusals', async () => {
   for (const kind of ['factory', 'load', 'aborted-load']) {
     const h = harness();
@@ -1028,7 +1039,7 @@ test('false native image selection refuses mount replacement before publishing o
 async function insertionHarness() {
   const store = await import('@docx-editor.dev/core/store');
   const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
-  const { docxFixture } = await import('./admission-fixtures.js');
+  const { docxFixture } = await import('../../test/admission-fixtures.js');
   const { imageInsertionBytes } = await import('../../test/corpus.js');
   const parsed = store.readOoxmlPackage(docxFixture({ 'word/document.xml': '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:p w14:paraId="00000001" w14:textId="00000001"><w:r><w:t>alpha</w:t></w:r></w:p></w:body></w:document>' })); assert(parsed.ok);
   const pkg = parsed.package, part = pkg.parts.get(pkg.mainDocumentPart)!, body = part.root.children[0]!; assert(body.kind !== 'textValue');

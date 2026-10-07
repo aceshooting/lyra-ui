@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { crc32 } from 'node:zlib';
 import type { OoxmlPackage } from '@docx-editor.dev/core/store';
 const store = await import('@docx-editor.dev/core/store');
 const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
-import { docxFixture } from './admission-fixtures.js';
+import { docxFixture } from '../../test/admission-fixtures.js';
 import { imageInsertionBytes } from '../../test/corpus.js';
 import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
 import { normalizeImageInsertion } from './image-insertion-input.js';
@@ -46,6 +47,28 @@ test('insertion profile and prospective bound refuse before candidate allocation
   const huge = { ...source, bytes: new Uint8Array(4194305) };
   assert.deepEqual(await preflightImageInsertion(h.pkg, h.target, huge, dependencies, decodePort, valid, h.signal), { ok: false, code: 'resource-limit' });
   assert.equal(constructors, 0); assert.equal(decodes, 0); assert.equal(writes, 0);
+});
+
+test('a candidate package over 4 MiB within the profiled package bound is accepted', async () => {
+  const chunk = (type: string, data: Uint8Array) => {
+    const out = new Uint8Array(12 + data.length), view = new DataView(out.buffer);
+    view.setUint32(0, data.length); out.set(new TextEncoder().encode(type), 4); out.set(data, 8);
+    view.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length))); return out;
+  };
+  const header = new Uint8Array(13), noise = new Uint8Array(4 * 1024 * 1024 - 128);
+  new DataView(header.buffer).setUint32(0, 64); new DataView(header.buffer).setUint32(4, 32); header.set([8, 6], 8);
+  for (let index = 0, state = 0x2468ace1; index < noise.length; index++) { state ^= state << 13; state ^= state >>> 17; state ^= state << 5; noise[index] = state & 255; }
+  noise.set([0x78, 0x9c]);
+  const parts = [Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10), chunk('IHDR', header), chunk('IDAT', noise), chunk('IEND', new Uint8Array())];
+  const png = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  parts.reduce((offset, part) => { png.set(part, offset); return offset + part.length; }, 0);
+  const checked = normalizeImageInsertion({ bytes: png, widthPoints: 48, heightPoints: 24 }, {}, valid); assert(checked.ok);
+  const h = fixture(); let written = 0;
+  const dependencies = { ...h.dependencies, writeOoxmlPackage: (pkg: OoxmlPackage) => { const bytes = store.writeOoxmlPackage(pkg); written = bytes.length; return bytes; } };
+  const result = await preflightImageInsertion(h.pkg, h.target, checked.value.source, dependencies,
+    { async decode() { return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } }, valid, h.signal);
+  assert.ok(written > 4 * 1024 * 1024, String(written));
+  assert.deepEqual(result, { ok: true, value: undefined });
 });
 
 test('candidate decode failure and native intent changes never reach candidate serialization', async () => {

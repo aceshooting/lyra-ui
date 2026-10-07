@@ -11,10 +11,11 @@ explicit save receipts. This first release covers the bounded inputs and actions
 documented here. It does not
 establish general Word compatibility or a broader format support commitment.
 
-Install the package and its optional document engine when using the editor:
+Install the package with its `@aceshooting/lyra-ui` peer, and the optional document engine
+when using the editor:
 
 ```sh
-pnpm add @aceshooting/lyra-docs @docx-editor.dev/core@2.26.0
+pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.26.0
 ```
 
 ## Imports
@@ -32,6 +33,7 @@ The imports provide:
 
 | Entry point | Provides |
 | --- | --- |
+| `@aceshooting/lyra-docs` | Nothing; each format lives on its own subpath |
 | `@aceshooting/lyra-docs/docx` | `createDocxSession` and public session, snapshot, result, and editor types |
 | `@aceshooting/lyra-docs/docx/editor` | Registers `<lr-docx-editor>` |
 | `@aceshooting/lyra-docs/docx/editor.class` | Exports `LyraDocxEditor` without registering its tag |
@@ -41,7 +43,8 @@ The CSS entry is an explicit static import. Load it in the host document before
 opening a file. Load `@aceshooting/lyra-ui/theme.css` first so the editor and its
 Lyra controls inherit the public theme. The engine is dynamically loaded on the
 first open, so importing the session API or registering the custom element does
-not initialize it.
+not initialize it. Package admission and the controls that only appear in an open
+document (color, chart, checkbox and text-area controls) also load with the first open.
 `@docx-editor.dev/core` is an exact `2.26.0` peer dependency and development
 dependency; consumers may omit it until they use the editor.
 
@@ -108,7 +111,7 @@ The component's localizable messages use these keys through Lyra's inherited
 `strings` property:
 
 ```text
-docxEditorLabel, docxEditorNew, docxEditorOpen, docxEditorSave,
+docxEditorLabel, docxEditorToolbar, docxEditorNew, docxEditorOpen, docxEditorSave,
 docxEditorBold, docxEditorItalic, docxEditorUnderline, docxEditorStrikethrough,
 docxEditorSuperscript, docxEditorSubscript, docxEditorClearFormatting,
 docxEditorIndentIncrease, docxEditorIndentDecrease, docxEditorLineSpacing,
@@ -119,6 +122,7 @@ DarkYellow, Black, Gray, DarkGray, LightGray), docxEditorUndo,
 docxEditorRedo, docxEditorUntitled, docxEditorIdle, docxEditorOpening,
 docxEditorReady, docxEditorUnsaved, docxEditorSaving, docxEditorError,
 docxEditorErrorTooLarge, docxEditorErrorExternal, docxEditorErrorInvalid,
+docxEditorErrorMount, docxEditorErrorEngine,
 docxEditorDisconnected, docxEditorShortcut, docxEditorDiscardQuestion,
 docxEditorDiscard, docxEditorKeep, docxEditorFormatting,
 docxEditorParagraphStyle, docxEditorAlignment, docxEditorAlignLeft,
@@ -133,7 +137,7 @@ docxEditorTableColumns, docxEditorTableSizeHint, docxEditorTableStale,
 docxEditorTableDimensions, docxEditorTableCell, docxEditorTableRowAbove,
 docxEditorTableRowBelow, docxEditorTableColumnLeft, docxEditorTableColumnRight,
 docxEditorTableDeleteRow, docxEditorTableDeleteColumn, docxEditorTableDelete,
-docxEditorImage, docxEditorResizeImage, docxEditorDescribeImage,
+docxEditorImage, docxEditorResizeImage, docxEditorResizeImageWithSize, docxEditorDescribeImage,
 docxEditorDeleteImage, docxEditorImageWidth, docxEditorImageHeight,
 docxEditorImageRatio, docxEditorImageSizeHint, docxEditorImageTitle,
 docxEditorImageDescription, docxEditorImageDescriptionHint,
@@ -147,7 +151,7 @@ docxEditorImageInsertInvalid, docxEditorImageInsertUnsupported,
 docxEditorImageInsertStale, docxEditorImageInsertRefused,
 docxEditorCancel, docxEditorFind, docxEditorFindQuery,
 docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
-docxEditorFindCount, docxEditorFindTruncated, docxEditorPrevious,
+docxEditorFindCount, docxEditorFindSelectMatch, docxEditorFindTruncated, docxEditorPrevious,
 docxEditorNext, docxEditorReplacement, docxEditorReplace,
 docxEditorReplaced, docxEditorEditUnavailable
 ```
@@ -242,7 +246,7 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 | `lr-ready` | `{ revision }` for the opened document. |
 | `lr-change` | `{ snapshot }`, where the snapshot may be `null` after disconnect. It never includes document bytes. |
 | `lr-selection-change` | `{ selection }` with selection kind and version. |
-| `lr-error` | `{ code }`, a normalized refusal without document contents or engine error text. |
+| `lr-error` | `{ code }`, a normalized refusal without document contents or engine error text; `destroyed` when the session is lost while the editor stays connected. |
 | `lr-save` | `{ receipt }`, including the bytes that the host must persist. |
 
 New and Open from the toolbar show an in-editor confirmation when the current
@@ -267,7 +271,8 @@ values except `snapshot()`; `open()`, `newDocument()`, and `save()` return
 The component reserves its `document` slot for its own stable light-DOM mount.
 Do not provide content in that slot or move, remove, or reuse the mount. The
 engine needs a connected, empty element in the document's light DOM; Shadow DOM
-mounts are unsupported.
+mounts are unsupported. Render `<lr-docx-editor>` itself outside other components'
+shadow roots too: there, every open is refused with `invalid-mount` and a message saying so.
 
 Common formatting, alignment, list, insertion and history actions use icons with localized
 accessible names and keyboard/hover tooltips. Wide allocations place file, history,
@@ -444,8 +449,8 @@ and search are demand-driven and do not run for ordinary typing.
 `can()` temporarily reports `busy` for formatting/history actions while native input settles;
 this prevents capability reads from committing queued typing. It otherwise validates the actual proposed edit, including that a paragraph style
 exists in the current document and that a link meets the safe URL policy.
-Links may target HTTPS, `mailto:`, or a same-document fragment; HTTP is
-refused, and destinations are never fetched. Family names are limited to 64
+Links may target HTTP(S) without credentials, `mailto:`, or a same-document fragment, and
+destinations are never fetched. Family names are limited to 64
 Unicode code points; font size is 1–1638 points in half-point steps; colors
 are `#RRGGBB` or `auto`; style ids are limited to 128 code units; link URLs to
 2048 and link/replacement text to 4096 code units. Catalogs cap at 256 styles
@@ -484,8 +489,10 @@ any of these bounds are refused:
 XML must be valid UTF-8. Only stored or deflated, unencrypted, non-ZIP64 DOCX
 archives are accepted; an Info-ZIP Unicode path field must spell the entry name.
 The parser rejects DTDs, processing instructions (except Office's inert `mso-*`
-instructions in custom XML parts), `altChunk`, and ActiveX controls. Embedded
-fonts, OLE objects and chart packages are kept as opaque parts. External
+instructions in custom XML parts), `altChunk`, and ActiveX controls. OLE objects
+and chart packages are kept as opaque parts. Embedded fonts are kept, and the engine
+loads them through the browser's font loader under a private alias, never under the
+document's family names. External
 relationships are admitted only when the engine never fetches them: hyperlinks
 (HTTP(S) without credentials, `mailto:`, fragments), the Word template a document
 was created from, and linked pictures, which render as placeholders. Other
@@ -511,7 +518,7 @@ selection. Reconnecting does not restore them; reopen bytes retained by the
 host. Moving or removing a session API mount also ends its session. There is no
 Shadow DOM mount mode.
 
-Native IME and touch behavior, font fidelity beyond rejecting embedded fonts,
+Native IME and touch behavior, font fidelity,
 advanced editing, broader DOCX compatibility, Word and LibreOffice
 interoperability, and collaboration still need qualification. The browser
 checks cover Chromium, Firefox, and WebKit, with associated synthetic OOXML
@@ -519,18 +526,14 @@ preservation checks. Qualification covers the exercised actions and fixtures;
 human input and assistive-technology review, real-document and font coverage,
 external word-processor round trips, and retained-memory behavior remain open.
 Performance runs record a fixed fixture and environment for comparison; they
-do not support a general speed claim.
-An earlier basic-editing benchmark used a 2,000-paragraph, 218,577-byte
-stored DOCX: fresh large open 1,868.9 ms, save 111.8 ms, warm reopen 1,602.8
-ms, and input-to-two-animation-frame median/p95 of 128.1/146.3 ms across 20
-samples. Browser and OS caches may be warm; these are diagnostic values, not
-latency guarantees. Full environment and bundle details are in the
+do not support a general speed claim. Measurements, environment and bundle details are in the
 [qualification record](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
 
 ## Development checks
 
-Run builds, tests, and browser checks on the repository's test host with the
-pinned Node 22.23.2 and pnpm 12.9.1 toolchain. From the repository root, build
+Run builds, tests, and browser checks on the repository's test host with its
+pinned toolchain (`.nvmrc` and the root `packageManager`), after
+`pnpm exec playwright install chromium firefox webkit`. From the repository root, build
 Lyra UI before the companion package:
 
 ```sh
@@ -553,7 +556,7 @@ functions or branches in unloaded modules, and the report flags those metrics
 as incomplete. Its statement count is based on V8 line counters, so statements
 and lines share that denominator. Every emitted runtime module, including
 styles, belongs to the coverage inventory. The generated reports record the
-executed suite counts and measured coverage for that run. CI enforces the 99.6%
+executed suite counts and measured coverage for that run. CI enforces a
 lines/statements floor; branch coverage is reported separately and has no floor.
 
 The browser command runs the three engines serially and writes browser evidence

@@ -49,8 +49,14 @@ test('callback-free mount checks retain exactly-once loss delivery and ignore ov
     for (const key of ['ownerDocument', 'isConnected', 'getRootNode']) Object.defineProperty(node, key, { get() { reads++; throw new Error('author override'); } });
     assert.equal(claim.value.check?.(), true); assert.equal(reads, 0);
     Observer.latest.records = Array.from({ length: 1025 }, () => new RecordFake([]));
+    assert.equal(claim.value.check?.(), true);
+    node.parent = mount();
+    Observer.latest.records = Array.from({ length: 1025 }, () => new RecordFake([]));
     assert.equal(claim.value.check?.(), false); claim.value.release();
     const removed = mount(), other = claimDocxMount(removed as unknown as HTMLElement, () => {}); assert(other.ok);
+    Observer.latest.records = [new RecordFake(Array.from({ length: 4097 }, mount))];
+    assert.equal(other.value.check?.(), true);
+    removed.parent = mount();
     Observer.latest.records = [new RecordFake(Array.from({ length: 4097 }, mount))];
     assert.equal(other.value.check?.(), false); other.value.release();
   } finally {

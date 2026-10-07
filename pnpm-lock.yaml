@@ -274,9 +274,6 @@ importers:
 
   packages/lyra-docs:
     dependencies:
-      '@aceshooting/lyra-ui':
-        specifier: workspace:*
-        version: link:../lyra-ui
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
@@ -287,6 +284,9 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
     devDependencies:
+      '@aceshooting/lyra-ui':
+        specifier: workspace:*
+        version: link:../lyra-ui
       '@docx-editor.dev/core':
         specifier: 2.26.0
         version: 2.26.0

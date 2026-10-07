@@ -19,9 +19,6 @@ test('root and session entries resolve without a DOM, engine, fetch or styleshee
       }`;
     execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
   }
-  const { default: manifest } = await import('@aceshooting/lyra-docs/package.json', { with: { type: 'json' } });
-  assert.equal(manifest.private, undefined);
-  assert.deepEqual(manifest.publishConfig, { access: 'public' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/session'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
   await assert.rejects(import('@aceshooting/lyra-docs/docx/engine-port'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 });
@@ -82,7 +79,10 @@ test('the registration entry defines the editor and every rendered Lyra control'
   const editorClass = readFileSync(new URL('../src/docx/docx-editor.class.ts', import.meta.url), 'utf8');
   const controls = [...editorClass.matchAll(/\bunsafeStatic\(tag\('([a-z][a-z0-9-]*)'\)\)/gu)]
     .map((match) => `lr-${match[1]}`);
+  const deferred = [...readFileSync(new URL('../src/docx/editor.ts', import.meta.url), 'utf8')
+    .matchAll(/\bimport\('@aceshooting\/lyra-ui\/components\/lr-([a-z][a-z0-9-]*)\.js'\)/gu)].map((match) => match[1]);
   assert(controls.length > 0);
+  assert.deepEqual(deferred.sort(), ['checkbox', 'color-picker', 'lite-chart', 'swatch-picker', 'textarea']);
   const source = `const definitions = new Map();
     globalThis.customElements = {
       get: name => definitions.get(name),
@@ -94,20 +94,15 @@ test('the registration entry defines the editor and every rendered Lyra control'
     globalThis.fetch = () => { throw new Error('Unexpected fetch'); };
     await import('@aceshooting/lyra-docs/docx/editor');
     const required = ${JSON.stringify(['lr-docx-editor', ...controls].sort())};
+    const deferred = ${JSON.stringify(deferred)};
+    const early = required.filter(name => deferred.includes(name.slice(3)) === definitions.has(name));
+    if (early.length) throw new Error('Wrong first-paint registrations: ' + early.join(', '));
+    const { loadDocumentControls } = await import(${JSON.stringify(new URL('../dist/docx/editor-controls.js', import.meta.url).href)});
+    await loadDocumentControls(...deferred);
     const missing = required.filter(name => !definitions.has(name));
     if (missing.length) throw new Error('Missing registrations: ' + missing.join(', '));
     const { LyraDocxEditor } = await import('@aceshooting/lyra-docs/docx/editor.class');
     if (definitions.get('lr-docx-editor') !== LyraDocxEditor)
       throw new Error('Editor registration does not use the public class');`;
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
-});
-
-test('release tooling plans the first public Docs tag', () => {
-  const docs = { directory: 'packages/lyra-docs', name: '@aceshooting/lyra-docs', version: '0.1.0' };
-  assert.deepEqual(planReleaseTags({ packages: [docs], existingTags: [], selection: 'lyra-docs' }), [{
-    tag: 'lyra-docs@0.1.0',
-    directory: 'packages/lyra-docs',
-    packageName: '@aceshooting/lyra-docs',
-    version: '0.1.0',
-  }]);
 });

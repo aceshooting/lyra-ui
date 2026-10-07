@@ -7,6 +7,7 @@ export const DOCX_LIMITS = Object.freeze({
   href: 2048, text: 4096, query: 256, matches: 100, context: 48,
   imagePoints: 1440, imageTitle: 256, imageDescription: 2048,
   tableRows: 20, tableColumns: 20, tableCells: 400,
+  inputBytes: 16 * 1024 * 1024, xmlNodes: 1_000_000,
 });
 const invalid = Object.freeze({ ok: false, code: 'invalid-option' } as const);
 const limited = Object.freeze({ ok: false, code: 'resource-limit' } as const);

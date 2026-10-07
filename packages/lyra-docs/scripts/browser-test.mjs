@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve, dirname, extname, sep, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -16,6 +16,7 @@ import { runImageInsertionTools } from './image-insertion-tools-browser.mjs';
 import { runEditorLayout } from './layout-browser.mjs';
 import { runFormattingTools } from './formatting-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
+import { runEditorContracts } from './editor-contracts-browser.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -899,7 +900,7 @@ async function bundle() {
   const lazy = manifest['test/editor-entry.ts'];
   assert.ok(lazy?.isDynamicEntry && lazy.file, 'Editor entry must be a separate lazy chunk');
   const core = Object.entries(manifest).find(([name, entry]) =>
-    name.includes('@docx-editor.dev+core@') && name.endsWith('/dist/index.js') && entry.isDynamicEntry);
+    name.endsWith('@docx-editor.dev/core/dist/index.js') && entry.isDynamicEntry);
   assert.ok(core?.[1]?.file, 'DOCX engine must be a separate lazy chunk');
   const files = await filesUnder(output);
   for (const file of files) {
@@ -951,8 +952,9 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
   page.on('pageerror', error => record.pageErrors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') record.consoleErrors.push(message.text()); });
   const check = async (label, work) => {
+    const started = performance.now();
     await work();
-    record.checks.push(label);
+    record.checks.push({ label, durationMs: Math.round(performance.now() - started) });
     evidence.checks.push(`${name}: ${label}`);
     console.log(`PASS ${name}: ${label}`);
   };
@@ -976,6 +978,10 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await check('session entry leaves the engine lazy', async () => {
       await page.evaluate(() => window.__docxTest.sessionFactory());
       assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded by the session entry');
+    });
+    await check('document-only controls stay unregistered until a document opens', async () => {
+      assert.deepEqual(await page.evaluate(() => ['lr-checkbox', 'lr-color-picker', 'lr-lite-chart', 'lr-swatch-picker', 'lr-textarea']
+        .filter(name => customElements.get(name))), []);
     });
     if (process.env.DOCX_LAYOUT_ONLY) {
       await runEditorLayout(page, check, { createEditor, saveEditor });
@@ -1382,6 +1388,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await runImageTools(page, check, { createEditor, saveEditor, assertProtectedParts });
     await runImageInsertion(page, check, { createEditor, saveEditor, assertProtectedParts });
     await runImageInsertionTools(page, check, { createEditor, saveEditor, assertProtectedParts });
+    await runEditorContracts(page, check, { createEditor });
     }
     assert.deepEqual(record.pageErrors, [], 'Browser page errors');
     assert.deepEqual(record.requestFailures, [], 'Browser request failures');
@@ -1416,6 +1423,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
 let server;
 try {
   const lazyEntries = await bundle();
+  await rm(screenshots, { recursive: true, force: true });
   await mkdir(screenshots, { recursive: true });
   server = serve();
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

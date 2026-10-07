@@ -1066,10 +1066,22 @@ test('independently evaluated modules mint distinct document identities and reje
   firstSession.destroy(); secondSession.destroy();
 });
 
-test('document identity generation failure cleans readiness resources without publishing a ready document', async () => {
-  const original = globalThis.crypto.randomUUID;
+test('opening and search identities need no secure-context crypto API', async () => {
+  const crypto = globalThis.crypto as { randomUUID?: unknown };
+  crypto.randomUUID = undefined;
   try {
-    globalThis.crypto.randomUUID = () => { throw new Error('unavailable randomness'); };
+    const { session } = await opened();
+    const found = value(session.find('alpha'));
+    assert.equal(found.matches.length, 1);
+    assert.equal(session.selectMatch(found.matches[0]!.id).ok, true);
+    session.destroy();
+  } finally { delete crypto.randomUUID; }
+});
+
+test('document identity generation failure cleans readiness resources without publishing a ready document', async () => {
+  const original = globalThis.crypto.getRandomValues;
+  try {
+    globalThis.crypto.getRandomValues = () => { throw new Error('unavailable randomness'); };
     const { f, create } = fixture();
     const session = value(create());
     refusal(await session.open({ kind: 'blank' }), 'open-failed');
@@ -1077,7 +1089,7 @@ test('document identity generation failure cleans readiness resources without pu
     assert.equal(f.destroyed, 1);
     assert.equal(f.subscriptions, 0);
     assert.equal(f.claimsReleased, 1);
-  } finally { globalThis.crypto.randomUUID = original; }
+  } finally { globalThis.crypto.getRandomValues = original; }
 });
 
 test('table settlement checks expected revision and leases after prior typing commits', async () => {

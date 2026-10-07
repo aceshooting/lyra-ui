@@ -5,8 +5,18 @@ const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const C = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const CHART_RELATIONSHIP = `${R}/chart`;
-const LIMITS = { nodes: 200_000, charts: 32 };
+const LIMITS = { nodes: 200_000, charts: 32, bytes: 2 * 1024 * 1024 };
 const decoder = new TextDecoder('utf-8', { fatal: true });
+// Chart parts are never edited, so their bytes objects key the parsed model across revisions.
+const models = new WeakMap<Uint8Array, DocxChartModel | null>();
+function chartModel(bytes: Uint8Array): DocxChartModel | null {
+  let model = models.get(bytes);
+  if (model === undefined) {
+    try { model = bytes.length > LIMITS.bytes ? null : parseDocxChart(decoder.decode(bytes)); } catch { model = null; }
+    models.set(bytes, model);
+  }
+  return model;
+}
 
 export interface DocxChartPlacement {
   /** The painted drawing's `data-drawing-node-id`. */
@@ -34,6 +44,7 @@ export function chartPlacements(pkg: OoxmlPackage): readonly DocxChartPlacement[
     const main = pkg.parts.get(pkg.mainDocumentPart);
     if (!main) return [];
     const relationships = pkg.relationships.get(main.name) ?? [];
+    if (!relationships.some(entry => entry.type === CHART_RELATIONSHIP)) return [];
     const placements: DocxChartPlacement[] = [];
     const stack: { node: OoxmlNode; drawing: string | null }[] = [{ node: main.root, drawing: null }];
     let visited = 0;
@@ -46,7 +57,7 @@ export function chartPlacements(pkg: OoxmlPackage): readonly DocxChartPlacement[
         const relationship = relationships.find(entry => entry.id === id && entry.type === CHART_RELATIONSHIP && entry.targetMode !== 'External');
         const part = relationship && resolve(main.name, relationship.rawTarget);
         const bytes = part ? pkg.partBytes.get(part) : undefined;
-        const model = bytes ? parseDocxChart(decoder.decode(bytes)) : null;
+        const model = bytes ? chartModel(bytes) : null;
         if (model) placements.push(Object.freeze({ drawingId: owner, model }));
         continue;
       }

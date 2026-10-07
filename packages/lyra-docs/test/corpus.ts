@@ -1,5 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { CONTENT_TYPES, docxFixture } from '../src/docx/admission-fixtures.js';
+import { CONTENT_TYPES, docxFixture } from './admission-fixtures.js';
 
 const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const officeRel = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
@@ -11,8 +11,6 @@ export function imageInsertionBytes(kind: 'png' | 'jpeg' | 'gif'): Uint8Array {
   return media[1];
 }
 const image = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/yA9iFgAAAABJRU5ErkJggg=='), char => char.charCodeAt(0));
-
-export const protectedParts = ['custom/payload.bin', 'customXml/item1.xml', 'word/media/pixel.png'] as const;
 
 export function representativeFixture(): Uint8Array {
   const types = CONTENT_TYPES.replace('</Types>', [
@@ -48,12 +46,6 @@ export function representativeFixture(): Uint8Array {
     'customXml/item1.xml': '<x:payload xmlns:x="urn:lyra:fixture">Keep this extension</x:payload>',
     'custom/payload.bin': new Uint8Array([0, 1, 2, 3, 255, 254, 253, 0, 42])
   }, 6);
-}
-
-export function largeFixture(paragraphCount = 2000): Uint8Array {
-  const paragraphs = Array.from({ length: paragraphCount }, (_, index) =>
-    `<w:p><w:r><w:t>Paragraph ${String(index + 1).padStart(4, '0')} keeps layout work measurable.</w:t></w:r></w:p>`).join('');
-  return docxFixture({ 'word/document.xml': `<w:document xmlns:w="${word}"><w:body>${paragraphs}</w:body></w:document>` }, 6);
 }
 
 /** Original OOXML fixture with a real custom style, a link and text split across runs. */

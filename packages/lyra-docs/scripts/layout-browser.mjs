@@ -282,7 +282,8 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       const picture = element.querySelector('.docx-pages img');
       return element.snapshot()?.revision?.value !== revision && Math.abs(picture?.getBoundingClientRect().width - width) < 1;
     }, { revision: dragged, width: image.width }, { timeout: 5000 });
-    await host.locator('.docx-pages img').first().click();
+    // A click racing the post-undo repaint can land beside the picture; select it through the API instead.
+    await page.waitForFunction(() => document.getElementById('layout-drag').selectImage('next').ok);
     await host.locator('[part="image-handle"][data-handle="e"]').waitFor({ state: 'visible' });
     const edge = await host.locator('[part="image-handle"][data-handle="e"]').boundingBox();
     const start = await host.evaluate(element => element.snapshot().image);

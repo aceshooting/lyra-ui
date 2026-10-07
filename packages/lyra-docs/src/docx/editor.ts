@@ -1,6 +1,7 @@
 export { LyraDocxEditor } from './docx-editor.class.js';
 import { LyraDocxEditor } from './docx-editor.class.js';
 import { defineElement } from '@aceshooting/lyra-ui/utilities/prefix.js';
+import { provideDocumentControls } from './editor-controls.js';
 import '@aceshooting/lyra-ui/components/lr-button.js';
 import '@aceshooting/lyra-ui/components/lr-icon.js';
 import '@aceshooting/lyra-ui/components/lr-tooltip.js';
@@ -8,12 +9,14 @@ import '@aceshooting/lyra-ui/components/lr-select.js';
 import '@aceshooting/lyra-ui/components/lr-option.js';
 import '@aceshooting/lyra-ui/components/lr-combobox.js';
 import '@aceshooting/lyra-ui/components/lr-number-input.js';
-import '@aceshooting/lyra-ui/components/lr-color-picker.js';
-import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';
-import '@aceshooting/lyra-ui/components/lr-lite-chart.js';
 import '@aceshooting/lyra-ui/components/lr-popover.js';
 import '@aceshooting/lyra-ui/components/lr-input.js';
-import '@aceshooting/lyra-ui/components/lr-checkbox.js';
-import '@aceshooting/lyra-ui/components/lr-textarea.js';
 
+provideDocumentControls({
+  checkbox: () => import('@aceshooting/lyra-ui/components/lr-checkbox.js'),
+  'color-picker': () => import('@aceshooting/lyra-ui/components/lr-color-picker.js'),
+  'lite-chart': () => import('@aceshooting/lyra-ui/components/lr-lite-chart.js'),
+  'swatch-picker': () => import('@aceshooting/lyra-ui/components/lr-swatch-picker.js'),
+  textarea: () => import('@aceshooting/lyra-ui/components/lr-textarea.js'),
+});
 defineElement('docx-editor', LyraDocxEditor);

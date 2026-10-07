@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseDocxChart } from './chart-model.js';
-import { chartXml } from '../../test/corpus.js';
+import { chartPlacements } from './eigenpal-charts.js';
+import { chartFixture, chartXml, representativeFixture } from '../../test/corpus.js';
+const store = await import('@docx-editor.dev/core/store');
 
 test('column and line charts read their cached categories, series and title', () => {
   assert.deepEqual(parseDocxChart(chartXml('column')), {
@@ -39,4 +41,18 @@ test('series, points and text are bounded', () => {
   assert.equal(parseDocxChart(long)!.title.length, 256);
   const far = chartXml('column').replace('<c:pt idx="2"><c:v>9</c:v></c:pt>', '<c:pt idx="2"><c:v>9</c:v></c:pt><c:pt idx="99999"><c:v>1</c:v></c:pt>');
   assert.equal(parseDocxChart(far)!.labels.length, 3);
+});
+
+test('chart placements skip chart-free documents, parse each chart part once and isolate a broken part', () => {
+  const read = (bytes: Uint8Array) => { const result = store.readOoxmlPackage(bytes); assert(result.ok); return result.package; };
+  const plain = read(representativeFixture()), main = plain.parts.get(plain.mainDocumentPart)!;
+  let walked = false;
+  const guarded = { ...main, get root() { walked = true; return main.root; } };
+  assert.deepEqual(chartPlacements({ ...plain, parts: new Map([...plain.parts, [main.name, guarded]]) }), []);
+  assert.equal(walked, false);
+  const charts = read(chartFixture()), partBytes = new Map(charts.partBytes);
+  partBytes.set('/word/charts/chart2.xml', Uint8Array.of(0xff, 0xfe));
+  const first = chartPlacements({ ...charts, partBytes }), second = chartPlacements({ ...charts, partBytes });
+  assert.equal(first.length, 1);
+  assert.equal(second[0]?.model, first[0]!.model);
 });

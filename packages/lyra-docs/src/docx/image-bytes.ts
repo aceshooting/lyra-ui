@@ -139,7 +139,7 @@ function inspectImage(bytes: Uint8Array, trailing: boolean): Readonly<DocxImageM
   return { pixels: width * height, pixelWidth: width, pixelHeight: height, mimeType: `image/${format}`, hasJpegApp1 };
 }
 
-const PNG_CRC = Uint32Array.from({ length: 256 }, (_, value) => {
+export const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, value) => {
   for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
   return value >>> 0;
 });
@@ -159,7 +159,7 @@ function inspectPng(bytes: Uint8Array, view: DataView, trailing: boolean): void 
     if (bytes[at + 6]! & 32) reject();
     let checksum = 0xffffffff;
     for (let index = at + 4; index < at + 8 + length; index++) {
-      checksum = (checksum >>> 8) ^ PNG_CRC[(checksum ^ bytes[index]!) & 255]!;
+      checksum = (checksum >>> 8) ^ CRC32_TABLE[(checksum ^ bytes[index]!) & 255]!;
     }
     if (((checksum ^ 0xffffffff) >>> 0) !== view.getUint32(at + 8 + length)) reject();
     if (kind === 0x49484452) {

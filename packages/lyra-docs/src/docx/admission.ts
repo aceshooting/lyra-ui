@@ -1,12 +1,13 @@
 import { Inflate } from 'fflate';
 import { SaxesParser } from 'saxes';
-import { inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
+import { CRC32_TABLE, inspectDocxImage, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
+import { DOCX_LIMITS } from './commands.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 const MiB = 1024 * 1024;
 // The input cap matches the largest package the session exports, so a saved document always reopens.
-const LIMITS = { input: 16 * MiB, entries: 2048, entry: 16 * MiB, expanded: 64 * MiB, xml: 16 * MiB, nodes: 1_000_000, depth: 128, totalPixels: 64_000_000, images: 256 };
+const LIMITS = { input: DOCX_LIMITS.inputBytes, entries: 2048, entry: 16 * MiB, expanded: 64 * MiB, xml: 16 * MiB, nodes: DOCX_LIMITS.xmlNodes, depth: 128, totalPixels: 64_000_000, images: 256 };
 /** External targets the engine records but never fetches: links, Word templates and linked pictures. */
 const INERT_EXTERNAL = new Set(['hyperlink', 'attachedTemplate', 'image']);
 /** Embedded content that can execute or import foreign markup stays refused; fonts and OLE/chart packages are opaque. */
@@ -110,10 +111,6 @@ function archive(bytes: Uint8Array, signal?: AbortSignal): Entry[] {
   }
   return entries;
 }
-const crcTable = Uint32Array.from({ length: 256 }, (_, value) => {
-  for (let i = 0; i < 8; i++) value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
-  return value >>> 0;
-});
 async function expand(bytes: Uint8Array, entry: Entry, signal?: AbortSignal): Promise<Uint8Array> {
   let size = 0, crc = 0xffffffff;
   const chunks: Uint8Array[] = [];
@@ -121,7 +118,7 @@ async function expand(bytes: Uint8Array, entry: Entry, signal?: AbortSignal): Pr
     check(signal);
     size += chunk.length;
     if (size > entry.size || size > LIMITS.entry) reject('resource-limit');
-    for (const byte of chunk) crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 255]!;
+    for (const byte of chunk) crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ byte) & 255]!;
     chunks.push(chunk);
   };
   if (entry.method === 0) receive(bytes.subarray(entry.start, entry.start + entry.packed));

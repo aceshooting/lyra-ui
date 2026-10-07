@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { crc32 } from 'node:zlib';
 import { admitDocx } from './admission.js';
 import { normalizeDocxAction } from './commands.js';
-import { docxFixture, DOCUMENT_XML, relationship } from './admission-fixtures.js';
+import { docxFixture, DOCUMENT_XML, relationship } from '../../test/admission-fixtures.js';
 
 const invalid = { ok: false, code: 'invalid-document' };
 const limited = { ok: false, code: 'resource-limit' };

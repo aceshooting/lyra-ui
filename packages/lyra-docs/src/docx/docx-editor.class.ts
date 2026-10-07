@@ -6,9 +6,14 @@ import { LyraElement } from '@aceshooting/lyra-ui/utilities/lyra-element.js';
 import { resolveLyraScopedString } from '@aceshooting/lyra-ui/localization.js';
 import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
+import { formatNumber } from '@aceshooting/lyra-ui/utilities/format.js';
+import { nextId } from '@aceshooting/lyra-ui/utilities/a11y.js';
 import { createDocxSession } from './create-session.js';
+import { loadDocumentControls } from './editor-controls.js';
 import { internalDocxCharts, internalDocxSelectedImageElement, refreshInternalDocxTableLabels, setInternalDocxZoom } from './session.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
+import type { DocxChartModel } from './chart-model.js';
+import { DOCX_LIMITS } from './commands.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
   captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
@@ -157,8 +162,23 @@ const tableActions = [
   ['delete-column', { type: 'delete-table-column' }, 'docxEditorTableDeleteColumn'],
   ['delete-table', { type: 'delete-table' }, 'docxEditorTableDelete'],
 ] as const;
-const maxInputBytes = 16 * 1024 * 1024;
+const maxInputBytes = DOCX_LIMITS.inputBytes;
 const maxImageBytes = 4 * 1024 * 1024;
+const errorMessages: Partial<Record<DocxRefusalCode, string>> = {
+  'resource-limit': 'docxEditorErrorTooLarge', 'external-resource': 'docxEditorErrorExternal',
+  'invalid-document': 'docxEditorErrorInvalid', 'invalid-mount': 'docxEditorErrorMount',
+  'engine-unavailable': 'docxEditorErrorEngine', destroyed: 'docxEditorDisconnected',
+};
+/** Inner control events stay inside the editor, which documents only its own events. */
+const innerEvents = ['lr-input', 'lr-change', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
+const stopEvent = (event: Event) => event.stopPropagation();
+const chartDatasets = new WeakMap<DocxChartModel, readonly object[]>();
+const datasets = (model: DocxChartModel) => {
+  let value = chartDatasets.get(model);
+  if (!value) chartDatasets.set(model, value = model.series.map((series, index) =>
+    ({ ...series, color: officeSeriesColors[index % officeSeriesColors.length] })));
+  return value;
+};
 type ImageInsertionPhase = 'idle' | 'reading' | 'draft' | 'dispatched';
 const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code });
 
@@ -173,7 +193,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @event lr-ready - A document finished opening.
  * @event lr-change - Session state or revision changed; no document bytes are included.
  * @event lr-selection-change - Selection kind or version changed.
- * @event lr-error - A normalized refusal code; no document contents are exposed.
+ * @event lr-error - A normalized refusal code; no document contents are exposed. `destroyed` reports a session lost while connected.
  * @event lr-save - Explicit save completed; detail contains the save receipt and bytes.
  * @customElement lr-docx-editor
  * @slot document - Reserved for the component-owned, stable light-DOM engine mount.
@@ -336,12 +356,11 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
 export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   static override styles = [LyraElement.styles, styles];
 
-  /** Resolve the editor's private message slice through Lyra's public scoped resolver. */
+  /** Lyra's own resolution (overrides, registered locales), then the editor's English defaults. */
   protected override localize(key: string, fallback?: string, values?: Record<string, string | number>): string {
-    if (!Object.prototype.hasOwnProperty.call(DOCX_EDITOR_STRINGS, key)) return super.localize(key, fallback, values);
-    // Register inherited-locale observation even though this slice lives outside Lyra UI's catalog.
-    void this.effectiveLocale;
-    return resolveLyraScopedString(this, key, DOCX_EDITOR_STRINGS, this.strings, fallback, values);
+    const message = super.localize(key, fallback, values);
+    return message === key && Object.hasOwn(DOCX_EDITOR_STRINGS, key)
+      ? resolveLyraScopedString(this, key, DOCX_EDITOR_STRINGS, DOCX_EDITOR_STRINGS, undefined, values) : message;
   }
 
   /** Applied when the next document is opened. The session fixes this value at creation. */
@@ -407,6 +426,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private cancelInsertionFocusReturn: (() => void) | null = null;
 
   private mount: HTMLDivElement | null = null;
+  private hint: HTMLSpanElement | null = null;
+  private lastUsable = new Map<string, boolean>();
+  private colorItems: { key: string; text: readonly object[]; highlight: readonly object[] } | null = null;
   private session: DocxSession | null = null;
   private unsubscribeSession: (() => void) | null = null;
   private toolbarSelection: DocxSelectionLease | null = null;
@@ -431,15 +453,20 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.politeSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
     this.assertiveSink = acquireAnnouncementSink('assertive', { document: this.ownerDocument, source: this });
     if (!this.mount) {
-      const mount = this.ownerDocument.createElement('div');
+      const mount = this.ownerDocument.createElement('div'), hint = this.ownerDocument.createElement('span');
       mount.slot = 'document';
       mount.setAttribute('role', 'document');
       mount.setAttribute('aria-label', this.editorLabel());
       mount.setAttribute('aria-keyshortcuts', 'Alt+F10');
-      mount.title = this.localize('docxEditorShortcut');
+      hint.id = nextId('lr-docx-editor-hint');
+      hint.hidden = true;
+      hint.textContent = this.localize('docxEditorShortcut');
+      mount.setAttribute('aria-describedby', hint.id);
       this.mount = mount;
-      this.append(mount);
+      this.hint = hint;
+      this.append(mount, hint);
     }
+    for (const type of innerEvents) this.renderRoot.addEventListener(type, stopEvent);
     this.addEventListener('keydown', this.onHostKeyDown, { capture: true });
     this.addEventListener('scroll', this.scheduleImageFrame, { capture: true, passive: true });
   }
@@ -462,6 +489,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.disposeSession();
     this.mount?.remove();
     this.mount = null;
+    this.hint?.remove();
+    this.hint = null;
     this.currentSnapshot = null;
     this.openInProgress = false;
     this.openingFile = false;
@@ -484,13 +513,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.applyZoom();
     const overlayOnly = [...(changed as Map<PropertyKey, unknown>).keys()].every(key => key === 'imageClip' || key === 'chartLayer');
     if (!overlayOnly) this.scheduleImageFrame();
-    const enabled = this.enabledToolbarButtons();
-    if (enabled.length && !enabled.some(button => button.getAttribute('data-tool-key') === this.toolbarKey))
-      this.toolbarKey = enabled[0]!.getAttribute('data-tool-key') ?? 'bold';
-    if (this.mount) {
-      this.mount.setAttribute('aria-label', this.editorLabel());
-      this.mount.title = this.localize('docxEditorShortcut');
+    const current = this.renderRoot.querySelector<HTMLElement>(`[data-tool-key="${this.toolbarKey}"]`);
+    if (!current || !this.enabledToolbarButtons([current]).length) {
+      const first = this.enabledToolbarButtons()[0];
+      if (first) this.toolbarKey = first.getAttribute('data-tool-key') ?? 'bold';
     }
+    this.mount?.setAttribute('aria-label', this.editorLabel());
+    if (this.hint) this.hint.textContent = this.localize('docxEditorShortcut');
     if (!this.announcementsArmed && this.wasDisconnected)
       this.politeSink?.announce(this.localize('docxEditorDisconnected'));
     this.announcementsArmed = true;
@@ -511,6 +540,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.unsubscribeSession = null;
     this.session?.destroy();
     this.session = null;
+    this.lastUsable.clear();
     this.mount?.replaceChildren();
     this.clearEditingDrafts();
   }
@@ -593,19 +623,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.emit('lr-selection-change', { selection: next.selection });
       if (!current()) return;
     }
-    if (next.status === 'error' && next.error?.code && (previous?.status !== 'error' || previous.error?.code !== next.error.code)) {
-      this.emit('lr-error', { code: next.error.code });
+    // Only an external loss reaches this listener; the element unsubscribes before destroying its own session.
+    const failure = next.status === 'destroyed' ? 'destroyed' : next.status === 'error' ? next.error?.code : undefined;
+    if (failure && (previous?.status !== next.status || previous.error?.code !== next.error?.code)) {
+      this.emit('lr-error', { code: failure });
       if (!current()) return;
     }
-    if (this.announcementsArmed && next.status === 'error' && previous?.status !== 'error')
-      this.assertiveSink?.announce(this.localize('docxEditorError'));
+    if (this.announcementsArmed && failure && previous?.status !== next.status)
+      this.assertiveSink?.announce(this.localize(failure === 'destroyed' ? 'docxEditorDisconnected' : 'docxEditorError'));
   }
 
   /** Explain the refusals a real file commonly hits; other failures keep the general message. */
-  private errorMessageKey(): string {
-    const code = this.localError ?? this.currentSnapshot?.error?.code;
-    return code === 'resource-limit' ? 'docxEditorErrorTooLarge' : code === 'external-resource' ? 'docxEditorErrorExternal' :
-      code === 'invalid-document' ? 'docxEditorErrorInvalid' : 'docxEditorError';
+  private errorMessage(): string {
+    const code = this.localError ?? (this.currentSnapshot?.status === 'destroyed' ? 'destroyed' : this.currentSnapshot?.error?.code);
+    return this.localize((code && errorMessages[code]) || 'docxEditorError', undefined, {
+      size: formatNumber(maxInputBytes / 1048576, this.effectiveLocale, { style: 'unit', unit: 'megabyte' }),
+      elements: formatNumber(DOCX_LIMITS.xmlNodes, this.effectiveLocale),
+    });
   }
 
   private reportError(code: DocxRefusalCode): void {
@@ -636,6 +670,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         return refused('busy');
     }
     this.openInProgress = true;
+    void loadDocumentControls('checkbox', 'color-picker', 'swatch-picker', 'textarea');
     this.localError = null;
     this.wasDisconnected = false;
     this.pendingAction = null;
@@ -706,6 +741,18 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   can(command: DocxCommand | DocxEdit) {
     return this.session?.can(command) ?? { enabled: false, reason: 'not-ready' as const };
+  }
+
+  /** Native input's transient `busy` keeps a control's last state instead of disabling it per keystroke. */
+  private usable(key: string, availability: DocxCommandAvailability | undefined): boolean {
+    if (availability?.reason === 'busy' && this.currentSnapshot?.activity === null) return this.lastUsable.get(key) ?? false;
+    const enabled = Boolean(availability?.enabled);
+    this.lastUsable.set(key, enabled);
+    return enabled;
+  }
+
+  private available(action: DocxCommand | DocxEdit): boolean {
+    return this.usable(JSON.stringify(action), this.can(action));
   }
 
   /** Execute a supported formatting, editing or history command. */
@@ -798,7 +845,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   /** Dirty content worth confirming: an edited single page with no text, picture or table has nothing to lose. */
   private hasUnsavedContent(): boolean {
-    if (!this.currentSnapshot?.dirty) return false;
+    if (!this.currentSnapshot?.dirty || this.currentSnapshot.status === 'destroyed') return false;
     const pages = this.mount?.querySelectorAll('.docx-page');
     if (pages?.length !== 1) return true;
     const page = pages[0]!;
@@ -828,7 +875,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const result = this.execute(edit, lease ? { selection: lease } : {});
     lease?.release();
     if (result.ok) this.editError = null;
-    else this.reportEditRefusal(result.code);
+    else if (result.code !== 'busy') this.reportEditRefusal(result.code);
     if (returnFocus) this.focusEditor();
   }
 
@@ -849,7 +896,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onParagraphStyleChange(event: CustomEvent<{ value: string | string[] }>): void {
-    event.stopPropagation();
     if (typeof event.detail.value === 'string' && event.detail.value) {
       this.pickerFocusReturn = true;
       this.runEdit({ type: 'paragraph-style', styleId: event.detail.value }, false);
@@ -857,7 +903,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onFontFamilyChange(event: CustomEvent<{ value: string | string[] }>): void {
-    event.stopPropagation();
     if (typeof event.detail.value === 'string' && event.detail.value) {
       this.pickerFocusReturn = true;
       this.runEdit({ type: 'font-family', family: event.detail.value }, false);
@@ -865,7 +910,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onFontSizeChange(event: CustomEvent<{ value: string }>): void {
-    event.stopPropagation();
     const points = Number(event.detail.value);
     this.runEdit({ type: 'font-size', points });
   }
@@ -893,7 +937,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onCustomColorChange(event: Event): void {
-    event.stopPropagation();
     const color = (event.currentTarget as HTMLElement & { value: string }).value;
     if (/^#[0-9a-f]{6}$/i.test(color)) this.applyPopoverEdit({ type: 'text-color', color }, null);
   }
@@ -941,15 +984,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   private renderZoom(): TemplateResult {
     const ready = this.currentSnapshot?.status === 'ready';
-    const percent = new Intl.NumberFormat(this.effectiveLocale, { style: 'percent' });
+    const zoom = zoomConverter.fromAttribute(String(this.zoom));
+    const levels = zoom === 'fit' || zoomLevels.includes(zoom as typeof zoomLevels[number]) ? zoomLevels : [...zoomLevels, zoom].sort((a, b) => a - b);
     return html`<${selectTag} part="zoom" size="s" aria-label=${this.localize('docxEditorZoom')} ?disabled=${!ready}
-      .value=${String(this.zoom)}
+      .value=${String(zoom)}
       @lr-change=${(event: CustomEvent<{ value: string | string[] }>) => {
-        event.stopPropagation();
         if (typeof event.detail.value === 'string') this.zoom = zoomConverter.fromAttribute(event.detail.value);
       }}>
       <${optionTag} value="fit">${this.localize('docxEditorZoomFit')}</${optionTag}>
-      ${zoomLevels.map(level => html`<${optionTag} value=${String(level)}>${percent.format(level)}</${optionTag}>`)}
+      ${levels.map(level => html`<${optionTag} value=${String(level)}>${formatNumber(level, this.effectiveLocale, { style: 'percent' })}</${optionTag}>`)}
     </${selectTag}>`;
   }
 
@@ -1220,7 +1263,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   };
 
   private changeInsertionDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
-    event.stopPropagation();
     const value = event.detail.value;
     if (axis === 'width') this.insertionWidth = value;
     else this.insertionHeight = value;
@@ -1398,7 +1440,6 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private changeImageDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
-    event.stopPropagation();
     const value = event.detail.value;
     if (axis === 'width') this.imageWidth = value;
     else this.imageHeight = value;
@@ -1435,7 +1476,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private imageHandlesAvailable(): boolean {
     const snapshot = this.currentSnapshot;
     return Boolean(snapshot?.image) && snapshot?.status === 'ready' && !snapshot.readOnly && !snapshot.composing &&
-      snapshot.activity === null && this.imageDialog === null && this.can({ type: 'delete-image' }).enabled;
+      snapshot.activity === null && this.imageDialog === null && this.available({ type: 'delete-image' });
   }
 
   private scheduleImageFrame = (): void => {
@@ -1503,6 +1544,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private syncCharts(): void {
     if (!this.isConnected) return;
     const placements = this.currentSnapshot?.status === 'ready' ? internalDocxCharts(this.session) : [];
+    if (placements.length) void loadDocumentControls('lite-chart');
     const surface = placements.length ? this.mount?.querySelector('[data-lr-docx-surface]') ?? null : null;
     if (surface !== this.observedSurface) {
       this.surfaceObserver?.disconnect();
@@ -1545,7 +1587,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         <${liteChartTag} type=${model.type} ?stacked=${model.stacked} ?with-legend=${model.series.length > 1}
           height=${px(Math.max(32, frame.height - (model.title ? 20 : 0) - (model.series.length > 1 ? 24 : 0)))}
           label=${model.title || this.localize('docxEditorChart')} .labels=${model.labels}
-          .datasets=${model.series.map((series, index) => ({ ...series, color: officeSeriesColors[index % officeSeriesColors.length] }))}></${liteChartTag}>
+          .datasets=${datasets(model)}></${liteChartTag}>
       </div>`)}
     </div>`;
   }
@@ -1628,7 +1670,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const box = this.imagePreview ?? clip.frame;
     const px = (value: number) => `${value}px`;
     const preview = this.imagePreview;
-    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 1 });
+    const dimension = (value: number) => formatNumber(value, this.effectiveLocale, { maximumFractionDigits: 1 });
     return html`<div class="image-layer" style=${styleMap({ left: px(clip.left), top: px(clip.top), width: px(clip.width), height: px(clip.height) })}>
       <div part="image-frame" data-dragging=${preview ? 'true' : 'false'}
         style=${styleMap({ left: px(box.left), top: px(box.top), width: px(box.width), height: px(box.height) })}>
@@ -1797,8 +1839,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (target) this.toolbarKey = target.getAttribute('data-tool-key') ?? 'bold';
   };
 
-  private enabledToolbarButtons(): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>('[data-tool-key]')]
+  private enabledToolbarButtons(buttons: Iterable<HTMLElement> = this.renderRoot.querySelectorAll<HTMLElement>('[data-tool-key]')): HTMLElement[] {
+    return [...buttons]
       .filter(button => !button.hasAttribute('disabled') && !button.hidden && !button.inert &&
         !button.closest('[inert]') && button.getAttribute('aria-hidden') !== 'true');
   }
@@ -1825,31 +1867,25 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       });
       return;
     }
-    if (action === 'new') {
-      const sourceRead = this.sourceReadSequence + 1;
-      const pending = this.newDocument();
-      void pending.then(async result => {
-        await this.updateComplete;
-        if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
-        if (result.ok) this.focusEditor();
-        else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
-      });
-    } else this.openFilePicker();
+    if (action === 'new') this.newFromToolbar();
+    else this.openFilePicker();
+  }
+
+  private newFromToolbar(): void {
+    const sourceRead = this.sourceReadSequence + 1;
+    void this.newDocument().then(async result => {
+      await this.updateComplete;
+      if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
+      if (result.ok) this.focusEditor();
+      else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
+    });
   }
 
   private confirmToolbarAction(): void {
     const action = this.pendingAction;
     this.pendingAction = null;
-    if (action === 'new') {
-      const sourceRead = this.sourceReadSequence + 1;
-      const pending = this.newDocument();
-      void pending.then(async result => {
-        await this.updateComplete;
-        if (!this.isConnected || sourceRead !== this.sourceReadSequence) return;
-        if (result.ok) this.focusEditor();
-        else this.renderRoot.querySelector<HTMLElement>('[part="new-button"]')?.focus();
-      });
-    } else if (action === 'open') this.openFilePicker();
+    if (action === 'new') this.newFromToolbar();
+    else if (action === 'open') this.openFilePicker();
   }
 
   private onFileSelected = (event: Event): void => {
@@ -1874,6 +1910,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (snapshot?.activity === 'inserting-image') return this.localize('docxEditorInsertingImage');
     if (snapshot?.activity === 'saving') return this.localize('docxEditorSaving');
     if (snapshot?.status === 'error' || this.localError) return this.localize('docxEditorError');
+    if (snapshot?.status === 'destroyed') return this.localize('docxEditorDisconnected');
     if (snapshot?.dirty) return this.localize('docxEditorUnsaved');
     if (snapshot?.status === 'ready') return this.localize('docxEditorReady');
     if (this.wasDisconnected) return this.localize('docxEditorDisconnected');
@@ -1897,7 +1934,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private renderCommand(command: DocxCommand): TemplateResult {
     const availability = this.currentSnapshot?.commands[command];
     const formatting = command !== 'undo' && command !== 'redo';
-    const active = availability?.active;
+    const active = availability?.active, enabled = this.usable(command, availability);
     return html`<${buttonTag}
       part="format-button"
       id=${`tool-${command}`} aria-label=${this.localize(commandLabels[command])}
@@ -1906,8 +1943,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       data-active=${active === true ? 'true' : 'false'}
       size="s"
       appearance=${active === true ? 'filled' : active === 'mixed' ? 'filled-outlined' : 'quiet'}
-      ?disabled=${!availability?.enabled}
-      tabindex=${availability?.enabled && this.toolbarKey === command ? '0' : '-1'}
+      ?disabled=${!enabled}
+      tabindex=${enabled && this.toolbarKey === command ? '0' : '-1'}
       .pressed=${formatting ? active === 'mixed' ? 'mixed' : active === true : null}
       @pointerdown=${() => { if (formatting) this.retainToolbarSelection(); }}
       @click=${() => this.runToolbarCommand(command)}
@@ -1922,7 +1959,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       id=${`tool-alignment-${value}`} aria-label=${this.localize(key)}
       data-tool-key=${`alignment-${value}`}
       size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${active}
-      ?disabled=${!this.can(edit).enabled}
+      ?disabled=${!this.available(edit)}
       tabindex=${this.toolbarKey === `alignment-${value}` ? '0' : '-1'}
       @pointerdown=${() => this.retainToolbarSelection()}
       @click=${() => this.runEdit(edit)}>${this.renderToolIcon(`alignment-${value}`)}</${buttonTag}>`;
@@ -1936,7 +1973,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       id=${`tool-list-${kind}`} aria-label=${this.localize(toolIcons[`list-${kind}`].label)}
       data-tool-key=${`toggle-list-${kind}`}
       size="s" appearance=${active ? 'filled' : 'quiet'} .pressed=${Boolean(active)}
-      ?disabled=${!this.can(edit).enabled}
+      ?disabled=${!this.available(edit)}
       tabindex=${this.toolbarKey === `toggle-list-${kind}` ? '0' : '-1'}
       @pointerdown=${() => this.retainToolbarSelection()}
       @click=${() => this.runEdit(edit)}>${this.renderToolIcon(`list-${kind}`)}</${buttonTag}>`;
@@ -1947,6 +1984,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const editable = ready && !this.currentSnapshot?.readOnly && !this.currentSnapshot?.composing &&
       this.currentSnapshot?.activity === null;
     const formatting = this.currentSnapshot?.formatting;
+    const swatches = this.swatchItems();
     return html`<div part="editing-tools" role="group" aria-label=${this.localize('docxEditorFormatting')}>
       <div class="font-tools">
       <${selectTag} part="paragraph-style" data-edit="paragraph-style" size="s"
@@ -1991,48 +2029,54 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         ${listKinds.map(kind => this.renderList(kind))}
         ${this.renderEditButton({ type: 'indent', direction: 'decrease' }, 'indent-decrease')}
         ${this.renderEditButton({ type: 'indent', direction: 'increase' }, 'indent-increase')}
-        ${this.renderToolPopover('line-spacing', Boolean(editable) && this.can({ type: 'line-spacing', multiple: 1 }).enabled, html`
+        ${this.renderToolPopover('line-spacing', Boolean(editable) && this.available({ type: 'line-spacing', multiple: 1 }), html`
           <div part="line-spacing-options" role="group" aria-label=${this.localize('docxEditorLineSpacing')}>
             ${lineSpacings.map(multiple => html`<${buttonTag} part="line-spacing-option" data-value=${multiple} size="s" appearance="quiet"
-              @click=${() => this.applyPopoverEdit({ type: 'line-spacing', multiple }, 'line-spacing-popover')}>${multiple.toLocaleString(this.effectiveLocale, { minimumFractionDigits: 1 })}</${buttonTag}>`)}
+              @click=${() => this.applyPopoverEdit({ type: 'line-spacing', multiple }, 'line-spacing-popover')}>${formatNumber(multiple, this.effectiveLocale, { minimumFractionDigits: 1 })}</${buttonTag}>`)}
           </div>`)}
       </div>
       <div class="color-tools">
         ${this.renderToolPopover('text-color', Boolean(editable), html`
           <div part="text-color-fields" class="color-fields">
             <${swatchPickerTag} part="text-color-swatches" size="s" aria-label=${this.localize('docxEditorTextColor')}
-              .items=${textColors.map(([color, name]) => ({ value: color, color, label: this.localize(`docxEditorColor${name}`) }))}
-              .value=${this.lastTextColor} @lr-change=${(event: Event) => event.stopPropagation()}
+              .items=${swatches.text} .value=${this.lastTextColor}
               @click=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'text-color', color }, 'text-color-popover'))}
               @keydown=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'text-color', color }, 'text-color-popover'))}></${swatchPickerTag}>
             <${buttonTag} part="color-auto" data-edit="text-color-auto" size="s" appearance="quiet"
-              ?disabled=${!this.can({ type: 'text-color', color: 'auto' }).enabled}
+              ?disabled=${!this.available({ type: 'text-color', color: 'auto' })}
               @click=${() => this.applyPopoverEdit({ type: 'text-color', color: 'auto' }, 'text-color-popover')}>${this.localize('docxEditorAutomaticColor')}</${buttonTag}>
             <${colorPickerTag} part="text-color-custom" inline size="s" format="hex" without-format-toggle
               label=${this.localize('docxEditorCustomColor')} .value=${this.lastTextColor}
-              @lr-input=${(event: Event) => event.stopPropagation()}
               @lr-change=${(event: Event) => this.onCustomColorChange(event)}></${colorPickerTag}>
           </div>`, this.lastTextColor)}
         ${this.renderToolPopover('highlight', Boolean(editable), html`
           <div part="highlight-fields" class="color-fields">
             <${swatchPickerTag} part="highlight-swatches" size="s" aria-label=${this.localize('docxEditorHighlight')}
-              .items=${highlightColors.map(([value, color, name]) => ({ value, color, label: this.localize(`docxEditorColor${name}`) }))}
-              .value=${this.lastHighlight} @lr-change=${(event: Event) => event.stopPropagation()}
+              .items=${swatches.highlight} .value=${this.lastHighlight}
               @click=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'highlight', color: color as DocxHighlight }, 'highlight-popover'))}
               @keydown=${(event: Event) => this.onSwatchActivation(event, color => this.applyPopoverEdit({ type: 'highlight', color: color as DocxHighlight }, 'highlight-popover'))}></${swatchPickerTag}>
             <${buttonTag} part="highlight-none" size="s" appearance="quiet"
-              ?disabled=${!this.can({ type: 'highlight', color: 'none' }).enabled}
+              ?disabled=${!this.available({ type: 'highlight', color: 'none' })}
               @click=${() => this.applyPopoverEdit({ type: 'highlight', color: 'none' }, 'highlight-popover')}>${this.localize('docxEditorNoHighlight')}</${buttonTag}>
           </div>`, highlightColors.find(([value]) => value === this.lastHighlight)![1])}
       </div>
     </div>`;
   }
 
+  /** Swatch items keep their identity until a label changes, so closed pickers skip re-rendering. */
+  private swatchItems() {
+    const text = textColors.map(([color, name]) => ({ value: color, color, label: this.localize(`docxEditorColor${name}`) }));
+    const highlight = highlightColors.map(([value, color, name]) => ({ value, color, label: this.localize(`docxEditorColor${name}`) }));
+    const key = JSON.stringify([text, highlight]);
+    if (this.colorItems?.key !== key) this.colorItems = { key, text, highlight };
+    return this.colorItems;
+  }
+
   /** One icon action that edits the current selection and returns to the document. */
   private renderEditButton(edit: DocxEdit, icon: ToolIcon): TemplateResult {
     return html`<${buttonTag} part="edit-button" id=${`tool-${icon}`} data-edit=${edit.type} data-tool-key=${icon}
       size="s" appearance="quiet" aria-label=${this.localize(toolIcons[icon].label)}
-      ?disabled=${!this.can(edit).enabled} tabindex=${this.toolbarKey === icon ? '0' : '-1'}
+      ?disabled=${!this.available(edit)} tabindex=${this.toolbarKey === icon ? '0' : '-1'}
       @pointerdown=${() => this.retainToolbarSelection()}
       @click=${() => this.runEdit(edit)}>${this.renderToolIcon(icon)}</${buttonTag}>`;
   }
@@ -2082,16 +2126,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <div part="link-fields">
         <${inputTag} part="link-href" type="text" inputmode="url" size="s" label=${this.localize('docxEditorLinkUrl')}
           hint=${this.localize('docxEditorLinkHint')}
-          .value=${this.linkHref} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkHref = event.detail.value; }}
-          @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+          .value=${this.linkHref} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkHref = event.detail.value; }}></${inputTag}>
         <${inputTag} part="link-text" size="s" label=${this.localize('docxEditorLinkText')}
-          .value=${this.linkText} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkText = event.detail.value; }}
-          @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+          .value=${this.linkText} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.linkText = event.detail.value; }}></${inputTag}>
         <div part="link-actions">
-          <${buttonTag} part="link-apply" size="s" ?disabled=${!this.can(this.linkEdit()).enabled}
+          <${buttonTag} part="link-apply" size="s" ?disabled=${!this.available(this.linkEdit())}
             @click=${() => this.applyLink()}>${this.localize('docxEditorApplyLink')}</${buttonTag}>
           <${buttonTag} part="link-remove" data-edit="remove-link" size="s" appearance="quiet"
-            ?disabled=${!this.can({ type: 'remove-link' }).enabled}
+            ?disabled=${!this.available({ type: 'remove-link' })}
             @click=${() => { this.runEdit({ type: 'remove-link' }, false); if (!this.editError) this.closeLinkEditor(); }}>
             ${this.localize('docxEditorRemoveLink')}
           </${buttonTag}>
@@ -2134,16 +2176,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         ${draft ? html`
           <${numberInputTag} part="image-insert-width" size="s" without-steppers label=${this.localize('docxEditorImageWidth')}
             min="1" max="1440" step="any" inputmode="decimal" .value=${this.insertionWidth} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'width')}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'width')}></${numberInputTag}>
           <${numberInputTag} part="image-insert-height" size="s" without-steppers label=${this.localize('docxEditorImageHeight')}
             min="1" max="1440" step="any" inputmode="decimal" .value=${this.insertionHeight} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'height')}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeInsertionDimension(event, 'height')}></${numberInputTag}>
           <${checkboxTag} part="image-insert-ratio" .checked=${this.insertionKeepRatio}
             ?disabled=${fieldsDisabled || !this.insertionDefaults?.ratioAvailable}
             @lr-change=${(event: Event) => {
-              event.stopPropagation();
               this.insertionKeepRatio = (event.currentTarget as HTMLElement & { checked: boolean }).checked;
               if (this.insertionKeepRatio && this.insertionDefaults?.ratioAvailable)
                 this.insertionHeight = imageRatioPartner(this.insertionWidth, 'width', this.insertionDefaults.original) ?? '';
@@ -2152,12 +2191,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
             this.insertionDefaults?.ratioAvailable ? 'docxEditorImageInsertSizeHint' : 'docxEditorImageInsertRatioUnavailable')}</p>
           <${inputTag} part="image-insert-title" size="s" label=${this.localize('docxEditorImageTitle')}
             maxlength="256" .value=${this.insertionTitle} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.insertionTitle = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.insertionTitle = event.detail.value; }}></${inputTag}>
           <${textareaTag} part="image-insert-description" size="s" label=${this.localize('docxEditorImageDescription')}
             rows="4" resize="vertical" maxlength="2048" .value=${this.insertionDescription} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.insertionDescription = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${textareaTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.insertionDescription = event.detail.value; }}></${textareaTag}>
           <p part="image-insert-hint">${this.localize('docxEditorImageInsertMetadataHint')}</p>
           <p part="image-insert-hint">${this.localize('docxEditorImageInsertScopeHint')}</p>` : nothing}
         <div part="image-insert-actions">
@@ -2178,7 +2215,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const draft = tableInsertDraft(this.tableRows, this.tableColumns);
     const intentValid = this.tableIntent?.valid(this.session) ?? false;
     const table = this.currentSnapshot?.table;
-    const number = (value: number) => value.toLocaleString(this.effectiveLocale);
+    const number = (value: number) => formatNumber(value, this.effectiveLocale);
     const context = table ? this.localize('docxEditorTableDimensions', undefined,
       { rows: number(table.rows), columns: number(table.columns) }) : '';
     const cell = table?.rowIndex != null && table.columnIndex != null ? this.localize('docxEditorTableCell', undefined,
@@ -2189,7 +2226,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @lr-show=${(event: Event) => this.openTableDialog(event)} @lr-after-hide=${() => this.onTableDialogHidden()}>
         <${buttonTag} slot="trigger" part="table-insert-trigger" id="tool-table-insert" aria-label=${this.localize(toolIcons['table-insert'].label)} data-tool-key="table-insert" size="s" appearance="quiet"
           tabindex=${this.toolbarKey === 'table-insert' ? '0' : '-1'}
-          ?disabled=${!this.can({ type: 'insert-table', rows: 2, columns: 2 }).enabled}
+          ?disabled=${!this.available({ type: 'insert-table', rows: 2, columns: 2 })}
           @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
           @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}>${this.renderToolIcon('table-insert')}</${buttonTag}>
         <div part="table-fields" @keydown=${(event: KeyboardEvent) => {
@@ -2200,16 +2237,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         }}>
           <${numberInputTag} part="table-rows" size="s" autofocus label=${this.localize('docxEditorTableRows')}
             min="1" max="20" step="1" .value=${this.tableRows}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.tableRows = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableRows = event.detail.value; }}></${numberInputTag}>
           <${numberInputTag} part="table-columns" size="s" label=${this.localize('docxEditorTableColumns')}
             min="1" max="20" step="1" .value=${this.tableColumns}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.tableColumns = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableColumns = event.detail.value; }}></${numberInputTag}>
           <p part="table-hint">${this.localize(this.tableDialogOpen && !intentValid ? 'docxEditorTableStale' : 'docxEditorTableSizeHint')}</p>
           <div part="table-dialog-actions">
             <${buttonTag} part="table-insert-apply" size="s"
-              ?disabled=${!intentValid || !draft || !this.can(draft).enabled}
+              ?disabled=${!intentValid || !draft || !this.available(draft)}
               @click=${() => this.insertTable()}>${this.localize('docxEditorInsertTable')}</${buttonTag}>
             <${buttonTag} part="table-insert-cancel" size="s" appearance="quiet"
               @click=${() => this.closeTableDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
@@ -2220,7 +2255,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         <div part="table-actions">${tableActions.map(([key, action, label]) => html`
           <${buttonTag} part="table-button" id=${`tool-table-${key}`} data-table-action=${key} data-tool-key=${`table-${key}`} size="s" appearance="quiet"
             aria-label=${this.localize(label)}
-            tabindex=${this.toolbarKey === `table-${key}` ? '0' : '-1'} ?disabled=${!this.can(action).enabled}
+            tabindex=${this.toolbarKey === `table-${key}` ? '0' : '-1'} ?disabled=${!this.available(action)}
             @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
             @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}
             @click=${() => this.runTableEdit(action)}>${this.renderToolIcon(`table-${key}`)}</${buttonTag}>`)}
@@ -2233,13 +2268,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (this.currentSnapshot?.status !== 'ready' && !this.imageDialog) return html``;
     const navigationDisabled = this.currentSnapshot?.status !== 'ready' || this.currentSnapshot.activity !== null || this.currentSnapshot.composing;
     const intentValid = this.imageIntent?.valid(this.session) ?? false;
-    const available = this.can({ type: 'delete-image' }).enabled;
+    const available = this.available({ type: 'delete-image' });
     const fieldsDisabled = !intentValid || !available;
     const resize = imageResizeDraft(this.imageWidth, this.imageHeight);
     const description = imageDescriptionDraft(this.imageTitle, this.imageDescriptionText);
-    const dimension = (value: number) => value.toLocaleString(this.effectiveLocale, { maximumFractionDigits: 1 });
-    const context = image ? this.localize('docxEditorImageDimensions', undefined,
-      { width: dimension(image.widthPoints), height: dimension(image.heightPoints) }) : '';
+    const dimension = (value: number) => formatNumber(value, this.effectiveLocale, { maximumFractionDigits: 1 });
+    const resizeLabel = image ? this.localize('docxEditorResizeImageWithSize', undefined, { action: this.localize('docxEditorResizeImage'),
+      dimensions: this.localize('docxEditorImageDimensions', undefined, { width: dimension(image.widthPoints), height: dimension(image.heightPoints) }) })
+      : this.localize('docxEditorResizeImage');
     return html`<div part="image-tools" role="group" aria-label=${this.localize('docxEditorImage')}>
       <${buttonTag} part="image-previous" id="tool-image-previous" aria-label=${this.localize(toolIcons['image-previous'].label)} data-tool-key="image-previous" size="s" appearance="quiet" wrap
         tabindex=${this.toolbarKey === 'image-previous' ? '0' : '-1'} ?disabled=${navigationDisabled}
@@ -2254,7 +2290,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @lr-show=${(event: Event) => this.openImageDialog(event, 'resize')}
         @lr-after-hide=${() => this.onImageDialogHidden('resize')}>
         <${buttonTag} slot="trigger" part="image-resize-trigger" id="tool-image-resize" data-tool-key="image-resize" size="s" appearance="quiet"
-          aria-label=${context ? `${this.localize('docxEditorResizeImage')}, ${context}` : this.localize('docxEditorResizeImage')} tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
+          aria-label=${resizeLabel} tabindex=${this.toolbarKey === 'image-resize' ? '0' : '-1'}
           ?disabled=${!available || this.imageDialog === 'description'}
           @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
           @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}>${this.renderToolIcon('image-resize')}</${buttonTag}>
@@ -2266,20 +2302,18 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         }}>
           <${numberInputTag} part="image-width" size="s" autofocus label=${this.localize('docxEditorImageWidth')}
             min="1" max="1440" step="any" inputmode="decimal" without-steppers .value=${this.imageWidth} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'width')}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'width')}></${numberInputTag}>
           <${numberInputTag} part="image-height" size="s" label=${this.localize('docxEditorImageHeight')}
             min="1" max="1440" step="any" inputmode="decimal" without-steppers .value=${this.imageHeight} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'height')}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${numberInputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => this.changeImageDimension(event, 'height')}></${numberInputTag}>
           <${checkboxTag} part="image-ratio" size="s" .checked=${this.imageKeepRatio} ?disabled=${fieldsDisabled}
             @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
-              event.stopPropagation(); this.imageKeepRatio = event.detail.checked;
+              this.imageKeepRatio = event.detail.checked;
             }}>${this.localize('docxEditorImageRatio')}</${checkboxTag}>
           <p part="image-resize-hint">${this.localize(this.imageDialog === 'resize' && !intentValid ? 'docxEditorImageStale' : 'docxEditorImageSizeHint')}</p>
           <div part="image-resize-actions">
             <${buttonTag} part="image-resize-apply" size="s"
-              ?disabled=${!intentValid || !resize || !this.can(resize).enabled}
+              ?disabled=${!intentValid || !resize || !this.available(resize)}
               @click=${() => this.applyImageResize()}>${this.localize('docxEditorImageApply')}</${buttonTag}>
             <${buttonTag} part="image-resize-cancel" size="s" appearance="quiet"
               @click=${() => this.closeImageDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
@@ -2303,17 +2337,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         }}>
           <${inputTag} part="image-title" size="s" autofocus label=${this.localize('docxEditorImageTitle')}
             maxlength="256" .value=${this.imageTitle} ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.imageTitle = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.imageTitle = event.detail.value; }}></${inputTag}>
           <${textareaTag} part="image-description" size="s" rows="4" resize="vertical" with-count
             label=${this.localize('docxEditorImageDescription')} maxlength="2048" .value=${this.imageDescriptionText}
             ?disabled=${fieldsDisabled}
-            @lr-input=${(event: CustomEvent<{ value: string }>) => { event.stopPropagation(); this.imageDescriptionText = event.detail.value; }}
-            @lr-change=${(event: Event) => event.stopPropagation()}></${textareaTag}>
+            @lr-input=${(event: CustomEvent<{ value: string }>) => { this.imageDescriptionText = event.detail.value; }}></${textareaTag}>
           <p part="image-description-hint">${this.localize(this.imageDialog === 'description' && !intentValid ? 'docxEditorImageStale' : 'docxEditorImageDescriptionHint')}</p>
           <div part="image-description-actions">
             <${buttonTag} part="image-description-apply" size="s"
-              ?disabled=${!intentValid || !description || !this.can(description).enabled}
+              ?disabled=${!intentValid || !description || !this.available(description)}
               @click=${() => this.applyImageDescription()}>${this.localize('docxEditorImageApply')}</${buttonTag}>
             <${buttonTag} part="image-description-cancel" size="s" appearance="quiet"
               @click=${() => this.closeImageDialog(false)}>${this.localize('docxEditorCancel')}</${buttonTag}>
@@ -2325,7 +2357,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @pointerdown=${() => this.prepareImageIntent()} @focusin=${() => this.prepareImageIntent()}
         @keydown=${(event: KeyboardEvent) => this.onImageActivationKey(event)}
         @click=${() => this.runImageEdit({ type: 'delete-image' })}>${this.renderToolIcon('image-delete')}</${buttonTag}>
-      <span class="tooltips">${this.renderTooltip('image-resize', context ? `${this.localize('docxEditorResizeImage')} · ${context}` : undefined)}${this.renderTooltip('image-description')}${this.renderTooltip('image-delete')}</span>`}
+      <span class="tooltips">${this.renderTooltip('image-resize', resizeLabel)}${this.renderTooltip('image-description')}${this.renderTooltip('image-delete')}</span>`}
     </div>`;
   }
 
@@ -2339,17 +2371,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <${inputTag} part="find-query" type="search" size="s" label=${this.localize('docxEditorFindQuery')}
         .value=${this.query} @lr-input=${(event: CustomEvent<{ value: string }>) => {
           this.query = event.detail.value; this.searchResults = null; this.searchIndex = -1;
-        }} @lr-change=${(event: Event) => event.stopPropagation()}
+        }}
         @keydown=${(event: KeyboardEvent) => {
           if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); this.runFind(); }
         }}></${inputTag}>
       <${checkboxTag} part="find-match-case" size="s" .checked=${this.matchCase}
         @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
-          event.stopPropagation(); this.matchCase = event.detail.checked; this.searchResults = null;
+          this.matchCase = event.detail.checked; this.searchResults = null;
         }}>${this.localize('docxEditorMatchCase')}</${checkboxTag}>
       <${checkboxTag} part="find-whole-word" size="s" .checked=${this.wholeWord}
         @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
-          event.stopPropagation(); this.wholeWord = event.detail.checked; this.searchResults = null;
+          this.wholeWord = event.detail.checked; this.searchResults = null;
         }}>${this.localize('docxEditorWholeWord')}</${checkboxTag}>
       <${buttonTag} part="find-submit" size="s" appearance="quiet"
         ?disabled=${!this.query || !available}
@@ -2363,8 +2395,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <${inputTag} part="find-replace" size="s" label=${this.localize('docxEditorReplacement')}
         hint=${count && this.searchIndex < 0 ? this.localize('docxEditorFindSelectMatch') : ''}
         .value=${this.replacement} ?disabled=${this.currentSnapshot?.readOnly || !count}
-        @lr-input=${(event: CustomEvent<{ value: string }>) => { this.replacement = event.detail.value; }}
-        @lr-change=${(event: Event) => event.stopPropagation()}></${inputTag}>
+        @lr-input=${(event: CustomEvent<{ value: string }>) => { this.replacement = event.detail.value; }}></${inputTag}>
       <${buttonTag} part="find-replace-button" size="s" appearance="quiet"
         ?disabled=${!replaceAvailable || this.searchIndex < 0 || !count}
         @click=${() => this.replaceCurrentMatch()}>${this.localize('docxEditorReplace')}</${buttonTag}>
@@ -2373,10 +2404,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   override render(): TemplateResult {
     const status = this.statusText();
-    const hasError = this.currentSnapshot?.status === 'error' || this.localError !== null;
+    const hasError = this.currentSnapshot?.status === 'error' || this.currentSnapshot?.status === 'destroyed' || this.localError !== null;
     return html`
       <section part="base" aria-label=${this.editorLabel()}>
-        <div part="toolbar" role="toolbar" aria-label=${this.editorLabel()}
+        <div part="toolbar" role="toolbar" aria-label=${this.localize('docxEditorToolbar')}
           @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}
           @lr-show=${this.onToolbarPanelShow} @lr-after-hide=${this.onToolbarPanelHidden}>
           <div class="toolbar-row">
@@ -2413,8 +2444,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
           </div>
         ` : nothing}
         ${this.renderFind()}
-        <div part="document" role="region" tabindex="0" aria-label=${this.editorLabel()}><slot name="document"></slot>${this.renderCharts()}${this.renderImageHandles()}</div>
-        ${hasError ? html`<p part="error">${this.localize(this.errorMessageKey())}</p>` : nothing}
+        <div part="document"><slot name="document"></slot>${this.renderCharts()}${this.renderImageHandles()}</div>
+        ${hasError ? html`<p part="error">${this.errorMessage()}</p>` : nothing}
         ${this.editError ? html`<p part="edit-error">${this.localize('docxEditorEditUnavailable')}</p>` : nothing}
         <div part="status">
           <span part="filename">${this.filename || this.localize('docxEditorUntitled')}</span>
