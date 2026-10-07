@@ -346,6 +346,8 @@ interface ThemeBinding {
   readonly onChange: () => void;
   readonly additionalMediaQueries: readonly string[];
   chain: Element[];
+  /** The last ancestry the host rendered under: an unslotted child of a shadow host renders nothing. */
+  rendered?: Element[];
   roots: ObservedRoot[];
   readonly media: Map<string, MediaSubscription>;
   queued: boolean;
@@ -529,12 +531,14 @@ function rebind(binding: ThemeBinding): boolean {
   for (const root of roots) observeRoot(registry, root, binding);
   binding.chain = chain;
   binding.roots = roots;
+  if (chain.every((element) => element.assignedSlot || !element.parentElement?.shadowRoot)) binding.rendered = chain;
   return true;
 }
 
 /**
  * Slot (re)assignment changes what a host inherits without reconnecting it, so watchers whose
- * path crosses a root re-resolve after its slotchange or slot removal and re-read the theme.
+ * path crosses a root re-resolve after its slotchange or slot removal. They re-read the theme
+ * only when a host that rendered before renders under a different ancestry.
  */
 function queueRootRebind(registry: ThemeRegistry, observation: RootObservation): void {
   if (observation.rebindQueued) return;
@@ -543,7 +547,10 @@ function queueRootRebind(registry: ThemeRegistry, observation: RootObservation):
     observation.rebindQueued = false;
     if (registry.roots.get(observation.root) !== observation) return;
     for (const binding of [...observation.bindings]) {
-      if (binding.active && rebind(binding)) queueChange(binding, true);
+      const { rendered } = binding;
+      if (!binding.active || !rebind(binding)) continue;
+      refreshMediaQueries(binding);
+      if (rendered && !sameNodes(rendered, binding.rendered!)) queueChange(binding, false);
     }
   });
 }

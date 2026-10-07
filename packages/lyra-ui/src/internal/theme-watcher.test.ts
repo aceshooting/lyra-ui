@@ -1431,16 +1431,42 @@ describe('ThemeWatcher shared observation', () => {
       calls = 0;
       wrapper.remove();
       await aTimeout(0);
-      expect(calls, 'losing the slot changes what the host inherits').to.equal(1);
+      expect(calls, 'an unslotted host renders no theme to re-read').to.equal(0);
       wrapper.setAttribute('data-theme', 'dark');
       await aTimeout(0);
-      expect(calls).to.equal(1);
+      expect(calls).to.equal(0);
       shell.setAttribute('data-theme', 'dark');
       await aTimeout(0);
-      expect(calls).to.equal(2);
+      expect(calls).to.equal(1);
     } finally {
       disconnect();
       shell.remove();
+    }
+  });
+
+  it('observes but does not re-read the theme when an unslotted host first renders into a slot', async () => {
+    const { host, connect, disconnect } = await makeHost();
+    const outer = document.body.appendChild(document.createElement('div'));
+    const fallback = outer.attachShadow({ mode: 'open' }).appendChild(document.createElement('slot'));
+    const shell = fallback.appendChild(document.createElement('div'));
+    const shellRoot = shell.attachShadow({ mode: 'open' });
+    shell.append(host);
+    let calls = 0;
+    new ThemeWatcher(host, () => calls++);
+    try {
+      connect();
+      const wrapper = shellRoot.appendChild(document.createElement('div'));
+      wrapper.append(document.createElement('slot'));
+      // Fallback content changes fire slotchange in the observed outer root, as a transcript does.
+      fallback.append(document.createElement('span'));
+      await aTimeout(0);
+      expect(calls, 'the host rendered no theme before its slot existed').to.equal(0);
+      wrapper.setAttribute('data-theme', 'dark');
+      await aTimeout(0);
+      expect(calls, 'the new ancestry is observed').to.equal(1);
+    } finally {
+      disconnect();
+      outer.remove();
     }
   });
 });
