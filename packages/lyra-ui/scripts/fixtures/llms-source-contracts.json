@@ -1167,6 +1167,28 @@
     },
     {
       "module": "src/components/agent-tools/agent-run/agent-run.class.ts",
+      "exportName": "AgentRunCancelDetail",
+      "kind": "interface",
+      "fingerprint": "c6aeac99f429a06561c5",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/agent-run/agent-run.class.ts",
+        "src/components/agent-tools/agent-run/agent-run.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-agent-run.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-agent-run-agent-run-contracts",
+        "declaration": "AgentRunCancelDetail"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/agent-run/agent-run.class.ts",
       "exportName": "AgentRunMetric",
       "kind": "interface",
       "fingerprint": "aee083c8377a38384499",
@@ -1189,6 +1211,28 @@
         "kind": "utility",
         "name": "components-agent-tools-agent-run-agent-run-contracts",
         "declaration": "AgentRunMetric"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/agent-run/agent-run.class.ts",
+      "exportName": "AgentRunRetryDetail",
+      "kind": "interface",
+      "fingerprint": "e1b71d81c2a25ff33e43",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/agent-run/agent-run.class.ts",
+        "src/components/agent-tools/agent-run/agent-run.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-agent-run.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-agent-run-agent-run-contracts",
+        "declaration": "AgentRunRetryDetail"
       }
     },
     {

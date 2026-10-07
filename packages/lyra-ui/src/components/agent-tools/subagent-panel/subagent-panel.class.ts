@@ -14,7 +14,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AGENT_STATUS_VARIANTS } from '../../../internal/agent-status-variants.js';
 import { firstByIdentity } from '../collection-identity.js';
-import { agentStatusText } from '../agent-status-presentation.js';
+import { agentStatusText } from '../../../internal/agent-status-text.js';
 import { isRtl } from '../../../internal/rtl.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import '../../overlays/badge/badge.class.js';

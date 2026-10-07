@@ -26,11 +26,11 @@ import {
   agentStatusKind,
   agentStatusLabel,
   agentStatusMessage,
-  agentStatusText,
   agentStatusVariant,
   isAgentStatusTerminal,
   type AgentStatusPresentation,
 } from '../agent-status-presentation.js';
+import { agentStatusText } from '../../../internal/agent-status-text.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

@@ -12,10 +12,10 @@ import {
   agentStatusKind,
   agentStatusLabel,
   agentStatusMessage,
-  agentStatusText,
   agentStatusVariant,
   type AgentStatusValue,
 } from '../agent-status-presentation.js';
+import { agentStatusText } from '../../../internal/agent-status-text.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { AgentRunActivateDetail } from '../run-events.js';

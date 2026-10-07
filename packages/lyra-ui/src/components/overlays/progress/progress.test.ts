@@ -796,7 +796,7 @@ it('falls back to the brand variant for an unsupported value, like the other ton
   expect(bar.getAttribute('variant')).to.equal('brand');
   expect(ring.getAttribute('variant')).to.equal('brand');
   expect(paint(bar)).to.equal(paint(brand));
-  bar.variant = 'primary';
+  bar.variant = 'primary' as LyraProgressBar['variant'];
   await bar.updateComplete;
   expect(bar.getAttribute('variant')).to.equal('primary');
 });

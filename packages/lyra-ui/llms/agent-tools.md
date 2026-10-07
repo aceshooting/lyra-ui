@@ -2997,7 +2997,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   so progress never reports an impossible total
 - `label?: string` — header label and accessible-name source; omission localizes "Evaluation run",
   and an explicit `''` is kept
-- `heading-level: LyraHeadingLevel = '4'` (attribute `heading-level`) — level of each example's
+- `headingLevel: LyraHeadingLevel = '4'` (attribute `heading-level`) — level of each example's
   section headings (input, output, grounding, tool trace); `'none'` drops heading semantics
 
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
@@ -3212,7 +3212,7 @@ normalization before cards, selectors, chart series, row lookup, and emitted eve
 **Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), its deprecated alias `lr-metric-change`, and
 `lr-run-activate` (`{ runId, run }`).
 
-**Heading, events and window:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
+**Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `empty`.
@@ -3662,11 +3662,24 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-agent-tools-agent-run-agent-run-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`.
+  `AgentRunCancelDetail extends CancelEventDetail {
+    runId: string;
+    // Inherited from CancelEventDetail.
+    reason?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`.
   `AgentRunMetric {
     id: string;
     label: string;
     value: string | number;
     variant?: BadgeVariant;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`.
+  `AgentRunRetryDetail extends RetryEventDetail {
+    runId: string;
+    // Inherited from RetryEventDetail.
+    attempt: number;
+    messageId?: string;
   }`
 
 - **`components-agent-tools-agent-status-presentation-contracts`** — Supporting data types and helpers for this component family.
@@ -4274,7 +4287,7 @@ At most 200 files and 200 hunks total render, with a visible limit notice. Diff 
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
-**Heading and events:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
 
 **CSS parts:**
 
@@ -4333,7 +4346,7 @@ Changing `requestId` resets draft and status, preserving explicit same-update pr
 Stale rendered request actions are ignored. This request interaction is not outer-form-associated;
 the composed parameter form owns field validation. Collection values and emitted details are owned.
 
-**Heading and rebinding:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. Re-binding the same `schema` or `value` object does not discard the typed draft; assign a new object to replace it.
+**Heading and rebinding:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. Re-binding the same `schema` or `value` object does not discard the typed draft; assign a new object to replace it.
 
 **CSS parts:**
 
@@ -4559,7 +4572,7 @@ price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as 
 values are not plain attribute strings. A host `aria-label` names the group and the progressbar has
 its own localized accessible name.
 
-**Heading and unit:** `heading-level: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
+**Heading and unit:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no heading. The unit is passed bare to `budgetMeterValue`, so a translated message owns the spacing around `{unit}`.
 
 **CSS parts:**
 

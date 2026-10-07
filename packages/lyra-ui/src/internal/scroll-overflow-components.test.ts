@@ -116,8 +116,12 @@ it('reads reduced-motion preference from each adopted component owner window', a
     frameDocument.body.append(segmented);
     await segmented.updateComplete;
     let segmentedBehavior: ScrollBehavior | undefined;
+    const track = segmented.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const segment = segmented.shadowRoot!.querySelector('[part="segment"]') as HTMLElement;
-    segment.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+    // The segment sits past the track's end, so revealing it scrolls the track and nothing else.
+    track.getBoundingClientRect = () => new DOMRect(0, 0, 100, 20);
+    segment.getBoundingClientRect = () => new DOMRect(150, 0, 50, 20);
+    track.scrollBy = (options?: ScrollToOptions | number) => {
       if (typeof options === 'object') segmentedBehavior = options.behavior;
     };
     segmented.scrollToValue('one');

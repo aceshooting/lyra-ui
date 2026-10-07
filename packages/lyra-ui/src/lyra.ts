@@ -1403,6 +1403,7 @@ export type {
   FlowLayoutChangeDetail,
   LyraFlowCanvasEventMap,
 } from './components/data/flow-canvas/flow-canvas.class.js';
+export type { LyraFlowControlsEventMap } from './components/data/flow-controls/flow-controls.class.js';
 export type {
   LyraPaletteItem,
   LyraNodePaletteEventMap,
@@ -1452,6 +1453,8 @@ export type {
 export type {
   AgentRunMetric,
   AgentRunAppearance,
+  AgentRunCancelDetail,
+  AgentRunRetryDetail,
   LyraAgentRunEventMap,
 } from './components/agent-tools/agent-run/agent-run.class.js';
 export type {

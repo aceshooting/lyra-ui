@@ -25,6 +25,7 @@ describe('viewer optional-peer capability validation', () => {
   });
 
   it('rejects malformed members independently for combined peer loaders', async () => {
+    expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
     const docx = await loadMammothAndSanitizer(
       async () => ({}) as never,
       async () => ({}) as never,

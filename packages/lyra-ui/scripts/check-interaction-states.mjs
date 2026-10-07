@@ -835,7 +835,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/layout/widget/widget.styles.ts:collapse-button',
   'src/components/layout/widget/widget.styles.ts:fullscreen-button',
   'src/components/media/video/video.styles.ts:poster-play-button',
-  'src/components/overlays/alert/alert.styles.ts:close-button',
   'src/components/overlays/toast/toast-item.styles.ts:close-button',
   'src/components/utility/export-button/export-button.styles.ts:menu-item',
 ]);
