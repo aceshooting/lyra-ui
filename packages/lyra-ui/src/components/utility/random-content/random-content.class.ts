@@ -5,7 +5,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { composedAccessibilityTextResult } from '../../../internal/announcement-text.js';
-import { pauseIcon, playIcon } from '../../../internal/icons.js';
+import { pauseIcon, playIcon, refreshIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -91,7 +91,7 @@ interface SelectionAnnouncementSnapshot {
  * @event lr-content-change - The displayed selection changed (first render, `randomize()`,
  * a slot-change-triggered reselection, or an autoplay tick). `detail: { items }` is the exact
  * frozen snapshot of the elements now shown, in display order. Not emitted when the eligible
- * pool is empty.
+ * pool is empty, or when the element is only moved within the document.
  * @event lr-pause-change - Fired when `paused` changes via the built-in pause/resume button, so a
  * host mirroring or persisting that state stays in sync. Never fired for a host's own `paused`
  * write. `detail: { paused: boolean }` (the new `paused` value). Same name and shape as
@@ -193,6 +193,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private stopMotionWatch?: () => void;
   private sequenceCursor = 0;
   private previousSelection?: Element[];
+  private selectionBeforeDisconnect?: Element[];
   private lastPool: Element[] = [];
   private managedPool = new Set<Element>();
   private readonly authorState = new WeakMap<Element, { hiddenAttribute: string | null; ariaHidden: string | null }>();
@@ -233,8 +234,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     // autoplay permanently stopped. Harmless no-op before the shadow tree's
     // slot exists yet (`eligible()` returns `[]`, gated off below).
     if (this.hasUpdated) {
-      this.reselect({ announce: false });
+      this.reselect({ announce: false, keep: this.selectionBeforeDisconnect });
     }
+    this.selectionBeforeDisconnect = undefined;
     this.restartAutoplay();
     // A reactive `items` write made while detached can leave its Lit update pending until this
     // connection. Let that update settle into the reconnect baseline before lifecycle-driven
@@ -249,6 +251,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   override disconnectedCallback(): void {
     this.connectionGeneration += 1;
+    this.selectionBeforeDisconnect = this.previousSelection;
     this.selectionAnnouncementsArmed = false;
     this.announcementSink?.release();
     this.announcementSink = undefined;
@@ -611,7 +614,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.announceCurrentSelectionIfChanged(snapshot.text);
   };
 
-  private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): readonly Element[] {
+  private reselect(
+    options: { resetPrevious?: boolean; announce?: boolean; keep?: readonly Element[] } = {},
+  ): readonly Element[] {
     const pool = this.eligible();
     this.lastPool = pool;
     if (pool.length === 0) {
@@ -622,7 +627,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
     if (options.resetPrevious) this.previousSelection = undefined;
     const count = this.clampedCount(pool.length);
-    const selected = this.preserveFocusedSubtree(pool, this.computeSelectionForMode(pool, count));
+    // A pure reconnect re-applies the selection it had, if every member is still in the pool.
+    const keep = options.keep?.length === count && options.keep.every((el) => pool.includes(el)) ? options.keep : undefined;
+    const selected = this.preserveFocusedSubtree(pool, keep ? [...keep] : this.computeSelectionForMode(pool, count));
     this.applySelection(pool, selected);
     this.previousSelection = selected;
     const announcement = this.observeAnnouncementContent().text;
@@ -631,7 +638,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
       this.announcementSink?.announce(announcement);
     }
     const exposedSelection = Object.freeze([...selected]);
-    this.emit('lr-content-change', Object.freeze({ items: exposedSelection }));
+    if (!keep) this.emit('lr-content-change', Object.freeze({ items: exposedSelection }));
     return exposedSelection;
   }
 
@@ -730,6 +737,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   // handler serves both siblings.
   private togglePaused = (): void => {
     this.paused = !this.paused;
+    if (!this.paused) this.focusWithin = false;
     this.emit('lr-pause-change', Object.freeze({ paused: this.paused }));
   };
 
@@ -762,14 +770,13 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
             aria-label=${this.localize('randomContentNext')}
             @click=${this.showNext}
           >
-            <lr-icon name="refresh"></lr-icon>
+            ${refreshIcon()}
           </button>`
         : nothing}
       ${this.autoplay
         ? html`<button
             part="pause-button"
             type="button"
-            aria-pressed=${this.paused ? 'true' : 'false'}
             aria-label=${this.localize(this.paused ? 'randomContentResume' : 'randomContentPause')}
             @focusin=${this.onFocusIn}
             @focusout=${this.onFocusOut}

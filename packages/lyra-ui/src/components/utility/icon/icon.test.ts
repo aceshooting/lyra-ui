@@ -200,32 +200,35 @@ it('clones and observes custom SVG content with the adopted owner-document realm
     path.setAttribute('d', 'M2 2');
     await aTimeout(0);
     expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M2 2');
-    expect(
-      Boolean(frameDocument.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)),
+    (frame.contentWindow as Window & typeof globalThis).fetch = (() => new Promise(() => {})) as typeof fetch;
+    el.src = 'https://icons.test/adopted-sink.svg';
+    await waitUntil(
+      () => frameDocument.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`) !== null,
       'the adopted icon acquires its sink in the active document',
-    ).to.be.true;
+    );
   } finally {
     frame.remove();
   }
 });
 
-it('pre-mounts and releases its assertive remote-error announcement sink', async () => {
-  const el = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
+it('acquires its assertive announcement sink only when a remote load starts, and releases it on disconnect', async () => {
   const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
-  const sink = document.querySelector<HTMLElement>(selector)!;
+  const builtIn = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
+  expect(document.querySelector(selector) === null, 'a built-in glyph can never announce').to.be.true;
+  builtIn.remove();
 
-  expect(Boolean(sink), 'the sink exists before any remote load can fail').to.be.true;
-  expect(sink.parentElement === document.body).to.be.true;
-  expect(sink.childElementCount).to.equal(0);
-
-  el.remove();
-  expect(document.querySelector(selector) === null, 'the last icon holder releases the sink').to.be.true;
-
-  document.body.append(el);
-  const reconnected = document.querySelector<HTMLElement>(selector)!;
-  expect(Boolean(reconnected), 'reconnect acquires a fresh owner-document sink').to.be.true;
-  expect(reconnected.childElementCount, 'reconnect does not replay stale state').to.equal(0);
-  el.remove();
+  const restore = stubFetch(() => new Promise<Response>(() => {}));
+  try {
+    const el = (await fixture(html`<lr-icon src="https://icons.test/pending-sink.svg"></lr-icon>`)) as LyraIcon;
+    await waitUntil(() => document.querySelector(selector) !== null, 'the sink mounts when the load starts');
+    const sink = document.querySelector<HTMLElement>(selector)!;
+    expect(sink.parentElement === document.body).to.be.true;
+    expect(sink.childElementCount).to.equal(0);
+    el.remove();
+    expect(document.querySelector(selector) === null, 'the last icon holder releases the sink').to.be.true;
+  } finally {
+    restore();
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -672,10 +675,10 @@ describe('lr-icon icon libraries', () => {
     const restore = stubFetch(() => Promise.resolve(svgResponse('', false)));
     try {
       const el = (await fixture(html`<lr-icon hidden></lr-icon>`)) as LyraIcon;
-      const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
       const errored = oneEvent(el, 'lr-error');
       el.src = 'https://icons.test/hidden-missing.svg';
       await errored;
+      const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
 
       expect(sink.childElementCount).to.equal(0);
       expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);

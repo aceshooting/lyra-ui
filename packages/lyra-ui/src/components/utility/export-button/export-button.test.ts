@@ -1,4 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { render } from 'lit';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './export-button.js';
 import type {
   LyraExportButton,
@@ -253,6 +255,43 @@ it('preserves focus ownership when loading/disabled invalidates the focused cont
   el.disabled = true;
   await el.updateComplete;
   expect(document.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
+});
+
+it('hands focus back to the trigger when loading clears after the focused trigger was parked', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  await focusByKeyboard(trigger);
+  el.loading = true;
+  await el.updateComplete;
+  expect(document.activeElement === el).to.equal(true);
+
+  el.loading = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === trigger).to.equal(true);
+  expect(el.hasAttribute('tabindex')).to.equal(false);
+});
+
+it('does not re-snapshot rows, columns or formats when a parent re-commits the same arrays', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  try {
+    const rowsInput = [{ id: 'a' }];
+    const columnsInput = [{ key: 'id', label: 'ID' }];
+    const formatsInput = ['csv', 'json'];
+    const template = () =>
+      html`<lr-export-button .rows=${rowsInput} .columns=${columnsInput} .formats=${formatsInput}></lr-export-button>`;
+    render(template(), host);
+    const el = host.querySelector('lr-export-button') as LyraExportButton;
+    await el.updateComplete;
+    const { rows, columns, formats } = el;
+    render(template(), host);
+    await el.updateComplete;
+    expect(el.rows === rows).to.equal(true);
+    expect(el.columns === columns).to.equal(true);
+    expect(el.formats === formats).to.equal(true);
+  } finally {
+    host.remove();
+  }
 });
 
 it('preserves an author-owned host tabindex across disable and re-enable', async () => {

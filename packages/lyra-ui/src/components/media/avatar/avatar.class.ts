@@ -81,8 +81,8 @@ export class LyraAvatar extends LyraElement<LyraAvatarEventMap> {
    *  the viewport — worth setting for avatars far down a long list, never for one above the fold. */
   @property() loading: LyraAvatarLoading = 'eager';
 
-  /** Visual size, on the shared six-step ladder. `'large'`/`'l'` matches `--lr-icon-button-size`
-   *  (4rem); `'medium'`/`'m'` (the default) is the mirrored 3rem diameter. */
+  /** Visual size, on the shared six-step ladder. `'large'`/`'l'` is a 4rem diameter;
+   *  `'medium'`/`'m'` (the default) is the mirrored 3rem diameter. */
   @property({ reflect: true, useDefault: true }) size: LyraSize = 'm';
 
   /** `'circle'` (the default), `'rounded'` (the shared medium corner radius), or `'square'` (no

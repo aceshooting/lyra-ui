@@ -10,7 +10,7 @@ import { styles } from './flag.styles.js';
 import { ALPHA2_RE, alpha3ToAlpha2, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
+import { devWarn, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_flagLoadError, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -630,7 +630,7 @@ export class LyraFlag extends LyraElement {
       })
       .catch((err) => {
         if (token !== this.resolveToken || request !== this.activeSourceRequest || !this.isConnected) return;
-        console.warn(`<lr-flag> failed to resolve a flag URL for "${code}":`, err);
+        devWarnOnce('lyra-flag-resolve-failed', `<lr-flag> failed to resolve a flag URL for "${code}": ${err}`);
         this.failSource(identity);
       });
   }

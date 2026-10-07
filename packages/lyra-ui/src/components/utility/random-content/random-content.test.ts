@@ -1,5 +1,5 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
-import { focusAfterPointer } from '../../../../test/wtr-focus.js';
+import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './random-content.js';
 import type { LyraRandomContent } from './random-content.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -582,14 +582,14 @@ it('exposes a localized pause/resume action whenever autoplay is enabled', async
   `)) as LyraRandomContent;
   const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
   expect(button.getAttribute('aria-label')).to.equal('Pause locale');
-  expect(button.getAttribute('aria-pressed')).to.equal('false');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
 
   button.click();
   await el.updateComplete;
   expect(el.paused).to.be.true;
   expect(el.hasAttribute('paused')).to.be.true;
   expect(button.getAttribute('aria-label')).to.equal('Resume locale');
-  expect(button.getAttribute('aria-pressed')).to.equal('true');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expect((el as any).timer).to.be.undefined;
 });
@@ -648,7 +648,7 @@ it('leaves paused explicitly unset by default', async () => {
   const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
   expect(el.paused).to.be.false;
   expect(el.hasAttribute('paused')).to.be.false;
-  expect(button.getAttribute('aria-pressed')).to.equal('false');
+  expect(button.hasAttribute('aria-pressed')).to.equal(false);
 });
 
 it('does not autoplay-tick when only one eligible child exists', async () => {
@@ -1545,7 +1545,9 @@ it('renders no next button by default and a localized icon action with with-next
   `)) as LyraRandomContent;
   const button = el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
   expect(button.getAttribute('aria-label')).to.equal('Another one');
-  expect(button.querySelector('lr-icon')?.getAttribute('name')).to.equal('refresh');
+  expect(button.querySelector('svg[aria-hidden="true"]') !== null).to.equal(true);
+  expect(button.querySelector('lr-icon') === null).to.equal(true);
+  expect(customElements.get('lr-icon') === undefined).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="pause-button"]') === null).to.equal(true);
   expect(button.getBoundingClientRect().height).to.be.greaterThan(0);
 });
@@ -1637,3 +1639,49 @@ it('the next button is axe-clean', async () => {
   `)) as LyraRandomContent;
   await expect(el).to.be.accessible();
 });
+
+it('resumes autoplay when Resume is pressed while the pause button holds focus', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+  await focusByKeyboard(button);
+  button.click();
+  await el.updateComplete;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.equal(undefined);
+  button.click();
+  await el.updateComplete;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.not.equal(undefined);
+});
+
+it('keeps the shown selection and stays silent when it is moved within the document', async () => {
+  const el = (await fixture(html`
+    <lr-random-content mode="sequence">
+      <div id="a">A</div>
+      <div id="b">B</div>
+      <div id="c">C</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const before = shownIds(el);
+  let changes = 0;
+  el.addEventListener('lr-content-change', () => (changes += 1));
+  const parent = el.parentNode!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(shownIds(el)).to.deep.equal(before);
+  expect(changes).to.equal(0);
+});
+
+it('sizes its icon buttons from the host font, not the UA control font', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay with-next><div>One</div><div>Two</div></lr-random-content>
+  `)) as LyraRandomContent;
+  for (const part of ['pause-button', 'next-button']) {
+    const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+    expect(getComputedStyle(button).fontSize).to.equal(getComputedStyle(el).fontSize);
+  }
+});
+

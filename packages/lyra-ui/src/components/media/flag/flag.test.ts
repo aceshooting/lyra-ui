@@ -27,6 +27,11 @@ async function captureConsoleWarnings<T>(operation: () => Promise<T>): Promise<{
   }
 }
 
+/** The resolver-failure warning is once per page; a test that asserts it must reopen the gate. */
+function reopenResolveFailureWarning(): void {
+  (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lyra-flag-resolve-failed');
+}
+
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(
     `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`,
@@ -950,6 +955,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     const originalWarn = console.warn;
     const warnings: string[] = [];
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    reopenResolveFailureWarning();
     window.addEventListener('unhandledrejection', onUnhandled);
     let el!: LyraFlag;
     try {
@@ -965,6 +971,23 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(el.loading).to.be.false;
     expect(el.getAttribute('aria-busy')).to.equal('false');
     expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
+  });
+
+  it('reports a rejected resolver once for many flags rather than once per element', async () => {
+    setFlagUrlResolver(
+      async () => {
+        throw new Error('network failure');
+      },
+    );
+    reopenResolveFailureWarning();
+    const { warnings } = await captureConsoleWarnings(async () => {
+      const wrapper = (await fixture(html`
+        <div><lr-flag country="fr"></lr-flag><lr-flag country="de"></lr-flag><lr-flag country="it"></lr-flag></div>
+      `)) as HTMLElement;
+      await waitUntil(() => wrapper.querySelectorAll('lr-flag').length === 3
+        && [...wrapper.querySelectorAll('lr-flag')].every((flag) => flag.shadowRoot!.querySelector('[part="error"]')));
+    });
+    expect(warnings.filter((warning) => warning.includes('failed to resolve a flag URL')).length).to.be.at.most(1);
   });
 
   it('fails closed visibly and appends each localized resolver failure to the light-DOM sink', async () => {
@@ -1050,6 +1073,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     const originalWarn = console.warn;
     const warnings: string[] = [];
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
+    reopenResolveFailureWarning();
     window.addEventListener('unhandledrejection', onUnhandled);
     let el!: LyraFlag;
     try {

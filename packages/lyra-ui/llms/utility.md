@@ -19,12 +19,13 @@ The format menu follows the [shared surface treatment](shared/styles-and-tokens.
 **Properties:**
 
 - `rows: readonly Readonly<Record<string, unknown>>[] = []` (attribute: false) — assignment takes
-  shallow frozen snapshots of the collection and row records; nested cell values remain opaque; the
+  shallow frozen snapshots of the collection and row records (assigning the same array again is
+  ignored; assign a new array to change the data); nested cell values remain opaque; the
   built-in download reads this **after** the cancelable `lr-export-request` event, so a listener that lets
   the download proceed may assign `.rows` from inside its own handler and that data is what gets
   downloaded
 - `columns: readonly Readonly<LyraCsvColumn>[] = []` (attribute: false) — assignment takes a
-  shallow frozen snapshot. `{ key, label }` acts as a field allow-list **and**
+  shallow frozen snapshot (assigning the same array again is ignored). `{ key, label }` acts as a field allow-list **and**
   CSV header-label source for **both** export formats when non-empty. Left empty, **both** CSV and
   JSON fall back to the union of the rows' own keys (`key`/`label` both set to the key name) instead
   of CSV degrading to a header-less/blank file while only JSON had a fallback — so an unconfigured
@@ -47,7 +48,7 @@ The format menu follows the [shared surface treatment](shared/styles-and-tokens.
   changes nothing for them. Never applies to the built-in JSON download — RFC 8259 forbids a BOM
   there
 - `formats: readonly LyraExportFormatOption[] = ['csv']` (attribute: false; shallow frozen
-  snapshot), where
+  snapshot; assigning the same array again is ignored), where
   `LyraExportFormatOption` is the built-in `LyraExportFormat = 'csv' | 'json'` or a
   `LyraExportFormatDescriptor = { formatId: string; label: string; description?: string;
 extension?: string }`. Descriptor labels/descriptions are consumer-supplied, already-localized
@@ -56,14 +57,15 @@ extension?: string }`. Descriptor labels/descriptions are consumer-supplied, alr
   event-only; no custom encoder is bundled
 - `size?: LyraSize` — optional density on the shared `2xs` through `xl` ladder, including the
   `small`/`medium`/`large` aliases. It changes trigger and menu-row typography and padding while
-  retaining the shared 40px minimum hit-area floor. Unset preserves the established geometry
+  retaining the shared `--lr-icon-button-size` minimum hit-area floor. Unset preserves the established geometry
 - `appearance?: LyraExportButtonAppearance` — `outlined` or `quiet` trigger treatment. Unset
   preserves the established surface, border, and text colors
 - `disabled: boolean = false` (reflected) — also disables every `[part="menu-item"]` button, not just
   the trigger
 - `loading: boolean = false` (reflected) — controlled busy state for an async or server-generated
   export; sets host/trigger `aria-busy` and disables the trigger and menu items. The component does
-  not toggle it automatically
+  not toggle it automatically. Focus on the trigger while it turns on is held on the host and
+  returns to the trigger when it turns off
 - `label?: string` — trigger button text; omission uses the localized `exportButtonLabel` default.
   Every supplied string, including `''` and `'Export'`, remains caller-owned visible copy. An empty
   or whitespace-only visible label keeps the localized default as the trigger's accessible name;
@@ -391,7 +393,7 @@ import type {
   `registerLyraLocale()` (see `llms/shared.md`). Explicit `*-label` properties take precedence.
 - Native `dir`/`lang` remain inherited global attributes. The component is not form-associated.
 - No `size`/`compact` property: the built-in trigger's hit area is `<lr-icon-button>`'s shared
-  `--lr-icon-button-size` floor (2.5rem/40px). For a dense action row, lower
+  `--lr-icon-button-size` floor (2.25rem by default). For a dense action row, lower
   `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every `LyraElement` re-declares
   on its own `:host` and so never reaches a composed child) on this element or an ancestor, or reach
   the composed native control directly through `::part(base-control)`. A coarse-pointer/no-hover
@@ -422,7 +424,8 @@ in the default slot and emits a composed event, while adding no layout of its ow
 
 **Properties:** `disabled: boolean = false` (reflected), `rootMargin: string = '0px'` (attribute
 `root-margin`), `threshold: number | number[] | string = '0'` (the mapped attribute form accepts
-space-separated values), `root: Element | string | null = null` (an element or mapped element ID),
+space-separated values), `root: Element | string | null = null` (an element or mapped element ID, looked up in the host's
+tree before the document),
 `intersectClass: string = ''` (attribute `intersect-class`, toggled on each target), and `once:
 boolean = false` (reflected; unobserves a target after its first intersection). A once-consumed
 target stays consumed across option-driven observer rebuilds and disconnect/reconnect cycles;
@@ -435,7 +438,7 @@ failures are contained, so later valid targets and later rebuilds can still obse
 tied to the current owner document, so a detached or adopted wrapper cannot emit a stale batch.
 Threshold collections inspect at most their first 10,000 direct data entries. Malformed or
 accessor-backed entries are skipped; a valid prefix remains active, while an entirely unusable value
-falls back to threshold `0`.
+falls back to threshold `0`. A new array with the same thresholds does not rebuild the observer.
 
 **Events:** mapped `lr-intersect` once per entry with `{ entry }`, plus the existing batch alias
 `lr-intersection` with a frozen
@@ -470,7 +473,8 @@ throwing constructor, leaves that rebuild inert rather than leaking an exception
 Callbacks from a retired document are ignored after disconnect or adoption. `attributeFilter` is
 likewise a bounded own-data snapshot (examining at most its first 10,000 direct data entries);
 malformed or accessor-backed entries are skipped, a valid prefix remains active, and an entirely
-unusable value falls back to an empty filter.
+unusable value falls back to an empty filter. A new array with the same names does not rebuild the
+observer.
 
 **Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
@@ -491,7 +495,7 @@ Rendering, searching, toolbar copy, and per-node copy all use that same owned gr
 mutation or revocation of the supplied object cannot change a displayed or copied value. Ordinary
 aliases, cycles, and sparse-array holes are retained. Expand/collapse state is keyed by structural path (not object
 identity), so it survives a `data` reassignment that keeps the same shape — e.g. a streaming result
-being patched in place. A container value that self-references (directly or through a longer cycle)
+reassigned as a fresh object per patch. A container value that self-references (directly or through a longer cycle)
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
@@ -527,7 +531,8 @@ the top-level copy button or a per-node one only after the owning browsing conte
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
 attempted text, a reason of `'unsupported' | 'denied' | 'failed'`, and the original error. Failures
-announce localized `copyFailed`; the raw platform error is never rendered. Copying a circular
+announce localized `copyFailed`; the raw platform error is never rendered. The activated button also
+shows the localized `copied`/`copyFailed` text for 1.5 s. Copying a circular
 `data` value serializes safely, substituting the same `Circular reference` marker the tree view
 renders, instead of throwing. `lr-search-change`
 (`detail: { query, matchCount, matchCountExact, activeIndex }`) —
@@ -837,8 +842,8 @@ unset it still emits the manual event but no countdown is armed.
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
-"Refreshing…", text), `pause-button` (the built-in pause/resume toggle), `refresh-button` (the
-optional built-in manual refresh action).
+"Refreshing…", text), `pause-button` (the built-in pause/resume action, named `Pause`/`Resume` with no pressed state),
+`refresh-button` (the optional built-in manual refresh action; its glyph is drawn inline).
 
 **Themeable custom properties:** `--lr-poll-status-due-bg` (default `var(--lr-color-success)`) —
 background of `indicator` while `data-due` is set. Component-scoped indirection over the shared
@@ -1224,9 +1229,11 @@ retires an older pending outcome, so stale writes cannot confirm or fail a hidde
 `layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
 marker — plus `data-match`/`data-active-match` while a search result covers it, and
 `data-highlight` (the resolved tone, default `accent`) with `data-active-highlight` while a
-`highlights` entry covers it), `line-highlight-action` (the focusable button a resolved
+`highlights` entry covers it; an added or removed line wraps its text in `<ins>`/`<del>` so assistive
+technology exposes the change), `line-highlight-action` (the focusable button a resolved
 `highlights` entry adds to the line it first covers; emits `lr-highlight-activate`), `copy-button`
-(the copy affordance, only rendered while `copyable`), `limit` (the localized over-`maxLines`
+(the copy affordance, only rendered while `copyable`; it stays pinned at the top while the view
+scrolls), `limit` (the localized over-`maxLines`
 fallback), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
 (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is
 appended to the shared document-level polite sink only while the viewer and its composed ancestors
@@ -1278,9 +1285,11 @@ consumer can compute or unit-test the same alignment without instantiating the e
   so files that differ only by line-ending convention do not appear wholly changed.
 - An empty document contains zero logical lines. A genuine trailing newline is still represented,
   so empty/one-sided diffs and copied unified text do not gain a phantom blank operation.
-- alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
-  memory. The 5,000-line per-side default, aggregate character ceiling, and comparison-work ceiling
-  bound pathological inputs; `Infinity` opts out of only the first of those limits.
+- the identical leading and trailing lines are matched directly; alignment of the lines between
+  them uses Hirschberg longest-common-subsequence matching: O(k·l) time with linear working
+  memory. The 5,000-line per-side default, aggregate character ceiling, and a comparison-work
+  ceiling on those changed lines bound pathological inputs, so two long files that differ in a few
+  lines still diff; `Infinity` opts out of only the first of those limits.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 - Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.
@@ -1676,11 +1685,13 @@ paint on hover and press.
 
 - `value: string` — canonical `YYYY-MM-DD` or `''`. Assignment goes through a strict-ISO gate:
   a non-zero-padded (`"2007-3-27"`) or calendar-invalid (`"2007-02-30"`) literal sanitizes to `''`
-  and clears all three fields. Programmatic assignment never emits `input`/`change`
+  and clears all three fields. Programmatic assignment never emits `input`/`change`. Assigning the
+  date the control already holds keeps the typed field text and the pending `change`
 - `valueAsDate: Date | null` — the same value as a local-midnight `Date`; settable (assigning
   `null` clears)
 - `parts: LyraKnownDateParts` — the live raw `{ day, month, year }` strings. Assigning a complete valid set
-  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`
+  synchronizes the canonical `value`; assigning an incomplete or impossible set clears `value`.
+  Assigning the same object, or one with the current field text, is ignored
 - `valueInput: HTMLInputElement` — hidden native `type="date"` mirror kept synchronized with
   `value`, `min`, `max`, `required`, `disabled`, and `readonly` for integrations that inspect native
   date constraints
@@ -1800,7 +1811,7 @@ of which the ladder re-points per `size` tier. That is what keeps the three fiel
 as an `<lr-input>`/`<lr-date-input>` in the same form row at every tier; the
 `--lr-known-date-field-*` names are unchanged and are still the documented override point. The
 min-height resolves to 24px at `2xs`/`xs` (WCAG 2.2 SC 2.5.8's pointer-target floor, above the
-ladder's own 1.25rem/1.5rem there), 1.875rem at `s`, 2.5rem at `m`, 3rem at `l`, 3.5rem at `xl`.
+ladder's own 1.25rem/1.5rem there), 2rem at `s`, 2.25rem at `m`, 2.5rem at `l`, 3.5rem at `xl`.
 Also `--lr-known-date-field-height`,
 `--lr-known-date-field-gap` (default `--lr-space-s` — gap between the three field blocks),
 `--lr-known-date-day-field-width` / `--lr-known-date-month-field-width` (default `--lr-size-3-5em`)
@@ -1888,7 +1899,8 @@ Does **not** reset or restart the autoplay timer; call `restart()` afterwards or
 **Events:** `lr-content-change` (`detail: { readonly items: readonly Element[] }` — a frozen
 snapshot of the exact elements now shown, in display order). Fires on first render, on
 `randomize()`, on a real slot-content change, and on
-each autoplay tick; never when the eligible pool is empty. `lr-pause-change`
+each autoplay tick; never when the eligible pool is empty, and not when the element is only moved
+within the document (it keeps the selection it showed). `lr-pause-change`
 (`detail: { paused: boolean }`) fires only when the built-in pause/resume button toggles `paused`, so a
 host mirroring or persisting that state stays in sync; a programmatic `paused` write stays silent,
 so a controlled binding can't echo itself. Same event name and payload shape as `<lr-poll-status>`'s
@@ -1912,7 +1924,8 @@ stay silent too. A nested forwarding slot contributes flattened assigned content
 fallback; later assignment and assigned-node text/style/visibility changes announce only when they
 change the currently exposed selection, while initial distribution remains silent. `pause-button`
 — the localized autoplay pause/resume action, rendered
-only while `autoplay` is enabled and exposed as a toggle with `aria-pressed`. `next-button` — the
+only while `autoplay` is enabled, named by its action (`Pause`/`Resume`) with no pressed state.
+Pressing Resume restarts autoplay even while focus rests on the button. `next-button` — the
 opt-in localized action rendered while `with-next` is set, sharing the pause button's styling.
 
 **Themeable custom properties:** Web Awesome aliases `--animation-duration` (default `300ms`),

@@ -205,6 +205,16 @@ describe('lr-qr-code', () => {
     ]);
   });
 
+  it('re-localizes a visible error when the strings change after it was shown', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(el, null);
+    el.value = 'hello';
+    await waitForPart(el, 'error');
+    el.strings = { qrCodeMissingLibrary: 'Bibliothèque manquante' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Bibliothèque manquante');
+  });
+
   it('shows the generation-failed error when encoding throws', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
@@ -813,6 +823,24 @@ describe('lr-qr-code', () => {
         .to.deep.equal([1, 2, 3]);
     });
   }
+
+  it('resolves token-valued fill and background colors in the live theme scope', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code
+        size="90"
+        fill="var(--qr-test-fill)"
+        background="var(--qr-test-background)"
+        style="--qr-test-fill: rgb(255, 0, 0); --qr-test-background: rgb(0, 0, 255)"
+      ></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const ctx = el.canvas.getContext('2d')!;
+    const pixel = (x: number, y: number): number[] => [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)];
+    expect(pixel(Math.round(el.canvas.width * 0.75), Math.round(el.canvas.height * 0.75))).to.deep.equal([255, 0, 0]);
+    expect(pixel(Math.round(el.canvas.width * 0.25), Math.round(el.canvas.height * 0.25))).to.deep.equal([0, 0, 255]);
+  });
 
   it('paints a one-module symbol to every full-canvas edge without injecting a quiet zone', async () => {
     const el = (await fixture(html`

@@ -198,7 +198,7 @@ export interface LyraExportButtonEventMap {
  *   a `::part(trigger)` rule.
  * @property size - Optional density on the shared `2xs` through `xl` ladder, including the
  *   `small`/`medium`/`large` aliases. It changes the trigger and menu-row typography and padding;
- *   the 40px default hit-area floor remains in place. Unset preserves the established geometry.
+ *   the `--lr-icon-button-size` hit-area floor remains in place. Unset preserves the established geometry.
  * @property appearance - Optional `outlined` or `quiet` trigger treatment. Unset preserves the
  *   established surface, border, and text colors.
  * @status stable
@@ -229,8 +229,10 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   };
 
   private _rows: readonly Readonly<Record<string, unknown>>[] = Object.freeze([]);
+  private rowsSource?: unknown;
 
-  /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data.
+  /** Shallow frozen row snapshots. Nested cell values remain caller-owned opaque data. Assigning
+   *  the same array again is ignored; assign a new array to change the data.
    *
    *  Read late, not early: the built-in download serializes whatever this holds *after* the
    *  cancelable `lr-export-request` event has been dispatched, so a listener may assign `.rows`
@@ -242,6 +244,8 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   set rows(next: readonly Readonly<Record<string, unknown>>[]) {
+    if (next === this.rowsSource) return;
+    this.rowsSource = next;
     const previous = this._rows;
     const source = Array.isArray(next) ? next : [];
     this._rows = Object.freeze(source.map((row) => Object.freeze({ ...row })));
@@ -251,14 +255,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Column allow-list (and CSV header labels) for both export formats. Left
    *  at its default empty array, both formats fall back to the union of the
    *  rows' own keys instead (see `effectiveColumns()`), rather than CSV
-   *  degrading to a blank file while only JSON had a fallback. */
+   *  degrading to a blank file while only JSON had a fallback. Assigning the
+   *  same array again is ignored. */
   private _columns: readonly Readonly<LyraCsvColumn>[] = Object.freeze([]);
+  private columnsSource?: unknown;
 
   get columns(): readonly Readonly<LyraCsvColumn>[] {
     return this._columns;
   }
 
   set columns(next: readonly LyraCsvColumn[]) {
+    if (next === this.columnsSource) return;
+    this.columnsSource = next;
     const previous = this._columns;
     const source = Array.isArray(next) ? next : [];
     this._columns = Object.freeze(source.map((column) => Object.freeze({ ...column })));
@@ -292,14 +300,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  the built-in JSON download -- RFC 8259 forbids a BOM there. */
   @property({ type: Boolean, reflect: true }) bom = false;
   private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
+  private formatsSource?: unknown;
 
   /** Format choices keyed by unique, nonempty `formatId`; the first duplicate wins. An empty or
-   * fully rejected list disables the trigger because there is no export action to perform. */
+   * fully rejected list disables the trigger because there is no export action to perform.
+   * Assigning the same array again is ignored. */
   get formats(): readonly LyraExportFormatOption[] {
     return this._formats;
   }
 
   set formats(next: readonly LyraExportFormatOption[]) {
+    if (next === this.formatsSource) return;
+    this.formatsSource = next;
     const previous = this._formats;
     const source = formatArrayLength(next);
     const seen = new Set<string>();
@@ -673,15 +685,6 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.setAttribute('aria-busy', String(this.loading));
-    if (
-      (changed.has('disabled') || changed.has('loading')) &&
-      !this.disabled &&
-      !this.loading &&
-      this.injectedHostTabIndex
-    ) {
-      if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
-      this.injectedHostTabIndex = false;
-    }
     if ((changed.has('disabled') || changed.has('loading')) && (this.disabled || this.loading)) {
       const active = activeElementIn(this.shadowRoot);
       if (
@@ -757,6 +760,17 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (
+      (changed.has('disabled') || changed.has('loading')) &&
+      !this.disabled &&
+      !this.loading &&
+      this.injectedHostTabIndex
+    ) {
+      const parked = this.ownerDocument.activeElement === this && !this.shadowRoot?.activeElement;
+      if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
+      this.injectedHostTabIndex = false;
+      if (parked) this.triggerEl?.focus({ preventScroll: true });
+    }
     const forcedMenuClose = this.forcedMenuClose;
     this.forcedMenuClose = undefined;
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it

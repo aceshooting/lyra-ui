@@ -51,7 +51,7 @@ describe('lr-poll-status', () => {
     const el = wrapper.querySelector('lr-poll-status') as LyraPollStatus;
     const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
     expect(button.getAttribute('aria-label')).to.equal('Actualiser maintenant');
-    expect(button.querySelector('lr-icon')?.getAttribute('name')).to.equal('refresh');
+    expect(button.querySelector('svg') !== null).to.equal(true);
     expect(parseFloat(getComputedStyle(button).minInlineSize)).to.be.greaterThan(0);
     expect(button.getBoundingClientRect().width).to.be.at.least(
       parseFloat(getComputedStyle(button).minInlineSize),
@@ -746,5 +746,32 @@ describe('poll-status timer and adoption hardening', () => {
       { timeout: 2000 },
     );
     await due;
+  });
+
+  it('names the pause toggle by its action alone, with no pressed state', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+    expect(button.hasAttribute('aria-pressed')).to.equal(false);
+    el.paused = true;
+    await el.updateComplete;
+    expect(button.hasAttribute('aria-pressed')).to.equal(false);
+    expect(button.getAttribute('aria-label')).to.equal('Resume');
+  });
+
+  it('draws its refresh glyph inline instead of registering lr-icon', async () => {
+    expect(customElements.get('lr-icon') === undefined).to.equal(true);
+    const el = (await fixture(html`<lr-poll-status with-refresh next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    const refresh = el.shadowRoot!.querySelector('[part="refresh-button"]')!;
+    expect(refresh.querySelector('lr-icon') === null).to.equal(true);
+    expect(refresh.querySelector('svg[aria-hidden="true"]') !== null).to.equal(true);
+  });
+
+  it('sizes its icon buttons from the component font, not the UA control font', async () => {
+    const el = (await fixture(html`<lr-poll-status with-refresh next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
+    const countdown = el.shadowRoot!.querySelector('[part="countdown"]') as HTMLElement;
+    for (const part of ['pause-button', 'refresh-button']) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(getComputedStyle(button).fontSize).to.equal(getComputedStyle(countdown).fontSize);
+    }
   });
 });

@@ -7,6 +7,7 @@ import {
 } from '../../../internal/canvas.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -58,7 +59,7 @@ type QrCodeState =
   | { kind: 'empty' }
   | { kind: 'loading' }
   | { kind: 'ready'; modules: QrModules; image?: HTMLImageElement }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; key: 'qrCodeMissingLibrary' | 'qrCodeGenerationFailed' };
 
 function isObjectLike(value: unknown): value is object {
   return (typeof value === 'object' || typeof value === 'function') && value !== null;
@@ -135,33 +136,6 @@ const errorCorrectionConverter = {
     return value === null ? DEFAULT_ERROR_CORRECTION : normalizeErrorCorrection(value);
   },
 };
-
-function warnInvalidColor(): void {
-  devWarnOnce(INVALID_COLOR_WARNING_KEY, INVALID_COLOR_WARNING);
-}
-
-/**
- * Validates `value` as a syntactically valid CSS `<color>` via two canvas `fillStyle` sentinel
- * round-trips and returns it unchanged when it parses. Two sentinels are required because a valid
- * color can normalize to either sentinel itself (`#010203` and `rgb(1 2 3)` both do); an invalid
- * assignment is the only one that leaves both distinct sentinels unchanged. Falls back to
- * `fallbackHex` with a fixed, one-time development diagnostic when neither round-trip accepts the
- * value.
- */
-function resolveQrColor(
-  value: string,
-  fallbackHex: string,
-  ctx: CanvasRenderingContext2D,
-): string {
-  for (const sentinel of ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']) {
-    ctx.fillStyle = sentinel;
-    const sentinelNormalized = ctx.fillStyle;
-    ctx.fillStyle = value;
-    if (ctx.fillStyle !== sentinelNormalized) return value;
-  }
-  warnInvalidColor();
-  return fallbackHex;
-}
 
 /**
  * `<lr-qr-code>` -- encodes `value` as a QR symbol with the optional
@@ -569,9 +543,8 @@ export class LyraQrCode extends LyraElement {
       const api = await this.loadLibrary();
       if (generation !== this.generation || !this.isConnected) return;
       if (!api) {
-        const message = this.localize('qrCodeMissingLibrary');
-        this.transitionTo({ kind: 'error', message });
-        this.errorAnnouncementSink?.announce(message);
+        this.transitionTo({ kind: 'error', key: 'qrCodeMissingLibrary' });
+        this.errorAnnouncementSink?.announce(this.localize('qrCodeMissingLibrary'));
         return;
       }
       const imageSource = safeMediaSrc(this.image);
@@ -588,9 +561,8 @@ export class LyraQrCode extends LyraElement {
       }
     } catch {
       if (generation !== this.generation || !this.isConnected) return;
-      const message = this.localize('qrCodeGenerationFailed');
-      this.transitionTo({ kind: 'error', message });
-      this.errorAnnouncementSink?.announce(message);
+      this.transitionTo({ kind: 'error', key: 'qrCodeGenerationFailed' });
+      this.errorAnnouncementSink?.announce(this.localize('qrCodeGenerationFailed'));
     }
   }
 
@@ -615,22 +587,23 @@ export class LyraQrCode extends LyraElement {
     this.draw();
   }
 
-  private fillColor(ctx: CanvasRenderingContext2D): string {
-    const computed = this.ownerDocument.defaultView?.getComputedStyle(this);
-    const raw =
-      this.fill.trim() ||
-      computed?.color?.trim() ||
-      FALLBACK_FILL;
-    return resolveQrColor(raw, FALLBACK_FILL, ctx);
+  private resolveColor(value: string, fallback: string): string {
+    const resolved = resolveCanvasColor(this, value, fallback);
+    if (resolved === fallback) devWarnOnce(INVALID_COLOR_WARNING_KEY, INVALID_COLOR_WARNING);
+    return resolved;
   }
 
-  private backgroundColor(ctx: CanvasRenderingContext2D): string {
+  private fillColor(): string {
     const computed = this.ownerDocument.defaultView?.getComputedStyle(this);
-    const raw =
-      this.background.trim() ||
-      computed?.backgroundColor?.trim() ||
-      FALLBACK_BACKGROUND;
-    return resolveQrColor(raw, FALLBACK_BACKGROUND, ctx);
+    return this.resolveColor(this.fill.trim() || computed?.color?.trim() || FALLBACK_FILL, FALLBACK_FILL);
+  }
+
+  private backgroundColor(): string {
+    const computed = this.ownerDocument.defaultView?.getComputedStyle(this);
+    return this.resolveColor(
+      this.background.trim() || computed?.backgroundColor?.trim() || FALLBACK_BACKGROUND,
+      FALLBACK_BACKGROUND,
+    );
   }
 
   private draw(): void {
@@ -654,8 +627,8 @@ export class LyraQrCode extends LyraElement {
     if (!ctx) return;
     ctx.scale(allocation.scaleX, allocation.scaleY);
 
-    const background = this.backgroundColor(ctx);
-    const fill = this.fillColor(ctx);
+    const background = this.backgroundColor();
+    const fill = this.fillColor();
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, size, size);
 
@@ -718,11 +691,7 @@ export class LyraQrCode extends LyraElement {
     const contentSize = boxSize - padding * 2;
     const boxStart = (size - boxSize) / 2;
     if (this.imageBackground?.trim()) {
-      ctx.fillStyle = resolveQrColor(
-        this.imageBackground.trim(),
-        this.backgroundColor(ctx),
-        ctx,
-      );
+      ctx.fillStyle = resolveCanvasColor(this, this.imageBackground.trim(), this.backgroundColor());
       ctx.fillRect(boxStart, boxStart, boxSize, boxSize);
     }
     if (contentSize <= 0) return;
@@ -743,7 +712,7 @@ export class LyraQrCode extends LyraElement {
       case 'loading':
         return html`<div part="loading">${this.localize('loading')}</div>`;
       case 'error':
-        return html`<div part="error">${this.loadState.message}</div>`;
+        return html`<div part="error">${this.localize(this.loadState.key)}</div>`;
       case 'ready':
         return nothing;
     }

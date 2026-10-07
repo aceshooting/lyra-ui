@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { pauseIcon, playIcon } from '../../../internal/icons.js';
+import { pauseIcon, playIcon, refreshIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
@@ -351,13 +351,12 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
             ?disabled=${!this.active}
             @click=${this.requestRefresh}
           >
-            <lr-icon name="refresh"></lr-icon>
+            ${refreshIcon()}
           </button>
         ` : nothing}
         <button
           part="pause-button"
           type="button"
-          aria-pressed=${this.paused ? 'true' : 'false'}
           aria-label=${this.localize(this.paused ? 'pollResume' : 'pollPause')}
           ?disabled=${!this.active}
           @click=${this.togglePause}

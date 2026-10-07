@@ -186,7 +186,7 @@ export const OverflowBadgeFloor: Story = {
     docs: {
       description: {
         story:
-          'The "+N" action surface (`overflow-badge`) is a `--lr-icon-button-size` floor, not a cap: at `size="l"`/`"xl"` the badge grows past 40px to fully contain its own avatar-sized painted disc (`overflow-badge-visual`) instead of clipping it.',
+          'The "+N" action surface (`overflow-badge`) is a `--lr-icon-button-size` floor, not a cap: at `size="l"`/`"xl"` the badge grows past that floor to fully contain its own avatar-sized painted disc (`overflow-badge-visual`) instead of clipping it.',
       },
     },
   },

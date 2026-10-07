@@ -75,8 +75,8 @@ export interface LyraAvatarGroupEventMap {
  * @csspart base - The outer inline-flex container (holds the slot and the overflow badge).
  * @csspart overflow-badge - The "+N" button. Only rendered while `max` is actively causing an
  * overflow.
- * @csspart overflow-badge-visual - The avatar-sized painted disc inside the 40px-minimum action
- * surface.
+ * @csspart overflow-badge-visual - The avatar-sized painted disc inside the `--lr-icon-button-size`
+ * minimum action surface.
  * @cssprop [--lr-avatar-group-avatar-size=var(--lr-size-3rem)] - Sizes the overflow badge to
  * match the slotted avatars, tier for tier with `<lr-avatar>`'s own `--lr-avatar-size`.
  * @cssprop [--lr-avatar-group-overlap=var(--lr-size-neg-6px)] - Horizontal overlap between

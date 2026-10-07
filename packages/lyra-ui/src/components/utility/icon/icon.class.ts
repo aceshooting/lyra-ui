@@ -222,12 +222,6 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Mount before a resolver/fetch can fail; creating the live region alongside its first message
-    // is not reliably announced, and an adopted icon must target its current owner document.
-    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
-      document: this.ownerDocument,
-      source: this,
-    });
     this.stopLibrarySubscription ??= subscribeIconLibrary((name) => {
       if (name === this.library) void this.load();
     });
@@ -371,6 +365,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       return;
     }
 
+    // Only a remote load can fail; mount the region before any failure text.
+    this.errorAnnouncementSink ??= acquireAnnouncementSink('assertive', {
+      document: this.ownerDocument,
+      source: this,
+    });
     this.fetchState = { kind: 'loading' };
     let source = this.src;
     try {

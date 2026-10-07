@@ -5,7 +5,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
@@ -19,8 +19,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** How long the confirmation/failure state lasts before reverting -- matches
- *  `lr-code-block`'s own `COPY_CONFIRM_MS`. */
+/** The mirrored upstream `feedback-duration` default, in milliseconds. */
 const DEFAULT_FEEDBACK_DURATION = 1000;
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -147,9 +146,9 @@ export interface LyraCopyButtonEventMap {
  * detailed `lr-copy-error` alias.
  *
  * This trigger has no `size` property of its own: it composes `<lr-icon-button>`, so the built-in
- * trigger's hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same
+ * trigger's hit area is that component's shared `--lr-icon-button-size` floor (2.25rem by default), same
  * as everywhere else in the library. For a dense action row (e.g. several copy buttons packed into
- * a toolbar) where 40px is more than the layout can afford, lower `--lr-icon-button-size-scope`
+ * a toolbar) where that floor is more than the layout can afford, lower `--lr-icon-button-size-scope`
  * (the subtree-scoped input) or `--lr-theme-icon-button-size` (the application-wide one) -- NOT
  * `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and so
  * never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or

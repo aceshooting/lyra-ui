@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { computeLineDiff, pairOpsForSplit, type LyraDiffOp } from './diff-line-diff.js';
+import { commonAffix, computeLineDiff, pairOpsForSplit, type LyraDiffOp } from './diff-line-diff.js';
 
 describe('computeLineDiff', () => {
   it('produces a real interleaved diff for a one-line change inside a longer block, not all-removed-then-all-added', () => {
@@ -52,6 +52,28 @@ describe('computeLineDiff', () => {
       { type: 'remove', text: 'before' },
       { type: 'remove', text: 'after' },
       { type: 'add', text: 'new' },
+    ]);
+  });
+});
+
+describe('commonAffix', () => {
+  it('measures the identical leading and trailing runs without letting them overlap', () => {
+    expect(commonAffix(['a', 'b', 'x', 'c'], ['a', 'b', 'y', 'c'])).to.deep.equal([2, 1]);
+    expect(commonAffix(['a', 'a'], ['a'])).to.deep.equal([1, 0]);
+    expect(commonAffix([], ['a'])).to.deep.equal([0, 0]);
+  });
+
+  it('keeps the head and tail as equal lines around the changed middle', () => {
+    expect(computeLineDiff(['a', 'b', 'x', 'c'], ['a', 'b', 'y', 'c'])).to.deep.equal([
+      { type: 'equal', text: 'a' },
+      { type: 'equal', text: 'b' },
+      { type: 'remove', text: 'x' },
+      { type: 'add', text: 'y' },
+      { type: 'equal', text: 'c' },
+    ]);
+    expect(computeLineDiff(['a', 'a'], ['a'])).to.deep.equal([
+      { type: 'equal', text: 'a' },
+      { type: 'remove', text: 'a' },
     ]);
   });
 });

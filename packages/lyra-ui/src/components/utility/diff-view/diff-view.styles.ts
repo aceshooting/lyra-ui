@@ -59,6 +59,10 @@ export const styles = css`
     inline-size: max-content;
     min-inline-size: 100%;
   }
+  ins,
+  del {
+    text-decoration: none;
+  }
   [part="line"]:not([data-type="fold"]) {
     /* Diffed source reads left-to-right whatever the document direction -- same rationale and fix
        shape as code-block.styles.ts's [part='pre']: without this an ancestor dir="rtl"
@@ -168,13 +172,17 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="copy-button"] {
-    position: absolute;
+    position: sticky;
     inset-block-start: var(--lr-space-xs);
-    inset-inline-end: var(--lr-space-xs);
+    z-index: var(--lr-layer-content);
+    display: block;
+    margin: var(--lr-space-xs);
+    margin-inline-start: auto;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+    font: inherit;
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-s);
     min-inline-size: var(--lr-icon-button-size);

@@ -95,7 +95,7 @@ export const CompactOutlined: Story = {
     docs: {
       description: {
         story:
-          'The opt-in small density keeps the shared 40px hit-area floor while outlined chrome aligns the export action with a compact toolbar.',
+          'The opt-in small density keeps the shared hit-area floor while outlined chrome aligns the export action with a compact toolbar.',
       },
     },
   },

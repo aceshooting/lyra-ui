@@ -7,6 +7,7 @@ import {
   oneEvent,
   waitUntil,
 } from "@open-wc/testing";
+import { render } from "lit";
 import "./diff-view.js";
 import type { LyraDiffView } from "./diff-view.js";
 import type { LyraDiffOp } from "./diff-line-diff.js";
@@ -173,6 +174,36 @@ describe("lr-diff-view", () => {
     ).to.equal(0);
   });
 
+  it("diffs two long files that differ in one line instead of refusing them", async () => {
+    const lines = Array.from({ length: 2500 }, (_, index) => `line-${index}`);
+    const edited = lines.slice();
+    edited[1200] = "edited";
+    const el = (await fixture(
+      html`<lr-diff-view
+        .oldText=${lines.join("\n")}
+        .newText=${edited.join("\n")}
+      ></lr-diff-view>`
+    )) as LyraDiffView;
+    const count = (selector: string): number =>
+      el.shadowRoot!.querySelectorAll(selector).length;
+    expect(count('[part="limit"]')).to.equal(0);
+    expect(count('[part="line"]')).to.equal(2501);
+    expect(count('[part="line"][data-type="remove"]')).to.equal(1);
+    expect(count('[part="line"][data-type="add"]')).to.equal(1);
+  });
+
+  it("marks added and removed lines with insertion and deletion semantics", async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${"a\nb"} .newText=${"a\nc"}></lr-diff-view>`
+    )) as LyraDiffView;
+    const line = (type: string): Element =>
+      el.shadowRoot!.querySelector(`[part="line"][data-type="${type}"]`)!;
+    expect(line("remove").querySelector("del")?.textContent).to.equal("- b");
+    expect(line("add").querySelector("ins")?.textContent).to.equal("+ c");
+    expect(line("equal").querySelector("ins, del") === null).to.equal(true);
+    expect(getComputedStyle(line("add").querySelector("ins")!).textDecorationLine).to.equal("none");
+  });
+
   it("enforces the default ceiling and accepts explicit Infinity as the documented opt-out", async () => {
     const oversized = Array.from(
       { length: 5001 },
@@ -273,6 +304,22 @@ describe("lr-diff-view", () => {
       '[part="copy-button"]'
     ) as HTMLButtonElement;
     expect(button.getAttribute("aria-label")).to.equal("Copy diff");
+  });
+
+  it("keeps the copy button in view while the diff scrolls, in the component font", async () => {
+    const rows = Array.from({ length: 60 }, (_, index) => `row ${index}`).join("\n");
+    const el = (await fixture(
+      html`<lr-diff-view copyable max-height="8rem" .oldText=${""} .newText=${rows}></lr-diff-view>`
+    )) as LyraDiffView;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="copy-button"]')!;
+    base.scrollTop = 300;
+    await el.updateComplete;
+    const baseBox = base.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    expect(buttonBox.top).to.be.at.least(baseBox.top);
+    expect(buttonBox.bottom).to.be.at.most(baseBox.bottom);
+    expect(getComputedStyle(button).fontFamily).to.equal(getComputedStyle(base).fontFamily);
   });
 
   it("paints the copy-button hover treatment under a real pointer", async () => {
@@ -1948,6 +1995,27 @@ describe('search and scrollToAnchor', () => {
     expect(found).to.equal(true);
     expect(scrolled).to.equal(true);
     expect((await listener).detail).to.deep.equal({ found: true });
+  });
+
+  it('does not jump again when a parent template re-commits the same anchor object', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      const anchor = { kind: 'line-range', start: 4 } as const;
+      const template = () =>
+        html`<lr-diff-view .oldText=${oldText} .newText=${newText} .anchor=${anchor}></lr-diff-view>`;
+      render(template(), host);
+      const el = host.querySelector('lr-diff-view') as LyraDiffView;
+      let results = 0;
+      el.addEventListener('lr-anchor-result', () => (results += 1));
+      await waitUntil(() => results === 1);
+      render(template(), host);
+      await el.updateComplete;
+      await aTimeout(50);
+      expect(results).to.equal(1);
+    } finally {
+      host.remove();
+    }
   });
 
   it('reports a definite not-found result for an out-of-range line-range anchor', async () => {

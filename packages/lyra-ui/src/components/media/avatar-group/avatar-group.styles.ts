@@ -90,8 +90,8 @@ export const styles = css`
   [part='overflow-badge'] {
     display: inline-flex;
     /* auto, not a fixed basis: the box must float up to contain overflow-badge-visual when
-       --lr-avatar-group-avatar-size exceeds --lr-icon-button-size (default size and up at 'l'/
-       'xl') -- min-inline-size/min-block-size below are the WCAG 2.5.8 floor, never a cap. */
+       --lr-avatar-group-avatar-size exceeds --lr-icon-button-size (tier 's' and up) --
+       min-inline-size/min-block-size below are the WCAG 2.5.8 floor, never a cap. */
     flex: 0 0 auto;
     align-items: center;
     justify-content: flex-start;

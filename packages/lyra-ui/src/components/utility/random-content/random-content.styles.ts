@@ -42,6 +42,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+    font: inherit;
     cursor: pointer;
     /* Hover/active below repaint border-color and color, and active also fills a background, so
        all three channels need to ease; without this this button's paint snaps while

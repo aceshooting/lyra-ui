@@ -75,6 +75,11 @@ export function pauseIcon(): SVGTemplateResult {
   `);
 }
 
+/** Two circular arrows, for a refresh/"show another" action. */
+export function refreshIcon(): SVGTemplateResult {
+  return icon(svg`<path d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4"></path>`);
+}
+
 /** A calendar/date glyph, for date-input's open-calendar toggle. */
 export function calendarIcon(): SVGTemplateResult {
   return icon(svg`

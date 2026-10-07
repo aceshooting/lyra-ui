@@ -100,15 +100,33 @@ function collectMatches(
   collectMatches(oldLines, oldMiddle, oldEnd, newLines, newMiddle, newEnd, matches);
 }
 
+/** Lengths of the identical leading and trailing line runs; they never overlap. */
+export function commonAffix(oldLines: string[], newLines: string[]): [head: number, tail: number] {
+  const shortest = Math.min(oldLines.length, newLines.length);
+  let head = 0;
+  while (head < shortest && oldLines[head] === newLines[head]) head += 1;
+  let tail = 0;
+  while (
+    tail < shortest - head &&
+    oldLines[oldLines.length - 1 - tail] === newLines[newLines.length - 1 - tail]
+  ) tail += 1;
+  return [head, tail];
+}
+
 /**
  * A real line-level diff using Hirschberg's linear-space longest-common-subsequence algorithm --
  * not a lexical/syntax-highlighting pass, and not "every removed line then every added line."
- * Runtime remains O(n*m), while peak working memory is linear rather than an eager
- * `(oldLines.length + 1) × (newLines.length + 1)` JavaScript-number matrix.
+ * The identical leading and trailing lines are matched directly; Hirschberg's O(k*l) runtime and
+ * linear working memory apply only to the lines between them.
  */
 export function computeLineDiff(oldLines: string[], newLines: string[]): LyraDiffOp[] {
+  const [head, tail] = commonAffix(oldLines, newLines);
   const matches: LineMatch[] = [];
-  collectMatches(oldLines, 0, oldLines.length, newLines, 0, newLines.length, matches);
+  for (let index = 0; index < head; index += 1) matches.push([index, index]);
+  collectMatches(oldLines, head, oldLines.length - tail, newLines, head, newLines.length - tail, matches);
+  for (let index = tail; index > 0; index -= 1) {
+    matches.push([oldLines.length - index, newLines.length - index]);
+  }
 
   const ops: LyraDiffOp[] = [];
   let oldIndex = 0;

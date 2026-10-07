@@ -1,6 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
-import type { PropertyValues } from 'lit';
+import { render, type PropertyValues } from 'lit';
 import './known-date.js';
 import '../../forms/input/input.js';
 import '../../forms/button/button.js';
@@ -2001,4 +2001,57 @@ it('falls back to ambient globals in a window missing MutationObserver, requestA
     }
     frame.remove();
   }
+});
+
+describe('under a re-rendering parent', () => {
+  it('keeps typed fields when a template re-commits the same parts object', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      const draft = { day: '1', month: '', year: '' };
+      const template = () => html`<lr-known-date locale="en-GB" .parts=${draft}></lr-known-date>`;
+      render(template(), host);
+      const el = host.querySelector('lr-known-date') as LyraKnownDate;
+      await el.updateComplete;
+      typeInto(fieldFor(el, 'month'), '3');
+      render(template(), host);
+      await el.updateComplete;
+      expect(el.parts).to.deep.equal({ day: '1', month: '3', year: '' });
+      expect(fieldFor(el, 'month').value).to.equal('3');
+    } finally {
+      host.remove();
+    }
+  });
+
+  it('keeps zero padding and still fires change when a controlled value is echoed back', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      let value = '';
+      const template = () =>
+        html`<lr-known-date
+          locale="en-GB"
+          .value=${value}
+          @input=${(event: Event) => {
+            value = (event.target as LyraKnownDate).value;
+            render(template(), host);
+          }}
+        ></lr-known-date>`;
+      render(template(), host);
+      const el = host.querySelector('lr-known-date') as LyraKnownDate;
+      await el.updateComplete;
+      let changes = 0;
+      el.addEventListener('change', () => (changes += 1));
+      typeInto(fieldFor(el, 'day'), '27');
+      typeInto(fieldFor(el, 'month'), '03');
+      typeInto(fieldFor(el, 'year'), '2007');
+      await el.updateComplete;
+      fieldFor(el, 'year').dispatchEvent(new FocusEvent('blur', { relatedTarget: null }));
+      expect(fieldFor(el, 'month').value).to.equal('03');
+      expect(el.value).to.equal('2007-03-27');
+      expect(changes).to.equal(1);
+    } finally {
+      host.remove();
+    }
+  });
 });

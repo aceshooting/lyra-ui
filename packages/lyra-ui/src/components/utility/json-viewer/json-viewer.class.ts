@@ -51,6 +51,7 @@ interface RenderBudget {
   truncated: boolean;
 }
 
+const COPY_CONFIRM_MS = 1500;
 const MAX_JSON_NODES = 5000;
 const MAX_JSON_DEPTH = 100;
 // Reflection is independently bounded, but has headroom for opaque/non-enumerable own names so
@@ -335,7 +336,7 @@ export interface LyraJsonViewerEventMap {
  *
  * Expand/collapse state is keyed by structural path (not by object identity),
  * so it survives a `data` reassignment that keeps the same shape -- e.g. a
- * streaming tool result being patched in place.
+ * streaming tool result reassigned as a fresh object per patch.
  * Imperative search-cursor changes are appended to the shared light-DOM polite announcement sink;
  * initial/reconnect state and changes while the host is accessibility-hidden are silent, and the
  * shadow tree retains only an `aria-hidden` text mirror.
@@ -436,6 +437,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private searchAnnouncementSink?: AnnouncementSink;
   private searchAnnouncementsArmed = false;
   private searchAnnouncementGeneration = 0;
+  @state() private copyFeedback: { key: string; ok: boolean } | null = null;
+  private copyFeedbackTimer?: { owner: Window; handle: number };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -455,6 +458,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.clearCopyFeedback();
     this.searchAnnouncementGeneration += 1;
     this.searchAnnouncementSink?.release();
     this.searchAnnouncementSink = undefined;
@@ -512,12 +516,34 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.emit('lr-copy-error', outcome);
   }
 
-  private async copy(value: JsonSnapshotValue): Promise<void> {
+  private clearCopyFeedback(): void {
+    const timer = this.copyFeedbackTimer;
+    if (timer) timer.owner.clearTimeout(timer.handle);
+    this.copyFeedbackTimer = undefined;
+    this.copyFeedback = null;
+  }
+
+  private showCopyFeedback(key: string, ok: boolean): void {
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    this.clearCopyFeedback();
+    this.copyFeedback = { key, ok };
+    this.copyFeedbackTimer = { owner, handle: owner.setTimeout(() => this.clearCopyFeedback(), COPY_CONFIRM_MS) };
+  }
+
+  private copyLabel(key: string, rest: string): string {
+    const feedback = this.copyFeedback;
+    return feedback?.key === key ? this.localize(feedback.ok ? 'copied' : 'copyFailed') : rest;
+  }
+
+  private async copy(value: JsonSnapshotValue, key: string): Promise<void> {
+    this.clearCopyFeedback();
     let text = '';
     try {
       text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     } catch (error) {
       if (this.isConnected) {
+        this.showCopyFeedback(key, false);
         this.reportCopyFailure(Object.freeze({ ok: false, text, reason: 'failed', error }));
       }
       return;
@@ -525,6 +551,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const outcome = await writeClipboardText(owner, text);
     if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+    this.showCopyFeedback(key, outcome.ok);
     if (!outcome.ok) {
       this.reportCopyFailure(outcome);
       return;
@@ -670,7 +697,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     };
   }
 
-  private renderCopyButton(value: JsonSnapshotValue, label: string | undefined): TemplateResult | typeof nothing {
+  private renderCopyButton(
+    value: JsonSnapshotValue,
+    label: string | undefined,
+    pathKey: string,
+  ): TemplateResult | typeof nothing {
     if (!this.copyable) return nothing;
     // "Copy {label}" is interpolated via the values arg (not string-concatenated)
     // so word order stays translatable -- label is either caller data (a JSON
@@ -682,15 +713,16 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       <button
         part="copy-button"
         type="button"
-        aria-label=${this.localize('jsonCopyLabel', undefined, {
-          label: resolvedLabel,
-        })}
+        aria-label=${this.copyLabel(
+          pathKey,
+          this.localize('jsonCopyLabel', undefined, { label: resolvedLabel }),
+        )}
         @click=${(e: Event) => {
           e.stopPropagation();
-          void this.copy(value);
+          void this.copy(value, pathKey);
         }}
       >
-        ${this.localize('copy')}
+        ${this.copyLabel(pathKey, this.localize('copy'))}
       </button>
     `;
   }
@@ -811,7 +843,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 : 'false'}
               >${formatPrimitive(value, type)}</span
             >`}
-        ${this.renderCopyButton(value, toggleLabel)}
+        ${this.renderCopyButton(value, toggleLabel, pathKey)}
       </div>
     `;
 
@@ -997,10 +1029,10 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               <button
                 part="copy-button"
                 type="button"
-                aria-label=${this.localize('copyJson')}
-                @click=${() => void this.copy(this.dataSnapshot)}
+                aria-label=${this.copyLabel('toolbar', this.localize('copyJson'))}
+                @click=${() => void this.copy(this.dataSnapshot, 'toolbar')}
               >
-                ${this.localize('copy')}
+                ${this.copyLabel('toolbar', this.localize('copy'))}
               </button>
             </div>`
           : nothing}

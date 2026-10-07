@@ -62,6 +62,7 @@ export const styles = css`
     border: none;
     background: transparent;
     color: inherit;
+    font: inherit;
     cursor: pointer;
     padding: var(--lr-size-0-125rem);
     border-radius: var(--lr-radius);

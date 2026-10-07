@@ -124,8 +124,11 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
-  @property() threshold: number | number[] | string = '0';
-  /** Element root or mapped element-ID string. */
+  @property({
+    hasChanged: (value, old) => JSON.stringify(normalizedThreshold(value)) !== JSON.stringify(normalizedThreshold(old)),
+  })
+  threshold: number | number[] | string = '0';
+  /** Element root or mapped element-ID string, resolved in the host's tree before the document. */
   @property() root: Element | string | null = null;
   @property({ attribute: 'intersect-class' }) intersectClass = '';
   /** Stops observing each target after its first intersection. Consumed targets stay consumed
@@ -222,8 +225,9 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
       ? Object.freeze(classValue.trim().split(/\s+/).filter(Boolean))
       : Object.freeze([]);
     const rootValue = this.root;
+    const rootId = typeof rootValue === 'string' ? rootValue.trim().replace(/^#/, '') : '';
     const root = typeof rootValue === 'string'
-      ? ownerDocument.getElementById(rootValue.trim().replace(/^#/, ''))
+      ? (this.getRootNode() as Document | ShadowRoot).getElementById?.(rootId) ?? ownerDocument.getElementById(rootId)
       : isElementNode(rootValue)
         ? rootValue
         : null;

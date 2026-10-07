@@ -2023,3 +2023,27 @@ it('keeps sparse snapshot holes undefined despite an inherited numeric getter', 
     frame.remove();
   }
 });
+
+for (const [outcome, writeText, expected] of [
+  ['success', () => Promise.resolve(), 'Copied!'],
+  ['failure', () => Promise.reject(new DOMException('no', 'NotAllowedError')), 'Copy failed'],
+] as const) {
+  it(`confirms a ${outcome} on the activated copy button only`, async () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    try {
+      const el = await withData(sample);
+      el.copyable = true;
+      await el.updateComplete;
+      const buttons = Array.from(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="copy-button"]'));
+      expect(buttons.length).to.be.greaterThan(2);
+      buttons[0]!.click();
+      await waitUntil(() => buttons[0]!.textContent!.trim() === expected);
+      expect(buttons[0]!.getAttribute('aria-label')).to.equal(expected);
+      expect(buttons.slice(1).every((button) => button.textContent!.trim() === 'Copy')).to.equal(true);
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+}

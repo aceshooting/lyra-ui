@@ -37,6 +37,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
+import { formatISO, parseISO } from '../../forms/date-picker/calendar-core.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
@@ -65,53 +66,11 @@ const EMPTY_PARTS: Readonly<LyraKnownDateParts> = {
   year: '',
 };
 
-/** Local proleptic-Gregorian construction without Date's legacy 0–99 → 1900 remap. */
-function localDate(year: number, month: number, day: number): Date {
-  const date = new Date(0);
-  date.setHours(0, 0, 0, 0);
-  date.setFullYear(year, month, day);
-  return date;
-}
-
-/** Parse `YYYY-MM-DD` into a local Date, or null if invalid (calendar-invalid
- *  combinations like Feb 30 are rejected, not silently rolled over). Local
- *  port of `date-picker/calendar-core.ts#parseISO` -- duplicated rather than
- *  imported so this component's own directory stays self-contained. */
-function parseISO(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = localDate(year, month - 1, day);
-  if (Number.isNaN(date.getTime())) return null;
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  )
-    return null;
-  return date;
-}
-
-/** Format a supported Date as local `YYYY-MM-DD`, or an empty string outside years 0000-9999.
- *  Local port of `date-picker/calendar-core.ts#formatISO` -- see {@link parseISO}. */
-function formatISO(date: Date): string {
-  if (!Number.isFinite(date.getTime()) || date.getFullYear() < 0 || date.getFullYear() > 9999) {
-    return '';
-  }
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${String(date.getFullYear()).padStart(4, '0')}-${mm}-${dd}`;
-}
-
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
  *  distinguishable), instead of relying on `Date.parse()`'s implementation-
  *  defined (commonly mm/dd/yyyy-biased) heuristics for an ambiguous separated
- *  date. Local port of `date-picker/date-input.class.ts`'s own
- *  `localeDateOrder()` -- see {@link parseISO}'s doc comment for why it's
- *  duplicated rather than imported. */
+ *  date. Local port of `date-picker/date-input.class.ts`'s own `localeDateOrder()`. */
 function localeDateOrder(locale: string): LyraKnownDateField[] {
   try {
     const parts = getDateTimeFormat(locale || undefined, {
@@ -129,6 +88,22 @@ function localeDateOrder(locale: string): LyraKnownDateField[] {
   } catch {
     return ['month', 'day', 'year']; // Date.parse()'s own bias, as a last-resort fallback
   }
+}
+
+/** Maps Arabic-Indic, Extended Arabic-Indic and the locale's own digits to ASCII. */
+function localeDigitMap(locale: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (let digit = 0; digit <= 9; digit++) {
+    map.set(String.fromCharCode(0x660 + digit), String(digit));
+    map.set(String.fromCharCode(0x6f0 + digit), String(digit));
+  }
+  try {
+    const formatter = getNumberFormat(locale || undefined, { useGrouping: false });
+    for (let digit = 0; digit <= 9; digit++) map.set(formatter.format(digit), String(digit));
+  } catch {
+    // The two Unicode decimal ranges above remain available if an invalid locale was assigned.
+  }
+  return map;
 }
 
 export interface LyraKnownDateEventDetail {
@@ -257,7 +232,7 @@ function addCompatibilityDetail<T extends Event>(
  * @cssprop [--lr-known-date-field-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))]
  *   - Minimum block size of each `field-input`; its private default follows `size`
  *   (`2xs`/`xs`→`24px`,
- *   `s`→`1.875rem`, `m`→`2.5rem`, `l`→`3rem`, `xl`→`3.5rem`) -- the same shared control-height
+ *   `s`→`2rem`, `m`→`2.25rem`, `l`→`2.5rem`, `xl`→`3.5rem`) -- the same shared control-height
  *   ladder `lr-input`/`lr-date-input` sit on, so a birthdate field in a form row beside those
  *   controls renders at the same height. The `max()` floors the two smallest tiers at WCAG 2.2
  *   SC 2.5.8's 24px pointer-target minimum. At the small tiers the floor exceeds the field's own
@@ -363,6 +338,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   @property({ attribute: 'year-label' }) yearLabel?: string;
 
   private _parts: LyraKnownDateParts = { ...EMPTY_PARTS };
+  private partsSource?: LyraKnownDateParts;
   // Set on the first blur that leaves the whole control (not a field-to-field
   // Tab); gates the touched-only invalid presentation, same as every other
   // lyra form control.
@@ -565,12 +541,15 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.requestUpdate('readonly', old);
   }
 
-  /** The three raw day/month/year field strings. Assigning a complete valid set updates `value`. */
+  /** The three raw day/month/year field strings. Assigning a complete valid set updates `value`.
+   *  Assigning the same object, or one with the current field text, is ignored. */
   get parts(): LyraKnownDateParts {
     return this._parts;
   }
 
   set parts(next: LyraKnownDateParts) {
+    if (next === this.partsSource) return;
+    this.partsSource = next;
     this.setParts(next, true);
   }
 
@@ -579,11 +558,19 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     programmatic: boolean
   ): void {
     const old = this._parts;
-    this._parts = {
+    const parts = {
       day: String(next?.day ?? ''),
       month: String(next?.month ?? ''),
       year: String(next?.year ?? ''),
     };
+    if (
+      programmatic &&
+      parts.day === old.day &&
+      parts.month === old.month &&
+      parts.year === old.year
+    )
+      return;
+    this._parts = parts;
     if (programmatic) {
       this.commitFromFields();
       this.lastCommittedValue = this.value;
@@ -599,9 +586,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
    *  field texts to match -- a declarative `value="2007-3-27"` (non-padded) or a calendar-invalid
    *  literal (`"2007-02-30"`) sanitizes to `''`, same strict-ISO gate as `lr-date-input`'s
    *  `parseStrictISO()`. Programmatic assignment stays silent (no `input`/`change`), matching every
-   *  `FormAssociated` sibling's documented contract. */
+   *  `FormAssociated` sibling's documented contract. Assigning the date already held keeps the
+   *  typed field text. */
   override set value(next: string) {
     const parsed = this.parseStrictISO(next ?? '');
+    if (parsed && formatISO(parsed) === super.value) return;
     if (parsed) {
       this.setParts(
         {
@@ -633,8 +622,13 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     return parseISO(value);
   }
 
+  private fieldOrderCache?: { locale: string; order: LyraKnownDateField[] };
+
   private get fieldOrder(): LyraKnownDateField[] {
-    return localeDateOrder(this.effectiveLocale);
+    const locale = this.effectiveLocale;
+    if (this.fieldOrderCache?.locale !== locale)
+      this.fieldOrderCache = { locale, order: localeDateOrder(locale) };
+    return this.fieldOrderCache.order;
   }
 
   private textFor(field: LyraKnownDateField): string {
@@ -953,42 +947,17 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     if (message) this.errorAnnouncementSink?.announce(message);
   }
 
+  private digitMapCache?: { locale: string; map: Map<string, string> };
+
   private normalizeFieldDigits(value: string): string {
-    const digitMap = new Map<string, string>([
-      ['٠', '0'],
-      ['١', '1'],
-      ['٢', '2'],
-      ['٣', '3'],
-      ['٤', '4'],
-      ['٥', '5'],
-      ['٦', '6'],
-      ['٧', '7'],
-      ['٨', '8'],
-      ['٩', '9'],
-      ['۰', '0'],
-      ['۱', '1'],
-      ['۲', '2'],
-      ['۳', '3'],
-      ['۴', '4'],
-      ['۵', '5'],
-      ['۶', '6'],
-      ['۷', '7'],
-      ['۸', '8'],
-      ['۹', '9'],
-    ]);
-    try {
-      const formatter = getNumberFormat(this.effectiveLocale || undefined, {
-        useGrouping: false,
-      });
-      for (let digit = 0; digit <= 9; digit++)
-        digitMap.set(formatter.format(digit), String(digit));
-    } catch {
-      // The two Unicode decimal ranges above remain available if an invalid locale was assigned.
-    }
+    const locale = this.effectiveLocale;
+    if (this.digitMapCache?.locale !== locale)
+      this.digitMapCache = { locale, map: localeDigitMap(locale) };
+    const { map } = this.digitMapCache;
     let normalized = '';
     for (const character of value) {
       if (character >= '0' && character <= '9') normalized += character;
-      else normalized += digitMap.get(character) ?? '';
+      else normalized += map.get(character) ?? '';
     }
     return normalized;
   }

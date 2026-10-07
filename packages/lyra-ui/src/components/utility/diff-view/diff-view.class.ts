@@ -32,7 +32,7 @@ import type {
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../../viewers/viewer-search-limits.js';
 import { ViewerAnnouncementController } from '../../viewers/viewer-announcements.js';
-import { computeLineDiff, pairOpsForSplit, type LyraDiffOp, type LyraDiffSplitRow } from './diff-line-diff.js';
+import { commonAffix, computeLineDiff, pairOpsForSplit, type LyraDiffOp, type LyraDiffSplitRow } from './diff-line-diff.js';
 import {
   loadShikiHighlighterCore,
   SHIKI_THEMES,
@@ -45,8 +45,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_details, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** How long the "Copied!" confirmation state lasts before reverting -- matches
- *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
 const COPY_CONFIRM_MS = 1500;
 
 type CopyStatus = 'rest' | 'success' | 'error';
@@ -60,8 +58,9 @@ type CopyStatus = 'rest' | 'success' | 'error';
 const splitLines = (text: string): string[] =>
   text === '' ? [] : text.split(/\r\n|\r|\n/);
 
-// Line count alone does not bound Hirschberg's O(n*m) work or the strings handed to the
-// highlighter. These ceilings apply even when maxLines is explicitly relaxed.
+// Line count alone does not bound Hirschberg's O(k*l) work over the lines between the common head
+// and tail, or the strings handed to the highlighter. These ceilings apply even when maxLines is
+// explicitly relaxed.
 const MAX_DIFF_CHARACTERS = 1_000_000;
 const MAX_DIFF_COMPARISONS = 4_000_000;
 const MAX_DIFF_LANGUAGES = 10_000;
@@ -184,10 +183,11 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   `+`/`-` prefix; `"fold"` is the collapsed-unchanged-lines marker `contextLines` produces),
  *   `data-match`/`data-active-match` while a search result covers it, and `data-highlight`
  *   (the resolved tone, default `accent`) plus `data-active-highlight` while a `highlights` entry
- *   covers it.
+ *   covers it. An added or removed line wraps its text in `<ins>`/`<del>`.
  * @csspart line-highlight-action - The focusable button a resolved `highlights` entry adds to the
  *   line it first covers; emits `lr-highlight-activate`.
- * @csspart copy-button - The copy affordance, only rendered while `copyable`.
+ * @csspart copy-button - The copy affordance, only rendered while `copyable`; pinned to the top
+ *   while the view scrolls.
  * @csspart limit - The localized fallback rendered when either input exceeds `maxLines`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
  * @cssprop [--lr-diff-view-max-height=none] - Cap on `[part="base"]`'s block size, past which the
@@ -390,7 +390,8 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       const maxLines =
         this.maxLines === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : finiteCount(this.maxLines, 5000);
       const characterCount = this.oldTextSnapshot.length + this.newTextSnapshot.length;
-      const comparisons = oldLines.length * newLines.length;
+      const [head, tail] = commonAffix(oldLines, newLines);
+      const comparisons = (oldLines.length - head - tail) * (newLines.length - head - tail);
       this.diffTooLarge =
         oldLines.length > maxLines ||
         newLines.length > maxLines ||
@@ -912,6 +913,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     const ownerLabel = owner
       ? this.highlightActionLabel(owner, context.order.get(owner) ?? 0, context.total)
       : '';
+    const text = html`${marker} ${content}`;
     return html`<div
       part="line"
       data-type=${op.type}
@@ -920,7 +922,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       ?data-active-match=${isActiveMatch}
       data-highlight=${highlight ? highlight.tone ?? 'accent' : nothing}
       ?data-active-highlight=${!!highlight && highlight.id === this.activeHighlightId}
-    >${marker} ${content}${owner
+    >${op.type === 'add' ? html`<ins>${text}</ins>` : op.type === 'remove' ? html`<del>${text}</del>` : text}${owner
       ? html`<button
           part="line-highlight-action"
           type="button"

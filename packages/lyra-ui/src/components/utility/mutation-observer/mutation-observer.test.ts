@@ -601,3 +601,25 @@ it('contains a throwing disconnect hook across rebuild and reconnect', async () 
     else Reflect.deleteProperty(window, 'MutationObserver');
   }
 });
+
+it('keeps its observer for a structurally equal attributeFilter and rebuilds for a different one', async () => {
+  const el = await fixture<LyraMutationObserver>(
+    html`<lr-mutation-observer .attributeFilter=${['data-state']}><div data-state="a"></div></lr-mutation-observer>`,
+  );
+  await aTimeout(0);
+  const seam = el as unknown as { observeTargets: () => void };
+  const original = seam.observeTargets;
+  let rebuilds = 0;
+  seam.observeTargets = () => {
+    rebuilds += 1;
+    original();
+  };
+  el.attributeFilter = ['data-state'];
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(rebuilds).to.equal(0);
+  el.attributeFilter = ['data-other'];
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(rebuilds).to.equal(1);
+});

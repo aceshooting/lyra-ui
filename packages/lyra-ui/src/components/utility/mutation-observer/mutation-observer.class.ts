@@ -87,7 +87,11 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
   /** Observes only the slotted elements themselves, not their descendants (the native
    *  `subtree: false` option). */
   @property({ type: Boolean, attribute: 'without-subtree' }) withoutSubtree = false;
-  @property({ attribute: false }) attributeFilter: string[] = [];
+  @property({
+    attribute: false,
+    hasChanged: (value, old) => normalizedAttributeFilter(value).join() !== normalizedAttributeFilter(old).join(),
+  })
+  attributeFilter: string[] = [];
 
   private observer?: MutationObserver;
   private observerDocument?: Document;

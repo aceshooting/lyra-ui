@@ -150,4 +150,29 @@ describe('intersection observer capability boundaries', () => {
     expect(latestObserver().observed.length).to.equal(1);
     expect(latestObserver().thresholds).to.deep.equal([0.75]);
   });
+
+  it('resolves a root id inside the host shadow tree', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML =
+      '<div id="scroller"></div><lr-intersection-observer root="scroller"><div>Target</div></lr-intersection-observer>';
+    const wrapper = shadow.querySelector('lr-intersection-observer') as LyraIntersectionObserver;
+    await wrapper.updateComplete;
+    await aTimeout(0);
+    expect(latestObserver().root === shadow.getElementById('scroller')).to.equal(true);
+  });
+
+  it('keeps its observer for a structurally equal threshold array and rebuilds for a different one', async () => {
+    const wrapper = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer .threshold=${[0, 0.5]}><div>Target</div></lr-intersection-observer>`);
+    await aTimeout(0);
+    const count = BoundaryObserver.instances.length;
+    wrapper.threshold = [0, 0.5];
+    await wrapper.updateComplete;
+    await aTimeout(0);
+    expect(BoundaryObserver.instances.length).to.equal(count);
+    wrapper.threshold = [0, 1];
+    await wrapper.updateComplete;
+    await aTimeout(0);
+    expect(BoundaryObserver.instances.length).to.equal(count + 1);
+  });
 });
