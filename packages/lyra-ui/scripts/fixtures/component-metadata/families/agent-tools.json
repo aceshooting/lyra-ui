@@ -59,7 +59,7 @@
       "tag": "lr-agent-eval-dashboard",
       "kind": "event",
       "name": "lr-metric-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-metric-change-request",
@@ -72,7 +72,7 @@
       "tag": "lr-agent-run",
       "kind": "event",
       "name": "lr-cancel",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-run-cancel",
@@ -85,7 +85,7 @@
       "tag": "lr-background-runs",
       "kind": "event",
       "name": "lr-run-open",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-run-activate",
@@ -98,7 +98,7 @@
       "tag": "lr-change-review",
       "kind": "event",
       "name": "lr-change-decision",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-change-decision-request",
@@ -111,7 +111,7 @@
       "tag": "lr-subagent-panel",
       "kind": "event",
       "name": "lr-cancel",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-run-cancel",
@@ -124,7 +124,7 @@
       "tag": "lr-tool-call-chip",
       "kind": "slot",
       "name": "icon",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "slot",
         "name": "status-icon",

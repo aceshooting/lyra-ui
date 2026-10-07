@@ -7,9 +7,9 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-metric-change` since `unreleased`; use event `@lr-metric-change-request`; removal not before `28.0.0` — lr-metric-change-request names a request the application decides on; the old event fires right after it for one major.
-- **Deprecated event** `lr-run-change` since `unreleased`; use event `@lr-run-activate`; removal not before `28.0.0` — lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major.
-- **Deprecated event** `lr-slice-change` since `unreleased`; use event `@lr-slice-change-request`; removal not before `28.0.0` — lr-slice-change-request names a request the application decides on; the old event fires right after it for one major.
+- **Deprecated event** `lr-metric-change` since `26.0.0`; use event `@lr-metric-change-request`; removal not before `28.0.0` — lr-metric-change-request names a request the application decides on; the old event fires right after it for one major.
+- **Deprecated event** `lr-run-change` since `26.0.0`; use event `@lr-run-activate`; removal not before `28.0.0` — lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major.
+- **Deprecated event** `lr-slice-change` since `26.0.0`; use event `@lr-slice-change-request`; removal not before `28.0.0` — lr-slice-change-request names a request the application decides on; the old event fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

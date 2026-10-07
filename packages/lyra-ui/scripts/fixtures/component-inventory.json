@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "25.7.1",
+    "lyraVersion": "26.0.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -2682,7 +2682,7 @@
             "tag": "lr-agent-eval-dashboard",
             "kind": "event",
             "name": "lr-metric-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-metric-change-request",
@@ -2906,7 +2906,7 @@
               "tag": "lr-agent-eval-dashboard",
               "kind": "event",
               "name": "lr-metric-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-metric-change-request",
@@ -3323,7 +3323,7 @@
             "tag": "lr-agent-run",
             "kind": "event",
             "name": "lr-cancel",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-run-cancel",
@@ -3548,7 +3548,7 @@
               "tag": "lr-agent-run",
               "kind": "event",
               "name": "lr-cancel",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-run-cancel",
@@ -7326,7 +7326,7 @@
             "tag": "lr-app-rail-item",
             "kind": "slot",
             "name": "icon",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "slot",
               "name": "start",
@@ -7560,7 +7560,7 @@
               "tag": "lr-app-rail-item",
               "kind": "slot",
               "name": "icon",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "slot",
                 "name": "start",
@@ -11350,7 +11350,7 @@
             "tag": "lr-background-runs",
             "kind": "event",
             "name": "lr-run-open",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-run-activate",
@@ -11470,7 +11470,7 @@
               "tag": "lr-background-runs",
               "kind": "event",
               "name": "lr-run-open",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-run-activate",
@@ -19609,7 +19609,7 @@
             "tag": "lr-change-review",
             "kind": "event",
             "name": "lr-change-decision",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-change-decision-request",
@@ -19759,7 +19759,7 @@
               "tag": "lr-change-review",
               "kind": "event",
               "name": "lr-change-decision",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-change-decision-request",
@@ -25295,7 +25295,7 @@
             "tag": "lr-chunk-inspector",
             "kind": "event",
             "name": "lr-chunk-toggle",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -25510,7 +25510,7 @@
               "tag": "lr-chunk-inspector",
               "kind": "event",
               "name": "lr-chunk-toggle",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -32396,7 +32396,7 @@
             "tag": "lr-community-card",
             "kind": "event",
             "name": "lr-entity-activate",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-entity-select",
@@ -32560,7 +32560,7 @@
               "tag": "lr-community-card",
               "kind": "event",
               "name": "lr-entity-activate",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-entity-select",
@@ -45608,7 +45608,7 @@
             "tag": "lr-dock-panel",
             "kind": "event",
             "name": "lr-collapse-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -45621,7 +45621,7 @@
             "tag": "lr-dock-panel",
             "kind": "event",
             "name": "lr-collapse-request",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle-request",
@@ -45822,7 +45822,7 @@
               "tag": "lr-dock-panel",
               "kind": "event",
               "name": "lr-collapse-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -45841,7 +45841,7 @@
               "tag": "lr-dock-panel",
               "kind": "event",
               "name": "lr-collapse-request",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle-request",
@@ -54489,7 +54489,7 @@
             "tag": "lr-entity-dossier",
             "kind": "event",
             "name": "lr-entity-activate",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-entity-select",
@@ -54777,7 +54777,7 @@
               "tag": "lr-entity-dossier",
               "kind": "event",
               "name": "lr-entity-activate",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-entity-select",
@@ -60397,7 +60397,7 @@
             "tag": "lr-flow-node",
             "kind": "slot",
             "name": "icon",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "slot",
               "name": "start",
@@ -60694,7 +60694,7 @@
               "tag": "lr-flow-node",
               "kind": "slot",
               "name": "icon",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "slot",
                 "name": "start",
@@ -82079,7 +82079,7 @@
             "tag": "lr-memory-panel",
             "kind": "event",
             "name": "lr-entity-activate",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-entity-select",
@@ -82092,7 +82092,7 @@
             "tag": "lr-memory-panel",
             "kind": "event",
             "name": "lr-memory-toggle",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -82270,7 +82270,7 @@
               "tag": "lr-memory-panel",
               "kind": "event",
               "name": "lr-entity-activate",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-entity-select",
@@ -82307,7 +82307,7 @@
               "tag": "lr-memory-panel",
               "kind": "event",
               "name": "lr-memory-toggle",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -89286,7 +89286,7 @@
             "tag": "lr-navigation-menu",
             "kind": "event",
             "name": "lr-expanded-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -89580,7 +89580,7 @@
               "tag": "lr-navigation-menu",
               "kind": "event",
               "name": "lr-expanded-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -96550,7 +96550,7 @@
             "tag": "lr-path-strip",
             "kind": "event",
             "name": "lr-entity-activate",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-entity-select",
@@ -96640,7 +96640,7 @@
               "tag": "lr-path-strip",
               "kind": "event",
               "name": "lr-entity-activate",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-entity-select",
@@ -105878,7 +105878,7 @@
             "tag": "lr-provenance-panel",
             "kind": "event",
             "name": "lr-entity-activate",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-entity-select",
@@ -106015,7 +106015,7 @@
               "tag": "lr-provenance-panel",
               "kind": "event",
               "name": "lr-entity-activate",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-entity-select",
@@ -110895,7 +110895,7 @@
             "tag": "lr-rag-eval-dashboard",
             "kind": "event",
             "name": "lr-metric-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-metric-change-request",
@@ -110908,7 +110908,7 @@
             "tag": "lr-rag-eval-dashboard",
             "kind": "event",
             "name": "lr-run-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-run-activate",
@@ -110921,7 +110921,7 @@
             "tag": "lr-rag-eval-dashboard",
             "kind": "event",
             "name": "lr-slice-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-slice-change-request",
@@ -111125,7 +111125,7 @@
               "tag": "lr-rag-eval-dashboard",
               "kind": "event",
               "name": "lr-metric-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-metric-change-request",
@@ -111156,7 +111156,7 @@
               "tag": "lr-rag-eval-dashboard",
               "kind": "event",
               "name": "lr-run-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-run-activate",
@@ -111175,7 +111175,7 @@
               "tag": "lr-rag-eval-dashboard",
               "kind": "event",
               "name": "lr-slice-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-slice-change-request",
@@ -114697,7 +114697,7 @@
             "tag": "lr-retrieval-results",
             "kind": "event",
             "name": "lr-select",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-selection-change",
@@ -115070,7 +115070,7 @@
               "tag": "lr-retrieval-results",
               "kind": "event",
               "name": "lr-select",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-selection-change",
@@ -115620,7 +115620,7 @@
             "tag": "lr-retrieval-trace",
             "kind": "event",
             "name": "lr-stage-toggle",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -115746,7 +115746,7 @@
               "tag": "lr-retrieval-trace",
               "kind": "event",
               "name": "lr-stage-toggle",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -120853,7 +120853,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "26.0.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -122971,7 +122971,7 @@
             "tag": "lr-source-card",
             "kind": "event",
             "name": "lr-expand",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -123196,7 +123196,7 @@
               "tag": "lr-source-card",
               "kind": "event",
               "name": "lr-expand",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -123537,7 +123537,7 @@
             "tag": "lr-source-picker",
             "kind": "event",
             "name": "lr-sources-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-selection-change",
@@ -123724,7 +123724,7 @@
               "tag": "lr-source-picker",
               "kind": "event",
               "name": "lr-sources-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-selection-change",
@@ -128104,7 +128104,7 @@
             "tag": "lr-subagent-panel",
             "kind": "event",
             "name": "lr-cancel",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-run-cancel",
@@ -128255,7 +128255,7 @@
               "tag": "lr-subagent-panel",
               "kind": "event",
               "name": "lr-cancel",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-run-cancel",
@@ -143600,7 +143600,7 @@
             "tag": "lr-tool-call-chip",
             "kind": "slot",
             "name": "icon",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "slot",
               "name": "status-icon",
@@ -143815,7 +143815,7 @@
               "tag": "lr-tool-call-chip",
               "kind": "slot",
               "name": "icon",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "slot",
                 "name": "status-icon",
@@ -153076,7 +153076,7 @@
             "tag": "lr-widget",
             "kind": "event",
             "name": "lr-collapse-change",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle",
@@ -153089,7 +153089,7 @@
             "tag": "lr-widget",
             "kind": "event",
             "name": "lr-collapse-request",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "event",
               "name": "lr-toggle-request",
@@ -153102,7 +153102,7 @@
             "tag": "lr-widget",
             "kind": "slot",
             "name": "icon",
-            "since": "unreleased",
+            "since": "26.0.0",
             "replacement": {
               "kind": "slot",
               "name": "start",
@@ -153412,7 +153412,7 @@
               "tag": "lr-widget",
               "kind": "slot",
               "name": "icon",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "slot",
                 "name": "start",
@@ -153456,7 +153456,7 @@
               "tag": "lr-widget",
               "kind": "event",
               "name": "lr-collapse-change",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle",
@@ -153475,7 +153475,7 @@
               "tag": "lr-widget",
               "kind": "event",
               "name": "lr-collapse-request",
-              "since": "unreleased",
+              "since": "26.0.0",
               "replacement": {
                 "kind": "event",
                 "name": "lr-toggle-request",

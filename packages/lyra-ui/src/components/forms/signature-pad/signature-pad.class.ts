@@ -106,7 +106,7 @@ function pathData(stroke: SignatureStroke): string {
  * @cssstate user-valid - `valid` once the user has drawn, cleared, left the pad or tried to submit.
  * @cssstate user-invalid - `invalid` after that same interaction.
  * @status experimental
- * @since unreleased
+ * @since 26.0.0
  */
 export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

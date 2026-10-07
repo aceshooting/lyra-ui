@@ -7,9 +7,9 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
-- **Deprecated event** `lr-collapse-change` since `unreleased`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
-- **Deprecated event** `lr-collapse-request` since `unreleased`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
-- **Deprecated slot** `icon` since `unreleased`; use slot `slot="start"`; removal not before `28.0.0` — The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
+- **Deprecated event** `lr-collapse-change` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
+- **Deprecated event** `lr-collapse-request` since `26.0.0`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
+- **Deprecated slot** `icon` since `26.0.0`; use slot `slot="start"`; removal not before `28.0.0` — The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSignaturePad`, also available unregistered from `@aceshooting/lyra-ui/components/forms/signature-pad/signature-pad.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `26.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none

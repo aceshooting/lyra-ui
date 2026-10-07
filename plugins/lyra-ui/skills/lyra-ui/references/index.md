@@ -67,7 +67,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-country-picker` · lr-country-picker.js · `experimental` since `25.5.0` — a form-associated country and territory selector.
 - `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `25.5.0` — a form-associated time-zone identifier selector.
 - `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` — a form-associated measurement-unit identifier selector.
-- `lr-signature-pad` · lr-signature-pad.js · `experimental` since `unreleased` — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
+- `lr-signature-pad` · lr-signature-pad.js · `experimental` since `26.0.0` — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
 
 ## Data display, dashboards & flow canvas — `components/data/` (26)
 

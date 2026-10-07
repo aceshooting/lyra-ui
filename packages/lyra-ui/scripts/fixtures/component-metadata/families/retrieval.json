@@ -47,7 +47,7 @@
       "tag": "lr-chunk-inspector",
       "kind": "event",
       "name": "lr-chunk-toggle",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -60,7 +60,7 @@
       "tag": "lr-community-card",
       "kind": "event",
       "name": "lr-entity-activate",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-entity-select",
@@ -73,7 +73,7 @@
       "tag": "lr-entity-dossier",
       "kind": "event",
       "name": "lr-entity-activate",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-entity-select",
@@ -86,7 +86,7 @@
       "tag": "lr-memory-panel",
       "kind": "event",
       "name": "lr-entity-activate",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-entity-select",
@@ -99,7 +99,7 @@
       "tag": "lr-memory-panel",
       "kind": "event",
       "name": "lr-memory-toggle",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -112,7 +112,7 @@
       "tag": "lr-path-strip",
       "kind": "event",
       "name": "lr-entity-activate",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-entity-select",
@@ -125,7 +125,7 @@
       "tag": "lr-provenance-panel",
       "kind": "event",
       "name": "lr-entity-activate",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-entity-select",
@@ -138,7 +138,7 @@
       "tag": "lr-rag-eval-dashboard",
       "kind": "event",
       "name": "lr-metric-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-metric-change-request",
@@ -151,7 +151,7 @@
       "tag": "lr-rag-eval-dashboard",
       "kind": "event",
       "name": "lr-run-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-run-activate",
@@ -164,7 +164,7 @@
       "tag": "lr-rag-eval-dashboard",
       "kind": "event",
       "name": "lr-slice-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-slice-change-request",
@@ -177,7 +177,7 @@
       "tag": "lr-retrieval-results",
       "kind": "event",
       "name": "lr-select",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-selection-change",
@@ -190,7 +190,7 @@
       "tag": "lr-retrieval-trace",
       "kind": "event",
       "name": "lr-stage-toggle",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -203,7 +203,7 @@
       "tag": "lr-source-card",
       "kind": "event",
       "name": "lr-expand",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -216,7 +216,7 @@
       "tag": "lr-source-picker",
       "kind": "event",
       "name": "lr-sources-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-selection-change",

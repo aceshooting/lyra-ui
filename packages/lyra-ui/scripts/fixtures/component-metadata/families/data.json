@@ -44,7 +44,7 @@
       "tag": "lr-flow-node",
       "kind": "slot",
       "name": "icon",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "slot",
         "name": "start",

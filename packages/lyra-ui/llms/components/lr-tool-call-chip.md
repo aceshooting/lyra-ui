@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated slot** `icon` since `unreleased`; use slot `slot="status-icon"`; removal not before `28.0.0` — The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration.
+- **Deprecated slot** `icon` since `26.0.0`; use slot `slot="status-icon"`; removal not before `28.0.0` — The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

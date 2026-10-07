@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-cancel` since `unreleased`; use event `@lr-run-cancel`; removal not before `28.0.0` — lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major.
+- **Deprecated event** `lr-cancel` since `26.0.0`; use event `@lr-run-cancel`; removal not before `28.0.0` — lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 25 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -70,7 +70,7 @@
       "tag": "lr-app-rail-item",
       "kind": "slot",
       "name": "icon",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "slot",
         "name": "start",
@@ -83,7 +83,7 @@
       "tag": "lr-dock-panel",
       "kind": "event",
       "name": "lr-collapse-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -96,7 +96,7 @@
       "tag": "lr-dock-panel",
       "kind": "event",
       "name": "lr-collapse-request",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle-request",
@@ -109,7 +109,7 @@
       "tag": "lr-navigation-menu",
       "kind": "event",
       "name": "lr-expanded-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -122,7 +122,7 @@
       "tag": "lr-widget",
       "kind": "event",
       "name": "lr-collapse-change",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle",
@@ -135,7 +135,7 @@
       "tag": "lr-widget",
       "kind": "event",
       "name": "lr-collapse-request",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "event",
         "name": "lr-toggle-request",
@@ -148,7 +148,7 @@
       "tag": "lr-widget",
       "kind": "slot",
       "name": "icon",
-      "since": "unreleased",
+      "since": "26.0.0",
       "replacement": {
         "kind": "slot",
         "name": "start",
