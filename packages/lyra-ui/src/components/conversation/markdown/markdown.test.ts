@@ -554,6 +554,20 @@ it('forces rel="noopener noreferrer" onto a raw HTML anchor carrying target, wit
   expect(relTokens).to.include("noreferrer");
 });
 
+for (const mode of ["sanitize", "trusted"]) {
+  it(`guards a named-target raw anchor whose title contains ">" in html-mode="${mode}"`, async () => {
+    const el = (await fixture(
+      html`<lr-markdown html-mode=${mode}></lr-markdown>`
+    )) as LyraMarkdown;
+    el.content = 'go <a href="https://evil.example" title="x>y" target="win1">here</a>';
+    await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+
+    const a = el.shadowRoot!.querySelector("a")!;
+    expect(a.getAttribute("target")).to.equal("win1");
+    expect(a.getAttribute("rel")).to.equal("noopener noreferrer");
+  });
+}
+
 it('defaults link-target to "_blank"', async () => {
   const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
   expect(el.linkTarget).to.equal("_blank");

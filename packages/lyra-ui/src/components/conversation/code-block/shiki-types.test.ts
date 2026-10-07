@@ -1,6 +1,7 @@
 import { expect } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import {
+  ensureShikiLanguageLoaded,
   loadShikiHighlighterCore,
   setShikiCoreEngine,
   __resetShikiCoreEngineForTesting,
@@ -66,6 +67,21 @@ describe('loadShikiHighlighterCore language aliasing', () => {
     const html = core!.codeToHtml('alpha', { lang: 'tsx', themes: SHIKI_THEMES });
     expect(html).to.contain('alpha');
     expect(html).to.match(/<span style="[^"]*">alpha<\/span>/);
+  });
+
+  it('highlights a lazily loaded grammar under keys that are neither its name nor a declared alias', async function () {
+    this.timeout(20_000);
+    const grammar = testGrammar();
+    const core = await loadShikiHighlighterCore({});
+    expect(core).to.not.equal(null);
+    cores.add(core!);
+
+    expect(await ensureShikiLanguageLoaded(core!, grammar.name, () => Promise.resolve(grammar))).to.equal(true);
+    expect(await ensureShikiLanguageLoaded(core!, 'tsx', () => Promise.resolve([grammar]))).to.equal(true);
+    expect(await ensureShikiLanguageLoaded(core!, 'jsx', () => Promise.resolve({ default: grammar }))).to.equal(true);
+    for (const lang of [grammar.name, 'tsx', 'jsx']) {
+      expect(core!.codeToHtml('alpha', { lang, themes: SHIKI_THEMES })).to.match(/<span style="[^"]*">alpha<\/span>/);
+    }
   });
 
   it("still highlights when the map key already matches the grammar's own name", async function () {

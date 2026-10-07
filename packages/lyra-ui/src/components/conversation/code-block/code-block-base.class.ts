@@ -126,7 +126,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.refreshTheme();
+    if (this.hasUpdated) this.refreshTheme();
     this.headerActions.observe();
   }
 
@@ -156,6 +156,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.seedFirstRenderState(() => this.refreshTheme());
     this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
     if (changed.has('code')) {

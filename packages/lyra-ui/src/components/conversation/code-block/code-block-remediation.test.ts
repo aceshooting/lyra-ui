@@ -78,3 +78,21 @@ for (const tagName of ['lr-code-block', 'lr-code-block-core']) {
     });
   });
 }
+
+customElements.define('late-slot-host', class extends HTMLElement {
+  connectedCallback(): void {
+    const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
+    queueMicrotask(() => root.append(document.createElement('slot')));
+  }
+});
+
+for (const tagName of ['lr-code-block', 'lr-code-block-core']) {
+  it(`${tagName} reads a dark page palette once the host that slots it has rendered`, async () => {
+    const wrapper = await fixture<HTMLElement>(
+      `<div style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a"><late-slot-host><${tagName}></${tagName}></late-slot-host></div>`,
+    );
+    const el = wrapper.querySelector<CodeBlock>(tagName)!;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="body"]')!.getAttribute('data-dark-theme')).to.equal('true');
+  });
+}

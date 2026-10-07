@@ -316,6 +316,9 @@ function buildShikiLangAlias(
   return aliases;
 }
 
+/** Shiki reads a core's `langAlias` object on every lookup, so a lazy grammar's key can be added later. */
+const coreLangAliases = new WeakMap<ShikiHighlighterCore, Record<string, string>>();
+
 type ShikiHighlighterCoreLoader = (
   languages: Record<string, ShikiLanguageInput>
 ) => Promise<ShikiHighlighterCore | null>;
@@ -381,10 +384,11 @@ export function loadShikiHighlighterCore(
     ])
       .then(
         async ([{ createHighlighterCore }, resolvedEngine, light, dark]) => {
+          const langAlias = buildShikiLangAlias(languages) ?? {};
           const core = await createHighlighterCore({
             themes: [light.default, dark.default],
             langs: Object.values(languages) as never,
-            langAlias: buildShikiLangAlias(languages),
+            langAlias,
             engine: resolvedEngine as never,
           });
           if (!isShikiHighlighter(core)) {
@@ -392,6 +396,7 @@ export function loadShikiHighlighterCore(
               'Invalid optional peer `shiki`: `createHighlighterCore()` did not produce a usable highlighter capability.',
             );
           }
+          coreLangAliases.set(core, langAlias);
           return core;
         }
       )
@@ -482,13 +487,7 @@ const LAZY_LANGUAGE_SOURCE_WARNING =
  * one-time dev warning), so a caller can render the plain-text fallback for that key the same way
  * it already does for a key absent from `languages` altogether.
  *
- * Unlike an already-resolved entry (seeded through `buildShikiLangAlias()` at core creation, so an
- * author-chosen `languages` key never needs to match the grammar's own registered name), a lazily
- * loaded grammar is registered under whatever name/aliases it declares *itself* -- `loadLanguage()`
- * has no alias parameter. `codeToHtml`/`tokenize` calls must therefore request the grammar's own
- * name or a declared alias, not an arbitrary `languages` key, unless that key already happens to be
- * one of those (true for shiki's own bundled grammars keyed by their conventional short id, e.g.
- * `bash`/`ts`).
+ * A `key` that is neither the grammar's name nor a declared alias is aliased to it, as `buildShikiLangAlias()` does.
  */
 export function ensureShikiLanguageLoaded(
   core: ShikiHighlighterCore,
@@ -505,7 +504,13 @@ export function ensureShikiLanguageLoaded(
   if (!pending) {
     pending = Promise.resolve()
       .then(source)
-      .then((resolved) => core.loadLanguage(unwrapOptionalPeerDefault(resolved) as ShikiLanguageInput))
+      .then(async (resolved) => {
+        const grammar = unwrapOptionalPeerDefault(resolved) as ShikiLanguageInput;
+        await core.loadLanguage(grammar);
+        const { primaryName, known } = shikiGrammarOwnNames(grammar);
+        const aliases = coreLangAliases.get(core);
+        if (aliases && primaryName && !known.has(key)) aliases[key] = primaryName;
+      })
       .then(() => true)
       .catch(() => {
         devWarnOnce(LAZY_LANGUAGE_SOURCE_WARNING_KEY, LAZY_LANGUAGE_SOURCE_WARNING);

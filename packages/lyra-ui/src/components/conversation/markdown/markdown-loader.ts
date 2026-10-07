@@ -1,24 +1,5 @@
-import {
-  isHtmlSanitizer,
-  resolveOptionalPeerCapability,
-  type HtmlSanitizer,
-} from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-
-const MARKDOWN_PARSER_WARNING_KEY = 'lyra-markdown-marked-unavailable';
-const MARKDOWN_PARSER_WARNING =
-  '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.';
-const MARKDOWN_SANITIZER_WARNING_KEY = 'lyra-markdown-dompurify-unavailable';
-const MARKDOWN_SANITIZER_WARNING =
-  '<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.';
-
-function warnMarkdownParserUnavailable(): void {
-  devWarnOnce(MARKDOWN_PARSER_WARNING_KEY, MARKDOWN_PARSER_WARNING);
-}
-
-function warnMarkdownSanitizerUnavailable(): void {
-  devWarnOnce(MARKDOWN_SANITIZER_WARNING_KEY, MARKDOWN_SANITIZER_WARNING);
-}
+import { createOptionalPeerLoader, type HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 
 /**
  * The configurable parser capability exposed by both Markdown variants' `marked` getter.
@@ -133,6 +114,14 @@ function isMarkedModule(value: unknown): value is MarkedModule {
   }
 }
 
+const markedLoader = /* @__PURE__ */ createOptionalPeerLoader<MarkedModule>({
+  load: () => import('marked'),
+  isCapability: isMarkedModule,
+  warningKey: 'lyra-markdown-marked-unavailable',
+  warning:
+    '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.',
+});
+
 /**
  * The two optional peers `<lr-markdown>` needs, loaded independently (see
  * `loadMarkdownAndSanitizer()`). Either half can be `undefined` on its own —
@@ -164,29 +153,11 @@ let resolvedDeps: MarkdownDeps | undefined;
  * needing to actually uninstall either package.
  */
 export async function loadMarkdownAndSanitizer(
-  importMarked: () => Promise<unknown> = () => import('marked'),
-  importDompurify: () => Promise<unknown> = () => import('dompurify'),
+  importMarked?: () => Promise<unknown>,
+  importDompurify?: () => Promise<unknown>,
 ): Promise<MarkdownDeps> {
-  let marked: MarkedModule | undefined;
-  try {
-    marked = resolveOptionalPeerCapability(await importMarked(), isMarkedModule) ?? undefined;
-  } catch {
-    warnMarkdownParserUnavailable();
-  }
-
-  let DOMPurify: HtmlSanitizer | undefined;
-  try {
-    // Different bundler/interop configurations resolve a CJS-published optional peer as either
-    // `{ default: X }` or the bare module namespace -- reading only `.default` would silently
-    // substitute `undefined` for the real sanitizer under the other resolution, a security-
-    // relevant regression (sanitization would silently no-op). Mirrors email-loader.ts's and
-    // calendar-loader.ts's identical `module.default ?? module` fallback.
-    DOMPurify = resolveOptionalPeerCapability(await importDompurify(), isHtmlSanitizer) ?? undefined;
-  } catch {
-    warnMarkdownSanitizerUnavailable();
-  }
-
-  return { marked, DOMPurify };
+  const [marked, DOMPurify] = await Promise.all([markedLoader.loadWith(importMarked), loadDompurify(importDompurify)]);
+  return { marked: marked ?? undefined, DOMPurify: DOMPurify ?? undefined };
 }
 
 /**

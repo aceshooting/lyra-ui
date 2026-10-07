@@ -82,6 +82,40 @@ describe('Markdown sanitizer boundary', () => {
   });
 });
 
+describe('Markdown anchor rel guard', () => {
+  const rawAnchors =
+    '<a href="https://x.example" title="a>b" target="win1">one</a>' +
+    "<a title='c>d' target=win2 rel=\"opener nofollow\">two</a>" +
+    '<a href="#" rel="opener" target="_blank" rel="nofollow">three</a>' +
+    '<a href="#" title="no target">four</a>' +
+    '<map name="m"><area href="#" title="x>y" target="win3"></map>';
+
+  for (const htmlMode of ['trusted', 'sanitize'] as const) {
+    it(`guards every anchor and image-map area with a target even when an earlier attribute value contains ">" (${htmlMode})`, async () => {
+      const outcome = renderMarkdownDocument({
+        tag: 'lr-markdown',
+        deps: { marked: (await loadMarkdownDeps()).marked, DOMPurify: { sanitize: (value: string) => value } },
+        htmlMode,
+        math: false,
+        parse: () => ({ html: rawAnchors, hadMathFallback: false }),
+        onParsed: () => undefined,
+        isKatexConfirmedMissing: () => false,
+      });
+      expect(outcome.status).to.equal('rendered');
+      if (outcome.status !== 'rendered') return;
+      const template = document.createElement('template');
+      template.innerHTML = outcome.html;
+      expect([...template.content.querySelectorAll('a,area')].map((a) => a.getAttribute('rel'))).to.deep.equal([
+        'noopener noreferrer',
+        'nofollow noopener noreferrer',
+        'noopener noreferrer',
+        null,
+        'noopener noreferrer',
+      ]);
+    });
+  }
+});
+
 describe('Markdown highlight resource bounds', () => {
   it('admits a stable first 100 active blocks so a 101-block document settles after caching', async () => {
     const marked = (await loadMarkdownDeps()).marked!;
@@ -152,6 +186,28 @@ describe('Markdown highlight resource bounds', () => {
     const retainedBytes = [...cache].reduce((total, [key, html]) => total + (key.length + html.length) * 2, 0);
     expect(retainedBytes).to.be.at.most(HIGHLIGHT_CACHE_MAX_BYTES);
     expect(cache.size).to.be.lessThan(8);
+  });
+
+  it('keeps the retained-byte total incrementally instead of walking the cache per insert', () => {
+    let walks = 0;
+    class WalkCountingMap extends Map<string, string> {
+      override [Symbol.iterator]() {
+        walks++;
+        return super[Symbol.iterator]();
+      }
+    }
+    const walked = new WalkCountingMap();
+    for (let index = 0; index < 50; index++) setCachedHighlight(walked, `k${index}`, 'x'.repeat(100));
+    expect(walked.size).to.equal(50);
+    expect(walks).to.equal(0);
+
+    const cache = new Map<string, string>();
+    const budget = 100;
+    for (const key of ['a', 'b', 'c']) setCachedHighlight(cache, key, 'x'.repeat(20), 100, budget);
+    expect([...cache.keys()]).to.deep.equal(['b', 'c']);
+    setCachedHighlight(cache, 'b', 'x'.repeat(5), 100, budget);
+    setCachedHighlight(cache, 'd', 'x'.repeat(20), 100, budget);
+    expect([...cache.keys()]).to.deep.equal(['c', 'b', 'd']);
   });
 
   it('tolerates a Map subclass whose oldest value disappears between iteration and eviction', () => {

@@ -5,7 +5,7 @@ import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 // These tests exercise optional-peer fallbacks; the diagnostic contract has a separate capture test.
 expectDevWarning('lyra-markdown-marked-unavailable');
-expectDevWarning('lyra-markdown-dompurify-unavailable');
+expectDevWarning('lyra-dompurify-unavailable');
 
 class UsableMarked {
   readonly defaults: Record<string, unknown> = {};
@@ -233,7 +233,7 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
       }
       expect(messages).to.deep.equal([
         '<lr-markdown>/<lr-markdown-core>: Markdown parsing is unavailable because the optional marked peer could not load. Content is rendered as plain text.',
-        '<lr-markdown>/<lr-markdown-core>: HTML sanitization is unavailable because the optional DOMPurify peer could not load. Content is rendered as plain text unless trusted HTML is explicitly selected.',
+        'A lyra-ui component could not load its optional dompurify peer.',
       ]);
       expect(messages.join(' ')).to.not.contain(markedFailure.message);
       expect(messages.join(' ')).to.not.contain(dompurifyFailure.message);

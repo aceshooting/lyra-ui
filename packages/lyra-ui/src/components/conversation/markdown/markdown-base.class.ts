@@ -302,7 +302,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   override connectedCallback(): void {
     super.connectedCallback();
     this.markdownVariant.connectedInstances.add(this);
-    this.refreshTheme();
+    if (this.hasUpdated) this.refreshTheme();
     beginMarkdownDepsLoad(this, (resolved) => {
       this.deps = resolved;
       this.renderMarkdown();
@@ -342,6 +342,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.seedFirstRenderState(() => this.refreshTheme());
     const active = this.shadowRoot?.activeElement as HTMLElement | null;
     const selector = '[part~="code-block"], [part~="code-block-copy"], [part~="table-wrapper"]';
     if (active?.matches(selector)) {
@@ -355,7 +356,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (markdownHighlightConfigChanged(changed) || (!progressive && (changed.has('content') || changed.has('streaming')))) this.highlightToken++;
     if (markdownHighlightConfigChanged(changed)) {
       this.failedHighlightKeys.clear();
-      if (markdownLanguageSetChanged(changed)) this.highlightCache.clear();
+      if (markdownLanguageSetChanged(changed)) this.highlightCache = new Map();
     }
     if (!progressive) this.resetProgressiveMarkdown();
     else if (configurationChanged) this.progressiveRebuild = true;

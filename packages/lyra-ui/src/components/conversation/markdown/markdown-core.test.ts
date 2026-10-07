@@ -839,6 +839,20 @@ describe("languages lazy grammar loaders", () => {
     expect(calls, "a later content change must not re-invoke an already-resolved loader").to.equal(1);
   });
 
+  it("highlights a fence whose languages key differs from the lazily loaded grammar's own name", async function () {
+    this.timeout(20_000);
+    const el = (await fixture(
+      html`<lr-markdown-core></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.languages = { mine: () => import("shiki/langs/typescript.mjs") };
+    el.content = "```mine\nconst x = 1;\n```";
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
+      "a lazy loader under a custom key never highlighted",
+      { timeout: 8000 }
+    );
+  });
+
   it("falls back to plain text without throwing when a loader rejects", async () => {
     const el = (await fixture(
       html`<lr-markdown-core></lr-markdown-core>`

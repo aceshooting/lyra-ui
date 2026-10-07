@@ -31,6 +31,7 @@ import {
   type TextQuoteMatch,
 } from '../../../internal/text-quote.js';
 import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
@@ -276,6 +277,9 @@ export function getCachedHighlight(cache: Map<string, string>, key: string): str
   return cached;
 }
 
+const cacheBytes = new WeakMap<Map<string, string>, number>();
+
+/** Byte accounting assumes every entry arrived through this function: replace a cache, never `clear()` it. */
 export function setCachedHighlight(
   cache: Map<string, string>,
   key: string,
@@ -285,19 +289,19 @@ export function setCachedHighlight(
 ): boolean {
   const entryBytes = (key.length + html.length) * 2;
   if (entryBytes > HIGHLIGHT_CACHE_ENTRY_MAX_BYTES || entryBytes > maxBytes) return false;
-  if (cache.has(key)) {
-    cache.delete(key);
-  }
-  let retainedBytes = 0;
-  for (const [cachedKey, cachedHtml] of cache) retainedBytes += (cachedKey.length + cachedHtml.length) * 2;
+  let retainedBytes = cacheBytes.get(cache) ?? 0;
+  const evict = (evictedKey: string): void => {
+    retainedBytes -= (evictedKey.length + (cache.get(evictedKey) ?? '').length) * 2;
+    cache.delete(evictedKey);
+  };
+  if (cache.has(key)) evict(key);
   while (cache.size >= max || retainedBytes + entryBytes > maxBytes) {
     const oldest = cache.keys().next().value;
     if (oldest === undefined) break;
-    const oldestHtml = cache.get(oldest) ?? '';
-    retainedBytes -= (oldest.length + oldestHtml.length) * 2;
-    cache.delete(oldest);
+    evict(oldest);
   }
   cache.set(key, html);
+  cacheBytes.set(cache, retainedBytes + entryBytes);
   return true;
 }
 
@@ -902,7 +906,8 @@ const SHIKI_DATA_TO_STYLE: Readonly<Record<string, string>> = {
  * declarations are discarded even if a future or compromised highlighter emits them.
  */
 function encodeMarkdownHighlightStyles(markup: string): string {
-  return markup.replace(/\sstyle=(["'])(.*?)\1/gi, (_attribute, _quote: string, value: string) => {
+  // Hex-escaped quotes: check:source-policy reads a literal quote inside a regex as a string.
+  return markup.replace(/\sstyle=([\x22\x27])(.*?)\1/gi, (_attribute, _quote: string, value: string) => {
     const attributes: string[] = [];
     for (const declaration of value.split(';')) {
       const separator = declaration.indexOf(':');
@@ -923,7 +928,7 @@ function restoreMarkdownHighlightStyles(markup: string): string {
   return markup.replace(/<[a-z][^<>]*>/gi, (openingTag) => {
     const declarations: string[] = [];
     const cleanTag = openingTag.replace(
-      /\s(data-lr-shiki-(?:light-bg|dark-bg|light|dark))=(["'])(#[\da-f]+)\2/gi,
+      /\s(data-lr-shiki-(?:light-bg|dark-bg|light|dark))=([\x22\x27])(#[\da-f]+)\2/gi,
       (attribute, name: string, _quote: string, color: string) => {
         const property = SHIKI_DATA_TO_STYLE[name.toLowerCase()];
         if (!property || !SHIKI_COLOR.test(color)) return attribute;
@@ -936,55 +941,19 @@ function restoreMarkdownHighlightStyles(markup: string): string {
   });
 }
 
-/** Matches one HTML attribute (double-quoted, single-quoted, or an unquoted `name=value`) wherever
- *  it starts in an opening tag's source -- used to locate `target`/`rel` without false-matching a
- *  lookalike substring inside another attribute's already-quoted value, since a global regex's
- *  `lastIndex` advances past each full match before the next `exec()`. Quote and backtick
- *  characters are hex-escaped rather than typed literally so this regex literal itself can't be
- *  mistaken for a quoted string or template literal by naive text tooling. */
-const MARKDOWN_ANCHOR_ATTR = /([a-zA-Z][\w-]*)\s*=\s*(\x22([^\x22]*)\x22|\x27([^\x27]*)\x27|[^\s\x22\x27=<>\x60]+)/g;
-
-/**
- * Force-adds `rel="noopener noreferrer"` onto every rendered `<a>` carrying a `target` attribute,
- * merging any author-supplied `rel` tokens and stripping `opener` -- the same
- * merge-author-tokens/strip-opener/force-add semantics as `resolvedRel` in
- * `button.class.ts`/`breadcrumb-item.class.ts`.
- *
- * The `link()` renderer override above already forces this for markdown-syntax `[text](url)`
- * links (gated on the `link-target` property), but marked routes an author-written raw HTML
- * anchor -- literal `<a ...>` typed directly into the Markdown source -- through the separate
- * `html(token)` renderer instead, which the `link()` override never sees. This closes that gap by
- * post-processing the final markup string, the same technique `restoreMarkdownHighlightStyles`
- * above already uses for Shiki palette data. Applied in both the `sanitize` branch (after
- * DOMPurify, which itself has no notion of `rel`/`target` policy) and the non-`sanitize` branch
- * (covering the `trusted` bypass, where this is the only guard reached at all -- `escape` mode's
- * raw HTML is rendered as escaped text, never a real `<a>` element, so this is a no-op there). */
+/** Raw `<a>`/`<area>` skip the `link()` renderer: every parsed one with a `target` gets the `resolveGuardedRel()` rel. */
 function enforceMarkdownAnchorRelGuard(markup: string): string {
-  return markup.replace(/<a\b[^<>]*>/gi, (tag) => {
-    MARKDOWN_ANCHOR_ATTR.lastIndex = 0;
-    let hasTarget = false;
-    let relMatch: RegExpExecArray | null = null;
-    let match: RegExpExecArray | null;
-    while ((match = MARKDOWN_ANCHOR_ATTR.exec(tag))) {
-      const name = match[1]!.toLowerCase();
-      if (name === 'target') hasTarget = true;
-      else if (name === 'rel') relMatch = match;
-    }
-    if (!hasTarget) return tag;
-    const authoredValue = relMatch ? (relMatch[3] ?? relMatch[4] ?? relMatch[2])! : '';
-    const tokens = new Set(
-      authoredValue.split(/\s+/).filter((token) => token !== '' && token.toLowerCase() !== 'opener'),
-    );
-    tokens.add('noopener');
-    tokens.add('noreferrer');
-    const relValue = [...tokens].join(' ');
-    if (relMatch) {
-      const start = relMatch.index;
-      const end = start + relMatch[0]!.length;
-      return `${tag.slice(0, start)}rel='${relValue}'${tag.slice(end)}`;
-    }
-    return `${tag.slice(0, -1)} rel='${relValue}'>`;
-  });
+  if (!/target/i.test(markup)) return markup;
+  const template = document.createElement('template');
+  template.innerHTML = markup;
+  let changed = false;
+  for (const link of template.content.querySelectorAll('a[target],area[target]')) {
+    const rel = resolveGuardedRel(link.getAttribute('rel'), 'target')!;
+    if (rel === link.getAttribute('rel')) continue;
+    link.setAttribute('rel', rel);
+    changed = true;
+  }
+  return changed ? template.innerHTML : markup;
 }
 
 /**
