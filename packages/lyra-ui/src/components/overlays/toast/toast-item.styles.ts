@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -65,10 +66,9 @@ export const styles = css`
     /* Modal-layer surface: a toast floats over arbitrary page content and cannot share the page
        surface token -- in dark mode both resolve to the same near-black and it loses its edges.
        */
-    background: var(--lr-color-surface-overlay);
+    ${overlaySurfaceFill}
     color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-toast-item-radius, var(--lr-radius));
+    border-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
     /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
        the two modal steps. */
     box-shadow: var(--lr-shadow-l);
@@ -102,8 +102,8 @@ export const styles = css`
     inset-inline-start: 0;
     inline-size: var(--lr-toast-accent-width, var(--_lr-toast-accent-width));
     background: var(--lr-toast-accent-color, var(--_lr-toast-accent-color));
-    border-start-start-radius: var(--lr-toast-item-radius, var(--lr-radius));
-    border-end-start-radius: var(--lr-toast-item-radius, var(--lr-radius));
+    border-start-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
+    border-end-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
   }
   [part="icon"] {
     display: inline-flex;
@@ -128,7 +128,7 @@ export const styles = css`
   }
   /* toaster.ts's action option and the WithIcon/Triggers stories append a plain light-DOM button
      beside the message text; unstyled it takes the browser's default button chrome. An inline
-     text action in the toast's accent color, not a boxed button, since it sits inside the content
+     text action in the variant's text tone, not a boxed button, since it sits inside the content
      part rather than its own layout slot. */
   ::slotted(button) {
     display: inline-block;
@@ -144,7 +144,7 @@ export const styles = css`
     background: none;
     font: inherit;
     font-weight: var(--lr-font-weight-bold);
-    color: var(--lr-toast-accent-color, var(--_lr-toast-accent-color));
+    color: var(--lr-color-on-quiet);
     text-decoration: underline;
     cursor: pointer;
   }
@@ -274,5 +274,5 @@ export const styles = css`
     }
   }
 
-  ${glassSurface('[part="toast-item"]', css`var(--lr-color-surface-overlay)`)}
+  ${glassSurface('[part="toast-item"]', css`var(--lr-overlay-surface, var(--lr-color-surface-container-high))`)}
 `;

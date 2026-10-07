@@ -840,3 +840,43 @@ it('a real hover/click gesture pins mixed popover content without focusing its a
     await resetMouse();
   }
 });
+
+it('ignores unrelated document mutations for an unchanged for trigger', async () => {
+  const wrapper = await fixture<HTMLElement>(
+    '<div><button id="idle-identity-popover-trigger">Open</button><lr-popover for="idle-identity-popover-trigger">Details</lr-popover></div>',
+  );
+  const el = wrapper.querySelector('lr-popover') as LyraPopover;
+  await el.updateComplete;
+  const internals = el as unknown as { syncTriggerA11y(): void };
+  const original = internals.syncTriggerA11y;
+  let syncs = 0;
+  internals.syncTriggerA11y = function (this: LyraPopover) {
+    syncs += 1;
+    original.call(this);
+  };
+  wrapper.append(document.createElement('span'));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(syncs).to.equal(0);
+});
+
+it('closes a hover-opened popover when a re-render replaces its for trigger away from the pointer', async () => {
+  const wrapper = await fixture<HTMLElement>(
+    '<div><button id="recycled-popover-trigger">Profile</button><lr-popover for="recycled-popover-trigger" trigger="hover" show-delay="0" hide-delay="0" style="--lr-duration-base: 0ms">Card</lr-popover></div>',
+  );
+  const popover = wrapper.querySelector('lr-popover') as LyraPopover;
+  const trigger = wrapper.querySelector<HTMLButtonElement>('#recycled-popover-trigger')!;
+  await popover.updateComplete;
+  try {
+    const box = trigger.getBoundingClientRect();
+    await sendMouse({ type: 'move', position: [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)] });
+    await waitUntil(() => popover.open, 'the popover opens on hover');
+    const fresh = document.createElement('button');
+    fresh.id = 'recycled-popover-trigger';
+    fresh.textContent = 'Profile';
+    fresh.style.marginBlockStart = '300px';
+    trigger.replaceWith(fresh);
+    await waitUntil(() => !popover.open, 'the popover closes when its trigger is swapped away', { timeout: 2000 });
+  } finally {
+    await resetMouse();
+  }
+});

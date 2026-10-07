@@ -1,8 +1,10 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { promoteToTopLayer } from '../../../internal/top-layer-escape.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { parseHotkey, matchesHotkey, isIgnorableKeyEvent, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
@@ -25,6 +27,7 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+const SEARCH_ICON = svg`<svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"></path></svg>`;
 /** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
  *  `-group-height`, which default to `3rem`/`2rem` -- equal to these numbers at a 16px root font
  *  and *unequal* at any other, including a user's raised browser font size. Rows are absolutely
@@ -290,6 +293,10 @@ export interface LyraCommandPaletteEventMap {
  *   (keyboard-highlighted, `data-active="true"`) command row. Declared as an inline `var()` fallback
  *   (never on `:host`), so setting it on the element or an ancestor recolors only the active row
  *   without hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared floating-surface fill of the palette dialog.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the palette dialog.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius of the palette dialog.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Elevation of the palette dialog.
  * @status stable
  * @since 4.0.0
  */
@@ -389,6 +396,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private resultModelGroupPitch?: number;
   private resultModelCache?: CommandResultModel;
   private openRequestTarget?: boolean;
+  private panelPressed = false;
+  private resultsSink?: AnnouncementSink;
+  private announcedEmpty = false;
 
   /** Canonical command collection consumed by search, focus, rendering, and activation. Keeping
    *  the first valid occurrence makes duplicate handling deterministic while retaining caller
@@ -435,6 +445,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         this.activateOverlay();
       } else {
         const hadOverlay = this.overlay !== undefined;
+        this.releaseResultsSink();
         this.nativeModal.hide();
         this.overlay?.deactivate();
         this.overlay = undefined;
@@ -475,18 +486,20 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open') && this.open) {
-      this.nativeModal.show();
+      this.enterTopLayer();
       this.overlay?.focusInitial();
     }
     // The list is a fixed-height, scrollable box -- without this, arrowing past its visible rows
     // moves activeIndex/aria-activedescendant correctly but leaves the highlighted row scrolled
     // out of view. Mirrors lr-combobox's identical fix for the same shape of listbox.
-    if (changed.has('activeIndex')) {
-      const active = this.renderRoot.querySelector<HTMLElement>(
-        '[part="command"][data-active="true"]'
-      );
-      active?.scrollIntoView({ block: 'nearest' });
-      this.scrollActiveIntoView();
+    if (changed.has('activeIndex')) this.scrollActiveIntoView();
+    if (this.open && changed.get('queryText') !== undefined) {
+      const empty = this.filtered.length === 0;
+      if (empty && !this.announcedEmpty) {
+        this.resultsSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+        this.resultsSink.announce(this.localize('commandPaletteEmpty'));
+      }
+      this.announcedEmpty = empty;
     }
     const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
     this.observeList(list ?? undefined);
@@ -615,7 +628,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.activateOverlay();
       queueMicrotask(() => {
         if (!this.isConnected || !this.open) return;
-        this.nativeModal.show();
+        this.enterTopLayer();
         this.overlay?.focusInitial();
       });
     }
@@ -631,6 +644,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.nativeModal.hide();
     this.overlay?.suspend();
     this.deferredFocusReturn.cancel();
+    this.releaseResultsSink();
     this.listResizeObserver?.disconnect();
     this.listResizeObserver = undefined;
     this.observedList = undefined;
@@ -645,6 +659,17 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.rowPitchFrame = undefined;
     }
     this.runtimeWindow = undefined;
+  }
+
+  private releaseResultsSink(): void {
+    this.resultsSink?.release();
+    this.resultsSink = undefined;
+    this.announcedEmpty = false;
+  }
+
+  private enterTopLayer(): void {
+    const backdrop = this.renderRoot.querySelector<HTMLElement>('[part="backdrop"]');
+    if (!this.nativeModal.show() && backdrop) promoteToTopLayer(backdrop);
   }
 
   private activateOverlay(): void {
@@ -669,6 +694,16 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   close(reason: LyraCommandPaletteCloseReason = 'api'): void {
     this.requestOpen(false, reason);
+  }
+
+  /** Same as `openPalette()`, for the `show()`/`hide()` surface every Lyra overlay exposes. */
+  show(): void {
+    this.openPalette();
+  }
+
+  /** Same as `close('api')`. */
+  hide(): void {
+    this.close();
   }
 
   private requestOpen(next: boolean, reason: LyraCommandPaletteCloseReason = 'api'): boolean {
@@ -786,6 +821,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         event.preventDefault();
         this.select(active);
       }
+    } else if (rows.length && ['Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
+      event.preventDefault();
+      const step = event.key === 'Home' || event.key === 'PageDown' ? 1 : -1;
+      const page = Math.max(1, Math.floor(this.listViewportHeight / this.rowPitch));
+      const from = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length - 1
+        : Math.min(rows.length - 1, Math.max(0, this.activeIndex + step * page));
+      const next = this.seekEnabled(rows, from, step);
+      if (next !== -1) this.setActiveIndex(rows, next);
     }
   };
 
@@ -912,7 +955,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const list = this.renderRoot.querySelector<HTMLElement>('[part="list"]');
     const row = this.resultModel.rows[this.activeIndex];
     if (!list || !row) return;
-    const top = row.top;
+    // Rows sit in the spacer, which starts after the list's own padding.
+    const top = row.top + ((list.firstElementChild as HTMLElement | null)?.offsetTop ?? 0);
     const bottom = top + this.rowPitch;
     if (top < list.scrollTop) list.scrollTop = top;
     else if (bottom > list.scrollTop + list.clientHeight) {
@@ -975,8 +1019,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.activeIndex >= 0 ? this.optionId(this.activeIndex) : nothing;
     return this.nativeModal.render(html`<div
       part="backdrop"
+      @pointerdown=${(event: Event) => {
+        this.panelPressed = event.target !== event.currentTarget;
+      }}
       @click=${(event: Event) => {
-        if (event.target === event.currentTarget)
+        const panelPressed = this.panelPressed;
+        this.panelPressed = false;
+        if (event.target === event.currentTarget && !panelPressed)
           this.overlay?.dismissBackdrop();
       }}
     >
@@ -991,8 +1040,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         @keydown=${this.onKeyDown}
       >
         <div part="search">
-          <lr-icon name="search" aria-hidden="true"></lr-icon
-          ><input
+          ${SEARCH_ICON}<input
             part="input"
             type="search"
             .value=${this.queryText}

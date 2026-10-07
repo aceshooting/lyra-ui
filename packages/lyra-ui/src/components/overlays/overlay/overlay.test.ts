@@ -965,6 +965,24 @@ it('ignores disabled close actions and closes only the nearest nested popover', 
   expect(outer.open).to.equal(true);
 });
 
+it('keeps an open ancestor popover open when a nested popover opens from its own trigger', async () => {
+  const outer = await fixture<LyraPopover>(html`
+    <lr-popover open style="--show-duration: 0ms; --hide-duration: 0ms">
+      <button slot="trigger">Outer</button>
+      <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms">
+        <button slot="trigger">Inner</button>
+        <p>Inner details</p>
+      </lr-popover>
+    </lr-popover>
+  `);
+  const inner = outer.querySelector<LyraPopover>('lr-popover')!;
+  await outer.updateComplete;
+  inner.querySelector('button')!.click();
+  await waitUntil(() => inner.open, 'the nested popover never opened');
+  await outer.updateComplete;
+  expect(outer.open, 'the ancestor stays open').to.equal(true);
+});
+
 it('opens a popover from its slotted trigger and wires dialog semantics', async () => {
   const el = await fixture(html`
     <lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>

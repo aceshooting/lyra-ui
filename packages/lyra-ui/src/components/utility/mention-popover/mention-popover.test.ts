@@ -1287,45 +1287,6 @@ it('falls back to focusing the listbox itself when candidates empty out while th
   }
 });
 
-it('falls back to focusing the anchor when a non-idempotent filter predicate empties results only by render time, with the anchor still connected', async () => {
-  // willUpdate() pre-emptively hands focus back to the anchor whenever a query/items/filter
-  // change makes filteredItems empty -- but it decides that by calling the `filter` predicate
-  // itself, once, for every item. A filter that isn't idempotent (returns a different answer on
-  // a second pass over the same items) can make willUpdate's own check see a non-empty result
-  // while render()'s later, separate pass over the same items sees an empty one -- landing on
-  // updated()'s own independent "no active row rendered, but the anchor is still connected"
-  // fallback instead, which is what this covers.
-  const el = await openWithItems();
-  const textarea = document.createElement('textarea');
-  document.body.appendChild(textarea);
-  try {
-    el.anchor = textarea;
-    await el.updateComplete;
-    expect(await el.focusActiveOption()).to.be.true;
-    // Settle the trailing requestUpdate() focusActiveOption() itself schedules before starting
-    // the call-counted filter below, so that scheduled cycle can't be mistaken for one of the
-    // two passes this test is deliberately choreographing.
-    await el.updateComplete;
-
-    // A non-empty query is required for filteredItems to ever consult `filter` at all -- its own
-    // empty-query fast path returns `items` verbatim without calling the predicate.
-    el.query = 'a';
-    await el.updateComplete;
-
-    let calls = 0;
-    const total = el.items.length;
-    el.filter = () => {
-      calls += 1;
-      return calls <= total;
-    };
-    await el.updateComplete;
-
-    expect(document.activeElement === textarea).to.be.true;
-  } finally {
-    textarea.remove();
-  }
-});
-
 it('recovers real fallback focus when filtering invalidates the focused option', async () => {
   const el = await openWithItems();
   const textarea = document.createElement('textarea');
@@ -1892,4 +1853,58 @@ it('restores focus to a connected non-text anchor after closing a focused sugges
   await el.updateComplete;
   await waitUntil(() => document.activeElement === anchor);
   expect(document.activeElement?.id).to.equal('mention-button-anchor');
+});
+
+it('reveals the active row by scrolling only its listbox, never through scrollIntoView', async () => {
+  const items = Array.from({ length: 30 }, (_, index) => ({ suggestionId: `m${index}`, label: `Member ${index}` }));
+  const el = await openWithItems(items);
+  const original = Element.prototype.scrollIntoView;
+  let calls = 0;
+  Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) {
+    calls += 1;
+    original.apply(this, args);
+  };
+  try {
+    for (let index = 0; index < 12; index += 1) {
+      el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+      await el.updateComplete;
+    }
+    expect(calls).to.equal(0);
+    const box = listbox(el).getBoundingClientRect();
+    const row = el.shadowRoot!.querySelector('[part="option"][data-active]')!.getBoundingClientRect();
+    expect(row.top >= box.top - 1 && row.bottom <= box.bottom + 1, 'the active row is visible').to.equal(true);
+  } finally {
+    Element.prototype.scrollIntoView = original;
+  }
+});
+
+it('moves a focused option session with Home and End, leaving the anchor caret keys alone otherwise', async () => {
+  const items = Array.from({ length: 6 }, (_, index) => ({ suggestionId: `h${index}`, label: `Member ${index}` }));
+  const el = await openWithItems(items);
+  const end = new KeyboardEvent('keydown', { key: 'End', cancelable: true });
+  expect(el.handleKeyDown(end), 'the anchor keeps End while it owns focus').to.equal(false);
+  expect(await el.focusActiveOption()).to.equal(true);
+  const option = (): string | null | undefined =>
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-id');
+  el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  await waitUntil(() => option() === 'h5', 'End moves to the last option');
+  el.shadowRoot!.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  await waitUntil(() => option() === 'h0', 'Home moves to the first option');
+});
+
+it('filters the candidate set once per query change', async () => {
+  const items = Array.from({ length: 10 }, (_, index) => ({ suggestionId: `f${index}`, label: `Member ${index}` }));
+  const el = await openWithItems(items);
+  let calls = 0;
+  el.filter = (item, query) => {
+    calls += 1;
+    return item.label.toLowerCase().includes(query);
+  };
+  el.query = 'member';
+  await el.updateComplete;
+  el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+  await el.updateComplete;
+  expect(calls).to.equal(items.length);
 });

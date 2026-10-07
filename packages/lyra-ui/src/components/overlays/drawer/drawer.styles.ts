@@ -8,6 +8,10 @@ export const styles = css`
   }
   :host([contained]) {
     position: absolute;
+    pointer-events: none;
+  }
+  :host([contained]:not([data-closing])) [part~="panel"] {
+    pointer-events: auto;
   }
   :host([contained]) [part~="backdrop"] {
     display: none;

@@ -237,10 +237,12 @@ describe('lr-tour', () => {
     expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Replacement');
     expect(missing).to.be.true;
 
+    const ended = oneEvent(tour, 'lr-tour-end');
     tour.steps = [];
     await tour.updateComplete;
     expect(tour.open).to.be.false;
     expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
+    expect((await ended).detail.reason).to.equal('unavailable');
   });
 
   it('owns a frozen step snapshot and never mutates caller data across navigation', async () => {
@@ -2538,4 +2540,23 @@ it('requests ordinary tour completion with a reason before closing', async () =>
   tour.end('api');
   expect(order).to.deep.equal(['request', 'commit']);
   expect(tour.open).to.be.false;
+});
+
+it('runs the start/end lifecycle for post-mount open writes, including the end veto', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-tour .steps=${makeSteps(1)}></lr-tour><button id="tour-target-0">Target</button></div>
+  `);
+  const tour = wrapper.querySelector('lr-tour') as LyraTour;
+  await tour.updateComplete;
+  const started = oneEvent(tour, 'lr-tour-start');
+  tour.open = true;
+  await started;
+  tour.addEventListener('lr-tour-end-request', (event) => event.preventDefault(), { once: true });
+  tour.open = false;
+  expect(tour.open, 'a vetoed end keeps the tour open').to.equal(true);
+  const ended = oneEvent(tour, 'lr-tour-end');
+  tour.open = false;
+  expect((await ended).detail.reason).to.equal('api');
+  await tour.updateComplete;
+  expect(tour.hasAttribute('open')).to.equal(false);
 });

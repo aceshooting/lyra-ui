@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
 export const styles = css`
   :host {
@@ -63,14 +64,13 @@ export const styles = css`
     );
     max-block-size: var(--lr-positioner-available-block-size, 90vh);
     padding: var(--lr-space-l);
-    background: var(--lr-color-surface);
+    --_lr-overlay-surface: var(--lr-color-surface-container-highest);
+    ${overlaySurface}
     color: var(--lr-color-text);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
     /* Modal tier, not the anchored-panel tier the popover name suggests: it sits on the modal
        layer above a full-viewport backdrop scrim, and centers itself like a dialog when
        unanchored, so it needs separation a menu beside live page content does not. */
-    box-shadow: var(--lr-shadow-l);
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-l));
     pointer-events: auto;
     overflow: auto;
   }

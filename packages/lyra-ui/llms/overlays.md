@@ -313,8 +313,12 @@ fill). Inherited or direct public values remain authoritative across every size 
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
 message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
-surface and accent-bar start corners. They are deliberately separate from `--lr-toast-gap`, which
-continues to control only the region's stack spacing.
+surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
+deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
+spacing. The item joins the shared overlay-surface family for its fill and edge
+(`--lr-overlay-surface`, `--lr-overlay-border`) but keeps its own unscrimmed `--lr-shadow-l`
+elevation. A `toast({ action })` button's text uses the variant's `--lr-color-on-quiet` tone, not the
+accent color.
 
 The close button's four inherited state hooks are `--lr-toast-close-button-hover-bg` (default
 `transparent`), `--lr-toast-close-button-hover-color` (default `var(--lr-color-text)`),
@@ -1072,9 +1076,10 @@ if (ok) deleteConversation();
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
-backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
+backdrop-click branch survives 8.0.0's flip of that property's own default to `false`, and
+`withoutCloseButton = true`, so it renders no header close button. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
-of the call and removes it once settled, rather than reusing a persistent page-level region
+of the call and removes it after its exit animation, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
 `lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
@@ -1096,8 +1101,8 @@ their `data-lr-confirm-action` attribute.
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
-  `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
-  dispatch and remains pending/mounted when a listener calls `preventDefault()`.
+  `.remove()` itself. `lr-close` is not cancelable: veto a dismissal through `lr-hide` or
+  `lr-close-request`, which leaves `confirm()` pending and mounted.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
   variant pairs `--lr-color-on-danger` with `--lr-color-danger`. Each of those resolves through its
   variant's row of the semantic grid (`--lr-color-<variant>-fill-loud` /
@@ -1798,9 +1803,10 @@ Public DOM-anchored `lr-popover` instances form a same-root singleton. A later o
 first requests the existing peer's cancelable close and remains closed if that peer vetoes. Initial
 open markup stays lifecycle-silent: after the hydration-safe first-render boundary, the
 later-connected instance wins and the earlier peer closes structurally without a veto or lifecycle
-event. `lr-dropdown`, `showAt()` virtual surfaces, and popovers in separate document/shadow roots
-remain independent. Re-entering the same `show()` or `hide()` request from its own before-event
-coalesces onto one transition promise and emits the lifecycle once.
+event. `lr-dropdown`, `showAt()` virtual surfaces, popovers in separate document/shadow roots, and
+an open ancestor popover containing the newcomer or its trigger remain independent. Re-entering
+the same `show()` or `hide()` request from its own before-event coalesces onto one transition
+promise and emits the lifecycle once.
 
 **Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire _before_ the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and

@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -21,8 +21,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** Press duration, in milliseconds, after which a touch or pen press-and-hold opens the menu. */
-const LONG_PRESS_DELAY_MS = 500;
 /** Finger drift, in CSS pixels, a press-and-hold tolerates before it stops counting. */
 const LONG_PRESS_TOLERANCE_PX = 10;
 /** How long a decided keyboard or press-and-hold gesture absorbs the platform's follow-up event. */
@@ -199,9 +197,11 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
     menuLabel: LYRA_DEFAULT_menuLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+  /** @internal Press duration, in milliseconds, after which a touch or pen press-and-hold opens the menu. */
+  static longPressDelayMs = 500;
 
   static override styles = [LyraElement.styles, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze(['lr-show']);
 
@@ -485,7 +485,7 @@ export class LyraContextMenu extends LyraElement<LyraContextMenuEventMap> {
       ownerDocument.removeEventListener('pointercancel', onEnd, listen);
       ownerDocument.removeEventListener('scroll', onScroll, listen);
     };
-    press.timer = view.setTimeout(() => this.onPressTimer(press), LONG_PRESS_DELAY_MS);
+    press.timer = view.setTimeout(() => this.onPressTimer(press), LyraContextMenu.longPressDelayMs);
     this.press = press;
   };
 

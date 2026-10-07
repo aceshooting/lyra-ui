@@ -1,5 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './tour.js';
+import '../../overlays/dialog/dialog.js';
+import type { LyraDialog } from '../../overlays/dialog/dialog.js';
 import type { LyraTour } from './tour.js';
 
 /** The positioner writes `position` on the popup itself, so the RENDERED value -- never the
@@ -140,4 +142,23 @@ describe('lr-tour inset ownership', () => {
     expect(tour.style.bottom).to.equal('');
     expect(tour.style.left).to.equal('');
   });
+});
+
+it('paints a step targeting dialog content above the open lr-dialog', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><lr-dialog label="Settings" open><button id="tour-target-0">target</button></lr-dialog><lr-tour></lr-tour></div>
+  `);
+  const dialog = wrapper.querySelector('lr-dialog') as LyraDialog;
+  await waitUntil(() => dialog.matches(':popover-open'), 'the dialog never reached the top layer');
+  const tour = await openTour(wrapper);
+  expect(tour.matches(':popover-open'), 'the step paints in the top layer, above the dialog').to.equal(true);
+  tour.open = false;
+  await tour.updateComplete;
+  expect(tour.hasAttribute('popover')).to.equal(false);
+});
+
+it('paints the step panel with the shared overlay-surface family', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div style="--lr-overlay-surface: rgb(1, 2, 3)">${markup()}</div>`);
+  const tour = await openTour(wrapper);
+  expect(getComputedStyle(popover(tour)).backgroundColor).to.equal('rgb(1, 2, 3)');
 });

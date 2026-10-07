@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 export const styles = css`
   :host {
     display: contents;
@@ -42,14 +43,13 @@ export const styles = css`
       var(--_lr-command-palette-max-block-size)
     );
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
     /* Modal-panel surface, not the page surface -- in dark mode the two are the same near-black
        and the palette would read as a scrim with a floating list on it. */
-    background: var(--lr-color-surface-overlay);
+    --_lr-overlay-surface: var(--lr-color-surface-container-highest);
+    ${overlaySurface}
     /* Modal layer, top step: the palette floats free on all four edges over its own scrim,
        exactly like a centered lr-dialog. */
-    box-shadow: var(--lr-shadow-xl);
+    box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-xl));
     color: var(--lr-color-text);
   }
   [part="search"] {

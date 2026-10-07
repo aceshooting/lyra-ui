@@ -130,8 +130,9 @@ it('uses live boundary changes and retains the configuration across close and re
   host.append(popover);
   await popover.updateComplete;
   expect(popover.interactionBoundary?.id).to.equal(collection.id);
+  const reopened = lifecycle(popover);
   await click(first);
-  await waitUntil(() => popover.open);
+  await waitUntil(() => reopened.includes('lr-after-show'));
   const events = lifecycle(popover);
   await click(second);
   await popover.updateComplete;

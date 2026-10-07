@@ -1,4 +1,4 @@
-import { expect, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
@@ -42,6 +42,49 @@ describe('toaster() lazy element loading', () => {
   });
 });
 
+
+describe('toast() failure containment and stacking', () => {
+  it('contains a failed fire-and-forget toast() while its item promise still rejects', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const unhandled: unknown[] = [];
+    const record = (event: PromiseRejectionEvent): void => {
+      unhandled.push(event.reason);
+      event.preventDefault();
+    };
+    window.addEventListener('unhandledrejection', record);
+    try {
+      const handle = toast({ message: 'Saved', ownerDocument: frame.contentDocument! });
+      handle.dismiss();
+      await aTimeout(50);
+      expect(unhandled.length).to.equal(0);
+      expect(await handle.item.then(() => 'resolved', () => 'rejected')).to.equal('rejected');
+    } finally {
+      window.removeEventListener('unhandledrejection', record);
+      frame.remove();
+    }
+  });
+
+  it('raises a toast above an already open lr-dialog so its action takes the pointer', async () => {
+    await import('../dialog/dialog.js');
+    const dialog = document.createElement('lr-dialog') as HTMLElement & { open: boolean; updateComplete: Promise<boolean> };
+    dialog.setAttribute('label', 'Settings');
+    dialog.open = true;
+    document.body.append(dialog);
+    try {
+      await dialog.updateComplete;
+      await waitUntil(() => dialog.matches(':popover-open'), 'the dialog never reached the top layer');
+      const item = await toast({ message: 'Saved', action: { label: 'Undo', onClick: () => undefined } }).item;
+      const action = item.querySelector('button')!;
+      await waitUntil(() => getComputedStyle(item.shadowRoot!.querySelector('[part="toast-item"]')!).opacity === '1');
+      const box = action.getBoundingClientRect();
+      expect(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === action).to.equal(true);
+      item.remove();
+    } finally {
+      dialog.remove();
+    }
+  });
+});
 
 describe('toast() inside native modal dialogs', () => {
   const mounted: HTMLElement[] = [];

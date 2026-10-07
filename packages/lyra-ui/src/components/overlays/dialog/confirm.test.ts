@@ -1,4 +1,4 @@
-import { expect, waitUntil } from '@open-wc/testing';
+import { expect, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { confirm, type ConfirmOptions } from './confirm.js';
 import { registerLyraLocale, setLyraLocale } from '../../../internal/localization.js';
@@ -7,10 +7,15 @@ import './dialog.js';
 import type { LyraDialog } from './dialog.js';
 
 function getMountedDialog(): LyraDialog {
-  const dialog = document.querySelector<LyraDialog>('lr-dialog');
+  const dialog = [...document.querySelectorAll<LyraDialog>('lr-dialog')].at(-1);
   if (!dialog) throw new Error('expected confirm() to mount an lr-dialog');
   return dialog;
 }
+
+const removed = (): Promise<void> =>
+  waitUntil(() => !document.querySelector('lr-dialog'), 'the confirmation outlived its exit animation');
+
+afterEach(removed);
 
 function footerButtons(dialog: LyraDialog): [HTMLButtonElement, HTMLButtonElement] {
   // The buttons themselves carry slot="footer" directly (no wrapping
@@ -33,7 +38,7 @@ it('resolves true and removes the dialog when the confirm button is clicked', as
   footerButtons(dialog)[1].click(); // [cancel, confirm]
 
   expect(await promise).to.be.true;
-  expect((document.querySelector('lr-dialog')) == null).to.be.true;
+  await removed();
 });
 
 it('resolves false and removes the dialog when the cancel button is clicked', async () => {
@@ -43,7 +48,7 @@ it('resolves false and removes the dialog when the cancel button is clicked', as
   footerButtons(dialog)[0].click();
 
   expect(await promise).to.be.false;
-  expect((document.querySelector('lr-dialog')) == null).to.be.true;
+  await removed();
 });
 
 it('resolves false and removes the dialog on Escape', async () => {
@@ -53,7 +58,7 @@ it('resolves false and removes the dialog on Escape', async () => {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
   expect(await promise).to.be.false;
-  expect((document.querySelector('lr-dialog')) == null).to.be.true;
+  await removed();
 });
 
 it('resolves false and removes the dialog on a backdrop click', async () => {
@@ -64,7 +69,29 @@ it('resolves false and removes the dialog on a backdrop click', async () => {
   (dialog.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement).click();
 
   expect(await promise).to.be.false;
-  expect((document.querySelector('lr-dialog')) == null).to.be.true;
+  await removed();
+});
+
+it('plays the exit animation and emits lr-after-hide before removing the dialog', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const afterHide = oneEvent(dialog, 'lr-after-hide');
+  footerButtons(dialog)[1].click();
+  expect(await promise).to.be.true;
+  expect(dialog.isConnected, 'still mounted while animating out').to.equal(true);
+  await afterHide;
+  await removed();
+});
+
+it('renders no header close control, so every action is a registered native button', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const hasCloseControl = dialog.shadowRoot!.querySelector('[part~="close-button"]') !== null;
+  footerButtons(dialog)[0].click();
+  expect(await promise).to.be.false;
+  expect(hasCloseControl).to.equal(false);
 });
 
 it('defaults cancelLabel to "Cancel" and confirmLabel to "Confirm"', async () => {
@@ -93,9 +120,9 @@ it('falls through to a registered locale catalog for cancel/confirm when no labe
   // ConfirmOptions has no `.strings`/`locale` field of its own -- the dialog is transient and
   // unparented at button-creation time, so the only way resolveLyraString() reaches a registered
   // catalog (rather than the hardcoded English default) is via the global active locale.
-  // The catalog carries every key the transient dialog reads while rendering, not only the two
-  // this test asserts on: its close button localizes `close`, and strict-console platform lanes
-  // treat the dev-mode locale-fallback warning a still-partial catalog triggers as fatal.
+  // The catalog carries every key the transient dialog can read, not only the two this test
+  // asserts on: strict-console platform lanes treat the dev-mode locale-fallback warning a
+  // still-partial catalog triggers as fatal.
   registerLyraLocale('x-test-confirm', {
     cancel: 'Annuler',
     close: 'Fermer',
@@ -209,8 +236,7 @@ it('mounts exactly one dialog per call and fully cleans it up after resolving', 
 
   footerButtons(getMountedDialog())[1].click();
   await promise;
-
-  expect(document.querySelectorAll('lr-dialog').length).to.equal(0);
+  await removed();
 });
 
 it('does not resolve a second time when both buttons are somehow activated', async () => {
@@ -249,7 +275,7 @@ it('waits for capture-phase close vetoes before settling or removing the dialog'
 
   footerButtons(dialog)[1].click();
   expect(await promise).to.be.true;
-  expect(dialog.isConnected).to.be.false;
+  await removed();
 });
 
 it('resolves false instead of hanging when the dialog is removed from the DOM by something other than a button', async () => {
@@ -341,7 +367,7 @@ it('accepts a body-mounted confirmation above a native modal using the native po
     await waitUntil(() => settled !== undefined);
     expect(settled).to.equal(true);
     expect(native.open).to.equal(true);
-    expect(dialog.isConnected).to.equal(false);
+    await waitUntil(() => !dialog.isConnected, 'the confirmation outlived its exit animation');
   } finally {
     dialog.remove();
     native.close();
@@ -365,7 +391,7 @@ it('dismisses only the confirmation on native Escape and removes its transient h
     await waitUntil(() => settled !== undefined);
     expect(settled).to.equal(false);
     expect(native.open).to.equal(true);
-    expect(dialog.isConnected).to.equal(false);
+    await waitUntil(() => !dialog.isConnected, 'the confirmation outlived its exit animation');
   } finally {
     dialog.remove();
     native.close();

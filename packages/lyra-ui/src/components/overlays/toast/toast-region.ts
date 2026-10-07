@@ -27,12 +27,10 @@ export function getToastRegion(
   if (!region || !region.isConnected || region.ownerDocument !== ownerDocument) {
     region = ownerDocument.createElement(tag('toast')) as LyraToast;
     region.placement = placement;
-    if (modal && typeof region.showPopover === 'function') region.popover = 'manual';
+    if (typeof region.showPopover === 'function') region.popover = 'manual';
     parent.appendChild(region);
     if (modal) {
-      // A popover only escapes clipping here because it is already a descendant of the native
-      // modal. Promoting a body-mounted region would leave its actions platform-inert.
-      if (region.popover === 'manual') region.showPopover();
+      // A native modal leaves body content platform-inert, so this region lives inside it.
       const ownedRegion = region;
       const discard = (): void => {
         modal.removeEventListener('close', onClose);
@@ -52,6 +50,11 @@ export function getToastRegion(
       modal.addEventListener('close', onClose);
     }
     documentRegions.set(placement, region);
+  }
+  // Top-layer order is show order: re-showing lifts the region above modals opened since.
+  if (region.popover === 'manual' && !region.matches(':focus-within')) {
+    if (region.matches(':popover-open')) region.hidePopover();
+    region.showPopover();
   }
   return region;
 }

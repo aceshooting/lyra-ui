@@ -53,3 +53,21 @@ describe('optional command keywords', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(1);
   });
 });
+
+it('draws its search glyph inline without registering lr-icon', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.openPalette();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="search"] svg') !== null).to.equal(true);
+  expect(customElements.get('lr-icon') === undefined).to.equal(true);
+  el.close();
+});
+
+it('opens and closes through the shared show()/hide() overlay surface', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.show();
+  expect(el.open).to.equal(true);
+  const closed = oneEvent(el, 'lr-close');
+  el.hide();
+  expect((await closed).detail.reason).to.equal('api');
+});

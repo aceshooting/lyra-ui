@@ -7,6 +7,7 @@ import { styles } from './toast-item.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { contrastRatio, toRgba } from '../../../../test/color-contrast.js';
 
 function announcementTexts(politeness: 'polite' | 'assertive', ownerDocument = document): string[] {
   const sink = ownerDocument.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"]`);
@@ -2140,4 +2141,40 @@ it('announces text added by a custom child defined after the toast is shown', as
   } finally {
     el.remove();
   }
+});
+
+it('paints the action at AA text contrast in every variant and color scheme', async () => {
+  for (const scheme of ['light', 'dark']) {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      const el = await fixture<LyraToastItem>(html`
+        <lr-toast-item data-lr-theme=${scheme} variant=${variant} duration="0">Deleted<button>Undo</button></lr-toast-item>
+      `);
+      const surface = el.shadowRoot!.querySelector('[part="toast-item"]')!;
+      const ratio = contrastRatio(
+        getComputedStyle(el.querySelector('button')!).color,
+        getComputedStyle(surface).backgroundColor,
+      );
+      expect(ratio, `${variant} ${scheme}`).to.be.at.least(4.5);
+    }
+  }
+});
+
+it('paints its surface with the shared overlay-surface family', async () => {
+  const el = await fixture<LyraToastItem>(html`<lr-toast-item duration="0" data-lr-surface="solid" style="--lr-overlay-surface: rgb(1, 2, 3)">Saved</lr-toast-item>`);
+  expect(toRgba(getComputedStyle(el.shadowRoot!.querySelector('[part="toast-item"]')!).backgroundColor)).to.deep.equal([1, 2, 3, 255]);
+});
+
+it('pauses its countdown while the document is hidden', async () => {
+  const el = await fixture<LyraToastItem>(html`<lr-toast-item duration="300">Saved</lr-toast-item>`);
+  await waitUntil(() => el.hasAttribute('data-visible'), 'the toast never showed');
+  Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+  try {
+    document.dispatchEvent(new Event('visibilitychange'));
+    await aTimeout(500);
+    expect(el.isConnected, 'a hidden document pauses the countdown').to.equal(true);
+  } finally {
+    Reflect.deleteProperty(document, 'hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+  await waitUntil(() => !el.isConnected, 'the countdown resumes once visible', { timeout: 1500 });
 });

@@ -157,6 +157,10 @@ export interface LyraToastItemEventMap {
  *   transition used while showing.
  * @cssprop [--lr-toast-hide-duration=var(--lr-transition-base, 180ms ease-out)] - Opacity/transform
  *   transition used while hiding.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill of the item.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the item.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, behind
+ *   `--lr-toast-item-radius`.
  * @status stable
  * @since 4.0.0
  */
@@ -346,6 +350,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
         })
       : undefined;
     this.addEventListener('slotchange', this.onMessageSlotChange);
+    this.ownerDocument.addEventListener('visibilitychange', this.onVisibilityChange);
     this.bindMessageObserverTargets();
     if (this.hasUpdated) this.recomputeMessageText();
     else this.seedFirstRenderState(() => this.recomputeMessageText());
@@ -392,7 +397,11 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
           this.remove();
       };
       const view = this.ownerDocument.defaultView;
-      if (view) view.queueMicrotask(releaseUnavailableOwner);
+      const registry = view?.customElements;
+      // The registry that defined this item defines its region too.
+      if (registry?.get(this.localName) && !registry.get(parent.localName))
+        void registry.whenDefined(parent.localName).then(releaseUnavailableOwner);
+      else if (view) view.queueMicrotask(releaseUnavailableOwner);
       else queueMicrotask(releaseUnavailableOwner);
       return;
     }
@@ -608,6 +617,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
     super.disconnectedCallback();
     this.removeEventListener('slotchange', this.onMessageSlotChange);
+    this.ownerDocument.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.messageObserver?.disconnect();
     this.messageObserver = undefined;
     this.messageUpgrades.disconnect();
@@ -652,7 +662,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       this.hiding ||
       !this.hasAttribute('data-visible') ||
       this.hovering ||
-      this.focused
+      this.focused ||
+      this.ownerDocument.hidden
     ) {
       return;
     }
@@ -679,6 +690,11 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
       void this.requestHide('timer');
     }, remaining);
     this.timer = timer;
+  };
+
+  private onVisibilityChange = (): void => {
+    this.pauseTimer();
+    this.resumeTimer();
   };
 
   private pauseTimer = (): void => {

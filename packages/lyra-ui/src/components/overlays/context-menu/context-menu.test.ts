@@ -17,7 +17,8 @@ import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-m
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 const GAP = 2;
-const HOLD_MS = 650;
+(customElements.get('lr-context-menu') as unknown as { longPressDelayMs: number }).longPressDelayMs = 100;
+const HOLD_MS = 250;
 
 interface Recorder {
   readonly log: string[];
@@ -852,9 +853,9 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
-      await aTimeout(200);
+      await aTimeout(40);
       touch('pointerup', plain, x, y);
-      await aTimeout(HOLD_MS - 200);
+      await aTimeout(HOLD_MS - 40);
       expect(events.count('lr-show')).to.equal(0);
       expect(el.open).to.equal(false);
     });
@@ -907,7 +908,7 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
-      await aTimeout(200);
+      await aTimeout(40);
       el.disabled = true;
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y);

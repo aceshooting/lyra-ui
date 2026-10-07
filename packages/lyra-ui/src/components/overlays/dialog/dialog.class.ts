@@ -9,6 +9,8 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import {
   activateOverlay,
   collectFocusableElements,
+  composedContains,
+  deepActiveElement,
   type OverlayDeactivateOptions,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
@@ -280,10 +282,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   static override styles = [LyraElement.styles, styles, nativeModalCarrierStyles];
 
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-  }
-
   private _open = false;
 
   /**
@@ -443,13 +441,15 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         this.focusReturnOpener = captureFocusReturnOpener(this);
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
-        const hadOverlay = this.overlay !== undefined;
+        // A nonmodal surface has no synchronous return, so focus left inside it is returned here.
+        const returnsFocus =
+          this.overlay !== undefined || composedContains(this, deepActiveElement(this.ownerDocument));
         this.pendingScrollLockRelease = this.deactivateOverlay({ deferScrollLockRelease: true });
         // The synchronous return above keeps the established timing whenever the opener can
         // already take focus; this covers an opener the host only re-shows afterward.
         const opener = this.focusReturnOpener;
         this.focusReturnOpener = null;
-        if (hadOverlay && opener && this.isConnected) {
+        if (returnsFocus && opener && this.isConnected) {
           this.deferredFocusReturn.schedule({
             host: this,
             candidates: () => [opener],

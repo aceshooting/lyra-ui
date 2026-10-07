@@ -25,7 +25,7 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
-import { needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
+import { hasTopLayerAncestor, needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
 import { styles } from './tour.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -125,7 +125,8 @@ export interface LyraTourStep {
  * `'completed'`/`'skip'`/`'escape'` are emitted by the tour's own built-in dismiss triggers;
  * `'unmount'` is emitted when the tour is removed from the DOM while still open by something
  * other than its own `end()` (mirrors `lr-dialog`'s identical `'unmount'` case);
- * `'unavailable'` is emitted when deferred placement fails and the hidden panel cannot remain open;
+ * `'unavailable'` is emitted when deferred placement fails and the hidden panel cannot remain open,
+ * or when `steps` becomes empty while open;
  * any other string is whatever a caller passes to `end()` directly.
  */
 export type LyraTourEndReason =
@@ -355,7 +356,8 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  * @event lr-tour-end-request - Cancelable proposal before an ordinary tour end. `detail: { reason }`.
  *   Preventing it keeps the tour open. Removal from the document does not request permission.
  * @event lr-tour-end - Non-cancelable notification after the tour closes. `detail: { reason }`.
- *   Forced removal emits reason `unmount`; unavailable deferred placement emits `unavailable`.
+ *   Forced removal emits reason `unmount`; unavailable deferred placement or emptied `steps` emits
+ *   `unavailable`.
  *   Neither requests permission because the closure cannot be vetoed.
  * @event lr-tour-target-missing - The active step's `target` did not resolve to a connected
  *   element. `detail: { index, step }`. Not cancelable -- informational. The tour does not
@@ -390,6 +392,10 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   popover's `fixed` default, read from computed style when a step is (re)positioned. Set it
  *   once on `:root`, a theme, or one clipping ancestor to change every unset tour beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared floating-surface fill of the step panel.
+ * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the step panel.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius of the step panel.
+ * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Elevation of the step panel.
  * @status stable
  * @since 4.0.0
  */
@@ -411,9 +417,30 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     steps: { attribute: false, noAccessor: true },
   };
 
-  /** Whether the tour is open. Set this (or call `start()`/`end()`) -- there is no separate
-   *  `show()`/`hide()` pair. */
-  @property({ type: Boolean, reflect: true }) open = false;
+  private _open = false;
+  /** Whether the tour is open. After the first render, writes run `start()`/`end('api')`, with their
+   *  events and the cancelable end request. */
+  @property({ type: Boolean, reflect: true })
+  get open(): boolean {
+    return this._open;
+  }
+  set open(next: boolean) {
+    const normalized = Boolean(next);
+    if (normalized === this._open) return;
+    if (!this.hasUpdated) {
+      this.commitOpen(normalized);
+      return;
+    }
+    if (normalized) this.start(this.activeIndex);
+    else this.end('api');
+    if (this._open !== normalized) this.toggleAttribute('open', this._open);
+  }
+
+  private commitOpen(next: boolean): void {
+    const old = this._open;
+    this._open = next;
+    this.requestUpdate('open', old);
+  }
 
   private _steps: readonly Readonly<LyraTourStep>[] = Object.freeze([]);
 
@@ -523,8 +550,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
     const cannotOpen = this.open && this.steps.length === 0;
     if (cannotOpen) {
-      this.open = false;
+      this.commitOpen(false);
       this.deactivateOverlayInternal();
+      if (this.hasUpdated) this.emit('lr-tour-end', { reason: 'unavailable' });
     } else if (changed.has('open')) {
       if (this.open) {
         this.deferredFocusReturn.cancel();
@@ -620,7 +648,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       // reconnect) isn't mistaken for a real removal -- mirrors lr-dialog's identical case.
       queueMicrotask(() => {
         if (!this.isConnected && this.open) {
-          this.open = false;
+          this.commitOpen(false);
           this.emit('lr-tour-end', { reason: 'unmount' });
         }
       });
@@ -632,7 +660,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   start(index: number = 0): void {
     if (this.steps.length === 0) return;
     this.activeIndex = this.clampIndex(index);
-    this.open = true;
+    this.commitOpen(true);
     this.emit('lr-tour-start', Object.freeze({ index: this.activeIndex }));
   }
 
@@ -674,7 +702,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (!this.open) return;
     const request = this.emit('lr-tour-end-request', { reason }, { cancelable: true });
     if (request.defaultPrevented) return;
-    this.open = false;
+    this.commitOpen(false);
     this.emit('lr-tour-end', { reason });
   }
 
@@ -805,7 +833,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       // A modal tour cannot remain as a focus-trapping scrim with an unavailable hidden panel.
       // This is structural teardown, not a user-requested end reason, so it bypasses the
       // cancelable end lifecycle just like losing the component itself does.
-      this.open = false;
+      this.commitOpen(false);
       this.deactivateOverlayInternal();
       this.emit('lr-tour-end', { reason: 'unavailable' });
     });
@@ -867,11 +895,19 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     backdrop?.style.removeProperty('clip-path');
   }
 
-  /** The scrim, ring and keyhole are viewport-space `fixed` surfaces: under an ancestor that
-   *  contains fixed descendants the host is promoted to the top layer, before the step popover so
-   *  it stays above the scrim, and released again when the tour ends. */
+  /** Promotes the host to the top layer until the tour ends; an interactive step only when it must
+   *  escape (trapped, or its target is in the top layer), so overlays its target opens stay above. */
   private escapeContainingBlock(): void {
-    if (!needsTopLayerEscape(this) || !promoteToTopLayer(this)) return;
+    const target = this.activeTargetSnapshot;
+    if (
+      this.steps[this.activeIndex]?.interactiveTarget &&
+      !needsTopLayerEscape(this) &&
+      !(target && hasTopLayerAncestor(target))
+    ) {
+      this.releaseContainingBlockEscape();
+      return;
+    }
+    if (!promoteToTopLayer(this)) return;
     if (!this.escapedInset) {
       const previous = ['top', 'right', 'bottom', 'left'].map((property) => ({
         property,

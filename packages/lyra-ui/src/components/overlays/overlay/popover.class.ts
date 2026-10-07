@@ -931,7 +931,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         && this.observedDirectAnchorWasConnected
         && this.observedDirectAnchor?.isConnected === false;
       this.observedDirectAnchorWasConnected = this.observedDirectAnchor?.isConnected === true;
-      this.syncInteractionTrigger();
+      // The trigger's own subtree and upgrade observers re-sync an unchanged trigger.
+      const next = this.virtualAnchor ? undefined : (this.slottedTrigger ?? this.resolveForTrigger());
+      if (next !== this.triggerElement) this.syncInteractionTrigger();
       if (!this.open) return;
       const nextAnchor = this.resolveAnchor();
       if (directAnchorRemoved && !nextAnchor) {
@@ -967,9 +969,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.syncTriggerA11y();
       return;
     }
-    this.triggerElement?.removeEventListener('click', this.onTriggerClick);
-    this.triggerElement?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
-    if (this.triggerElement) this.unbindTriggerInteractions(this.triggerElement);
+    const previous = this.triggerElement;
+    previous?.removeEventListener('click', this.onTriggerClick);
+    previous?.removeEventListener('keydown', this.onExternalTriggerKeyDown);
+    if (previous) this.unbindTriggerInteractions(previous);
     this.triggerElement = next;
     this.triggerUpgrades.disconnect();
     if (this.triggerElement && this.triggerElement !== this.slottedTrigger) {
@@ -984,7 +987,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (this.triggerElement) this.bindTriggerInteractions(this.triggerElement);
     this.syncTriggerA11y();
     if (this.open) {
-      if (!this.resolveAnchor()) {
+      // A replacement trigger inherits no hover or focus hold from the node it replaced.
+      const released = previous && next && this.openedByInteraction && !this.pinned &&
+        ![next, this].some((element) => element.matches(':hover')) &&
+        !this.isWithinPopoverSurface(deepActiveElementIn(this.ownerDocument));
+      if (released || !this.resolveAnchor()) {
         void this.forceClose({ focusTrigger: false });
         return;
       }
@@ -1588,14 +1595,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
 
-  /** Generic DOM-anchored popovers are a same-root singleton. Dropdown subclasses and virtual
-   * `showAt()` surfaces are intentionally outside that contract. A peer veto leaves the newcomer
-   * closed; focus never jumps through the retiring peer's trigger during the handoff. */
+  /** Generic DOM-anchored popovers are a same-root singleton, except for a peer containing this
+   * popover or its trigger. Dropdown subclasses and virtual `showAt()` surfaces are intentionally
+   * outside that contract. A peer veto leaves the newcomer closed; focus never jumps through the
+   * retiring peer's trigger during the handoff. */
   private closePopoverPeers(): boolean {
     if (this.virtualAnchor || this.localName !== tag('popover')) return true;
     const root = this.getRootNode() as Document | ShadowRoot;
     for (const peer of root.querySelectorAll<LyraPopover>(tag('popover'))) {
       if (peer === this || !peer.open || peer.virtualAnchor) continue;
+      if (composedContains(peer, this) || (this.triggerElement && composedContains(peer, this.triggerElement))) continue;
       void peer.hide({ focusTrigger: false });
       if (peer.open) return false;
     }

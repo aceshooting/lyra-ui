@@ -90,10 +90,9 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  *
  * Every dismissal path (confirm button, cancel button, Escape, backdrop
  * click) funnels through `<lr-dialog>`'s own `close()`/`lr-close`
- * event, so there is exactly one place that resolves the promise and tears
- * the dialog down. Because that event is cancelable, a veto leaves this
- * promise pending and the transient dialog mounted until a later accepted
- * close.
+ * event, so there is exactly one place that resolves the promise; the dialog
+ * is removed after its exit animation. Veto through `lr-hide` or
+ * `lr-close-request` to keep the confirmation open.
  *
  * @example
  * const ok = await confirm({
@@ -116,7 +115,8 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     // `<lr-dialog>` makes backdrop dismissal opt-in (matching `wa-dialog`), but this helper's
     // documented contract is that Escape, the backdrop and the cancel button all resolve `false`.
     dialog.lightDismiss = true;
-    let settled = false;
+    // Cancel, Escape and the backdrop already dismiss; a header close button would need lr-icon-button.
+    dialog.withoutCloseButton = true;
 
     // Mounted inside the transient dialog so it is torn down with it, leaving nothing behind
     // between calls -- the same lifetime the rest of this helper's DOM has.
@@ -137,17 +137,9 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       dialog.appendChild(desc);
     }
 
-    dialog.addEventListener('lr-close', (event) => {
-      // Settle after the accepted notification has propagated, so consumers observe the dialog
-      // before this helper removes it. Dismissal vetoes belong to lr-close-request.
-      queueMicrotask(() => {
-        if (settled || event.defaultPrevented) return;
-        settled = true;
-        const reason = (event as CustomEvent<{ reason: DialogCloseReason }>).detail.reason;
-        resolve(reason === 'confirm');
-        dialog.remove();
-      });
-    });
+    dialog.addEventListener('lr-close', (event) =>
+      resolve((event as CustomEvent<{ reason: DialogCloseReason }>).detail.reason === 'confirm'));
+    dialog.addEventListener('lr-after-hide', () => dialog.remove());
 
     const cancelButton = createButton(
       resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),

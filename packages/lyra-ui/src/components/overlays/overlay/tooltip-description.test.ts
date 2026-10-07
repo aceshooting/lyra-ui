@@ -125,3 +125,36 @@ it('describes a light-DOM focusable inside a custom-element trigger', async () =
   await el.updateComplete;
   expect(describedByElements(inner).map((node) => node.id)).to.deep.equal(['light-trigger-help']);
 });
+
+it('keeps describing its trigger after its children are replaced wholesale', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><button id="replaced-content-trigger">Save</button><lr-tooltip for="replaced-content-trigger" show-delay="0">Tip</lr-tooltip></div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
+  const button = wrapper.querySelector('button')!;
+  await el.updateComplete;
+  el.textContent = 'Saved 2 min ago';
+  await focusByKeyboard(button);
+  await waitUntil(
+    () => describedByElements(button).some((node) => node.isConnected && node.textContent === 'Saved 2 min ago'),
+    'the trigger lost its tooltip description',
+  );
+});
+
+it('ignores unrelated document mutations while closed', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><button id="idle-identity-trigger">Save</button><lr-tooltip for="idle-identity-trigger">Tip</lr-tooltip></div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
+  await el.updateComplete;
+  const internals = el as unknown as { syncTriggerA11y(): void };
+  const original = internals.syncTriggerA11y;
+  let syncs = 0;
+  internals.syncTriggerA11y = function (this: LyraTooltip) {
+    syncs += 1;
+    original.call(this);
+  };
+  wrapper.append(document.createElement('span'));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(syncs).to.equal(0);
+});

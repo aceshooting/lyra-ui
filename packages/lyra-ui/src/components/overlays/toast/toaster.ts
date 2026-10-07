@@ -57,11 +57,13 @@ export function toast(input: LyraToastOptions | string): ToastHandle {
     }
     return getToastRegion(opts.placement, ownerDocument).create(normalized);
   });
+  // Contains a fire-and-forget failure; awaiting `item` still rejects.
+  item.catch(() => undefined);
 
   return {
     item,
     dismiss: () => {
-      void item.then((el) => el.hide());
+      void item.then((el) => el.hide(), () => undefined);
     },
   };
 }

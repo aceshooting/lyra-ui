@@ -6,6 +6,7 @@ import type { LyraDrawer } from "./drawer.js";
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import { setAnimation } from "../../../utilities/animation-registry.js";
 import { toRgba } from '../../../../test/color-contrast.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-drawer', 'accessible-label');
@@ -695,6 +696,34 @@ describe("inherited dialog size property", () => {
 });
 
 describe("contained drawer compatibility", () => {
+  it("lets pointer input reach content beside the contained panel", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="position: relative; inline-size: 600px; block-size: 300px;">
+        <button id="beside" style="position: absolute; inset-inline-start: 8px; inset-block-start: 8px;">Beside</button>
+        <lr-drawer contained open label="Filters" style="--lr-drawer-width: 200px"><button>Inside</button></lr-drawer>
+      </div>
+    `);
+    await (wrapper.querySelector("lr-drawer") as LyraDrawer).updateComplete;
+    const box = wrapper.querySelector("#beside")!.getBoundingClientRect();
+    expect(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)?.id).to.equal("beside");
+  });
+
+  it("returns focus to the opener when it closes with focus inside", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="position: relative; inline-size: 500px; block-size: 300px;">
+        <button id="opener">Filters</button>
+        <lr-drawer contained label="Filters"><button id="inside">Inside</button></lr-drawer>
+      </div>
+    `);
+    const el = wrapper.querySelector("lr-drawer") as LyraDrawer;
+    const opener = wrapper.querySelector<HTMLButtonElement>("#opener")!;
+    await focusByKeyboard(opener);
+    await el.show();
+    await focusByKeyboard(wrapper.querySelector<HTMLButtonElement>("#inside")!);
+    await el.hide();
+    await waitUntil(() => document.activeElement === opener, "focus fell out of the closed drawer");
+  });
+
   it("renders in its containing block without modal ownership, overlay, or Escape dismissal", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="position: relative; inline-size: 500px; block-size: 300px;">

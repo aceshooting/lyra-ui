@@ -9,9 +9,12 @@ import {
 } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
 import "./command-palette.js";
+import "../../overlays/dialog/dialog.js";
+import type { LyraDialog } from "../../overlays/dialog/dialog.js";
 import { expectFocusReturnsToReshownOpener } from "../../../../test/hidden-opener.js";
 import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
 expectLocaleFallback('tr', ['clear', 'commandPaletteLabel', 'commandPalettePlaceholder', 'commandPaletteResults']);
 
@@ -388,35 +391,6 @@ it("never rests the active option on a disabled command when one leads the list"
   );
   await el.updateComplete;
   expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1]!.id);
-});
-
-it("scrolls the newly active row into view when navigating with arrow keys", async () => {
-  const commands = Array.from({ length: 5 }, (_unused, i) => ({
-    commandId: `c${i}`,
-    label: `Command ${i}`,
-  }));
-  const el = (await fixture(
-    html`<lr-command-palette .commands=${commands}></lr-command-palette>`
-  )) as LyraCommandPalette;
-  el.openPalette();
-  await el.updateComplete;
-  const input = el.shadowRoot!.querySelector("input")!;
-  const secondRow = el.shadowRoot!.querySelectorAll(
-    '[part="command"]'
-  )[1] as HTMLElement;
-  let called = false;
-  secondRow.scrollIntoView = () => {
-    called = true;
-  };
-  input.dispatchEvent(
-    new KeyboardEvent("keydown", {
-      key: "ArrowDown",
-      bubbles: true,
-      cancelable: true,
-    })
-  );
-  await el.updateComplete;
-  expect(called).to.be.true;
 });
 
 it("preserves the active command by commandId across replacement/reorder and repairs it after removal", async () => {
@@ -1978,9 +1952,9 @@ describe('RTL', () => {
     const dialog = el.shadowRoot!.querySelector('[part="dialog"]') as HTMLElement;
     expect(dialog.matches(':dir(rtl)')).to.be.true;
 
-    // Search row: the leading <lr-icon> stays the inline-start element, which under dir="rtl"
+    // Search row: the leading glyph stays the inline-start element, which under dir="rtl"
     // is the physical RIGHT edge of the row -- so its box sits to the right of the input's.
-    const searchIcon = el.shadowRoot!.querySelector('[part="search"] lr-icon') as HTMLElement;
+    const searchIcon = el.shadowRoot!.querySelector('[part="search"] svg') as SVGElement;
     const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
     expect(searchIcon.getBoundingClientRect().left).to.be.greaterThan(
       input.getBoundingClientRect().left
@@ -2043,4 +2017,103 @@ it("returns focus to an opener the host re-shows only after lr-close", async () 
       await el.updateComplete;
     },
   });
+});
+
+it('paints above an open lr-dialog', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><lr-dialog label="Settings" open>Body</lr-dialog><lr-command-palette></lr-command-palette></div>`);
+  const dialog = wrapper.querySelector('lr-dialog') as LyraDialog;
+  await waitUntil(() => dialog.matches(':popover-open'), 'the dialog never reached the top layer');
+  const el = wrapper.querySelector('lr-command-palette') as LyraCommandPalette;
+  el.commands = [{ commandId: 'one', label: 'One' }];
+  el.openPalette();
+  await el.updateComplete;
+  // Hit testing skips the inert dialog, so painting order is asserted through top-layer membership.
+  expect(el.shadowRoot!.querySelector('[part="backdrop"]')!.matches(':popover-open')).to.equal(true);
+  el.close();
+});
+
+it('stays open when a press inside the panel is released over the scrim', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.commands = [{ commandId: 'one', label: 'One' }];
+  el.openPalette();
+  await el.updateComplete;
+  const box = el.shadowRoot!.querySelector<HTMLElement>('[part="input"]')!.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(box.left + 8), Math.round(box.top + box.height / 2)] });
+    await sendMouse({ type: 'down' });
+    await sendMouse({ type: 'move', position: [4, 4] });
+    await sendMouse({ type: 'up' });
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+  } finally {
+    await resetMouse();
+    el.close();
+  }
+});
+
+it('reveals the active command by scrolling only its list, never through scrollIntoView', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.commands = Array.from({ length: 30 }, (_, index) => ({ commandId: `c${index}`, label: `Command ${index}` }));
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  const original = Element.prototype.scrollIntoView;
+  let calls = 0;
+  Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) {
+    calls += 1;
+    original.apply(this, args);
+  };
+  try {
+    for (let index = 0; index < 15; index += 1) {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }));
+      await el.updateComplete;
+    }
+    expect(calls).to.equal(0);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="list"]')!.scrollTop).to.be.greaterThan(0);
+  } finally {
+    Element.prototype.scrollIntoView = original;
+    el.close();
+  }
+});
+
+it('announces when a query matches no command', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.commands = [{ commandId: 'one', label: 'One' }];
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  input.value = 'zzz';
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  await waitUntil(
+    () => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)?.textContent?.includes('No matching commands.') === true,
+    'the empty result was never announced',
+  );
+  el.close();
+});
+
+it('paints its dialog with the shared overlay-surface family', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette style="--lr-overlay-surface: rgb(1, 2, 3)"></lr-command-palette>`);
+  el.openPalette();
+  await el.updateComplete;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="dialog"]')!).backgroundColor).to.equal('rgb(1, 2, 3)');
+  el.close();
+});
+
+it('moves the active command with Home, End, PageDown and PageUp', async () => {
+  const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+  el.commands = Array.from({ length: 30 }, (_, index) => ({ commandId: `c${index}`, label: `Command ${index}` }));
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+  const press = async (key: string): Promise<string | null> => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
+    await el.updateComplete;
+    return el.shadowRoot!.querySelector('[part="command"][data-active="true"]')?.textContent?.trim() ?? null;
+  };
+  expect(await press('End')).to.include('Command 29');
+  expect(await press('Home')).to.include('Command 0');
+  expect(await press('PageDown')).to.not.include('Command 0');
+  expect(await press('PageUp')).to.include('Command 0');
+  el.close();
 });

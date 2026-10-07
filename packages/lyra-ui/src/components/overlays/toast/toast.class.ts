@@ -11,7 +11,6 @@ import { tag } from '../../../internal/prefix.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './toast.styles.js';
 import type { LyraToastItem, LyraToastVariant } from './toast-item.class.js';
-import './toast-item.class.js';
 import {
   isToastRegionEntry,
   TOAST_REGION_ENQUEUE,
@@ -311,7 +310,9 @@ export class LyraToast extends LyraElement<LyraToastEventMap> {
     this.promoteQueuedEntries();
     for (const child of children) {
       if (!isToastRegionEntry(child)) {
-        if (child.localName === tag('toast-item')) child.remove();
+        // An item not yet upgraded admits itself once its tag is defined.
+        if (child.localName === tag('toast-item') && this.ownerDocument.defaultView?.customElements.get(child.localName))
+          child.remove();
         continue;
       }
       if (!this.managedEntries.has(child)) this.admitEntry(child);

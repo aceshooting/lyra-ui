@@ -461,6 +461,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // keeps focus and the option in this component's shadow tree without
   // assigning a cross-root relationship to the native textarea.
   @state() private _ownsFocus = false;
+  private filteredMemo?: [readonly Readonly<LyraMentionItem>[], string, LyraMentionFilter | null, string, readonly Readonly<LyraMentionItem>[]];
   private _focusOwnerPredicate?: () => boolean;
   private _focusTransferGeneration = 0;
   private anchorRelationship?: AnchorRelationship;
@@ -560,11 +561,17 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // this must fire on its own rather than piggyback on a reposition. The
     // popup's own [part='listbox'] is height-capped and scrollable (see
     // mention-popover.styles.ts) -- without this, arrowing past its visible
-    // rows would silently move the highlight off-screen. `block: 'nearest'`
-    // makes this a no-op whenever the active row is already fully visible.
+    // rows would silently move the highlight off-screen. Only the listbox scrolls, never a page
+    // ancestor; a fully visible row is a no-op.
     if (changed.has('activeIndex') || changed.has('query') || changed.has('items') || changed.has('filter')) {
       const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
-      active?.scrollIntoView({ block: 'nearest' });
+      const list = active?.parentElement;
+      if (active && list) {
+        const top = active.offsetTop;
+        const bottom = top + active.offsetHeight;
+        if (top < list.scrollTop) list.scrollTop = top;
+        else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+      }
       if (this._ownsFocus) {
         if (!active && this.anchor?.isConnected) this.restoreFocus();
         else void this.restoreFocus(true);
@@ -901,8 +908,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  built-in default). */
   get filteredItems(): readonly Readonly<LyraMentionItem>[] {
     const locale = this.effectiveLocale;
-    const q = (this.query ?? '').trim().toLocaleLowerCase(locale);
-    return this.items.filter((item) => {
+    const { items, query, filter } = this;
+    const memo = this.filteredMemo;
+    if (memo && memo[0] === items && memo[1] === query && memo[2] === filter && memo[3] === locale) return memo[4];
+    const q = (query ?? '').trim().toLocaleLowerCase(locale);
+    const rows = items.filter((item) => {
       if (typeof item.label !== 'string' || item.label.trim().length === 0) return false;
       if (!q) return true;
       if (this.filter) return this.filter(item, q);
@@ -911,6 +921,8 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
           .toLocaleLowerCase(locale)
           .includes(q);
     });
+    this.filteredMemo = [items, query, filter, locale, rows];
+    return rows;
   }
 
   /** The internal id of the currently highlighted row, for same-tree consumers only. */
@@ -1091,6 +1103,13 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.commit(rows[idx]!); // safe: idx >= 0 here is clampedIndex()'s in-range result
         return true;
       }
+      case 'Home':
+      case 'End':
+        // The anchor's own caret keeps Home/End until the listbox owns focus.
+        if (!this._ownsFocus || !rows.length) return false;
+        e.preventDefault();
+        this.activeIndex = e.key === 'Home' ? this.stepEnabledIndex(rows, -1, 1) : this.stepEnabledIndex(rows, rows.length, -1);
+        return true;
       case 'Escape':
         e.preventDefault();
         this.open = false;

@@ -1,6 +1,5 @@
 /** @deprecated Import @aceshooting/lyra-ui/components/lr-command-palette.js to register this component. */
 export * from './command-palette.class.js';
-import '../../utility/icon/icon.js';
 import { LyraCommandPalette } from './command-palette.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 defineElement('command-palette', LyraCommandPalette);

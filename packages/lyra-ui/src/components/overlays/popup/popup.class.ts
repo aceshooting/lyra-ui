@@ -316,10 +316,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Any of these changes the anchor, the geometry or whether there is anything to position.
-    this.reposition();
+    // This popup's own paint-gating states never move it.
+    if (!changed.size || [...changed.keys()].some((key) => key !== 'anchorPositioned' && key !== 'popupHidden'))
+      this.reposition();
     if (changed.has('active') && !this.active) void this.settlePopupHidden();
-    void changed;
   }
 
   /** Removes the popup from layout only once its CSS opacity/visibility exit transition has

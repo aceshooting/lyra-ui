@@ -1168,3 +1168,19 @@ it('settles a virtualAnchor override in a single render, like the other anchor i
   el.virtualAnchor = { x: 300, y: 220 };
   expect(await el.updateComplete, 'a virtualAnchor override scheduled a second render').to.be.true;
 });
+
+it('does not re-place when only its own positioned state changes', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup strategy="fixed" placement="bottom"><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
+  `);
+  const original = el.reposition;
+  let calls = 0;
+  el.reposition = function (this: LyraPopup) {
+    calls += 1;
+    original.call(this);
+  };
+  el.active = true;
+  await settle(el);
+  await el.updateComplete;
+  expect(calls).to.equal(1);
+});

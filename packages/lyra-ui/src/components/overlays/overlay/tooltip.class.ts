@@ -706,7 +706,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         && this.observedDirectAnchorWasConnected
         && this.observedDirectAnchor?.isConnected === false;
       this.observedDirectAnchorWasConnected = this.observedDirectAnchor?.isConnected === true;
-      this.syncInteractionTrigger();
+      // A closed tooltip contributes nothing to its unchanged trigger, so unrelated mutations stay cheap.
+      const next = this.virtualAnchor ? undefined : (this.slottedTriggerElement ?? this.resolveForTrigger());
+      if (next !== this.triggerElement || this.open || this.focusDescribesTrigger) this.syncInteractionTrigger();
       if (!this.open) return;
       const nextAnchor = this.resolveAnchor();
       if (directAnchorRemoved && !nextAnchor) {
@@ -1081,7 +1083,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     trigger.addEventListener('focusin', this.onEnter);
     trigger.addEventListener('focusout', this.onLeave);
     trigger.addEventListener('click', this.onTriggerClick);
-    trigger.addEventListener('keydown', this.onTriggerKeyDown);
   }
   private unbindTrigger(trigger: HTMLElement): void {
     trigger.removeEventListener('mouseenter', this.onEnter);
@@ -1089,7 +1090,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     trigger.removeEventListener('focusin', this.onEnter);
     trigger.removeEventListener('focusout', this.onLeave);
     trigger.removeEventListener('click', this.onTriggerClick);
-    trigger.removeEventListener('keydown', this.onTriggerKeyDown);
     this.focusDescribesTrigger = false;
   }
   /** Whether `trigger` is currently held open by a real user interaction -- the pointer resting
@@ -1478,11 +1478,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.descriptionProxy.hidden = true;
       this.descriptionProxy.dataset['lyraTooltipDescription'] = '';
     }
-    if (this.descriptionProxy.parentElement !== this) this.append(this.descriptionProxy);
     this.updateDescriptionProxy();
   }
   private updateDescriptionProxy(contentText?: string, assigned?: boolean): void {
     if (!this.descriptionProxy) return;
+    if (this.descriptionProxy.parentNode !== this) this.append(this.descriptionProxy);
     const hostLabel = this.getAttribute('aria-label');
     const snapshot = contentText === undefined || assigned === undefined ? this.inspectContent() : undefined;
     const visibleContent = contentText ?? snapshot?.text ?? '';
@@ -1492,15 +1492,6 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       : (this.accessibleLabel || visibleContent || (hasAssignment ? '' : this.content)).trim();
     if (this.descriptionProxy.textContent !== description) this.descriptionProxy.textContent = description;
   }
-  private onTriggerKeyDown = (event: KeyboardEvent): void => {
-    // WCAG 1.4.13: content shown on hover/focus must be dismissable without
-    // moving pointer hover or keyboard focus -- Escape hides the tooltip while
-    // leaving focus on the trigger (unlike the popover's Escape handling, the
-    // trigger already has focus here, so there's nothing to refocus).
-    if (this.isManual || !this.open || event.key !== 'Escape' || !this.overlayHandle?.isTopmost()) return;
-    event.preventDefault();
-    this.hide();
-  };
   override render(): TemplateResult {
     const hostLabel = this.getAttribute('aria-label');
     const propertyLabel = this.accessibleLabel ?? '';
