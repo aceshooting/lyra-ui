@@ -4,6 +4,7 @@
     "new-component-experimental": [
       "lr-country-picker",
       "lr-currency-picker",
+      "lr-signature-pad",
       "lr-time-zone-picker",
       "lr-toggle",
       "lr-toggle-group",

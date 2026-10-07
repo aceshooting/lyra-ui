@@ -7886,3 +7886,85 @@ and skip invalid or duplicate rows. Pass the application's locale explicitly.
   `resolveUnitNames(units: LyraUnitCatalog, locale: string): readonly SelectionCatalogRow[]`
   resolves localized singular names and short symbols, retaining caller overrides and using the
   identifier when `Intl` cannot format it. It never converts a measurement.
+
+## `lr-signature-pad`
+
+A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
+submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
+resize, zoom or theme change never redraws or distorts them; the surface fills its allocation's
+inline size at a fixed aspect ratio. Pressure-sensitive ink, undo, image import and colour pickers
+are out of scope.
+
+**Form behaviour.** An empty pad submits **no** `FormData` entry; a signed pad submits `value`.
+`required` makes an empty pad `valueMissing` ("This field is required.", anchored to the surface).
+`form.reset()` clears it, browser form-state restoration brings the strokes back, and a
+`<fieldset disabled>` disables it like its own `disabled`. It publishes the shared `:state()` set
+(`required`, `optional`, `valid`, `invalid`, `user-valid`, `user-invalid`) and the cancelable
+`lr-invalid` alias.
+
+**Keyboard and assistive technology.** The surface is one tab stop with `role="application"` and the
+role description "signature pad". It is named by a host `aria-label`, else by the label, else
+"Signature", and described by the error, the hint, the keyboard instructions and its state ("No signature",
+"Signed, 2 strokes"). The arrow keys move a visible pen cursor by 1 % of the box (10 % with Shift),
+Space or Enter lowers or lifts the pen, moves draw while it is down, and Escape lifts it. Pen changes
+are announced through the shared polite live region. **The arrow keys keep their physical direction
+under `dir="rtl"`**: the deliberate exception to the ArrowLeft/ArrowRight swap, because a signature
+must never be mirrored.
+
+**Properties:**
+
+- `name: string = ''` (reflected) — the form entry name.
+- `label: string = ''` — visible label text, before the `label` slot.
+- `hint: string = ''` — hint text, before the `hint` slot.
+- `errorText: string = ''` (attribute `error-text`) — error text, before the `error` slot.
+- `required: boolean = false` (reflected) — an empty pad is `valueMissing`.
+- `disabled: boolean = false` (reflected) — blocks drawing and clearing and removes the surface from
+  the tab order.
+- `strokes: readonly SignatureStroke[]` — the signature, empty by default. Assign saved strokes to
+  restore one: the input is copied, non-finite points are dropped, coordinates are clamped to 0–1,
+  and at most `SIGNATURE_PAD_MAX_STROKES` (256) strokes of `SIGNATURE_PAD_MAX_POINTS` (2048) points
+  are kept. Assigning the current array is a no-op.
+- `value: string` (read-only) — PNG data URL, `''` while empty: black ink on a transparent
+  background, 1024 px on the long side at the surface's last measured aspect ratio (3:1 before the
+  first layout). It never depends on `devicePixelRatio`, the theme or the rendered size, so the same
+  strokes give the same PNG on any screen.
+- `form`, `validity`, `validationMessage` (read-only) — the native form-control readbacks.
+
+**Methods:** `clear()` removes every stroke without firing events. `checkValidity()`,
+`reportValidity()` and `setCustomValidity(message)` follow the native contract.
+
+**Events:**
+
+- `change` — native event, after the user finishes a stroke (pointer released or cancelled, pen
+  lifted) or clears the pad.
+- `lr-change` — not cancelable, no detail; fired with every `change`.
+- `lr-invalid` — cancelable; the validity alias.
+
+Assigning `strokes`, `clear()`, a form reset and state restoration fire none of them.
+
+**Types:** `SignatureStroke = ReadonlyArray<readonly [number, number]>` (one stroke's `[x, y]` points
+as fractions of the box) and `LyraSignaturePadEventMap`; constants `SIGNATURE_PAD_MAX_STROKES` and
+`SIGNATURE_PAD_MAX_POINTS`.
+
+**Slots:** `label`, `hint`, `error` — rich content after the matching text property.
+
+**CSS parts:** `form-control`, `form-control-label`, `base` (the surface and the clear button),
+`surface`, `cursor` (shown while the surface has keyboard focus), `clear-button`, `error`, `hint`.
+
+**Themeable custom properties** (not declared on the host): `--lr-signature-pad-ink` (default
+`var(--lr-color-text)`), `--lr-signature-pad-stroke-width` (default
+`var(--lr-border-width-medium)`) and `--lr-signature-pad-aspect-ratio` (default `3 / 1`). The
+required marker takes the shared `--lr-form-control-required-content`,
+`--lr-form-control-required-color` and `--lr-form-control-required-offset` (see "The required-field
+marker" above).
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-signature-pad.js';
+</script>
+
+<form>
+  <lr-signature-pad name="signature" label="Signature" hint="Sign inside the box." required></lr-signature-pad>
+  <button>Submit</button>
+</form>
+```

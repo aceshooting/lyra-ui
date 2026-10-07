@@ -308,6 +308,7 @@
     "currency-picker": "forms",
     "country-picker": "forms",
     "time-zone-picker": "forms",
-    "unit-picker": "forms"
+    "unit-picker": "forms",
+    "signature-pad": "forms"
   }
 }

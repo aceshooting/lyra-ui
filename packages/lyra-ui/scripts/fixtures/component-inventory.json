@@ -119075,6 +119075,495 @@
       }
     },
     {
+      "tag": "lr-signature-pad",
+      "family": "forms",
+      "classModule": "src/components/forms/signature-pad/signature-pad.class.ts",
+      "registrationModule": "src/components/forms/signature-pad/signature-pad.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "error-text",
+            "property": "errorText",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "property": "form",
+            "type": "HTMLFormElement | string | null",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "property": "required",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "errorText",
+            "attribute": "error-text",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "form",
+            "attribute": "form",
+            "type": "HTMLFormElement | string | null",
+            "readonly": true,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "required",
+            "attribute": "required",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "strokes",
+            "attribute": null,
+            "type": "readonly SignatureStroke[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validationMessage",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "validity",
+            "attribute": null,
+            "type": "ValidityState",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "attribute": null,
+            "type": "string",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "change",
+            "type": "Event",
+            "cancelable": "never",
+            "constructor": "Event"
+          },
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "clear-button",
+            "deprecated": null
+          },
+          {
+            "name": "cursor",
+            "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "surface",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-form-control-required-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-required-content",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": " *"
+          },
+          {
+            "name": "--lr-form-control-required-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-signature-pad-aspect-ratio",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "3 / 1"
+          },
+          {
+            "name": "--lr-signature-pad-ink",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-signature-pad-stroke-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-medium)"
+          }
+        ],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "checkValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "clear",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formDisabledCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "disabled",
+                    "type": "boolean",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formResetCallback",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "formStateRestoreCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "state",
+                    "type": "string | File | FormData | null",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "reportValidity",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "setCustomValidity",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "message",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [
+          {
+            "module": "src/components/forms/signature-pad/signature-pad.class.ts",
+            "name": "SIGNATURE_PAD_MAX_POINTS",
+            "kind": "variable",
+            "type": "number",
+            "readonly": false,
+            "deprecated": null
+          },
+          {
+            "module": "src/components/forms/signature-pad/signature-pad.class.ts",
+            "name": "SIGNATURE_PAD_MAX_STROKES",
+            "kind": "variable",
+            "type": "number",
+            "readonly": false,
+            "deprecated": null
+          }
+        ],
+        "form": {
+          "associated": true,
+          "properties": [
+            "disabled",
+            "form",
+            "name",
+            "required",
+            "validationMessage",
+            "validity",
+            "value"
+          ],
+          "methods": [
+            "checkValidity",
+            "reportValidity",
+            "setCustomValidity"
+          ]
+        },
+        "native": {
+          "forwardedEvents": [
+            "change"
+          ],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-skeleton",
       "family": "overlays",
       "classModule": "src/components/overlays/skeleton/skeleton.class.ts",

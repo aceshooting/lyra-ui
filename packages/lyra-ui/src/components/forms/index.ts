@@ -24,6 +24,7 @@ export * from './radio/radio-group.js';
 export * from './radio/radio.js';
 export * from './rubric-form/rubric-form.js';
 export * from './select/select.js';
+export * from './signature-pad/signature-pad.js';
 export * from './slider/slider.js';
 export * from './swatch-picker/swatch-picker.js';
 export * from './switch/switch.js';

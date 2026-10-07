@@ -1485,6 +1485,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   reorderMovePending: 'Reorder pending.',
   reorderMoveCancelled: 'Reorder cancelled.',
   reorderItemMoved: 'Moved to position {index} of {total}',
+  signaturePad: 'signature pad',
+  signaturePadLabel: 'Signature',
+  signaturePadInstructions:
+    'Draw with a pointer, or press Space to lower or lift the pen and the arrow keys to move it.',
+  signaturePadEmpty: 'No signature',
+  signaturePadSigned: { one: 'Signed, {count} stroke', other: 'Signed, {count} strokes' },
+  signaturePadPenDown: 'Pen down',
+  signaturePadPenUp: 'Pen up',
 };
 
 export {
