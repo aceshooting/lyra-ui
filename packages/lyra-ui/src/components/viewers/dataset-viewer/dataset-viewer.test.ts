@@ -578,6 +578,25 @@ describe('lr-dataset-viewer', () => {
       findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })
     ).to.not.exist;
   });
+  it('keeps the loaded data across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => {
+      calls++;
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve('name\trole\nAda\tOne') } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src="https://example.test/a.tsv"></lr-dataset-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="table"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('reloads an already-loaded source after reconnecting', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -597,6 +616,7 @@ describe('lr-dataset-viewer', () => {
       );
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
     } finally {
@@ -1139,6 +1159,31 @@ describe('lr-dataset-viewer', () => {
       }
     });
 
+    it('paints at most the bounded highlight candidates, always keeping the active one', async () => {
+      const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { updateComplete: Promise<unknown> };
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell"]') !== null);
+        el.highlights = [
+          ...Array.from({ length: 1_000 }, (_unused, index) => ({
+            id: `far-${index}`,
+            anchor: { kind: 'cell-range' as const, range: 'Z9999' },
+          })),
+          { id: 'near', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
+        await el.updateComplete;
+        await list.updateComplete;
+        expect(list.shadowRoot!.querySelector('[part~="cell-highlight"]') === null).to.be.true;
+        el.activeHighlightId = 'near';
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+      } finally {
+        restore();
+      }
+    });
+
     it('searchNext/searchPrevious wrap, and clearSearch resets to 0/-1', async () => {
       const el = (await fixture(
         html`<lr-dataset-viewer></lr-dataset-viewer>`
@@ -1175,6 +1220,9 @@ describe('lr-dataset-viewer', () => {
           matchCountExact: true,
           activeIndex: -1,
         });
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+        expect(list.activeItemId).to.equal('');
       } finally {
         restore();
       }
@@ -1475,6 +1523,23 @@ describe('scrollMode', () => {
     expect(style.overflowX).to.equal('visible');
     expect(style.overflowY).to.equal('visible');
     expect(style.maxBlockSize).to.equal('none');
+  });
+
+  it('lets rows continue in the page scroll in page mode', async () => {
+    const restore = fetchText(['name', ...Array.from({ length: 200 }, (_unused, index) => `row ${index}`)].join('\n'));
+    try {
+      const el = await fixture<LyraDatasetViewer>(
+        html`<lr-dataset-viewer scroll-mode="page" src="https://example.test/rows.csv"></lr-dataset-viewer>`
+      );
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="base"]') !== null);
+      const base = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(base.hasAttribute('data-external-scroll')).to.be.true;
+      expect(base.getBoundingClientRect().height).to.be.greaterThan(1_000);
+    } finally {
+      restore();
+    }
   });
 
   it('normalizes unsupported scroll modes back to self', async () => {

@@ -5,7 +5,6 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    --_lr-html-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -18,10 +17,7 @@ export const styles = css`
   }
   [part="body"] {
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(
-      --lr-html-viewer-max-height,
-      var(--_lr-html-viewer-max-height)
-    );
+    max-block-size: var(--lr-html-viewer-max-height, none);
     box-sizing: border-box;
     overflow: auto;
     padding: var(--lr-space-m);
@@ -32,8 +28,7 @@ export const styles = css`
     contain: paint;
     overflow-wrap: anywhere;
   }
-  [part="html"] img,
-  [part="html"] video {
+  [part="html"] img {
     max-inline-size: 100%;
     block-size: auto;
   }

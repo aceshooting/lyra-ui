@@ -43,7 +43,7 @@ it('returns null with one fixed dev diagnostic that never includes importer fail
     expect(await loadSvgSanitizerDeps(() => Promise.reject(new Error('second failure')))).to.equal(null);
     expect(calls).to.have.length(1);
     const message = calls.flat().map(String).join(' ');
-    expect(message).to.equal('<lr-svg-viewer> could not load its optional dompurify peer.');
+    expect(message).to.equal('A lyra-ui component could not load its optional dompurify peer.');
     expect(message).to.not.contain(importError.message);
     expect(message).to.not.contain('second failure');
   } finally {

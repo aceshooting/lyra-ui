@@ -6,6 +6,7 @@ import {
   oneEvent,
   waitUntil,
 } from '@open-wc/testing';
+import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import './spreadsheet-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
@@ -14,7 +15,7 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
 // Numeric formatting and case-folding need these locales; their UI text is fixture data.
-for (const locale of ['ar', 'tr']) {
+for (const locale of ['ar', 'tr', 'de']) {
   registerLyraLocale(locale, LYRA_DEFAULT_STRINGS);
 }
 
@@ -369,10 +370,94 @@ describe('lr-spreadsheet-viewer', () => {
       );
       expect(
         list.shadowRoot!.querySelector('[part~="cell"]')!.textContent
-      ).to.equal(new Intl.NumberFormat('ar').format(1234.5));
+      ).to.equal(new Intl.NumberFormat('ar', { useGrouping: false }).format(1234.5));
     } finally {
       restore();
     }
+  });
+
+  it('renders cells through their number formats', async () => {
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Date', 'Time', 'Share', 'Price', 'Zip', 'Year'],
+      [new Date(Date.UTC(2024, 0, 2)), 0.5, 0.25, 1234.5, 2134, 2024],
+    ]);
+    sheet['B2']!.z = 'h:mm';
+    sheet['C2']!.z = '0%';
+    sheet['D2']!.z = '"$"#,##0.00';
+    sheet['E2']!.z = '00000';
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, 'Sheet1');
+    const el = await fixture<LyraSpreadsheetViewer>(
+      html`<lr-spreadsheet-viewer lang="de"></lr-spreadsheet-viewer>`
+    );
+    const restore = fetchBuffer(
+      XLSX.write(book, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+    );
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => list.shadowRoot!.querySelector('[part="data-row"]') !== null);
+      const texts = Array.from(
+        list.shadowRoot!.querySelectorAll('[part~="cell"]'),
+        (cell) => cell.textContent
+      );
+      expect(texts).to.deep.equal([
+        new Intl.DateTimeFormat('de', { timeZone: 'UTC', dateStyle: 'medium' }).format(Date.UTC(2024, 0, 2)),
+        new Intl.DateTimeFormat('de', { timeZone: 'UTC', timeStyle: 'short' }).format(Date.UTC(1899, 11, 31, 12)),
+        '25%',
+        '$1,234.50',
+        '02134',
+        '2024',
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('bounds the declared sheet range before expanding it', async () => {
+    const zip = await JSZip.loadAsync(buffer({ Sheet1: [['x']] }));
+    const sheetPath = 'xl/worksheets/sheet1.xml';
+    const withDimension = async (ref: string): Promise<ArrayBuffer> => {
+      const xml = await zip.file(sheetPath)!.async('string');
+      zip.file(sheetPath, xml.replace(/<dimension ref="[^"]*"/, `<dimension ref="${ref}"`));
+      return zip.generateAsync({ type: 'arraybuffer' });
+    };
+    const walked: unknown[] = [];
+    const load = async (source: ArrayBuffer): Promise<LyraSpreadsheetViewer> => {
+      const el = await fixture<LyraSpreadsheetViewer>(
+        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+      );
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+        Promise.resolve({
+          read: XLSX.read,
+          utils: {
+            sheet_to_json: (sheet: XLSX.WorkSheet, options: XLSX.Sheet2JSONOpts) => {
+              walked.push(sheet['!ref']);
+              return XLSX.utils.sheet_to_json(sheet, options);
+            },
+          },
+        });
+      const restore = fetchBuffer(source);
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(
+          () => el.shadowRoot!.querySelector('[part="error"], [part="header-row"]') !== null
+        );
+      } finally {
+        restore();
+      }
+      return el;
+    };
+
+    const wide = await load(await withDimension('A1:XFD300'));
+    expect(wide.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+      'This document is too large to preview.'
+    );
+    expect(walked).to.deep.equal([]);
+    const bloated = await load(await withDimension('A1:XFD1048576'));
+    expect(bloated.shadowRoot!.querySelector('[part="header-row"]')?.textContent).to.equal('x');
+    expect(walked).to.deep.equal(['A1']);
   });
 
   it('renders data rows as a grid, matching the header row, not as unstyled stacked text', async () => {
@@ -743,6 +828,7 @@ describe('lr-spreadsheet-viewer', () => {
       );
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
     } finally {
@@ -781,8 +867,7 @@ describe('lr-spreadsheet-viewer', () => {
 
       const parent = el.parentElement!;
       el.remove();
-      // disconnectedCallback() resets fetchState to idle synchronously -- assert it directly,
-      // before any reconnect/re-render could mask a stale value with a freshly loading one.
+      await aTimeout(0);
       expect(
         (el as unknown as { fetchState: { kind: string } }).fetchState.kind
       ).to.equal('idle');
@@ -808,6 +893,36 @@ describe('lr-spreadsheet-viewer', () => {
       await waitUntil(
         () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
       );
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('keeps the workbook and search across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    const value = buffer(GRID_WORKBOOK);
+    window.fetch = (() => {
+      calls++;
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(value) } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSpreadsheetViewer>(
+        html`<lr-spreadsheet-viewer src="https://example.test/book.xlsx"></lr-spreadsheet-viewer>`
+      );
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+      expect(await el.search('ada')).to.equal(2);
+      const parent = el.parentElement!;
+      parent.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="header-row"]') !== null).to.be.true;
+      el.remove();
+      await aTimeout(0);
+      const reran = oneEvent(el, 'lr-search-change');
+      parent.append(el);
+      expect((await reran).detail).to.include({ query: 'ada', matchCount: 2 });
+      expect(calls).to.equal(2);
     } finally {
       window.fetch = original;
     }
@@ -839,9 +954,8 @@ describe('lr-spreadsheet-viewer', () => {
       await waitUntil(
         () => el.shadowRoot!.querySelector('lr-tab-group') !== null
       );
-      expect(
-        el.shadowRoot!.querySelectorAll('[part="sheet"]')
-      ).to.have.lengthOf(12);
+      expect(el.shadowRoot!.querySelectorAll('lr-tab')).to.have.lengthOf(12);
+      expect(el.shadowRoot!.querySelectorAll('[part="sheet"]')).to.have.lengthOf(1);
       expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(
         true
       );
@@ -851,10 +965,7 @@ describe('lr-spreadsheet-viewer', () => {
   });
 
   it('rejects excessive sheet and expanded-cell counts before eagerly rendering workbook tabs', async () => {
-    const run = async (
-      sheetNames: string[],
-      rows: unknown[][]
-    ): Promise<void> => {
+    const run = async (sheetNames: string[], ref: string): Promise<void> => {
       const el = (await fixture(
         html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
       )) as LyraSpreadsheetViewer;
@@ -863,9 +974,9 @@ describe('lr-spreadsheet-viewer', () => {
           Promise.resolve({
             read: () => ({
               SheetNames: sheetNames,
-              Sheets: Object.fromEntries(sheetNames.map((name) => [name, {}])),
+              Sheets: Object.fromEntries(sheetNames.map((name) => [name, { '!ref': ref }])),
             }),
-            utils: { sheet_to_json: () => rows },
+            utils: { sheet_to_json: () => [] },
           });
       const restore = fetchBuffer(
         new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]).buffer
@@ -886,12 +997,11 @@ describe('lr-spreadsheet-viewer', () => {
 
     await run(
       Array.from({ length: 257 }, (_unused, index) => `Sheet ${index}`),
-      []
+      'A1'
     );
-    await run(
-      ['One'],
-      Array.from({ length: 1_001 }, () => Array(1_000).fill('x'))
-    );
+    await run(['One'], 'A1:ALL1001');
+    await run(['One'], 'A1:ALM1');
+    await run(['One'], 'A1:A10001');
   });
 
   it('surfaces the standard load-failure state when the xlsx peer returns a SheetNames array with non-string entries', async () => {
@@ -990,6 +1100,27 @@ describe('lr-spreadsheet-viewer', () => {
     }
   });
 
+  it('does not carry the active row onto another sheet when a tab is clicked', async () => {
+    const rows = (label: string): unknown[][] =>
+      [['Name'], ...Array.from({ length: 60 }, (_unused, index) => [`${label} ${index}`])];
+    const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);
+    const restore = fetchBuffer(buffer({ Q1: rows('first'), Q2: rows('second') }));
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-tab-group') !== null);
+      expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A40' })).to.be.true;
+      const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
+      (tabs.shadowRoot!.querySelectorAll('[part="tab"]')[1] as HTMLElement).click();
+      await el.updateComplete;
+      const list = el.shadowRoot!.querySelector('lr-virtual-list[data-sheet-index="1"]') as HTMLElement & {
+        activeItemId: unknown;
+      };
+      expect(list.activeItemId).to.equal('');
+    } finally {
+      restore();
+    }
+  });
+
   describe('cell-range anchor-target', () => {
     it('scrolls to a cell-range anchor addressing the raw grid (header included)', async () => {
       const el = (await fixture(
@@ -1041,6 +1172,31 @@ describe('lr-spreadsheet-viewer', () => {
           el.shadowRoot!.querySelectorAll('[part~="cell-highlight"]')
         ).to.have.lengthOf(1);
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
+      } finally {
+        restore();
+      }
+    });
+
+    it('paints at most the bounded highlight candidates, always keeping the active one', async () => {
+      const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`);
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { updateComplete: Promise<unknown> };
+        await waitUntil(() => list.shadowRoot!.querySelector('[part="data-row"]') !== null);
+        el.highlights = [
+          ...Array.from({ length: 1_000 }, (_unused, index) => ({
+            id: `far-${index}`,
+            anchor: { kind: 'cell-range' as const, range: 'Z9999' },
+          })),
+          { id: 'near', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
+        await el.updateComplete;
+        await list.updateComplete;
+        expect(list.shadowRoot!.querySelector('[part~="cell-highlight"]') === null).to.be.true;
+        el.activeHighlightId = 'near';
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
       } finally {
         restore();
       }
@@ -1506,29 +1662,25 @@ describe('lr-spreadsheet-viewer', () => {
       try {
         el.src = 'https://example.test/book.xlsx';
         await waitUntil(
-          () =>
-            el.shadowRoot!.querySelectorAll('[part="header-row"]').length === 2
+          () => el.shadowRoot!.querySelector('[part="header-row"]') !== null
         );
-        const headers = el.shadowRoot!.querySelectorAll(
-          '[part="header-row"] [part~="cell"]'
-        );
-        let firstScrolled = false;
-        let secondScrolled = false;
-        (headers[0] as HTMLElement).scrollIntoView = () => {
-          firstScrolled = true;
+        const scrolled: (string | undefined)[] = [];
+        const original = HTMLElement.prototype.scrollIntoView;
+        HTMLElement.prototype.scrollIntoView = function (this: HTMLElement): void {
+          scrolled.push(this.closest<HTMLElement>('[part="sheet"]')?.dataset['sheetIndex']);
         };
-        (headers[1] as HTMLElement).scrollIntoView = () => {
-          secondScrolled = true;
-        };
-        expect(
-          await el.scrollToAnchor({
-            kind: 'cell-range',
-            sheet: 'Sheet2',
-            range: 'A1',
-          })
-        ).to.be.true;
-        expect(firstScrolled).to.be.false;
-        expect(secondScrolled).to.be.true;
+        try {
+          expect(
+            await el.scrollToAnchor({
+              kind: 'cell-range',
+              sheet: 'Sheet2',
+              range: 'A1',
+            })
+          ).to.be.true;
+        } finally {
+          HTMLElement.prototype.scrollIntoView = original;
+        }
+        expect(scrolled).to.deep.equal(['1']);
       } finally {
         restore();
       }
@@ -1563,14 +1715,13 @@ describe('lr-spreadsheet-viewer', () => {
     });
 
     it('caps retained search matches before allocating an unbounded result list', async () => {
+      const loadedSheet = (rows: unknown[][]) => ({ name: 'One', rows, body: rows.slice(1), columns: 1 });
       const el = (await fixture(
         html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
       )) as LyraSpreadsheetViewer;
       (el as unknown as { fetchState: unknown }).fetchState = {
         kind: 'loaded',
-        sheets: [
-          { name: 'One', rows: Array.from({ length: 1_001 }, () => ['hit']) },
-        ],
+        sheets: [loadedSheet(Array.from({ length: 1_001 }, () => ['hit']))],
       };
       await el.updateComplete;
       let cappedDetail:
@@ -1590,9 +1741,7 @@ describe('lr-spreadsheet-viewer', () => {
 
       (el as unknown as { fetchState: unknown }).fetchState = {
         kind: 'loaded',
-        sheets: [
-          { name: 'One', rows: Array.from({ length: 1_000 }, () => ['hit']) },
-        ],
+        sheets: [loadedSheet(Array.from({ length: 1_000 }, () => ['hit']))],
       };
       expect(await el.search('hit')).to.equal(1_000);
       expect(cappedDetail).to.deep.include({
@@ -1744,6 +1893,9 @@ describe('lr-spreadsheet-viewer', () => {
           matchCountExact: true,
           activeIndex: -1,
         });
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+        expect(list.activeItemId).to.equal('');
       } finally {
         restore();
       }

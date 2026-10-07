@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { clearSheetJsCache, loadSheetJs, loadSheetJsCached } from './spreadsheet-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 afterEach(() => clearSheetJsCache());
 
@@ -13,6 +14,7 @@ it('loads and caches the real xlsx API', async () => {
 });
 
 it('supports injected imports and fails closed for an incomplete peer', async () => {
+  expectDevWarning('lyra-spreadsheet-viewer-xlsx-unavailable');
   const fake = { read: () => null, utils: { sheet_to_json: () => [] } };
   expect(await loadSheetJs(() => Promise.resolve(fake)) as unknown).to.equal(fake);
   expect(await loadSheetJs(() => Promise.resolve({ default: fake })) as unknown).to.equal(fake);

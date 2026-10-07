@@ -100,6 +100,8 @@ export const styles = css`
     inset-block-end: 0;
     display: grid;
     gap: var(--lr-space-xs);
+    max-block-size: 50%;
+    overflow-y: auto;
     padding: var(--lr-space-xs);
     pointer-events: none;
   }

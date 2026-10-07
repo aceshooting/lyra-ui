@@ -42,6 +42,8 @@ const MAX_PROPERTY_CHARS = 1_048_576;
 const BEGIN_MARKER = /^BEGIN:VCARD$/i;
 const END_MARKER = /^END:VCARD$/i;
 const SUPPORTED_VERSIONS = new Set(['2.1', '3.0', '4.0']);
+/** Other properties (PHOTO, LOGO, KEY, X-…) are never decoded, so their encodings cannot fail a card. */
+const DECODED_PROPERTIES = new Set(['VERSION', 'FN', 'N', 'ORG', 'TEL', 'EMAIL', 'ADR']);
 
 interface ParsedProperty {
   name: string;
@@ -173,9 +175,6 @@ function splitUnescaped(value: string, separator: string): string[] {
 }
 
 function parseProperty(line: string): ParsedProperty {
-  if (line.length > MAX_PROPERTY_CHARS) {
-    throw new LyraResourceLimitError('A vCard property is too large.');
-  }
   const colon = propertyColon(line);
   if (colon <= 0) throw malformed('property is missing its value delimiter');
   const head = splitOutsideQuotes(line.slice(0, colon), ';');
@@ -185,6 +184,8 @@ function parseProperty(line: string): ParsedProperty {
 
   const parameters = new Map<string, string[]>();
   const types: string[] = [];
+  let value = line.slice(colon + 1);
+  if (!DECODED_PROPERTIES.has(name)) return { name, parameters, types, value };
   for (const rawParameter of head) {
     if (!rawParameter.trim()) throw malformed('empty parameter');
     const equals = rawParameter.indexOf('=');
@@ -204,7 +205,6 @@ function parseProperty(line: string): ParsedProperty {
     if (key === 'TYPE') types.push(...values.map((item) => item.toLowerCase()));
   }
 
-  let value = line.slice(colon + 1);
   const encoding = parameters.get('ENCODING')?.at(-1)?.toUpperCase();
   if (encoding && encoding !== 'QUOTED-PRINTABLE' && encoding !== '8BIT') {
     throw malformed(`unsupported encoding ${encoding}`);
@@ -223,33 +223,48 @@ function structured(value: string, count: number): string[] {
   return parts.slice(0, count);
 }
 
-function isQuotedPrintableSoftLine(line: string): boolean {
-  if (!line.endsWith('=')) return false;
+function isQuotedPrintable(line: string): boolean {
   const colon = propertyColon(line);
   return colon > 0 && /(?:^|;)ENCODING\s*=\s*"?QUOTED-PRINTABLE"?(?:;|:)/i.test(line.slice(0, colon + 1));
 }
 
+/** Joins each logical line once, bounding its length while it grows. */
 function unfoldBlockLines(physicalLines: string[]): string[] {
   const lines: string[] = [];
+  let pieces: string[] = [];
+  let length = 0;
+  let quotedPrintable = false;
+  const append = (piece: string): void => {
+    length += piece.length;
+    if (length > MAX_PROPERTY_CHARS) throw new LyraResourceLimitError('A vCard property is too large.');
+    if (piece) pieces.push(piece);
+  };
   for (const physicalLine of physicalLines) {
-    if (lines.length && isQuotedPrintableSoftLine(lines.at(-1)!)) {
-      lines[lines.length - 1] = lines.at(-1)!.slice(0, -1)
-        + (physicalLine.startsWith(' ') || physicalLine.startsWith('\t')
-          ? physicalLine.slice(1)
-          : physicalLine);
+    const folded = physicalLine.startsWith(' ') || physicalLine.startsWith('\t');
+    const last = pieces.at(-1);
+    if (quotedPrintable && last?.endsWith('=')) {
+      if (last.length > 1) pieces[pieces.length - 1] = last.slice(0, -1);
+      else pieces.pop();
+      length--;
+      append(folded ? physicalLine.slice(1) : physicalLine);
       continue;
     }
-    if (physicalLine.startsWith(' ') || physicalLine.startsWith('\t')) {
-      if (!lines.length) throw malformed('orphan folded line');
-      lines[lines.length - 1] += physicalLine.slice(1);
+    if (folded) {
+      if (!last) throw malformed('orphan folded line');
+      append(physicalLine.slice(1));
       continue;
     }
     if (!physicalLine) continue;
-    lines.push(physicalLine);
-    if (lines.length > MAX_PROPERTIES_PER_CONTACT) {
+    if (last) lines.push(pieces.join(''));
+    if (lines.length >= MAX_PROPERTIES_PER_CONTACT) {
       throw new LyraResourceLimitError('The vCard contains too many properties.');
     }
+    pieces = [];
+    length = 0;
+    append(physicalLine);
+    quotedPrintable = isQuotedPrintable(physicalLine);
   }
+  if (pieces.length) lines.push(pieces.join(''));
   return lines;
 }
 

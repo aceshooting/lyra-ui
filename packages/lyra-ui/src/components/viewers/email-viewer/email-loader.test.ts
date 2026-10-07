@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { clearEmailDepsCache, getEmailDepsIfLoaded, loadEmailAndSanitizer, loadEmailDeps } from './email-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 afterEach(() => clearEmailDepsCache());
 
@@ -35,41 +36,36 @@ describe('email loader', () => {
   });
 
   it('loads each peer independently', async () => {
-    const error = new Error('postal boom');
-    const originalWarn = console.warn;
-    const warnings: unknown[][] = [];
-    console.warn = (...args: unknown[]) => warnings.push(args);
-    let deps: Awaited<ReturnType<typeof loadEmailAndSanitizer>>;
-    try {
-      deps = await loadEmailAndSanitizer(
-        () => Promise.reject(error),
-        () => Promise.resolve({ default: { sanitize: (value: string) => value } }),
-      );
-    } finally {
-      console.warn = originalWarn;
-    }
+    expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
+    const deps = await loadEmailAndSanitizer(
+      () => Promise.reject(new Error('postal boom')),
+      () => Promise.resolve({ default: { sanitize: (value: string) => value } }),
+    );
     expect(deps.PostalMime).to.be.undefined;
     expect(deps.DOMPurify?.sanitize).to.exist;
-    expect(warnings.flat()).to.contain(error);
-    expect(warnings.flat().join(' ')).to.contain('pnpm add postal-mime');
   });
 
-  it('preserves postal-mime when DOMPurify fails and logs install fixes', async () => {
-    const error = new Error('purify boom');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      const deps = await loadEmailAndSanitizer(
-        () => Promise.resolve({ default: { parse: () => Promise.resolve({}) } }),
-        () => Promise.reject(error),
-      );
-      expect(deps.PostalMime?.parse).to.exist;
-      expect(deps.DOMPurify).to.be.undefined;
-      expect(calls.flat()).to.contain(error);
-      expect(calls.flat().join(' ')).to.contain('pnpm add dompurify');
-    } finally {
-      console.warn = originalWarn;
-    }
+  it('preserves postal-mime when DOMPurify fails', async () => {
+    expectDevWarning('lyra-dompurify-unavailable');
+    const deps = await loadEmailAndSanitizer(
+      () => Promise.resolve({ default: { parse: () => Promise.resolve({}) } }),
+      () => Promise.reject(new Error('purify boom')),
+    );
+    expect(deps.PostalMime?.parse).to.exist;
+    expect(deps.DOMPurify).to.be.undefined;
+  });
+
+  it('starts both peer imports together', async () => {
+    const started: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const pending = loadEmailAndSanitizer(
+      async () => { started.push('postal-mime'); await gate; return { parse: () => Promise.resolve({}) }; },
+      async () => { started.push('dompurify'); await gate; return { sanitize: (value: string) => value }; },
+    );
+    await Promise.resolve();
+    expect(started).to.deep.equal(['postal-mime', 'dompurify']);
+    release();
+    await pending;
   });
 });

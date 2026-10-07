@@ -4,7 +4,6 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --_lr-spreadsheet-viewer-max-height: none;
   }
   [part='base'],
   [part='body'],
@@ -17,10 +16,7 @@ export const styles = css`
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
-    max-block-size: var(
-      --lr-spreadsheet-viewer-max-height,
-      var(--_lr-spreadsheet-viewer-max-height)
-    );
+    max-block-size: var(--lr-spreadsheet-viewer-max-height, none);
   }
   /* [part='body'] above caps and scrolls the vertical axis; [part='sheet'] below owns horizontal
      overflow, with both axes pinned non-visible -- per the CSS overflow spec, pinning only
@@ -132,10 +128,5 @@ export const styles = css`
   [part='error'] {
     color: var(--lr-color-danger);
     text-align: center;
-  }
-  [part='spinner'] {
-    display: flex;
-    justify-content: center;
-    padding: var(--lr-space-l);
   }
 `;

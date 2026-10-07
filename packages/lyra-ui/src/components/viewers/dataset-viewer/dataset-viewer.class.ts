@@ -18,8 +18,10 @@ import {
 } from '../../../internal/cell-range.js';
 import {
   DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
@@ -195,8 +197,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
    *  `aria-label` is absent. A non-empty host label remains on the host; an explicitly empty one
    *  stays explicit on the shadow owner. */
   @property() name = '';
-  /** CSS length that caps the scrollable body. */
-  /** A CSS `max-height`; invalid values are ignored. */
+  /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   private _scrollMode: DatasetViewerScrollMode = 'self';
@@ -204,8 +205,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   /**
    * Which element scrolls when the table overflows. `'self'` preserves contained horizontal
    * scrolling and applies `maxHeight`. `'page'` removes intervening scroll containers while
-   * retaining rounded header corners, making the page the sticky header's scrollport; a
-   * wide dataset can consequently overflow its host.
+   * retaining rounded header corners, making the page the sticky header's scrollport and letting
+   * the rows window against the page's own scroll; a wide dataset can consequently overflow its
+   * host.
    */
   @property({ reflect: true, attribute: 'scroll-mode', converter: DATASET_VIEWER_SCROLL_MODE })
   get scrollMode(): DatasetViewerScrollMode {
@@ -230,6 +232,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
    *  navigation -- bound to `<lr-virtual-list>`'s own `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
+  /** `cell-range` highlights parsed once per `highlights`/`activeHighlightId` change. */
+  private cellHighlights: ResolvedCellHighlight[] = [];
   @state() private searchMatches: { row: number; col: number }[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
@@ -241,9 +245,16 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   private readonly announcements = new ViewerAnnouncementController(this);
   private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
+  /** A same-task DOM move keeps the loaded table; a genuine disconnect cancels pending work. */
+  private readonly detached = new DeferredTeardown(() => {
+    this.loadTask.next();
+    this.cancelPendingAnimationFrames();
+  });
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => {
         void this.load();
@@ -252,14 +263,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   }
 
   override disconnectedCallback(): void {
-    this.loadTask.next();
-    this.cancelPendingAnimationFrames();
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -299,6 +310,14 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.activeRowKey = '';
+    }
+    if (changed.has('highlights') || changed.has('activeHighlightId')) {
+      this.cellHighlights = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)
+        .flatMap((highlight) => {
+          if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet) return []; // dataset-viewer has no sheets
+          const parsed = parseCellRange(highlight.anchor.range);
+          return parsed ? [{ highlight, parsed }] : [];
+        });
     }
   }
 
@@ -423,22 +442,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   /** `rawRow` is 1-based, always including the header row -- the same raw-file-grid addressing
    *  convention every `cell-range` anchor uses. */
   private cellHighlightsForRow(rawRow: number): ResolvedCellHighlight[] {
-    const seen = new Set<string>();
-    return this.highlights
-      .filter((highlight) => {
-        if (seen.has(highlight.id)) return false;
-        seen.add(highlight.id);
-        return true;
-      })
-      .flatMap((highlight) => {
-        if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet)
-          return []; // dataset-viewer has no sheets
-        const parsed = parseCellRange(highlight.anchor.range);
-        if (!parsed) return [];
-        return rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
-          ? [{ highlight, parsed }]
-          : [];
-      });
+    return this.cellHighlights.filter(
+      ({ parsed }) => rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
+    );
   }
 
   private renderCell(
@@ -673,6 +679,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
+    this.activeRowKey = '';
     this.emit('lr-search-change', {
       query: '',
       matchCount: 0,
@@ -737,6 +744,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
                 this.renderRow(row as Record<string, string>, index, fields)}
               .keyFunction=${this.virtualListKeyFunction}
               .activeItemId=${this.activeRowKey}
+              .scrollElement=${this.scrollMode === 'page' ? this.ownerDocument.defaultView ?? undefined : undefined}
               item-role="row"
               row-index-offset="1"
               @lr-load-more=${this.stopInternalEvent}

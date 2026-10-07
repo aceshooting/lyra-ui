@@ -3,7 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --_lr-calendar-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -16,10 +15,7 @@ export const styles = css`
   }
   [part="body"] {
     box-sizing: border-box;
-    max-block-size: var(
-      --lr-calendar-viewer-max-height,
-      var(--_lr-calendar-viewer-max-height)
-    );
+    max-block-size: var(--lr-calendar-viewer-max-height, none);
     overflow: auto;
   }
   [part="event-list"] {
@@ -33,6 +29,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-2xs);
+    overflow-wrap: anywhere;
     padding: var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
@@ -54,7 +51,6 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);
     white-space: pre-wrap;
-    overflow-wrap: anywhere;
   }
   .empty-note {
     margin: 0;

@@ -4,6 +4,7 @@ import './calendar-viewer.js';
 import type { LyraCalendarViewer } from './calendar-viewer.js';
 import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
+import { loadIcal } from './calendar-loader.js';
 
 const SAMPLE_ICS = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//lyra-ui//test//EN', 'BEGIN:VEVENT', 'UID:event-1@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260714T140000Z', 'DTEND:20260714T150000Z', 'SUMMARY:Quarterly planning', 'LOCATION:Room 204', 'DESCRIPTION:Review roadmap and budget.', 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n');
 const TWO_EVENTS = SAMPLE_ICS.replace('END:VCALENDAR', ['BEGIN:VEVENT', 'UID:event-2@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART:20260715T100000Z', 'DTEND:20260715T110000Z', 'SUMMARY:Design review', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
@@ -163,6 +164,34 @@ describe('lr-calendar-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
     } finally { restore(); }
   });
+  it('rejects an over-ceiling event count before the peer parses the calendar', async () => {
+    const ical = (await loadIcal())!;
+    const parse = ical.parse;
+    let parses = 0;
+    ical.parse = (source: string) => { parses++; return parse(source); };
+    const events = Array.from({ length: 251 }, (_unused, index) => `BEGIN:VEVENT\r\nUID:${index}\r\nDTSTART:20260714T140000Z\r\nEND:VEVENT`).join('\r\n');
+    const restore = stubFetch(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${events}\r\nEND:VCALENDAR\r\n`);
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+      const failed = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/large.ics';
+      await failed;
+      expect(parses).to.equal(0);
+    } finally {
+      ical.parse = parse;
+      restore();
+    }
+  });
+  it('keeps the other events when one event has an invalid date', async () => {
+    const broken = TWO_EVENTS.replace('END:VCALENDAR', ['BEGIN:VEVENT', 'UID:event-3@example.test', 'DTSTAMP:20260701T090000Z', 'DTSTART;VALUE=DATE:2023XX31', 'SUMMARY:Impossible day', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
+    const { el, restore } = await loaded(broken);
+    try {
+      const events = [...el.shadowRoot!.querySelectorAll('[part="event"]')];
+      expect(events.map((event) => event.querySelector('[part="event-summary"]')!.textContent))
+        .to.deep.equal(['Quarterly planning', 'Design review', 'Impossible day']);
+      expect(events[2]!.querySelector('[part="event-time"]')!.textContent).to.equal('');
+    } finally { restore(); }
+  });
   it('rejects bounded input whose retained event text exceeds the rendering ceiling', async () => {
     const oversized = [
       'BEGIN:VCALENDAR',
@@ -187,6 +216,15 @@ describe('lr-calendar-viewer', () => {
     } finally {
       restore();
     }
+  });
+  it('wraps a long unbreakable location inside a 320px host', async () => {
+    const restore = stubFetch(SAMPLE_ICS.replace('LOCATION:Room 204', `LOCATION:https://meet.example.test/${'a'.repeat(160)}`));
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer style="inline-size:320px" src="https://example.test/calendar.ics"></lr-calendar-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null, undefined, { timeout: 5000 });
+      const event = el.shadowRoot!.querySelector('[part="event"]')!;
+      expect(event.scrollWidth).to.be.at.most(event.clientWidth);
+    } finally { restore(); }
   });
   it('renders multiple events in source order', async () => { const { el, restore } = await loaded(TWO_EVENTS); try { expect(Array.from(el.shadowRoot!.querySelectorAll('[part="event-summary"]')).map((node) => node.textContent)).to.deep.equal(['Quarterly planning', 'Design review']); } finally { restore(); } });
   it('renders a non-error empty-note for a well-formed calendar with zero events, not assertively-announced error chrome', async () => {
@@ -219,6 +257,21 @@ describe('lr-calendar-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-calendar-viewer-max-height')).to.equal('20rem');
   });
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response(SAMPLE_ICS)); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="event"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('reloads the same source after reconnecting and restores its named region', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -228,6 +281,7 @@ describe('lr-calendar-viewer', () => {
       await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="event"]') !== null);
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
       expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
@@ -302,17 +356,18 @@ describe('lr-calendar-viewer', () => {
   it('preserves an explicitly empty host aria-label ahead of name', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer name="Team offsite.ics" aria-label=""></lr-calendar-viewer>`); const base = el.shadowRoot!.querySelector('[part="base"]')!; expect(base.hasAttribute('aria-label')).to.be.true; expect(base.getAttribute('aria-label')).to.equal(''); });
   it('falls back to the localized calendarViewerLabel default when neither name nor a host aria-label is set', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Calendar viewer'); });
   it('supports a .strings override for the calendarViewerLabel fallback', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer .strings=${{ calendarViewerLabel: 'Visionneuse de calendrier' }}></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de calendrier'); });
-  it('forwards document anchors/highlights and advertises its text contracts', () => {
+  it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/calendar')!;
     const highlights: LyraHighlight[] = [{ id: 'event', anchor: { kind: 'text-quote', quote: 'planning' } }];
     const anchor = { kind: 'fragment' as const, id: 'event' };
-    const rendered = definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
       name: 'team.ics',
       mimeType: 'text/calendar',
       src: 'https://example.test/team.ics',
       anchor,
       highlights,
-    }) as LyraCalendarViewer;
+    })}</div>`);
+    const rendered = host.querySelector('lr-calendar-viewer') as LyraCalendarViewer;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;

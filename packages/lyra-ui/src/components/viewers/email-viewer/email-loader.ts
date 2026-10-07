@@ -1,6 +1,6 @@
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import {
-  isHtmlSanitizer,
-  resolveOptionalPeerCapability,
+  createOptionalPeerLoader,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
 
@@ -44,42 +44,35 @@ export interface EmailDeps {
   DOMPurify: HtmlSanitizer | undefined;
 }
 
+const postalMime = /* @__PURE__ */ createOptionalPeerLoader<PostalMimeApi>({
+  load: () => import('postal-mime'),
+  isCapability: isPostalMimeApi,
+  warningKey: 'lyra-email-viewer-postal-mime-unavailable',
+  warning: '<lr-email-viewer> could not load its optional postal-mime peer.',
+});
+
 let depsPromise: Promise<EmailDeps> | undefined;
 let resolvedDeps: EmailDeps | undefined;
 
+/** Loads both peers in parallel; a missing one resolves `undefined`. */
 export async function loadEmailAndSanitizer(
-  importPostalMime: () => Promise<unknown> = () => import('postal-mime'),
-  importDompurify: () => Promise<unknown> = () => import('dompurify'),
+  importPostalMime?: () => Promise<unknown>,
+  importDompurify?: () => Promise<unknown>,
 ): Promise<EmailDeps> {
-  let PostalMime: PostalMimeApi | undefined;
-  try {
-    PostalMime = resolveOptionalPeerCapability(await importPostalMime(), isPostalMimeApi) ?? undefined;
-  } catch (error) {
-    console.warn(
-      '<lr-email-viewer> needs the optional peer dependency `postal-mime` to parse .eml messages — install it with `pnpm add postal-mime`:',
-      error,
-    );
-  }
-
-  let DOMPurify: HtmlSanitizer | undefined;
-  try {
-    DOMPurify = resolveOptionalPeerCapability(await importDompurify(), isHtmlSanitizer) ?? undefined;
-  } catch (error) {
-    console.warn(
-      '<lr-email-viewer> needs the optional peer dependency `dompurify` to sanitize HTML message bodies — install it with `pnpm add dompurify`:',
-      error,
-    );
-  }
-  return { PostalMime, DOMPurify };
+  const [PostalMime, DOMPurify] = await Promise.all([
+    importPostalMime ? postalMime.loadWith(importPostalMime) : postalMime.get(),
+    loadDompurify(importDompurify),
+  ]);
+  return { PostalMime: PostalMime ?? undefined, DOMPurify: DOMPurify ?? undefined };
 }
 
+/** Shared load; only a complete result is kept, so a missing peer is retried by the next call. */
 export function loadEmailDeps(): Promise<EmailDeps> {
-  if (!depsPromise) {
-    depsPromise = loadEmailAndSanitizer().then((result) => {
-      resolvedDeps = result;
-      return result;
-    });
-  }
+  depsPromise ??= loadEmailAndSanitizer().then((result) => {
+    if (!result.PostalMime || !result.DOMPurify) depsPromise = undefined;
+    resolvedDeps = result;
+    return result;
+  });
   return depsPromise;
 }
 
@@ -90,6 +83,7 @@ export function getEmailDepsIfLoaded(): EmailDeps | undefined {
 export function clearEmailDepsCache(): void {
   depsPromise = undefined;
   resolvedDeps = undefined;
+  postalMime.clear();
 }
 
 /** @internal test-only hook to force a specific resolved dependency set (e.g. simulate a missing optional peer); pass `undefined` to reset to the real loader. */

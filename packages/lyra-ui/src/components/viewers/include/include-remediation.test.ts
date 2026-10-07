@@ -75,3 +75,14 @@ it('rejects declared oversized remote fragments before reading their body and re
   expect(reads).to.equal(0);
   expect(viewer.textContent).to.equal('Original fallback');
 });
+
+it('drops name attributes so included markup cannot clobber window or document properties', async () => {
+  window.fetch = (() => Promise.resolve(new Response('<img name="lyraIncludeProbe" alt="Probe"><a name="lyraAnchorProbe">Probe</a>'))) as typeof fetch;
+  const viewer = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+  const loaded = oneEvent(viewer, 'lr-load');
+  viewer.src = '/named-partial.html';
+  await loaded;
+  expect(viewer.querySelectorAll('[name]').length).to.equal(0);
+  expect(typeof (window as unknown as Record<string, unknown>)['lyraIncludeProbe']).to.equal('undefined');
+  expect(typeof (document as unknown as Record<string, unknown>)['lyraIncludeProbe']).to.equal('undefined');
+});

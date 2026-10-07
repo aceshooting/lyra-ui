@@ -136,6 +136,21 @@ describe('lr-html-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
     } finally { window.fetch = original; }
   });
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(new Response('<p>Loaded</p>')); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer src="https://example.test/a.html"></lr-html-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="html"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('reloads the same HTML source after a disconnect/reconnect', async () => {
     const original = window.fetch;
     let fetchCount = 0;
@@ -150,6 +165,7 @@ describe('lr-html-viewer', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await aTimeout(20);
       expect(fetchCount).to.equal(2);
@@ -205,17 +221,18 @@ it('validates maxHeight before assigning the base custom property', async () => 
 });
 
 describe('HTML registry', () => {
-  it('forwards document anchors/highlights and advertises its text contracts', () => {
+  it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/html')!;
     const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];
     const anchor = { kind: 'fragment' as const, id: 'section-one' };
-    const rendered = definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
       name: 'report.html',
       mimeType: 'text/html',
       src: 'https://example.test/report.html',
       anchor,
       highlights,
-    }) as LyraHtmlViewer;
+    })}</div>`);
+    const rendered = host.querySelector('lr-html-viewer') as LyraHtmlViewer;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;

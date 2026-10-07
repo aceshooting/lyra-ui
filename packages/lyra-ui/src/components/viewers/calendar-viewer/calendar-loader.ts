@@ -1,5 +1,4 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 
 const CALENDAR_ICAL_WARNING_KEY = 'lyra-calendar-viewer-ical-unavailable';
 const CALENDAR_ICAL_WARNING = '<lr-calendar-viewer> could not load its optional ical.js peer.';
@@ -45,22 +44,19 @@ function isIcalApi(value: unknown): value is IcalApi {
   );
 }
 
-let cached: Promise<IcalApi | null> | undefined;
+const ical = /* @__PURE__ */ createOptionalPeerLoader<IcalApi>({
+  load: () => import('ical.js'),
+  isCapability: isIcalApi,
+  warningKey: CALENDAR_ICAL_WARNING_KEY,
+  warning: CALENDAR_ICAL_WARNING,
+});
 
-export async function loadIcalDeps(
-  importIcal: () => Promise<unknown> = () => import('ical.js'),
-): Promise<IcalApi | null> {
-  try {
-    return resolveOptionalPeerCapability(await importIcal(), isIcalApi);
-  } catch {
-    devWarnOnce(CALENDAR_ICAL_WARNING_KEY, CALENDAR_ICAL_WARNING);
-    return null;
-  }
+export function loadIcalDeps(importIcal?: () => Promise<unknown>): Promise<IcalApi | null> {
+  return ical.loadWith(importIcal);
 }
 
 export function loadIcal(): Promise<IcalApi | null> {
-  if (!cached) cached = loadIcalDeps();
-  return cached;
+  return ical.get();
 }
 
-export function clearIcalCache(): void { cached = undefined; }
+export function clearIcalCache(): void { ical.clear(); }

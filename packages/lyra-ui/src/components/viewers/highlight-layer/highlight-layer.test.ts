@@ -4,6 +4,9 @@ import './highlight-layer.js';
 import type { LyraHighlightLayer, HighlightLayerItem } from './highlight-layer.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-highlight-layer', 'interactive');
@@ -247,6 +250,7 @@ describe('lr-highlight-layer', () => {
       rects: [],
     }));
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    expectDevWarning(collectionTruncationWarningKey(el.localName, 'items'));
     el.items = many;
     await el.updateComplete;
     expect(el.items).to.have.length(10_000);
@@ -779,6 +783,33 @@ describe('lr-highlight-layer', () => {
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     actions[1]!.click();
     expect((await eventPromise).detail).to.deep.equal({ highlightId: 'second' });
+  });
+
+  it('keeps in-place targets for highlights whose minimum hit areas do not overlap', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="position:relative; width:400px; height:200px">
+        <lr-highlight-layer
+          .items=${[
+            { id: 'a', rects: [{ x: 10, y: 15, width: 20, height: 15 }] },
+            { id: 'b', rects: [{ x: 60, y: 55, width: 20, height: 15 }] },
+          ]}
+        ></lr-highlight-layer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-highlight-layer') as LyraHighlightLayer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="highlight-actions"]') === null).to.be.true;
+    expect(itemActions(el).map((target) => target.getAttribute('part'))).to.deep.equal(['rect-target', 'rect-target']);
+  });
+
+  it('keeps keyboard focus on the same highlight when the host prepends one', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    await focusByKeyboard(itemActions(el)[1]!);
+    el.items = [{ id: 'new', rects: [{ x: 10, y: 60, width: 20, height: 5 }] }, ...ITEMS];
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('b');
+    expect(itemActions(el).filter((target) => target.tabIndex === 0).map((target) => target.dataset['id']))
+      .to.deep.equal(['b']);
   });
 
   it('is accessible with items present', async () => {

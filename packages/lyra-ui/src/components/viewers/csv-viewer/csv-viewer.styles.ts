@@ -4,7 +4,6 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --_lr-csv-viewer-max-height: none;
   }
   [part='base'],
   [part='body'],
@@ -17,10 +16,7 @@ export const styles = css`
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
-    max-block-size: var(
-      --lr-csv-viewer-max-height,
-      var(--_lr-csv-viewer-max-height)
-    );
+    max-block-size: var(--lr-csv-viewer-max-height, none);
   }
   /* [part='body'] above caps the allocation while the nested virtual-list owns data-row scrolling;
      horizontal overflow of the grid is this element's own concern. Both axes pinned non-visible

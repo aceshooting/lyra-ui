@@ -80,6 +80,20 @@ describe('xlsx resource guard', () => {
     await expectResourceLimit(() => assertXlsxArchiveWithinLimits(source, 10, 1_000));
   });
 
+  it('measures every part SheetJS can parse, whatever its name', async () => {
+    const zip = (name: string, content: string | Uint8Array): Promise<ArrayBuffer> =>
+      new JSZip().file(name, content).generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    const rows = '<worksheet><sheetData><row><c/></row><row><c/></row></sheetData></worksheet>';
+    await expectResourceLimit(async () =>
+      assertXlsxArchiveWithinLimits(await zip('xl/worksheets/sheet1.dat', rows), 10, 10_000, { maxRows: 1 }));
+    await expectResourceLimit(async () =>
+      assertXlsxArchiveWithinLimits(await zip('xl/worksheets/sheet1.BIN', new Uint8Array(64)), 10, 10_000, { maxCells: 4 }));
+    await assertXlsxArchiveWithinLimits(await zip('xl/vbaProject.bin', new Uint8Array(64)), 10, 10_000, { maxCells: 16 });
+    for (const name of ['META-INF/manifest.xml', 'objectdata.xml', 'Index/Document.iwa', 'nested\\Index.zip']) {
+      await expectResourceLimit(async () => assertXlsxArchiveWithinLimits(await zip(name, '<x/>')));
+    }
+  });
+
   it('rejects excessive worksheet row/cell and XML-node complexity and honors cancellation', async () => {
     const zip = new JSZip();
     zip.file(

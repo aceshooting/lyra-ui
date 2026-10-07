@@ -13,8 +13,10 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import {
   parseCellRange,
   type ParsedCellRange,
@@ -185,8 +187,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   @property() name = '';
   /** Renders the first parsed row as an ordinary data row instead of the persistent header. */
   @property({ type: Boolean, attribute: 'without-header-row' }) withoutHeaderRow = false;
-  /** CSS length that caps the scrollable body. */
-  /** A CSS `max-height`; invalid values are ignored. */
+  /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
@@ -196,6 +197,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
    *  navigation -- bound to `<lr-virtual-list>`'s own `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
+  /** `cell-range` highlights parsed once per `highlights`/`activeHighlightId` change. */
+  private cellHighlights: ResolvedCellHighlight[] = [];
   @state() private searchMatches: { row: number; col: number }[] = [];
   private searchMatchCountExact = true;
   @state() private searchActiveIndex = -1;
@@ -208,9 +211,16 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private readonly announcements = new ViewerAnnouncementController(this);
   private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
+  /** A same-task DOM move keeps the loaded table; a genuine disconnect cancels pending work. */
+  private readonly detached = new DeferredTeardown(() => {
+    this.loadTask.next();
+    this.cancelPendingAnimationFrames();
+  });
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => {
         void this.load();
@@ -219,14 +229,14 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   }
 
   override disconnectedCallback(): void {
-    this.loadTask.next();
-    this.cancelPendingAnimationFrames();
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -266,6 +276,14 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       this.searchMatchCountExact = true;
       this.searchActiveIndex = -1;
       this.activeRowKey = '';
+    }
+    if (changed.has('highlights') || changed.has('activeHighlightId')) {
+      this.cellHighlights = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)
+        .flatMap((highlight) => {
+          if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet) return []; // csv has no sheets
+          const parsed = parseCellRange(highlight.anchor.range);
+          return parsed ? [{ highlight, parsed }] : [];
+        });
     }
   }
 
@@ -365,22 +383,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** `rawRow` is 1-based, including the header row when present -- the same raw-file-grid
    *  addressing convention every `cell-range` anchor uses. */
   private cellHighlightsForRow(rawRow: number): ResolvedCellHighlight[] {
-    const seen = new Set<string>();
-    return this.highlights
-      .filter((highlight) => {
-        if (seen.has(highlight.id)) return false;
-        seen.add(highlight.id);
-        return true;
-      })
-      .flatMap((highlight) => {
-        if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet)
-          return []; // csv has no sheets
-        const parsed = parseCellRange(highlight.anchor.range);
-        if (!parsed) return [];
-        return rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
-          ? [{ highlight, parsed }]
-          : [];
-      });
+    return this.cellHighlights.filter(
+      ({ parsed }) => rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
+    );
   }
 
   private renderCell(
@@ -592,6 +597,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
+    this.activeRowKey = '';
     this.emit('lr-search-change', {
       query: '',
       matchCount: 0,

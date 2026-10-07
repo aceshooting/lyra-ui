@@ -14,6 +14,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_htmlViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -36,8 +37,8 @@ export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
 class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
 
 /**
- * Fetches and safely renders an inline HTML document. The sanitized surface establishes paint
- * containment so retained author styles cannot position content over the surrounding application.
+ * Fetches and safely renders an inline HTML document. Author styles are removed and the sanitized
+ * surface establishes paint containment, so content cannot paint over the surrounding application.
  * A nonempty host `aria-label` makes the host the sole named semantic owner; otherwise the loaded
  * shadow document owns the explicit-empty, `name`, or localized fallback label.
  * Its passive-document profile is network-silent and non-interactive: links, form controls, and
@@ -92,8 +93,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   @property() src = '';
   /** Accessible name for the rendered HTML document. */
   @property() name = '';
-  /** CSS length that caps the scrollable body. */
-  /** A CSS `max-height`; invalid values are ignored. */
+  /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared text search and anchor-target API for sanitized HTML output. */
   override async search(query: string): Promise<number> { return super.search(query); }
@@ -118,19 +118,26 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the rendered document; a genuine disconnect aborts and resets. */
+  private readonly detached = new DeferredTeardown(() => {
     this.generation++;
     this.beginAbortableLoad();
     this.fetchState = { kind: 'idle' };
+  });
+
+  override disconnectedCallback(): void {
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.announcements.adopted();
   }
 

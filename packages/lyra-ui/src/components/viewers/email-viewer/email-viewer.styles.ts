@@ -3,7 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --_lr-email-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -22,7 +21,7 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     font-size: var(--lr-font-size-md-sm);
   }
-  [part$="-label"] {
+  [part="headers"] > [part$="-label"] {
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-semibold);
     text-align: end;
@@ -45,10 +44,7 @@ export const styles = css`
   [part="body"] {
     box-sizing: border-box;
     overflow: auto;
-    max-block-size: var(
-      --lr-email-viewer-max-height,
-      var(--_lr-email-viewer-max-height)
-    );
+    max-block-size: var(--lr-email-viewer-max-height, none);
     padding: var(--lr-space-m);
   }
   [part="body-html"],

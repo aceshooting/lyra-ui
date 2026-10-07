@@ -8,7 +8,6 @@ export const styles = css`
        within whatever allocation it gets. */
     min-inline-size: 0;
     max-inline-size: 100%;
-    --_lr-svg-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -21,13 +20,11 @@ export const styles = css`
   }
   [part="body"] {
     display: flex;
+    flex-wrap: wrap;
     align-items: safe center;
     justify-content: safe center;
     min-block-size: var(--lr-size-10rem);
-    max-block-size: var(
-      --lr-svg-viewer-max-height,
-      var(--_lr-svg-viewer-max-height)
-    );
+    max-block-size: var(--lr-svg-viewer-max-height, none);
     box-sizing: border-box;
     overflow: auto;
     padding: var(--lr-space-m);
@@ -50,10 +47,6 @@ export const styles = css`
   }
   [part="error"] {
     color: var(--lr-color-danger);
-  }
-  [part="spinner"] {
-    display: flex;
-    justify-content: center;
   }
   .zoom-content {
     position: relative;

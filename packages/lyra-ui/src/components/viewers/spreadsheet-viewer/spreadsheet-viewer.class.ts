@@ -5,7 +5,8 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
-  assertTableSize,
+  assertTableDimensions,
+  DEFAULT_MAX_TABLE_ROWS,
   isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
@@ -17,8 +18,10 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   DocumentAnchorTarget,
+  prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import {
   parseCellRange,
   type ParsedCellRange,
@@ -31,7 +34,7 @@ import type {
 import { loadSheetJsCached, type SheetJsApi } from './spreadsheet-loader.js';
 import { styles } from './spreadsheet-viewer.styles.js';
 import { assertXlsxArchiveWithinLimits } from './xlsx-resource-guard.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import {
   viewerSemanticLabel,
@@ -51,6 +54,8 @@ import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAUL
 interface SpreadsheetSheet {
   name: string;
   rows: unknown[][];
+  body: unknown[][];
+  columns: number;
 }
 type SpreadsheetState =
   | { kind: 'idle' }
@@ -66,13 +71,21 @@ const MAX_SPREADSHEET_SHEETS = 256;
 const MAX_SPREADSHEET_CELLS = 1_000_000;
 const MAX_SEARCH_MATCHES = 1_000;
 
-function columns(rows: unknown[][]): number {
-  return rows.reduce((max, row) => Math.max(max, row.length), 0);
-}
 function cell(value: unknown, locale: string): string {
   if (value === undefined || value === null) return '';
+  if (value instanceof Date) {
+    // Date cells carry their wall-clock time in UTC fields; a time-only value precedes 1900.
+    const dated = value.getUTCFullYear() >= 1900;
+    const seconds = value.getUTCSeconds() > 0;
+    const timed = !dated || seconds || value.getUTCHours() + value.getUTCMinutes() > 0;
+    return getDateTimeFormat(locale, {
+      timeZone: 'UTC',
+      dateStyle: dated ? 'medium' : undefined,
+      timeStyle: timed ? (seconds ? 'medium' : 'short') : undefined,
+    }).format(value);
+  }
   return typeof value === 'number'
-    ? getNumberFormat(locale).format(value)
+    ? getNumberFormat(locale, { useGrouping: false }).format(value)
     : String(value);
 }
 
@@ -80,6 +93,7 @@ function cell(value: unknown, locale: string): string {
 interface ResolvedCellHighlight {
   highlight: LyraHighlight;
   parsed: ParsedCellRange;
+  sheet?: string;
 }
 
 export interface LyraSpreadsheetViewerEventMap
@@ -107,9 +121,10 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * persistent DOM to keep in sync. `search()` is a case-insensitive
  * substring match over every sheet's stringified cell values (the same stringification `cell()`
  * already renders), ordered sheet then row then column, switching tabs as navigation crosses sheets.
- * Each sheet is independently limited to 10,000 rows and 1,000 columns; a workbook additionally
- * retains at most 256 sheets and 1,000,000 aggregate expanded cells. Internal tab and virtual-list
- * lifecycle events stay contained inside the viewer.
+ * Cells render through their number formats; dates and General numbers use the effective locale.
+ * Each sheet's used range is limited to 10,000 rows and 1,000 columns before it is expanded; a
+ * workbook additionally retains at most 256 sheets and 1,000,000 aggregate cells. Internal tab and
+ * virtual-list lifecycle events stay contained inside the viewer.
  *
  * @customElement lr-spreadsheet-viewer
  * @event lr-render-error - Fired when fetching or parsing fails.
@@ -189,9 +204,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
    *  `active` (as `sheet-${index}`), and switched by `scrollToAnchor()`/search navigation whenever
    *  a match lives on a different sheet. */
   @state() private activeSheetIndex = 0;
-  /** The virtualized body row currently scrolled into view on the active sheet -- bound to
-   *  `<lr-virtual-list>`'s own `active-item-id`. */
+  /** The virtualized body row last scrolled into view, on sheet `activeRowSheet` -- bound to that
+   *  sheet's `<lr-virtual-list>` `active-item-id`. */
   @state() private activeRowKey: number | '' = '';
+  @state() private activeRowSheet = 0;
+  /** `cell-range` highlights parsed once per `highlights`/`activeHighlightId` change. */
+  private cellHighlights: ResolvedCellHighlight[] = [];
   @state() private searchMatches: {
     sheetIndex: number;
     row: number;
@@ -208,9 +226,19 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   private readonly announcements = new ViewerAnnouncementController(this);
   private readonly pendingAnimationFrames = new Set<OwnedAnimationFrameWait>();
 
+  /** A genuine disconnect drops the grid (the query survives and re-runs after the reload). */
+  private readonly detached = new DeferredTeardown(() => {
+    this.generation++;
+    this.cancelPendingAnimationFrames();
+    this.fetchState = { kind: 'idle' };
+    this.activeRowKey = '';
+    this.activeSheetIndex = 0;
+  });
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => {
         void this.load();
@@ -219,35 +247,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   }
 
   override disconnectedCallback(): void {
-    this.generation++;
-    this.cancelPendingAnimationFrames();
-    // Reset rather than leaving a stale "loaded" state behind: without this, a reconnect with an
-    // unchanged `src` (connectedCallback() re-triggers the load below, but only once the next
-    // update completes) would keep rendering the previously-loaded sheet grid as if it were still
-    // live -- interactive and scrollable against data that's about to be replaced -- instead of an
-    // idle/loading state during the reload window. Mirrors svg-viewer.class.ts's unconditional
-    // reset (this viewer, like svg-viewer, has no inline-data alternative to `src` that would make
-    // the reset conditional, unlike xml-viewer/notebook-viewer's own disconnectedCallback).
-    this.fetchState = { kind: 'idle' };
-    // Mirrors willUpdate()'s own `changed.has('src')` reset block -- the same dependent state a
-    // `src` change already clears must not survive a disconnect/reconnect cycle either. Deliberately
-    // NOT routed through `pendingSearchResetEvent`: that flag is only ever consumed inside
-    // `updated()`'s `changed.has('src')` branch, which a same-`src` reconnect never re-triggers, so
-    // setting it here could leave it stuck (or attribute a stale reset to a later, unrelated `src`
-    // change); a disconnect resets state silently, matching every sibling viewer's own
-    // disconnectedCallback (none of them emit an event from here either).
-    this.searchQuery = '';
-    this.searchMatches = [];
-    this.searchMatchCountExact = true;
-    this.searchActiveIndex = -1;
-    this.activeRowKey = '';
-    this.activeSheetIndex = 0;
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.cancelPendingAnimationFrames();
     this.announcements.adopted();
   }
@@ -288,6 +295,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       this.searchActiveIndex = -1;
       this.activeRowKey = '';
       this.activeSheetIndex = 0;
+    }
+    if (changed.has('highlights') || changed.has('activeHighlightId')) {
+      this.cellHighlights = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)
+        .flatMap((highlight) => {
+          if (highlight.anchor.kind !== 'cell-range') return [];
+          const parsed = parseCellRange(highlight.anchor.range);
+          return parsed ? [{ highlight, parsed, sheet: highlight.anchor.sheet ?? parsed.sheet }] : [];
+        });
     }
   }
 
@@ -361,7 +376,13 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         signal,
       });
       if (!this.isConnected || generation !== this.generation) return;
-      const workbook = library.read(source, { type: 'array' });
+      const workbook = library.read(source, {
+        type: 'array',
+        cellDates: true,
+        cellNF: true,
+        // Past this many rows SheetJS clamps a sheet's declared range to its parsed cells.
+        sheetRows: DEFAULT_MAX_TABLE_ROWS + 1,
+      });
       if (!this.isConnected || generation !== this.generation) return;
       const sheetNames = workbook.SheetNames;
       if (
@@ -378,17 +399,37 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       const sheets: SpreadsheetSheet[] = [];
       let totalCells = 0;
       for (const name of sheetNames) {
-        const rows = library.utils.sheet_to_json(workbook.Sheets[name], {
-          header: 1,
-        }) as unknown[][];
-        assertTableSize(rows);
-        totalCells += rows.reduce((sum, row) => sum + row.length, 0);
+        const sheet = (workbook.Sheets[name] ?? {}) as Record<string, unknown>;
+        // `sheet_to_json` visits every cell of the declared range, so bound that range first.
+        const range = parseCellRange(String(sheet['!ref'] ?? 'A1'));
+        if (!range) throw new Error('The xlsx peer returned a malformed workbook.');
+        const rowCount = range.endRow - range.startRow + 1;
+        const columnCount = range.endCol - range.startCol + 1;
+        assertTableDimensions(rowCount, columnCount);
+        totalCells += rowCount * columnCount;
         if (totalCells > MAX_SPREADSHEET_CELLS) {
           throw new LyraResourceLimitError(
             'The spreadsheet contains too many expanded cells.'
           );
         }
-        sheets.push({ name, rows });
+        // Formatted numbers render as the workbook shows them; General numbers stay numeric.
+        for (const value of Object.values(sheet)) {
+          const formatted = value as { t?: unknown; z?: unknown; w?: unknown; v?: unknown };
+          if (formatted.t === 'n' && formatted.z !== undefined && formatted.z !== 'General' && typeof formatted.w === 'string') {
+            formatted.t = 's';
+            formatted.v = formatted.w;
+          }
+        }
+        const rows = library.utils.sheet_to_json(sheet, {
+          header: 1,
+          UTC: true,
+        }) as unknown[][];
+        sheets.push({
+          name,
+          rows,
+          body: rows.slice(1),
+          columns: rows.reduce((max, row) => Math.max(max, row.length), 0),
+        });
       }
       if (this.isConnected && generation === this.generation) {
         this.fetchState = { kind: 'loaded', sheets };
@@ -422,24 +463,12 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     rawRow: number,
     currentSheetName: string
   ): ResolvedCellHighlight[] {
-    const seen = new Set<string>();
-    return this.highlights
-      .filter((highlight) => {
-        if (seen.has(highlight.id)) return false;
-        seen.add(highlight.id);
-        return true;
-      })
-      .flatMap((highlight) => {
-        if (highlight.anchor.kind !== 'cell-range') return [];
-        const parsed = parseCellRange(highlight.anchor.range);
-        if (!parsed) return [];
-        const sheetName = highlight.anchor.sheet ?? parsed.sheet;
-        if (sheetName !== undefined && sheetName !== currentSheetName)
-          return [];
-        return rawRow - 1 >= parsed.startRow && rawRow - 1 <= parsed.endRow
-          ? [{ highlight, parsed }]
-          : [];
-      });
+    return this.cellHighlights.filter(
+      ({ parsed, sheet }) =>
+        (sheet === undefined || sheet === currentSheetName) &&
+        rawRow - 1 >= parsed.startRow &&
+        rawRow - 1 <= parsed.endRow
+    );
   }
 
   private renderCell(
@@ -512,19 +541,15 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     >`;
   }
 
-  // Stable across every render (unlike an inline arrow literal in the template), and paired with
-  // `.items`'s `guard()` against the sheet's own `rows` reference -- together these keep an
-  // unrelated reactive update (e.g. `activeSheetIndex`, `activeRowKey`) from forcing a full O(n)
-  // offset recompute on the composed `<lr-virtual-list>`, since a fresh `.keyFunction` closure
-  // and a fresh `[header, ...body]` destructure (recomputed every render regardless) otherwise
-  // appear to change identity even when the sheet's row data did not.
+  // Stable, like the guarded `body`, so an unrelated update does not make the composed
+  // `<lr-virtual-list>` recompute its O(n) offsets.
   private readonly virtualListKeyFunction = (_item: unknown, bodyIndex: number): number => bodyIndex;
 
   private renderSheet(sheet: SpreadsheetSheet, index: number): TemplateResult {
-    const [header, ...body] = sheet.rows;
+    const header = sheet.rows[0];
     if (!header)
       return html`<p class="empty-note">${this.localize('noData')}</p>`;
-    const count = columns(sheet.rows);
+    const count = sheet.columns;
     return html`<div
       part="sheet"
       data-sheet-index=${index}
@@ -543,7 +568,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
         part="rows"
         exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
         data-sheet-index=${index}
-        .items=${guard([sheet.rows], () => body)}
+        .items=${guard([sheet.body], () => sheet.body)}
         .renderItem=${(row: unknown, bodyIndex: number) =>
           this.renderRow(
             row as unknown[],
@@ -553,7 +578,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
             sheet.name
           )}
         .keyFunction=${this.virtualListKeyFunction}
-        .activeItemId=${index === this.activeSheetIndex ? this.activeRowKey : ''}
+        .activeItemId=${index === this.activeRowSheet ? this.activeRowKey : ''}
         item-role="row"
         row-index-offset="1"
         @lr-load-more=${this.stopInternalEvent}
@@ -579,7 +604,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       )}${sheets.map(
         (sheet, index) =>
           html`<lr-tab-panel name=${`sheet-${index}`}
-            >${this.renderSheet(sheet, index)}</lr-tab-panel
+            >${index === this.activeSheetIndex ? this.renderSheet(sheet, index) : nothing}</lr-tab-panel
           >`
       )}</lr-tab-group
     >`;
@@ -610,7 +635,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       rawRow < 1 ||
       rawRow > sheet.rows.length ||
       col < 0 ||
-      col >= columns(sheet.rows)
+      col >= sheet.columns
     )
       return false;
     const bodyIndex = rawRow - 2; // every sheet has exactly one (always-present) header row
@@ -631,6 +656,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
       });
       return !!target;
     }
+    this.activeRowSheet = sheetIndex;
     this.activeRowKey = bodyIndex;
     await this.updateComplete;
     await this.scrollColumnIntoView(sheetIndex, col);
@@ -769,6 +795,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     this.searchMatches = [];
     this.searchMatchCountExact = true;
     this.searchActiveIndex = -1;
+    this.activeRowKey = '';
     this.emit('lr-search-change', {
       query: '',
       matchCount: 0,

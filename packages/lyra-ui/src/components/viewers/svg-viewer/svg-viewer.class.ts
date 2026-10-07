@@ -9,7 +9,7 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
@@ -21,6 +21,7 @@ import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
@@ -38,6 +39,30 @@ function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   );
 }
 
+/** Elements that rendering may clone through `<use>` references before the SVG is refused. */
+const MAX_USE_CLONES = 100_000;
+
+/** Elements cloned by the `<use>` references within `scope` (itself included); Infinity for a
+ *  reference cycle or past the ceiling. */
+function useClones(root: DocumentFragment, scope: Element | DocumentFragment, memo: Map<Element, number>): number {
+  const uses: Element[] = [...scope.querySelectorAll('use')];
+  if ('localName' in scope && scope.localName === 'use') uses.push(scope);
+  let total = 0;
+  for (const use of uses) {
+    const target = root.getElementById((use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').trim().slice(1));
+    if (!target) continue;
+    let clones = memo.get(target);
+    if (clones === undefined) {
+      memo.set(target, Infinity);
+      clones = 1 + target.querySelectorAll('*').length + useClones(root, target, memo);
+      memo.set(target, clones);
+    }
+    total += clones;
+    if (total > MAX_USE_CLONES) return Infinity;
+  }
+  return total;
+}
+
 /**
  * Applies the viewer family's one passive-SVG profile after DOMPurify's structural allowlist.
  * Local fragment paint servers and embedded raster data remain usable; every network, style,
@@ -53,6 +78,10 @@ function sanitizeInlineSvg(
   template.innerHTML = markup;
   if (!template.content.querySelector('svg')) {
     throw new Error('SVG sanitizer did not return an SVG document.');
+  }
+  // Nested `<use>` fan-out multiplies rendering work exponentially in every engine.
+  if (useClones(template.content, template.content, new Map()) > MAX_USE_CLONES) {
+    throw new LyraResourceLimitError('The SVG expands too many <use> references.');
   }
   return markup;
 }
@@ -176,19 +205,26 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the rendered image; a genuine disconnect aborts and resets. */
+  private readonly detached = new DeferredTeardown(() => {
     this.generation++;
     this.beginAbortableLoad();
     this.fetchState = { kind: 'idle' };
+  });
+
+  override disconnectedCallback(): void {
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.announcements.adopted();
   }
 
@@ -366,12 +402,27 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
           data-highlight-id=${highlight.id}
           aria-label=${label}
           @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
+          @keydown=${(e: KeyboardEvent) => this.onHighlightActionKeyDown(e, index, regionHighlights.length)}
         >
           ${highlight.label || label}
         </button>
       `;
       })}
     </div>`;
+  }
+
+  private onHighlightActionKeyDown(e: KeyboardEvent, index: number, total: number): void {
+    const rtl = this.effectiveDirection === 'rtl';
+    const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
+    const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
+    let nextIndex: number | undefined;
+    if (forward) nextIndex = Math.min(total - 1, index + 1);
+    else if (backward) nextIndex = Math.max(0, index - 1);
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = total - 1;
+    if (nextIndex === undefined || nextIndex === index) return;
+    e.preventDefault();
+    this.renderRoot.querySelectorAll<HTMLElement>('[part="region-highlight-action"]')[nextIndex]?.focus();
   }
 
   /** Per-viewer hook for `DocumentAnchorTarget`: resolves a `region` anchor back to its owning

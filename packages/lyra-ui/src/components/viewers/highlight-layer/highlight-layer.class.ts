@@ -10,6 +10,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings.generated.js';
@@ -72,8 +73,8 @@ export interface LyraHighlightLayerEventMap {
  * @csspart rect - One highlight rectangle (`data-tone`/`data-active`/`data-flash` state attributes).
  * @csspart rect-target - Transparent activation geometry around a rectangle, with a minimum
  *   pointer/focus area independent of the caller-supplied visual coordinates.
- * @csspart highlight-actions - Non-overlapping actions used when more than one logical highlight
- *   would otherwise create ambiguous minimum hit areas.
+ * @csspart highlight-actions - Non-overlapping actions used instead of in-place targets when the
+ *   minimum hit areas of different highlights would overlap; at most half the box tall, scrolling.
  * @csspart highlight-action - One action in the non-overlapping highlight action list.
  * @cssprop --lr-highlight-layer-accent-bg - Accent highlight background.
  * @cssprop --lr-highlight-layer-accent-outline - Accent highlight outline.
@@ -124,19 +125,38 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
    *  interactive, matching markdown's `sanitize` stance. */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
   withoutInteraction = false;
-  @state() private focusedItem: HighlightLayerItem | null = null;
-  @state() private flashingItem: HighlightLayerItem | null = null;
+  // Ids, not item objects: every assignment is re-snapshotted, so object identity never survives.
+  @state() private focusedId: string | null = null;
+  @state() private flashingId: string | null = null;
+  /** The latest observed box; a resize re-measures the overlap of minimum hit areas. */
+  @state() private boxSize?: DOMRectReadOnly;
+  private actionList = false;
+  private sizeObserver?: ResizeObserver;
   private flashTimer?: number;
   private flashTimerWindow?: Window;
   private flashGeneration = 0;
-  private pendingFocusItem: HighlightLayerItem | null = null;
+  private pendingFocusId: string | null = null;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    const Observer = this.ownerDocument.defaultView?.ResizeObserver;
+    this.sizeObserver = Observer
+      ? new Observer((entries) => {
+          this.boxSize = entries.at(-1)?.contentRect ?? this.boxSize;
+        })
+      : undefined;
+    this.sizeObserver?.observe(this);
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const refocus = this.hasFocusedAction();
     if (changed.has('items')) {
-      if (this.focusedItem && !this.items.includes(this.focusedItem)) {
-        const previousItems = changed.get('items') as readonly HighlightLayerItem[] | undefined;
-        const previousIndex = previousItems?.indexOf(this.focusedItem) ?? -1;
+      const positionOf = (items: readonly HighlightLayerItem[] | undefined, id: string | null): number =>
+        items?.findIndex((item) => item.id === id) ?? -1;
+      const previousItems = changed.get('items') as readonly HighlightLayerItem[] | undefined;
+      if (this.focusedId !== null && positionOf(this.items, this.focusedId) < 0) {
+        const previousIndex = positionOf(previousItems, this.focusedId);
         const renderedIndexes = this.itemIndexesWithRects(
           this.items.map((item) => this.safeRects(item)),
         );
@@ -144,34 +164,67 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
           if (nearest === null) return index;
           return Math.abs(index - previousIndex) < Math.abs(nearest - previousIndex) ? index : nearest;
         }, null);
-        const nextItem = nextIndex === null ? null : this.items[nextIndex]!;
-        const activeElement = activeElementIn(this.shadowRoot) as HTMLElement | null;
-        const shouldTransferFocus = activeElement?.matches('[data-item-action]') ?? false;
-        if (shouldTransferFocus && nextItem) {
-          const previousTargetIndex = previousItems?.indexOf(nextItem) ?? -1;
-          if (previousTargetIndex >= 0) this.primaryTarget(previousTargetIndex)?.focus();
-          this.pendingFocusItem = nextItem;
-        }
-        this.focusedItem = nextItem;
+        this.focusedId = nextIndex === null ? null : this.items[nextIndex]!.id;
+        const previousTargetIndex = positionOf(previousItems, this.focusedId);
+        if (refocus && previousTargetIndex >= 0) this.primaryTarget(previousTargetIndex)?.focus();
       }
       if (changed.get('items') !== undefined) this.clearFlash();
+    }
+    if (changed.has('items') || changed.has('boxSize') || changed.has('withoutInteraction')) {
+      this.actionList = !this.withoutInteraction && this.hitAreasOverlap();
+      // Targets are reused by position or swapped for actions, so focus follows the focused id.
+      if (refocus) this.pendingFocusId = this.focusedId;
     }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    const pending = this.pendingFocusItem;
-    this.pendingFocusItem = null;
-    if (!pending) return;
-    const index = this.items.indexOf(pending);
+    const pending = this.pendingFocusId;
+    this.pendingFocusId = null;
+    if (pending === null) return;
+    const index = this.items.findIndex((item) => item.id === pending);
     if (index >= 0) this.focusRect(index);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.focusedItem = null;
-    this.pendingFocusItem = null;
+    this.sizeObserver?.disconnect();
+    this.focusedId = null;
+    this.pendingFocusId = null;
     this.clearFlash();
+  }
+
+  private hasFocusedAction(): boolean {
+    return (activeElementIn(this.shadowRoot) as HTMLElement | null)?.matches('[data-item-action]') ?? false;
+  }
+
+  /** Whether the minimum-size hit areas (as `[part="rect-target"]` sizes them) of different
+   *  highlights intersect. */
+  private hitAreasOverlap(): boolean {
+    const view = this.ownerDocument.defaultView;
+    if (!view) return false;
+    const { width, height } = this.boxSize ?? this.getBoundingClientRect();
+    const min = resolveCssTokenLength(
+      view.getComputedStyle(this).getPropertyValue('--lr-icon-button-size').trim(),
+      { host: this },
+    ) ?? 0;
+    const boxes = this.items
+      .flatMap((item, index) => this.safeRects(item).map((rect) => {
+        const boxWidth = Math.max((rect.width / 100) * width, min);
+        const boxHeight = Math.max((rect.height / 100) * height, min);
+        const left = ((rect.x + rect.width / 2) / 100) * width - boxWidth / 2;
+        const top = ((rect.y + rect.height / 2) / 100) * height - boxHeight / 2;
+        return { index, left, top, right: left + boxWidth, bottom: top + boxHeight };
+      }))
+      .sort((first, second) => first.left - second.left);
+    for (let first = 0; first < boxes.length; first++) {
+      const a = boxes[first]!;
+      for (let second = first + 1; second < boxes.length && boxes[second]!.left < a.right; second++) {
+        const b = boxes[second]!;
+        if (b.index !== a.index && b.top < a.bottom && a.top < b.bottom) return true;
+      }
+    }
+    return false;
   }
 
   override adoptedCallback(): void {
@@ -184,21 +237,19 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   flash(id: string): void {
     this.clearFlash();
     if (!this.isConnected) return;
-    const item = this.items.find((candidate) => candidate.id === id);
-    if (!item) return;
-    this.flashingItem = item;
+    if (!this.items.some((candidate) => candidate.id === id)) return;
+    this.flashingId = id;
     const generation = this.flashGeneration;
     void this.updateComplete.then(() => {
-      if (generation !== this.flashGeneration || this.flashingItem !== item || !this.isConnected) return;
-      const itemIndex = this.items.indexOf(item);
-      const rect = this.primaryVisualRect(itemIndex);
+      if (generation !== this.flashGeneration || this.flashingId !== id || !this.isConnected) return;
+      const rect = this.primaryVisualRect(this.items.findIndex((candidate) => candidate.id === id));
       if (!rect) {
-        this.flashingItem = null;
+        this.flashingId = null;
         return;
       }
       const ownerWindow = rect.ownerDocument.defaultView;
       if (!ownerWindow) {
-        this.flashingItem = null;
+        this.flashingId = null;
         return;
       }
       const computed = ownerWindow.getComputedStyle(rect);
@@ -212,7 +263,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         if (generation !== this.flashGeneration || this.flashTimerWindow !== ownerWindow) return;
         this.flashTimer = undefined;
         this.flashTimerWindow = undefined;
-        this.flashingItem = null;
+        this.flashingId = null;
       }, durationMs);
     });
   }
@@ -222,7 +273,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.flashTimer = undefined;
     this.flashTimerWindow = undefined;
     this.flashGeneration += 1;
-    this.flashingItem = null;
+    this.flashingId = null;
   }
 
   private safeRects(item: HighlightLayerItem): SafePercentRect[] {
@@ -242,8 +293,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   private tabStopIndex(rectsByItem: readonly SafePercentRect[][]): number | null {
     const renderedIndexes = this.itemIndexesWithRects(rectsByItem);
     if (renderedIndexes.length === 0) return null;
-    if (this.focusedItem) {
-      const focusedIndex = this.items.indexOf(this.focusedItem);
+    if (this.focusedId !== null) {
+      const focusedIndex = this.items.findIndex((item) => item.id === this.focusedId);
       if (renderedIndexes.includes(focusedIndex)) return focusedIndex;
     }
     if (this.activeHighlightId) {
@@ -260,7 +311,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   private onRectFocus(item: HighlightLayerItem): void {
-    this.focusedItem = item;
+    this.focusedId = item.id;
   }
 
   private primaryTarget(itemIndex: number): HTMLElement | null {
@@ -303,7 +354,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     else if (e.key === 'End') nextIndex = renderedIndexes.at(-1);
     if (nextIndex === undefined || nextIndex === itemIndex) return;
     e.preventDefault();
-    this.focusedItem = this.items[nextIndex]!;
+    this.focusedId = this.items[nextIndex]!.id;
     this.scheduleAfterUpdate(() => this.focusRect(nextIndex));
   }
 
@@ -330,7 +381,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       : -1;
     const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
     const interactive = !this.withoutInteraction;
-    const useActionList = interactive && renderedIndexes.length > 1;
+    const useActionList = interactive && this.actionList;
     const ariaLabel = interactive
       ? hostAriaLabel(this) ?? this.localize('highlightLayerLabel')
       : undefined;
@@ -343,7 +394,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       >
         ${this.items.map((item, index) => {
           const isActive = activeIndex === index;
-          const isFlash = this.flashingItem === item;
+          const isFlash = this.flashingId === item.id;
           // Rect coordinates are physical percent-of-box over content that never mirrors (a
           // rendered image/page), so position with physical left/top -- logical
           // inset-inline-start would flip the overlay under RTL while the content stays put.

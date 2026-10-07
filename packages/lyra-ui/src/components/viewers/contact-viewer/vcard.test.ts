@@ -207,6 +207,29 @@ describe('parseVCards delimiter and framing edge cases', () => {
     expect(parseVCards(source)[0]!.fn).to.equal('A B');
   });
 
+  it('skips embedded binary and other unrendered properties without decoding them', () => {
+    const source = [
+      'BEGIN:VCARD',
+      'VERSION:2.1',
+      'FN:Ada',
+      'PHOTO;ENCODING=b;TYPE=JPEG:/9j/4AAQ',
+      'LOGO;ENCODING=BASE64;PNG:iVBORw0KGgo=',
+      'X-NOTE;CHARSET=ISO-8859-1:R=E9sum=E9',
+      'END:VCARD',
+    ].join('\r\n');
+
+    expect(parseVCards(source)[0]!.fn).to.equal('Ada');
+  });
+
+  it('unfolds a long quoted-printable property in linear time and bounds it while unfolding', () => {
+    const softLines = Array.from({ length: 8_000 }, () => `${'=41'.repeat(50)}=`);
+    const source = ['BEGIN:VCARD', 'VERSION:2.1', 'NOTE;ENCODING=QUOTED-PRINTABLE:=41=', ...softLines, 'A', 'END:VCARD']
+      .join('\r\n');
+    const started = performance.now();
+    expect(() => parseVCards(source)).to.throw(LyraResourceLimitError);
+    expect(performance.now() - started).to.be.below(1_000);
+  });
+
   it('rejects NUL bytes before attempting block parsing', () => {
     expect(() => parseVCards(`BEGIN:VCARD\r\nVERSION:4.0\r\nFN:A\0B\r\nEND:VCARD`))
       .to.throw(/NUL byte/);

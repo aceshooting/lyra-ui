@@ -21,6 +21,7 @@ import {
 import { styles } from './include.styles.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings.generated.js';
@@ -163,7 +164,8 @@ function elementWithId(root: ParentNode, id: string): Element | null {
  * selected. The passive profile covers nested template contents before cache retention as well
  * as live insertion; template text and supported fragment selection remain available.
  * Cloned ids are rebased per instance so repeated includes do not
- * introduce duplicate document ids.
+ * introduce duplicate document ids, and `name` attributes are dropped so included markup cannot
+ * shadow `window` or `document` properties.
  *
  * `mode` deliberately defaults to `'same-origin'` rather than the `'cors'`
  * default those upstream components document — a same-origin-only fetch
@@ -291,15 +293,26 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.detached.cancel()) return;
     this.setAttribute('aria-busy', 'false');
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the transcluded content and its lease; a genuine disconnect ends both. */
+  private readonly detached = new DeferredTeardown(() => {
     this.generation++;
     this.releaseResourceLease();
     this.setAttribute('aria-busy', 'false');
+  });
+
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.detached.flush();
   }
 
   /** Invalidates this remote source's retained value and loads it again. Same-page fragments are
@@ -381,6 +394,8 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     let index = 0;
     const elements = allElements(fragment);
     for (const element of elements) {
+      // A named `<img>` in the light DOM would become a `window`/`document` property.
+      element.removeAttribute('name');
       if (!element.id) continue;
       const original = element.id;
       const next = `${this.clonePrefix}-${++index}`;

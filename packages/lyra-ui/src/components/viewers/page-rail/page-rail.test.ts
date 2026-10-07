@@ -281,6 +281,30 @@ describe('lr-page-rail', () => {
     expect(buttons[1]!.getAttribute('aria-label')).to.equal('Page 2');
   });
 
+  it('repaints rendered rows when highlights or strings change after the first render', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="3"></lr-page-rail>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="page"]') != null);
+    const listRoot = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+    const label = (index: number): string | null =>
+      listRoot.querySelectorAll('[part~="page"]')[index]!.getAttribute('aria-label');
+    el.highlights = [{ id: 'h1', anchor: { kind: 'page', page: 2 } }];
+    await waitUntil(() => label(1) === 'Page 2, 1 highlighted passage', 'highlights did not repaint');
+    expect(listRoot.querySelectorAll('[part~="heat-dot"]')).to.have.lengthOf(1);
+    el.strings = { pageRailPage: 'Seite {page}' };
+    await waitUntil(() => label(0) === 'Seite 1', 'strings did not repaint');
+  });
+
+  it('accepts the page digits of the effective locale in type-ahead', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail locale="ar-EG" page-count="20"></lr-page-rail>`);
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    for (const key of ['١', '٢']) {
+      base.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
+    }
+    await el.updateComplete;
+    expect(el.page).to.equal(12);
+  });
+
   it('calls viewer.renderPageThumbnail(page, canvas, { width: thumbWidth }) as rows materialize', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer} thumb-width="64"></lr-page-rail>`);

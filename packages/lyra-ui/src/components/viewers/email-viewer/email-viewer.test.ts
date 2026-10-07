@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
 import { __setEmailDepsForTesting } from "./email-loader.js";
@@ -7,6 +7,7 @@ import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.
 import type { LyraHighlight } from "../document-viewer/anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('ar', [
@@ -399,20 +400,21 @@ describe("lr-email-viewer", () => {
     }
   });
 
-  it("forwards document anchors/highlights and advertises its text contracts", () => {
+  it("forwards document anchors/highlights and advertises its text contracts", async () => {
     const definition =
       getDefaultDocumentRendererRegistry().get("message/rfc822")!;
     const highlights: LyraHighlight[] = [
       { id: "subject", anchor: { kind: "text-quote", quote: "Quarterly" } },
     ];
     const anchor = { kind: "fragment" as const, id: "subject" };
-    const rendered = definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
       name: "message.eml",
       mimeType: "message/rfc822",
       src: "https://example.test/message.eml",
       anchor,
       highlights,
-    }) as LyraEmailViewer;
+    })}</div>`);
+    const rendered = host.querySelector('lr-email-viewer') as LyraEmailViewer;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;
@@ -479,12 +481,12 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="body-html"]') !== null
+        () => el.shadowRoot!.querySelector('[part="body-text"]') !== null
       );
       expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be
         .true;
       expect(
-        el.shadowRoot!.querySelector('[part="body-html"]')!.textContent
+        el.shadowRoot!.querySelector('[part="body-text"]')!.textContent
       ).to.equal("");
     } finally {
       restore();
@@ -760,6 +762,21 @@ describe("lr-email-viewer", () => {
     }
   });
 
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response(SAMPLE_EML)); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="body"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it("reloads an already-loaded source after reconnecting", async () => {
     const original = window.fetch;
     let calls = 0;
@@ -779,6 +796,7 @@ describe("lr-email-viewer", () => {
       );
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
     } finally {
@@ -1852,6 +1870,52 @@ describe("styling", () => {
       );
     } finally {
       await resetMouse();
+      restore();
+    }
+  });
+});
+
+describe('message content and Lyra chrome', () => {
+  it('ignores message markup that copies the quote-toggle attributes', async () => {
+    const restore = stubFetch(['Subject: Re', 'Content-Type: text/html; charset=utf-8', '',
+      '<span data-quote-toggle="0" data-quote-index="0">Fake toggle</span><div class="gmail_quote">Quoted</div>', ''].join('\r\n'));
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+      const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
+      expect(body.querySelectorAll('[data-quote-index], [data-quote-toggle]').length).to.equal(2);
+      (body.querySelector('span') as HTMLElement).click();
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.true;
+      const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="quote-toggle"]')!;
+      await focusByKeyboard(toggle);
+      toggle.click();
+      await waitUntil(() => !el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden'));
+      expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('quote-toggle');
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows the text alternative when the HTML part sanitizes to nothing', async () => {
+    const { el, restore } = await loaded(['Subject: Styles only', 'Content-Type: multipart/alternative; boundary="B"', '',
+      '--B', 'Content-Type: text/plain; charset=utf-8', '', 'Readable text', '',
+      '--B', 'Content-Type: text/html; charset=utf-8', '', '<style>p { color: red; }</style>', '', '--B--', ''].join('\r\n'));
+    try {
+      expect(el.shadowRoot!.querySelector('[part="body-html"]') === null).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent!.trim()).to.equal('Readable text');
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps the attachments heading start-aligned', async () => {
+    const { el, restore } = await loaded(ATTACHMENT_EML);
+    try {
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="attachments-label"]') !== null);
+      expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attachments-label"]')!).textAlign).to.equal('start');
+      expect(getComputedStyle(el.shadowRoot!.querySelector('[part="from-label"]')!).textAlign).to.equal('end');
+    } finally {
       restore();
     }
   });

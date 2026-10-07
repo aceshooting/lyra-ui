@@ -21,6 +21,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_calendarViewerEmpty, LYRA_DEFAULT_calendarViewerLabel, LYRA_DEFAULT_calendarViewerMissingParser, LYRA_DEFAULT_calendarViewerNoSummary, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeCalendar, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
@@ -93,6 +94,11 @@ function parseCalendarTime(time: IcalTimeApi | undefined): {
   return { value, kind: time.isDate === true ? 'date' : 'date-time' };
 }
 
+/** A malformed date drops only that event's time, not the whole calendar. */
+function eventTime(read: () => IcalTimeApi | undefined): ReturnType<typeof parseCalendarTime> {
+  try { return parseCalendarTime(read()); } catch { return null; }
+}
+
 class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
 
 /**
@@ -158,8 +164,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
    *  absent, before the localized fallback. A non-empty host label remains on the host; an
    *  explicitly empty one is preserved on the shadow owner. */
   @property() name = '';
-  /** CSS length that caps the scrollable event body. */
-  /** A CSS `max-height`; invalid values are ignored. */
+  /** CSS length that caps the scrollable event body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared text search and anchor-target API for the rendered calendar body. */
   override async search(query: string): Promise<number> { return super.search(query); }
@@ -174,20 +179,25 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
       if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
     }
   }
 
+  /** A same-task DOM move keeps the loaded document; a genuine disconnect invalidates its load. */
+  private readonly detached = new DeferredTeardown(() => { this.generation++; });
+
   override disconnectedCallback(): void {
-    this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.announcements.adopted();
   }
 
@@ -234,6 +244,10 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     const ical = await loadIcal();
     if (!this.isConnected || generation !== this.generation) return undefined;
     if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'));
+    // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
+    if ((source.match(/^BEGIN:VEVENT\r?$/gim)?.length ?? 0) > MAX_CALENDAR_EVENTS) {
+      throw new LyraResourceLimitError('The calendar contains too many events.');
+    }
     const component = new ical.Component(ical.parse(source));
     const subcomponents = component.getAllSubcomponents('vevent') as unknown[];
     if (subcomponents.length > MAX_CALENDAR_EVENTS) {
@@ -242,8 +256,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     let renderedChars = 0;
     const events = subcomponents.map((subcomponent) => {
       const event = new ical.Event(subcomponent);
-      const parsedStart = parseCalendarTime(event.startDate);
-      const parsedEnd = parseCalendarTime(event.endDate);
+      const parsedStart = eventTime(() => event.startDate);
+      const parsedEnd = eventTime(() => event.endDate);
       const end = parsedStart && parsedEnd && (
         parsedStart.kind !== parsedEnd.kind
         || parsedEnd.value.getTime() < parsedStart.value.getTime()

@@ -15,7 +15,7 @@ import {
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { getDateTimeFormat, getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/attachment-chip.class.js';
+import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/file-size.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -30,6 +30,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
+import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -294,6 +295,11 @@ function foldHtmlQuotes(
   // Server/inert documents have no parsing realm. The body was already sanitized, so retaining it
   // unfolded is the safe deterministic fallback until the element connects to a browser document.
   if (!doc) return html;
+  // Message markup must not impersonate the toggles and blocks marked below.
+  for (const forged of doc.body.querySelectorAll('[data-quote-toggle], [data-quote-index]')) {
+    forged.removeAttribute('data-quote-toggle');
+    forged.removeAttribute('data-quote-index');
+  }
   const blocks = doc.body.querySelectorAll(QUOTE_SELECTOR);
   blocks.forEach((block, index) => {
     const expanded = expandedIndices.includes(index);
@@ -311,10 +317,11 @@ function foldHtmlQuotes(
   return doc.body.innerHTML;
 }
 
+/** Sanitized message markup never contains buttons, so only Lyra's toggles match. */
 function isQuoteToggleElement(target: EventTarget): target is Element {
   const candidate = target as Element;
   return candidate.nodeType === 1
-    && typeof candidate.hasAttribute === 'function'
+    && candidate.localName === 'button'
     && candidate.hasAttribute('data-quote-toggle');
 }
 
@@ -437,8 +444,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
    *  style sibling document viewers. Host `aria-label` wins by attribute
    *  presence, including an empty value. */
   @property() name = '';
-  /** CSS length that caps the scrollable body. */
-  /** A CSS `max-height`; invalid values are ignored. */
+  /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
    *  preserves today's exact body rendering. */
@@ -512,22 +518,29 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
+    if (this.detached.cancel()) return;
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the loaded message; a genuine disconnect drops load and fold state. */
+  private readonly detached = new DeferredTeardown(() => {
     this.generation++;
     this.textQuoteExpanded = false;
     this.expandedHtmlQuoteIndices = [];
     this.foldedHtmlCache = null;
+  });
+
+  override disconnectedCallback(): void {
     this.announcements.disconnect();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     this.announcements.adopted();
   }
 
@@ -601,9 +614,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     if (!this.isCurrentLoad(generation, ownerView)) return null;
     const parsed = normalizeParsedEmail(rawParsed);
     if (!parsed) throw new LyraUserFacingError(this.localize('documentPreviewFailedToLoad'));
-    const bodyHtml = parsed.html !== undefined && DOMPurify
+    const sanitized = parsed.html !== undefined && DOMPurify
       ? sanitizePassiveMarkup(DOMPurify, parsed.html, this.ownerDocument, 'passive-document')
-      : null;
+      : '';
+    const bodyHtml = sanitized.trim() ? sanitized : null;
     if (!this.isCurrentLoad(generation, ownerView)) return null;
     if (parsed.html && !DOMPurify && !parsed.text) {
       // An HTML-only message (no text/plain alternative) with the optional

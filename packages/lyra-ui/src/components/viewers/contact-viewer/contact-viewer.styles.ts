@@ -3,7 +3,6 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --_lr-contact-viewer-max-height: none;
   }
   [part="base"] {
     display: flex;
@@ -20,16 +19,14 @@ export const styles = css`
     gap: var(--lr-space-m);
     box-sizing: border-box;
     overflow: auto;
-    max-block-size: var(
-      --lr-contact-viewer-max-height,
-      var(--_lr-contact-viewer-max-height)
-    );
+    max-block-size: var(--lr-contact-viewer-max-height, none);
     padding: var(--lr-space-m);
   }
   [part="contact"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    overflow-wrap: anywhere;
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius);
@@ -66,13 +63,6 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-space-2xs);
-  }
-  .field-label,
-  .type {
-    color: var(--lr-color-text-quiet);
-  }
-  .type {
-    font-size: var(--lr-font-size-xs);
   }
   .empty-note,
   [part="error"] {

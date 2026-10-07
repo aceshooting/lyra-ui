@@ -30,6 +30,22 @@ describe('lr-contact-viewer', () => {
     }
   });
 
+  it('wraps a long unbreakable value inside a 320px host', async () => {
+    const original = window.fetch;
+    const card = CARD.replace('john@example.com', `${'a'.repeat(120)}@example.com`);
+    window.fetch = (() => Promise.resolve(response(card))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(
+        html`<lr-contact-viewer style="inline-size:320px" src="https://example.test/a.vcf"></lr-contact-viewer>`,
+      );
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
+      const contact = el.shadowRoot!.querySelector('[part="contact"]')!;
+      expect(contact.scrollWidth).to.be.at.most(contact.clientWidth);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('renders a localized empty state by default', async () => {
     const el = (await fixture(html`<lr-contact-viewer></lr-contact-viewer>`)) as LyraContactViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No contact to display.');
@@ -282,6 +298,21 @@ describe('lr-contact-viewer', () => {
     await aTimeout(0);
     expect(count).to.equal(1);
   });
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response(CARD)); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="contact"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('reloads after reconnect and exposes its accessible name on a region', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -291,22 +322,24 @@ describe('lr-contact-viewer', () => {
       await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="contact"]') !== null);
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
       expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
     } finally { window.fetch = original; }
   });
-  it('forwards document anchors/highlights and advertises its text contracts', () => {
+  it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/vcard')!;
     const highlights: LyraHighlight[] = [{ id: 'contact', anchor: { kind: 'text-quote', quote: 'Ada' } }];
     const anchor = { kind: 'fragment' as const, id: 'contact' };
-    const rendered = definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
       name: 'team.vcf',
       mimeType: 'text/vcard',
       src: 'https://example.test/team.vcf',
       anchor,
       highlights,
-    }) as LyraContactViewer;
+    })}</div>`);
+    const rendered = host.querySelector('lr-contact-viewer') as LyraContactViewer;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.anchor).not.to.equal(anchor);
     expect(Object.isFrozen(rendered.anchor)).to.be.true;

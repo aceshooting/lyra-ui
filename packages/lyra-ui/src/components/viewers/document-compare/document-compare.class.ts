@@ -11,7 +11,9 @@ import type {
 } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
-import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
+import type { LyraDiffView, LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
+import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
+import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type {
   LyraClipboardWriteFailure,
@@ -48,13 +50,10 @@ const DOCUMENT_COMPARE_DIFF_LAYOUT = literalSetConverter<LyraDiffViewLayout>(
   'unified',
 );
 
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `lr-checkpoint`'s identical
- *  converter). */
-
-export interface LyraDocumentCompareEventMap {
+export interface LyraDocumentCompareEventMap
+  extends Pick<LyraAnchorTargetEventMap, 'lr-text-select' | 'lr-anchor-result'> {
+  /** Bubbles from the internal `<lr-diff-view>` while `view="diff"`, after `search()` and its siblings. */
+  'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   /** Bubbles unchanged from the internal `<lr-diff-view>` after the clipboard write fulfills. */
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   /** Bubbles unchanged from the internal `<lr-diff-view>` when clipboard writing fails. */
@@ -193,6 +192,9 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  *   unless `without-sync-scroll` is set). Re-rendering the same identity preserves reading
  *   position, and an active shared `anchor` always wins over the reset.
  *
+ * In `view="diff"`, `anchor`, `scrollToAnchor()` and the search methods address the internal
+ * `<lr-diff-view>` (`line-range` anchors index its rendered lines).
+ *
  * A nonempty host `aria-label` makes the host the sole named semantic owner. An explicitly empty
  * host label remains on the shadow group, and absence restores its localized comparison label.
  *
@@ -203,6 +205,9 @@ function versionSourceIdentity(version: DocumentCompareVersion | undefined): str
  * @event lr-highlight-activate - See `LyraDocumentCompareEventMap`.
  * @event lr-download - See `LyraDocumentCompareEventMap`.
  * @event lr-render-error - See `LyraDocumentCompareEventMap`.
+ * @event lr-search-change - See `LyraDocumentCompareEventMap`.
+ * @event lr-anchor-result - Bubbles from the internal `<lr-diff-view>` after an anchor jump. `detail: { found }`.
+ * @event lr-text-select - Bubbles from the internal `<lr-diff-view>` when a text selection ends.
  * @csspart base - The root wrapper.
  * @csspart diff - The internal `<lr-diff-view>`, rendered while `view="diff"`.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes, rendered while `view="side-by-side"`.
@@ -255,27 +260,33 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   }
 
   private _oldVersion?: DocumentCompareVersion;
+  private _oldVersionSource?: unknown;
   /** The "before" version. Display fields are copied through own data descriptors at assignment,
-   * while invalid records render as an unset pane. */
+   * while invalid records render as an unset pane. Re-assigning the same object is a no-op. */
   @property({ attribute: false })
   get oldVersion(): DocumentCompareVersion | undefined {
     return this._oldVersion;
   }
   set oldVersion(value: DocumentCompareVersion | undefined) {
+    if (value === this._oldVersionSource || value === this._oldVersion) return;
     const previous = this._oldVersion;
+    this._oldVersionSource = value;
     this._oldVersion = projectDocumentCompareVersion(value);
     this.requestUpdate('oldVersion', previous);
   }
 
   private _newVersion?: DocumentCompareVersion;
+  private _newVersionSource?: unknown;
   /** The "after" version. Display fields are copied through own data descriptors at assignment,
-   * while invalid records render as an unset pane. */
+   * while invalid records render as an unset pane. Re-assigning the same object is a no-op. */
   @property({ attribute: false })
   get newVersion(): DocumentCompareVersion | undefined {
     return this._newVersion;
   }
   set newVersion(value: DocumentCompareVersion | undefined) {
+    if (value === this._newVersionSource || value === this._newVersion) return;
     const previous = this._newVersion;
+    this._newVersionSource = value;
     this._newVersion = projectDocumentCompareVersion(value);
     this.requestUpdate('newVersion', previous);
   }
@@ -328,12 +339,12 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
    *  the differently-named CSS custom property inline. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
-  /** A shared scroll-to-anchor target forwarded to both `view="side-by-side"` panes'
-   *  `scrollToAnchor()`. `hasChanged: () => true` so re-assigning the same value (e.g. re-clicking
-   *  the same source reference) still re-fires, mirroring `<lr-document-viewer>`'s identical
-   *  property. */
-  @property({ attribute: false, hasChanged: () => true }) anchor: LyraAnchor | string | null = null;
+  /** A shared scroll-to-anchor target, applied to the diff view or to both `view="side-by-side"`
+   *  panes. Re-assigning the identical object or id is not a new jump; call `scrollToAnchor()`
+   *  to jump to the same anchor again. */
+  @property({ attribute: false }) anchor: LyraAnchor | string | null = null;
 
+  @query('lr-diff-view') private diffEl?: LyraDiffView;
   @query('[part="pane-old"]') private paneOldEl?: HTMLElement;
   @query('[part="pane-new"]') private paneNewEl?: HTMLElement;
   @query('[part="pane-old"] lr-document-preview') private previewOldEl?: LyraDocumentPreview;
@@ -393,19 +404,16 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         !== versionSourceIdentity(this[property]);
     const oldSourceChanged = sourceChanged('oldVersion');
     const newSourceChanged = sourceChanged('newVersion');
+    if (this.view !== 'side-by-side') return;
 
     if (anchor != null) {
-      const shouldJump =
-        changed.has('anchor') ||
-        (this.view === 'side-by-side' &&
-          (changed.has('view') || changed.has('oldVersion') || changed.has('newVersion')));
-      if (shouldJump) {
+      if (changed.has('anchor') || changed.has('view') || oldSourceChanged || newSourceChanged) {
         void this.previewOldEl?.scrollToAnchor(anchor);
         void this.previewNewEl?.scrollToAnchor(anchor);
       }
       return;
     }
-    if (this.view !== 'side-by-side' || (!oldSourceChanged && !newSourceChanged)) return;
+    if (!oldSourceChanged && !newSourceChanged) return;
     this.cancelSyncRelease();
     if (!this.withoutSyncScroll || oldSourceChanged) {
       if (this.paneOldEl) this.paneOldEl.scrollTop = 0;
@@ -441,6 +449,39 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     void otherPreview?.scrollToAnchor(highlightId);
   }
 
+  /** Scrolls the diff view, or both side-by-side panes, to `target` (also when it is the current
+   *  `anchor`). Resolves whether any of them found it. */
+  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    await this.updateComplete;
+    if (this.diffEl) return this.diffEl.scrollToAnchor(target);
+    const found = await Promise.all([
+      this.previewOldEl?.scrollToAnchor(target),
+      this.previewNewEl?.scrollToAnchor(target),
+    ]);
+    return found.includes(true);
+  }
+
+  /** Searches the diff view (`view="diff"`); resolves its match count, or `0` side by side. */
+  async search(query: string): Promise<number> {
+    await this.updateComplete;
+    return this.diffEl?.search(query) ?? 0;
+  }
+
+  /** Moves to the diff view's next match; resolves `false` without matches. */
+  async searchNext(): Promise<boolean> {
+    return this.diffEl?.searchNext() ?? false;
+  }
+
+  /** Moves to the diff view's previous match; resolves `false` without matches. */
+  async searchPrevious(): Promise<boolean> {
+    return this.diffEl?.searchPrevious() ?? false;
+  }
+
+  /** Clears the diff view's search. */
+  clearSearch(): void {
+    this.diffEl?.clearSearch();
+  }
+
   private versionLabel(version: DocumentCompareVersion | undefined, fallbackKey: 'documentCompareOldVersion' | 'documentCompareNewVersion'): string {
     return version?.name || version?.version || this.localize(fallbackKey);
   }
@@ -455,6 +496,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
         ?copyable=${this.copyable}
         language=${this.language}
         .languages=${this.languages}
+        .anchor=${this.anchor}
       ></lr-diff-view>
     `;
   }

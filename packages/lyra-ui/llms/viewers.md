@@ -24,7 +24,8 @@ host-highlight painting. Shared highlight admission retains at most 10,000 uniqu
 after inspecting at most 10,001 input records. Capped renderers select at most 1,000 candidates from
 that immutable snapshot and paint at most 100 host highlights; an `activeHighlightId` anywhere in
 the snapshot is placed first and preserved inside both rendering ceilings. DOCX, Markdown, PDF,
-ebook, SVG, and XML use these candidate/paint semantics.
+ebook, SVG, and XML use these candidate/paint semantics; the CSV, dataset and spreadsheet viewers
+paint `cell-range` highlights from the same 1,000-candidate window.
 
 All DOMPurify-backed passive-markup profiles strip `part` and `exportparts` from embedded content.
 Untrusted documents therefore cannot impersonate a viewer's public CSS parts; ordinary passive
@@ -1010,7 +1011,9 @@ The shared `passive-svg` profile (the same post-sanitization engine used for emb
 removes author `<style>`/`style`, SVG animation elements, and external
 resource or paint-server references before insertion, preventing fetched SVG content from escaping
 the viewer's paint box or starting secondary requests. Local `url(#id)` paint servers and embedded
-raster data remain available.
+raster data remain available. A document whose local `<use>` references (nested ones included)
+would clone more than 100,000 elements is refused with the localized
+`documentPreviewResourceTooLarge` message instead of freezing the page.
 
 Fitting SVG content stays centered. In a capped nonzoomable viewer, overflowing content begins
 inside the body's reachable scroll range, keeping both its top and bottom available.
@@ -1165,7 +1168,8 @@ rather than a phantom success, and a header-row target scrolls with the same
 reflected). Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 `scrollMode='self'` preserves contained horizontal scrolling and applies `maxHeight`.
 `scrollMode='page'` removes intervening scroll containers and the height cap, so a populated table's
-sticky header follows the page scrollport while rows continue below it. The border and rounded
+sticky header follows the page scrollport while rows continue below it, windowed against the
+page's own (window) scroll. The border and rounded
 header corners remain; a wide dataset can overflow its host in page mode.
 Unsupported attribute and untyped property values normalize to `'self'`.
 Host `aria-label` names the table by attribute presence, including an explicitly empty value;
@@ -1551,10 +1555,16 @@ Importing `spreadsheet-viewer.js` (this component's own registration entry) load
 installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
 (`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
 
-Remote resources are capped at 25 MB, each parsed sheet at 10,000 rows and 1,000 columns, and each
-workbook at 256 sheets and 1,000,000 aggregate expanded cells. Row limits are per sheet, not
-cumulative across a workbook. Exceeding any ceiling surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the workbook.
+Cells render through their workbook number formats: date and time cells localize with the
+effective locale, other formatted numbers (percent, currency, zero-padded codes) show the
+workbook's formatted text, and General numbers use locale digits without grouping.
+
+Remote resources are capped at 25 MB, each sheet's used range at 10,000 rows and 1,000 columns, and
+each workbook at 256 sheets and 1,000,000 aggregate cells in those ranges; the ranges are checked
+before the grid is expanded. Row limits are per sheet, not cumulative across a workbook. Exceeding
+any ceiling surfaces the localized `documentPreviewResourceTooLarge` message instead of the
+workbook. ZIP input must be an Office Open XML workbook: OpenDocument and Numbers packages are
+refused, and binary (`.bin`) parts count against the cell ceiling by size.
 
 ## `lr-csv-viewer`
 
@@ -1730,7 +1740,8 @@ never transcluded.
 
 Every inserted subtree is a clone. Its ids are rebased per Include instance, including references
 from labels, ARIA idrefs, fragment links, and `url(#id)` attributes, so repeating one source does
-not add duplicate document ids. Concurrent consumers lease shared work: disconnecting one aborts
+not add duplicate document ids. `name` attributes are dropped, so an included `<img name>` cannot
+shadow a `window` or `document` property. Concurrent consumers lease shared work: disconnecting one aborts
 the request only when no other subscriber still needs it. Rejected work is evicted and can be
 retried; a stale response never paints over a newer `src`.
 
@@ -1775,8 +1786,10 @@ re-click of the same source citation).
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
 (transparent activation geometry with a minimum pointer/focus area independent of the visual
 rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
-individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
-one `highlight-action` button per rendered highlight.
+individual targets are replaced by `highlight-actions` (a non-overlapping action list, at most half
+the box tall and scrolling) containing one `highlight-action` button per rendered highlight;
+highlights whose hit areas do not overlap keep their in-place targets. Keyboard focus and the roving
+tab stop follow a highlight's `id` when `items` is re-sorted or prepended.
 
 **Themeable custom properties:**
 `--lr-highlight-layer-accent-bg`, `--lr-highlight-layer-accent-outline`,
@@ -1819,7 +1832,8 @@ viewer, allocation width, status, or document identity changes.
 If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
 page instead of using the rendered window's local index or being lost with the virtualized row.
 Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
-numeric type-ahead buffer is cleared on detach. Alt/Ctrl/Meta-modified digits are left to browser or
+numeric type-ahead buffer is cleared on detach. Typed digits may be ASCII or the digits of the
+effective locale the page numbers are shown in. Alt/Ctrl/Meta-modified digits are left to browser or
 application shortcuts and never enter the buffer.
 
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
@@ -2141,7 +2155,7 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
   `highlights?: LyraHighlight[]` for its own preview pane. Each assignment becomes a frozen
   snapshot: own string `id` and `name` are required or that pane is unset; valid string optional
   fields are retained and other values are omitted. Its highlights use the shared snapshot too, so
-  mutation requires reassignment.
+  mutation requires reassigning a new object; re-assigning the same object is a no-op.
 - `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
   preview panes. Invalid property or attribute values normalize to `diff` and repair the reflected
   attribute.
@@ -2155,8 +2169,9 @@ is absent, it uses the localized comparison label. Dynamic host-label changes up
 - `withoutSyncScroll: boolean = false` (attribute `without-sync-scroll`) — by default either
   side-by-side pane's scroll fraction is proportionally mirrored to the other; `without-sync-scroll`
   turns that off.
-- `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
-  preview panes; repeated assignment of the same value still re-runs.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — jumps the diff view, or both
+  side-by-side preview panes, to the target. Re-assigning the identical object or id does not jump
+  again; call `scrollToAnchor()` for a repeat jump.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"30rem"`) that overrides
   `--lr-document-compare-pane-max-height` declaratively, giving each `view="side-by-side"` pane its
   maximum block size before it scrolls internally. The value is sanitized as a CSS length, so an
@@ -2172,11 +2187,17 @@ highlight, while the original `lr-highlight-activate`
 continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
 columns already share one scroll container.
 
+**Methods:** `scrollToAnchor(target)` jumps the diff view (a `line-range` anchor indexes its rendered
+lines) or both side-by-side panes, resolving whether any found the target. `search(query)`,
+`searchNext()`, `searchPrevious()` and `clearSearch()` forward to the diff view; side by side,
+`search()` resolves `0`.
+
 **Events:** `lr-copy` fires only after clipboard fulfillment (`detail: { ok: true, text }`). A
 clipboard failure bubbles `lr-error` plus `lr-copy-error`
 (`detail: { ok: false, text, reason, error }`) unchanged from `lr-diff-view`. Also emits
 `lr-download` (`detail: { src, filename }`), `lr-highlight-activate` (`detail: { highlightId }`), and
-`lr-render-error` (`detail: { error }`).
+`lr-render-error` (`detail: { error }`). In diff mode, `lr-search-change`, `lr-anchor-result`
+(`detail: { found }`) and `lr-text-select` bubble from the internal `lr-diff-view`.
 
 **Slots:** none.
 

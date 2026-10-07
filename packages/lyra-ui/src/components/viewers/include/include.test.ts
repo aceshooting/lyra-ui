@@ -458,6 +458,24 @@ describe('lr-include', () => {
     } finally { window.fetch = original; }
   });
 
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response('<h1>Part</h1>')); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/part.html"></lr-include>`);
+      await waitUntil(() => el.querySelector('h1') !== null);
+      let loads = 0;
+      el.addEventListener('lr-load', () => { loads++; });
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(loads).to.equal(0);
+      expect(el.querySelector('h1') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('restarts an interrupted same-src load after reconnecting', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -477,6 +495,7 @@ describe('lr-include', () => {
       await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => el.querySelector('h1') !== null);
       expect(calls).to.equal(2);

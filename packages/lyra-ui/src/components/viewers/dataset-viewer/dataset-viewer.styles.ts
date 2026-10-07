@@ -4,7 +4,6 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --_lr-dataset-viewer-max-height: none;
   }
   [part='base'] {
     display: flex;
@@ -19,10 +18,7 @@ export const styles = css`
   [part='body'] {
     box-sizing: border-box;
     overflow: auto;
-    max-block-size: var(
-      --lr-dataset-viewer-max-height,
-      var(--_lr-dataset-viewer-max-height)
-    );
+    max-block-size: var(--lr-dataset-viewer-max-height, none);
   }
   /* A scroll container clips both axes and becomes the sticky header's containing block even when
      it has no height cap and therefore never scrolls. Page mode accepts page-level horizontal

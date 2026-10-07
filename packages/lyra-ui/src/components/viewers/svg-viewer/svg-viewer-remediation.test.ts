@@ -35,3 +35,22 @@ it('preserves centered fitting SVGs, uncapped height, and the zoom wrapper', asy
   const zoomed = await svgViewer(60, 60, true, true);
   expect(zoomed.viewer.shadowRoot!.querySelectorAll('lr-pan-zoom').length).to.equal(1);
 });
+
+it('refuses an SVG whose nested <use> references fan out past the clone ceiling', async () => {
+  const fanout = (levels: number): string => {
+    let defs = '<g id="g0"><rect width="1" height="1"/></g>';
+    for (let level = 1; level <= levels; level++) defs += `<g id="g${level}">${`<use href="#g${level - 1}"/>`.repeat(10)}</g>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><defs>${defs}</defs><use href="#g${levels}"/></svg>`;
+  };
+  const render = async (markup: string): Promise<LyraSvgViewer> => {
+    window.fetch = (() => Promise.resolve(new Response(markup))) as typeof fetch;
+    const viewer = await fixture<LyraSvgViewer>(html`<lr-svg-viewer src="https://example.test/fanout.svg"></lr-svg-viewer>`);
+    await waitUntil(() => viewer.shadowRoot!.querySelector('[part="error"], [part="svg"] svg') !== null);
+    return viewer;
+  };
+  const modest = await render(fanout(3));
+  expect(modest.shadowRoot!.querySelectorAll('[part="svg"] use').length).to.equal(31);
+  const exploding = await render(fanout(5));
+  expect(exploding.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('This document is too large to preview.');
+  expect(exploding.shadowRoot!.querySelector('use') === null).to.be.true;
+});

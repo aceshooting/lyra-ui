@@ -1,6 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
 import './svg-viewer.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
 import { styles } from './svg-viewer.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -217,6 +218,21 @@ describe('lr-svg-viewer', () => {
     expect(count).to.equal(1);
   });
 
+  it('keeps its loaded content across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(new Response('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>')); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer src="https://example.test/icon.svg"></lr-svg-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('reloads the same SVG source after a disconnect/reconnect', async () => {
     const original = window.fetch;
     let fetchCount = 0;
@@ -231,6 +247,7 @@ describe('lr-svg-viewer', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => fetchCount === 2);
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
@@ -562,6 +579,41 @@ describe('region highlights', () => {
       const first = actions[0]!.getBoundingClientRect();
       const second = actions[1]!.getBoundingClientRect();
       expect(first.bottom).to.be.at.most(second.top);
+    } finally {
+      restore();
+    }
+  });
+
+  it('moves focus across region-highlight actions with arrow keys, Home and End', async () => {
+    const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = ['a', 'b', 'c'].map((id, index) => ({
+        id,
+        anchor: { kind: 'region' as const, rect: { x: 50 + index, y: 50, width: 1, height: 1 } },
+      }));
+      await el.updateComplete;
+      const actions = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="region-highlight-action"]')];
+      const image = el.shadowRoot!.querySelector('[part="svg"]')!.getBoundingClientRect();
+      expect(actions[0]!.getBoundingClientRect().top).to.be.at.least(image.bottom - 1);
+      const focused = (): string | undefined =>
+        (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['highlightId'];
+      const press = (key: string): void => {
+        el.shadowRoot!.activeElement!.dispatchEvent(
+          new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }),
+        );
+      };
+      await focusByKeyboard(actions[0]!);
+      press('ArrowDown');
+      expect(focused()).to.equal('b');
+      press('End');
+      expect(focused()).to.equal('c');
+      press('ArrowDown');
+      expect(focused()).to.equal('c');
+      press('Home');
+      expect(focused()).to.equal('a');
     } finally {
       restore();
     }

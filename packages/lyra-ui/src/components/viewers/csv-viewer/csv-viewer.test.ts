@@ -443,6 +443,25 @@ describe('lr-csv-viewer', () => {
       window.fetch = original;
     }
   });
+  it('keeps the loaded data across a same-task DOM move', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => {
+      calls++;
+      return Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve('Name,Role\nAda,One') } as Response);
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer src="https://example.test/people.csv"></lr-csv-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+      el.parentElement!.append(document.createElement('span'), el);
+      await aTimeout(50);
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="header-row"]') !== null).to.be.true;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('reloads an already-loaded source after reconnecting', async () => {
     const original = window.fetch;
     let calls = 0;
@@ -468,6 +487,7 @@ describe('lr-csv-viewer', () => {
       );
       const parent = el.parentElement!;
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2);
     } finally {
@@ -1095,6 +1115,31 @@ describe('lr-csv-viewer', () => {
       }
     });
 
+    it('paints at most the bounded highlight candidates, always keeping the active one', async () => {
+      const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer></lr-csv-viewer>`);
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { updateComplete: Promise<unknown> };
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell"]') !== null);
+        el.highlights = [
+          ...Array.from({ length: 1_000 }, (_unused, index) => ({
+            id: `far-${index}`,
+            anchor: { kind: 'cell-range' as const, range: 'Z9999' },
+          })),
+          { id: 'near', anchor: { kind: 'cell-range', range: 'A2' } },
+        ];
+        await el.updateComplete;
+        await list.updateComplete;
+        expect(list.shadowRoot!.querySelector('[part~="cell-highlight"]') === null).to.be.true;
+        el.activeHighlightId = 'near';
+        await waitUntil(() => list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+      } finally {
+        restore();
+      }
+    });
+
     it('clearSearch resets matchCount/activeIndex to 0/-1', async () => {
       const el = (await fixture(
         html`<lr-csv-viewer></lr-csv-viewer>`
@@ -1119,6 +1164,9 @@ describe('lr-csv-viewer', () => {
           matchCountExact: true,
           activeIndex: -1,
         });
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+        expect(list.activeItemId).to.equal('');
       } finally {
         restore();
       }
@@ -1614,6 +1662,7 @@ it('re-applies an active search when a reconnect reloads the source', async () =
     body = 'Name,Role\nAda,One\nAda,Two\nAda,Three';
     const parent = el.parentElement!;
     el.remove();
+    await aTimeout(0);
     parent.append(el);
     await waitUntil(
       () =>

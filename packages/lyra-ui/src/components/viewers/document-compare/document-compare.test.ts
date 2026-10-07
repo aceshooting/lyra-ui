@@ -1,5 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { render, type TemplateResult } from 'lit';
+import type { LyraDiffView } from '../../utility/diff-view/diff-view.class.js';
 import jsGrammar from 'shiki/langs/javascript.mjs';
 import './document-compare.js';
 import type { LyraDocumentCompare } from './document-compare.js';
@@ -126,6 +128,35 @@ describe('lr-document-compare', () => {
       const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string; newText: string };
       expect(diff.oldText).to.equal('');
       expect(diff.newText).to.equal('');
+    });
+
+    it('forwards anchor, scrollToAnchor() and search to the diff view', async () => {
+      const el = await fixture<LyraDocumentCompare>(html`
+        <lr-document-compare
+          .oldVersion=${{ id: 'v1', name: 'v1', text: 'alpha\nbeta' }}
+          .newVersion=${{ id: 'v2', name: 'v2', text: 'alpha\ngamma' }}
+        ></lr-document-compare>
+      `);
+      const diff = el.shadowRoot!.querySelector('lr-diff-view') as LyraDiffView;
+      const anchors: unknown[] = [];
+      diff.scrollToAnchor = async (anchor) => {
+        anchors.push(anchor);
+        return true;
+      };
+      el.anchor = { kind: 'line-range', start: 2 };
+      await el.updateComplete;
+      await diff.updateComplete;
+      expect(await el.scrollToAnchor('again')).to.equal(true);
+      expect(anchors).to.deep.equal([{ kind: 'line-range', start: 2 }, 'again']);
+      const searched = oneEvent(el, 'lr-search-change');
+      expect(await el.search('gamma')).to.equal(1);
+      expect((await searched).detail.matchCount).to.equal(1);
+      expect(await el.searchNext()).to.equal(true);
+      expect(await el.searchPrevious()).to.equal(true);
+      el.clearSearch();
+      el.view = 'side-by-side';
+      await el.updateComplete;
+      expect(await el.search('gamma')).to.equal(0);
     });
 
     it('preserves an explicitly empty host aria-label on the comparison group', async () => {
@@ -622,7 +653,7 @@ describe('lr-document-compare', () => {
       ]);
     });
 
-    it('re-fires the anchor jump when the exact same anchor value is reassigned', async () => {
+    it('jumps to an identical anchor again only through scrollToAnchor()', async () => {
       const el = (await fixture(html`
         <lr-document-compare
           view="side-by-side"
@@ -642,7 +673,34 @@ describe('lr-document-compare', () => {
       expect(calls).to.equal(1);
       el.anchor = 'same-id';
       await el.updateComplete;
+      expect(calls).to.equal(1);
+      expect(await el.scrollToAnchor('same-id')).to.equal(true);
       expect(calls).to.equal(2);
+    });
+
+    it('does not re-jump when a host re-renders the same versions and anchor', async () => {
+      const oldVersion = { id: 'v1', name: 'Old' };
+      const newVersion = { id: 'v2', name: 'New' };
+      const host = await fixture<HTMLDivElement>(html`<div></div>`);
+      const view = (): TemplateResult => html`<lr-document-compare
+        view="side-by-side"
+        .oldVersion=${oldVersion}
+        .newVersion=${newVersion}
+        .anchor=${'h1'}
+      ></lr-document-compare>`;
+      render(view(), host);
+      const el = host.querySelector('lr-document-compare') as LyraDocumentCompare;
+      await el.updateComplete;
+      let jumps = 0;
+      for (const preview of el.shadowRoot!.querySelectorAll('lr-document-preview')) {
+        (preview as LyraDocumentPreview).scrollToAnchor = async () => {
+          jumps++;
+          return true;
+        };
+      }
+      render(view(), host);
+      await el.updateComplete;
+      expect(jumps).to.equal(0);
     });
 
     it('applies an existing anchor when a version arrives or is replaced later', async () => {

@@ -165,15 +165,20 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   /** Current page: auto-tracked in wired mode, host-bound in mediated mode. */
   @property({ type: Number, reflect: true }) page = 1;
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
+  private _highlightsSource?: readonly LyraHighlight[];
   /** Per-page heat-marker highlights. IDs are trimmed and must be nonempty; the first record for
    * an ID is retained and blank or later duplicate records are ignored. */
   @property({ attribute: false })
   get highlights(): readonly LyraHighlight[] { return this._highlights; }
   set highlights(value: readonly LyraHighlight[]) {
+    if (value === this._highlightsSource || value === this._highlights) return;
     const previous = this._highlights;
+    this._highlightsSource = value;
     this._highlights = snapshotLyraHighlights(value);
     this.requestUpdate('highlights', previous);
   }
+  /** Heat-marker tones per page, rebuilt when `highlights` changes. */
+  private pageTones = new Map<number, LyraHighlightTone[]>();
   /** Thumbnail width, clamped to the container (320px-safe): a number of CSS pixels, or a CSS
    *  length (`px`, `rem`, `em`, `vw`, `vh`, or `%` of the rail's width) resolved to pixels when a
    *  thumbnail renders -- `rem` against the document root, `em` against this element. A numeric
@@ -248,6 +253,15 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     // extra Lit update cycle after this one already committed. Invalidating before render also
     // means this same pass already reflects the new width instead of needing a second one.
     if (changed.has('thumbWidth') && changed.get('thumbWidth') !== undefined) this.invalidateThumbnails();
+    if (changed.has('highlights')) {
+      this.pageTones = new Map();
+      for (const { anchor, tone = 'accent' } of this.highlights) {
+        if (!('page' in anchor) || anchor.page === undefined) continue;
+        const tones = this.pageTones.get(anchor.page) ?? [];
+        tones.push(tone);
+        this.pageTones.set(anchor.page, tones);
+      }
+    }
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
       const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
       const focused = activeElementIn(list?.shadowRoot);
@@ -462,12 +476,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('thumbnailStates')) {
-      // renderItem is intentionally a stable callback and the count source is intentionally a
-      // stable object. A thumbnail settling is state *inside* that callback, so explicitly ask the
-      // child virtualizer to repaint its bounded live window without replacing the source.
-      this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list')?.requestUpdate();
-    }
+    // The stable renderItem reads rail state (page, highlights, thumbnails, strings, locale), so
+    // every rail update repaints the list's bounded live window.
+    this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list')?.requestUpdate();
     const pendingFocusPage = this.pendingFocusPage;
     this.pendingFocusPage = null;
     if (pendingFocusPage !== null) {
@@ -621,17 +632,6 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.thumbnailStates = settled;
   }
 
-  private pageHighlightSummary(pageNumber: number): { count: number; tones: LyraHighlightTone[] } {
-    const tones: LyraHighlightTone[] = [];
-    for (const highlight of this.highlights) {
-      const anchor = highlight.anchor;
-      const anchorPage =
-        anchor.kind === 'page' ? anchor.page : anchor.kind === 'text-quote' || anchor.kind === 'region' ? anchor.page : undefined;
-      if (anchorPage === pageNumber) tones.push(highlight.tone ?? 'accent');
-    }
-    return { count: tones.length, tones };
-  }
-
   private onPageActivate(pageNumber: number): void {
     if (this.boundViewer) this.boundViewer.page = pageNumber;
     this.emit('lr-page-select', { page: pageNumber });
@@ -650,8 +650,13 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.altKey || e.ctrlKey || e.metaKey || !/^[0-9]$/.test(e.key)) return;
-    this.digitBuffer += e.key;
+    // ASCII digits, or the digits the effective locale displays page numbers in.
+    const format = getNumberFormat(this.effectiveLocale);
+    const digit = /^[0-9]$/.test(e.key)
+      ? Number(e.key)
+      : Array.from({ length: 10 }, (_unused, value) => format.format(value)).indexOf(e.key);
+    if (e.altKey || e.ctrlKey || e.metaKey || digit < 0) return;
+    this.digitBuffer += digit;
     const target = Number(this.digitBuffer);
     this.cancelDigitTimer();
     // A realm-less rail arms nothing and drops the buffer immediately, exactly as before: the
@@ -670,7 +675,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private renderPageItem = (pageNumber: unknown): TemplateResult => {
     const number = pageNumber as number;
     const numberFormat = getNumberFormat(this.effectiveLocale);
-    const { count, tones } = this.pageHighlightSummary(number);
+    const tones = this.pageTones.get(number) ?? [];
+    const count = tones.length;
     const thumbState = this.thumbnailStates.get(number);
     const name =
       count === 0
