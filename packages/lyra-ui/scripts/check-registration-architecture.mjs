@@ -876,6 +876,12 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  * registrations. Each entry is a full `a -> b` module path.
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
+  // The expanded evaluation-run detail and the tool-timeline result view register on first use.
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/agent-tools/tool-timeline/tool-timeline.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/code-block/code-block.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/markdown/markdown.ts',
+  'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/retrieval/grounding-summary/grounding-summary.ts',
+  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
   'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
   // Only lists above `virtualizeAt` need the virtualizer.
   'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',

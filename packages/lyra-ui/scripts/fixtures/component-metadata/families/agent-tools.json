@@ -54,5 +54,71 @@
     "compatibility-stable": [],
     "introduced-stable": []
   },
-  "deprecations": []
+  "deprecations": [
+    {
+      "tag": "lr-agent-eval-dashboard",
+      "kind": "event",
+      "name": "lr-metric-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-metric-change-request",
+        "usage": "@lr-metric-change-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-agent-run",
+      "kind": "event",
+      "name": "lr-cancel",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-cancel",
+        "usage": "@lr-run-cancel"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-background-runs",
+      "kind": "event",
+      "name": "lr-run-open",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-activate",
+        "usage": "@lr-run-activate"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-change-review",
+      "kind": "event",
+      "name": "lr-change-decision",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-change-decision-request",
+        "usage": "@lr-change-decision-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-subagent-panel",
+      "kind": "event",
+      "name": "lr-cancel",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-cancel",
+        "usage": "@lr-run-cancel"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
+    }
+  ]
 }

@@ -9047,10 +9047,26 @@
       }
     },
     {
+      "module": "src/components/media/attachment-chip/file-size.ts",
+      "exportName": "localizedNumberLabel",
+      "kind": "function",
+      "fingerprint": "538afbfb8d3964b40330",
+      "routes": [
+        "src/components/media/attachment-chip/file-size.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-attachment-chip",
+        "declaration": "localizedNumberLabel"
+      }
+    },
+    {
       "module": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
       "exportName": "LyraAttachmentFilesDetail",
       "kind": "interface",
-      "fingerprint": "c48eb0f3c626d17cde5d",
+      "fingerprint": "fed9502de93b20633c8e",
       "routes": [
         "src/all.ts",
         "src/components/lr-attachment-trigger.ts",

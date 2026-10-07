@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import DOMPurify from 'dompurify';
 import { sanitizePassiveMarkup } from './passive-markup.js';
 import './html-viewer/html-viewer.js';
@@ -288,6 +288,8 @@ describe('passive markup through real viewer routes', () => {
     };
     check();
     viewer.remove();
+    // A same-task re-append is a move that keeps the include; settle the teardown first.
+    await aTimeout(0);
     const reloaded = oneEvent(viewer, 'lr-load');
     wrapper.append(viewer);
     await reloaded;

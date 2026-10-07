@@ -29,6 +29,7 @@ const FORWARDED_EVENT_EXEMPTIONS = new Set([
   'src/components/data/tree/tree.class.ts#LyraTree#lr-lazy-change',
   'src/components/data/tree/tree.class.ts#LyraTree#lr-lazy-load',
   'src/components/viewers/document-viewer/document-viewer.class.ts#LyraDocumentViewer#lr-text-select',
+  'src/components/viewers/document-compare/document-compare.class.ts#LyraDocumentCompare#lr-text-select',
   'src/components/overlays/context-menu/context-menu.class.ts#LyraContextMenu#lr-select',
   'src/components/layout/menubar/menubar.class.ts#LyraMenubar#lr-select',
 ]);

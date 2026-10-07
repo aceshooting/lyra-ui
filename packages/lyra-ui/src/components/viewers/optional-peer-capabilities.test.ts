@@ -8,9 +8,13 @@ import { loadNotebookSanitizerDeps } from './notebook-viewer/dompurify-loader.js
 import { loadPdfJsDeps } from './pdf-viewer/pdf-loader.js';
 import { loadSheetJs } from './spreadsheet-viewer/spreadsheet-loader.js';
 import { loadSvgSanitizerDeps } from './svg-viewer/dompurify-loader.js';
+import { expectDevWarning } from '../../../test/expected-dev-warnings.js';
 
 describe('viewer optional-peer capability validation', () => {
   it('rejects malformed parser, renderer, and sanitizer module shapes', async () => {
+    expectDevWarning('lyra-calendar-viewer-ical-unavailable');
+    expectDevWarning('lyra-spreadsheet-viewer-xlsx-unavailable');
+    expectDevWarning('lyra-dompurify-unavailable');
     expect(await loadIcalDeps(async () => ({}) as never)).to.equal(null);
     expect(await loadEpubJs(async () => ({}) as never)).to.equal(null);
     expect(await loadHtmlSanitizerDeps(async () => ({}) as never)).to.equal(null);

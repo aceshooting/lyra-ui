@@ -47,6 +47,11 @@ const WA_CAROUSEL_V9_DRIFT = [
   },
 ];
 
+const WA_VIDEO_PLAYING_DRIFT = [
+  { code: 'missing-attribute', section: 'attributes', member: 'playing' },
+  { code: 'readonly-mismatch', section: 'properties', member: 'playing', expected: false, actual: true },
+];
+
 const WA_RANDOM_CONTENT_V9_DRIFT = [
   {
     code: 'event-type-mismatch',
@@ -346,6 +351,15 @@ const DECISION_OVERRIDES = new Map([
       rationale:
         'Lyra returns frozen readonly selection snapshots instead of mutable arrays. The migrator also reports the exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics.',
       expectedDrift: WA_RANDOM_CONTENT_V9_DRIFT,
+    },
+  ],
+  [
+    'wa-video',
+    {
+      classification: 'warning-required',
+      rationale:
+        'Lyra exposes playing as read-only live state that is reflected but not observed as an attribute; migrated code that assigned playing or authored the playing attribute must call play() or pause() instead.',
+      expectedDrift: WA_VIDEO_PLAYING_DRIFT,
     },
   ],
   ...[

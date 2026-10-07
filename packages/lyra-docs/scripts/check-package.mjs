@@ -77,7 +77,6 @@ for (const file of files(path.join(repoRoot, 'packages/lyra-ui/src'))) {
 }
 // lyra-ui's per-file source policies; findings beyond these reviewed counts fail.
 const SOURCE_POLICY_BASELINE = new Map([
-  ['src/docx/docx-editor.class.ts [intl-outside-cache]', 1], // one NumberFormat per render
   ['src/docx/docx-editor.styles.ts [physical-css]', 9], // geometry-positioned image handles
 ]);
 const docxStringsSource = read('packages/lyra-docs/src/docx/strings.ts');

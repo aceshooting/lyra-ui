@@ -1257,8 +1257,11 @@ test('shipped Page and Video mappings retain reviewed parity classifications', (
   assert.deepEqual(page?.drift, []);
 
   const video = checkedInventory.mappings.find((entry) => entry.upstreamTag === 'wa-video');
-  assert.equal(video?.classification, 'exact');
-  assert.deepEqual(video?.drift, []);
+  assert.equal(video?.classification, 'warning-required');
+  assert.deepEqual(
+    video?.drift.map(({ code, member }) => [code, member]),
+    [['missing-attribute', 'playing'], ['readonly-mismatch', 'playing']],
+  );
 
   for (const upstreamTag of ['wa-page', 'wa-video']) {
     assert.ok(!Object.hasOwn(checkedUpstreamTags.noCounterpart, upstreamTag));
