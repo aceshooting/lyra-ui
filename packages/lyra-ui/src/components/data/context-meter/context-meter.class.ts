@@ -5,7 +5,9 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { literalSetConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
@@ -19,13 +21,14 @@ import type { LyraVariant } from '../../../internal/variants.js';
 import { styles } from './context-meter.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_contextMeterLabeledSummary, LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_contextMeterSegmentLabel, LYRA_DEFAULT_contextMeterUsed, LYRA_DEFAULT_contextMeterUsedOfTotal } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The shared semantic tone. Kept as a local name so existing imports keep resolving. */
 export type ContextMeterTone = LyraVariant;
 /** The meter geometry. This is deliberately separate from the semantic `variant` vocabulary. */
 export type ContextMeterShape = 'ring' | 'bar';
+const CONTEXT_METER_SHAPE = literalSetConverter<ContextMeterShape>(['bar', 'ring'], 'bar');
 /**
  * What each legend row shows beside its swatch. Combinable rather than mutually exclusive (the
  * `label | value | percentage` spelling `<lr-chart>`'s own legend uses cannot express "count AND
@@ -167,7 +170,8 @@ function projectContextMeterSegments(value: unknown): readonly Readonly<ContextM
 }
 
 function formatCount(n: number, locale: string): string {
-  return Math.round(finiteNumber(n, 0)).toLocaleString(resolveIntlLocale(locale));
+  const value = finiteNumber(n, 0);
+  return getNumberFormat(locale, { maximumFractionDigits: chartValueFractionDigits(value) }).format(value);
 }
 
 /**
@@ -180,6 +184,9 @@ function formatCount(n: number, locale: string): string {
  * computes token counts, costs, or any other domain-specific estimate
  * itself — the one exception is the plain arithmetic sum of the segment
  * values used to build the accessible "X of Y used" summary below.
+ *
+ * The visually hidden meter is named by a host `aria-label`, else `label`, and speaks the
+ * "X of Y used" summary as its `aria-valuetext`; with neither name set the summary is the name.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
@@ -224,7 +231,7 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-legend-swatch-size=var(--lr-size-0-625rem)] - Inline and block size of a legend swatch.
  * @cssprop [--lr-context-meter-track-size=var(--lr-size-0-5rem)] - Block size (thickness) of the `bar`-shape track, and therefore of its filled segments.
  * @cssprop [--lr-context-meter-track-radius=calc(var(--lr-radius) * 0.5)] - Corner radius of the `bar`-shape track.
- * @cssprop [--lr-context-meter-track-bg=color-mix(in srgb, var(--lr-color-border) 30%, transparent)] - Background of the unfilled remainder of the `bar`-shape track.
+ * @cssprop [--lr-context-meter-track-bg=color-mix(in srgb, var(--lr-color-border) 30%, transparent)] - Colour of the unfilled remainder of the track (bar background, ring stroke).
  * @cssprop [--lr-context-meter-segment-seam-color=var(--lr-color-surface)] - Color of the hairline seam painted between adjacent `bar`-shape segments.
  * @cssprop [--lr-context-meter-selected-ring-color=var(--lr-color-text)] - Colour of the inset ring marking a `bar`-shape band or a legend row whose index is in `selectedIndices`. Painted inside the shadow root because the state lives in the part name, and as a ring rather than an outline so it composes with the hover/press/focus outlines instead of being replaced by them.
  * @cssprop [--lr-context-meter-selected-ring-width=var(--lr-border-width-thick)] - Width of that selected ring.
@@ -243,7 +250,6 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    contextMeterLabeledSummary: LYRA_DEFAULT_contextMeterLabeledSummary,
     contextMeterSegmentLabel: LYRA_DEFAULT_contextMeterSegmentLabel,
     contextMeterUsed: LYRA_DEFAULT_contextMeterUsed,
     contextMeterUsedOfTotal: LYRA_DEFAULT_contextMeterUsedOfTotal,
@@ -271,17 +277,12 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private _shape: ContextMeterShape = 'bar';
 
   /** Meter geometry. Foreign attribute values normalize to the default bar shape. */
-  @property({ reflect: true })
+  @property({ reflect: true, converter: CONTEXT_METER_SHAPE })
   get shape(): ContextMeterShape { return this._shape; }
   set shape(value: ContextMeterShape) {
-    const normalized: ContextMeterShape = value === 'ring' ? 'ring' : 'bar';
+    const normalized = CONTEXT_METER_SHAPE.normalizeReflected(this, 'shape', value);
     const previous = this._shape;
-    if (previous === normalized) {
-      // An invalid attribute can normalize to the current value. Still schedule reflection so
-      // the DOM never advertises a closed-token state the renderer did not accept.
-      if (value !== normalized) this.requestUpdate('shape', previous);
-      return;
-    }
+    if (previous === normalized) return;
     this._shape = normalized;
     this.requestUpdate('shape', previous);
   }
@@ -351,6 +352,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   // numeric-guard-exempt: isSelected() rejects anything that is not an in-range integer before the
   // value reaches rendering, so a non-finite or fractional entry selects nothing.
   @property({ attribute: false }) selectedIndices: readonly number[] = [];
+  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   private projectedSegmentsSource: unknown;
   private projectedSegments: readonly Readonly<ContextMeterSegment>[] = EMPTY_CONTEXT_METER_SEGMENTS;
@@ -410,16 +412,12 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   private get summary(): string {
     const { used: usedForSummary, total: totalValue } = this.clampedUsedTotal;
     const used = formatCount(usedForSummary, this.effectiveLocale);
-    const phrase =
-      totalValue > 0
-        ? this.localize('contextMeterUsedOfTotal', undefined, {
-            used,
-            total: formatCount(totalValue, this.effectiveLocale),
-          })
-        : this.localize('contextMeterUsed', undefined, { used });
-    return this.label
-      ? this.localize('contextMeterLabeledSummary', undefined, { label: this.label, summary: phrase })
-      : phrase;
+    return totalValue > 0
+      ? this.localize('contextMeterUsedOfTotal', undefined, {
+          used,
+          total: formatCount(totalValue, this.effectiveLocale),
+        })
+      : this.localize('contextMeterUsed', undefined, { used });
   }
 
   /** Hover/`<title>` text for one segment. Templated so a locale controls
@@ -451,8 +449,14 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     ].sort((left, right) => left - right);
   }
 
+  private selection?: [readonly number[], number, ReadonlySet<number>];
   private isSelected(index: number): boolean {
-    return this.canonicalSelectedIndices().includes(index);
+    const source = this.selectedIndices;
+    const count = this.effectiveSegments.length;
+    if (this.selection?.[0] !== source || this.selection[1] !== count) {
+      this.selection = [source, count, new Set(this.canonicalSelectedIndices())];
+    }
+    return this.selection[2].has(index);
   }
 
   /** The same clamped ratio the band paints, as a locale-formatted percentage. */
@@ -514,16 +518,16 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
 
   private renderSemantics(): TemplateResult {
     const { used, total } = this.clampedUsedTotal;
-    // A host aria-label names the custom element itself. Reusing it here would expose the same
-    // name on two semantic owners; the meter retains its purpose-specific generated summary.
-    const accessibleName = this.summary;
+    const summary = this.summary;
+    const name = this.hostAccessibleLabel ?? (this.label || summary);
     return html`
       <div
         part="semantic"
         class="sr-only"
         role=${total > 0 ? 'meter' : 'group'}
-        aria-label=${accessibleName}
-        aria-valuenow=${total > 0 ? String(used) : nothing}
+        aria-label=${name}
+        aria-valuetext=${total > 0 && name !== summary ? summary : nothing}
+        aria-valuenow=${total > 0 ? String(Number(used.toPrecision(15))) : nothing}
         aria-valuemin=${total > 0 ? '0' : nothing}
         aria-valuemax=${total > 0 ? String(total) : nothing}
       ></div>
@@ -537,8 +541,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     `;
   }
 
-  private renderBar(): TemplateResult {
-    const ratios = this.ratios();
+  private renderBar(ratios: RatioSegment[]): TemplateResult {
     return html`
       <div part="base">
         ${this.label ? html`<div part="label" aria-hidden="true">${this.label}</div>` : nothing}
@@ -546,11 +549,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
           ${ratios.map(({ segment, value, ratio }, index) => {
             const title = this.segmentTitle(segment, value);
             const selected = this.isSelected(index);
+            const color = this.segmentColor(segment);
             const style = styleMap({
               flexBasis: `${(ratio * 100).toFixed(4)}%`,
-              ...(this.segmentColor(segment)
-                ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
-                : {}),
+              ...(color ? { '--lr-context-meter-segment-color': color } : {}),
             });
             // hit-area-exempt: a band's inline size IS the datum -- the share it stands for -- so a
             // minimum target size would make the meter lie about its own data. The legend row is
@@ -580,8 +582,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
     `;
   }
 
-  private renderRing(): TemplateResult {
-    const ratios = this.ratios();
+  private renderRing(ratios: RatioSegment[]): TemplateResult {
     let cumulative = 0;
     const arcs: SVGTemplateResult[] = ratios.map(({ segment, value, ratio }, index) => {
       const segLen = ratio * CIRCUMFERENCE;
@@ -589,6 +590,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
       cumulative += ratio;
       const title = this.segmentTitle(segment, value);
       const selected = this.isSelected(index);
+      const color = this.segmentColor(segment);
       // An SVG shape cannot be a native `<button>`, so an interactive arc carries the role, its own
       // tab stop and its own Enter/Space handling -- the same shape `<lr-lite-chart>`'s marks use.
       return svg`
@@ -606,11 +608,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
           @keydown=${this.interactive && !segment.disabled
             ? (event: KeyboardEvent) => this.onArcKeyDown(event, index)
             : nothing}
-          style=${styleMap(
-            this.segmentColor(segment)
-              ? { '--lr-context-meter-segment-color': this.segmentColor(segment)! }
-              : {},
-          )}
+          style=${styleMap(color ? { '--lr-context-meter-segment-color': color } : {})}
           cx=${CENTER}
           cy=${CENTER}
           r=${RADIUS}
@@ -639,11 +637,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
    *  screen reader announcing the same scheme twice is worse than not announcing the duplicate at
    *  all. Same stance, and the same `legend`/`legend-item`/`legend-swatch`/`legend-label` part
    *  names, as `<lr-sequence-strip>`'s legend. */
-  private renderLegend(): TemplateResult {
+  private renderLegend(ratios: RatioSegment[]): TemplateResult {
     const display = normalizeContextMeterLegendDisplay(this.legendDisplay);
     const showsValue = display === 'label-value' || display === 'label-value-percent';
     const showsPercent = display === 'label-percent' || display === 'label-value-percent';
-    const ratios = this.ratios();
     return html`
       <div part="legend" aria-hidden=${this.interactive ? nothing : 'true'}>
         ${this.effectiveSegments.map((segment, index) => {
@@ -688,9 +685,10 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   }
 
   override render(): TemplateResult {
+    const ratios = this.ratios();
     return html`
-      ${this.shape === 'ring' ? this.renderRing() : this.renderBar()}
-      ${this.withLegend ? this.renderLegend() : nothing}
+      ${this.shape === 'ring' ? this.renderRing(ratios) : this.renderBar(ratios)}
+      ${this.withLegend ? this.renderLegend(ratios) : nothing}
       ${this.renderSemantics()}
     `;
   }

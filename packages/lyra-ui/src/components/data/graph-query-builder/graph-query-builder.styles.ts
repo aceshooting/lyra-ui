@@ -99,22 +99,22 @@ export const styles = css`
      than multiplied channel-wise by filter: brightness(): a filter lightens a dark brand and
      darkens a light one only by accident, does nothing at all to a pure white or pure black one,
      and applies to the whole subtree, so it shifted this button's label too. */
-  [part='run-button']:hover {
+  [part='run-button']:where(:not(:disabled)):hover {
     background: var(
       --lr-graph-query-builder-run-hover-bg,
-      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      color-mix(in oklab, var(--lr-graph-query-builder-run-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
     );
   }
-  [part='run-button']:active {
+  [part='run-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-run-active-bg,
-      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      color-mix(in oklab, var(--lr-graph-query-builder-run-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
   }
-  [part='save-button']:hover {
+  [part='save-button']:where(:not(:disabled)):hover {
     background: var(--lr-graph-query-builder-save-hover-bg, var(--lr-color-brand-quiet));
   }
-  [part='save-button']:active {
+  [part='save-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-save-active-bg,
       color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
@@ -197,13 +197,13 @@ export const styles = css`
        ease. */
     transition: background-color var(--lr-transition-fast);
   }
-  [part='saved-load-button']:hover {
+  [part='saved-load-button']:where(:not(:disabled)):hover {
     text-decoration: underline;
   }
   /* The pressed tint mixes from the row's surface fill, not the button's own transparent
      background; an underline alone cannot get more underlined, and loading a saved query replaces
      the whole form, which is worth acknowledging. */
-  [part='saved-load-button']:active {
+  [part='saved-load-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-saved-load-active-bg,
       color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
@@ -234,16 +234,16 @@ export const styles = css`
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
   }
-  [part='saved-delete-button']:hover {
+  [part='saved-delete-button']:where(:not(:disabled)):hover {
     color: var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger));
   }
   /* Pressed adds the quiet danger fill behind the already-red glyph rather than only deepening the
      glyph: a colour step on an icon this small is easy to miss, and this is the row's destructive
      control. */
-  [part='saved-delete-button']:active {
+  [part='saved-delete-button']:where(:not(:disabled)):active {
     color: var(
       --lr-graph-query-builder-saved-delete-active-color,
-      color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      color-mix(in oklab, var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
     );
     background: var(--lr-graph-query-builder-saved-delete-active-bg, var(--lr-color-danger-quiet));
   }

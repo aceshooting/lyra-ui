@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
+  getCollator,
   getDateTimeFormat,
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
@@ -252,14 +253,14 @@ function projectLibraryDocument(candidate: unknown): LibraryDocument | undefined
  * `aria-selected`, but its click-anywhere selection event is contained and rolled back because row
  * activation opens the document; checkbox controls remain the sole selection interaction.
  * `<lr-table>` is set to `sort-mode="server"` because this component owns ordering:
- * `visibleDocuments` already sorts against real values (timestamps for `updatedAt`, a rank for
+ * it already sorts against real values (timestamps for `updatedAt`, a rank for
  * `freshness`). Client mode would order the rows a second time from `String(cell(row))`, and these
  * `cell()`s render formatted dates and templates — which made the Updated column come out
  * alphabetical by month name rather than chronological. `sortKey`/`sortDir` are still passed
  * down: they drive the header's sort affordance, not the order.
- * Post-mount selection-count changes announce through the document's shared light-DOM polite
- * sink, including zero and repeated equal counts; initial declarative selection stays silent. The
- * visible selection bar remains ordinary, non-live content.
+ * Each selection change the user makes announces the selected count through the document's
+ * shared light-DOM polite sink; property assignments stay silent. The visible selection bar
+ * remains ordinary, non-live content.
  * Document identity is a unique nonempty `id`: malformed records (including a missing/non-string
  * `name` or non-string `tags` entry), blank ids, and later duplicate records are omitted at
  * assignment, so the first valid occurrence owns filtering, counts, selection, rows, and events.
@@ -351,7 +352,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-filter-change',
     'lr-selection-change',
@@ -362,17 +363,22 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    * per document. Document records, nested tag arrays, and dates are snapshotted at assignment
    * time; records without a string name or with non-string tag entries, blank ids, and later
    * duplicate ids are omitted first-wins before filters, counts, selection, rows, and events. Reads
-   * return detached snapshots so even `Date` mutators cannot reach retained state. Reassign the
-   * collection to update. */
+   * return one stable detached snapshot per assignment, so even `Date` mutators cannot reach
+   * retained state. Reassign a new collection to update. */
   @property({ attribute: false })
   get documents(): readonly LibraryDocument[] {
-    return this.snapshotDocuments(this._documents);
+    return (this.documentsView ??= this.snapshotDocuments(this._documents));
   }
   set documents(value: readonly LibraryDocument[]) {
+    if (value === this.documentsSource || value === this.documentsView) return;
+    this.documentsSource = value;
     const previous = this._documents;
     this._documents = this.snapshotDocuments(value);
+    this.documentsView = undefined;
     this.requestUpdate('documents', previous);
   }
+  private documentsSource?: unknown;
+  private documentsView?: readonly LibraryDocument[];
 
   /** Bulk-selected document ids. Settable up front (pre-selection) and mutated internally by the
    *  row/select-all checkboxes and "Clear selection" — read it back, or listen for
@@ -381,11 +387,14 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  interaction does, mirroring `<lr-chip-group>`'s identical silent-resync convention for its
    *  own `expanded` state). Assignment snapshots at most 10,000 unique ids; reassign to update. */
   private _selectedDocumentIds: readonly string[] = Object.freeze([]);
+  private selectionSource?: unknown;
   @property({ attribute: false })
   get selectedDocumentIds(): readonly string[] {
     return this._selectedDocumentIds;
   }
   set selectedDocumentIds(value: readonly string[]) {
+    if (value === this.selectionSource || value === this._selectedDocumentIds) return;
+    this.selectionSource = value;
     const previous = this._selectedDocumentIds;
     this._selectedDocumentIds = this.snapshotIds(Array.isArray(value) ? value : []);
     this.requestUpdate('selectedDocumentIds', previous);
@@ -395,11 +404,14 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    *  Settable up front and mutated internally by the tag filter combobox. Assignment snapshots at
    *  most 10,000 unique tags; reassign to update. */
   private _tagFilter: readonly string[] = Object.freeze([]);
+  private tagFilterSource?: unknown;
   @property({ attribute: false })
   get tagFilter(): readonly string[] {
     return this._tagFilter;
   }
   set tagFilter(value: readonly string[]) {
+    if (value === this.tagFilterSource || value === this._tagFilter) return;
+    this.tagFilterSource = value;
     const previous = this._tagFilter;
     this._tagFilter = this.snapshotIds(Array.isArray(value) ? value : []);
     this.requestUpdate('tagFilter', previous);
@@ -508,7 +520,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @property() label?: string;
 
   private announcementSink?: AnnouncementSink;
-  private isMounting = true;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -627,14 +638,6 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     }
   }
 
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (!this.isMounting && changed.has('selectedDocumentIds')) {
-      this.announcementSink?.announce(this.selectionCountText());
-    }
-    this.isMounting = false;
-  }
-
   private selectionCountText(): string {
     return this.localize('documentLibrarySelectedCount', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(
@@ -674,22 +677,18 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     a: LibraryDocument,
     b: LibraryDocument
   ): number => {
-    const locale = this.effectiveLocale;
+    const collator = getCollator(this.effectiveLocale, { numeric: true });
     const dir = this.sortDir === 'asc' ? 1 : -1;
     let result = 0;
     switch (this.sortKey) {
       case 'name':
-        result = a.name.localeCompare(b.name, locale, { numeric: true });
+        result = collator.compare(a.name, b.name);
         break;
       case 'version':
-        result = (a.version ?? '').localeCompare(b.version ?? '', locale, {
-          numeric: true,
-        });
+        result = collator.compare(a.version ?? '', b.version ?? '');
         break;
       case 'owner':
-        result = (a.owner ?? '').localeCompare(b.owner ?? '', locale, {
-          numeric: true,
-        });
+        result = collator.compare(a.owner ?? '', b.owner ?? '');
         break;
       case 'freshness':
         result =
@@ -705,18 +704,17 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     return result * dir;
   };
 
-  /** The current search+tag-facet-filtered, sorted view of `documents`. */
-  private get visibleDocuments(): LibraryDocument[] {
+  /** The current search+tag-facet-filtered view of `documents`, in input order. */
+  private get matchingDocuments(): LibraryDocument[] {
     const query = (this.searchTerm ?? '')
       .trim()
       .toLocaleLowerCase(this.effectiveLocale);
     const matchFn = this.filter ?? this.defaultFilter;
-    const filtered = this._documents.filter(
+    return this._documents.filter(
       (document) =>
         (query === '' || matchFn(document, query)) &&
         this.matchesTagFilter(document)
     );
-    return [...filtered].sort(this.compareDocuments);
   }
 
   /** Every distinct tag across `documents`, sorted for stable combobox ordering. Empty when no
@@ -726,14 +724,14 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     const tags = new Set<string>();
     for (const document of this._documents)
       for (const tag of document.tags ?? []) tags.add(tag);
-    return [...tags].sort((a, b) => a.localeCompare(b, this.effectiveLocale));
+    return [...tags].sort(getCollator(this.effectiveLocale).compare);
   }
 
   private emitFilterChange(): void {
     const tags = Object.freeze([...this.tagFilter]);
     this.emit(
       'lr-filter-change',
-      Object.freeze({ searchTerm: this.searchTerm, tags, matchCount: this.visibleDocuments.length })
+      Object.freeze({ searchTerm: this.searchTerm, tags, matchCount: this.matchingDocuments.length })
     );
   }
 
@@ -800,6 +798,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   private setSelected(ids: Iterable<string>): void {
     this.selectedDocumentIds = [...ids];
+    this.announcementSink?.announce(this.selectionCountText());
     const eventIds = Object.freeze([...this.selectedDocumentIds]);
     this.emit('lr-selection-change', Object.freeze({ documentIds: eventIds }));
   }
@@ -835,13 +834,13 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     }
   }
 
-  private renderSelectAllCheckbox(visible: LibraryDocument[]): TemplateResult {
+  private renderSelectAllCheckbox(visible: LibraryDocument[], selected: ReadonlySet<string>): TemplateResult {
     const allSelected =
       visible.length > 0 &&
-      visible.every((document) => this.selectedDocumentIds.includes(document.id));
+      visible.every((document) => selected.has(document.id));
     const someSelected =
       !allSelected &&
-      visible.some((document) => this.selectedDocumentIds.includes(document.id));
+      visible.some((document) => selected.has(document.id));
     return html`<lr-checkbox
       .checked=${allSelected}
       .indeterminate=${someSelected}
@@ -857,9 +856,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     ></lr-checkbox>`;
   }
 
-  private renderRowCheckbox(document: LibraryDocument): TemplateResult {
+  private renderRowCheckbox(document: LibraryDocument, selected: ReadonlySet<string>): TemplateResult {
     return html`<lr-checkbox
-      .checked=${this.selectedDocumentIds.includes(document.id)}
+      .checked=${selected.has(document.id)}
       aria-label=${this.localize('documentLibrarySelectDocument', undefined, {
         name: document.name,
       })}
@@ -913,14 +912,15 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   private buildColumns(
-    visible: LibraryDocument[]
+    visible: LibraryDocument[],
+    selected: ReadonlySet<string>
   ): TableColumn<LibraryDocument>[] {
     return [
       {
         key: 'select',
         label: this.localize('documentLibrarySelectColumn'),
-        headerCell: () => this.renderSelectAllCheckbox(visible),
-        cell: (document) => this.renderRowCheckbox(document),
+        headerCell: () => this.renderSelectAllCheckbox(visible, selected),
+        cell: (document) => this.renderRowCheckbox(document, selected),
       },
       {
         key: 'type',
@@ -979,7 +979,8 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     const label =
       hostAriaLabel(this)?.trim() ??
       (this.label == null ? this.localize('documentLibraryLabel') : this.label);
-    const visible = this.visibleDocuments;
+    const visible = this.matchingDocuments.sort(this.compareDocuments);
+    const selected = new Set(this.selectedDocumentIds);
     const tags = this.allTags;
     const emptyHeading =
       this._documents.length === 0
@@ -1042,12 +1043,12 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           : nothing}
         <lr-table
           part="table"
-          exportparts="row, cell, header-cell, error-row, error-cell, error, error-base, error-icon, error-heading, error-description, error-actions, retry-button"
+          exportparts="row, cell, header-cell, document-name, error-row, error-cell, error, error-base, error-icon, error-heading, error-description, error-actions, retry-button"
           aria-label=${label}
-          .columns=${this.buildColumns(visible)}
+          .columns=${this.buildColumns(visible, selected)}
           .rows=${visible}
           .rowKey=${(document: LibraryDocument) => document.id}
-          .selectedRowKeys=${new Set(this.selectedDocumentIds)}
+          .selectedRowKeys=${selected}
           selection-mode="multiple"
           .sortKey=${this.sortKey}
           .sortDir=${this.sortDir}

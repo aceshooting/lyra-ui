@@ -51,7 +51,7 @@ export const styles = css`
   }
   [part='track'] {
     fill: none;
-    stroke: var(--lr-color-border);
+    stroke: var(--lr-gauge-track-color, var(--lr-color-border));
   }
   [part='fill'] {
     fill: none;

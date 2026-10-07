@@ -3,7 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { decimalPlaces, finiteNumber } from '../../../internal/numbers.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { detectPlatform } from '../../../internal/platform.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -165,12 +166,12 @@ export class LyraStat extends LyraElement {
   @property({ reflect: true }) variant: LyraVariant = 'neutral';
   /** When set to a safe URL, renders the whole stat as a real anchor instead of a static div. */
   @property() href?: string;
-  /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
-   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered
-   *  anchor -- there is no separately-settable `rel` property, so a consumer can't forget it and
-   *  leave the opened page holding a `window.opener` back-reference (reverse-tabnabbing). Matches
-   *  `app-rail-item.class.ts`'s pattern. */
+  /** Native anchor target, used only while `href` resolves to a link. Any target adds
+   *  `noopener noreferrer` to the rendered `rel`. */
   @property() target?: string;
+  /** Link relationship tokens for the anchor; `opener` is dropped and a `target` always adds
+   *  `noopener noreferrer`. */
+  @property() rel?: string;
 
   private _deltaPercent: number | null = null;
   /** Percentage delta for the trend pill. Null (the JSON-safe default) hides the pill;
@@ -191,12 +192,15 @@ export class LyraStat extends LyraElement {
    *  cost/latency/error-rate-style metrics where a decrease is the win. */
   @property({ attribute: 'good-direction' }) goodDirection: StatGoodDirection = 'up';
   private _rows: readonly StatRow[] = [];
+  private rowsSource?: unknown;
   /** Breakdown rows rendered as a simple label/value list beneath the caption. The first 10,000
    * rows are snapshotted and frozen so caller mutation cannot bypass the reactive boundary;
    * reassign the collection to update. */
   @property({ attribute: false })
   get rows(): readonly StatRow[] { return this._rows; }
   set rows(value: readonly StatRow[]) {
+    if (value === this.rowsSource || value === this._rows) return;
+    this.rowsSource = value;
     const previous = this._rows;
     const snapshot: StatRow[] = [];
     if (Array.isArray(value)) {
@@ -347,9 +351,10 @@ export class LyraStat extends LyraElement {
       const previousRel = anchor.getAttribute('rel');
       // Some engines ignore modifiers on synthetic activation. A temporary native target keeps
       // the current page intact while click listeners still own cancellation of the real anchor.
+      const guardedRel = resolveGuardedRel(this.rel, '_blank')!;
       if (newContext) {
         anchor.target = '_blank';
-        anchor.rel = 'noopener noreferrer';
+        anchor.rel = guardedRel;
       }
       try {
         anchor.dispatchEvent(new MouseEventConstructor('click', {
@@ -375,7 +380,7 @@ export class LyraStat extends LyraElement {
             if (previousTarget === null) anchor.removeAttribute('target');
             else anchor.setAttribute('target', previousTarget);
           }
-          if (anchor.getAttribute('rel') === 'noopener noreferrer') {
+          if (anchor.getAttribute('rel') === guardedRel) {
             if (previousRel === null) anchor.removeAttribute('rel');
             else anchor.setAttribute('rel', previousRel);
           }
@@ -406,12 +411,10 @@ export class LyraStat extends LyraElement {
     const hasCaption = this.hasCaptionSlot || (this.caption ?? '').length > 0;
     const hasSub = this.hasSubSlot || (this.sub ?? '').length > 0;
     // Intl's percent style takes a ratio, and dividing the delta by 100 leaves binary noise
-    // (384.9 / 100 is 3.8489999999999998). Cap the fraction digits at the ones the delta's own
-    // decimal text carries so the quotient's expansion is never printed. Counted inline: the
-    // shared helper would be this component's only use of it in several family bundles.
+    // (384.9 / 100 is 3.8489999999999998). Cap the fraction digits at the delta's own.
     const formattedTrend = getNumberFormat(this.effectiveLocale, {
       style: 'percent',
-      maximumFractionDigits: Math.min(20, (String(effectiveDelta).split('.')[1] ?? '').length),
+      maximumFractionDigits: Math.min(20, decimalPlaces(effectiveDelta)),
     }).format(Math.abs(effectiveDelta) / 100);
     // The visible pill only ever shows the icon rotation + color to convey
     // direction and good/bad polarity; both are invisible to screen readers,
@@ -490,7 +493,7 @@ export class LyraStat extends LyraElement {
             part="base"
             href=${href}
             target=${this.target || nothing}
-            rel=${this.target ? 'noopener noreferrer' : nothing}
+            rel=${resolveGuardedRel(this.rel, this.target) ?? nothing}
             aria-label=${this.accessibleLabel ?? nothing}
             ><span class="sr-only">${[this.label, this.value, this.unit].filter(Boolean).join(' ')}</span></a
           >

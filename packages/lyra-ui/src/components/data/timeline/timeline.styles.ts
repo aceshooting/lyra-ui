@@ -41,6 +41,7 @@ export const styles = css`
     position: relative;
     display: block;
     block-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
+    margin-block-end: var(--_lr-timeline-trailing-extent, 0);
   }
   :host([scale='time'][orientation='horizontal']) [part='base'] {
     block-size: var(--_lr-timeline-content-height, auto);
@@ -119,108 +120,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  /* Edge affordance gated on real overflow: ScrollOverflowController toggles data-scroll-overflow
-     from a scrollWidth/clientWidth measurement; unconditional, it fades the first and last item of
-     a strip that fits. One-sided and RTL-aware, matching
-     lr-tab-group/lr-segmented/lr-stepper/lr-widget -- data-scroll-start/data-scroll-end (same
-     controller, logical, live on scroll) report which edges still have more to reach, so a strip
-     scrolled to one edge fades only the other. :where() pins them to the same
-     [data-scroll-overflow]-only specificity, so the later forced-colors override (same base
-     selectors) still wins its tie on source order. */
-  :host([orientation='horizontal'])
-    [part='base'][data-scroll-overflow]:where(
-      [data-scroll-start][data-scroll-end]
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  :host([orientation='horizontal'])
-    [part='base'][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  :host([orientation='horizontal'])
-    [part='base'][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)[orientation='horizontal'])
-    [part='base'][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl)[orientation='horizontal'])
-    [part='base'][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  @media (forced-colors: active) {
-    :host([orientation='horizontal']) [part='base'][data-scroll-overflow],
-    :host(:dir(rtl)[orientation='horizontal'])
-      [part='base'][data-scroll-overflow] {
-      -webkit-mask-image: none;
-      mask-image: none;
-    }
+  /* The shared edge fade is for the horizontal strip only; a vertical base never scrolls sideways. */
+  :host(:not([orientation='horizontal'])) [part='base'] {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 
   /* Matches by role, not tag name (<lr-timeline-item> sets role="listitem" in connectedCallback),

@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
 import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
@@ -142,15 +143,18 @@ export class LyraFunnel extends LyraElement {
   }
 
   private formatValue(value: number): string {
-    return getNumberFormat(this.effectiveLocale).format(value);
+    return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: chartValueFractionDigits(value) }).format(value);
   }
 
   private formatShare(ratio: number): string {
     const precision = this.precision;
+    const percent = Math.abs(ratio) * 100;
+    // A non-zero share that would round to 0 keeps its first significant digit.
+    const digits = percent > 0 && percent < 0.5 * 10 ** -precision ? Math.min(20, -Math.floor(Math.log10(percent))) : precision;
     return getNumberFormat(this.effectiveLocale, {
       style: 'percent',
       minimumFractionDigits: precision,
-      maximumFractionDigits: precision,
+      maximumFractionDigits: digits,
     }).format(ratio);
   }
 

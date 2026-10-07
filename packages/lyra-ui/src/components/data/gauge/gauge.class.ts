@@ -10,6 +10,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { chartValueFractionDigits } from '../../charts/chart/chart-number-format.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
 import { styles } from './gauge.styles.js';
@@ -112,6 +113,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * effective variant is `warning`.
  * @cssprop [--lr-gauge-danger-fill=var(--lr-color-danger)] - Fill stroke used when the effective
  * variant is `danger`.
+ * @cssprop [--lr-gauge-track-color=var(--lr-color-border)] - Stroke of the unfilled track.
  * @status stable
  * @since 4.0.0
  */
@@ -187,6 +189,12 @@ export class LyraGauge extends LyraElement {
   private explicitAriaLabel: string | null = null;
   private authorRole: string | null = null;
   private syncingGeneratedRole = false;
+  private serverRendered = false;
+
+  override connectedCallback(): void {
+    this.serverRendered ||= !this.hasUpdated && this.shadowRoot !== null;
+    super.connectedCallback();
+  }
 
   override attributeChangedCallback(
     name: string,
@@ -195,6 +203,8 @@ export class LyraGauge extends LyraElement {
   ): void {
     super.attributeChangedCallback(name, oldValue, value);
     if (name !== 'role' || oldValue === value || this.syncingGeneratedRole) return;
+    // A server-rendered meter/img role is this component's own output, not the author's.
+    if (!this.hasUpdated && this.shadowRoot && (value === 'meter' || value === 'img')) return;
     this.authorRole = value;
     this.requestUpdate();
   }
@@ -244,7 +254,9 @@ export class LyraGauge extends LyraElement {
   private get displayText(): string {
     return (
       this.valueText ||
-      (!Number.isFinite(this.value) ? '' : getNumberFormat(this.effectiveLocale).format(this.value))
+      (!Number.isFinite(this.value)
+        ? ''
+        : getNumberFormat(this.effectiveLocale, { maximumFractionDigits: chartValueFractionDigits(this.value) }).format(this.value))
     );
   }
 
@@ -294,10 +306,6 @@ export class LyraGauge extends LyraElement {
       this.removeAttribute('aria-valuemin');
       this.removeAttribute('aria-valuemax');
     }
-    const currentAriaLabel = this.getAttribute('aria-label');
-    if (currentAriaLabel !== this.appliedAriaLabel) {
-      this.explicitAriaLabel = currentAriaLabel;
-    }
     const defaultName = this.label || this.localize('gaugeLabel');
     const fallbackValueLabel =
       this.displayText && (!Number.isFinite(this.value) || lo === hi)
@@ -306,6 +314,14 @@ export class LyraGauge extends LyraElement {
             value: this.displayText,
           })
         : defaultName;
+    const currentAriaLabel = this.getAttribute('aria-label');
+    // A server-rendered name equal to the generated one is this component's own output.
+    if (!this.hasUpdated && this.serverRendered && currentAriaLabel === (finiteTrio ? defaultName : fallbackValueLabel)) {
+      this.appliedAriaLabel = currentAriaLabel;
+    }
+    if (currentAriaLabel !== this.appliedAriaLabel) {
+      this.explicitAriaLabel = currentAriaLabel;
+    }
     // Truthiness, not the presence test (`hostAriaLabel()`) the rest of the library uses to keep an
     // explicit `aria-label=""` meaning "no accessible name" -- and deliberately so. Everywhere else
     // the authored label is copied onto a node INSIDE the shadow root, so honouring an empty one

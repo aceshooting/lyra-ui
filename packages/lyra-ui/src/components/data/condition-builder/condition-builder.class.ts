@@ -1,7 +1,8 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -132,6 +133,9 @@ export interface LyraConditionBuilderEventMap {
   /** Fired after a condition row is removed. */
   'lr-remove-condition': CustomEvent<{ readonly conditionId: string }>;
 }
+
+const CHILD_EVENTS = ['input', 'change', 'lr-input', 'lr-change', 'lr-activate', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide', 'lr-clear', 'lr-filter', 'lr-invalid'];
+const stopEvent = (event: Event): void => event.stopPropagation();
 
 const MAX_FIELDS = 200;
 const MAX_CONDITIONS = 200;
@@ -338,8 +342,8 @@ function normalizeConditionBuilderValue(value: unknown): ConditionBuilderValue {
  * `<lr-combobox>` (`enum`, `in`/`notIn`). Date fields forward bounded `min`/`max` strings to
  * `<lr-date-input>`; number fields forward finite `min`/`max` and positive finite `step` values to
  * `<lr-input>`. A unary operator (`isEmpty`/`isNotEmpty`) renders no value control.
- * Field/operator selections emit one complete-model `lr-input`; their native value events,
- * prefixed value aliases and listbox lifecycle events stay within the picker.
+ * Every user edit emits one complete-model `lr-input`; the child controls' native value events,
+ * prefixed value aliases and listbox lifecycle events stay inside the builder.
  * `<lr-icon-button icon="trash">` removes a row; `<lr-button>` appends one.
  *
  * This is a composite query-definition control, not a single submittable form field — it
@@ -413,7 +417,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',
     'lr-add-condition',
@@ -427,6 +431,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
 
   private _fields: readonly ConditionBuilderField[] = EMPTY_FIELDS;
   private _value: ConditionBuilderValue = EMPTY_VALUE;
+  private fieldsSource?: unknown;
+  private valueSource?: unknown;
   private _disabled = false;
   // Set right before a condition row is removed when focus was inside that row -- consumed by
   // updated() to move focus to the add-button, so removing the focused row's remove-button
@@ -439,6 +445,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     return this._fields;
   }
   set fields(next: readonly ConditionBuilderField[]) {
+    if (next === this.fieldsSource || next === this._fields) return;
+    this.fieldsSource = next;
     const old = this._fields;
     this._fields = normalizeFields(next);
     this.requestUpdate('fields', old);
@@ -454,6 +462,8 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     return this._value;
   }
   set value(next: ConditionBuilderValue) {
+    if (next === this.valueSource || next === this._value) return;
+    this.valueSource = next;
     const old = this._value;
     this._value = normalizeConditionBuilderValue(next);
     this.requestUpdate('value', old);
@@ -668,8 +678,10 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     action();
   }
 
-  private containSelectEvent(event: Event): void {
-    event.stopPropagation();
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const root = super.createRenderRoot();
+    for (const type of CHILD_EVENTS) root.addEventListener(type, stopEvent);
+    return root;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -683,7 +695,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
   private renderCombinator(combinator: ConditionBuilderCombinator): TemplateResult {
     return html`
       <lr-select
-        @lr-activate=${this.containSelectEvent}
         part="combinator"
         size="s"
         aria-label=${this.localize('queryBuilderCombinatorLabel')}
@@ -709,7 +720,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const selected = Array.isArray(condition.value) ? condition.value : [];
       return html`
         <lr-combobox
-          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           multiple
@@ -729,7 +739,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const current = condition.value === true ? 'true' : condition.value === false ? 'false' : '';
       return html`
         <lr-select
-          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           aria-label=${valueLabel}
@@ -768,7 +777,6 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
       const current = typeof condition.value === 'string' ? condition.value : '';
       return html`
         <lr-select
-          @lr-activate=${this.containSelectEvent}
           part="value"
           size="s"
           aria-label=${valueLabel}
@@ -843,20 +851,12 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         aria-invalid=${validationCode ? 'true' : 'false'}
       >
         <lr-select
-          @lr-activate=${this.containSelectEvent}
           part="field-select"
           size="s"
           aria-label=${this.localize('queryBuilderFieldLabel')}
           placeholder=${this.localize('queryBuilderFieldPlaceholder')}
           .value=${condition.field}
           ?disabled=${this.disabled}
-          @input=${this.containSelectEvent}
-          @lr-input=${this.containSelectEvent}
-          @lr-change=${this.containSelectEvent}
-          @lr-show=${this.containSelectEvent}
-          @lr-after-show=${this.containSelectEvent}
-          @lr-hide=${this.containSelectEvent}
-          @lr-after-hide=${this.containSelectEvent}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
               this.setConditionField(condition.id, selectValue(event.target as LyraSelect)),
@@ -866,20 +866,12 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
         </lr-select>
 
         <lr-select
-          @lr-activate=${this.containSelectEvent}
           part="operator-select"
           size="s"
           aria-label=${this.localize('queryBuilderOperatorLabel')}
           placeholder=${this.localize('queryBuilderOperatorPlaceholder')}
           .value=${condition.operator}
           ?disabled=${this.disabled || !field}
-          @input=${this.containSelectEvent}
-          @lr-input=${this.containSelectEvent}
-          @lr-change=${this.containSelectEvent}
-          @lr-show=${this.containSelectEvent}
-          @lr-after-show=${this.containSelectEvent}
-          @lr-hide=${this.containSelectEvent}
-          @lr-after-hide=${this.containSelectEvent}
           @change=${(event: Event) =>
             this.consumeChildEvent(event, () =>
               this.setConditionOperator(condition.id, (event.target as LyraSelect).value as ConditionBuilderOperator),
@@ -921,7 +913,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
                 ? html`<p part="empty">${this.localize('queryBuilderEmpty')}</p>`
                 : html`
                     <div part="conditions" role="list">
-                      ${value.conditions.map((condition, index) =>
+                      ${repeat(value.conditions, (condition) => condition.id, (condition, index) =>
                         this.renderCondition(condition, index, issueById.get(condition.id)))}
                     </div>
                   `}

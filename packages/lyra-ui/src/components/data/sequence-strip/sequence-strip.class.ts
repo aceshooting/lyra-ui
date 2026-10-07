@@ -7,6 +7,8 @@ import { isRtl } from '../../../internal/rtl.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
+import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -189,6 +191,7 @@ export interface LyraSequenceStripEventMap {
  * the same bottom bar a `marker: true` cell paints, in the same `--lr-sequence-strip-marker-color`.
  * @csspart legend-label - The text of a legend item (the category's `label`, or the localized
  * unnamed-category label).
+ * @csspart empty - Visible localized "no items" text, rendered only while `items` is empty.
  * @csspart bucket-summary - Visible item-total/range-count disclosure, rendered only while the
  * strip is past its cell cap and therefore showing ranges rather than individual items. It replaces
  * 15.x's `window-range`, which disclosed a projection window this component no longer has.
@@ -220,12 +223,16 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
+  private itemsSource?: unknown;
+  private categoriesSource?: unknown;
 
   /** Frozen snapshot of at most the first 10,000 items. Empty/blank ids are omitted and duplicate
    * ids use the first entry. Reassign to update. */
   @property({ attribute: false })
   get items(): readonly SequenceStripItem[] { return this._items; }
   set items(value: readonly SequenceStripItem[]) {
+    if (value === this.itemsSource || value === this._items) return;
+    this.itemsSource = value;
     const previous = this._items;
     const seen = new Set<string>();
     const next: SequenceStripItem[] = [];
@@ -255,6 +262,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   @property({ attribute: false })
   get categories(): readonly SequenceStripCategory[] { return this._categories; }
   set categories(value: readonly SequenceStripCategory[]) {
+    if (value === this.categoriesSource || value === this._categories) return;
+    this.categoriesSource = value;
     const previous = this._categories;
     const seen = new Set<string>();
     const next: SequenceStripCategory[] = [];
@@ -400,6 +409,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   @state() private hoverIndex: number | null = null;
   /** The roving keyboard-focus CELL index (`null` while focus is outside the strip). */
   @state() private keyboardIndex: number | null = null;
+  @state() private keyboardTooltip = false;
   /** Identity-keyed projection cache. Hover and focus re-render on every pointer move, so the
    *  O(items) bucket pass must not run again while the same frozen `items` snapshot is installed. */
   private cellCacheSource: readonly SequenceStripItem[] | undefined;
@@ -476,6 +486,25 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.cellCacheSource = items;
     this.cellCache = Object.freeze(buildSequenceStripCells(items));
     return this.cellCache;
+  }
+
+  private viewKey: readonly unknown[] = [];
+  private view?: { labels: readonly string[]; colors: readonly string[]; summary: string };
+
+  /** Cell names, cell colours and the generated summary, rebuilt only when one of their inputs changes. */
+  private cellView(cells: readonly SequenceStripCell[]): NonNullable<LyraSequenceStrip['view']> {
+    const locale = this.effectiveLocale;
+    const key = [cells, this._categories, this.markerLabel, locale, this.strings, lyraLocaleCatalogVersion(locale)];
+    if (!this.view || key.some((part, index) => part !== this.viewKey[index])) {
+      const categories = this.categoryMap();
+      this.viewKey = key;
+      this.view = {
+        labels: cells.map((cell) => this.cellLabel(cell, categories)),
+        colors: cells.map((cell) => this.categoryColor(cell.categoryId, categories)),
+        summary: this.autoSummary(),
+      };
+    }
+    return this.view;
   }
 
   private categoryMap(): ReadonlyMap<string, SequenceStripCategory> {
@@ -573,8 +602,10 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     this.hoverIndex = null;
   }
 
-  private onCellFocus(index: number): void {
-    if (!this.restoringOwnedFocus) this.keyboardIndex = index;
+  private onCellFocus(index: number, event: FocusEvent): void {
+    if (this.restoringOwnedFocus) return;
+    this.keyboardIndex = index;
+    this.keyboardTooltip = isKeyboardFocusEvent(event);
   }
 
   private onStripFocusOut(e: FocusEvent): void {
@@ -610,6 +641,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (targetId === undefined) return;
     const generation = this.focusRestoreGeneration;
     this.keyboardIndex = next;
+    this.keyboardTooltip = true;
     void this.updateComplete.then(() => {
       if (
         generation !== this.focusRestoreGeneration ||
@@ -661,10 +693,10 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   }
 
   override render(): TemplateResult {
-    const categoryMap = this.categoryMap();
-    const ariaLabel = this.hostAccessibleLabel ?? this.autoSummary();
     const cells = this.cells();
-    const activeIndex = this.hoverIndex ?? this.keyboardIndex;
+    const view = this.cellView(cells);
+    const ariaLabel = this.hostAccessibleLabel ?? view.summary;
+    const activeIndex = this.hoverIndex ?? (this.keyboardTooltip ? this.keyboardIndex : null);
     const active = activeIndex !== null ? cells[activeIndex] : undefined;
     const selectedCell = this.selectedCellIndex();
     const requestedTabStop = this.keyboardIndex ?? selectedCell ?? 0;
@@ -693,15 +725,15 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               data-range-start=${cell.start}
               data-range-end=${cell.end}
               role="listitem"
-              aria-label=${this.cellLabel(cell, categoryMap)}
+              aria-label=${view.labels[index]}
               aria-posinset=${index + 1}
               aria-setsize=${cells.length}
               aria-disabled=${this.cellDisabled(cell) ? 'true' : nothing}
               tabindex=${index === tabStop ? '0' : '-1'}
-              style=${styleMap({ backgroundColor: this.categoryColor(cell.categoryId, categoryMap) })}
+              style=${styleMap({ backgroundColor: view.colors[index] })}
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
-              @focus=${() => this.onCellFocus(index)}
+              @focus=${(e: FocusEvent) => this.onCellFocus(index, e)}
               @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
               @click=${() => this.activateCell(index)}
               aria-current=${selectedCell === index ? 'true' : 'false'}
@@ -711,7 +743,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
               ${index === tooltipIndex
                 ? html`
                     <span id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>
-                      ${active ? this.cellLabel(active, categoryMap) : ''}
+                      ${active ? view.labels[activeIndex!] : ''}
                     </span>
                   `
                 : nothing}
@@ -719,6 +751,9 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
           `,
         )}
       </div>
+      ${cells.length === 0
+        ? html`<span part="empty" aria-hidden="true">${this.localize('sequenceStripEmpty')}</span>`
+        : nothing}
       ${overview === undefined
         ? nothing
         : html`<div part="bucket-summary" aria-hidden="true">${overview}</div>`}

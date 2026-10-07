@@ -102,7 +102,7 @@ export const styles = css`
      baseline stays visible above and below an opaque bar that is drawn over it. */
   [part='comparison-bar'] {
     inset-block: 0;
-    border: var(--lr-size-1px) dashed
+    border: var(--lr-border-width-thin) dashed
       var(--lr-funnel-comparison-color, var(--lr-color-border-strong));
     background: none;
   }
@@ -121,7 +121,7 @@ export const styles = css`
   /* A stage that exceeds the first stage clamps to the track, so the bar alone cannot show that it
      ran past the end. The end cap says so without contradicting the length. */
   [part~='bar-overflow'] {
-    border-inline-end: var(--lr-size-3px) solid var(--lr-color-text);
+    border-inline-end: var(--lr-border-width-thick) solid var(--lr-color-text);
   }
 
   [part='empty'] {

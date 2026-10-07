@@ -51,11 +51,11 @@ export interface LyraEnvListEventMap {
  * @csspart value - The value text itself; carries `data-masked`.
  * @csspart reveal-button - The per-row reveal/hide toggle, omitted while `without-reveal` is set.
  * @csspart copy-button - The per-row copy button, omitted while `without-copy-button` is set.
- * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
- *   (revealed) reveal toggle, and the base its hover/press mixes from.
- * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a pressed
- *   (revealed) reveal toggle. Restyling the pressed state otherwise requires overriding the
- *   library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS.
+ * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a revealed
+ *   entry's reveal button, and the base its hover/press mixes from.
+ * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a revealed
+ *   entry's reveal button. Restyling that state otherwise requires overriding the library-wide
+ *   brand tokens, since an attribute selector cannot follow `::part()`.
  * @status stable
  * @since 4.0.0
  */
@@ -79,6 +79,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   private _entries: readonly EnvEntry[] = [];
+  private entriesSource?: unknown;
 
   /** Clone-owned readonly name/value entries to render, in order, bounded to the first 10,000
    * source entries. Malformed records, blank names, and later duplicate names are skipped; the
@@ -86,6 +87,8 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   @property({ attribute: false })
   get entries(): readonly EnvEntry[] { return this._entries; }
   set entries(value: readonly EnvEntry[]) {
+    if (value === this.entriesSource || value === this._entries) return;
+    this.entriesSource = value;
     const previous = this._entries;
     const next: EnvEntry[] = [];
     const seen = new Set<string>();
@@ -234,7 +237,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
                 ? html`<button
                     part="reveal-button"
                     type="button"
-                    aria-pressed=${isRevealed ? 'true' : 'false'}
+                    ?data-revealed=${isRevealed}
                     @click=${() => this.toggleReveal(entry.name)}
                   >
                     ${isRevealed

@@ -38,3 +38,42 @@ it('keeps colored agenda foreground and fill paired through hover and press', as
     expect(getComputedStyle(item).color).to.equal(foreground);
   } finally { await resetMouse(); }
 });
+
+it('repairs a foreign view token written on a mounted month calendar', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar></lr-calendar>`);
+  el.setAttribute('view', 'week');
+  await el.updateComplete;
+  expect(el.getAttribute('view')).to.equal('month');
+});
+
+it('moves the day focus by month with PageUp/PageDown and to the month edges with Home/End', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-01-01" value="2026-01-31"></lr-calendar>`);
+  const visited: string[] = [];
+  for (const key of ['PageDown', 'Home', 'End', 'PageUp']) {
+    const day = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][tabindex="0"]')!;
+    day.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
+    await el.updateComplete;
+    visited.push(el.shadowRoot!.querySelector<HTMLElement>('[part="day"][tabindex="0"]')!.dataset['date']!);
+  }
+  expect(visited).to.deep.equal(['2026-02-28', '2026-02-01', '2026-02-28', '2026-01-28']);
+});
+
+it('does not rebuild the month buckets for a roving-focus move', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-07-01" value="2026-07-10" .events=${[{ date: '2026-07-15', title: 'Meeting' }]}></lr-calendar>`);
+  const target = el as unknown as { bucketEventsByDate: (events: unknown) => unknown };
+  const original = target.bucketEventsByDate;
+  let calls = 0;
+  target.bucketEventsByDate = function (this: unknown, events: unknown) { calls += 1; return original.call(this, events); };
+  try {
+    el.shadowRoot!.querySelector<HTMLElement>('[part="day"][tabindex="0"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+    await el.updateComplete;
+  } finally {
+    delete (target as Partial<typeof target>).bucketEventsByDate;
+  }
+  expect(calls).to.equal(0);
+});
+
+it('renders the empty agenda message as a styleable part', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar view="agenda" view-date="2026-07-01"></lr-calendar>`);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('No events this month.');
+});

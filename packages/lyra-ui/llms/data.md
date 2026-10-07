@@ -141,8 +141,10 @@ attribute now, so a stat left on `appearance="plain"` silently renders full card
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
   URL schemes keep the stat non-interactive. The anchor is stretched behind the visible content,
   so public slots remain semantic siblings rather than interactive descendants of the link
-- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
-  `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
+- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target always adds
+  `noopener noreferrer` to the anchor's `rel`
+- `rel?: string` — author link-relationship tokens (`nofollow`, `external`, …) merged with that
+  guard; `opener` is dropped
 - `variant: LyraVariant = 'neutral'` (reflected) — the library's shared
   one semantic-tone vocabulary, tinting `[part="value"]`. **`brand` is new in 8.0.0**, so a stat
   whose headline is the primary metric no longer has to borrow `emphasis` (which is a card-chrome
@@ -1434,7 +1436,7 @@ independent concepts.
   solid brand chip in all five, so the appearance never decides whether the current page is
   identifiable
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
-  selects the localized singular `item` or the CLDR plural form of `items` for the active locale
+  selects the CLDR plural form of the localized `items` message for the active locale
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
   forwarded to the internal `<nav>` landmark; takes precedence over `label`
 - `label?: string` — explicit fallback accessible name for the internal `<nav>` landmark, applied
@@ -1622,7 +1624,7 @@ pagination.hrefTemplate = (page) =>
 - the numbered list keeps a constant slot count as the reader pages through, so the control does not
   jitter: `siblingCount`/`boundaryCount` fix the budget, every page renders when the page count fits
   inside it, and otherwise a side that turns out to need no gap hands its slot back as one more page
-  number. A gap is a named jump control, not decorative text; repeated activation advances through
+  number; a gap that would hide exactly one page shows that page instead. A gap is a named jump control, not decorative text; repeated activation advances through
   a large skipped run. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
   however large you set them the list never renders more than 103 slots
 - `appearance` does not reach the compact page-jump input — `[part="page-input"]` always draws with
@@ -1690,7 +1692,8 @@ fallback before the shared token so a consumer can retint one variant without `-
 uniform override touching the others: `--lr-gauge-neutral-fill` (default `var(--lr-color-neutral)`),
 `--lr-gauge-brand-fill` (default `var(--lr-color-brand)`), `--lr-gauge-success-fill` (default
 `var(--lr-color-success)`), `--lr-gauge-warning-fill` (default `var(--lr-color-warning)`), and
-`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`).
+`--lr-gauge-danger-fill` (default `var(--lr-color-danger)`). `--lr-gauge-track-color` (default
+`var(--lr-color-border)`) strokes the unfilled track.
 
 **Optional peer deps:** none.
 
@@ -2616,8 +2619,9 @@ consistently with the sparkline/heatmap family, and read as a glanceable aggrega
 is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
-Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does. That tooltip is positioned from the
+Home/End move the stop — direction-aware, so the arrows swap under RTL — and keyboard focus on a
+cell shows the same `[part="tooltip"]` detail that pointer hover does (a click-focused cell keeps no
+tooltip once the pointer leaves). That tooltip is positioned from the
 active cell, not from the center of the whole strip. The tooltip is visual only and is not
 wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
 text and describing it again would duplicate the announcement. Cells are actionable: clicking a
@@ -2716,10 +2720,12 @@ library event.
 
 **CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
 background-colored by its category, carrying the roving `tabindex`, and activatable by click or
-Enter/Space — it has a pointer cursor plus paired hover/press treatments, and `[data-selected]` when
+Enter/Space — it has a pointer cursor, a thin quiet hover outline distinct from the focus ring, a
+press treatment, and `[data-selected]` when
 it is `selectedIndex`), `marker` (the small bottom
 marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
-item's label, hidden until a cell is hovered or focused),
+item's label, hidden until a cell is hovered or keyboard-focused), `empty` (visible localized "No
+items" text, rendered only while `items` is empty),
 `legend` (the static category key rendered below the strip when `withLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
@@ -3772,8 +3778,9 @@ boolean }[]`. `value` is an _absolute_
   non-integer or out-of-range entry selects nothing rather than throwing.
 
 Accessible summaries, segment tooltips, and ring titles format normalized nonnegative quantities
-using `effectiveLocale`. A host `aria-label` names the host without being duplicated on the nested
-meter owner, which retains its generated aggregate summary.
+using `effectiveLocale` (up to three fraction digits, more below one, so a small quantity never reads
+0). A host `aria-label`, else `label`, names the nested meter owner, which then speaks the generated
+aggregate summary as its `aria-valuetext`.
 
 **Events:** `lr-segment-activate-request` — a band or its legend row was activated while `interactive` is
 set. `detail: { index: number; label: string; value: number }`, bubbling and composed like every
@@ -3812,8 +3819,8 @@ sizes a legend chip on both axes. The `bar`-shape track is independently retunab
 `--lr-context-meter-track-size` (default `var(--lr-size-0-5rem)`) is its block size (and so the
 block size of its filled segments), `--lr-context-meter-track-radius` (default
 `calc(var(--lr-radius) * 0.5)`) its corner radius, `--lr-context-meter-track-bg` (default
-`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the background of its unfilled
-remainder, and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
+`color-mix(in srgb, var(--lr-color-border) 30%, transparent)`) the colour of its unfilled
+remainder (the ring track's stroke too), and `--lr-context-meter-segment-seam-color` (default `var(--lr-color-surface)`) the
 hairline seam painted between adjacent segments.
 `--lr-context-meter-selected-ring-color` (default `var(--lr-color-text)`) and
 `--lr-context-meter-selected-ring-width` (default `var(--lr-border-width-thick)`) paint the inset
@@ -3856,8 +3863,8 @@ tone stay in sync. Otherwise the component consumes shared tokens
 
 An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,
 `aria-valuemin`, and `aria-valuemax` whenever `total > 0`; without a valid positive total it uses
-`role="group"` and omits numeric meter attributes. Its accessible name is the generated summary;
-an authored host `aria-label` remains on the host as a distinct overall name. A separate
+`role="group"` and omits numeric meter attributes. Its accessible name is the host `aria-label`, else
+`label`, with the generated summary as `aria-valuetext`; with neither set, the summary is the name. A separate
 visually-hidden segment list exposes
 each labeled quantity, while the visible track, segments, ring SVG, and visible label remain
 `aria-hidden`. The summary's "used" figure is the sum of
@@ -3926,9 +3933,9 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   integer form is gone; the value is now one of the shared weekday-name tokens (`'auto'`, then
   `'sun'` through `'sat'`), which pins the week start independent of locale. Pass `'mon'` to keep
   the pre-10.0.0 rendering.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — names the host. The nested calendar
-  section retains the localized purpose name rather than duplicating an authored host name; when
-  set programmatically without a host attribute, this value names the section
+- `accessibleLabel: string = ''` (attribute `aria-label`) — names the nested calendar section,
+  whether authored as the host attribute or set programmatically; unset, the section keeps the
+  localized purpose name
 
 At most 4 events render as `event` buttons inside a single month-view day cell, and at most 500
 events render as `agenda-event` buttons in agenda view; either ceiling past that count renders a
@@ -3937,7 +3944,8 @@ buttons.
 
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
-Arrows move by 1 day (Left/Right swapped under RTL) or 7; stepping past the rendered grid rolls
+Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
+the day), Home/End to the month's first/last day; stepping past the rendered grid rolls
 `viewDate` to the target's month and emits `lr-view-change`. Enter/Space select.
 
 **Events:** `lr-date-select` (`detail: { date }`), `lr-event-select` (`detail: { event }`),
@@ -3950,8 +3958,9 @@ month-navigation buttons; `previous-button` and `next-button` identify each dire
 `nav-glyph` is the chevron (`scaleX(-1)`-mirrored under RTL); `title`, `weekdays`, `weekday`,
 `grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
 (localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
-ceiling), `agenda`, `agenda-event`, and `agenda-limit` (localized "+N more" notice shown in agenda
-view when the visible month's events exceed the 500-event render ceiling).
+ceiling), `agenda`, `agenda-event`, `agenda-limit` (localized "+N more" notice shown in agenda
+view when the visible month's events exceed the 500-event render ceiling), and `empty` (the agenda
+view's localized "no events" message).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
 and `--lr-calendar-day-min-block-size-narrow` (default `var(--lr-size-4rem)`, applied at container inline-size
@@ -3987,7 +3996,8 @@ Horizontal time layouts using `collision="overlap"` or `collision="stack"` alloc
 from the actual item content and lane offsets. The height follows content growth, shrinkage, and
 changes in lane count. `--lr-timeline-time-extent` still controls only the main-axis distance, and
 horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its existing sizing
-behavior.
+behavior. Vertical time layouts keep the `--lr-timeline-time-extent` axis and reserve room after it
+for the latest item, which sits at the axis end, so it never overlaps the content that follows.
 
 **`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
@@ -4160,12 +4170,12 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 
 **Themeable custom properties:** `--lr-env-list-reveal-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
-`var(--lr-color-brand)`) — the background and border color of a pressed (revealed) reveal toggle. The background is also the
-base its hover/press mixes from.
+`var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
+base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
+and carries no `aria-pressed`, so its name never contradicts a pressed state.
 Both are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either
-can be set on the element _or any ancestor_. They exist because
-`::part(reveal-button)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
-selector after `::part()` — so restyling the pressed state otherwise required overriding the
+can be set on the element _or any ancestor_. They exist because Shadow Parts forbids an attribute
+selector after `::part()`, so restyling the revealed state otherwise required overriding the
 library-wide brand tokens.
 
 ## `lr-document-library`
@@ -4187,8 +4197,9 @@ by accepted `lr-sort` transaction and `{ phase, sortKey, sortDir }` vocabulary a
 10,000 source documents and 10,000 tags per document are retained; document records, nested tags,
 and dates are snapshotted on assignment; malformed records (including missing/non-string names or
 non-string tag entries), blank ids, and later duplicate ids are omitted first-wins before filters,
-counts, selection, rows, and events; reads are detached so `Date`
-mutators cannot reach retained state; reassign after changes), `filter`, `label`, `loading`,
+counts, selection, rows, and events; reads return one stable detached snapshot per assignment, so
+`Date` mutators cannot reach retained state; reassign a new array after changes; re-assigning the same
+array, as a re-rendering parent does, is no change), `filter`, `label`, `loading`,
 clone-owned frozen `selectedDocumentIds: readonly string[] = []` (at most 10,000 unique ids; reassign after
 changes), public controlled `searchTerm: string = ''`
 (`search-term`), `sortKey: LibraryDocumentSortKey = 'name'` (`sort-key`), canonical
@@ -4229,9 +4240,9 @@ button, while `error` is set.
 `error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
 `error-description`, `error-actions`, `retry-button`.
 
-`selection-bar` is visible ordinary content, not a shadow live region. Initial declarative
-selection stays silent; every post-mount `selectedDocumentIds` change appends the localized selected count
-to the document's shared light-DOM polite sink, including zero and repeated equal counts.
+`selection-bar` is visible ordinary content, not a shadow live region. `selectedDocumentIds`
+assignments stay silent; each selection change the user makes (row or select-all checkbox, "Clear
+selection") appends the localized selected count to the document's shared light-DOM polite sink.
 Internal search, tag-filter, and checkbox native `input`/`change` plus prefixed `lr-input`/
 `lr-change` aliases, the checkboxes' `lr-checkbox-toggle-request` proposals, the tag combobox's
 lifecycle/filter/clear/invalid events, table pagination and priority-column visibility events, and
@@ -4246,10 +4257,10 @@ Form-associated editor for a typed graph relationship/path query, including enti
 relationship and node-type filters, hop limits, validation, and saved queries.
 
 When the DOM cannot provide `activeElement`, the builder skips focus restoration while chip removal
-and saved-query updates continue normally. Each minimum/maximum-hop select choice updates the query
-once and emits one `lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value
-events, prefixed value aliases and listbox show/hide lifecycle events from those child selects are
-contained. Programmatic query assignments remain silent.
+and saved-query updates continue normally. Each edit updates the query once and emits one
+`lr-input` with the complete `{ value: GraphQuery }` snapshot. Native value events, prefixed value
+aliases and listbox show/hide lifecycle events from every child control are contained; events from
+slotted content pass through. Programmatic query assignments remain silent.
 
 The normalized `value` present at the first update is the form reset default. Later property writes
 and user edits change only the live query; `form.reset()` restores that initial model, clears
@@ -4350,10 +4361,10 @@ being shadowed by a declaration on the component host.
 Composable flat condition builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator, distinct by name and model from `lr-graph-query-builder`.
 
-A field or operator select choice updates the builder once and emits one `lr-input` carrying the
-complete `{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value
-aliases and listbox show/hide lifecycle events remain inside those pickers. Programmatic `value`
-assignments remain silent.
+Each edit updates the builder once and emits one `lr-input` carrying the complete
+`{ value: ConditionBuilderValue }` snapshot. Child native `input`/`change`, prefixed value aliases
+and listbox show/hide lifecycle events from every row control and the combinator stay inside the
+builder. Programmatic `value` assignments remain silent.
 
 **9.0 migration:** `lr-query-builder` / `LyraQueryBuilder` / `QueryBuilder*` were renamed without
 aliases to `lr-condition-builder` / `LyraConditionBuilder` / `ConditionBuilder*`. Update the tag,

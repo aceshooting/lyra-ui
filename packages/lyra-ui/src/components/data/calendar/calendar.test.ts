@@ -472,9 +472,7 @@ it('is accessible with a populated agenda view', async () => {
   const el = (await fixture(
     html`<lr-calendar aria-label="Schedule" view="agenda" view-date="2026-07-01"></lr-calendar>`,
   )) as LyraCalendar;
-  // Same rule as the month-view case above: no palette literal in a fixture. The agenda view does
-  // not currently paint `event.color` at all, so this passes either way today -- resolving the
-  // token keeps it passing the day it starts to.
+  // Same rule as the month-view case above: no palette literal in a fixture.
   el.events = [
     { date: '2026-07-15', title: 'Standup', color: readToken(el, '--lr-color-brand') },
     { date: '2026-07-20', title: 'Deadline' },

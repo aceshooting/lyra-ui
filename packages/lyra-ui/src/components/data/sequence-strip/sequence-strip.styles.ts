@@ -31,7 +31,10 @@ export const styles = css`
   [part='cell'] {
     cursor: pointer;
   }
-  [part='cell']:where(:not([aria-disabled='true'])):hover,
+  [part='cell']:where(:not([aria-disabled='true'])):hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-text-quiet);
+    outline-offset: calc(-1 * var(--lr-border-width-thin));
+  }
   [part='cell']:where(:not([aria-disabled='true'])):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
@@ -119,6 +122,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
   }
+  [part='empty'],
   [part='bucket-summary'],
   [part='legend-limit'] {
     color: var(--lr-color-text-quiet);

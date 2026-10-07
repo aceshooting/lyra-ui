@@ -3,29 +3,27 @@ import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
-import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_map, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */
 export type LyraPaginationFormat = 'standard' | 'compact';
 
-function normalizePaginationFormat(value: unknown): LyraPaginationFormat {
-  return value === 'compact' ? 'compact' : 'standard';
-}
+const PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard', 'compact'], 'standard');
 
 export interface LyraPaginationChangeDetail {
   readonly page: number;
@@ -101,6 +99,9 @@ function paginationItems(
     else break;
     spare -= 1;
   }
+  // A gap standing for one page shows that page instead; the slot count is unchanged.
+  if (from === windowFloor + 1) from = windowFloor;
+  if (to === windowCeiling - 1) to = windowCeiling;
 
   return [
     ...pageSequence(1, boundaryCount).map(asPage),
@@ -249,14 +250,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
-    details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-    item: LYRA_DEFAULT_item,
     items: LYRA_DEFAULT_items,
-    map: LYRA_DEFAULT_map,
     next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     paginationApplied: LYRA_DEFAULT_paginationApplied,
     paginationAppliedUnknownTotal: LYRA_DEFAULT_paginationAppliedUnknownTotal,
     paginationEmptySummary: LYRA_DEFAULT_paginationEmptySummary,
@@ -267,9 +262,6 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     paginationPage: LYRA_DEFAULT_paginationPage,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     previous: LYRA_DEFAULT_previous,
-    progress: LYRA_DEFAULT_progress,
-    restore: LYRA_DEFAULT_restore,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -307,13 +299,15 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** `standard` renders the numbered page list; `compact` swaps it for the editable page jump,
    *  which fits a toolbar or a card footer where a full list would not. Unknown runtime values
    *  normalize to `standard`. */
-  @property({ reflect: true })
+  @property({ reflect: true, converter: PAGINATION_FORMAT })
   get format(): LyraPaginationFormat {
     return this._format;
   }
   set format(value: LyraPaginationFormat) {
+    const normalized = PAGINATION_FORMAT.normalizeReflected(this, 'format', value);
     const previous = this._format;
-    this._format = normalizePaginationFormat(value);
+    if (previous === normalized) return;
+    this._format = normalized;
     this.requestUpdate('format', previous);
   }
   /** Pages shown either side of the current page in the numbered list. */
@@ -513,21 +507,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return { href, renderAnchor: href !== null };
   }
 
-  private localizedProperty(key: string, value: string | undefined): string {
-    return value == null ? this.localize(key) : value;
-  }
-
   private formatNumber(value: number): string {
     return getNumberFormat(this.effectiveLocale).format(value);
   }
 
   private summaryText(): string {
     const total = this.normalizedTotalItems;
-    const itemLabel =
-      this.itemLabel ||
-      (getPluralRules(this.effectiveLocale).select(total) === 'one'
-        ? this.localize('item')
-        : this.localize('items', undefined, { count: total }));
+    const itemLabel = this.itemLabel || this.localize('items', undefined, { count: total });
     if (this.calculatedTotalPages === 0) {
       return this.localize('paginationEmptySummary', undefined, {
         total: this.formatNumber(0),
@@ -660,8 +646,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isPrevious = direction === 'previous';
     const current = this.currentPage;
     const label = isPrevious
-      ? this.localizedProperty('previous', this.previousLabel)
-      : this.localizedProperty('next', this.nextLabel);
+      ? this.previousLabel ?? this.localize('previous')
+      : this.nextLabel ?? this.localize('next');
     const spent = isPrevious
       ? current <= 1
       : this.indeterminate
@@ -706,8 +692,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     const isFirst = edge === 'first';
     const current = this.currentPage;
     const label = isFirst
-      ? this.localizedProperty('paginationFirstPage', this.firstLabel)
-      : this.localizedProperty('paginationLastPage', this.lastLabel);
+      ? this.firstLabel ?? this.localize('paginationFirstPage')
+      : this.lastLabel ?? this.localize('paginationLastPage');
     const spent = isFirst ? current <= 1 : current >= this.calculatedTotalPages;
     const target = isFirst ? 1 : this.calculatedTotalPages;
     const inactive = this.controlsDisabled || spent;
@@ -830,7 +816,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   private renderPageField(): TemplateResult {
-    const pageLabel = this.localizedProperty('paginationPage', this.pageLabel);
+    const pageLabel = this.pageLabel ?? this.localize('paginationPage');
 
     return html`<span part="page-field label">
       <input
@@ -860,7 +846,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   override render(): TemplateResult | typeof nothing {
     if (this.hideSinglePage && !this.indeterminate && this.calculatedTotalPages <= 1) return nothing;
     const navigationLabel =
-      this.accessibleLabel ?? this.localizedProperty('paginationLabel', this.label);
+      this.accessibleLabel ?? this.label ?? this.localize('paginationLabel');
     // Indeterminate mode has no total to lay a numbered page list, an item-range summary, or a
     // "last page" edge button against, so it always renders the page-jump field regardless of
     // `format`, and ignores `withSummary`/`withEdges`.

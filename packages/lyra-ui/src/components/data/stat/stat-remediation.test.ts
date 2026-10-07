@@ -115,3 +115,27 @@ it('keeps a named target and its relation unchanged during ordinary delegated ac
     expect(anchor.rel).to.equal('noopener noreferrer');
   } finally { await resetMouse(); }
 });
+
+it('keeps row label ids when the same rows array is re-assigned', async () => {
+  const rows = [{ label: 'North', value: '4' }, { label: 'South', value: '7' }];
+  const el = await fixture<LyraStat>(html`<lr-stat label="Revenue" value="11" .rows=${rows}></lr-stat>`);
+  const ids = () => [...el.shadowRoot!.querySelectorAll('[aria-labelledby]')].map((node) => node.getAttribute('aria-labelledby'));
+  const before = ids();
+  el.rows = rows;
+  await el.updateComplete;
+  expect(ids()).to.deep.equal(before);
+});
+
+it('prints the digits of a delta written in exponent notation', async () => {
+  const el = await fixture<LyraStat>(html`<lr-stat label="Drift" value="1" delta-percent="0.0000005"></lr-stat>`);
+  expect(el.shadowRoot!.querySelector('[part~="trend"]')!.textContent).to.include('0.0000005%');
+});
+
+it('merges an authored rel with the target guard and drops opener', async () => {
+  const el = await fixture<LyraStat>(html`<lr-stat href="#x" rel="nofollow opener" target="_blank"></lr-stat>`);
+  const anchor = el.shadowRoot!.querySelector('a')!;
+  expect(anchor.getAttribute('rel')).to.equal('nofollow noopener noreferrer');
+  el.target = undefined;
+  await el.updateComplete;
+  expect(anchor.getAttribute('rel')).to.equal('nofollow');
+});

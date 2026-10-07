@@ -1436,6 +1436,7 @@ describe('lr-graph-query-builder', () => {
   for (const part of ['run-button', 'save-button'] as const) {
     it(`renders a hover fill on ${part}, and a pressed fill distinct from both`, async () => {
       const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+      el.shadowRoot!.querySelector('[part="save-name-input"]')!.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'Saved' } }));
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       button.scrollIntoView();

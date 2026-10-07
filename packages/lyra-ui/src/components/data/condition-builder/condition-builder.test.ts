@@ -709,6 +709,7 @@ describe('lr-condition-builder v9 contract', () => {
 
     const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
     setAndDispatch(input, 'value', 'beta', 'lr-input');
+    for (const type of ['input', 'change']) input.dispatchEvent(new Event(type, { bubbles: true, composed: true }));
     await el.updateComplete;
     const field = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
     setAndDispatch(field, 'value', 'age', 'change');

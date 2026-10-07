@@ -47,3 +47,39 @@ for (const collision of ['overlap', 'stack'] as const) {
     });
   }
 }
+
+it('treats an equal re-created Date range or item timestamp as no change', async () => {
+  const el = await fixture<LyraTimeline>(html`<lr-timeline scale="time" .rangeStart=${new Date(0)} .rangeEnd=${new Date(1000)}>
+    <lr-timeline-item .timestamp=${new Date(500)}>A</lr-timeline-item>
+  </lr-timeline>`);
+  const item = el.querySelector('lr-timeline-item')!;
+  await item.updateComplete;
+  el.rangeStart = new Date(0);
+  el.rangeEnd = new Date(1000);
+  item.timestamp = new Date(500);
+  expect([el.isUpdatePending, item.isUpdatePending]).to.deep.equal([false, false]);
+});
+
+it('repairs foreign closed tokens written on a mounted timeline and item', async () => {
+  const el = await fixture<LyraTimeline>(html`<lr-timeline scale="flow" collision="overlap"><lr-timeline-item variant="neutral">A</lr-timeline-item></lr-timeline>`);
+  const item = el.querySelector('lr-timeline-item')!;
+  for (const [name, value] of [['orientation', 'diagonal'], ['scale', 'zoom'], ['collision', 'merge']] as const) el.setAttribute(name, value);
+  item.setAttribute('variant', 'bogus');
+  await el.updateComplete;
+  await item.updateComplete;
+  expect(['orientation', 'scale', 'collision'].map((name) => el.getAttribute(name))).to.deep.equal(['vertical', 'flow', 'overlap']);
+  expect(item.hasAttribute('variant')).to.equal(false);
+});
+
+it('reserves room below a vertical time axis for its latest item', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-timeline scale="time">
+      <lr-timeline-item .timestamp=${0}>Start</lr-timeline-item>
+      <lr-timeline-item .timestamp=${1000}>Latest event with a description</lr-timeline-item>
+    </lr-timeline>
+    <p>After</p>
+  </div>`);
+  const last = wrapper.querySelectorAll('lr-timeline-item')[1]!;
+  const after = wrapper.querySelector('p')!;
+  await waitUntil(() => last.getBoundingClientRect().bottom <= after.getBoundingClientRect().top + 1, 'the latest item overlaps the following content');
+});

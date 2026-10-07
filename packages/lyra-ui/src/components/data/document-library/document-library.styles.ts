@@ -69,7 +69,7 @@ export const styles = css`
   [part='table'] {
     min-inline-size: 0;
   }
-  [part='document-name'] {
+  [part='table']::part(document-name) {
     border: 0;
     background: none;
     padding: 0;
@@ -81,14 +81,14 @@ export const styles = css`
        snaps while lr-button/lr-icon-button ease. */
     transition: color var(--lr-transition-fast);
   }
-  [part='document-name']:hover {
+  [part='table']::part(document-name):hover {
     text-decoration: underline;
   }
-  [part='document-name']:active {
+  [part='table']::part(document-name):active {
     color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     text-decoration: underline;
   }
-  [part='document-name']:focus-visible {
+  [part='table']::part(document-name):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

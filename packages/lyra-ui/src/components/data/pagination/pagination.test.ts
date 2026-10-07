@@ -613,7 +613,7 @@ it("uses singular item text and accepts localized label overrides", async () => 
       total="1"
       with-summary
       .strings=${{
-        item: "entry",
+        items: { one: "entry", other: "entries" },
         previous: "Back",
         next: "Forward",
         paginationPage: "Result page",
@@ -1429,6 +1429,16 @@ describe("numbered page list", () => {
     await el.updateComplete;
     expect(itemCount(el)).to.equal(middleCount);
     expect(pageLabels(el).at(-1)).to.equal("20");
+  });
+
+  it("shows a single hidden page instead of spending an ellipsis on it", async () => {
+    const el = await pagination(html`
+      <lr-pagination total="200" page-size="10" page="4" sibling-count="1" boundary-count="1"></lr-pagination>
+    `);
+    expect(pageLabels(el)).to.deep.equal(["1", "2", "3", "4", "5", "20"]);
+    el.page = 17;
+    await el.updateComplete;
+    expect(pageLabels(el)).to.deep.equal(["1", "16", "17", "18", "19", "20"]);
   });
 
   it("renders each elided gap as a named control that requests a multi-page jump", async () => {
@@ -2662,4 +2672,11 @@ describe("lr-pagination current page under the pointer", () => {
       await resetMouse();
     }
   });
+});
+
+it('repairs a foreign format token written on a mounted standard pager', async () => {
+  const el = await fixture<LyraPagination>(html`<lr-pagination total="50" format="standard"></lr-pagination>`);
+  el.setAttribute('format', 'tiny');
+  await el.updateComplete;
+  expect(el.getAttribute('format')).to.equal('standard');
 });

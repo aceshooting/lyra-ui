@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   observeScrollOverflow,
@@ -21,7 +22,9 @@ import {
   OBSERVE_TIMELINE_ITEM_TIMESTAMP,
   SET_TIMELINE_CLUSTER_PRESENTATION,
   isTimelineClusterItemContract,
+  timeValueChanged,
 } from './timeline-cluster.js';
+import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './timeline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -29,8 +32,7 @@ import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-const normalizeTimelineOrientation = (value: unknown): LyraOrientation =>
-  value === 'horizontal' ? 'horizontal' : 'vertical';
+const TIMELINE_ORIENTATION = literalSetConverter<LyraOrientation>(['vertical', 'horizontal'], 'vertical');
 
 /** Browser active-element getters are typed as Element but partial DOMs can return structural
  * lookalikes. Brand-check before focus repair or composed containment traverses a candidate. */
@@ -87,14 +89,12 @@ function safelyContainsActive(container: Element, candidate: unknown): boolean {
 /** How a timeline distributes its items along the main axis. */
 export type LyraTimelineScale = 'flow' | 'time';
 
-const normalizeTimelineScale = (value: unknown): LyraTimelineScale =>
-  value === 'time' ? 'time' : 'flow';
+const TIMELINE_SCALE = literalSetConverter<LyraTimelineScale>(['flow', 'time'], 'flow');
 
 /** How `scale="time"` handles items that land on (nearly) the same position. */
 export type LyraTimelineCollision = 'overlap' | 'stack' | 'cluster';
 
-const normalizeTimelineCollision = (value: unknown): LyraTimelineCollision =>
-  value === 'stack' || value === 'cluster' ? value : 'overlap';
+const TIMELINE_COLLISION = literalSetConverter<LyraTimelineCollision>(['overlap', 'stack', 'cluster'], 'overlap');
 
 export interface LyraTimelineClusterActivateDetail {
   /** The clustered `<lr-timeline-item>` elements, as a frozen snapshot in document order. */
@@ -219,7 +219,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     timelineClusterCount: LYRA_DEFAULT_timelineClusterCount,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-cluster-activate',
@@ -230,24 +230,21 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       'lr-cluster-activate': Object.freeze(['items']),
     });
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
   private _orientation: LyraOrientation = 'vertical';
-  @property({ reflect: true })
+  @property({ reflect: true, converter: TIMELINE_ORIENTATION })
   get orientation(): LyraOrientation {
     return this._orientation;
   }
   set orientation(value: LyraOrientation) {
-    const normalized = normalizeTimelineOrientation(value);
+    const normalized = TIMELINE_ORIENTATION.normalizeReflected(this, 'orientation', value);
     const previous = this._orientation;
-    if (previous === normalized) {
-      if (value !== normalized) this.requestUpdate('orientation', previous);
-      return;
-    }
+    if (previous === normalized) return;
     this._orientation = normalized;
     this.requestUpdate('orientation', previous);
   }
@@ -270,17 +267,14 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * is distributed evenly, so a partially-timestamped list degrades rather than collapsing.
    */
   private _scale: LyraTimelineScale = 'flow';
-  @property({ reflect: true })
+  @property({ reflect: true, converter: TIMELINE_SCALE })
   get scale(): LyraTimelineScale {
     return this._scale;
   }
   set scale(value: LyraTimelineScale) {
-    const normalized = normalizeTimelineScale(value);
+    const normalized = TIMELINE_SCALE.normalizeReflected(this, 'scale', value);
     const previous = this._scale;
-    if (previous === normalized) {
-      if (value !== normalized) this.requestUpdate('scale', previous);
-      return;
-    }
+    if (previous === normalized) return;
     this._scale = normalized;
     this.requestUpdate('scale', previous);
   }
@@ -299,27 +293,24 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * unless `scale="time"`.
    */
   private _collision: LyraTimelineCollision = 'overlap';
-  @property({ reflect: true })
+  @property({ reflect: true, converter: TIMELINE_COLLISION })
   get collision(): LyraTimelineCollision {
     return this._collision;
   }
   set collision(value: LyraTimelineCollision) {
-    const normalized = normalizeTimelineCollision(value);
+    const normalized = TIMELINE_COLLISION.normalizeReflected(this, 'collision', value);
     const previous = this._collision;
-    if (previous === normalized) {
-      if (value !== normalized) this.requestUpdate('collision', previous);
-      return;
-    }
+    if (previous === normalized) return;
     this._collision = normalized;
     this.requestUpdate('collision', previous);
   }
 
   /** Pins the axis start instead of deriving it from the earliest item. Ignored unless
    *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
-  @property({ attribute: false }) rangeStart?: Date | string | number;
+  @property({ attribute: false, hasChanged: timeValueChanged }) rangeStart?: Date | string | number;
   /** Pins the axis end instead of deriving it from the latest item. Ignored unless
    *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
-  @property({ attribute: false }) rangeEnd?: Date | string | number;
+  @property({ attribute: false, hasChanged: timeValueChanged }) rangeEnd?: Date | string | number;
 
   /** Host-level `aria-label` override for the list's accessible name — wins over the localized
    *  default `"Timeline"`. Needed because the `role="list"` element lives in the shadow root and
@@ -424,9 +415,6 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     // so the overflow attribute read below is this render's.
     this.syncScrollTabStop();
     this.scheduleTimeExtentMeasurement();
-    if (changed.has('orientation') && this.getAttribute('orientation') !== this.orientation) {
-      this.setAttribute('orientation', this.orientation);
-    }
     if (
       (changed.has('collisionClusters') || changed.has('orientation')) &&
       this.collisionClusters.length > 0
@@ -742,6 +730,18 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
       const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
       if (!base) return;
+      // The latest vertical item sits at 100%, below the axis: reserve its overhang after the base.
+      let overhang = 0;
+      if (this.scale === 'time' && this.orientation !== 'horizontal') {
+        const bottom = base.getBoundingClientRect().bottom;
+        for (const item of this.timelineItems()) {
+          if (item.getClientRects().length) overhang = Math.max(overhang, item.getBoundingClientRect().bottom - bottom);
+        }
+      }
+      const trailing = `${Math.ceil(overhang)}px`;
+      if (base.style.getPropertyValue('--_lr-timeline-trailing-extent') !== trailing) {
+        base.style.setProperty('--_lr-timeline-trailing-extent', trailing);
+      }
       if (this.scale !== 'time' || this.orientation !== 'horizontal' || this.collision === 'cluster') {
         base.style.removeProperty('--_lr-timeline-content-height');
         return;

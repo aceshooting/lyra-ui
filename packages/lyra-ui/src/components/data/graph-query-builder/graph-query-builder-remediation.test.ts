@@ -3,6 +3,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import './graph-query-builder.js';
 import type { GraphQuery, LyraGraphQueryBuilder } from './graph-query-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 function query(): GraphQuery {
   return { startId: 'start', endId: '', relationshipTypes: ['knows'], nodeTypes: ['person'], direction: 'both', minHops: 1, maxHops: 1 };
@@ -37,6 +39,64 @@ for (const part of ['min-hops', 'max-hops']) {
     expect(events.length, 'programmatic assignments stay silent').to.equal(1);
   });
 }
+
+async function watchedBuilder(): Promise<{ el: LyraGraphQueryBuilder; leaked: string[] }> {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder
+    style="--lr-transition-fast:0ms"
+    .value=${{ ...query(), startId: '' }}
+    .relationshipTypeOptions=${[{ value: 'knows' }, { value: 'likes' }]}
+    .nodeTypeOptions=${[{ value: 'person' }, { value: 'place' }]}
+  ><input slot="actions"></lr-graph-query-builder>`);
+  const leaked: string[] = [];
+  for (const type of ['input', 'change', 'lr-input', 'lr-change', 'lr-activate', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide', 'lr-clear', 'lr-filter', 'lr-invalid']) {
+    el.addEventListener(type, (event) => {
+      if (event.composedPath()[0] !== el) leaked.push(type);
+    });
+  }
+  return { el, leaked };
+}
+
+for (const name of ['start-input', 'end-input', 'save-name-input']) {
+  it(`contains every child event while typing in ${name}`, async () => {
+    const { el, leaked } = await watchedBuilder();
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>(`[part="${name}"]`)!.shadowRoot!.querySelector('input')!);
+    await sendKeys({ type: 'x' });
+    await sendKeys({ press: 'Tab' });
+    await el.updateComplete;
+    expect(leaked).to.deep.equal([]);
+    if (name !== 'save-name-input') expect(el.value[name === 'start-input' ? 'startId' : 'endId']).to.equal('x');
+  });
+}
+
+for (const [name, key, field, expected] of [
+  ['direction', 'Home', 'direction', 'out'],
+  ['relationship-picker', 'End', 'relationshipTypes', ['knows', 'likes']],
+  ['node-type-picker', 'End', 'nodeTypes', ['person', 'place']],
+] as const) {
+  it(`contains every child event for a real ${name} choice`, async () => {
+    const { el, leaked } = await watchedBuilder();
+    const select = el.shadowRoot!.querySelector<LyraSelect>(`[part="${name}"]`)!;
+    const trigger = select.shadowRoot!.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+    const shown = oneEvent(select, 'lr-after-show');
+    await focusByKeyboard(trigger);
+    trigger.click();
+    await shown;
+    await sendKeys({ press: key });
+    const hidden = oneEvent(select, 'lr-after-hide');
+    await sendKeys({ press: 'Enter' });
+    await hidden;
+    await el.updateComplete;
+    expect(leaked).to.deep.equal([]);
+    expect(el.value[field]).to.deep.equal(expected);
+  });
+}
+
+it('lets events from slotted actions reach the host', async () => {
+  const { el, leaked } = await watchedBuilder();
+  await focusByKeyboard(el.querySelector('input')!);
+  await sendKeys({ type: 'y' });
+  expect(leaked).to.deep.equal(['input']);
+});
 
 function unavailableActiveElement(root: ShadowRoot): () => void {
   const descriptor = Object.getOwnPropertyDescriptor(root, 'activeElement');
@@ -97,3 +157,43 @@ for (const group of ['relationship', 'node-type']) {
     expect(el.shadowRoot!.querySelectorAll(`[part="${group}-chips"] lr-chip`).length).to.equal(0);
   });
 }
+
+it('treats re-assigning the same value, options or saved queries as no change', async () => {
+  const value = query();
+  const options = [{ value: 'knows' }];
+  const saved = [{ id: 's1', name: 'Saved', query: query() }];
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .value=${value} .relationshipTypeOptions=${options} .nodeTypeOptions=${options} .savedQueries=${saved}></lr-graph-query-builder>`);
+  el.value = value;
+  el.relationshipTypeOptions = options;
+  el.nodeTypeOptions = options;
+  el.savedQueries = saved;
+  expect(el.isUpdatePending).to.equal(false);
+});
+
+it('keeps both path edits that land before the next render', async () => {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .value=${query()}></lr-graph-query-builder>`);
+  for (const [part, value] of [['start-input', 'a'], ['end-input', 'b']]) {
+    el.shadowRoot!.querySelector(`[part="${part}"]`)!.dispatchEvent(new CustomEvent('lr-input', { detail: { value }, bubbles: true, composed: true }));
+  }
+  expect([el.value.startId, el.value.endId]).to.deep.equal(['a', 'b']);
+});
+
+it('keeps a disabled Save at rest under the pointer and mixes Run hover from its own fill', async () => {
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder
+    style="--lr-transition-fast: 0s; --lr-graph-query-builder-run-bg: rgb(0, 128, 0); --lr-color-mix-hover: 0%"
+    .value=${query()}
+  ></lr-graph-query-builder>`);
+  const [save, run] = ['save-button', 'run-button'].map((name) => el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${name}"]`)!);
+  const resting = getComputedStyle(save!).backgroundColor;
+  try {
+    await hoverUntilMatched(save!, 'disabled save hovered');
+    const saveHover = getComputedStyle(save!).backgroundColor;
+    await hoverUntilMatched(run!, 'run hovered');
+    const probe = document.createElement('i');
+    probe.style.background = 'color-mix(in oklab, rgb(0, 128, 0), black 0%)';
+    el.after(probe);
+    expect([save!.disabled, saveHover, getComputedStyle(run!).backgroundColor]).to.deep.equal([true, resting, getComputedStyle(probe).backgroundColor]);
+  } finally {
+    await resetMouse();
+  }
+});

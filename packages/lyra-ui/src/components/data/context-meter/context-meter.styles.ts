@@ -258,7 +258,7 @@ export const styles = css`
   }
   :host([shape='ring']) [part='track'] {
     fill: none;
-    stroke: color-mix(in srgb, var(--lr-color-border) 30%, transparent);
+    stroke: var(--lr-context-meter-track-bg, color-mix(in srgb, var(--lr-color-border) 30%, transparent));
   }
   :host([shape='ring']) [part~='segment'] {
     fill: none;

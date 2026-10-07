@@ -162,50 +162,47 @@ it('computes a "used of total" aria-label summary from the segment sum, ignoring
   expect(semantic.getAttribute('aria-valuemax')).to.equal('10000');
 });
 
-it('prefixes the aria-label summary with the label when provided', async () => {
+it('names the meter from its label and speaks the used phrase as its value text', async () => {
   const el = (await fixture(
     html`<lr-context-meter total="10000" label="128K context window"></lr-context-meter>`,
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
-    '128K context window: 8,000 of 10,000 used',
-  );
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect([semantic.getAttribute('aria-label'), semantic.getAttribute('aria-valuetext')]).to.deep.equal([
+    '128K context window',
+    '8,000 of 10,000 used',
+  ]);
 });
 
-it('keeps an explicit host name on the host without duplicating it on the meter owner', async () => {
+it('names the meter from a host aria-label, following late changes', async () => {
   const el = (await fixture(html`
-    <lr-context-meter aria-label="Context window occupancy" total="10000"></lr-context-meter>
+    <lr-context-meter aria-label="Context window occupancy" label="Window" total="10000"></lr-context-meter>
   `)) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
 
   const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
-  expect(el.getAttribute('aria-label')).to.equal('Context window occupancy');
-  expect(semantic.getAttribute('aria-label')).to.equal('8,000 of 10,000 used');
-  expect(semantic.getAttribute('role')).to.equal('meter');
-});
-
-it('does not copy late host aria-label changes onto the meter semantic owner', async () => {
-  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
-  el.segments = [{ label: 'Prompt', value: 25 }];
-  await el.updateComplete;
-
-  const semantic = () => el.shadowRoot!.querySelector('[part="semantic"]')!;
-  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
-
-  el.setAttribute('aria-label', 'Custom occupancy');
-  await el.updateComplete;
-  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
-
+  expect([semantic.getAttribute('role'), semantic.getAttribute('aria-label'), semantic.getAttribute('aria-valuetext')]).to.deep.equal([
+    'meter',
+    'Context window occupancy',
+    '8,000 of 10,000 used',
+  ]);
   el.setAttribute('aria-label', 'Replacement occupancy');
   await el.updateComplete;
-  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
-
+  expect(semantic.getAttribute('aria-label')).to.equal('Replacement occupancy');
   el.removeAttribute('aria-label');
   await el.updateComplete;
-  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
+  expect(semantic.getAttribute('aria-label')).to.equal('Window');
+});
+
+it('keeps fractional counts and snaps the summed value', async () => {
+  const el = await fixture<LyraContextMeter>(html`<lr-context-meter total="2"></lr-context-meter>`);
+  el.segments = [{ label: 'Logs', value: 0.1 }, { label: 'Tools', value: 0.2 }];
+  await el.updateComplete;
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect([semantic.getAttribute('aria-label'), semantic.getAttribute('aria-valuenow')]).to.deep.equal(['0.3 of 2 used', '0.3']);
 });
 
 it('exposes each segment label and locale-formatted count in an accessible breakdown', async () => {
@@ -286,18 +283,18 @@ describe('summary localization', () => {
     expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('5 utilisés');
   });
 
-  it('lets a locale reorder the visible label and aggregate summary as one message', async () => {
+  it('speaks a localized used-of-total summary as the labelled meter value text', async () => {
     const el = (await fixture(html`
       <lr-context-meter
         total="10000"
         label="Budget"
-        .strings=${{ contextMeterLabeledSummary: '{summary} — {label}' }}
+        .strings=${{ contextMeterUsedOfTotal: '{total} max, {used} used' }}
       ></lr-context-meter>
     `)) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
-      '8,000 of 10,000 used — Budget',
+    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-valuetext')).to.equal(
+      '10,000 max, 8,000 used',
     );
   });
 
@@ -958,4 +955,34 @@ describe('canonical with-legend behavior', () => {
     expect(warnings).to.deep.equal([]);
   });
 
+});
+
+it('repairs a foreign shape token written on a mounted bar meter', async () => {
+  const el = await fixture<LyraContextMeter>(html`<lr-context-meter total="100"></lr-context-meter>`);
+  el.setAttribute('shape', 'triangle');
+  await el.updateComplete;
+  expect(el.getAttribute('shape')).to.equal('bar');
+});
+
+it('paints the ring track from the shared track token', async () => {
+  const el = await fixture<LyraContextMeter>(html`<lr-context-meter shape="ring" total="10" style="--lr-context-meter-track-bg: rgb(1, 2, 3)"></lr-context-meter>`);
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="track"]')!).stroke).to.equal('rgb(1, 2, 3)');
+});
+
+it('canonicalizes the selection once per render, not per band', async () => {
+  const el = await fixture<LyraContextMeter>(html`<lr-context-meter interactive with-legend total="100"></lr-context-meter>`);
+  el.segments = Array.from({ length: 20 }, (_, index) => ({ label: `s${index}`, value: 1 }));
+  el.selectedIndices = [3, 1];
+  await el.updateComplete;
+  const target = el as unknown as { canonicalSelectedIndices: () => number[] };
+  const original = target.canonicalSelectedIndices;
+  let calls = 0;
+  target.canonicalSelectedIndices = function (this: unknown) { calls += 1; return original.call(this); };
+  try {
+    el.total = 200;
+    await el.updateComplete;
+  } finally {
+    delete (target as Partial<typeof target>).canonicalSelectedIndices;
+  }
+  expect(calls).to.equal(0);
 });

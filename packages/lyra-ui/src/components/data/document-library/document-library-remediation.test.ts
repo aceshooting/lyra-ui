@@ -50,3 +50,40 @@ it('retains own undefined tags like omission through projection, rows, selection
   nameButtons(element)[2]!.click();
   expect(opened).to.deep.equal(['undefined']);
 });
+
+it('keeps one stable documents snapshot and ignores re-assigned identical collections', async () => {
+  const selected = ['alpha'];
+  const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${documents} .selectedDocumentIds=${selected}></lr-document-library>`);
+  expect(element.documents === element.documents).to.equal(true);
+  element.documents = documents;
+  element.selectedDocumentIds = selected;
+  element.tagFilter = element.tagFilter;
+  expect(element.isUpdatePending).to.equal(false);
+});
+
+it('styles document names inside the composed table and exports their part', async () => {
+  const host = await fixture(html`<div><style>.probe::part(document-name) { outline-color: rgb(1, 2, 3); }</style><lr-document-library class="probe" .documents=${documents}></lr-document-library></div>`);
+  const button = nameButtons(host.querySelector('lr-document-library')!)[0]!;
+  const style = getComputedStyle(button);
+  expect([style.borderTopStyle, style.backgroundColor, style.outlineColor]).to.deep.equal(['none', 'rgba(0, 0, 0, 0)', 'rgb(1, 2, 3)']);
+});
+
+it('counts search matches without sorting and sorts names through the cached collator', async () => {
+  const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${[...documents, { id: 'gamma', name: 'Gamma' }]}></lr-document-library>`);
+  const target = element as unknown as { compareDocuments: (a: LibraryDocument, b: LibraryDocument) => number };
+  const compare = target.compareDocuments;
+  let comparisons = 0;
+  target.compareDocuments = (a, b) => { comparisons += 1; return compare(a, b); };
+  const localeCompare = String.prototype.localeCompare;
+  let localeCompares = 0;
+  String.prototype.localeCompare = function (this: string, ...args: Parameters<string['localeCompare']>) { localeCompares += 1; return localeCompare.apply(this, args); };
+  try {
+    const search = element.shadowRoot!.querySelector('[part="search"]')!;
+    search.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'a' } }));
+    expect(comparisons).to.equal(0);
+    await element.updateComplete;
+  } finally {
+    String.prototype.localeCompare = localeCompare;
+  }
+  expect(localeCompares).to.equal(0);
+});

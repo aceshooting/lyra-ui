@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 import './env-list.js';
 import type { LyraEnvList } from './env-list.js';
@@ -60,10 +61,10 @@ describe('lr-env-list', () => {
     )) as LyraEnvList;
     await el.updateComplete;
     const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
-    reveal.focus();
+    await focusByKeyboard(reveal);
     expect(getComputedStyle(reveal).outlineStyle).to.equal('solid');
     const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
-    copy.focus();
+    await focusByKeyboard(copy);
     expect(getComputedStyle(copy).outlineStyle).to.equal('solid');
   });
 
@@ -376,7 +377,6 @@ describe('lr-env-list', () => {
       el.style.setProperty('--lr-env-list-reveal-active-bg', 'rgb(10, 20, 30)');
       el.style.setProperty('--lr-env-list-reveal-active-border', 'rgb(40, 50, 60)');
       const btn = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
-      expect(btn.getAttribute('aria-pressed')).to.equal('true');
       expect(getComputedStyle(btn).backgroundColor).to.equal('rgb(10, 20, 30)');
       expect(getComputedStyle(btn).borderTopColor).to.equal('rgb(40, 50, 60)');
     });
@@ -506,8 +506,7 @@ it('keeps a hover tint on a revealed toggle, not only on the hidden ones', async
   expect(buttons).to.have.lengthOf(2);
   buttons[0]!.click();
   await el.updateComplete;
-  const revealed = el.shadowRoot!.querySelector<HTMLElement>('[part="reveal-button"][aria-pressed="true"]')!;
-  const hidden = el.shadowRoot!.querySelector<HTMLElement>('[part="reveal-button"][aria-pressed="false"]')!;
+  const [revealed, hidden] = buttons as [HTMLElement, HTMLElement];
   const centre = (element: HTMLElement): [number, number] => {
     const rect = element.getBoundingClientRect();
     return [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)];
@@ -564,4 +563,37 @@ describe('lr-env-list reveal and copy controls', () => {
     expect(warnings).to.deep.equal([]);
   });
 
+});
+
+it('treats re-assigning the same entries array as no change', async () => {
+  const entries = [{ name: 'API_KEY', value: 'secret', secret: true }];
+  const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
+  el.entries = entries;
+  expect(el.isUpdatePending).to.equal(false);
+});
+
+it('names the reveal toggle by its action and carries no pressed state', async () => {
+  const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="reveal-button"]')!;
+  const before = button.textContent!.trim();
+  button.click();
+  await el.updateComplete;
+  expect([before, button.textContent!.trim(), button.hasAttribute('aria-pressed')]).to.deep.equal(['Reveal API_KEY', 'Hide API_KEY', false]);
+});
+
+it('deepens a masked reveal button while it is pressed', async () => {
+  const el = await fixture<LyraEnvList>(html`<lr-env-list style="--lr-transition-fast: 0s" .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="reveal-button"]')!;
+  const rect = button.getBoundingClientRect();
+  try {
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+    await waitUntil(() => button.matches(':hover'));
+    const hover = getComputedStyle(button).backgroundColor;
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => button.matches(':active'));
+    expect(getComputedStyle(button).backgroundColor).to.not.equal(hover);
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
 });

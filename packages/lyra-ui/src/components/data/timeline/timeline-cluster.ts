@@ -14,6 +14,10 @@ export const SET_TIMELINE_CLUSTER_PRESENTATION: unique symbol = Symbol.for(
   '@aceshooting/lyra-ui/timeline/cluster-presentation/v1'
 ) as never;
 
+/** @internal Dates compare by time, so a re-created equal `Date` is no change. */
+export const timeValueChanged = (value: unknown, old: unknown): boolean =>
+  value instanceof Date && old instanceof Date ? !Object.is(value.getTime(), old.getTime()) : !Object.is(value, old);
+
 /** @internal */
 export const OBSERVE_TIMELINE_ITEM_TIMESTAMP: unique symbol = Symbol.for(
   '@aceshooting/lyra-ui/timeline/timestamp-observer/v1'

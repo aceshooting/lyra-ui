@@ -198,7 +198,7 @@ it("is accessible with populated, tagged, selected, sorted rows", async () => {
   await expect(el).to.be.accessible();
 });
 
-it("announces post-mount selection counts as light-DOM additions while the visible bar stays non-live", async () => {
+it("announces each user selection change once while the visible bar stays non-live", async () => {
   const el = (await fixture(
     html`<lr-document-library
       .documents=${docs}
@@ -214,13 +214,17 @@ it("announces post-mount selection counts as light-DOM additions while the visib
   expect(bar.getAttribute("role")).to.equal(null);
   expect(bar.getAttribute("aria-live")).to.equal(null);
 
-  el.selectedDocumentIds = ["d2"];
+  el.addEventListener("lr-selection-change", (event) => {
+    el.selectedDocumentIds = (event as CustomEvent<{ documentIds: readonly string[] }>).detail.documentIds;
+  });
+  const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+  findCheckbox(table, 1).click();
   await el.updateComplete;
-  el.selectedDocumentIds = ["d2"];
+  el.selectedDocumentIds = [...el.selectedDocumentIds];
   await el.updateComplete;
   el.selectedDocumentIds = [];
   await el.updateComplete;
-  expect(sinkTexts()).to.deep.equal(["1 selected", "1 selected", "0 selected"]);
+  expect(sinkTexts()).to.deep.equal(["2 selected"]);
 
   el.remove();
   expect(sinkElement() === null).to.be.true;
@@ -235,7 +239,8 @@ it("re-targets selection announcements after cross-document adoption", async () 
   const frameDocument = iframe.contentDocument!;
   try {
     frameDocument.body.append(el);
-    el.selectedDocumentIds = ["d1"];
+    await el.updateComplete;
+    findCheckbox(el.shadowRoot!.querySelector("lr-table") as HTMLElement, 0).click();
     await el.updateComplete;
     expect(
       sinkElement() === null,
@@ -894,9 +899,11 @@ describe("v9 controlled and immutable contracts", () => {
     expect(Object.isFrozen(el.selectedDocumentIds)).to.equal(true);
     expect(Object.isFrozen(el.tagFilter)).to.equal(true);
 
-    const publicDate = el.documents[0]!.updatedAt as Date;
-    publicDate.setUTCFullYear(2040);
-    expect((el.documents[0]!.updatedAt as Date).toISOString()).to.equal("2026-01-02T00:00:00.000Z");
+    (el.documents[0]!.updatedAt as Date).setUTCFullYear(2040);
+    el.requestUpdate();
+    await el.updateComplete;
+    const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
+    expect(table.shadowRoot!.querySelector("[data-row-key]")!.textContent).to.include("2026");
   });
 
   it("exposes controlled searchTerm and emits an isolated readonly filter snapshot", async () => {

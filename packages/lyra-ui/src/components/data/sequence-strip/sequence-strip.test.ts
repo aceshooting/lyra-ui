@@ -6,7 +6,9 @@ import type {
   SequenceStripCategory,
   SequenceStripItem,
 } from './sequence-strip.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { captureDeprecationWarnings, type DeprecatedUsage } from '../../../../test/expected-deprecations.js';
 
@@ -374,6 +376,8 @@ it('renders an empty strip (no cells, generic aria-label) when items is empty', 
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.be.a('string');
+  const empty = el.shadowRoot!.querySelector<HTMLElement>('[part="empty"]')!;
+  expect([empty.textContent!.trim(), empty.getBoundingClientRect().height > 0]).to.deep.equal(['No items', true]);
 });
 
 it('honors a .strings override for the empty-state summary in the rendered aria-label', async () => {
@@ -518,7 +522,7 @@ describe('hover tooltip', () => {
     await el.updateComplete;
     const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[3]!;
 
-    cell.focus();
+    await focusByKeyboard(cell);
     await el.updateComplete;
     const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!;
     const cellRect = cell.getBoundingClientRect();
@@ -536,7 +540,7 @@ describe('hover tooltip', () => {
     el.categories = categories;
     await el.updateComplete;
     let cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
-    cells[0]!.focus();
+    await focusByKeyboard(cells[0]!);
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 1: text');
     expect(cells[0]!.getAttribute('aria-describedby')).to.be.null;
@@ -590,6 +594,67 @@ describe('hover tooltip', () => {
     const focusedId = cells.find((cell) => cell === el.shadowRoot!.activeElement)?.dataset['itemId'];
     expect(focusedId).to.equal('2');
     expect(cells.filter((cell) => cell.tabIndex === 0).map((cell) => cell.dataset['itemId'])).to.deep.equal(['2']);
+  });
+
+  it('leaves no tooltip behind a pointer-focused cell once the pointer leaves', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .items=${labeledItems} .categories=${categories}></lr-sequence-strip>`);
+    const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[1]!;
+    const rect = cell.getBoundingClientRect();
+    try {
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+      await sendMouse({ type: 'move', position: [0, 0] });
+      await el.updateComplete;
+      expect(el.shadowRoot!.activeElement === cell).to.equal(true);
+      expect(el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!.hidden).to.equal(true);
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('paints hover with a thin outline and keeps the focus ring for keyboard focus', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .items=${labeledItems} .categories=${categories}></lr-sequence-strip>`);
+    const [first, second] = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]');
+    try {
+      await hoverUntilMatched(second!, 'cell hovered');
+      const hover = parseFloat(getComputedStyle(second!).outlineWidth);
+      await focusByKeyboard(first!);
+      expect(hover).to.be.above(0).and.below(parseFloat(getComputedStyle(first!).outlineWidth));
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('does not rebuild the generated summary while the pointer moves across cells', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip locale="en" .items=${labeledItems} .categories=${categories}></lr-sequence-strip>`);
+    const list = getListFormat('en', { style: 'long', type: 'unit' });
+    const format = list.format;
+    let calls = 0;
+    list.format = (values) => { calls += 1; return format.call(list, values); };
+    try {
+      for (const cell of el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')) {
+        cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+        await el.updateComplete;
+      }
+    } finally {
+      list.format = format;
+    }
+    expect(calls).to.equal(0);
+  });
+
+  it('keeps the hover tooltip and a queued arrow focus when the same items are re-assigned', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .items=${labeledItems} .categories=${categories}></lr-sequence-strip>`);
+    const cells = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    cells()[1]!.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!.hidden).to.equal(false);
+
+    await focusByKeyboard(cells()[0]!);
+    cells()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    el.items = labeledItems;
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['itemId']).to.equal('2');
   });
 
   it('cancels a queued arrow focus when the item model is replaced in the same turn', async () => {

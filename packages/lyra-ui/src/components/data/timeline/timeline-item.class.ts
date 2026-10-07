@@ -10,6 +10,7 @@ import {
   SET_TIMELINE_CLUSTER_PRESENTATION,
   type TimelineClusterPresentation,
   type TimelineTimestampObserver,
+  timeValueChanged,
 } from './timeline-cluster.js';
 
 const timelineItemVariantConverter = {
@@ -131,7 +132,7 @@ export class LyraTimelineItem extends LyraElement {
    *  `Date` instances aren't attribute-serializable -- set via a property binding
    *  (`.timestamp=${...}`) or imperatively, never a plain HTML attribute. Ignored entirely when the
    *  `timestamp` slot has assigned content -- see the class doc / that slot's own description. */
-  @property({ attribute: false }) timestamp?: Date | string | number;
+  @property({ attribute: false, hasChanged: timeValueChanged }) timestamp?: Date | string | number;
 
   /** Forwarded 1:1 onto the internally-rendered `<lr-relative-time>`'s own `sync` property, so a
    *  live feed (e.g. streaming agent actions) can opt this item into auto-refreshing relative text
@@ -150,11 +151,14 @@ export class LyraTimelineItem extends LyraElement {
   }
   set variant(value: LyraVariant) {
     const normalized = normalizeTimelineItemVariant(value);
-    const previous = this._variant;
-    if (previous === normalized) {
-      if (value !== normalized) this.requestUpdate('variant', previous);
-      return;
+    const raw = this.getAttribute('variant');
+    if (raw !== null && raw !== normalized) {
+      const reflected = timelineItemVariantConverter.toAttribute(normalized);
+      if (reflected === null) this.removeAttribute('variant');
+      else this.setAttribute('variant', reflected);
     }
+    const previous = this._variant;
+    if (previous === normalized) return;
     this._variant = normalized;
     this.requestUpdate('variant', previous);
   }
@@ -230,12 +234,6 @@ export class LyraTimelineItem extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('variant')) {
-      const reflected = timelineItemVariantConverter.toAttribute(this.variant);
-      if (reflected === null) this.removeAttribute('variant');
-      else if (this.getAttribute('variant') !== reflected)
-        this.setAttribute('variant', reflected);
-    }
     if (this.timestampObserversReady && changed.has('timestamp')) {
       this.scheduleAfterUpdate(
         () => {
