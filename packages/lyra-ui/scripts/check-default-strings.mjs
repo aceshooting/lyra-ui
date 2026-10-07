@@ -24,7 +24,10 @@ import { parseSync } from 'oxc-parser';
 // so its call site's key argument is a forwarded parameter, not a literal, by construction.
 // Bare `localize()` calls now count (+1), and `<lr-chart>` names its type through a literal
 // switch (-1).
-const UNRESOLVED_CEILING = 29;
+// Lowered 29 -> 25: `<lr-agent-run>`'s status text, the shared short-duration formatter (waterfall
+// and thinking-panel durations) and `<lr-pagination>`'s plural text now take decidable shapes (-5);
+// `<lr-qr-code>` stores its error message key and localizes it at render (+1).
+const UNRESOLVED_CEILING = 25;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));
