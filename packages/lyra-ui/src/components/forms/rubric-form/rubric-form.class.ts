@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { nextId } from '../../../internal/a11y.js';
@@ -1068,7 +1069,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     } else if (firstKey.type === 'score') {
       (control.shadowRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.focus(options);
     } else if (firstKey.type === 'category' && firstKey.multiple) {
-      (control.querySelector('lr-checkbox') as HTMLElement | null)?.focus(options);
+      (control.querySelector(tag('checkbox')) as HTMLElement | null)?.focus(options);
     } else {
       control.focus(options);
     }

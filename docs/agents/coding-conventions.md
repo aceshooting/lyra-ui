@@ -7,7 +7,9 @@
   supplies the token CSS layer (`static styles = [tokens]`) and `this.emit()`.
 - **Never hard-code `"lr-"`.** Tag names go through `tag(name)`; register via
   `defineElement(name, ctor)` (`src/internal/prefix.ts`, idempotent — safe to import twice). The
-  prefix is a single constant (`LYRA_PREFIX`) so a rename stays cheap.
+  prefix is a single constant (`LYRA_PREFIX`) so a rename stays cheap. `check:source-policy`'s
+  `literal-tag-name` rule rejects an `lr-` tag in `closest`/`matches`/`querySelector(All)` or a
+  `localName` comparison.
 - **Design tokens only.** Every color/space/font/radius value in component styles references a
   centralized `--lr-*` custom property. Themeable base tokens read a `--lr-theme-*` application
   input and provide a built-in fallback; aliases, computed tokens, the colour ramp, environment

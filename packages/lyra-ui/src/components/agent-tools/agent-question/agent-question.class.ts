@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -193,7 +194,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       let content: ToolParamFormValue | undefined;
       if (action === 'accept') {
         if (!this.supportedSchema || this.valueInvalid) return;
-        const form = this.renderRoot.querySelector<LyraToolParamForm>('lr-tool-param-form');
+        const form = this.renderRoot.querySelector<LyraToolParamForm>(tag('tool-param-form'));
         if (!form) return;
         // Synchronize synchronous host assignments before validation, even before Lit's next render.
         const schema = this.schema;

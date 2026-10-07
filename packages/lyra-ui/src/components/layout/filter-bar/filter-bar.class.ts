@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import type { LyraDateRangePreset } from '../../forms/date-picker/date-picker.class.js';
 import type { LyraInputType } from '../../forms/input/input.class.js';
@@ -1824,7 +1825,7 @@ export class LyraFilterBar<
    *  on both edges covers the case where the detached update lands too late to take effect. */
   private closeCheckboxMenus(): void {
     for (const menu of this.renderRoot?.querySelectorAll<HTMLElement & { open: boolean }>(
-      'lr-dropdown[data-filter-id]'
+      `${tag('dropdown')}[data-filter-id]`
     ) ?? []) {
       if (menu.open) menu.open = false;
     }
@@ -1851,7 +1852,7 @@ export class LyraFilterBar<
     if (!this._filters.some((def) => def.type === 'text')) return;
     const fields = new Map<string, HTMLElement & { value: string }>();
     for (const node of this.renderRoot.querySelectorAll(
-      'lr-input[data-filter-id]'
+      `${tag('input')}[data-filter-id]`
     )) {
       const element = node as HTMLElement & { value: string };
       const id = element.dataset['filterId'];

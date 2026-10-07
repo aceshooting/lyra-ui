@@ -38,6 +38,9 @@ export interface LyraSequencePlaybackEventMap {
  * play-timers in time-series dashboards.
  *
  * @customElement lr-sequence-playback
+ * @slot play-icon - Decorative play glyph shown while paused; rendered inert and `aria-hidden` inside the
+ *   play/pause button, so it must not be a second interactive control. The built-in glyph is the fallback.
+ * @slot pause-icon - Decorative pause glyph shown while playing, through the same inert layer.
  * @event lr-play - Fired when playback starts.
  * @event lr-pause - Fired when playback stops (including auto-pause).
  * @event lr-sequence-step - `detail: { currentIndex }`, fired on every tick and manual step.
@@ -307,7 +310,9 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
           @focus=${this.onControlFocus}
           @blur=${this.onControlBlur}
         >
-          ${this.playing ? pauseIcon() : playIcon()}
+          <span class="icon" aria-hidden="true" inert>${this.playing
+            ? html`<slot name="pause-icon">${pauseIcon()}</slot>`
+            : html`<slot name="play-icon">${playIcon()}</slot>`}</span>
         </button>
         <input
           part="slider"

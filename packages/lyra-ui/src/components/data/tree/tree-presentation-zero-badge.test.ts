@@ -1,6 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 it('renders a badge value of 0 instead of treating it as absent', async () => {
   const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;

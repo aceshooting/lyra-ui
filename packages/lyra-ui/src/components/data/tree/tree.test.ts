@@ -1,7 +1,10 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { captureDevWarnings, expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 interface TreeTestAccess {
   activeId: string | null;
@@ -891,4 +894,19 @@ describe('explicitly empty host aria-label', () => {
     await omitted.updateComplete;
     expect(omitted.shadowRoot!.querySelector('[part~="tree"]')!.getAttribute('aria-label')).to.equal('Files');
   });
+});
+
+it('warns once per page about a tree with no accessible name, and not about a named one', async () => {
+  const named = await captureDevWarnings(async () => {
+    await fixture(html`<lr-tree label="Files" .data=${data}></lr-tree>`);
+    await fixture(html`<lr-tree aria-label="Files" .data=${data}></lr-tree>`);
+    await fixture(html`<lr-tree aria-label="" .data=${data}></lr-tree>`);
+  });
+  expect(named).to.deep.equal([]);
+  const unnamed = await captureDevWarnings(async () => {
+    await fixture(html`<lr-tree .data=${data}></lr-tree>`);
+    await fixture(html`<lr-tree .data=${data}></lr-tree>`);
+  });
+  expect(unnamed).to.have.lengthOf(1);
+  expect(unnamed[0]).to.include('no accessible name');
 });

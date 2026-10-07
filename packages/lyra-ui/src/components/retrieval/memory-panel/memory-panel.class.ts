@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -648,7 +649,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private focusPendingConfirmation(): void {
     const started = this.pending;
     void this.updateComplete.then(async () => {
-      const bar = this.renderRoot.querySelector('lr-confirm-bar');
+      const bar = this.renderRoot.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>(tag('confirm-bar'));
       if (!bar) return;
       await bar.updateComplete;
       const deny = bar.shadowRoot?.querySelector('[part="deny-button"]') as

@@ -54,10 +54,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   'src/components/forms/radio/radio.class.ts': Object.freeze(['fieldRequired']),
   'src/components/forms/select/select.class.ts': Object.freeze(['fieldRequired']),
 
-  // Not form-associated: attachInternalsSafely() is the only import taken from
-  // form-associated.ts, and the unrelated FormAssociated export owns the fieldRequired lookup.
-  'src/components/layout/details/details.class.ts': Object.freeze(['fieldRequired']),
-
   // Not form-associated at all; form-associated.ts only reaches this graph transitively through
   // the composed form controls it renders, and each of those owns its own slice.
 

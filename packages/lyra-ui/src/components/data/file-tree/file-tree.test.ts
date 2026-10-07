@@ -5,6 +5,9 @@ import './file-tree.js';
 import type { LyraFileTree, FileTreeNode } from './file-tree.js';
 import type { LyraTree } from '../tree/tree.js';
 import type { LyraTreeItem } from '../tree/tree-item.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 const nodes: FileTreeNode[] = [
   {

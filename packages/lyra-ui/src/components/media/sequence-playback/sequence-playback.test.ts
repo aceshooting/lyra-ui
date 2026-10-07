@@ -1,8 +1,10 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { LitElement, type PropertyValues } from 'lit';
 import './sequence-playback.js';
 import { LyraSequencePlayback } from './sequence-playback.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import {
@@ -467,6 +469,45 @@ it('renders the play/pause button content as an SVG icon, not a literal glyph, a
 
   expect((button().querySelector('svg')) != null).to.equal(true);
   expect(button().innerHTML).to.not.equal(playMarkup);
+});
+
+describe('play-icon and pause-icon slots', () => {
+  const shown = (node: Element): boolean => node.getBoundingClientRect().width > 0;
+
+  it('shows the authored glyph for the current state and the built-in glyph when none is authored', async () => {
+    const el = (await fixture(html`<lr-sequence-playback item-count="3">
+      <b slot="play-icon">P</b><b slot="pause-icon">Q</b>
+    </lr-sequence-playback>`)) as LyraSequencePlayback;
+    const [play, pause] = el.querySelectorAll('b');
+    const builtIn = (): boolean => shown(el.shadowRoot!.querySelector('[part="play-button"] svg')!);
+    expect([shown(play!), shown(pause!), builtIn()]).to.deep.equal([true, false, false]);
+    el.play();
+    await el.updateComplete;
+    expect([shown(play!), shown(pause!), builtIn()]).to.deep.equal([false, true, false]);
+    pause!.remove();
+    await el.updateComplete;
+    expect([shown(play!), builtIn()]).to.deep.equal([false, true]);
+  });
+
+  it('keeps an authored interactive glyph decorative: skipped by Tab and never the click target', async () => {
+    const el = (await fixture(html`<lr-sequence-playback item-count="3">
+      <button slot="play-icon" type="button" aria-label="Glyph">Go</button>
+    </lr-sequence-playback>`)) as LyraSequencePlayback;
+    const glyph = el.querySelector('button')!;
+    let glyphClicks = 0;
+    glyph.addEventListener('click', () => glyphClicks++);
+    await expect(el).to.be.accessible();
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[part="play-button"]')!);
+    await sendKeys({ press: 'Tab' });
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('slider');
+    const rect = glyph.getBoundingClientRect();
+    try {
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+      expect([el.playing, glyphClicks]).to.deep.equal([true, 0]);
+    } finally {
+      await resetMouse();
+    }
+  });
 });
 
 it('shows the disabled affordance (opacity + not-allowed cursor) on the play button when length <= 1', async () => {

@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
@@ -467,7 +468,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   }
 
   private archiveVirtualList(): LyraVirtualList | null {
-    return this.renderRoot.querySelector('lr-virtual-list') as LyraVirtualList | null;
+    return this.renderRoot.querySelector(tag('virtual-list')) as LyraVirtualList | null;
   }
 
   private async waitForArchiveRow(list: LyraVirtualList, index: number): Promise<boolean> {
@@ -603,7 +604,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     const match = this.archiveSearchMatches[this.archiveSearchActiveIndex];
     if (!match) return;
     const index = this.fetchState.entries.indexOf(match);
-    const list = this.renderRoot.querySelector('lr-virtual-list') as
+    const list = this.renderRoot.querySelector(tag('virtual-list')) as
       | { scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void }
       | null;
     if (index >= 0) list?.scrollToIndex(index, { behavior: 'auto' });

@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -927,9 +928,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     if (
-      active?.localName !== 'lr-chip' ||
+      active?.localName !== tag('chip') ||
       active.getAttribute('value') !== value ||
-      active.closest<HTMLElement>('lr-chip-group')?.getAttribute('part') !== expectedPart
+      active.closest<HTMLElement>(tag('chip-group'))?.getAttribute('part') !== expectedPart
     )
       return;
     const index = selected.indexOf(value);
@@ -1020,7 +1021,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       if (pending.kind === 'chip') {
         if (pending.targetValue) {
           const part = pending.group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
-          const chip = [...(this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="${part}"] lr-chip`) ?? [])].find(
+          const chip = [...(this.shadowRoot?.querySelectorAll<HTMLElement>(`[part="${part}"] ${tag('chip')}`) ?? [])].find(
             (candidate) => candidate.getAttribute('value') === pending.targetValue
           );
           if (chip) {

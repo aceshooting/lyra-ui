@@ -38,6 +38,9 @@ export const styles = css`
     );
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
+  .icon {
+    display: flex;
+  }
   [part="play-button"]:hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }

@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type {
@@ -1086,7 +1087,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private async revealActiveSearchMatch(): Promise<void> {
     await this.updateComplete;
-    const list = this.renderRoot.querySelector('lr-virtual-list') as
+    const list = this.renderRoot.querySelector(tag('virtual-list')) as
       | (HTMLElement & {
         updateComplete: Promise<boolean>;
         scrollToIndex(

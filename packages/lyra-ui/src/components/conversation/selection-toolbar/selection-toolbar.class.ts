@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -421,7 +422,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private actionRoots(): Element[] {
     const builtIn = [
       ...this.renderRoot.querySelectorAll<HTMLElement>(
-        'lr-button[data-action]'
+        `${tag('button')}[data-action]`
       ),
     ];
     const slot = this.renderRoot.querySelector<HTMLSlotElement>(
@@ -433,7 +434,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   private actionForStop(stop: Element): SelectionAction | undefined {
     const owner = [
       ...this.renderRoot.querySelectorAll<HTMLElement>(
-        'lr-button[data-action]'
+        `${tag('button')}[data-action]`
       ),
     ].find((button) => composedContains(button, stop));
     const action = owner?.getAttribute('data-action');

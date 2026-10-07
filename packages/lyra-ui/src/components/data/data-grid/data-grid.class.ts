@@ -30,6 +30,7 @@ import { DebounceController } from '../../../internal/debounce-controller.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import {
   writeClipboardText,
@@ -1640,6 +1641,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         const index = columns.findIndex((entry) => entry.id === id);
         if (index >= 0) this.focusedColumn = index;
       }
+    }
+  }
+
+  protected override firstUpdated(changed: PropertyValues<this>): void {
+    super.firstUpdated(changed);
+    if (hostAriaLabel(this) == null && !this.label) {
+      devWarnOnce(
+        'lyra-data-grid-missing-accessible-name',
+        '<lr-data-grid> has no accessible name: set `label` or a host `aria-label`.'
+      );
     }
   }
 
@@ -5712,18 +5723,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const pageSizes = configuredPageSizes.includes(this.safePageSize)
       ? configuredPageSizes
       : [this.safePageSize, ...configuredPageSizes];
+    // Not `.value` on the <select>: it would be assigned before the options render, and dropped.
     return html`
       <nav part="pager" aria-label=${this.localize('paginationLabel')}>
         <span class="page-size-wrapper">
           <select
             part="page-size"
             aria-label=${this.localize('dataGridRowsPerPage')}
-            .value=${String(this.safePageSize)}
             @change=${this.onPageSizeChange}
           >
             ${pageSizes.map(
               (value) =>
-                html`<option value=${value}>${format.format(value)}</option>`
+                html`<option value=${value} .selected=${value === this.safePageSize}>${format.format(value)}</option>`
             )}
           </select>
           <span class="page-size-chevron" aria-hidden="true"

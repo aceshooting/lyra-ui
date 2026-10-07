@@ -42,6 +42,24 @@ export const ProgrammaticFocus: Story = {
   `,
 };
 
+export const CustomIcons: Story = {
+  name: 'Custom play/pause icons via slots',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The icon slots are decorative overrides rendered inert inside the play/pause button, so use a glyph or SVG rather than a second interactive control. An empty slot keeps the built-in glyph.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-sequence-playback item-count="10" interval-ms="500">
+      <span slot="play-icon">▶</span>
+      <span slot="pause-icon">⏸</span>
+    </lr-sequence-playback>
+  `,
+};
+
 export const NoLoop: Story = {
   render: () =>
     html`<lr-sequence-playback item-count="10" interval-ms="500" without-loop></lr-sequence-playback>`,

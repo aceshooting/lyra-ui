@@ -489,12 +489,12 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   ): TemplateResult => {
     const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
     const role = this.roleLabel(message.role);
+    // Not `.value` on the <select>: it would be assigned before the options render, and dropped.
     return html`<li part="message" data-message-id=${message.id}>
       <span class="message-role-wrapper">
         <select
           part="message-role"
           aria-label=${this.localize('promptStudioMessageRole', undefined, { index: displayIndex, role })}
-          .value=${live(message.role)}
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
             this.updateMessage(message.id, { role: (event.target as HTMLSelectElement).value as PromptStudioRole })}
@@ -502,7 +502,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
           @blur=${this.onBlur}
         >
           ${(['system', 'user', 'assistant', 'tool'] as const).map(
-            (role) => html`<option value=${role}>${this.roleLabel(role)}</option>`,
+            (value) =>
+              html`<option value=${value} .selected=${live(value === message.role)}>${this.roleLabel(value)}</option>`,
           )}
         </select>
         <span class="message-role-chevron" aria-hidden="true">${chevronIcon()}</span>

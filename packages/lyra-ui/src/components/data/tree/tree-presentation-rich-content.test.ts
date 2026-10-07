@@ -1,6 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 it('renders a structured icon and secondary description without adding another interactive row', async () => {
   const icon = html`<svg data-test-icon viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"></circle></svg>`;

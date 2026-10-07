@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import {
@@ -374,7 +375,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   private focusFirstControl(options?: FocusOptions): void {
     if (!this.renderRoot) return;
-    const controls = this.renderRoot.querySelectorAll<HTMLElement>('input.control, lr-select, lr-number-input');
+    const controls = this.renderRoot.querySelectorAll<HTMLElement>(`input.control, ${tag('select')}, ${tag('number-input')}`);
     for (const control of controls) {
       const disabled = (control as HTMLElement & { disabled?: boolean }).disabled
         || control.getAttribute('aria-disabled') === 'true';

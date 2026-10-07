@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -943,7 +944,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     // `internal/anchor-target.ts` selection helper uses for its own shadow-scoped read).
     const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
       (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
-    const listShadow = this.renderRoot.querySelector('lr-virtual-list')?.shadowRoot;
+    const listShadow = this.renderRoot.querySelector(tag('virtual-list'))?.shadowRoot;
     const selection =
       shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
     if (!selection || selection.isCollapsed) return;

@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { property, state } from 'lit/decorators.js';
@@ -336,7 +337,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   };
 
   private checkboxGroupOwner(element: Element): Element | null {
-    const group = element.closest('lr-checkbox-group');
+    const group = element.closest(tag('checkbox-group'));
     if (!group) return null;
     let topLevelChild = element;
     while (topLevelChild.parentElement && topLevelChild.parentElement !== group) {
@@ -349,7 +350,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   private ownsCheckbox(element: Element): element is LyraCheckbox {
     return (
-      element.localName === 'lr-checkbox' && this.checkboxGroupOwner(element) === this
+      element.localName === tag('checkbox') && this.checkboxGroupOwner(element) === this
     );
   }
 

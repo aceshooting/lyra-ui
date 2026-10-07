@@ -51,7 +51,8 @@ it('leaves keys an open slotted menu handled with that menu', async () => {
   const dropdown = toolbar.querySelector('lr-dropdown') as HTMLElement & { open: boolean };
   const [first, last] = [...toolbar.querySelectorAll<HTMLElement>('lr-menu-item')];
   dropdown.open = true;
-  await waitUntil(() => last!.checkVisibility(), 'the menu opened');
+  // The popup stays visibility-hidden, so unfocusable, until positioned; the menu then takes focus.
+  await waitUntil(() => document.activeElement === first, 'the opened menu took focus');
   last!.focus();
   await sendKeys({ press: 'Home' });
   await waitUntil(() => document.activeElement !== last, 'Home moved focus');

@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   assertTableDimensions,
@@ -687,7 +688,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     col: number
   ): Promise<void> {
     const list = this.renderRoot.querySelector(
-      `lr-virtual-list[data-sheet-index="${sheetIndex}"]`
+      `${tag('virtual-list')}[data-sheet-index="${sheetIndex}"]`
     ) as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
     if (list?.updateComplete) await list.updateComplete;
     if (!(await this.waitForOwnerAnimationFrame())) return;

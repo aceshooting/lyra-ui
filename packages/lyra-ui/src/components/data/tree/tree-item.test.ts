@@ -8,6 +8,9 @@ import {
   treeItemOwnerContext,
 } from './tree-owner-controller.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 const item = { id: '1', label: 'Root' };
 

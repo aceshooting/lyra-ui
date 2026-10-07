@@ -7,6 +7,7 @@ import {
 } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
+import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
@@ -1107,6 +1108,16 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     // so without this the roving `tabindex` would stay parked on a node that refuses focus. Also
     // what clears the flag, so a mutation can never outlive the update it raised.
     if (this.inertMutationPending) this.resolveActiveFromDom();
+  }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    if (hostAriaLabel(this) == null && !this.label) {
+      devWarnOnce(
+        'lyra-tree-missing-accessible-name',
+        '<lr-tree> has no accessible name: set `label` or a host `aria-label`.'
+      );
+    }
   }
 
   protected override updated(changed: PropertyValues): void {

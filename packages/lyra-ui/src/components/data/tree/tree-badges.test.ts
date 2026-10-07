@@ -2,6 +2,9 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 function required<T>(value: T | undefined, context: string): T {
   if (value === undefined) throw new Error(`Missing ${context}`);

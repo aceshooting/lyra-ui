@@ -3,6 +3,9 @@ import { sendKeys } from '@web/test-runner-commands';
 import './data-grid.js';
 import type { DataGridColumn, LyraDataGrid } from './data-grid.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-data-grid-missing-accessible-name');
 
 type Row = { id: string; rank?: number; children?: Row[] };
 const rows: Row[] = [{ id: 'two', rank: 2 }, { id: 'missing' }, { id: 'one', rank: 1 }];

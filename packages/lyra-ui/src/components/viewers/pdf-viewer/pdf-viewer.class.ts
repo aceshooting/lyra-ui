@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization-runtime.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { resolveBoundedCanvasAllocation, type BoundedCanvasAllocation } from '../../../internal/canvas.js';
@@ -1033,7 +1034,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private waitForPageMount(page: number): Promise<boolean> {
     if (this.pageCanvases.has(page)) return Promise.resolve(true);
-    const list = this.shadowRoot?.querySelector('lr-virtual-list');
+    const list = this.shadowRoot?.querySelector(tag('virtual-list'));
     const view = this.ownerDocument.defaultView;
     if (!list || !view) return Promise.resolve(false);
     return new Promise((resolve) => {
@@ -1242,7 +1243,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private virtualListScrollContainer(): HTMLElement | null {
     return (
-      (this.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null) ?? null
+      (this.shadowRoot?.querySelector(tag('virtual-list'))?.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null) ?? null
     );
   }
 
@@ -1315,7 +1316,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
     const resolveSelectionRange = (): Range | null => {
       const hostShadowRoot = this.shadowRoot;
-      const listShadowRoot = this.shadowRoot?.querySelector('lr-virtual-list')?.shadowRoot ?? null;
+      const listShadowRoot = this.shadowRoot?.querySelector(tag('virtual-list'))?.shadowRoot ?? null;
       const globalSelection = view.getSelection() as
         | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
         | null;

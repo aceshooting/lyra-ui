@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -399,10 +400,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   private renderedChunkIds(): string[] {
     const roots: ParentNode[] = [this.renderRoot];
-    const virtualList = this.renderRoot.querySelector('lr-virtual-list');
+    const virtualList = this.renderRoot.querySelector(tag('virtual-list'));
     if (virtualList?.shadowRoot) roots.push(virtualList.shadowRoot);
     return roots.flatMap((root) =>
-      [...root.querySelectorAll('lr-chunk-inspector[data-chunk-id]')]
+      [...root.querySelectorAll(`${tag('chunk-inspector')}[data-chunk-id]`)]
         .map((element) => element.getAttribute('data-chunk-id'))
         .filter((id): id is string => id !== null)
     );
@@ -557,7 +558,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     }
     const virtualList = this.renderRoot.querySelector<
       HTMLElement & { updateComplete?: Promise<unknown> }
-    >('lr-virtual-list');
+    >(tag('virtual-list'));
     await virtualList?.updateComplete;
     if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
     const roots: ParentNode[] = [this.renderRoot];
@@ -567,7 +568,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     ]);
     const checkbox = candidates.find(
       (element) =>
-        element.localName === 'lr-checkbox' &&
+        element.localName === tag('checkbox') &&
         element.getAttribute('data-chunk-id') === target
     );
     if (checkbox) {
@@ -576,7 +577,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     }
     const inspector = candidates.find(
       (element) =>
-        element.localName === 'lr-chunk-inspector' &&
+        element.localName === tag('chunk-inspector') &&
         element.getAttribute('data-chunk-id') === target
     ) as (HTMLElement & { updateComplete?: Promise<unknown> }) | undefined;
     await inspector?.updateComplete;

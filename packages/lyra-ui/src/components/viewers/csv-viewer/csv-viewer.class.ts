@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import {
   isAbortError,
   isResourceLimitError,
@@ -502,7 +503,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   }
 
   private async scrollColumnIntoView(col: number): Promise<void> {
-    const list = this.renderRoot.querySelector('lr-virtual-list') as
+    const list = this.renderRoot.querySelector(tag('virtual-list')) as
       | (HTMLElement & { updateComplete?: Promise<unknown> })
       | null;
     if (list?.updateComplete) await list.updateComplete;

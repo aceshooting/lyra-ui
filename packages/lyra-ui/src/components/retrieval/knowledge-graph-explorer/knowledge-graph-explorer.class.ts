@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -530,7 +531,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.isConnected &&
       graph.isConnected &&
       this.selectedNodeId === id &&
-      graph.shadowRoot?.querySelector('lr-skeleton')
+      graph.shadowRoot?.querySelector(tag('skeleton'))
     ) {
       if (!(await this.waitForActivationFrame(generation))) return;
     }

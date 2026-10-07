@@ -1,6 +1,7 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 installFormControlLabelSupport();
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -388,7 +389,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   /** Keeps an owning aggregate's value/FormData/validity coherent in the same task as a direct
    * child property write. User events remain the group's separate public notification boundary. */
   private notifyOwningGroup(): void {
-    const group = this.closest?.('lr-checkbox-group') as (HTMLElement & {
+    const group = this.closest?.(tag('checkbox-group')) as (HTMLElement & {
       notifyCheckboxStateChange?: (checkbox: LyraCheckbox) => void;
     }) | null;
     group?.notifyCheckboxStateChange?.(this);

@@ -320,7 +320,9 @@ composed, preserving `relatedTarget`).
 `LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
 `index`, and `lr-step` names are removed in v9 rather than retained as ambiguous aliases.
 
-**Slots:** none.
+**Slots:** `play-icon`, `pause-icon` — decorative glyphs for the paused and playing states; an empty
+slot keeps the built-in glyph. Assigned content renders in an inert, `aria-hidden` layer inside the
+play/pause button, so do not use either slot for a second interactive control.
 
 **CSS parts:** `base`, `play-button`, `slider`
 

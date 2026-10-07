@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -399,7 +400,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     void this.updateComplete.then(() => {
       if (!this.isConnected || generation !== this.chipFocusGeneration) return;
       const chips = this.renderRoot.querySelectorAll<HTMLElement>(
-        '[part="filters"] lr-chip'
+        `[part="filters"] ${tag('chip')}`
       );
       const target = chips[Math.min(index, chips.length - 1)];
       if (target) {

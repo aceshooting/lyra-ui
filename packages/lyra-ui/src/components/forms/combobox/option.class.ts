@@ -2,7 +2,7 @@ import { html, svg, type SVGTemplateResult, type TemplateResult, type PropertyVa
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   composedParentElement,

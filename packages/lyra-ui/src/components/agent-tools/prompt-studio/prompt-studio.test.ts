@@ -297,6 +297,20 @@ it('names duplicate-role message controls by purpose and display position', asyn
   ]);
 });
 
+it('shows each message role in its selector from the first render and follows later role changes', async () => {
+  const roleMessages: PromptStudioMessage[] = [
+    { id: 'a', role: 'user', content: 'First' },
+    { id: 'b', role: 'assistant', content: 'Second' },
+  ];
+  const el = (await fixture(html`<lr-prompt-studio .messages=${roleMessages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const roles = () =>
+    [...el.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="message-role"]')].map((select) => select.value);
+  expect(roles()).to.deep.equal(['user', 'assistant']);
+  el.messages = [{ id: 'a', role: 'tool', content: 'First' }, roleMessages[1]!];
+  await el.updateComplete;
+  expect(roles()).to.deep.equal(['tool', 'assistant']);
+});
+
 it('keeps both variable controls named when a caller supplies an empty variable name', async () => {
   const el = (await fixture(html`<lr-prompt-studio
     .variables=${[{ name: '', value: 'developers' }]}

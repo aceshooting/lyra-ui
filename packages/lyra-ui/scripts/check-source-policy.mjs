@@ -41,6 +41,8 @@ import { isMainModule } from './is-main-module.mjs';
 //   bare-global-isNaN       The coercive global isNaN() accepts values such as numeric strings and
 //                           treats Infinity as valid; use Number.isFinite() or a shared
 //                           finite-number helper for numeric validation.
+//   literal-tag-name        A hard-coded `lr-` tag in a closest()/matches()/querySelector(All)()
+//                           selector or a `localName` comparison bypasses tag() (prefix.ts).
 //   physical-css            *.styles.ts must use logical properties (inset-inline-*,
 //                           margin-inline-*, text-align: start/end, ...) instead of physical
 //                           left/right ones, except inside `:dir()` rules, in rule blocks that
@@ -219,6 +221,34 @@ export function findBareGlobalIsNaNCalls(source, file = '<source>') {
     calls.push({ line: lineOf(source, node.start ?? 0) });
   });
   return calls;
+}
+
+const SELECTOR_METHODS = new Set(['closest', 'matches', 'querySelector', 'querySelectorAll']);
+const LITERAL_TAG = /(?:^|[\s>+~,(])lr-[a-z]/u;
+
+/** Static text of a string or template literal; each `${}` hole reads as a space. */
+function staticLiteralText(node) {
+  const expression = unwrapSyntaxExpression(node);
+  if (expression?.type === 'TemplateLiteral')
+    return expression.quasis.map((quasi) => quasi.value.cooked ?? '').join(' ');
+  return syntaxStaticString(expression) ?? '';
+}
+
+/** Lines that spell an `lr-` tag in a `closest`/`matches`/`querySelector(All)` selector or compare
+ * `localName` to one, instead of building it with `tag()`. */
+export function findLiteralTagNames(source, file = '<source>') {
+  const lines = new Set();
+  visitSyntaxNodes(parseSyntaxProgram(source, file), (node) => {
+    let hit = false;
+    if (node.type === 'CallExpression') {
+      hit = SELECTOR_METHODS.has(syntaxMemberName(node.callee)) && LITERAL_TAG.test(staticLiteralText(node.arguments[0]));
+    } else if (node.type === 'BinaryExpression' && /^[!=]==?$/u.test(node.operator)) {
+      const [name, other] = syntaxMemberName(node.left) === 'localName' ? [node.left, node.right] : [node.right, node.left];
+      hit = syntaxMemberName(name) === 'localName' && staticLiteralText(other).startsWith('lr-');
+    }
+    if (hit) lines.add(lineOf(source, node.start ?? 0));
+  });
+  return [...lines];
 }
 
 /**
@@ -1207,6 +1237,13 @@ export function collectSourcePolicyFindings({
     findings.push(
       `${rel(file)}:${line} [bare-global-isNaN] use Number.isFinite() or a shared finite-number ` +
         'helper instead of coercive global isNaN()',
+    );
+  }
+
+  for (const line of findLiteralTagNames(source, file)) {
+    findings.push(
+      `${rel(file)}:${line} [literal-tag-name] build the tag with tag('<name>') ` +
+        '(src/internal/prefix.ts) instead of a hard-coded "lr-" name',
     );
   }
 

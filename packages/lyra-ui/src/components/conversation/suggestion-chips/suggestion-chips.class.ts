@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -185,7 +186,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   }
 
   private async restorePendingFocus(pending: PendingSuggestionFocus): Promise<void> {
-    const scroller = this.renderRoot.querySelector<Element & { updateComplete?: Promise<unknown> }>('lr-scroller');
+    const scroller = this.renderRoot.querySelector<Element & { updateComplete?: Promise<unknown> }>(tag('scroller'));
     await scroller?.updateComplete;
     await Promise.resolve();
     if (pending.generation !== this.focusRepairGeneration || !this.isConnected) return;

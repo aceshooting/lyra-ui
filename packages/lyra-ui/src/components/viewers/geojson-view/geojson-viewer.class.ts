@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import {
   TextViewerTarget,
   type LyraSearchChangeDetail,
@@ -576,7 +577,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     if (
       !this.isConnected ||
       map !== this.registeredMap ||
-      this.shadowRoot?.querySelector('lr-map') !== map ||
+      this.shadowRoot?.querySelector(tag('map')) !== map ||
       this.loadState.kind !== 'loaded' ||
       !this.loadState.peerAvailable ||
       this.src !== this.lastLoadSrc
@@ -592,7 +593,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   }
 
   private syncMapCanvasReadyCallback(): void {
-    const next = this.shadowRoot?.querySelector('lr-map') as LyraMap | null;
+    const next = this.shadowRoot?.querySelector(tag('map')) as LyraMap | null;
     if (next === this.registeredMap) return;
     if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
     this.registeredMap = next;

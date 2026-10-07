@@ -9,6 +9,7 @@ import {
   colocatedTestSource,
   findOpaqueReviewTokens,
   findBareGlobalIsNaNCalls,
+  findLiteralTagNames,
   findUnboundAnnouncerTimerHosts,
   findNulByteLines,
   findUnboundAnnouncementSinks,
@@ -63,6 +64,23 @@ test('numeric source policy rejects coercive global isNaN while allowing Number.
   ].join('\n');
 
   assert.deepEqual(findBareGlobalIsNaNCalls(source), [{ line: 4 }]);
+});
+
+test('tag-name policy rejects literal lr- tags in selector calls and localName comparisons', () => {
+  const source = [
+    "this.closest('lr-app-rail');",
+    "this.renderRoot.querySelectorAll('[part=\"x\"] > lr-option, lr-group');",
+    'el?.matches(`${tag(\'a\')} lr-b`);',
+    "if (el.localName === 'lr-checkbox') run();",
+    "if ('lr-chip' !== el.localName) run();",
+    "// this.closest('lr-comment') in a comment is not code.",
+    "this.closest(tag('app-rail'));",
+    "this.querySelector('[data-lr-look], .lr-visually-hidden, [part=\"lr-x\"], --lr-token');",
+    "const named = el.localName === tag('checkbox') || el.localName.includes('-');",
+    "this.emit('lr-change');",
+  ].join('\n');
+
+  assert.deepEqual(findLiteralTagNames(source), [1, 2, 3, 4, 5]);
 });
 
 test('Announcer timer policy requires an owner-window binding', () => {

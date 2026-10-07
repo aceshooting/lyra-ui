@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import {
   html,
   nothing,
@@ -1076,10 +1077,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private rowElements(): LyraConversationItem[] {
     if (!this.dataMode)
       return [
-        ...this.querySelectorAll<LyraConversationItem>('lr-conversation-item'),
+        ...this.querySelectorAll<LyraConversationItem>(tag('conversation-item')),
       ];
     return (this.virtualListEl?.renderedRows ?? []).flatMap((row) => [
-      ...row.querySelectorAll<LyraConversationItem>('lr-conversation-item'),
+      ...row.querySelectorAll<LyraConversationItem>(tag('conversation-item')),
     ]);
   }
 

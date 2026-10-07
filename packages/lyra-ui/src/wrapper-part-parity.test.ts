@@ -1,4 +1,7 @@
 import { expect } from '@open-wc/testing';
+import { expectDevWarning } from '../test/expected-dev-warnings.js';
+expectDevWarning('lyra-tree-missing-accessible-name');
+
 import './components/data/pagination/pagination.js';
 import './components/data/tree/tree-item.js';
 import './components/data/tree/tree.js';

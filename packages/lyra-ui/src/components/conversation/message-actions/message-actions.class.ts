@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
   html,
@@ -447,7 +448,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private currentBuiltInFeedback(): LyraMessageFeedback | undefined {
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
     const feedback = base?.querySelector<LyraMessageFeedback>(
-      'lr-message-feedback[part~="feedback"]',
+      `${tag('message-feedback')}[part~="feedback"]`,
     );
     return feedback &&
       feedback.parentElement === base &&
@@ -532,7 +533,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private bindHoverTarget(): void {
     this.unbindHoverTarget();
     const target =
-      (this.closest('lr-chat-message') as HTMLElement | null) ??
+      (this.closest(tag('chat-message')) as HTMLElement | null) ??
       this.parentElement;
     if (!target) return;
     this.hoverTarget = target;

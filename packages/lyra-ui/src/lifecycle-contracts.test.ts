@@ -3,6 +3,10 @@ import './all.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
 import { renderedTemplateWhitespace } from '../test/rendered-whitespace.js';
 import { trackInputModality } from './internal/focus-modality.js';
+import { expectDevWarning } from '../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-data-grid-missing-accessible-name');
+expectDevWarning('lyra-tree-missing-accessible-name');
 
 // The input-modality recorder arms three passive listeners on each window once, for the window's
 // lifetime; it is not a per-element leak. Pre-arming keeps the window/document listener tally

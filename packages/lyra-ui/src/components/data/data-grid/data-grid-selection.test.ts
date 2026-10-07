@@ -5,7 +5,9 @@ import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
 import type { DataGridColumn, DataGridState } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid, delay, header, dataCells } from '../../../../test/data-grid.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
+expectDevWarning('lyra-data-grid-missing-accessible-name');
 
 it("maps writable selectedRows onto current source-row keys", async () => {
   const rows = [

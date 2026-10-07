@@ -9,6 +9,7 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
+import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
@@ -263,7 +264,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       }
     }
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
-      const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
+      const list = this.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'));
       const focused = activeElementIn(list?.shadowRoot);
       const focusedRowIndex = focused?.closest('[data-row-index]')?.getAttribute('data-row-index');
       const focusedIndex = focusedRowIndex == null
@@ -478,7 +479,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     super.updated(changed);
     // The stable renderItem reads rail state (page, highlights, thumbnails, strings, locale), so
     // every rail update repaints the list's bounded live window.
-    this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list')?.requestUpdate();
+    this.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'))?.requestUpdate();
     const pendingFocusPage = this.pendingFocusPage;
     this.pendingFocusPage = null;
     if (pendingFocusPage !== null) {
@@ -496,7 +497,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private isCurrentFocusRepair(list: LyraVirtualList, generation: number): boolean {
     return this.isConnected
       && generation === this.focusRepairGeneration
-      && this.shadowRoot?.querySelector('lr-virtual-list') === list;
+      && this.shadowRoot?.querySelector(tag('virtual-list')) === list;
   }
 
   private focusRepairIndex(pageNumber: number): number | null {
@@ -532,7 +533,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   }
 
   private async focusVirtualPage(pageNumber: number, generation: number): Promise<void> {
-    const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
+    const list = this.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'));
     if (!list) {
       this.finishFocusRepair(generation);
       return;

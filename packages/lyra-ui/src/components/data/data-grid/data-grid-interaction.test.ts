@@ -1,5 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
@@ -437,6 +438,17 @@ it("paginates client rows, clamps navigation, and reports page-size changes", as
   size.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
   expect((await sizeEvent).detail).to.deep.equal({ page: 0, pageSize: 1 });
   expect(element.pageCount).to.equal(3);
+});
+
+it("selects the configured page size in the page-size select, not its first option", async () => {
+  const element = await dataGrid(html`
+    <lr-data-grid label="People" paginate .columns=${columns} .data=${rows}></lr-data-grid>
+  `);
+  const size = element.shadowRoot!.querySelector<HTMLSelectElement>('[part="page-size"]')!;
+  expect(size.value).to.equal("20");
+  element.pageSize = 50;
+  await element.updateComplete;
+  expect(size.value).to.equal("50");
 });
 
 it("uses the three exact empty/loading/no-results slots", async () => {
@@ -1310,6 +1322,21 @@ describe("explicitly empty host aria-label", () => {
       omitted.shadowRoot!.querySelector('[part="table"]')!.getAttribute("aria-label")
     ).to.equal("People");
   });
+});
+
+it("warns once per page about a grid with no accessible name, and not about a named one", async () => {
+  const named = await captureDevWarnings(async () => {
+    await dataGrid(html`<lr-data-grid label="People"></lr-data-grid>`);
+    await dataGrid(html`<lr-data-grid aria-label="People"></lr-data-grid>`);
+    await dataGrid(html`<lr-data-grid aria-label=""></lr-data-grid>`);
+  });
+  expect(named).to.deep.equal([]);
+  const unnamed = await captureDevWarnings(async () => {
+    await dataGrid(html`<lr-data-grid></lr-data-grid>`);
+    await dataGrid(html`<lr-data-grid></lr-data-grid>`);
+  });
+  expect(unnamed).to.have.lengthOf(1);
+  expect(unnamed[0]).to.include("no accessible name");
 });
 
 it("leaves Alt+Arrow on a resizable header to the browser instead of resizing", async () => {

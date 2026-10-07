@@ -3,6 +3,9 @@ import './data-grid.js';
 import '../../forms/button/button.js';
 import type { LyraDataGrid, DataGridColumn } from './data-grid.js';
 import type { LyraButton } from '../../forms/button/button.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+expectDevWarning('lyra-data-grid-missing-accessible-name');
 
 type Row = { id: string; value: string };
 const row: Row = { id: 'first', value: 'One' };

@@ -1,4 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { tag } from '../../../internal/prefix.js';
 import type { PropertyValues } from 'lit';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -212,7 +213,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     const isLatest = index === versions.length - 1;
     this.activeVersionId = isLatest ? null : version.id;
     this.emit('lr-version-change', { versionId: version.id });
-    (this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null)?.announce(
+    (this.renderRoot.querySelector(tag('live-region')) as LyraLiveRegion | null)?.announce(
       this.localize('artifactPanelVersionPosition', undefined, {
         index: this.formatCount(index + 1),
         count: this.formatCount(versions.length),
@@ -231,7 +232,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
       this.ownerDocument.defaultView !== owner ||
       generation !== this.copyGeneration
     ) return;
-    const liveRegion = this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null;
+    const liveRegion = this.renderRoot.querySelector(tag('live-region')) as LyraLiveRegion | null;
     if (outcome.ok) {
       liveRegion?.announce(this.localize('copied'));
       this.emit('lr-copy', outcome);
