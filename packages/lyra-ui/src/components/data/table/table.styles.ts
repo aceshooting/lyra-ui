@@ -124,7 +124,7 @@ export const styles = css`
     display: block;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
   }
-  /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells once table.class.ts's
+  /* columns[].priority hides [data-priority='low'] and ['medium'] header/cells/<col> once table.class.ts's
      ResizeObserver-driven measurement (recomputeHiddenPriorityColumns(), shared with
      syncAutoScrollMode()'s overflow check) finds the table's content actually overflows [part='base']
      -- not at any fixed container width. That measurement writes data-hide-priority-low/-medium onto

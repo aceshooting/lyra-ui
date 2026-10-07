@@ -857,6 +857,24 @@ describe('cellStyle column hook', () => {
     expect(cell.style.color).to.equal('');
   });
 
+  for (const [property, value] of [
+    ['background', '\\75 rl(https://example.test/x.png)'],
+    ['backgroundImage', 'image-set("https://example.test/x.png" 1x)'],
+    ['--note', '\\75 rl(https://example.test/x.png)'],
+    ['--note', 'teal /* note */'],
+    ['--note', 'calc(1px'],
+  ] as const) {
+    it(`drops the cellStyle declaration ${property}: ${value}`, async () => {
+      const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+      el.columns = [
+        { key: 'name', label: 'Name', cell: (r) => r.name, cellStyle: () => ({ [property]: value, color: 'rgb(1, 2, 3)' }) },
+      ];
+      el.rows = rows;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!.style.cssText).to.equal('color: rgb(1, 2, 3);');
+    });
+  }
+
   it('keeps safe cell styles when the host browser has no CSS validation API', async () => {
     const originalCss = Object.getOwnPropertyDescriptor(window, 'CSS');
     try {
@@ -927,6 +945,42 @@ describe('column width', () => {
     const cols = el.shadowRoot!.querySelectorAll('colgroup col');
     expect(cols).to.have.lengthOf(2);
     expect((cols[0] as HTMLElement).style.getPropertyValue('inline-size')).to.equal('120px');
+  });
+
+  it('drops a priority-hidden column\'s <col> with its cells, so later columns keep their own widths', async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table style="display: block; inline-size: 400px;"></lr-table>`);
+    el.columns = [
+      { key: 'name', label: 'Name', width: '200px', cell: (r) => r.name },
+      { key: 'id', label: 'Id', width: '300px', priority: 'low', cell: (r) => r.id },
+      { key: 'score', label: 'Score', width: '250px', cell: (r) => r.score },
+    ];
+    el.rows = rows;
+    await waitUntil(() => el.hasHiddenPriorityColumns);
+    const width = (selector: string) => el.shadowRoot!.querySelector<HTMLElement>(selector)!.getBoundingClientRect().width;
+    expect(width('th[data-col-key="name"]')).to.be.closeTo(200, 2);
+    expect(width('th[data-col-key="score"]')).to.be.closeTo(250, 2);
+    expect(width('[part="table"]')).to.be.closeTo(450, 2);
+
+    el.priorityColumnsVisible = true;
+    await el.updateComplete;
+    expect(width('th[data-col-key="id"]')).to.be.closeTo(300, 2);
+    expect(width('[part="table"]')).to.be.closeTo(750, 2);
+  });
+
+  it('keeps the medium tier visible once the declared widths left after hiding the low tier fit', async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table style="display: block; inline-size: 600px;"></lr-table>`);
+    el.columns = [
+      { key: 'name', label: 'Name', width: '200px', cell: (r) => r.name },
+      { key: 'id', label: 'Id', width: '300px', priority: 'low', cell: (r) => r.id },
+      { key: 'score', label: 'Score', width: '250px', cell: (r) => r.score },
+      { key: 'rank', label: 'Rank', width: '120px', priority: 'medium', cell: (r) => r.score },
+    ];
+    el.rows = rows;
+    await waitUntil(() => el.hasHiddenPriorityColumns);
+    for (let frame = 0; frame < 4; frame++) await nextPriorityFrame();
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.hasAttribute('data-hide-priority-low')).to.be.true;
+    expect(base.hasAttribute('data-hide-priority-medium')).to.be.false;
   });
 });
 

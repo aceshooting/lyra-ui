@@ -4,6 +4,7 @@ import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { styles } from './table.styles.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
@@ -964,6 +965,34 @@ describe("editType: 'select'", () => {
     const select = cell.querySelector('select[part="cell-editor"]') as HTMLSelectElement;
     expect(select.tagName).to.equal('SELECT');
     expect(select.value).to.equal('Alpha');
+  });
+
+  for (const opener of ['double-click', 'F2'] as const) {
+    it(`opens the ${opener} editor on the row's own option rather than the first`, async () => {
+      const el = await selectTable();
+      const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"] [part="cell"]')[1]!;
+      if (opener === 'F2') {
+        await focusByKeyboard(cell);
+        await sendKeys({ press: 'F2' });
+      } else {
+        cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+      }
+      await el.updateComplete;
+      expect(cell.querySelector<HTMLSelectElement>('select[part="cell-editor"]')!.value).to.equal('Beta');
+    });
+  }
+
+  it("selects each persistent editor on its row's own option and follows later row updates", async () => {
+    const el = await selectTable([{ ...selectEditableColumns[0]!, editTrigger: 'always' }]);
+    const selects = () => [...el.shadowRoot!.querySelectorAll<HTMLSelectElement>('select[part="cell-editor"]')];
+    expect(selects().map((select) => select.value)).to.deep.equal(['Alpha', 'Beta']);
+
+    selects()[0]!.value = 'Gamma';
+    for (const name of ['Beta', 'Gamma']) {
+      el.rows = [{ ...rows[0]!, name }, rows[1]!];
+      await el.updateComplete;
+      expect(selects()[0]!.value).to.equal(name);
+    }
   });
 
   it('emits lr-cell-edit exactly once with the selected value when the select commits', async () => {

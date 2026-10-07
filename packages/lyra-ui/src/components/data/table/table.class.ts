@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { sanitizeCssDeclarationValue, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
@@ -139,10 +139,6 @@ function storedKeySetFacade(values: ReadonlySet<string | number>): ReadonlySet<s
   }
   return facade;
 }
-
-const UNSAFE_CSS_STRUCTURE = /[;{}]/;
-const URL_FUNCTION = /url\s*\(/i;
-const SAFE_STYLE_PROPERTY = /^-?[_a-zA-Z][\w-]*$|^--[a-zA-Z0-9_-]+$/;
 
 interface OwnedAnimationFrame {
   owner: Window;
@@ -417,55 +413,31 @@ function stickyDirection(sticky: TableEdgeAlign | undefined): TableEdgeAlign | u
   return undefined;
 }
 
+/** A cell style repeats the same few declarations on every row of every render; remember each
+ *  verdict (bounded) instead of re-validating it. */
+const cellDeclarationVerdicts = new Map<string, string>();
+const CELL_DECLARATION_CACHE_LIMIT = 1_000;
+
 function sanitizeCellStyle(cellStyle: Record<string, unknown> | undefined): Record<string, string> {
-  if (cellStyle === undefined) return {};
   const safe: Record<string, string> = {};
-  for (const [rawProperty, rawValue] of Object.entries(cellStyle)) {
-    const property = sanitizeCellStyleProperty(rawProperty);
-    const value = sanitizeCellStyleValue(rawValue);
-    if (property === undefined || value === undefined) continue;
-    const normalizedProperty = normalizeStyleProperty(property);
-    if (normalizedProperty.startsWith('--') || cssSupports(normalizedProperty, value)) {
-      safe[normalizedProperty] = value;
+  for (const [rawProperty, value] of Object.entries(cellStyle ?? {})) {
+    if (typeof value !== 'string') continue;
+    const property = normalizeStyleProperty(rawProperty.trim());
+    const key = `${property}\u0000${value}`;
+    let verdict = cellDeclarationVerdicts.get(key);
+    if (verdict === undefined) {
+      verdict = sanitizeCssDeclarationValue(property, value) ?? '';
+      if (cellDeclarationVerdicts.size >= CELL_DECLARATION_CACHE_LIMIT) cellDeclarationVerdicts.clear();
+      cellDeclarationVerdicts.set(key, verdict);
     }
+    if (verdict) safe[property] = verdict;
   }
   return safe;
-}
-
-function sanitizeCellStyleProperty(property: string): string | undefined {
-  const normalized = property.trim();
-  if (!normalized || !SAFE_STYLE_PROPERTY.test(normalized)) return undefined;
-  return normalized;
 }
 
 function normalizeStyleProperty(property: string): string {
   if (property.startsWith('--')) return property;
   return property.replace(/[A-Z]/g, '-$&').toLowerCase();
-}
-
-function sanitizeCellStyleValue(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim();
-  if (!normalized || UNSAFE_CSS_STRUCTURE.test(normalized) || URL_FUNCTION.test(normalized)) {
-    return undefined;
-  }
-  return normalized;
-}
-
-/** `CSS.supports()` answers per declaration, and a cell style repeats the same few declarations
- *  on every row of every render; remember each answer (bounded) instead of re-parsing it. */
-const cssSupportsCache = new Map<string, boolean>();
-const CSS_SUPPORTS_CACHE_LIMIT = 1_000;
-
-function cssSupports(property: string, value: string): boolean {
-  if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return true;
-  const key = `${property}\u0000${value}`;
-  const cached = cssSupportsCache.get(key);
-  if (cached !== undefined) return cached;
-  const supported = CSS.supports(property, value);
-  if (cssSupportsCache.size >= CSS_SUPPORTS_CACHE_LIMIT) cssSupportsCache.clear();
-  cssSupportsCache.set(key, supported);
-  return supported;
 }
 
 /** Fails closed for untyped values outside the explicit editor-trigger vocabulary. */
@@ -3554,9 +3526,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `editType: 'select'` renders a native `<select>` instead, populated from `editOptions`
    *  (`col.editOptions ?? []`, so a column with none renders an empty, valueless `<select>` rather
    *  than throwing). `<select>`/`<option>` carry no native dirty-value flag, so there is no
-   *  content-attribute-vs-property distinction to make here -- both flavors bind `.value` the same
-   *  way, and (unlike the text/number editors) a persistent select editor does not protect an
-   *  in-progress, uncommitted selection from an out-of-band `rows` update to that cell.
+   *  content-attribute-vs-property distinction to make here -- both flavors set each option's
+   *  `selected` the same way, and (unlike the text/number editors) a persistent select editor does
+   *  not protect an in-progress, uncommitted selection from an out-of-band `rows` update to that
+   *  cell.
    *
    *  No `tabindex` on any of them: a persistent editor is a plain tab stop, exactly like the
    *  row-expand toggle rendered a few lines above, and stays outside the header/row roving model. */
@@ -3589,16 +3562,18 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const onKeyDown = (event: KeyboardEvent): void => this.onEditorKeyDown(event, rowKey, col.key);
     if (type === 'select') {
       const options = col.editOptions ?? [];
+      // Not `.value` on the <select>: it would be assigned before the options render, and dropped.
       return html`<select
         part="cell-editor"
         aria-label=${label}
-        .value=${value}
         @change=${onChange}
         @focus=${this.onNativeFocus}
         @blur=${this.onNativeBlur}
         @keydown=${onKeyDown}
       >
-        ${options.map((option) => html`<option value=${option.value}>${option.label}</option>`)}
+        ${options.map(
+          (option) => html`<option value=${option.value} .selected=${option.value === value}>${option.label}</option>`
+        )}
       </select>`;
     }
     const isText = type === 'text';
@@ -3864,6 +3839,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               ${this.columns.map(
                 (col) =>
                   html`<col
+                    data-priority=${col.priority ?? nothing}
                     style=${styleMap({
                       // Consumer-supplied CSS lengths: styleMap emits a joined declaration string on
                       // its first commit, so an unsanitized value would inject extra declarations.
