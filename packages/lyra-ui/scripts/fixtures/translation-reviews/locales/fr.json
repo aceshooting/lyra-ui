@@ -2,12 +2,12 @@
   "locale": "fr",
   "direction": "ltr",
   "source": {
-    "keyCount": 1395,
-    "sha256": "sha256:2871efcb95a2a1cbad4baae3b68cd532422f9f03149932cd4d4399f6801369f7"
+    "keyCount": 1402,
+    "sha256": "sha256:fc31e42521e3f0df6c1dfa6b5a61075121143b6e0fb6fa0e0ad37f619c210f5c"
   },
   "catalog": {
-    "keyCount": 1395,
-    "sha256": "sha256:7b5bb26a9f24351ea0d7acf46523f71e11f9c03ae273c8c847d5c9ca74dd2bf1"
+    "keyCount": 1402,
+    "sha256": "sha256:16a106a9e408ae915e0767f6f8025950fb55eb85df512b960836d3c7c73fdbf4"
   },
   "translator": {
     "status": "complete-original",
@@ -401,6 +401,10 @@
     {
       "messagePath": "showMoreCollapsed",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "signaturePadLabel",
+      "rationale": "'Signature' is the ordinary French word for a handwritten signature and has the same spelling as the English field label."
     },
     {
       "messagePath": "sourceListDefaultLabel",

@@ -24,8 +24,10 @@ counted as completed; an unrecognized status renders as `pending` rather than dr
 nonnegative finite `sources` count. Statuses and source counts are displayed as supplied; the
 component does not search or infer state. Assign a new `.steps` array after host updates. The
 component snapshots collection data, omits blank or duplicate identities after the first valid
-record, and renders at most 100 steps. `label` sets the visible group heading; host `aria-label`
-names the semantic group.
+record, and renders at most 100 steps. `label` sets the visible group heading and names the group
+unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
+localized default for an empty one). The `headingLevel` property and `heading-level` attribute
+(`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.
 
 **CSS parts:**
 

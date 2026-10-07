@@ -6,7 +6,7 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='base'] {
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-container);
     background: var(--lr-color-surface);
     overflow: hidden;

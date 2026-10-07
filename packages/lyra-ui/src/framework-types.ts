@@ -142,6 +142,7 @@ import type { LyraRadioGroup, LyraRadioGroupEventMap } from './components/forms/
 import type { LyraRadio, LyraRadioEventMap } from './components/forms/radio/radio.class.js';
 import type { LyraRubricForm, LyraRubricFormEventMap } from './components/forms/rubric-form/rubric-form.class.js';
 import type { LyraSelect, LyraSelectEventMap } from './components/forms/select/select.class.js';
+import type { LyraSignaturePad, LyraSignaturePadEventMap } from './components/forms/signature-pad/signature-pad.class.js';
 import type { LyraSlider, LyraSliderEventMap } from './components/forms/slider/slider.class.js';
 import type { LyraSwatchPicker, LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.class.js';
 import type { LyraSwitch, LyraSwitchEventMap } from './components/forms/switch/switch.class.js';
@@ -750,6 +751,7 @@ export interface LyraComponentTypeMap {
     element: LyraAppRail;
     properties: LyraElementProperties<
       LyraAppRail,
+      | 'accessibleLabel'
       | 'collapsible'
       | 'focusFallback'
       | 'for'
@@ -815,7 +817,7 @@ export interface LyraComponentTypeMap {
       | '--lr-app-rail-toggle-hover-color'
       | '--lr-app-rail-width';
     attributeAliases: {
-      'aria-label'?: LyraAttributeValue<string | null>;
+      'aria-label'?: LyraAppRail['accessibleLabel'];
       'focus-fallback'?: LyraAppRail['focusFallback'];
       'force-mode'?: LyraAppRail['forceMode'];
       'icon-only-breakpoint'?: LyraAppRail['iconOnlyBreakpoint'];
@@ -867,6 +869,7 @@ export interface LyraComponentTypeMap {
       | 'expanded'
       | 'href'
       | 'locale'
+      | 'rel'
       | 'strings'
       | 'target'
       | 'tooltip'
@@ -1512,7 +1515,8 @@ export interface LyraComponentTypeMap {
     events: {};
     eventNames: never;
     cssNames:       | '--lr-breadcrumb-current-color'
-      | '--lr-breadcrumb-item-active-bg';
+      | '--lr-breadcrumb-item-active-bg'
+      | '--lr-breadcrumb-item-color';
     attributeAliases: {};
   };
   'lr-browser-frame': {
@@ -2298,7 +2302,8 @@ export interface LyraComponentTypeMap {
       | 'required'
       | 'size'
       | 'strings'
-      | 'value',
+      | 'value'
+      | 'withHint',
       {
         form: HTMLFormElement | string | null;
       }
@@ -2328,6 +2333,7 @@ export interface LyraComponentTypeMap {
       'custom-error'?: LyraCheckbox['customError'];
       'error-text'?: LyraCheckbox['errorText'];
       'help-text'?: LyraCheckbox['helpText'];
+      'with-hint'?: LyraCheckbox['withHint'];
     };
   };
   'lr-checkbox-group': {
@@ -2359,6 +2365,7 @@ export interface LyraComponentTypeMap {
       | 'input'
       | 'lr-change'
       | 'lr-checkbox-group-toggle-request'
+      | 'lr-input'
       | 'lr-invalid';
     cssNames:       | '--gap'
       | '--lr-checkbox-group-invalid-border'
@@ -2462,6 +2469,7 @@ export interface LyraComponentTypeMap {
       LyraChunkInspector,
       | 'activeChunkId'
       | 'chunks'
+      | 'expandedChunkIds'
       | 'label'
       | 'locale'
       | 'size'
@@ -2524,7 +2532,8 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraClaimEvidenceEventMap;
-    eventNames:       | 'lr-citation-select'
+    eventNames:       | 'lr-citation-open'
+      | 'lr-citation-select'
       | 'lr-claim-select';
     cssNames:       | '--lr-claim-evidence-compact-gap'
       | '--lr-claim-evidence-compact-padding';
@@ -2887,6 +2896,7 @@ export interface LyraComponentTypeMap {
       | 'lr-create'
       | 'lr-filter'
       | 'lr-hide'
+      | 'lr-input'
       | 'lr-invalid'
       | 'lr-retry-request'
       | 'lr-show'
@@ -4794,7 +4804,8 @@ export interface LyraComponentTypeMap {
       | 'input'
       | 'lr-change'
       | 'lr-input'
-      | 'lr-invalid';
+      | 'lr-invalid'
+      | 'lr-load-error';
     cssNames:       | '--lr-emoji-picker-active-bg'
       | '--lr-emoji-picker-control-gap'
       | '--lr-emoji-picker-gap'
@@ -5828,7 +5839,8 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraGroundingSummaryEventMap;
-    eventNames:       | 'lr-citation-select'
+    eventNames:       | 'lr-citation-open'
+      | 'lr-citation-select'
       | 'lr-claim-select';
     cssNames: never;
     attributeAliases: {
@@ -6580,6 +6592,7 @@ export interface LyraComponentTypeMap {
       | 'error'
       | 'errorDescription'
       | 'errorHeading'
+      | 'headingLevel'
       | 'label'
       | 'locale'
       | 'sources'
@@ -6598,6 +6611,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'error-description'?: LyraKnowledgeBase['errorDescription'];
       'error-heading'?: LyraKnowledgeBase['errorHeading'];
+      'heading-level'?: LyraKnowledgeBase['headingLevel'];
       'without-create'?: LyraKnowledgeBase['withoutCreate'];
       'without-summary'?: LyraKnowledgeBase['withoutSummary'];
     };
@@ -6607,6 +6621,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraKnowledgeBaseAdmin,
       | 'activeTab'
+      | 'headingLevel'
       | 'ingestionItems'
       | 'label'
       | 'locale'
@@ -6628,6 +6643,7 @@ export interface LyraComponentTypeMap {
       | '--lr-knowledge-base-admin-tab-selected-color';
     attributeAliases: {
       'active-tab'?: LyraKnowledgeBaseAdmin['activeTab'];
+      'heading-level'?: LyraKnowledgeBaseAdmin['headingLevel'];
       'without-ingestion'?: LyraKnowledgeBaseAdmin['withoutIngestion'];
     };
   };
@@ -7045,9 +7061,12 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraLocalePickerEventMap;
     eventNames:       | 'blur'
+      | 'change'
       | 'focus'
+      | 'input'
       | 'lr-change'
       | 'lr-change-request'
+      | 'lr-input'
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-required-color'
@@ -7339,6 +7358,7 @@ export interface LyraComponentTypeMap {
     element: LyraMemoryPanel;
     properties: LyraElementProperties<
       LyraMemoryPanel,
+      | 'headingLevel'
       | 'label'
       | 'locale'
       | 'longTerm'
@@ -7350,13 +7370,23 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraMemoryPanelEventMap;
     eventNames:       | 'lr-add'
+      | 'lr-chunk-open'
+      | 'lr-chunk-toggle'
+      | 'lr-drill'
+      | 'lr-entity-activate'
+      | 'lr-entity-open'
+      | 'lr-entity-select'
       | 'lr-forget'
       | 'lr-memory-toggle'
-      | 'lr-remove';
+      | 'lr-relation-activate'
+      | 'lr-remove'
+      | 'lr-toggle';
     cssNames:       | '--lr-memory-panel-confidence-danger-color'
       | '--lr-memory-panel-confidence-success-color'
       | '--lr-memory-panel-confidence-warning-color';
-    attributeAliases: {};
+    attributeAliases: {
+      'heading-level'?: LyraMemoryPanel['headingLevel'];
+    };
   };
   'lr-mention-popover': {
     element: LyraMentionPopover;
@@ -7470,14 +7500,17 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'locale'
       | 'size'
-      | 'strings',
+      | 'strings'
+      | 'topLayer',
       {}
     >;
     events: LyraMenubarEventMap;
     eventNames:       | 'lr-select';
     cssNames:       | '--lr-menu-max-inline-size'
       | '--lr-menu-min-inline-size';
-    attributeAliases: {};
+    attributeAliases: {
+      'top-layer'?: LyraMenubar['topLayer'];
+    };
   };
   'lr-menubar-item': {
     element: LyraMenubarItem;
@@ -7944,6 +7977,7 @@ export interface LyraComponentTypeMap {
       | 'expanded'
       | 'hideDelay'
       | 'indicator'
+      | 'label'
       | 'locale'
       | 'mobileBreakpoint'
       | 'panelAnchor'
@@ -9558,6 +9592,7 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
       | 'lr-invalid';
@@ -9571,6 +9606,7 @@ export interface LyraComponentTypeMap {
       | '--lr-radio-circle-size'
       | '--lr-radio-dot-size'
       | '--lr-radio-hover-border-color'
+      | '--lr-radio-invalid-border-color'
       | '--lr-radio-label-indent'
       | '--lr-radio-radius';
     attributeAliases: {
@@ -9604,6 +9640,7 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
       | 'lr-invalid';
@@ -9628,6 +9665,7 @@ export interface LyraComponentTypeMap {
       | '--lr-radio-circle-size'
       | '--lr-radio-dot-size'
       | '--lr-radio-hover-border-color'
+      | '--lr-radio-invalid-border-color'
       | '--lr-radio-label-indent'
       | '--lr-radio-radius';
     attributeAliases: {
@@ -9664,12 +9702,14 @@ export interface LyraComponentTypeMap {
     events: LyraRadioGroupEventMap;
     eventNames:       | 'change'
       | 'input'
+      | 'lr-activate'
       | 'lr-change'
       | 'lr-input'
       | 'lr-invalid';
     cssNames:       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-radio-group-invalid-border'
       | '--lr-radio-group-row-gap';
     attributeAliases: {
       'aria-label'?: LyraRadioGroup['accessibleLabel'];
@@ -9692,6 +9732,7 @@ export interface LyraComponentTypeMap {
       | 'assessment'
       | 'citations'
       | 'errorText'
+      | 'headingLevel'
       | 'label'
       | 'loading'
       | 'locale'
@@ -9704,11 +9745,13 @@ export interface LyraComponentTypeMap {
     events: LyraRagAnswerEventMap;
     eventNames:       | 'lr-citation-select'
       | 'lr-claim-select'
+      | 'lr-open'
       | 'lr-retry';
     cssNames: never;
     attributeAliases: {
       'aria-label'?: LyraRagAnswer['accessibleLabel'];
       'error-text'?: LyraRagAnswer['errorText'];
+      'heading-level'?: LyraRagAnswer['headingLevel'];
       'without-claims'?: LyraRagAnswer['withoutClaims'];
       'without-sources'?: LyraRagAnswer['withoutSources'];
     };
@@ -9718,6 +9761,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraRagEvalDashboard,
       | 'chartHeight'
+      | 'headingLevel'
       | 'label'
       | 'locale'
       | 'metricId'
@@ -9730,11 +9774,15 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraRagEvalDashboardEventMap;
     eventNames:       | 'lr-metric-change'
+      | 'lr-metric-change-request'
+      | 'lr-run-activate'
       | 'lr-run-change'
-      | 'lr-slice-change';
+      | 'lr-slice-change'
+      | 'lr-slice-change-request';
     cssNames:       | '--lr-rag-eval-dashboard-selected-border-color';
     attributeAliases: {
       'chart-height'?: LyraRagEvalDashboard['chartHeight'];
+      'heading-level'?: LyraRagEvalDashboard['headingLevel'];
       'metric-id'?: LyraRagEvalDashboard['metricId'];
       'without-chart'?: LyraRagEvalDashboard['withoutChart'];
     };
@@ -9914,6 +9962,7 @@ export interface LyraComponentTypeMap {
     element: LyraResearchProgress;
     properties: LyraElementProperties<
       LyraResearchProgress,
+      | 'headingLevel'
       | 'label'
       | 'locale'
       | 'steps'
@@ -9923,7 +9972,9 @@ export interface LyraComponentTypeMap {
     events: {};
     eventNames: never;
     cssNames: never;
-    attributeAliases: {};
+    attributeAliases: {
+      'heading-level'?: LyraResearchProgress['headingLevel'];
+    };
   };
   'lr-resize-observer': {
     element: LyraResizeObserver;
@@ -10013,6 +10064,7 @@ export interface LyraComponentTypeMap {
     element: LyraRetrievalCompare;
     properties: LyraElementProperties<
       LyraRetrievalCompare,
+      | 'headingLevel'
       | 'label'
       | 'locale'
       | 'selectedChunkId'
@@ -10025,6 +10077,7 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-chunk-select';
     cssNames:       | '--lr-retrieval-compare-selected-border';
     attributeAliases: {
+      'heading-level'?: LyraRetrievalCompare['headingLevel'];
       'selected-chunk-id'?: LyraRetrievalCompare['selectedChunkId'];
       'top-k'?: LyraRetrievalCompare['topK'];
     };
@@ -10058,7 +10111,8 @@ export interface LyraComponentTypeMap {
     events: LyraRetrievalResultsEventMap;
     eventNames:       | 'lr-chunk-open'
       | 'lr-load-more'
-      | 'lr-select';
+      | 'lr-select'
+      | 'lr-selection-change';
     cssNames:       | '--lr-retrieval-results-selected-border';
     attributeAliases: {
       'active-chunk-id'?: LyraRetrievalResults['activeChunkId'];
@@ -10092,6 +10146,8 @@ export interface LyraComponentTypeMap {
     events: LyraRetrievalSearchEventMap;
     eventNames:       | 'lr-cancel'
       | 'lr-filters-change'
+      | 'lr-input'
+      | 'lr-mode-change'
       | 'lr-search';
     cssNames:       | '--lr-retrieval-search-submit-min-height';
     attributeAliases: {
@@ -10561,6 +10617,36 @@ export interface LyraComponentTypeMap {
       'with-legend'?: LyraSequenceStrip['withLegend'];
     };
   };
+  'lr-signature-pad': {
+    element: LyraSignaturePad;
+    properties: LyraElementProperties<
+      LyraSignaturePad,
+      | 'disabled'
+      | 'errorText'
+      | 'hint'
+      | 'label'
+      | 'locale'
+      | 'name'
+      | 'required'
+      | 'strings'
+      | 'strokes',
+      {}
+    >;
+    events: LyraSignaturePadEventMap;
+    eventNames:       | 'change'
+      | 'lr-change'
+      | 'lr-invalid';
+    cssNames:       | '--lr-form-control-required-color'
+      | '--lr-form-control-required-content'
+      | '--lr-form-control-required-offset'
+      | '--lr-signature-pad-aspect-ratio'
+      | '--lr-signature-pad-ink'
+      | '--lr-signature-pad-stroke-width';
+    attributeAliases: {
+      'error-text'?: LyraSignaturePad['errorText'];
+      'form'?: LyraSignaturePad['form'];
+    };
+  };
   'lr-skeleton': {
     element: LyraSkeleton;
     properties: LyraElementProperties<
@@ -10752,7 +10838,8 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraSourcePickerEventMap;
-    eventNames:       | 'lr-sources-change';
+    eventNames:       | 'lr-selection-change'
+      | 'lr-sources-change';
     cssNames:       | '--lr-source-picker-checked-bg'
       | '--lr-source-picker-checked-border'
       | '--lr-source-picker-depth'
@@ -11311,6 +11398,7 @@ export interface LyraComponentTypeMap {
       | '--lr-switch-checked-track-border'
       | '--lr-switch-checked-track-fill'
       | '--lr-switch-gap'
+      | '--lr-switch-invalid-border'
       | '--lr-switch-label-color'
       | '--lr-switch-thumb-fill'
       | '--lr-switch-thumb-offset'
@@ -12287,6 +12375,7 @@ export interface LyraComponentTypeMap {
       | '--lr-toggle-pressed-bg'
       | '--lr-toggle-pressed-border-color'
       | '--lr-toggle-pressed-color'
+      | '--lr-toggle-pressed-hover-bg'
       | '--lr-toggle-radius';
     attributeAliases: {
       'aria-labelledby'?: LyraAttributeValue<string | null>;

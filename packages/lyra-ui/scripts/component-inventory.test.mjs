@@ -1088,7 +1088,6 @@ test('the CEM FormAssociated projection is truthful, scoped, and idempotent', ()
       'lr-chat-composer',
       'lr-code-editor',
       'lr-color-picker',
-      'lr-currency-picker',
       'lr-date-input',
       'lr-emoji-picker',
       'lr-known-date',

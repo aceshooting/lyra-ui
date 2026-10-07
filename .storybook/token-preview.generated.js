@@ -3823,14 +3823,6 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
-        "name": "--lr-size-1-875rem",
-        "type": "dimension",
-        "scope": "shared",
-        "values": {
-          "light": "var(--lr-theme-size-1-875rem, 1.875rem)"
-        }
-      },
-      {
         "name": "--lr-size-10px",
         "type": "dimension",
         "scope": "shared",
@@ -4532,14 +4524,6 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "theme-input",
         "values": {
           "light": "1.75rem"
-        }
-      },
-      {
-        "name": "--lr-theme-size-1-875rem",
-        "type": "dimension",
-        "scope": "theme-input",
-        "values": {
-          "light": "1.875rem"
         }
       },
       {

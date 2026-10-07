@@ -240,6 +240,7 @@ import '../components/forms/select/select.js';
 import '../components/conversation/selection-toolbar/selection-toolbar.js';
 import '../components/media/sequence-playback/sequence-playback.js';
 import '../components/data/sequence-strip/sequence-strip.js';
+import '../components/forms/signature-pad/signature-pad.js';
 import '../components/overlays/skeleton/skeleton.js';
 import '../components/forms/slider/slider.js';
 import '../components/retrieval/source-card/source-card.js';

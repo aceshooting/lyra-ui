@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,6 +36,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 }` (attribute: false) —
   confidence-tier boundaries (reusing `lr-citation-badge`'s high/medium/low confidence vocabulary and
   success/warning/danger tones), also forwarded as the provenance relevance tiers
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
+  section headings; `'none'` keeps the visible text without heading semantics.
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
   panel label. A non-empty host `aria-label`
   makes the host the sole overall owner; an explicitly empty host label stays empty
@@ -59,6 +61,11 @@ localized `limit` notice after that section's list rather than mounting an unbou
 - `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
 'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
 collapsing it.
+- The expanded item's `lr-provenance-panel` events cross the panel unchanged and are part of its
+  typed event map: `lr-toggle`, `lr-entity-select`, `lr-entity-activate` (deprecated alias),
+  `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
+  as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
+  event's `composedPath()`.
 
 **Slots:** none.
 
@@ -68,7 +75,8 @@ heading text), `section-empty`, `list` (`role="list"`, omitted while that sectio
 (`role="listitem"`, carries `data-id`/`data-scope` and a stable `tabindex="-1"` so focus has
 somewhere to land after a confirmation resolves), `item-row`, `item-text`, `confidence` (carries
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
-`provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
+`provenance` is unset; `item-body` is `hidden` while collapsed and mounts its `lr-provenance-panel`
+only while expanded), `item-actions`, `add-button`,
 `remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
 `forget-all-button` while the bulk confirmation is pending), `limit` (localized notice shown when a
 section's items exceed the 500-item render ceiling).

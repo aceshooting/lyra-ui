@@ -2961,14 +2961,19 @@ describe('multi-series screen-reader data table', () => {
 
   it('keeps an initially sampled chart silent, then announces a later sampling transition', async () => {
     const sampledLabels = Array.from({ length: 1001 }, (_, index) => `C${index}`);
-    const sampledDatasets = [{ label: 'Revenue', data: sampledLabels.map((_, index) => index) }];
+    const sampledDatasets = [{
+      label: 'Revenue',
+      data: sampledLabels.map((_, index) => index === 0 || index === 1000 ? index : null),
+    }];
     const el = await mount(html`<lr-lite-chart
       type="bar"
+      .maxLabels=${2}
       .strings=${{ chartDataSampled: 'Sampled records; provide a custom table.' }}
       .labels=${sampledLabels}
       .datasets=${sampledDatasets}
     ></lr-lite-chart>`);
 
+    expect(el.shadowRoot!.querySelector('[part="data-truncation"]')?.textContent).to.contain('Sampled records');
     expect(politeTexts()).to.deep.equal([]);
 
     el.labels = ['C0'];

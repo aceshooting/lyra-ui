@@ -26,7 +26,7 @@ at the same size tier, so the toolbar row renders as one flush line.
 **Properties:**
 
 - `query: string = ''` — the query text. The internal `lr-input` updates it optimistically as the
-  user types; a host reassignment always wins
+  user types and reports it through `lr-input`; a host reassignment always wins
 - `mode: LyraRetrievalMode = 'hybrid'` — `LyraRetrievalMode = RetrievalQuery['mode'] = 'vector' |
 'keyword' | 'hybrid'`, re-exported here rather than redefined
 - `filters: Record<string, unknown> = {}` (attribute: false) — arbitrary metadata filters, rendered
@@ -77,6 +77,10 @@ at the same size tier, so the toolbar row renders as one flush line.
 
 **Events:**
 
+- `lr-input` (`detail: { value: string }`) — the user edited or cleared the query; `query` already
+  holds the value. The field's native `input`/`change`, `lr-change` and `lr-clear` stay inside.
+- `lr-mode-change` (`detail: { mode: LyraRetrievalMode }`) — the user picked a retrieval mode; `mode`
+  already holds it.
 - `lr-search` (`detail: RetrievalQuery` from `@aceshooting/lyra-ui/ai` = `{ text: string;
 filters?: Record<string, unknown>; mode: 'vector' | 'keyword' | 'hybrid'; scope?: string[] }`) —
   Enter in the query field, or the submit button while not `loading`.

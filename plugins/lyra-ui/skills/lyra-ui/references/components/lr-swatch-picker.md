@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,7 +23,8 @@ inside scrolling containers, including single-row `nowrap` palettes. Public
 A single-select picker over a small, fixed set of color swatches with the WAI-ARIA APG
 `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic
 activation (click or arrow-key move both select immediately, like a native radio group), cyclic
-Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
+Arrow/Home/End navigation (Up/Down as well as Left/Right, so a wrapped grid moves with either
+pair). First-party invention (no Web Awesome equivalent). Distinct from
 `lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
 of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
 accent-color buttons. Its `items` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
@@ -39,13 +40,16 @@ blocked focus preserves outside focus and emits no native focus inside the picke
 
 - `items: readonly SwatchPickerItem[] = []` (attribute: false) — `SwatchPickerItem { readonly value:
 string; readonly color: string; readonly label: string; readonly icon?: unknown; readonly
-gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is used as the
   swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
   never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
   `icon` is an optional custom shape rendered _instead of_ the plain filled circle. Its rendered
   subtree stays visible but is inert and hidden from assistive technology, so the swatch button
   remains the sole action. `gemstone` selects the canonical faceted glyph when
-  `mode="gemstone"`. An explicit `icon` wins over `gemstone`. Assignments are bounded and copied
+  `mode="gemstone"`. An explicit `icon` wins over `gemstone`. `disabled: true` marks one swatch
+  unavailable: a real `disabled` button that arrow keys skip and that cannot be selected, dimmed
+  like a disabled picker, while the rest of the row stays selectable. Assignments are bounded to the
+  first 512 items and copied
   into a frozen owned snapshot; mutate a new array/item and reassign it to update the palette.
   Fresh items with unchanged fields retain their radio nodes and keyboard focus without a blur.
   Custom icons match by identity. Duplicate values remain distinct occurrences; surviving original
@@ -93,8 +97,9 @@ fires nothing else. When an activation _does_ move the selection, `lr-change` is
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
 swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — its private default
-follows `size` and is floored at 24px; the selected one is
-`[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
+follows `size` and is floored at 24px), `swatch-selected` (a token added to the selected swatch's
+part list, so `::part(swatch-selected)` styles it from outside), `swatch-fill` (the filled circle
+inside it, sized via
 `--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, with a private default that also
 follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
@@ -198,10 +203,11 @@ class AccentTrigger extends LitElement {
 - each swatch's fill comes from its option's `color`, applied through a per-swatch custom property
   set inline on `[part='swatch']` and read by `[part='swatch-fill']`, so a consumer's
   `::part(swatch-fill)` `background-color` rule can still override it.
-- style the selected state through `--lr-swatch-picker-selected-color`/`-selected-blur`/
-  `-shine-duration`, not through `::part(swatch)[aria-checked='true']` from outside: the CSS Shadow
-  Parts spec only allows a fixed set of pseudo-classes after `::part()`, not arbitrary attribute
-  selectors, so that combinator can silently fail to match depending on the engine.
+- style the selected swatch from outside with `::part(swatch-selected)` or the
+  `--lr-swatch-picker-selected-color`/`-selected-blur`/`-shine-duration` tokens, not through
+  `::part(swatch)[aria-checked='true']`: the CSS Shadow Parts spec only allows a fixed set of
+  pseudo-classes after `::part()`, not arbitrary attribute selectors, so that combinator never
+  matches.
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
 - the automatic gemstone glyph's checked-state halo/shine is themed through

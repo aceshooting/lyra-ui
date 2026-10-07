@@ -69,7 +69,7 @@ the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border
 `-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
 normally from an ancestor.
 
-## Direct theme-backed tokens (288)
+## Direct theme-backed tokens (287)
 
 | Internal token | `--lr-theme-*` input | Light/default fallback | Mode overrides |
 |---|---|---|---|
@@ -264,7 +264,6 @@ normally from an ancestor.
 | `--lr-size-1-5em` | `--lr-theme-size-1-5em` | `1.5em` | — |
 | `--lr-size-1-5rem` | `--lr-theme-size-1-5rem` | `1.5rem` | — |
 | `--lr-size-1-75rem` | `--lr-theme-size-1-75rem` | `1.75rem` | — |
-| `--lr-size-1-875rem` | `--lr-theme-size-1-875rem` | `1.875rem` | — |
 | `--lr-size-10px` | `--lr-theme-size-10px` | `10px` | — |
 | `--lr-size-10rem` | `--lr-theme-size-10rem` | `10rem` | — |
 | `--lr-size-12em` | `--lr-theme-size-12em` | `12em` | — |

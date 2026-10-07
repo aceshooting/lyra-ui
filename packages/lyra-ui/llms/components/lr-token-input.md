@@ -63,7 +63,7 @@ the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-com
 `start`/`end`.
 **Events:** native `InputEvent` `input`, `lr-input`, native `Event` `change`, then `lr-change` for
 each list mutation; native events have no detail and both aliases carry a frozen
-`{ value: readonly string[] }` snapshot.
+`{ value: readonly string[], previousValue: readonly string[] }` snapshot.
 Native `FocusEvent` `focus`/`blur` are relayed once from the draft and inline editor, preserving
 `relatedTarget`. `lr-token-add-request`
 (`detail: { value, values }`, where `value` is the final added token and `values` is the frozen,
@@ -133,7 +133,8 @@ explicit focus destination outside the component is never reclaimed.
 input and the inline token editor, and blocks every other value-committing affordance: typing (or a
 programmatic `input`/`change` dispatch) into the draft, Enter/delimiter/Tab draft commits,
 Backspace-removes-last-token, clicking a remove button, and opening or committing the inline
-editor (`editable`). Unlike `disabled`, it never removes the draft input, a token label, or a
+editor (`editable`). The remove buttons stay focusable but render `aria-disabled="true"` and the
+disabled paint. Unlike `disabled`, it never removes the draft input, a token label, or a
 remove button from the tab order, never blocks `focus()`, and never excludes the current value from
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.

@@ -103,6 +103,16 @@ const strings: LyraLocaleStrings = {
   countryPickerLabel: 'کشور',
   timeZonePickerLabel: 'منطقهٔ زمانی',
   unitPickerLabel: 'واحد',
+  signaturePad: 'صفحهٔ امضا',
+  signaturePadLabel: 'امضا',
+  signaturePadInstructions: 'با نشانگر رسم کنید، یا برای پایین آوردن و بلند کردن قلم کلید فاصله و برای حرکت دادن آن کلیدهای جهت را فشار دهید.',
+  signaturePadEmpty: 'هنوز امضا نشده است',
+  signaturePadSigned: {
+    one: 'امضا با {count} خط ثبت شد',
+    other: 'امضا با {count} خط ثبت شد',
+  },
+  signaturePadPenDown: 'قلم پایین است',
+  signaturePadPenUp: 'قلم بلند است',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

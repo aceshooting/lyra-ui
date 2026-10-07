@@ -508,8 +508,11 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       // A live catalog refresh changes the suggestions underneath the current draft, not the
       // draft itself. Rebase only for controlled-value changes or a structural mode switch;
       // otherwise a provider polling its model list would erase what the user is typing.
+      const activeValue = typeof this.renderRoot?.querySelector === 'function'
+        ? this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.dataset['value']
+        : undefined;
       this.catalogPicker.reconcileRows(
-        this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.dataset['value'],
+        activeValue,
         changed.has('value') || changed.has('allowCustom') || modeChanged,
         false,
       );

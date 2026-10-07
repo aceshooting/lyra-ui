@@ -50,9 +50,11 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
 **Properties:**
 
 - `accessibleLabel?: string` (attribute `aria-label`) — names the `nav` landmark by attribute
-  presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named with
-  the localized `navigation` string ("Navigation"). Several menus on one page (for example a header
-  and a footer) need distinct labels, or axe reports `landmark-unique`.
+  presence; an explicitly empty `aria-label=""` leaves it unnamed. Unset, the landmark is named from
+  `label`, then the localized `navigation` string ("Navigation"). Several menus on one page (for
+  example a header and a footer) need distinct labels, or axe reports `landmark-unique`.
+- `label?: string` — the landmark name when no host `aria-label` is set; any supplied string,
+  including an empty one, is literal.
 - `mobileBreakpoint?: string` (attribute `mobile-breakpoint`) — a bare number or a `px`, `rem` or
   `em` length. The menu collapses while its own content-box inline size is at or below it (the same
   `<=` comparison and name as `lr-page`). Unlike `lr-page` and `lr-app-rail` there is no default:

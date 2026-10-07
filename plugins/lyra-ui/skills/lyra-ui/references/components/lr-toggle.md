@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -91,10 +91,10 @@ ellipsizes), `end`. There are no state parts: style the reflected host attribute
 
 **Hit area.** Unlike `lr-icon-button`, the toggle keeps the size ladder, including for icon-only
 content. Every tier floors both axes at 1.5rem (24px, the WCAG 2.5.8 minimum) and an icon-only
-toggle is at least square; the default `m` tier equals the 2.5rem (40px) `--lr-icon-button-size`
+toggle is at least square; the default `m` tier equals the 2.25rem (36px) `--lr-icon-button-size`
 floor; under a coarse pointer every tier floors at 2.75rem (44px). Only fine-pointer `2xs`/`xs`/`s`
-sit below 40px — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
-where the compact 40px floor matters.
+sit below it — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
+where the icon-button floor matters.
 
 **Pressed look.** The pressed state paints `--lr-color-fill-quiet` from the `variant` row plus a loud
 `--lr-color-border-loud` border. That border is the state's 3:1 non-text indicator (WCAG 1.4.11): a
@@ -108,7 +108,9 @@ and press get outline affordances, and disabled toggles read as `GrayText` at fu
 `--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-bg` (default
 `transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
 `var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-bg` (default
-`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`,
+the unpressed pointer fill only), `--lr-toggle-pressed-hover-bg` (default a hover mix of
+`--lr-toggle-pressed-bg`, the pressed pointer fill),
 `--lr-toggle-pressed-bg` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
 (default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
 `var(--lr-color-border-loud)`).

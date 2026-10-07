@@ -473,7 +473,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private _format: LyraColorPickerFormat = 'hex';
   /** Output format for `value`: `hex`, `rgb`, `hsl` or `hsv`, matched case-insensitively (`rgba`
    *  and the other `*a` spellings name the base format; alpha comes from `opacity`). Anything else
-   *  is `hex`. Input is always parsed permissively regardless of this. */
+   *  is `hex`. Input is always parsed permissively regardless of this.
+   * @default 'hex'
+   */
   @property({ converter: { fromAttribute: normalizeColorFormat } })
   get format(): LyraColorPickerFormat {
     return this._format;

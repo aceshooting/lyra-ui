@@ -537,7 +537,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   @property({ type: Boolean, reflect: true }) wrap = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. Matched
-   *  ASCII case-insensitively like the native attribute; an unknown value is `'button'`. */
+   *  ASCII case-insensitively like the native attribute; an unknown value is `'button'`.
+   * @default 'button'
+   */
   @property({ converter: { fromAttribute: (value: string | null) => BUTTON_TYPE.normalize(value?.toLowerCase()) } })
   get type(): ButtonType {
     return this._type;

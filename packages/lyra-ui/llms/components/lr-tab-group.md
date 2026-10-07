@@ -55,7 +55,8 @@ panel attributes synchronized with its own selection after hydration.
 Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
 under RTL, or Up/Down when `placement` is `start`/`end`) move focus _and_ selection together; with
 `activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
-enabled tab, and a roving `tabindex` follows the focused tab.
+enabled tab, and a roving `tabindex` follows the focused tab. Keys pressed with Alt, Ctrl or Meta,
+and IME composition keys, are never handled (Alt+ArrowLeft stays browser Back).
 Keyboard handling starts from the real event-target tab (then actual shadow focus), so a controlled
 `active` write cannot make Arrow/Delete/Enter operate on a different remembered tab.
 An enabled `closable` `<lr-tab>` also puts `aria-keyshortcuts="Delete"` on its real tab button.
@@ -65,8 +66,9 @@ selection.
 **Properties:**
 
 - `active: string = ''` (reflected) — the active tab's panel name; falls back to the first enabled
-  tab whenever the current value doesn't resolve to one (including on every children/attribute
-  change, tracked via a `MutationObserver`)
+  tab whenever the current value doesn't resolve to one, and to the following (else preceding)
+  enabled tab when the active tab is removed, disabled or made inert (tracked via a
+  `MutationObserver`)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. `null` omits the
   attribute; an explicitly empty value is preserved (there is no localized default name).
@@ -121,13 +123,13 @@ focus off the tab the user was on.
 
 **Events:**
 
-- `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`.
-  Not fired
-  when `active` self-corrects to a valid tab (initial default, or a tab disappearing/becoming
-  disabled underneath the current selection).
+- `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
+  or because the active tab was removed, disabled or made inert and selection moved to its following
+  (else preceding) tab. Not fired for the initial default or a direct `active` write.
 - `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
-  that builds the new one. Not fired when there was no previous selection.
+  that builds the new one; the only event when no tab remains to select. Not fired when there was no
+  previous selection.
 - `lr-activate` (`detail: { value: string }`) — fired on **every** user activation of a navigable
   tab (a click, an Arrow/Home/End key under `activation="auto"`, or Enter/Space under
   `activation="manual"`), whether or not the active tab actually moved. Bubbling, composed, not

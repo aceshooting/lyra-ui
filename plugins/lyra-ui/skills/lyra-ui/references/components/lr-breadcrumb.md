@@ -72,7 +72,9 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
 `--lr-breadcrumb-item-active-bg` independently themes a non-current link/button's pressed fill;
-unset, it retains the former transparent active mix.
+unset, it retains the former transparent active mix. `--lr-breadcrumb-item-color` (default
+`var(--lr-color-text)`) colours a non-current link or button; an item keeps an authored `role` and
+gets `role="listitem"` only when none is set.
 
 **Additional API surface:**
 

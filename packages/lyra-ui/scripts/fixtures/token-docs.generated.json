@@ -3223,24 +3223,6 @@
       ]
     },
     {
-      "name": "--lr-size-1-875rem",
-      "type": "dimension",
-      "group": "size",
-      "scope": "shared",
-      "values": {
-        "light": "var(--lr-theme-size-1-875rem, 1.875rem)"
-      },
-      "themeInput": "--lr-theme-size-1-875rem",
-      "valueNameClassification": "audited-fixed-geometry",
-      "compatibility": {
-        "name": "--lr-size-1-875rem",
-        "status": "retained"
-      },
-      "evidence": [
-        "src/internal/contextual-vocabulary.styles.ts"
-      ]
-    },
-    {
       "name": "--lr-size-10px",
       "type": "dimension",
       "group": "size",
@@ -3614,7 +3596,8 @@
       },
       "evidence": [
         "src/components/agent-tools/tool-select-dialog/tool-select-dialog.styles.ts",
-        "src/components/forms/date-picker/date-picker.styles.ts"
+        "src/components/forms/date-picker/date-picker.styles.ts",
+        "src/internal/contextual-vocabulary.styles.ts"
       ]
     },
     {
@@ -3920,14 +3903,15 @@
         "src/components/layout/command-palette/command-palette.styles.ts",
         "src/components/layout/scroller/scroller.class.ts",
         "src/components/layout/scroller/scroller.styles.ts",
-        "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/avatar-group/avatar-group.styles.ts",
+        "src/components/media/avatar/avatar.styles.ts",
         "src/components/media/file-icon/file-icon.class.ts",
         "src/components/media/file-icon/file-icon.styles.ts",
         "src/components/overlays/chip/chip.styles.ts",
         "src/components/viewers/document-preview/document-preview.styles.ts",
         "src/components/viewers/document-viewer/document-viewer.styles.ts",
-        "src/components/viewers/pptx-viewer/pptx-viewer.styles.ts"
+        "src/components/viewers/pptx-viewer/pptx-viewer.styles.ts",
+        "src/internal/contextual-vocabulary.styles.ts"
       ]
     },
     {
@@ -4125,8 +4109,7 @@
         "src/components/media/av-player/av-player.styles.ts",
         "src/components/media/avatar/avatar.class.ts",
         "src/components/media/avatar/avatar.styles.ts",
-        "src/components/media/avatar-group/avatar-group.styles.ts",
-        "src/internal/contextual-vocabulary.styles.ts"
+        "src/components/media/avatar-group/avatar-group.styles.ts"
       ]
     },
     {
@@ -6665,15 +6648,6 @@
       "scope": "theme-input",
       "values": {
         "light": "1.75rem"
-      }
-    },
-    {
-      "name": "--lr-theme-size-1-875rem",
-      "type": "dimension",
-      "group": "size",
-      "scope": "theme-input",
-      "values": {
-        "light": "1.875rem"
       }
     },
     {

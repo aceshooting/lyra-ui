@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -42,10 +42,10 @@ chip` row, one `lr-path-strip` per relationship, `lr-community-card`, `lr-chunk-
 **Events:** `lr-toggle` (`detail: { section, expanded }`, a section header was toggled —
 `section` is `'entities' | 'relationships' | 'communities' | 'chunks'`). Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
-part of its typed event map: `lr-entity-select` (`detail: { entityId }`, from an entity chip),
-`lr-entity-activate` (`detail: { entityId, occurrenceIndex? }`, from a community card member or
-path-strip node — the only name either one emits, and the only one carrying `occurrenceIndex`),
-`lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
+entity chip, a community card member or a path-strip node — only the path strip carries
+`occurrenceIndex`), its deprecated alias `lr-entity-activate` (same detail, dispatched right after
+it by a community card member or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
 edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
@@ -80,7 +80,9 @@ Plus shared tokens.
 
 - Composes `lr-entity-chip`, `lr-path-strip`, `lr-community-card`, and `lr-chunk-inspector`
   directly rather than reimplementing their rendering — events from those inner components (e.g.
-  `lr-entity-activate`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM
+  `lr-entity-select`, `lr-chunk-open`) still bubble/compose up through this panel's light DOM
   for the host to handle in one place.
+- The four sections are derived once per `provenance` assignment, so toggling a section header
+  never rebuilds the chunk inspector's input.
 
 ---

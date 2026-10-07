@@ -51,7 +51,12 @@ The chip's decorative `details` subtree is hidden from assistive technology.
 **Properties:**
 
 - `label?: string` — accessible name of the menubar. The host `aria-label` wins, including `""`;
-  an explicit `label=""` stays empty. When both are absent, no name attribute is rendered.
+  an explicit `label=""` stays empty. When both are absent, the localized `menuLabel` ("Menu") names it.
+- `topLayer: boolean = false` (attribute `top-layer`, reflected) — shows every menu the bar opens,
+  nested submenus included, in the browser top layer wherever the Popover API exists, so it paints
+  above a sibling surface stacked higher than a `z-index`ed fixed or sticky header it sits in. Placed
+  `fixed` while set; no DOM node moves; applies the next time a menu opens. Same contract as
+  `<lr-navigation-menu>`'s `top-layer`.
 - `size: LyraSize = 'm'` — shared control ladder, inherited by the titles.
 - `frame: LyraFrame = 'card'` — surface, subtle border and shadow; `'plain'` makes the same
   geometry transparent. Other values use the card appearance.

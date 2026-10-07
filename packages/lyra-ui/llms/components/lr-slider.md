@@ -57,7 +57,9 @@ single numeric string entry.
 
 - `min: number = 0`
 - `max: number = 100`
-- `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
+- `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode, where the
+  arrow keys move by a hundredth of the span, PageUp/PageDown by a tenth, and `stepUp()`/`stepDown()`
+  do nothing
 - `range: boolean = false` (reflected) — two-handle mode; see above
 - `minValue: number = 0` (attribute `min-value`) — the lower handle's value in `range` mode.
   Assigning past `maxValue` pushes `maxValue` to the same number
@@ -92,6 +94,8 @@ single numeric string entry.
   explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
   When error and hint content are both present, every handle's `aria-describedby` references the
   error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
+  Every handle exposes `aria-invalid="true"` while error content is visible, and otherwise only after
+  the user has interacted while a custom error is set.
 - `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
 - `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
   presence hints; hydrated instances also discover populated slots automatically.
@@ -305,7 +309,7 @@ is present for upstream form-surface parity but adds no missing-value constraint
 - `with-markers` silently draws nothing when `step` is 0/negative or when the domain implies more
   than 100 intervals. That is a deliberate ceiling, not a bug — check the rendered `[part="marker"]`
   count rather than assuming the ticks are there.
-- The visible thumb is deliberately below the library's usual 40px icon-button floor — 16px at the
+- The visible thumb is deliberately below the library's usual icon-button floor — 14.4px at the
   default `m` tier, and smaller at the tighter ones. A transparent `::before` carries the hit/drag
   area at `max(28px, calc(var(--lr-slider-thumb-size) * 1.75))`, which clears WCAG 2.5.8's 24px
   minimum at **every** tier, while a 40px _visible_ thumb would make two range handles overlap

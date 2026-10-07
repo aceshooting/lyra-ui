@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -64,8 +64,8 @@ The inherited derived reads `effectiveName` and `effectiveSize` expose the resol
 size used by the button's form and chrome logic.
 
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
-then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
-aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
+then `lr-change` (both aliases carry `{ checked, value }`) and every activation emits `lr-activate`;
+an owning `lr-radio-group` emits the aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
 not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
@@ -101,7 +101,8 @@ pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-borde
 `--lr-radio-button-checked-color` control checked rest; and the corresponding
 `--lr-radio-button-checked-hover-bg`, `--lr-radio-button-checked-hover-border-color`,
 `--lr-radio-button-checked-active-bg`, and `--lr-radio-button-checked-active-border-color` hooks
-control checked pointer states. The inherited `--lr-radio-hover-border-color`,
+control checked pointer states. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`)
+is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-hover-border-color`,
 `--lr-radio-active-border-color`, and `--lr-radio-active-ring-color` remain visible in generated
 metadata but apply only to the base radio's circular chrome. All fallbacks preserve the existing
 brand, on-brand, quiet, and color-mix treatments.

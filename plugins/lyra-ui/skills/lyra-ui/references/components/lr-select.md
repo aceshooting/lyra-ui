@@ -34,7 +34,10 @@ value/form/validity path as a programmatic value write and does not emit `input`
 
 **Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
 the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
-`[part="option"][role="option"]`, each with a `data-value` matching its represented value.
+`[part="option"][role="option"]`, each with a `data-value` matching its represented value. Rows
+mount the first time the listbox opens, so a closed select has none. Opening makes the committed
+option (the first committed one in `multiple`) the active row and scrolls it into view; with
+nothing committed no row is active until an arrow key.
 Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
 
 ```ts
@@ -282,8 +285,9 @@ state.
 **Events:** each real selection change emits, in order, a native `InputEvent` named `input`,
 `lr-input`, a native `Event` named `change`, then `lr-change`. The native events carry no detail;
 read `event.target.value`. Both
-prefixed aliases carry `detail: { value: string | string[]; data: readonly unknown[] }` — `value`
-is the new committed selection, a string in single mode and a `string[]` in `multiple` mode; `data`
+prefixed aliases carry `detail: { value: string | string[]; previousValue: string | string[]; data: readonly unknown[] }` — `value`
+is the new committed selection, a string in single mode and a `string[]` in `multiple` mode,
+`previousValue` the selection before this change in the same shape; `data`
 is index-aligned with `value` exactly like `selectedData` above (the same reference, `undefined`
 for a value matching no live option), reached by reference and never deep-cloned. The complete sequence is silent for a
 programmatic `value` write, `form.reset()`, or session-state restoration. Plus

@@ -514,6 +514,8 @@ export type LyraSequencePlaybackReactProps = LyraReactElementProps<'lr-sequence-
 
 export type LyraSequenceStripReactProps = LyraReactElementProps<'lr-sequence-strip'>;
 
+export type LyraSignaturePadReactProps = LyraReactElementProps<'lr-signature-pad'>;
+
 export type LyraSkeletonReactProps = LyraReactElementProps<'lr-skeleton'>;
 
 export type LyraSliderReactProps = LyraReactElementProps<'lr-slider'>;
@@ -891,6 +893,7 @@ export interface LyraReactIntrinsicElements {
   'lr-selection-toolbar': LyraSelectionToolbarReactProps;
   'lr-sequence-playback': LyraSequencePlaybackReactProps;
   'lr-sequence-strip': LyraSequenceStripReactProps;
+  'lr-signature-pad': LyraSignaturePadReactProps;
   'lr-skeleton': LyraSkeletonReactProps;
   'lr-slider': LyraSliderReactProps;
   'lr-source-card': LyraSourceCardReactProps;

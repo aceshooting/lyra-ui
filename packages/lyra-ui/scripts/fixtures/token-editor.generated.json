@@ -1719,13 +1719,6 @@
       ]
     },
     {
-      "name": "--lr-size-1-875rem",
-      "description": "Canonical shared component token for size 1 875rem.",
-      "references": [
-        "--lr-theme-size-1-875rem"
-      ]
-    },
-    {
       "name": "--lr-size-10px",
       "description": "Canonical shared component token for size 10px.",
       "references": [
@@ -3302,11 +3295,6 @@
     {
       "name": "--lr-theme-size-1-75rem",
       "description": "Application theme input for --lr-size-1-75rem.",
-      "references": []
-    },
-    {
-      "name": "--lr-theme-size-1-875rem",
-      "description": "Application theme input for --lr-size-1-875rem.",
       "references": []
     },
     {

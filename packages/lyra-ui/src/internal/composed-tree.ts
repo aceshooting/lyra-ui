@@ -13,7 +13,7 @@ function isElementLike(candidate: unknown): candidate is Element {
 }
 
 /** The host of a shadow root (a host-bearing document fragment), or null for any other root. */
-export function shadowRootHost(root: Node): Element | null {
+function shadowRootHost(root: Node): Element | null {
   const candidate = (root as { host?: unknown }).host;
   return root.nodeType === 11 && isElementLike(candidate) ? candidate : null;
 }

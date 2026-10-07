@@ -23,8 +23,8 @@ fetches, ranks, or computes retrieval results itself.
 **Properties:**
 
 - `stages: RetrievalStage[] = []` (attribute: false) — `RetrievalStage { id: string; kind:
-RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pending' | 'running'
-| 'success' | 'error' | 'denied'; detail?: string; evidence?: RetrievalStageEvidence }` (exported
+RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: LyraSpan['status'];
+detail?: string; evidence?: RetrievalStageEvidence }` (exported
   here), where `RetrievalStageKind = 'query-rewrite' | 'embed' | 'retrieve' | 'rerank' | 'filter'`.
   `startMs`/`endMs` are milliseconds relative to the trace start (`endMs` absent while still
   running); `status` uses `LyraSpan.status`'s vocabulary verbatim; `label` overrides the localized
@@ -39,14 +39,16 @@ RetrievalStageKind; label?: string; startMs: number; endMs?: number; status: 'pe
 unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** verbatim, rendered
   through `lr-chunk-inspector` (`source.id → sourceId`, `source.name → title`, `locator → anchor`;
   page locators also supply the visible `page`); `text` is free-form (e.g. the rewritten query, an
-  embedding model id); `metadata` renders as a plain key/value list. Malformed runtime chunk rows
+  embedding model id); `metadata` renders as a plain key/value list (at most 32 entries, each
+  value bounded and cycle-safe). Malformed runtime chunk rows
   are omitted while valid neighboring chunks remain visible. A
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
-- `label: string = ''` — accessible name for the timeline, falling back to its localized default.
-  An authored host `aria-label` independently names the trace and is not cloned onto the timeline;
-  explicit-empty/dynamic host changes preserve that single-owner distinction
+- `label?: string` — accessible name for the timeline; omission keeps its localized default and an
+  explicit empty string clears it. An authored host `aria-label` independently names the trace and is
+  not cloned onto the timeline; explicit-empty/dynamic host changes preserve that single-owner
+  distinction
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
 Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, an evidence panel was
@@ -78,4 +80,5 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
 **Known gotchas:**
 
 - Every stage starts collapsed; expansion state is internal `@state` keyed by stage id, not a
-  controlled property.
+  controlled property. A stage's evidence (text, chunk inspector, metadata) is mounted only while
+  it is expanded.

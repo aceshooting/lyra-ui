@@ -35,7 +35,7 @@ function isCollectionSnapshotFailure(
  * default), or the trailing ones (`'newest'`) for append-ordered data such as logs, transcripts
  * and sample streams, whose newest entries are the ones a reader needs.
  */
-export type CollectionRetention = 'oldest' | 'newest';
+type CollectionRetention = 'oldest' | 'newest';
 
 /** What the shared boundary had to drop from the root of one assignment. */
 export interface CollectionTruncation {

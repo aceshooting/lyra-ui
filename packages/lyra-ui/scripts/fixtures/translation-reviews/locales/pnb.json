@@ -2,12 +2,12 @@
   "locale": "pnb",
   "direction": "rtl",
   "source": {
-    "keyCount": 1395,
-    "sha256": "sha256:2871efcb95a2a1cbad4baae3b68cd532422f9f03149932cd4d4399f6801369f7"
+    "keyCount": 1402,
+    "sha256": "sha256:fc31e42521e3f0df6c1dfa6b5a61075121143b6e0fb6fa0e0ad37f619c210f5c"
   },
   "catalog": {
-    "keyCount": 1395,
-    "sha256": "sha256:4d3e1769724e201a73f5072fd250b8ca8b6a9215a3ca8a114b384ed7aa24cb1a"
+    "keyCount": 1402,
+    "sha256": "sha256:4ffc0a64a3a8b39373f51d5d261b1acc032e49e45bc13e99d1d9f827fdd60bdb"
   },
   "translator": {
     "status": "complete-original",

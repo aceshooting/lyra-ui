@@ -38,17 +38,22 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   `activeChunkId`, a new `size`) hands the internal `lr-virtual-list` the same array reference it
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
+- `expandedChunkIds: string[] = []` (attribute: false) — ids of the chunks whose text is expanded.
+  The inspector updates its own copy on toggle _then_ emits `lr-chunk-toggle`; reassign to control
+  (a composing list keeps expansion here across scrolling and re-sorting)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
   `xs`/`2xs`) hides the text preview/toggle, rendering the title/score row only; `m` (the default)
   and larger render the full rows.
-- `label: string = ''` — fallback name for the populated result group. A non-empty host
-  `aria-label` makes the host the sole overall owner; an explicitly empty host label stays empty
+- `label?: string` — fallback name for the populated result group; omission uses the localized
+  default and an explicit empty string clears it. A non-empty host `aria-label` makes the host the
+  sole overall owner; an explicitly empty host label stays empty
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
 `anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-toggle was activated, expanding or collapsing it).
+toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
+events stay inside the component.
 
 **Slots:** none.
 
@@ -124,7 +129,10 @@ Plus shared tokens otherwise.
     documentViewer.name = source.name;
     documentViewer.mimeType = source.mimeType;
     documentViewer.src = source.src;
-    documentViewer.anchor = e.detail.anchor ?? null;
+    const anchor = e.detail.anchor ?? null;
+    // An identical anchor is not re-applied; a repeat click on the same chunk jumps explicitly.
+    if (anchor && documentViewer.anchor === anchor) void documentViewer.scrollToAnchor(anchor);
+    else documentViewer.anchor = anchor;
     documentViewer.open = true;
   });
 </script>

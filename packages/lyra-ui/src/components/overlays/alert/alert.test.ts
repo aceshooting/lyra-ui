@@ -4,6 +4,7 @@ import type { LyraAlert } from './alert.js';
 import './alert.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { TOAST_REGION_ENQUEUE } from '../toast/toast-region-protocol.js';
 
 const motionless = '--lr-duration-fast: 0ms;';
 
@@ -40,6 +41,45 @@ it('is closed by default with the exact Shoelace-compatible property defaults', 
 
   el.open = false;
   expect(el.open).to.be.false;
+});
+
+it('admits and reasserts unfocused toast alerts without traversing document focus targets', async () => {
+  await import('../toast/toast.js');
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div><button id="outside">Outside</button><lr-toast></lr-toast></div>
+  `);
+  const region = wrapper.querySelector('lr-toast') as HTMLElement & {
+    [TOAST_REGION_ENQUEUE](entry: HTMLElement): void;
+  };
+  await focusByKeyboard(wrapper.querySelector<HTMLButtonElement>('#outside')!);
+
+  const documentRoot = document.documentElement;
+  const rootChildren = documentRoot.children;
+  const originalChildren = Object.getOwnPropertyDescriptor(documentRoot, 'children');
+  let documentWalks = 0;
+  Object.defineProperty(documentRoot, 'children', {
+    configurable: true,
+    get() {
+      documentWalks += 1;
+      return rootChildren;
+    },
+  });
+  try {
+    const alerts = Array.from({ length: 5 }, (_, index) => {
+      const alert = document.createElement('lr-alert') as LyraAlert;
+      alert.textContent = `Notice ${index}`;
+      return alert;
+    });
+    for (const alert of alerts) region[TOAST_REGION_ENQUEUE](alert);
+    region[TOAST_REGION_ENQUEUE](alerts[0]!);
+    region[TOAST_REGION_ENQUEUE](alerts[4]!);
+    await Promise.all(alerts.map((alert) => alert.updateComplete));
+    expect(region.querySelectorAll('lr-alert').length).to.equal(5);
+    expect(documentWalks, 'unfocused toast updates must not start a document focus traversal').to.equal(0);
+  } finally {
+    if (originalChildren) Object.defineProperty(documentRoot, 'children', originalChildren);
+    else Reflect.deleteProperty(documentRoot, 'children');
+  }
 });
 
 it('reflects the default primary variant and paints it like an explicit one', async () => {
@@ -852,15 +892,18 @@ it('repairs focus when an already-open focused alert enters a full toast region'
 
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
+      <button id="removed-focus-target">Removed target</button>
       <lr-alert open closable style=${motionless}>Already open focused alert</lr-alert>
       <button id="after-focused-alert">Return target</button>
     </div>
   `);
   const queued = wrapper.querySelector('lr-alert') as LyraAlert;
+  const removedTarget = wrapper.querySelector<HTMLButtonElement>('#removed-focus-target')!;
   const returnTarget = wrapper.querySelector<HTMLButtonElement>('#after-focused-alert')!;
   const close = queued.shadowRoot!.querySelector<HTMLButtonElement>('[part~="close-button"]')!;
-  returnTarget.focus();
-  close.focus();
+  await focusByKeyboard(removedTarget);
+  await focusByKeyboard(close);
+  removedTarget.remove();
   expect(queued.shadowRoot!.activeElement === close).to.equal(true);
 
   const queuedCompletion = queued.toast();

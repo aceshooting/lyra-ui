@@ -729,8 +729,9 @@ The expanded style system has a separate cost: theme.css grows from 2,902 to 6,9
 the standalone theme bootstrap grows from 3,980 to 6,088 gzip bytes with versioned sparse and nested
 ownership. These increases are reported separately from the package reduction. All figures describe production artifacts, not source-line counts.
 
-The byte ceilings are the exact reviewed measurements plus 33,960 packed and
-139,713 unpacked headroom bytes: 7,686,989 and 34,994,525 bytes respectively. Both ceilings are below
+The byte ceilings are the exact reviewed measurements of 7,690,209 packed and 34,930,235
+unpacked bytes plus 33,960 packed and 139,713 unpacked headroom bytes: 7,724,169 and
+35,069,948 bytes respectively. Both ceilings are below
 the historical baseline, so the former baseline-overage approvals are no longer needed. The separate
 25%-target required-artifact exceptions remain explicit. `validatePackageBudgets()` rejects a missing
 or renamed exception, an unpacked reviewed measurement that no longer exceeds its target, a packed
@@ -738,27 +739,12 @@ measurement at or below the recorded favorable probe, headroom above 0.5%, and a
 from measurement plus headroom. A ceiling at or above the historical baseline requires a separate
 named review; no such approval is active. Raising a ceiling merely to clear a failure is insufficient.
 
-The file ceiling is 4,116: 2,500 base artifacts, one emitted JavaScript file for each of the 304 stable
-registration aliases, a measured 1,305-file remainder, and the unchanged seven-file reserve for the
-next component scaffold. The currency-picker candidate contains 4,109 files, up from 4,097 before
-its addition. Published 23.0.0, the
-previous file-budget measurement, contains 4,088 files; published 25.3.1 contains 4,091. The exact
-23.0.0-to-25.3.1 inventory has 21 additions and 18 removals, including native glass, media/map,
-chart-axis and heatmap helpers, focused guides, and removal of empty runtime/type-only modules and
-retired routes. The six further files are JavaScript/declaration pairs for `chart-sync`,
-`chart-sync.styles`, and `opaque-content-border.styles`; they implement synchronized charts and
-opaque content borders. No files were removed from 25.3.1. Those three earlier inventories contain 303 stable
-registration aliases: correcting the former 304-alias term moves one file into the measured
-remainder without increasing the total. The earlier net nine-file increase since the last measurement
-retains the same scaffold reserve. Canonical declarations supply alias types without an extra
-declaration per alias. Byte ceilings, required-artifact exceptions, and source/map/fixture/test/story
-rejection remain unchanged; validation requires the exact derivation and a ceiling below the
-historical 4,441-file baseline.
-
-Currency-picker adds exactly twelve required files: JavaScript/declaration pairs for its catalog,
-class, registration, styles and presentation helper, plus its stable registration alias and component
-guide. No files are removed. The measured package is 7,517,992 bytes packed and 34,167,076 bytes
-unpacked; both retain the existing byte ceilings and the seven-file scaffold reserve.
+The file ceiling is 4,201: 2,500 base artifacts, one emitted JavaScript file for each of the 308
+stable registration aliases, a measured 1,386-file remainder, and the unchanged seven-file reserve
+for the next component scaffold. The measured package contains 4,194 files. Canonical declarations
+supply alias types without an extra declaration per alias. Validation requires the exact derivation,
+the seven-file reserve, and a ceiling below the historical 4,441-file baseline; source maps,
+fixtures, tests, and stories remain excluded from the tarball.
 
 ## `tsconfig.build.json` and dist hygiene
 

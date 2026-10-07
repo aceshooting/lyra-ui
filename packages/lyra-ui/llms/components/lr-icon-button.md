@@ -64,10 +64,13 @@ until `<lr-icon>` is registered by something else.
   selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
   `href`
 
-With neither `accessibleLabel` nor `label` set, the name falls back to the localized
-`iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
-app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
-button whose purpose isn't generic.
+The accessible name is the host `aria-label` (forwarded by presence, so an explicitly empty value
+stays empty), then `label`, then a name the slotted content already carries — visible text, an
+`aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
+Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
+rather than being empty — override it per instance with `.strings` or app-wide with
+`registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a button whose purpose
+isn't generic. Slotted content is re-checked on `slotchange`, not on text edits inside it.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
@@ -129,7 +132,7 @@ natural aspect ratio.
 **CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
 DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
-**Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
+**Themeable custom properties:** `--lr-icon-button-size` (default `2.25rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
 than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
 library-wide token (declared on every `lr-*` host by the shared token layer, and the shared minimum tappable size

@@ -23,8 +23,11 @@ permissions, and connector settings go in the `settings` slot.
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
-localized admin label, while an explicit empty string stays empty; authored host
-`aria-label` independently names the admin component and is not cloned onto either);
+localized admin label, while an explicit empty string empties the heading and the tablist keeps the
+localized name; authored host `aria-label` independently names the admin component and is not
+cloned onto either); `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the
+nested source inventory's heading sits one level below; `'none'` removes heading semantics from
+both);
 `withoutIngestion: boolean = false` (attribute `without-ingestion`). If ingestion is active when it
 becomes hidden, `activeTab`
 normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.

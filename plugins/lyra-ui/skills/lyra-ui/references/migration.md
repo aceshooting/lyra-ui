@@ -1520,9 +1520,9 @@ For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 33 | 37 | 17 | 0 | 0 | 70 | 17 |
+| Web Awesome | 33 | 35 | 19 | 0 | 0 | 68 | 19 |
 | Shoelace | 18 | 28 | 12 | 0 | 0 | 46 | 12 |
-| **Total** | **51** | **65** | **29** | **0** | **0** | **116** | **29** |
+| **Total** | **51** | **63** | **31** | **0** | **0** | **114** | **31** |
 
 ## Web Awesome (87)
 
@@ -1589,7 +1589,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-qr-code>` | `<lr-qr-code>` | `exact` | Automatic: tag and supported side-effect registration import. Canvas QR renderer; needs the optional peer `qrcode`. |
 | `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
 | `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. Form-associated single-choice controls with roving arrow-key navigation and group validation; Lyra's group `name` defaults empty while Shoelace defaults to `option`, so the codemod inserts `name="option"` (set it for a manual rename). |
-| `<wa-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
+| `<wa-radio-group>` | `<lr-radio-group>` | `warning-required` | Manual: Native input notifications are Event instances. Migrated handlers must not require InputEvent-specific fields. |
 | `<wa-random-content>` | `<lr-random-content>` | `warning-required` | Manual: Lyra returns frozen readonly selection snapshots instead of mutable arrays. The migrator also reports the exercised behavior differences: host and multi-item layout, bounded unique selection, forwarded-slot candidates, and autoplay semantics. |
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
@@ -1602,7 +1602,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-sparkline>` | `<lr-sparkline>` | `exact` | Automatic: tag and supported side-effect registration import. Zero-dependency inline SVG. |
 | `<wa-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. Localized indeterminate busy indicator with reduced-motion support. |
 | `<wa-split-panel>` | `<lr-split-panel>` | `rewritten` | Automatic: tag/import plus events: wa-reposition → lr-reposition. |
-| `<wa-switch>` | `<lr-switch>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
+| `<wa-switch>` | `<lr-switch>` | `warning-required` | Manual: Native input notifications are Event instances. Migrated handlers must not require InputEvent-specific fields. |
 | `<wa-tab>` | `<lr-tab>` | `exact` | Automatic: tag and supported side-effect registration import. Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; composed from the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs. |
 | `<wa-tab-group>` | `<lr-tab-group>` | `rewritten` | Automatic: tag/import plus events: wa-tab-hide → lr-tab-hide; events: wa-tab-show → lr-tab-show. |
 | `<wa-tab-panel>` | `<lr-tab-panel>` | `exact` | Automatic: tag and supported side-effect registration import. Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; composed from the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs. |

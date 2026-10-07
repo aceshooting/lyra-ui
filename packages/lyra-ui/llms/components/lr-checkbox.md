@@ -40,6 +40,8 @@ Explicit empty text stays empty; later supplied text renders normally.
 - `hint: string = ''` — WA supporting text below the control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text
   surface; `hint` wins when both properties are set
+- `withHint: boolean = false` (attribute `with-hint`) — WA SSR presence hint for slotted supporting
+  text that cannot be inspected until hydration
 - `errorText: string = ''` (attribute `error-text`) — owned error text associated with the inner
   checkbox; custom markup can use the `error` slot
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
@@ -72,6 +74,8 @@ never happened. Blurring the control, or a `reportValidity()` call, still marks 
 is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
+focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
+fieldset disablement starts, even before the next render;
 `getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
 superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
@@ -85,8 +89,9 @@ name. `hint` is the WA supporting-text slot;
 `help-text` is the Shoelace spelling for the same described-by surface.
 `error` supplies custom error markup on the same owned error surface as `errorText`.
 
-The label, hint, and error wrappers can shrink and wrap at arbitrary boundaries inside a 320px LTR
-or RTL allocation. The checkbox square and its shared interactive target remain fixed-size.
+The label, hint, and error wrappers wrap at word boundaries inside a 320px LTR or RTL allocation,
+breaking inside a word only when it is wider than the row. The checkbox square and its shared
+interactive target remain fixed-size.
 
 The default slot deliberately remains the checkbox's one visible, clickable label; there is no
 separate top-of-field label property or slot. `form-control` wraps that checkbox plus its error and
@@ -94,7 +99,8 @@ hint, matching `lr-switch` without duplicating the label idiom.
 
 The `checkbox`/`base` semantic role owner retains `--lr-icon-button-size` as its minimum inline and
 block size at every tier. The visible `box` remains tied to `size`, so a label-less `2xs` checkbox
-centres a compact square inside a 40px clickable target instead of inflating the glyph itself.
+centres a compact square inside a `--lr-icon-button-size` clickable target instead of inflating the
+glyph itself.
 
 The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
 visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
@@ -140,9 +146,9 @@ corresponding brand/brand-quiet/danger token. While checked or indeterminate, an
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
 active `size` tier's shared control height, so the box lines up with an
 `lr-input`/`lr-select`/`lr-button` of the same `size` instead of carrying a scale of its own; at the
-default `m` tier it resolves to `1.75rem`, exactly what the control shipped with before it had a
-`size` at all. The `--lr-icon-button-size` cap is kept, so a consumer compacting that theme token
-compacts this control with it. Set it to pin the box independently of the tier.
+default `m` tier it resolves to `1.575rem`. The `--lr-icon-button-size` cap is kept, so a consumer
+compacting that theme token compacts this control with it. Set it to pin the box independently of
+the tier.
 
 **`--lr-checkbox-label-indent`** — the inline distance from the control's start edge to the start of
 the label text: the box plus the gap beside it. It defaults to
@@ -162,8 +168,8 @@ substitute the one you actually use:
 .checkbox-hint {
   padding-inline-start: calc(
     min(
-        var(--lr-theme-icon-button-size, 2.5rem),
-        calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+        var(--lr-theme-icon-button-size, 2.25rem),
+        calc(var(--lr-theme-form-control-height-m, 2.25rem) * 0.7)
       ) + var(--lr-theme-space-s, 0.5rem)
   );
 }

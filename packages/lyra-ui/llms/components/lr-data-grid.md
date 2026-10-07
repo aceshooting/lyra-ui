@@ -20,23 +20,18 @@ Virtualized client/server data grid with multi-sort, column filters, global sear
 trees, row details, paging, pinning, resizing, reordering, selection, copy, and CSV export. Import
 the granular registration module when the root bundle is not already loaded:
 
-Repeated references to an admitted root row appear once in processed rows, pagination, facets, and
-CSV, matching rendered canonical identity. The retained occurrence remains the original caller-owned
-record. Clicking a supported interactive descendant, including a native control inside its open
-shadow root, runs that control without also emitting `lr-cell-click`. Passive cell content continues
-to activate the cell.
+Duplicate root-row references appear once in rows, paging, facets, and CSV; the first caller-owned
+record is retained. Interactive descendants (including open-shadow native controls) run without
+`lr-cell-click`; passive content activates the cell.
 
 ```js
 import "@aceshooting/lyra-ui/components/lr-data-grid.js";
 ```
 
 Give the grid an accessible name with `label` or a host `aria-label`; the host attribute wins.
-Collection inputs are clone-owned readonly snapshots, so reassign `data`, `columns`, `groupBy`, and controlled
-state arrays to update them; mutating the array originally assigned has no effect. Assigning the
-array a collection property last received (a parent re-render rebinding it) is a no-op, so pass a
-new array after changes; for caller-owned row edits in place, call `requestUpdate()`.
-Column records are also copied and frozen synchronously. Row object
-identities are preserved so formatter callbacks and `selectedRows` still refer to caller records.
+Collection inputs are clone-owned readonly snapshots: reassign `data`, `columns`, `groupBy`, and controlled
+arrays after changes. Same-array rebinding/in-place mutation is ignored; call `requestUpdate()` after
+row edits. Column records copy/freeze synchronously; row identities remain caller-owned.
 Column identity uses a nonblank `id`, then a nonblank `field`, then stable definition-object
 occurrence; malformed, blank, and later-duplicate identities are omitted first-wins. When `rowKey`
 is set, malformed, blank, and later-duplicate row identities are omitted first-wins before
@@ -76,9 +71,8 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
-- `dataTruncated: boolean` (read-only, JS-only) — `true` when the client row projection omitted
-  rows (over 10,000 total rows or 64 nesting levels); controlled `selectedRowKeys` are then not
-  pruned, since an omitted row's key cannot be proven invalid.
+- `dataTruncated: boolean` (read-only, JS-only) — true when projection drops input over 10,000 rows
+  or 64 nesting levels; controlled `selectedRowKeys` remain because omitted keys may exist.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
 - `filters: readonly Array<{ readonly id: string; readonly value: unknown }> = []` (JS-only).
@@ -100,10 +94,7 @@ ARIA values as page-local positions rather than as the dataset-wide total.
 - `rowClass: ((row) => string | null | undefined) | null = null` (JS-only).
 - `rowDetail: ((row) => string | TemplateResult | Node) | null = null` (JS-only).
 - `rowKey: string | ((row: Row) => DataGridKey | null | undefined) | null = null` (`row-key`) — dot
-  path, or a `(row) => key` callback as `<lr-table>` takes, for stable selection/expansion identity.
-  `selectedRowKeys`/`expandedRowKeys` also accept any iterable (such as `<lr-table>`'s `Set`) and
-  store a frozen array. Paging differs from `<lr-table>`: the grid's `page` is zero-based with a
-  default `pageSize` of 20 and `total`, the table's is one-based with 100 and `totalItems`.
+  path/callback for stable identity. Selection/expansion keys accept iterables and read back frozen.
 - `searchFn: ((value, term, row) => boolean) | null = null` (JS-only).
 - `searchTerm: string = ''` (JS-only).
 - `selectable: '' | 'single' | 'multiple' | 'none' = 'none'` (`selectable`, reflected) — a bare
@@ -146,9 +137,9 @@ attribute entirely rather than rendering `title=""`, which would suppress an anc
 Built-in sort algorithms are `alphanumeric`, `alphanumericCaseSensitive`, `text`,
 `textCaseSensitive`, `datetime`, and `basic`; `comparator` takes precedence. Built-in filter types
 are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `includes-all`;
-`filterFn` takes precedence in client mode. A `date-range` value is `[start, end]` with an inclusive
-end day; `YYYY-MM-DD` bounds and cell values are calendar days in the user's time zone (local
-midnight to local end of day), not UTC midnight. Group aggregations are `sum`, `min`, `max`, `mean`,
+`filterFn` takes precedence in client mode. A `date-range` `[start, end]` includes the end day;
+`YYYY-MM-DD` bounds/values use local midnight through day end, not UTC. Group aggregations are
+`sum`, `min`, `max`, `mean`,
 `median`, `count`, `unique`, `uniqueCount`, `extent`, or a callback.
 
 **Methods:**
@@ -201,57 +192,43 @@ For event-driven loading, set `server`, listen to the mirrored `request` event, 
 9.0.0; rename that listener to `request`. Each dispatch carries a fresh frozen detail that cannot
 mutate the component or loader request.
 
-**Keyboard:** headers and cells share one roving grid stop; the scrollable `body` is separately
-focusable so keyboard users can pan overflowing content. Arrow keys traverse cells. On a row's
-first cell, ArrowRight expands a collapsed tree row, row-detail panel or group row and ArrowLeft
-collapses an expanded one or moves a collapsed nested tree row to its parent row (the WAI-ARIA
-treegrid keys; an already-expanded or non-expandable row moves on as usual). Per-row and
-group-row selection checkboxes/radios and group expand buttons are not Tab stops: Space on any cell
-of a row (or on a group row, in `multiple` mode) toggles its selection. The header row's controls
-(select-all, filter and column-menu buttons, resize handles) deliberately remain Tab stops. Row
-selection controls are named by the localized "Select" plus the row's first visible cell, and the
-grid reports `aria-multiselectable` whenever selection is enabled. Alt+Arrow and Cmd+Arrow are
-left to the browser (history navigation) on headers and body cells alike; a column resizes from its
-focusable separator. Home/End
-traverse a row, Ctrl+Home / Ctrl+End reach grid ends, PageUp/PageDown move a page, Enter
-sorts/activates, Space selects, Shift+Arrow reorders a header,
-unmodified Left/Right adjusts a focused separator by 10px (Shift: 50px; Home/End jump to the
-column's minimum/authored maximum), Ctrl+A selects
-the current page, Ctrl+C copies, and Shift+F10 requests a cell context menu. Inline-direction
-movement swaps under RTL. Keyboard events from an interactive formatter descendant remain owned by
-that descendant.
+**Keyboard:** headers/cells share one roving stop; scrollable `body` is focusable for panning.
+Arrows traverse cells. At a row's first cell, ArrowRight expands a collapsed tree/detail/group row;
+ArrowLeft collapses an expanded row or focuses a collapsed nested tree row's parent. Otherwise they
+navigate. Row/group selection controls and group expand buttons are not Tab stops: Space on a row
+cell toggles selection, and on group rows only in `multiple` mode. Header select-all, filter,
+column-menu, and resize controls remain Tab stops. Selection controls are named by localized
+"Select" plus the first visible cell; selection sets `aria-multiselectable`. Alt+Arrow/Cmd+Arrow
+stay browser history. Separator ArrowLeft/ArrowRight resizes 10px (Shift: 50px); Home/End set min/
+authored max. Home/End reach a row's first/last cell; Ctrl+Home/End reach grid ends; PageUp/Down page; Enter
+sorts/activates; Space selects; Shift+Arrow reorders headers; Ctrl+A selects the current page;
+Ctrl+C copies; Shift+F10 requests a cell context menu. Inline arrows swap under RTL; formatter
+descendants keep their own keys.
 
-**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` carry canonical
-`rowKey`/`columnId` alongside the row, column, value, and display index (canceling the latter suppresses the
-native menu); `lr-column-move`; `lr-column-pin`; `lr-column-resize` (`detail: { columnId, columnKey,
-width, finished }` — `columnKey` mirrors `<lr-table>`'s name for the same id; `finished` distinguishes
-live and committed resize); cancelable `lr-column-resize-request` (`detail: { columnId, columnKey,
-width }`) proposes every committed width — a keyboard step or a pointer drag's final width — and
-preventing it keeps the previous width and discards a drag's live preview, as `<lr-table>` does. `pointerup` commits a pointer drag. `pointercancel` or lost capture
-restores the exact pre-gesture width state; after a live move it emits the restored width with
-`finished: false`, and it never emits a canceled `finished: true` commit. `lr-column-visibility-change`;
-`lr-data-error`;
-`lr-filter-change`; `lr-search-change` (frozen `{ searchTerm }`, after a user edits or clears the
-built-in `with-search` box; programmatic `searchTerm` writes do not fire it); `lr-page-change`;
-`lr-row-collapse`; `lr-row-expand`; `lr-group-collapse` and
-`lr-group-expand` (frozen `{ key, columnId, value, rows }` snapshots); `lr-row-select` with
-canonical `{ selectedRowKeys, selectedRows }` plus mirrored `selectedKeys`; row expand/collapse
-details use canonical `rowKey` plus mirrored `key`; cancelable `lr-sort-request` (frozen readonly
-`detail: { sort }`) precedes `lr-sort-change`; vetoing it leaves `sort` unchanged and suppresses
-`lr-sort-change` — the same veto-then-commit model as `<lr-table>`'s `lr-sort-request`, though the
-commit differs (the grid's `lr-sort-change` carries `{ sort }`, the table's `lr-sort` carries
-`{ phase, sortKey, sortDir }`);
-`lr-copy` (frozen `{ ok: true, text }` after fulfillment); `lr-copy-error`
-(frozen `{ ok: false, text, reason, error }` after failure); `lr-error` (compatibility failure
-notification with no raw platform error text); `lr-data-error` does NOT itself set the built-in
-`error` state (see `error` above); `lr-retry-request` (`detail: null`, cancelable) — the built-in
-`[part='retry-button']` was activated, only rendered while `error` is set; the default action
-clears `error`, `preventDefault()` leaves it set instead. Every library event bubbles and is
-composed; only `lr-cell-contextmenu`, `lr-sort-request`, and `lr-retry-request` are cancelable. Structured
-details and their owned collections are frozen. The toolbar search and active column-filter inputs
-re-dispatch `focus` and `blur` once from the grid host as bubbling, composed native `FocusEvent`s,
-preserving `relatedTarget` so delegated ancestors can observe editor entry and exit without
-crossing the shadow boundary.
+**Events:** `request`; `lr-cell-click` and cancelable `lr-cell-contextmenu` (canonical `rowKey`/
+`columnId` plus row, column, value, and display index; vetoing the latter suppresses the native menu);
+`lr-column-move`, `lr-column-pin`, `lr-column-visibility-change`; `lr-column-resize`
+(`detail: { columnId, columnKey, width, finished }`; `columnKey` mirrors the table's name for the
+same id; `finished` marks commit); cancelable `lr-column-resize-request`
+(`{ columnId, columnKey, width }`)
+proposes committed keyboard/drag-end widths; veto
+keeps the previous width and discards preview. `pointerup` commits; cancel/lost capture restores the
+exact pre-gesture width, emits it with `finished: false` after live movement, never canceled
+`finished: true`. `lr-data-error`, `lr-filter-change`, `lr-page-change`;
+`lr-search-change` (`{ searchTerm }` after user edits/clears `with-search`, not programmatic
+writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-expand` (`{ key, columnId, value, rows }` group snapshots); `lr-row-select` (canonical
+`{ selectedRowKeys, selectedRows }`, plus `selectedKeys`);
+row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
+`lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
+and suppresses `lr-sort-change`.
+Grid detail is `{ sort }`; `<lr-table>` emits `lr-sort` with `{ phase, sortKey, sortDir }`.
+`lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
+platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
+button was activated while `error` is set; its default clears `error`, and veto leaves it set.
+All library events bubble and are composed. Cancelable events: `lr-cell-contextmenu`,
+`lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
+are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
+bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.
 
 **Row context menus with `lr-context-menu`.** Wrap the grid in an `lr-context-menu` region and
 leave `lr-cell-contextmenu` **un-prevented**: preventing it suppresses the native menu, and the

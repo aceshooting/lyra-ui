@@ -32,7 +32,7 @@ export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraScoreThresholds } from '../graph/graph.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../graph/graph.class.js';
@@ -360,9 +360,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
     citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
     collapse: LYRA_DEFAULT_collapse,
+    date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     map: LYRA_DEFAULT_map,
     memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
     memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
@@ -381,7 +381,6 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     progress: LYRA_DEFAULT_progress,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    restore: LYRA_DEFAULT_restore,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     showLess: LYRA_DEFAULT_showLess,

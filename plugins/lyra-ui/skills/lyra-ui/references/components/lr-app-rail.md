@@ -40,7 +40,8 @@ containing block (`transform`, `filter`, `will-change: transform`, or layout/pai
 because geometric parking otherwise follows that ancestor's edge instead of the viewport.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
-`[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
+`[part="resizer"]` handle (pointer-drag, Left/Right-arrow keyboard stepping, RTL-aware, and Home/End
+to jump to the minimum/maximum; keys with Alt, Ctrl or Meta are left to the browser) clamped to
 `[minRailWidth, maxRailWidth]`. Set `storageKey` (attribute `storage-key`) to persist the fields
 selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
 next mount (mirrors `lr-multi-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
@@ -89,9 +90,11 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   restore a stale modal. Set this directly, or use the built-in toggle button — there is no separate
   `show()`/`hide()` pair.
 - `label?: string` — optional accessible name for the rail's navigation landmark and mobile dialog.
-  Every nonempty supplied string is honored literally; only absence/empty uses the localized
-  navigation fallback. A host-level `aria-label` attribute (including an explicit empty value)
-  takes precedence.
+  Every supplied string, including an empty one, is honored literally; only absence uses the
+  localized navigation fallback. A host-level `aria-label` attribute (including an explicit empty
+  value) takes precedence.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — the host `aria-label` as a
+  property; overrides `label` and the localized default on the landmark and the mobile dialog.
 - `preferredMode?: 'full' | 'icon-only' | null` (attribute `preferred-mode`) — manually prefers
   `'full'` or `'icon-only'` for the non-mobile breakpoint axis, while `mobile-breakpoint` continues to
   be tracked automatically regardless — e.g. a user's manual collapse toggle that should still yield
@@ -213,9 +216,9 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   which otherwise visibly "chases" the pointer instead of tracking it 1:1. This component always
   owned every drag transition itself; assigning it now throws (`el.dragging = true` -> TypeError).
 
-Also settable as a plain `aria-label` attribute (not a reactive property): overrides the computed
+Also settable as a plain `aria-label` attribute (`accessibleLabel`): overrides the computed
 `label`/localized-default accessible name on both the navigation landmark and the mobile dialog
-role, matching `<lr-date-input>`'s `accessibleLabel`.
+role.
 
 **Methods:** `toggle(): void` opens/closes the mobile overlay through cancelable `lr-toggle-request`, or
 flips the full/icon-only preference. It is a no-op while disconnected. While pinned, it records
@@ -247,8 +250,9 @@ step and once at pointerup for a genuine drag. Clamped/no-op steps, canceled/los
 consumer property writes emit no committed event).
 
 **Slots:** default (nav items — generic slotted content, e.g. `<a>`/`<button>` elements the consumer
-builds with its own icon+label structure; clicking anywhere in this slot closes the mobile overlay if
-open), `header` (logo/brand content, shown above the nav items in every mode), `footer` (a trailing
+builds with its own icon+label structure; clicking in this slot closes the mobile overlay if open,
+except on a group's or item's disclosure toggle, a group's `header-actions` and an item's `meta`/`end`
+content), `header` (logo/brand content, shown above the nav items in every mode), `footer` (a trailing
 user/settings trigger, shown below the nav items).
 
 **CSS parts:** `base`, `header`, `nav`, `footer`, `toggle` (hidden via CSS outside `'mobile'` mode, or
@@ -548,16 +552,18 @@ out of default-width compact rails, or use a rail that never collapses.
   always shows the open icon-only label flyout in the browser top layer, placed `fixed` whatever the
   positioning strategy resolves to, so it paints above a sibling surface stacked higher than a
   `z-index`ed fixed or sticky header, toolbar or rail it sits in (see the `<lr-popover>` `topLayer`
-  documentation in `llms/components/lr-popover.md`). Anchoring, RTL placement, focus, Escape and the
-  transitions are unchanged and no DOM node moves; it leaves the top layer once it settles closed. Unset,
+  documentation in `llms/components/lr-popover.md`). Anchoring, RTL placement, focus and Escape
+  dismissal are unchanged and no DOM node moves. Unset,
   promotion happens only when a trapping ancestor forces it. `<lr-app-rail top-layer>` applies it to
   every descendant item without overwriting an item's own value.
 - `tooltip: boolean = false` (reflected) — opt-in hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it)
   (`[part='tooltip']`) showing
   this item's label text while the rail's `icon-only` mode (set externally by the parent
   `<lr-app-rail>` as the viewport narrows) hides it from view. No effect outside icon-only mode,
-  since the label is already visible there. `false` (the default) reproduces the exact existing
-  output.
+  since the label is already visible there. Escape dismisses it, for hover and keyboard focus alike.
+  `false` (the default) reproduces the exact existing output.
+- `rel?: string` — link relationship tokens for the anchor; `opener` is dropped and a `target`
+  always adds `noopener noreferrer`.
 - `expanded: boolean = false` (reflected) — whether this item's own `children` are shown. `false`
   reproduces exactly what an item without this property rendered before this feature existed.
   Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
@@ -566,7 +572,8 @@ out of default-width compact rails, or use a rail that never collapses.
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
 same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
-interpolated `{label}` (see Events below).
+interpolated `{label}` (see Events below); without it both read the default slot only, never the
+`icon`, `meta`, `end` or `children` slots.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
@@ -620,9 +627,8 @@ names the native control, which remains the sole action).
   current descendant stays perceivable only through its own `current` property.
 
 Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an item using neither
-renders exactly as before. Note that while the mobile overlay is open, a click anywhere in the
-rail's default slot closes it — including a click on an `end` control; that is the rail's documented
-nav-slot behaviour, not new to these slots.
+renders exactly as before. While the mobile overlay is open, a click on `meta` or `end` content does
+not close it; a click elsewhere in the rail's default slot does.
 
 **CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
@@ -744,7 +750,8 @@ written, never for a vetoed or listener-resolved request (`detail: { expanded }`
 
 **Slots:** default — the group's items, and any nested `<lr-app-rail-group>`s; `heading` — rich
 heading content; `header-actions` — controls beside the heading, rendered as a sibling of the
-collapse control so activating one never toggles the group.
+collapse control so activating one never toggles the group (and, in the rail's mobile overlay, never
+closes it). Collapsing a group that holds focus moves focus to the collapse control.
 
 **CSS parts:** `base`, `header`, `heading`, `heading-text`, `toggle`, `toggle-icon`,
 `header-actions`, `content`.

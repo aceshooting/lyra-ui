@@ -516,6 +516,8 @@ export type LyraSequencePlaybackSvelteProps = LyraSvelteElementProps<'lr-sequenc
 
 export type LyraSequenceStripSvelteProps = LyraSvelteElementProps<'lr-sequence-strip'>;
 
+export type LyraSignaturePadSvelteProps = LyraSvelteElementProps<'lr-signature-pad'>;
+
 export type LyraSkeletonSvelteProps = LyraSvelteElementProps<'lr-skeleton'>;
 
 export type LyraSliderSvelteProps = LyraSvelteElementProps<'lr-slider'>;
@@ -893,6 +895,7 @@ export interface LyraSvelteElements {
   'lr-selection-toolbar': LyraSelectionToolbarSvelteProps;
   'lr-sequence-playback': LyraSequencePlaybackSvelteProps;
   'lr-sequence-strip': LyraSequenceStripSvelteProps;
+  'lr-signature-pad': LyraSignaturePadSvelteProps;
   'lr-skeleton': LyraSkeletonSvelteProps;
   'lr-slider': LyraSliderSvelteProps;
   'lr-source-card': LyraSourceCardSvelteProps;
@@ -1203,6 +1206,7 @@ export interface LyraElementTagNameMap {
   'lr-selection-toolbar': LyraComponentTypeMap['lr-selection-toolbar']['element'];
   'lr-sequence-playback': LyraComponentTypeMap['lr-sequence-playback']['element'];
   'lr-sequence-strip': LyraComponentTypeMap['lr-sequence-strip']['element'];
+  'lr-signature-pad': LyraComponentTypeMap['lr-signature-pad']['element'];
   'lr-skeleton': LyraComponentTypeMap['lr-skeleton']['element'];
   'lr-slider': LyraComponentTypeMap['lr-slider']['element'];
   'lr-source-card': LyraComponentTypeMap['lr-source-card']['element'];

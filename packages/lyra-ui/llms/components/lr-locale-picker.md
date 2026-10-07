@@ -20,8 +20,10 @@ A closed-list locale switcher over the library's own locale registry. First-part
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
 plus `en` — kept live via `subscribeLyraLocaleRegistry()`. Built directly on `lr-select`'s
-trigger-button/`aria-activedescendant` listbox technique, not composed from it. Optional
-`searchable` adds a text filter; free text never becomes a locale selection.
+trigger-button/`aria-activedescendant` listbox technique, not composed from it. Opening makes the
+committed locale the active row and scrolls it into view (nothing is active while no locale is
+committed); the active row is revealed by scrolling only the listbox, below the sticky search field.
+Optional `searchable` adds a text filter; free text never becomes a locale selection.
 
 Host `aria-describedby` references resolve onto the role=combobox trigger before its local error and
 hint guidance. The relationship tracks missing IDs, target replacement, removal/reinsertion,
@@ -145,8 +147,11 @@ the retry button with `load-retry`.
 **Events:** `lr-change-request` is cancelable and carries `{ value, previousValue, direction }`
 before the selected value, popup, or global locale changes. Prevent it to keep all three unchanged;
 a synchronous host value assignment also takes precedence. On acceptance, the component sets
-`value`, closes the popup, applies `setLyraLocale(value)`, then emits a non-cancelable `lr-change`
-with the captured values and the direction resolved after any catalog load. Preventing the notification has no effect. `focus`/`blur` relay once from the
+`value`, closes the popup, applies `setLyraLocale(value)`, then emits non-cancelable native `input`,
+`lr-input`, native `change` and `lr-change` (the prefixed pair carries the captured values and the
+direction resolved after any catalog load). Preventing the notifications has no effect. Picking the
+locale that is already committed and already the page locale only closes the popup: no request,
+event or `setLyraLocale()` call. `focus`/`blur` relay once from the
 trigger as native `FocusEvent`s preserving `relatedTarget`. `lr-invalid` is the single
 bubbling/composed, cancelable alias of a failed native validity check.
 

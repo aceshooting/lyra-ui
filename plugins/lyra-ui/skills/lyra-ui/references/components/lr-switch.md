@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,8 +61,8 @@ programmatic `click()` activation path) emits
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
-a consumer observes a control they didn't write. `input` is an `InputEvent`; `change` is an
-`Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
+a consumer observes a control they didn't write. `input` and `change` are plain `Event`s, as on a
+native checkbox. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
 None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
@@ -95,6 +95,10 @@ survives every toggle and a form reset; `setCustomValidity('')` or `resetValidit
 never reflect, default/attribute changes cannot overwrite a dirty live state, and `form.reset()`
 restores the current default before making the control pristine again.
 
+The internal `role="switch"` exposes explicit stateful `aria-invalid`: visible error chrome makes it
+`"true"` immediately; otherwise it becomes true only after interaction while intrinsic/custom
+validity fails.
+
 **Slots:**
 
 - default — rich label content rendered beside the semantic switch owner. Clicking plain label
@@ -122,9 +126,11 @@ pill-shaped background), `thumb` (the circular knob), `label` (wrapper around th
 and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-local geometry knobs set
 on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
 default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
-resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+resolve to `1.125rem` × `2.025rem`.
 WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 `--lr-switch-gap` (default `var(--lr-space-s)`) independently controls the track-to-label gap.
+`--lr-switch-invalid-border` (default `var(--lr-color-danger)`) is the outline `[part='track']`
+paints while the switch matches `:state(user-invalid)`.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its

@@ -201,7 +201,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   /** Whether the minimum-size hit areas (as `[part="rect-target"]` sizes them) of different
    *  highlights intersect. */
   private hitAreasOverlap(): boolean {
-    const view = this.ownerDocument.defaultView;
+    const view = this.ownerDocument?.defaultView;
     if (!view) return false;
     const { width, height } = this.boxSize ?? this.getBoundingClientRect();
     const min = resolveCssTokenLength(

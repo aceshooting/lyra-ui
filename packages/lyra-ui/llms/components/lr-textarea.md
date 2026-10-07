@@ -196,8 +196,8 @@ shadow boundary. The sink stays silent while the textarea or a composed ancestor
 `aria-hidden`, or hidden by rendered CSS. Lengths count UTF-16 code units (one emoji counts as two),
 matching the native `maxlength` the count reports against, and the remaining count floors at zero — only a
 script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
-state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
-dropped rather than rendered as `NaN`, and the count counts up from zero instead.
+state better than a negative number would. An unparseable or blank `maxlength` (`maxlength="oops"`,
+`maxlength=""`) is dropped rather than rendered as `NaN` or `0`, and the count counts up from zero instead.
 
 `required` with a non-empty `label` paints the library's shared marker on `form-control-label` —
 the one `::after` rule described under "The required-field marker" above, not a copy of it, so

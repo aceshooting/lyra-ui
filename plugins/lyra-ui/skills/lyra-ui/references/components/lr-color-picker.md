@@ -54,8 +54,9 @@ to the declarative value or to empty when none was supplied.
 
 Colour is never the only channel carrying state: the trigger's `aria-describedby` points at a
 visually-hidden span spelling the current value out in text, the panel shows it in an editable
-field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
-a tint alone.
+field, and the selected palette swatch is marked with `aria-checked` plus a check mark rather than
+a tint alone. The palette is one roving `radiogroup` with a single tab stop: the arrow keys (Left/Right
+swap under RTL), Home and End move to and select the next enabled swatch, like `lr-swatch-picker`.
 
 Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
 required empty picker starts pristine, so the popup trigger and panel value input both expose
@@ -88,14 +89,17 @@ accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactiv
 independently retains the `--lr-icon-button-size` floor),
 and:
 
-- `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
+- `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in, matched
+  case-insensitively; `rgba` and the other `*a` spellings name the base format (alpha comes from
+  `opacity`) and anything else is `hex`. Parsing is
   always permissive regardless of it. The format button cycles through the four in that order
 - `opacity: boolean = false` — enables the alpha channel: an opacity slider appears in the panel and
   the serialized value gains its alpha-carrying twin (`hexa`/`rgba`/`hsla`/`hsva`). With it unset,
   picking a palette entry forces alpha back to 1
 - `uppercase: boolean = false` — serializes `value` in upper case (`#FF0000` rather than `#ff0000`);
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
-- `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
+- `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette (the first 512
+  entries, each parsed once when assigned), given as a
   `;`-separated string, an array of colour strings, or an array of
   `{ color: string; label?: string; disabled?: boolean; icon?: unknown }` objects. Any colour the
   picker can parse is accepted; blank entries are dropped. An entry that is _not_ parseable is kept
@@ -187,8 +191,8 @@ doesn't move the serialized value emits nothing, so dragging within a single rou
 silent.
 
 **Keyboard.** The grid handle, hue handle and opacity handle are each a real `role="slider"` with a
-localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow by 10,
-and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
+localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow and
+PageUp/PageDown by 10, and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
 never do. One discrete press pairs a keydown (`input`/`lr-input`) with a keyup
 (`change`/`lr-change`); OS key repeat re-fires the edit pair but still commits once. The panel is
 Escape-dismissible and returns focus to the trigger; a pointerdown outside the element closes it
@@ -232,7 +236,7 @@ here exactly as they do on `lr-input`. With no label text the part is hidden and
 painted.
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
-not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.5rem`,
+not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
 inline and block sizes are each
 `max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller

@@ -2863,8 +2863,8 @@ component does not search or infer state. Assign a new `.steps` array after host
 component snapshots collection data, omits blank or duplicate identities after the first valid
 record, and renders at most 100 steps. `label` sets the visible group heading and names the group
 unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
-localized default for an empty one). `heading-level` (`'2'` by default; `'none'` keeps the text
-without heading semantics) sets the heading's level.
+localized default for an empty one). The `headingLevel` property and `heading-level` attribute
+(`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.
 
 **CSS parts:**
 
@@ -3228,6 +3228,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/retrieval/rag-answer/rag-answer.class.js`.
   `LyraRagCitationSelectDetail extends CitationSelectEventDetail {
     section: 'answer' | 'grounding';
+    action: 'activate' | 'open';
     // Inherited from CitationSelectEventDetail.
     citation: Citation;
   }`

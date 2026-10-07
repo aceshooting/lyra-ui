@@ -276,6 +276,18 @@ const SL_SPLIT_PANEL_MODULE_EXPORT_DRIFT = [
 ];
 
 const DECISION_OVERRIDES = new Map([
+  ...['wa-radio-group', 'wa-switch'].map((tag) => [
+    tag,
+    {
+      classification: 'warning-required',
+      rationale:
+        'Native input notifications are Event instances. Migrated handlers must not require InputEvent-specific fields.',
+      expectedDrift: [
+        { code: 'event-constructor-mismatch', section: 'events', member: 'input', expected: 'InputEvent', actual: 'Event' },
+        { code: 'event-type-mismatch', section: 'events', member: 'input', expected: 'InputEvent', actual: 'Event' },
+      ],
+    },
+  ]),
   [
     'sl-split-panel',
     {
@@ -493,7 +505,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'change',
           expected: 'CustomEvent<{ value: string | string[] }>',
           actual:
-            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+            'CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
         {
           code: 'event-constructor-mismatch',
@@ -501,7 +513,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
         {
           code: 'event-type-mismatch',
@@ -509,7 +521,7 @@ const DECISION_OVERRIDES = new Map([
           member: 'input',
           expected: 'InputEvent | CustomEvent<{ value: string | string[] }>',
           actual:
-            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
+            'InputEvent | CustomEvent< LyraEventDetailSnapshot<{ readonly value: LyraPickerDetailValue<Multiple>; readonly previousValue: LyraPickerDetailValue<Multiple>; readonly data: readonly unknown[]; }> >',
         },
       ],
     },

@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-sources-change` since `unreleased`; use event `@lr-selection-change`; removal not before `28.0.0` — lr-selection-change is the library's one name for a changed selection; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -40,9 +40,10 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   invalid-value error rather than the ordinary no-data state
 - `selectedSourceIds: string[] = []` (attribute: false) — controlled; blank ids, duplicates, and ids
   that are not leaves in the current `sources` tree are pruned, and the host assigns updates back from
-  `lr-sources-change`
+  `lr-selection-change`
 - `withoutSelectAll: boolean = false` (attribute `without-select-all`) — omits the header control
-  that otherwise selects or clears every visible leaf source.
+  that otherwise selects or clears every leaf source — only the leaves matching the filter while one
+  is active, leaving hidden selections untouched.
 - `withoutSearch: boolean = false` (attribute `without-search`) — omits the built-in source filter.
 - `label?: string` — fallback name for the source tree; omission uses the localized picker label,
   while an explicit empty string stays empty
@@ -56,12 +57,13 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
   root. With no `size` the field keeps its own `m` default; an unsupported value normalizes to the
   omitted state and removes the attribute
 
-**Events:** `lr-sources-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id array,
-fired after every toggle including select-all. Also fired when a `sources` reassignment prunes a
-previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's
-own `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside
-the component; `lr-sources-change` is the host-level report of that toggle.
+**Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
+array, fired after every toggle including select-all. Also fired when a `sources` reassignment
+prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
+`selectedSourceIds` directly; that assignment is normalized silently) and its deprecated alias
+`lr-sources-change`, dispatched right after it. The select-all checkbox's and the filter field's
+`lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
+component; `lr-selection-change` is the host-level report.
 
 **Slots:** none.
 
@@ -72,8 +74,9 @@ owner), `summary` ("{selected} of {total} selected"), `tree`
 `aria-checked` — `"true"`, `"false"`, or `"mixed"` — and intentionally has no duplicate
 `aria-selected` state), `disclosure` (a folder row's pointer-only expand/collapse indicator; the
 surrounding treeitem owns keyboard expansion),
-`checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
-when `sources` is empty, `noMatches` when a filter empties the tree), `error` (a nonempty raw
+`checkbox` (tri-state box: a check when selected, a dash when mixed), `icon` (the `lr-file-icon` type
+badge), `label`, `empty` (an `lr-empty`: `noData` when `sources` is empty, `noMatches` when a filter
+empties the tree), `error` (a nonempty raw
 payload containing no valid roots), `limit` (bounded-normalizer
 failure/truncation). Post-mount no-match and recovery transitions announce through the shared
 light-DOM polite sink; the shadow messages are visible mirrors, never live regions.
@@ -111,7 +114,7 @@ set the step, not the depth. Plus shared tokens otherwise.
     },
   ];
   picker.addEventListener(
-    "lr-sources-change",
+    "lr-selection-change",
     (e) => (retrievalScope = e.detail.selectedSourceIds)
   );
 </script>
@@ -119,7 +122,7 @@ set the step, not the depth. Plus shared tokens otherwise.
 
 **Known gotchas:**
 
-- Deliberately not form-associated — `lr-sources-change` is the only wiring; there's no
+- Deliberately not form-associated — `lr-selection-change` is the only wiring; there's no
   `name`/`value`/`FormData` participation the way a genuine form control would have.
 - Selection, filtering and projection all consume the same bounded normalized tree. Repeated ids
   use the first depth-first occurrence; cyclic/repeated object identities are skipped.

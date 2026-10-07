@@ -2,12 +2,12 @@
   "locale": "bho",
   "direction": "ltr",
   "source": {
-    "keyCount": 1395,
-    "sha256": "sha256:2871efcb95a2a1cbad4baae3b68cd532422f9f03149932cd4d4399f6801369f7"
+    "keyCount": 1402,
+    "sha256": "sha256:fc31e42521e3f0df6c1dfa6b5a61075121143b6e0fb6fa0e0ad37f619c210f5c"
   },
   "catalog": {
-    "keyCount": 1395,
-    "sha256": "sha256:d2180a4d474fc51c63bcccbd9af722e4eb4fa00aa0f32066a76754ff6e6e5d6d"
+    "keyCount": 1402,
+    "sha256": "sha256:cf9753549dc6d8717492d3c4035a6ea5b133f615c11a8faca6520fd8cf0ff087"
   },
   "translator": {
     "status": "complete-original",

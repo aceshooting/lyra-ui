@@ -195,7 +195,7 @@ const compactIconCompliant = `
 const tooSmall = checkStaticHitAreaFixture(compactIconClass, [compactIconTooSmall]);
 assert.equal(tooSmall.candidateCount, 1, 'a compact icon button reaches the static checker');
 assert.equal(tooSmall.errors.length, 2, 'both undersized axes are actionable findings');
-assert.match(tooSmall.errors[0], /resolves to 24px.*below the 40px floor/);
+assert.match(tooSmall.errors[0], /resolves to 24px.*below the 36px floor/);
 
 assert.deepEqual(
   checkStaticHitAreaFixture(compactIconClass, [compactIconCompliant]).errors,

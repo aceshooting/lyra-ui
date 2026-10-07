@@ -284,6 +284,7 @@
     "./components/forms/radio/radio.class.js": "./dist/components/forms/radio/radio.class.js",
     "./components/forms/rubric-form/rubric-form.class.js": "./dist/components/forms/rubric-form/rubric-form.class.js",
     "./components/forms/select/select.class.js": "./dist/components/forms/select/select.class.js",
+    "./components/forms/signature-pad/signature-pad.class.js": "./dist/components/forms/signature-pad/signature-pad.class.js",
     "./components/forms/slider/slider.class.js": "./dist/components/forms/slider/slider.class.js",
     "./components/forms/swatch-picker/swatch-picker.class.js": "./dist/components/forms/swatch-picker/swatch-picker.class.js",
     "./components/forms/switch/switch.class.js": "./dist/components/forms/switch/switch.class.js",
@@ -1287,6 +1288,10 @@
     "./components/lr-sequence-strip.js": {
       "types": "./dist/components/data/sequence-strip/sequence-strip.d.ts",
       "default": "./dist/components/lr-sequence-strip.js"
+    },
+    "./components/lr-signature-pad.js": {
+      "types": "./dist/components/forms/signature-pad/signature-pad.d.ts",
+      "default": "./dist/components/lr-signature-pad.js"
     },
     "./components/lr-skeleton.js": {
       "types": "./dist/components/overlays/skeleton/skeleton.d.ts",
@@ -8833,6 +8838,7 @@
     "./dist/components/forms/radio/radio.js",
     "./dist/components/forms/rubric-form/rubric-form.js",
     "./dist/components/forms/select/select.js",
+    "./dist/components/forms/signature-pad/signature-pad.js",
     "./dist/components/forms/slider/slider.js",
     "./dist/components/forms/swatch-picker/swatch-picker.js",
     "./dist/components/forms/switch/switch.js",
@@ -9123,6 +9129,7 @@
     "./dist/components/lr-selection-toolbar.js",
     "./dist/components/lr-sequence-playback.js",
     "./dist/components/lr-sequence-strip.js",
+    "./dist/components/lr-signature-pad.js",
     "./dist/components/lr-skeleton.js",
     "./dist/components/lr-slider.js",
     "./dist/components/lr-source-card.js",
@@ -10352,6 +10359,7 @@
     "./src/components/forms/radio/radio.ts",
     "./src/components/forms/rubric-form/rubric-form.ts",
     "./src/components/forms/select/select.ts",
+    "./src/components/forms/signature-pad/signature-pad.ts",
     "./src/components/forms/slider/slider.ts",
     "./src/components/forms/swatch-picker/swatch-picker.ts",
     "./src/components/forms/switch/switch.ts",
@@ -10642,6 +10650,7 @@
     "./src/components/lr-selection-toolbar.ts",
     "./src/components/lr-sequence-playback.ts",
     "./src/components/lr-sequence-strip.ts",
+    "./src/components/lr-signature-pad.ts",
     "./src/components/lr-skeleton.ts",
     "./src/components/lr-slider.ts",
     "./src/components/lr-source-card.ts",

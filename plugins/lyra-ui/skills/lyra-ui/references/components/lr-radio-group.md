@@ -10,16 +10,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-radio-group`
 
-A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the orientation's arrow
-axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
-horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
+A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
+focus and select the next enabled radio, whatever the orientation: Down/Right select the next
+option and Up/Left the previous one. Left/Right mirror under RTL, and disabled options are skipped.
 
 For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
 `lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
@@ -57,15 +57,20 @@ form ownership, fieldset disablement, reset, and session restoration all live on
 default and cannot overwrite a dirty selection. Reset restores that current default, and session
 restore selects the stored value silently even when it arrives before the radio children.
 A required but pristine group keeps `aria-invalid="false"` on its internal radiogroup; the value
-error is projected only after interaction or a native validity check (`checkValidity()`,
-`reportValidity()`, or form-level validation), while explicit error chrome is immediate.
+error is projected only after interaction (a selection, or focus leaving the group) or a native
+validity check (`reportValidity()`, or form-level validation), while explicit error chrome is
+immediate. While the group matches `:state(user-invalid)` the option collection is outlined with
+`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), and a disabled group dims its
+label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
-a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named
+a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
 both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
-value events. Ownership is resolved synchronously, so immediate removal restores standalone
+value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
+including one on the already-selected option — also emits `lr-activate` (`{ value, radio }`) after
+those events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
 check fails; a consumer listening above the group does not receive a second prefixed alias from the
@@ -87,7 +92,9 @@ hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
-options and its messages, scaled by `size` through the shared control ladder.
+options and its messages, scaled by `size` through the shared control ladder — and
+`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), the border around the options
+while the group is `:state(user-invalid)`.
 
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and

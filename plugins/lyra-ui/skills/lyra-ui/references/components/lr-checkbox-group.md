@@ -41,10 +41,12 @@ remembered while the group remains authoritative, and removing the group size, m
 out, or disconnecting the group restores the latest authored child value. This matches Web
 Awesome's unset-default behavior.
 
-**Slots:** default checkboxes, `label`, `hint`, `error`.
-**Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
-all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
-group boundary, so an ancestor does not receive a second, differently shaped sequence.
+**Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
+alongside slotted hint/error content, like every other group.
+**Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
+`lr-change`; all four carry `{ value: string[] }`. The owned child's corresponding events are
+consumed at the group boundary, so an ancestor does not receive a second, differently shaped
+sequence.
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
 same-task `new FormData(form)` or validity query observes the same state as the child.
 `lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.

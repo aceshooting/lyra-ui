@@ -299,14 +299,14 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   const fileBudget = actualBudgets.fileCountBudget;
   assert.equal(
     fileBudget.stableTagAliasCount,
-    307,
-    'the normal tarball has 307 stable registration aliases',
+    308,
+    'the normal tarball has 308 stable registration aliases',
   );
   assert.equal(
     fileBudget.baseArtifactCeiling +
       fileBudget.stableTagAliasCount * fileBudget.emittedFilesPerAlias +
       fileBudget.measuredEntrypointRemainder,
-    4_148,
+    4_194,
     'the derivation must bind the reviewed complete package inventory',
   );
   assert.equal(
@@ -316,12 +316,12 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.equal(
     actualBudgets.maximum.fileCount,
-    4_155,
+    4_201,
     'the complete inventory retains exactly seven scaffold files',
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [7_686_989, 34_994_525],
+    [7_724_169, 35_069_948],
     'passing byte ceilings must remain unchanged',
   );
 
@@ -333,7 +333,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     'dist/internal/opaque-content-border.styles.js',
     'dist/internal/opaque-content-border.styles.d.ts',
   ];
-  for (const fileCount of [4_148, 4_155, 4_156]) {
+  for (const fileCount of [4_194, 4_201, 4_202]) {
     const extraFiles = Array.from(
       { length: fileCount - requiredTarballFiles.length - requiredAdditions.length },
       (_, index) => `dist/required-entrypoint-${index}.js`,
@@ -346,7 +346,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     const findings = packageBudgetFindings(metrics, actualBudgets);
     assert.deepEqual(
       findings,
-      fileCount === 4_156 ? ['fileCount 4,156 exceeds hard budget 4,155'] : [],
+      fileCount === 4_202 ? ['fileCount 4,202 exceeds hard budget 4,201'] : [],
       'the measured package and exact reserve pass, while one additional artifact fails',
     );
   }

@@ -7,7 +7,9 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-metric-change` since `unreleased`; use event `@lr-metric-change-request`; removal not before `28.0.0` — lr-metric-change-request names a request the application decides on; the old event fires right after it for one major.
+- **Deprecated event** `lr-run-change` since `unreleased`; use event `@lr-run-activate`; removal not before `28.0.0` — lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major.
+- **Deprecated event** `lr-slice-change` since `unreleased`; use event `@lr-slice-change-request`; removal not before `28.0.0` — lr-slice-change-request names a request the application decides on; the old event fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -21,8 +23,10 @@ and run history. The host computes metrics and owns evaluation execution.
 
 **Properties:** `metrics: LyraRagEvaluationMetric[] = []` and
 `runs: LyraRagEvaluationRun[] = []`
-(attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
-display when unset/unmatched); `slice: string = ''`; `label?: string` (visible heading and
+(attribute: false); `metricId: string = ''` (attribute `metric-id`; the first metric is used when
+unset, while an id that matches no metric selects none and renders no chart); `slice: string = ''`;
+`headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`, the run-history heading sits one
+level below; `'none'` keeps the visible text without heading semantics); `label?: string` (visible heading and
 fallback overall-region name; a non-empty host `aria-label` makes the host the sole overall owner,
 while an explicitly empty host label stays empty on the region);
 `withoutChart: boolean = false` (attribute `without-chart`, reflected — omits the trend chart);
@@ -36,13 +40,14 @@ Metrics and runs are canonicalized independently by nonblank `id`. Malformed row
 duplicates are omitted first-wins before metric fallback, slice derivation/filtering, cards, charts,
 history, counts, rendering, or actions.
 
-At most 500 of the currently filtered runs render as `run` buttons and feed the trend chart; a
-filtered set past that length renders a localized `limit` notice after the run history rather than
-mounting an unbounded number of rows.
+At most the 500 most recent of the currently filtered runs (the array end is newest) render as
+`run` buttons and feed the trend chart; a filtered set past that length renders a localized
+`limit` notice after the run history rather than mounting an unbounded number of rows.
 
-**Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
-`lr-run-change` (`{ run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties.
+**Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
+`lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
+corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice-change` and
+`lr-run-change` (`{ run }`) are dispatched right after them.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),

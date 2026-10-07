@@ -612,7 +612,7 @@ it("forwards a stable message id with retry events", async () => {
   expect((await event).detail).to.deep.equal({ messageId: "message-7" });
 });
 
-it("forwards a controlled retrieval selection as lr-retrieval-select, without leaking the raw lr-select", async () => {
+it("forwards a controlled retrieval selection as lr-retrieval-select, without leaking child events", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace .retrievalChunks=${[chunk]}></lr-agent-workspace>
   `);
@@ -622,11 +622,15 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
   el.addEventListener("lr-select", () => {
     rawLeaked = true;
   });
+  let forwardedCount = 0;
+  el.addEventListener("lr-retrieval-select", () => {
+    forwardedCount += 1;
+  });
 
   const listener = oneEvent(el, "lr-retrieval-select");
   results.dispatchEvent(
-    new CustomEvent("lr-select", {
-      detail: { chunkIds: ['chunk-1'], chunks: [chunk] },
+    new CustomEvent("lr-selection-change", {
+      detail: { selectedChunkIds: ['chunk-1'], chunks: [chunk] },
       bubbles: true,
       composed: true,
     })
@@ -641,6 +645,14 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
     el.selectedRetrievalChunkIds,
     "request events do not mutate controlled selection"
   ).to.deep.equal([]);
+  results.dispatchEvent(
+    new CustomEvent("lr-select", {
+      detail: { chunkIds: ['chunk-1'], chunks: [chunk] },
+      bubbles: true,
+      composed: true,
+    })
+  );
+  expect(forwardedCount, "the deprecated alias does not trigger another forwarded event").to.equal(1);
   expect(
     rawLeaked,
     "the raw lr-select from lr-retrieval-results must not leak past agent-workspace"

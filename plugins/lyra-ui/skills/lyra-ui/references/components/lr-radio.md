@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -64,9 +64,15 @@ restores the current default.
 **Events:** a standalone selection emits, in order, native-style composed `input`, `lr-input`,
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
 radio emits none of those child value events; its group emits the sole aggregate sequence described
-below, so capture and bubble listeners cannot observe two differently shaped event sets. The
-internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events.
+below, so capture and bubble listeners cannot observe two differently shaped event sets. A
+standalone radio also emits `lr-activate` (`{ value }`) on every activation, including a click on
+the radio that is already checked, after the value events when the selection moved. Standalone
+radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
+others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
+`focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
+A standalone required radio exposes `aria-invalid="true"` once the user has interacted with it or
+validation has been revealed.
 
 **Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
 wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button`; changing away
@@ -88,11 +94,8 @@ an empty-label control; the visible density can still grow with the shared size 
 
 **Themeable custom properties:**
 
-- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height)
-  - 0.7))`; `1.75rem`at the default`m`tier) — the edge length of`[part='circle']`, derived from
-the active `size`tier's shared control height so a radio lines up with an`lr-input`/`lr-select`/`lr-button`of the same`size`.
-- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5),
-calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
+- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`; `1.575rem` at the default `m` tier) — the edge length of `[part='circle']`, derived from the active `size` tier's shared control height so a radio lines up with an `lr-input`/`lr-select`/`lr-button` of the same `size`.
+- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5), calc(var(--lr-form-control-height) * 0.3))`; `0.675rem` at `m`) — the edge length of `[part='dot']`,
   capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
   or the `--lr-icon-button-size` cap.
 - `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
@@ -115,7 +118,9 @@ The pointer states are independently themeable with `--lr-radio-hover-border-col
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
 and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
 hover or active border falls back to `--lr-radio-checked-border-color`, so a themed checked border
-survives the pointer.
+survives the pointer. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`) is the
+indicator border while the radio matches `:state(user-invalid)`; `lr-radio-button` and
+`appearance="button"` apply it to the button border.
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 

@@ -342,19 +342,14 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   exists again (the same convention `selectedRowKeys` follows for server pagination). Reads return
   immutable detached `ReadonlySet` facades; reassign a new set to update
 - `hasMore: boolean = false` (attribute `has-more`, reflected)
-- `loadingMore: boolean = false` (attribute `loading-more`, reflected) — controlled busy state
-  for the built-in incremental action. With `hasMore`, keeps existing rows and the same focusable
-  `more-button` mounted, exposes `aria-busy="true"` and `aria-disabled="true"`, and suppresses
-  pointer and keyboard `lr-load-more` requests while pending. Set it synchronously in the event
-  handler before awaiting the next page, then clear it when the request settles. It does not fetch
-  or append data itself; reassign `rows` when results arrive. `hasMore` still controls the button's
-  presence, and `loading` retains its separate full-table loading behavior. Left unset, the
-  continuation markup and activation behavior are unchanged.
+- `loadingMore: boolean = false` (attribute `loading-more`, reflected) — controlled busy state.
+  With `hasMore`, retains rows and focusable `more-button`, sets `aria-busy`/`aria-disabled` true,
+  and blocks pointer/keyboard requests. Set before awaiting data; clear when settled and reassign
+  `rows`. It never fetches/appends. `hasMore` controls button presence; `loading` remains full-table.
 - `loadingMoreLabel?: string` (attribute `loading-more-label`) — omission renders localized
-  `tableLoadingMore` (`'Loading more rows'` in the built-in English catalog); supplied strings,
-  including `''`, render verbatim. Post-mount transitions into incremental loading append this
-  copy to the shared light-DOM polite sink only when the continuation is rendered and initial
-  `loading` is false. Declarative initial busy state remains silent.
+  `tableLoadingMore` (`'Loading more rows'`); supplied strings including `''` are verbatim. After mount,
+  transitions into loading announce through the shared polite light-DOM sink only while the
+  continuation is visible and `loading` is false; initial busy state is silent.
 - `moreLabel?: string` (attribute `more-label`) — omission renders localized `loadMore` (`'Load more'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
 - `error: boolean = false` (attribute `error`, reflected) — replaces `<tbody>`'s row content with
   a built-in failed-load state while keeping the surrounding `<thead>`, filter field, and
@@ -379,7 +374,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   `announce` stays unset so the failure is spoken once, not twice. Remove any host
   `role="status"`/`role="alert"` hand-added before this property existed once it is set —
   otherwise the failure is announced a third time, through the native role as well.
-- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog) for a table with no rows and localized `noMatches` (`'No matches'`) when rows exist but the filter excludes them all; a supplied string, including `''`, renders verbatim in both cases
+- `emptyHeading?: string` (attribute `empty-heading`) — unset, localized `noData` (`'No data'`) when empty or `noMatches` (`'No matches'`) when filtering leaves none; supplied text including `''` is verbatim
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
   no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,
@@ -466,7 +461,7 @@ any of the attributes — a consumer-supplied key is not safe to interpolate int
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
 sort properties; server mode leaves them controlled. Other events are `lr-row-activate`
-(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more` (fired on the "load more" button only while `loadingMore` is false),
+(a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more`,
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
 emitted only while `expansionMode` is `'single'` or `'multiple'`; `preventDefault()` skips the

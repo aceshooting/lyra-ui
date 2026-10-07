@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { LitElementRenderer, render } from '@lit-labs/ssr';
 import { collectResult } from '@lit-labs/ssr/lib/render-result.js';
 import { html } from 'lit';
-import { currencyPickerSsrTemplate, enumeratePublicSsrStateCases, packageDir } from './ssr-fixture.mjs';
+import { currencyPickerSsrTemplate, enumeratePublicSsrStateCases, packageDir, renderSsrStateProbe } from './ssr-fixture.mjs';
 import { htmlCommentEnd, maskHtmlComments, replaceHtmlComments } from './html-comments.mjs';
 
 test('select SSR retains raw values until its option catalog has been observed', async () => {
@@ -93,6 +93,30 @@ test('currency picker has an explicit SSR classification', async () => {
   const loader = await import('@aceshooting/lyra-ui/ssr.js');
   assert.equal(loader.getLyraSsrMode('lr-currency-picker'), 'render-and-hydrate');
   assert.ok(loader.getLyraSsrStaticSafety('lr-currency-picker'));
+});
+
+test('highlight layer renders without an owner document during SSR', async () => {
+  assert.equal(globalThis.document, undefined);
+  await import('@aceshooting/lyra-ui/components/lr-highlight-layer.js');
+  const markup = await collectResult(render(html`<lr-highlight-layer
+    .items=${[{ id: 'first', rects: [{ x: 10, y: 20, width: 30, height: 40 }] }]}
+  ></lr-highlight-layer>`, { elementRenderers: [LitElementRenderer] }));
+  assert.match(markup, /part="rect-target"/);
+  assert.match(markup, /part="rect"/);
+  assert.equal(globalThis.document, undefined);
+});
+
+test('model select renders open states before a shadow root exists during SSR', async () => {
+  assert.equal(globalThis.document, undefined);
+  await import('@aceshooting/lyra-ui/components/lr-model-select.js');
+  for (const value of ['', 'false']) {
+    const markup = await renderSsrStateProbe(
+      { tag: 'lr-model-select', attribute: 'open', value },
+      [LitElementRenderer],
+    );
+    assert.match(markup, /<template[^>]*shadowrootmode="open"/);
+    assert.match(markup, /part="listbox"/);
+  }
 });
 
 const catalogPickerFixtures = [

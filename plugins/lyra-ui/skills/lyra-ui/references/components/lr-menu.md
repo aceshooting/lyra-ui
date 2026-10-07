@@ -114,7 +114,9 @@ nested disclosure.
 
 **Keyboard and focus:** exactly one navigable row has `tabindex="0"`. ArrowDown/ArrowUp wrap;
 Home/End move to the first/last navigable row; Enter/Space activate; printable input performs
-locale-aware type-ahead. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
+locale-aware type-ahead against each row's visible label. Keys with Alt, Ctrl or Meta, and
+composition keys, are never handled. Pressing a disabled or loading row with the mouse does not
+focus it. Rows that are disabled, loading, hidden, `aria-hidden`, inert, or inside an
 inert subtree are skipped. Navigation is repaired live when those states or light-DOM membership
 change. A root inline menu does not consume Escape or turn Tab into overlay dismissal; a containing
 dropdown owns those root-level behaviors.
@@ -165,7 +167,8 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
 - `select(): void` activates through the current owning menu; it is inert while disabled/loading
 - `openSubmenu(focus: 'first' | 'last' | 'none' = 'first'): Promise<void>`
 - `closeSubmenu(): Promise<void>`
-- `getTextLabel(): string` returns the accessibility-visible label used by type-ahead
+- `getTextLabel(): string` returns the accessibility-visible label used by type-ahead; it follows
+  label edits within one microtask
 
 The computed name is derived from the row's own visible label and does not depend on whether the
 menu is currently displayed, so a row inside a closed dropdown — whose popup is `visibility:

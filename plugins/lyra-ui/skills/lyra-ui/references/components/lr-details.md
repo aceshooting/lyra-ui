@@ -102,7 +102,7 @@ the ladder doesn't cover is a two-line override rather than a fork.
 
 On the accordion, `lr-expand` and `lr-collapse` fire before a direct item changes, are cancelable,
 and carry `detail: { item }`. **New in 10.0.0:** a cancelable `lr-toggle-request`
-(`detail: { collapsed, item }`) fires alongside the matching directional event for every
+(`detail: { expanded, collapsed, item }`, `expanded` being the proposed state, as in every other `lr-toggle-request`) fires alongside the matching directional event for every
 transition, including sibling auto-collapses in `single`/`single-collapsible` mode and
 `collapseAll()`. It carries the direction in the detail rather than the event name — `collapsed:
 true` is the closing direction — plus an `item` reference the single-panel siblings do not need (an accordion's toggling entity is one of several children, so the
@@ -190,15 +190,19 @@ when the element disconnects.
 **Keyboard:** each direct enabled accordion item contributes one heading button. Exactly one is in
 the tab order; ArrowDown/ArrowUp move cyclically, horizontal arrows provide the same next/previous
 movement and swap under RTL, and Home/End jump to the first/last enabled item. Disabled items are
-skipped. Enter and Space use the native button activation contract. Focus and key handling stay
-inside the nearest nested accordion.
+skipped; keys with Alt, Ctrl or Meta are left to the browser. Enter and Space use the native button
+activation contract. Focus and key handling stay inside the nearest nested accordion.
 
 **Slots:** accordion has a default slot for direct items. Accordion item has default panel content,
 `label`, and `icon`; `label` slot → `label` property → localized `"Details"` is the precedence
 order. The label slot accepts rich visible markup, but its flattened subtree is inert and hidden
 from assistive technology: do not place independent links, buttons, inputs, form state, or focus
 targets there. The accordion-item `icon` slot follows the same flattened-tree inert and aria-hidden
-visual contract, while the trigger button remains the sole action. Details has `summary`,
+visual contract, while the trigger button remains the sole action. A collapsed accordion item's
+content is findable by browser find-in-page: once the collapse settles it sits behind
+`hidden="until-found"`, and a find (or fragment link) into it expands the item through the group's
+cancelable `lr-expand`/`lr-toggle-request`. Collapsing an item or a Details panel while focus is inside
+its content moves focus to the trigger or summary. Details has `summary`,
 `header-actions`, `expand-icon`, `collapse-icon`, plus default content. `header-actions` renders
 extra controls (e.g. a trailing "add" button) as a sibling of the private native `<details>` in the
 complete header row, so they stay rendered, visible, and hit-testable while the panel is collapsed

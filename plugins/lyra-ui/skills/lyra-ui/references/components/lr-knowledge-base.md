@@ -30,13 +30,17 @@ errorMessage?: string }` (all four types exported here), where
   `KnowledgeSourceIndexingHealth = 'healthy' | 'degraded' | 'failed' | 'unknown'` (absent is treated
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
-  as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (epoch ms Date or
-  ISO-8601); absent/unparseable renders "never synced". `errorMessage` shows only while
+  as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (a `Date` or an
+  ISO-8601 string); absent/unparseable renders "never synced". A `syncStatus`, `indexingHealth` or
+  `permission` outside these unions renders a neutral localized "Unknown" badge, offers no "Sync now",
+  and is left out of the synced/syncing/needs-attention counts. `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
   feeding_ documents, not a document, so the rest of the fields are its own
 - `label?: string` — heading text and the table's accessible name; omission uses the localized
   knowledge-base label. An explicit empty string keeps the visible heading empty while the nested
   table still takes the localized default as its accessible name
+- `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — semantic level of the
+  heading; `'none'` keeps the visible text without heading semantics.
 - `withoutSummary: boolean = false` (attribute `without-summary`, reflected) — hides the aggregate
   total/synced/syncing/needs-attention row.
 - `withoutCreate: boolean = false` (attribute `without-create`, reflected) — hides the "Add source"
@@ -95,7 +99,7 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
 
 - `permission` is rendered informationally only — the per-row action menu is never gated by it.
   Authorization enforcement is the host's concern.
-- "Sync now" is disabled only while `syncStatus === 'syncing'` (including on `'error'` rows, so
+- "Sync now" is disabled while `syncStatus === 'syncing'` or unrecognized (not on `'error'` rows, so
   re-running a failed sync is one click); "Pause sync" is enabled only while `'syncing'`.
 - The inner `lr-table`'s own `lr-row-activate` is deliberately stopped from propagating — this component
   exposes no row-click/selection semantics, only the per-row action menu.

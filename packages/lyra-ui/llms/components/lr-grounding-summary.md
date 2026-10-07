@@ -33,7 +33,9 @@ claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractio
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
 label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
   renders as an `lr-citation-badge` whose `index` is its 1-based position and whose `source-id` is
-  `citation.sourceId ?? ''`
+  `citation.sourceId ?? ''`; the visible label and span are not repeated in the badge's preview. A
+  `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
+  citation stays in the list
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,
@@ -60,10 +62,12 @@ rather than mounting an unbounded number of rows. The full citation set is still
 composed `lr-claim-evidence` for claim-to-citation lookup, which applies its own render cap.
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
-`@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
-The inner `lr-citation-badge`'s generic activation is stopped at this composition boundary; this
-richer event exists because a bare `sourceId`/`index` pair cannot identify the exact evidence span.
-The summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
+`@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated
+— and `lr-citation-open` (same detail) when its full-preview affordance is triggered (double-click,
+or Space), including from a nested claim's badge. The inner `lr-citation-badge`'s generic
+`lr-citation-activate`/`lr-citation-open` are stopped at this composition boundary; these richer
+events exist because a bare `sourceId`/`index` pair cannot identify the exact evidence span. The
+summary emits `lr-claim-select` (`detail: { claim }`) when a claim is activated.
 
 **Slots:** none.
 

@@ -106,7 +106,8 @@ shared hit target (42px including the row border at the default theme); `l` and 
   forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
   value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordToggle: boolean = false` (attribute `password-toggle`, reflected — `type="password"`
-  only) — opt-in built-in show/hide-password button
+  only) — opt-in built-in show/hide-password button, named by its action ("Show password" /
+  "Hide password") with no `aria-pressed`; read `passwordVisible` for the state
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
   whether the field currently reveals its raw text. Toggled by the built-in button, and also
   settable up front with or without that button being rendered

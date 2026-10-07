@@ -26642,7 +26642,7 @@
     "current": {
       "version": "25.7.1",
       "sourceCommit": null,
-      "manifestSha256": "554873476be781e82d649bd5e154b9578bb8a99076005be2c67d8d150dad1384",
+      "manifestSha256": "e2e93a62f84466624e97480e39ec36cb2d4c3ca910de006a4f49f1a934c07ff2",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -26882,6 +26882,7 @@
         "lr-selection-toolbar",
         "lr-sequence-playback",
         "lr-sequence-strip",
+        "lr-signature-pad",
         "lr-skeleton",
         "lr-slider",
         "lr-source-card",

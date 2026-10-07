@@ -17,11 +17,6 @@ import {
   SET_OPTION_SELECTED_FROM_OWNER,
 } from '../../../internal/option-selection.js';
 import { styles } from './option.styles.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 
 const FORWARDED_ANCESTOR_ATTRIBUTES = ['aria-hidden', 'class', 'hidden', 'inert', 'open', 'style'];
 const GLYPH_VIEW_BOX = '0 0 24 24';
@@ -108,14 +103,6 @@ export interface LyraOptionEventMap {
  * @since 4.0.0
  */
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-
   static override styles = [LyraElement.styles, styles];
 
   private readonly slotPresence = new SlotPresenceController(this);

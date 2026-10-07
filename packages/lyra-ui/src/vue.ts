@@ -509,6 +509,8 @@ export type LyraSequencePlaybackVueProps = LyraVueCustomElement<'lr-sequence-pla
 
 export type LyraSequenceStripVueProps = LyraVueCustomElement<'lr-sequence-strip'>;
 
+export type LyraSignaturePadVueProps = LyraVueCustomElement<'lr-signature-pad'>;
+
 export type LyraSkeletonVueProps = LyraVueCustomElement<'lr-skeleton'>;
 
 export type LyraSliderVueProps = LyraVueCustomElement<'lr-slider'>;
@@ -886,6 +888,7 @@ export interface LyraVueGlobalComponents {
   'lr-selection-toolbar': LyraSelectionToolbarVueProps;
   'lr-sequence-playback': LyraSequencePlaybackVueProps;
   'lr-sequence-strip': LyraSequenceStripVueProps;
+  'lr-signature-pad': LyraSignaturePadVueProps;
   'lr-skeleton': LyraSkeletonVueProps;
   'lr-slider': LyraSliderVueProps;
   'lr-source-card': LyraSourceCardVueProps;

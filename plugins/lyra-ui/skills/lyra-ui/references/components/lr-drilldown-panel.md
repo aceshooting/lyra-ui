@@ -45,8 +45,12 @@ whitespace-unstable identities, and later duplicate IDs; and bounds the retained
 nodes, 1,000 records per category, 256 type styles, and 128 entity properties. A localized range
 under `limit` truthfully reports source input omitted by a ceiling.
 
-Only the effective category's child components are mounted. Each category is paged eight records
-at a time, with a localized `start–end of total` summary and Previous/Next controls. Consequently an
+Only the effective category's child components are mounted, and each child's module (source card,
+document preview, entity card) loads the first time its category renders, so a drilldown that never
+shows one never fetches it. Each category is paged eight records
+at a time, with a localized `start–end of total` summary and Previous/Next controls; a page change
+announces the new range politely, and the pressed button hands focus to its partner when it disables
+itself on the first or last page. Consequently an
 active document category owns at most eight simultaneous `lr-document-preview` lifecycles (and at
 most eight of that viewer's individually byte-capped text resources); hidden categories own no
 preview fetches. Paging, path replacement, category changes, and disconnect remove obsolete

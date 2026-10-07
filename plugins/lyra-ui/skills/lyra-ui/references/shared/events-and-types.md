@@ -749,6 +749,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarReactProps;
   'lr-sequence-playback': LyraSequencePlaybackReactProps;
   'lr-sequence-strip': LyraSequenceStripReactProps;
+  'lr-signature-pad': LyraSignaturePadReactProps;
   'lr-skeleton': LyraSkeletonReactProps;
   'lr-slider': LyraSliderReactProps;
   'lr-source-card': LyraSourceCardReactProps;
@@ -1181,6 +1182,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraComponentTypeMap['lr-selection-toolbar']['element'];
   'lr-sequence-playback': LyraComponentTypeMap['lr-sequence-playback']['element'];
   'lr-sequence-strip': LyraComponentTypeMap['lr-sequence-strip']['element'];
+  'lr-signature-pad': LyraComponentTypeMap['lr-signature-pad']['element'];
   'lr-skeleton': LyraComponentTypeMap['lr-skeleton']['element'];
   'lr-slider': LyraComponentTypeMap['lr-slider']['element'];
   'lr-source-card': LyraComponentTypeMap['lr-source-card']['element'];
@@ -1490,6 +1492,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarSvelteProps;
   'lr-sequence-playback': LyraSequencePlaybackSvelteProps;
   'lr-sequence-strip': LyraSequenceStripSvelteProps;
+  'lr-signature-pad': LyraSignaturePadSvelteProps;
   'lr-skeleton': LyraSkeletonSvelteProps;
   'lr-slider': LyraSliderSvelteProps;
   'lr-source-card': LyraSourceCardSvelteProps;
@@ -1911,6 +1914,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarVueProps;
   'lr-sequence-playback': LyraSequencePlaybackVueProps;
   'lr-sequence-strip': LyraSequenceStripVueProps;
+  'lr-signature-pad': LyraSignaturePadVueProps;
   'lr-skeleton': LyraSkeletonVueProps;
   'lr-slider': LyraSliderVueProps;
   'lr-source-card': LyraSourceCardVueProps;

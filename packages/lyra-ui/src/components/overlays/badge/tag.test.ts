@@ -25,6 +25,43 @@ customElements.define('tag-label-forward-wrapper', TagLabelForwardWrapper);
 const removeButton = (el: LyraTag): HTMLButtonElement | null =>
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]');
 
+it('mounts many plain tags without traversing unrelated document focus targets', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div></div>`);
+  const unrelated = document.createElement('div');
+  const shadow = unrelated.attachShadow({ mode: 'open' });
+  for (let index = 0; index < 200; index += 1) shadow.append(document.createElement('button'));
+  host.append(unrelated);
+
+  const documentRoot = document.documentElement;
+  const rootChildren = documentRoot.children;
+  const originalChildren = Object.getOwnPropertyDescriptor(documentRoot, 'children');
+  let documentWalks = 0;
+  Object.defineProperty(documentRoot, 'children', {
+    configurable: true,
+    get() {
+      documentWalks += 1;
+      return rootChildren;
+    },
+  });
+  try {
+    const fragment = document.createDocumentFragment();
+    const tags: LyraTag[] = [];
+    for (let index = 0; index < 120; index += 1) {
+      const tag = document.createElement('lr-tag') as LyraTag;
+      tag.textContent = `Tag ${index}`;
+      tags.push(tag);
+      fragment.append(tag);
+    }
+    host.append(fragment);
+    await Promise.all(tags.map((tag) => tag.updateComplete));
+    expect(tags.at(-1)?.shadowRoot?.querySelector('[part~="base"]')?.tagName).to.equal('SPAN');
+    expect(documentWalks, 'plain tags must not start a document focus traversal').to.equal(0);
+  } finally {
+    if (originalChildren) Object.defineProperty(documentRoot, 'children', originalChildren);
+    else Reflect.deleteProperty(documentRoot, 'children');
+  }
+});
+
 it('renders content and inherits the badge variant styling contract', async () => {
   const el = (await fixture(html`<lr-tag variant="success">Ready</lr-tag>`)) as LyraTag;
   expect(el.textContent).to.contain('Ready');

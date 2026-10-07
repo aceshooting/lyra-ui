@@ -156,7 +156,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 292
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 293
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -1258,7 +1258,7 @@ Two knobs plus a partner colour describe every hover and press in the library:
 ```css
 --lr-color-mix-hover    /* 12% — how far a hovered surface moves */
 --lr-color-mix-active   /* 22% — how far a pressed one moves */
---lr-color-mix-partner  /* what it moves toward; defaults to var(--lr-color-text) */
+--lr-color-mix-partner  /* what it moves toward; defaults to #737373 */
 ```
 
 **Hover and press are a colour mix, not a brightness filter.** The distinction is the whole design:
@@ -1494,7 +1494,7 @@ code. See each control's own reference page for its exact pair.
 
 ### Tokens with a contract attached
 
-- **`--lr-theme-icon-button-size`** (default `2.5rem`) backs `--lr-icon-button-size`, the tappable
+- **`--lr-theme-icon-button-size`** (default `2.25rem`) backs `--lr-icon-button-size`, the tappable
   box of **every** icon-only control in the library — `lr-icon-button` itself, and the
   expand/clear/toggle affordances inside `lr-date-input`, `lr-combobox`, `lr-input`, and
   `lr-select`. It is a _floor_, not a fixed size. Keep the resolved value **at or above 24px**
@@ -1549,32 +1549,22 @@ code. See each control's own reference page for its exact pair.
   own size ladder. Density scales this minimum together with each grid size baseline; row content
   can grow beyond it. A table's `--lr-table-row-height` or a grid's `--row-height` overrides that
   calculation, subject to density target floors. These inputs inherit through component boundaries.
-- **`--lr-color-border-subtle`** is the decorative border tier:
-  `var(--lr-theme-color-surface-border-subtle, var(--lr-color-border))`. Components draw only purely
+- **`--lr-color-border-subtle`** is the decorative border tier
+  (`#e5e5e5` in light, white at 10% in dark by default). Components draw only purely
   decorative edges with it — a divider or rule, a card, panel, table or section edge, a separator
   between items, a gutter line — never the only visible boundary of an interactive control or of a
   meaningful graphic, which WCAG 2.2 SC 1.4.11 holds to 3:1 and which therefore stay on
-  `--lr-color-border`. Form controls never read it (a build gate enforces that). The theme input is
-  unset by default, `theme.css` included, so the token is exactly `--lr-color-border` and nothing
-  renders differently until you opt in; set `--lr-theme-color-surface-border-subtle` to give
-  decoration a lighter tone without weakening a single control boundary — it may be well below 3:1,
-  or translucent (the shadcn preset uses white at 10% in dark). To change control borders, set
+  `--lr-color-border`. Form controls never read it (a build gate enforces that). Set
+  `--lr-theme-color-surface-border-subtle` to retune decoration without weakening a single control
+  boundary — it may be well below 3:1, or translucent. To change control borders, set
   `--lr-theme-color-surface-border` instead and keep it at 3:1 against both the page and the raised
   surface. Forced-colours mode maps both tokens to the same system colour. Use the same split in your
   own components: `tokens-root.css` publishes `--lr-color-border-subtle` at `:root`.
-- **`--lr-color-surface-overlay` follows `--lr-theme-color-surface-default` in both modes.** It is
-  the panel colour behind every floating surface — dropdowns, listboxes, menus, toasts, popovers,
-  dialogs, and the `lr-app-rail` mobile drawer. In light mode it resolves straight to
-  `--lr-color-surface`, so a re-skinned page surface carries them all with it. Dark mode cannot
-  resolve to the page surface — panel and page would be the same near-black, and an open dialog
-  would read as a scrim with text floating on it and no panel at all — so it is **derived** from
-  the page surface instead: `color-mix(in srgb, var(--lr-color-surface) 85%, #8bade2)`, which lifts
-  the panel a fixed amount above whatever the base happens to be. One
-  `--lr-theme-color-surface-default` override therefore re-skins every floating surface in dark
-  mode too, and the elevation delta survives the re-skin. At the built-in dark base the pair still
-  resolves to the same panel colour it always has, so no existing dark theme moves.
-  `--lr-theme-color-surface-overlay` still wins outright when you set it — reach for it only when
-  you want a panel colour unrelated to the page surface.
+- **`--lr-color-surface-overlay` is its own input.** It is the panel colour behind every floating
+  surface — dropdowns, listboxes, menus, toasts, popovers, dialogs, and the `lr-app-rail` mobile
+  drawer — and defaults to `#ffffff` in light and `#171717` in dark. It does not follow
+  `--lr-theme-color-surface-default`: when you re-skin the page surface, set
+  `--lr-theme-color-surface-overlay` (or `--lr-theme-color-surface-container-high`) to match.
 - **Aligning your own content next to a checkbox or radio.** `--lr-checkbox-label-indent` /
   `--lr-radio-label-indent` publish the label offset, but custom properties inherit _down_, not
   sideways, so a sibling node in your tree cannot read them off the control. Compute the same
@@ -4114,6 +4104,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarReactProps;
   'lr-sequence-playback': LyraSequencePlaybackReactProps;
   'lr-sequence-strip': LyraSequenceStripReactProps;
+  'lr-signature-pad': LyraSignaturePadReactProps;
   'lr-skeleton': LyraSkeletonReactProps;
   'lr-slider': LyraSliderReactProps;
   'lr-source-card': LyraSourceCardReactProps;
@@ -4546,6 +4537,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraComponentTypeMap['lr-selection-toolbar']['element'];
   'lr-sequence-playback': LyraComponentTypeMap['lr-sequence-playback']['element'];
   'lr-sequence-strip': LyraComponentTypeMap['lr-sequence-strip']['element'];
+  'lr-signature-pad': LyraComponentTypeMap['lr-signature-pad']['element'];
   'lr-skeleton': LyraComponentTypeMap['lr-skeleton']['element'];
   'lr-slider': LyraComponentTypeMap['lr-slider']['element'];
   'lr-source-card': LyraComponentTypeMap['lr-source-card']['element'];
@@ -4855,6 +4847,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarSvelteProps;
   'lr-sequence-playback': LyraSequencePlaybackSvelteProps;
   'lr-sequence-strip': LyraSequenceStripSvelteProps;
+  'lr-signature-pad': LyraSignaturePadSvelteProps;
   'lr-skeleton': LyraSkeletonSvelteProps;
   'lr-slider': LyraSliderSvelteProps;
   'lr-source-card': LyraSourceCardSvelteProps;
@@ -5276,6 +5269,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-selection-toolbar': LyraSelectionToolbarVueProps;
   'lr-sequence-playback': LyraSequencePlaybackVueProps;
   'lr-sequence-strip': LyraSequenceStripVueProps;
+  'lr-signature-pad': LyraSignaturePadVueProps;
   'lr-skeleton': LyraSkeletonVueProps;
   'lr-slider': LyraSliderVueProps;
   'lr-source-card': LyraSourceCardVueProps;

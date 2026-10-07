@@ -28,9 +28,11 @@ does not echo as a consumer selected write.
 A mounted `option.selected` assignment updates the live picker value and form submission
 immediately, including deselection and equal-value writes; it emits no user input/change event.
 
-When `multiple` becomes false, the public value, live option flags, and popup `aria-selected` expose
-one selected occurrence. The retained multiple-selection history returns if multiple is enabled
-again without another selection write.
+When `multiple` becomes false, the public value, live option flags, popup `aria-selected`,
+`selectedRows`, event `data` and `with-unknown-option` rows expose one selected occurrence. The
+retained multiple-selection history returns if multiple is enabled again without another selection
+write. A populated `multiple` combobox describes its input by every committed label (visually
+hidden), so the tags collapsed behind "+N" are announced too.
 
 Composing keyboard events (`isComposing` or legacy key code 229) remain with filter editing; they do
 not navigate, select/create a value, or dismiss the popup.
@@ -111,6 +113,8 @@ it rather than being moved into a shadow root as a side effect of opening a drop
 ```
 
 An async `source` row can carry the same two fields (`start`, `end`) alongside its existing `icon`.
+`icon`/`start`/`end` accept text, a DOM node, a Lit template result or a flat list of those; any
+other value (a plain object, a function) is dropped from the row instead of reaching the renderer.
 
 ### `lr-combobox`
 
@@ -135,7 +139,9 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected)
+- `open: boolean = false` (reflected). Rows mount the first time the listbox opens. Disabling the
+  combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
+  close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
   localized create row. Activating it emits cancelable `lr-create`; unless vetoed, the component
   appends a real `<lr-option>` and selects it (also supported in `multiple` mode)
@@ -362,6 +368,11 @@ The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/da
 same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
 `data` field, reached by reference through `selectedRows` exactly the same way.
 
+ArrowDown/ArrowUp on a closed combobox opens it with the committed row (the first committed row in
+`multiple`) keyboard-active and scrolled into view; opening by focus or typing leaves no row active,
+so Enter still submits the form. The active row is revealed by scrolling only the listbox, never the
+page.
+
 When a local option is removed or becomes disabled, or an async response shrinks, an existing
 keyboard-active row clamps to the nearest enabled survivor. If every row is disabled or removed,
 `aria-activedescendant` clears; an untouched list with no active row remains untouched.
@@ -370,9 +381,10 @@ keyboard-active row clamps to the nearest enabled survivor. If every row is disa
 as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
 selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
 clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
-followed by the same shape of `change`, then a prefixed `lr-change` alias. All three carry
-`detail: { value; data: readonly unknown[] }` — `value` is the new committed selection (a string in
-single mode, a `string[]` in `multiple` mode); `data` is index-aligned with `value`: `data[i]`
+followed by a prefixed `lr-input` alias, the same shape of `change`, then a prefixed `lr-change`
+alias. All four carry `detail: { value; previousValue; data: readonly unknown[] }` — `value` is the
+new committed selection (a string in single mode, a `string[]` in `multiple` mode), `previousValue`
+the selection before this change in the same shape; `data` is index-aligned with `value`: `data[i]`
 describes `value[i]` — the opaque `data` payload of a light-DOM `<lr-option data>` or an async
 source row's own `data`, reached by reference and never deep-cloned — or `undefined` in that
 value's own slot when it currently matches no live row/option (see "Unknown committed values"
@@ -380,24 +392,24 @@ above; unlike `selectedRows`, which drops that entry instead). `lr-change` mirro
 want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity with a native
 control. Re-picking the current single value and programmatic/default/reset/restore writes are
 silent (including on `lr-change`). The clear button emits one `lr-clear` after its
-`input`/`change`/`lr-change` triple.
+`input`/`lr-input`/`change`/`lr-change` sequence.
 `lr-activate` (`detail: { value: string }`, bubbling/composed, non-cancelable) fires on **every**
 activation of an available listbox row — a click, or Enter on the active row — whether or not the
 selection actually moved. Its `value` is the activated option's own value, **always a single
-string**, even in `multiple` mode, where the `input`/`change`/`lr-change` triple carries the whole
-`string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
+string**, even in `multiple` mode, where the `input`/`lr-input`/`change`/`lr-change` sequence carries
+the whole `string[]` instead. It reports that the user picked a row and gates nothing. Use it for the
 single-select repeat pick that `change`/`lr-change` deliberately stay silent for — "re-run that
 filter" is a real intent — which is otherwise unobservable, because the rows live in this shadow
 root, so a retargeted `click` names no option and a keyboard commit produces no click at all. When
-an activation _does_ move the selection, `input`/`change`/`lr-change` are emitted first, so either
-listener reads the settled selection. Not fired for typing, for a committed custom value matching no
+an activation _does_ move the selection, `input`/`lr-input`/`change`/`lr-change` are emitted first, so
+either listener reads the settled selection. Not fired for typing, for a committed custom value matching no
 row, for the clear button, or for a programmatic `value` assignment.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
 keystroke — the live as-you-typed search string, deliberately _not_ `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for
 `[part="combobox-input"]`'s value is not. Named `lr-filter` rather than `lr-input` precisely because
-`lr-input`'s detail on `<lr-input>` is the committed value, and the two must not share a name while
-carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
+`lr-input` carries the committed value (as on `<lr-input>` and `<lr-select>`), and the two must not
+share a name while carrying different strings. It fires for user edits only. Picking a row, `form.reset()`, dismissing
 the listbox, and a programmatic `value` write blank the filter silently. `setRangeText()` silently
 replaces the requested or selected native text range, synchronizes the resulting query and visible
 options, and refreshes an async source when present; it preserves the committed selection.
@@ -434,7 +446,7 @@ legal listbox child. A successful retry restores `role="listbox"`.
 committed selection and an in-progress filter query, so the button renders whenever either has
 something to clear, and one press clears both:
 
-- Clearing a selection emits `input`, then `change`, then `lr-change`, then `lr-clear` — and, if the
+- Clearing a selection emits `input`, `lr-input`, `change`, `lr-change`, then `lr-clear` — and, if the
   query was also non-empty, `lr-filter` with an empty `value`.
 - A **query-only** clear (nothing selected, just typed text) emits `lr-filter` with an empty
   `value` and deliberately **no** `change` and **no** `lr-clear`. There was no selection
@@ -508,11 +520,11 @@ failed-load state itself, with `source-error-base`, `source-error-icon`, `source
 `retry-button`, `error`, `hint`
 
 **TypeScript:** `LyraCombobox<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
-`lr-change`/native `input` event detail `value` narrow to `string` when `Multiple` is `false` and
-`string[]` (`readonly string[]` in a detail) when `true`. Types only; the runtime and the mirrored
-surface are unchanged, and an untyped `<lr-combobox>` keeps `string | string[]`. Combobox has no
-dedicated `lr-input` custom event (unlike `lr-select`); the exported `LyraComboboxChangeEvent`/
-`LyraComboboxInputEvent` aliases type `lr-change` and the native `input` listener respectively.
+`lr-input`/`lr-change`/native `input` event detail `value` and `previousValue` narrow to `string` when
+`Multiple` is `false` and `string[]` (`readonly string[]` in a detail) when `true`. Types only; the
+runtime and the mirrored surface are unchanged, and an untyped `<lr-combobox>` keeps
+`string | string[]`. The exported `LyraComboboxChangeEvent`/`LyraComboboxInputEvent` aliases type
+`lr-change` and the native `input` listener respectively; `lr-input` shares `lr-change`'s detail.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described above, not a copy of it, so

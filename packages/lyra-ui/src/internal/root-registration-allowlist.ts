@@ -227,6 +227,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-selection-toolbar',
   'lr-sequence-playback',
   'lr-sequence-strip',
+  'lr-signature-pad',
   'lr-skeleton',
   'lr-slider',
   'lr-source-card',

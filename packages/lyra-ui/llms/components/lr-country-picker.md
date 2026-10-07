@@ -49,7 +49,10 @@ otherwise labels or the localized Country, Time zone or Unit name apply. Externa
 `placeholder` defaults to localized Select; an explicit empty string stays empty.
 `size='m'`, `clearable=false`, `topLayer=false` (`top-layer`), and optional
 `positioningStrategy: 'fixed' | 'absolute'` (`positioning-strategy`) follow the select contract.
-An omitted positioning strategy inherits `--lr-positioning-strategy`.
+An omitted positioning strategy inherits `--lr-positioning-strategy`, else both modes use `absolute`.
+The filter control (`lr-combobox`) loads the first time `searchable` is enabled, so a plain picker
+never ships it; `await picker.updateComplete` resolves once it has taken over. A committed `disabled`
+entry stays visible and invalid with a "not in catalog" badge in all four pickers.
 
 `name`, `form`, `required`, `disabled`, `value`, `defaultValue`, fieldset disablement and native
 form submission/reset follow the shared form contracts. The form owns the committed identifier,

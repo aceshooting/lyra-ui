@@ -2,12 +2,12 @@
   "locale": "ln",
   "direction": "ltr",
   "source": {
-    "keyCount": 1395,
-    "sha256": "sha256:2871efcb95a2a1cbad4baae3b68cd532422f9f03149932cd4d4399f6801369f7"
+    "keyCount": 1402,
+    "sha256": "sha256:fc31e42521e3f0df6c1dfa6b5a61075121143b6e0fb6fa0e0ad37f619c210f5c"
   },
   "catalog": {
-    "keyCount": 1395,
-    "sha256": "sha256:393e1b69ef791eed3c0a0c8a67a631a194ec2cd483ba6526c3e69f98d9c3fa0f"
+    "keyCount": 1402,
+    "sha256": "sha256:c5cd3ac242eccbbb9d574996d789e3ba2949612439cd456f9df090a85600763b"
   },
   "translator": {
     "status": "complete-original",

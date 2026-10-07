@@ -119,6 +119,7 @@ import type { LyraRadioGroupEventMap } from '../components/forms/radio/radio-gro
 import type { LyraRadioEventMap } from '../components/forms/radio/radio.class.js';
 import type { LyraRubricFormEventMap } from '../components/forms/rubric-form/rubric-form.class.js';
 import type { LyraSelectEventMap } from '../components/forms/select/select.class.js';
+import type { LyraSignaturePadEventMap } from '../components/forms/signature-pad/signature-pad.class.js';
 import type { LyraSliderEventMap } from '../components/forms/slider/slider.class.js';
 import type { LyraSwatchPickerEventMap } from '../components/forms/swatch-picker/swatch-picker.class.js';
 import type { LyraSwitchEventMap } from '../components/forms/switch/switch.class.js';
@@ -467,6 +468,7 @@ export interface LyraTagEventTypes {
   'lr-selection-toolbar': LyraSelectionToolbarEventMap;
   'lr-sequence-playback': LyraSequencePlaybackEventMap;
   'lr-sequence-strip': LyraSequenceStripEventMap;
+  'lr-signature-pad': LyraSignaturePadEventMap;
   'lr-slider': LyraSliderEventMap;
   'lr-source-card': LyraSourceCardEventMap;
   'lr-source-list': LyraSourceListEventMap;
@@ -620,6 +622,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-rubric-form': { 'lr-invalid': true },
   'lr-scatter-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-select': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
+  'lr-signature-pad': { 'lr-invalid': true },
   'lr-slider': { 'lr-invalid': true },
   'lr-split-panel': { 'lr-reposition-request': true },
   'lr-switch': { 'lr-invalid': true, 'lr-switch-toggle-request': true },

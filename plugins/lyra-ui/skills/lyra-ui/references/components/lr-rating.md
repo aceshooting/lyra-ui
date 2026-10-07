@@ -47,7 +47,8 @@ value. Without one, a non-empty external `<label for>` names the host; `accessib
 then the localized name are the fallback order when no external label supplies text. Clicking an
 associated external label focuses the host-owned slider without changing its value. Neither
 property is visible label text, since a rating is a bare row of symbols with no field frame of its
-own; wrap the element in your own layout for a labelled field, exactly as `<lr-slider>` does.
+own; wrap the element in your own layout for a labelled field, or name it with an external
+`<label for>`.
 
 For the managed slider name only, an empty or whitespace-only `label` counts as absent and falls
 through to localized `rating`; the raw `label` property still reads exactly as assigned. An
@@ -68,7 +69,8 @@ const result = LyraRating.validators[0].checkValidity(rating);
 
 The host is the one focusable `role="slider"` owner and carries `tabindex`, its accessible name,
 `aria-valuemin`/`aria-valuemax`/`aria-valuenow`/`aria-valuetext`, and explicit true/false disabled,
-readonly and required states. The shadow star row is `aria-hidden` presentation only, so custom
+readonly, required and invalid states (`aria-invalid` turns `"true"` once the user has interacted
+while the rating fails its constraints). The shadow star row is `aria-hidden` presentation only, so custom
 host ARIA never creates a competing second slider.
 
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
@@ -93,7 +95,8 @@ Left unset, the built-in star outline/solid pair is unchanged.
   clamped value is unchanged, nor on a programmatic `value` write. It fires immediately after the
   native `change` event for the same user commit.
 - `lr-activate` — `detail: { value }`, the committed rating. Fired on **every** interactive commit
-  (a click on a symbol, or an Arrow/Home/End key), whether or not the value actually moved.
+  (a click on a symbol, or an Arrow/PageUp/PageDown/Home/End key), whether or not the value
+  actually moved.
   Bubbling, composed, not cancelable — it reports that the user committed a rating and gates
   nothing. Use it for the re-commit of the current rating that `lr-change` deliberately stays silent
   for; from the keyboard that case is otherwise unobservable, because End on an already-maximum
@@ -153,7 +156,8 @@ retained during hover preview), `--lr-rating-active-color` (default: the existin
 empty-symbol color — pressed-symbol color only), `--lr-rating-size` (default `--lr-font-size-xl` —
 symbol size; its private default follows each `size` step while a public value wins), and
 `--lr-rating-gap` (default
-`--symbol-spacing`, then `--lr-space-xs` — gap between symbols). The mapped compatibility hooks
+`--symbol-spacing`, then the larger of `--lr-space-xs` and what keeps adjacent symbol centres 1.5rem
+apart — gap between symbols; set it explicitly to go tighter). The mapped compatibility hooks
 are `--symbol-color` (inactive symbols), `--symbol-color-active` (filled symbols), `--symbol-size`
 (symbol size), and `--symbol-spacing` (the gap around symbols). The Lyra-prefixed color, size, and
 gap names win if both a Lyra property and its compatibility alias are set. `--symbol-size` otherwise
@@ -162,7 +166,10 @@ feeds the active `size` step, while `--symbol-spacing` remains the fallback for
 
 Pointer selection resolves the position within the clicked star and snaps upward to `precision`
 (with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
-input as well as keyboard/value updates. The host-owned slider's presentational symbol row keeps a
+input as well as keyboard/value updates; a fractional `precision` such as `0.1` never leaks
+floating-point noise into `value`, `lr-change` or the submitted entry. Arrow keys move by one
+`precision` unit, PageUp/PageDown by ten, and Home/End jump to the ends. The host-owned slider's
+presentational symbol row keeps a
 40×40px minimum activation area even for the degenerate `max=0`/`max=1` cases; larger ratings
 naturally grow wider, while symbols may shrink within a narrow allocation instead of forcing the
 host beyond its container.

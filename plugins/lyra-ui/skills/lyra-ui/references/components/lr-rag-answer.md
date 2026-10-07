@@ -37,7 +37,9 @@ either way. An answer with no error announces nothing. Remove any host
 the initial error is announced twice, through the native role and again through the shared sink;
 `withoutSources: boolean = false` (attribute `without-sources`, reflected — omits the source section);
 `withoutClaims: boolean = false` (attribute `without-claims`, reflected — stops claim-level details
-from reaching the grounding summary); `label?: string` (omission uses the localized answer label; an explicit
+from reaching the grounding summary); `headingLevel: LyraHeadingLevel = '3'` (attribute
+`heading-level` — level of the Citations and Sources headings, also forwarded to the grounding
+summary; `'none'` keeps the visible text without heading semantics); `label?: string` (omission uses the localized answer label; an explicit
 empty string stays empty); `accessibleLabel: string | null = null` (attribute
 `aria-label`). The same `<article>` remains the semantic shell in `idle`, `loading`, `answer`, and
 `error` states. With no non-empty host `aria-label` it owns the article role/name; a non-empty host
@@ -50,11 +52,15 @@ while a partial property or slotted answer is streaming.
 `id`. Malformed rows and later duplicates are omitted first-wins before empty state, child
 composition, counts, rendering, lookup, or actions.
 
-**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding' }`),
-`lr-claim-select` (`{ claim }`), and `lr-retry`. When `assessment` is present, grounding summary is
+**Events:** `lr-citation-select` (`{ citation, section: 'answer' | 'grounding', action: 'activate'
+| 'open' }`), `lr-claim-select` (`{ claim }`), `lr-open` (`{ sourceId, href }`, a generated source
+card's title was activated), and `lr-retry`. When `assessment` is present, grounding summary is
 the single citation presentation/action owner; the answer-level duplicate citation row is omitted.
 Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
-boundary and translated into that one section-qualified `lr-citation-select` contract.
+boundary and translated into that one section- and action-qualified `lr-citation-select` contract;
+a double-click reports two `activate`s then one `open`, so a host that only wants the open
+ignores the `activate`s. The generated source cards' `lr-expand`, the source list's `lr-toggle` and
+the Markdown renderer's housekeeping events stay inside.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list. Either slot renders from its assigned content without requiring the corresponding

@@ -33,8 +33,9 @@ Each `LyraCurrencyEntry { readonly code: string; readonly label?: string; readon
 readonly group?: string; readonly disabled?: boolean }` supplies one option. Names and symbols come from `Intl` using the field's
 effective locale, with code fallbacks where display data is unavailable. Caller labels/symbols,
 including explicit empty strings, override that presentation. The catalog is copied; reassign it
-to change options. At most 512 rows are examined, invalid rows are skipped, and the first valid
-entry for each normalized code wins. Caller order is preserved.
+to change options. At most 1024 rows are examined, invalid rows are skipped, and the first valid
+entry for each normalized code wins. Caller order is preserved. Names and symbols resolve once per
+catalog and locale and are shared by every picker using that catalog.
 
 **Unavailable values stay visible.** A value outside the configured catalog, a malformed nonempty
 value, or a selected entry that becomes disabled is retained and marked unavailable. It fails
@@ -57,7 +58,8 @@ constraints, leaving `value`, `defaultValue` and interaction state unchanged.
 
 `topLayer` (attribute `top-layer`) defaults to `false`; enable it inside clipped headers or dialogs.
 An explicit `positioningStrategy` (attribute `positioning-strategy`) of `"fixed"` or `"absolute"`
-overrides inherited `--lr-positioning-strategy`.
+overrides inherited `--lr-positioning-strategy`; with neither, the list uses `absolute` in both
+modes.
 Keyboard navigation and ISO-code type-ahead use the select contract by default. Set
 `searchable` (default `false`) to enable a text filter matching codes, localized names, literal
 labels, and regular/narrow symbols. Typing only filters; it does not change `value` or emit

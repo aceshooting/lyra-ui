@@ -20,9 +20,11 @@ Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
 **Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
-`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''` (fallback name
-for the overall claim region; a non-empty host `aria-label` makes the host the sole overall owner,
-while an explicitly empty host label stays empty on the region).
+`selectedClaimId: string = ''` (attribute `selected-claim-id`, the claim marked `aria-pressed` and
+`claim-selected`; every claim's evidence renders regardless); `label?: string` (fallback name for
+the overall claim region; omission uses the localized default and an explicit empty string clears
+it; a non-empty host `aria-label` makes the host the sole overall owner, while an explicitly empty
+host label stays empty on the region).
 `GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
 `status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
 is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
@@ -47,10 +49,10 @@ At most 500 claims render as `claim` rows; a `claims` array past that length ren
   nested inside an already-bordered container don't double the frame. `plain` wins over the dense
   `size` tier when both are set — nothing left to tighten.
 
-**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`). A nested
-`lr-citation-badge` activation is contained and translated to `lr-citation-select`; the distinct
-composed `lr-citation-open` event intentionally crosses `lr-claim-evidence` unchanged with its
-`{ sourceId, index, href }` detail.
+**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`) and
+`lr-citation-open` (`{ citation }`). A nested `lr-citation-badge`'s activation and its distinct
+`lr-citation-open` (double-click, or Space) are contained and translated to these two events, each
+carrying the complete citation record.
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `limit` (localized notice shown when `claims` exceeds the

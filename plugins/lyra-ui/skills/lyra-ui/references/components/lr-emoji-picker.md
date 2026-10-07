@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 17 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,7 +83,8 @@ consumer-supplied custom validity and recomputes current intrinsic constraints; 
 `value`/`defaultValue`, clear prior interaction state, or force a required-empty picker valid.
 
 **Events:** a pick emits native `InputEvent` `input`, `lr-input`, native `Event` `change`, then
-`lr-change`; both aliases carry `detail: { value }`. The internal search input's `focus` and `blur`
+`lr-change`; both aliases carry `detail: { value, previousValue }`. `lr-load-error` (no detail,
+non-cancelable) fires when the built-in emoji set fails to load. The internal search input's `focus` and `blur`
 are relayed once as native `FocusEvent`s preserving `relatedTarget`.
 All four native events use the picker's current owner-document realm, including
 after adoption. `lr-invalid` (no detail) is emitted once as a cancelable alias when native validity
@@ -95,8 +96,9 @@ tabbable). ArrowLeft/ArrowRight step the active item backward/forward following 
 (swapped under RTL), ArrowUp/ArrowDown move by one visual row (measured from the live wrap layout),
 Home/End jump to the first/last item, and Enter/Space picks the active item. The search input is a
 `role="combobox"` over the same listbox: the arrow keys and Enter also work while focus stays in
-the input, with `aria-activedescendant` tracking the active option. Hovering an emoji with the
-pointer also moves the active item to it. When a controlled `groups` replacement removes the
+the input, with `aria-activedescendant` tracking the active option. Hovering paints through CSS
+`:hover` only: the pointer never moves the active item, the tab stop or `aria-activedescendant`.
+The active option is revealed by scrolling only the grid, never the page. When a controlled `groups` replacement removes the
 focused option, focus moves to the nearest surviving option; when the same item object remains,
 its identity wins even if it moved. A replacement never pulls focus away from the search field or
 an external control. In a windowed grid, roving navigation materializes an off-window target before
@@ -111,9 +113,10 @@ content, overrides the `errorText` attribute when provided).
 field, replacing the native search-cancel glyph the component resets; rendered only while it has a
 value), `grid`
 (`role="listbox"`, the scroll viewport), `group-label`, `emoji` (each emoji's own `role="option"`
-button), `empty` (shown when the search matches nothing, or when a consumer deliberately opted out
+button; each group's options sit in a `role="group"` named by its `group-label`), `empty` (shown
+when the search matches nothing, or when a consumer deliberately opted out
 with `groups = []`), `load-error` (the failure surface shown in `empty`'s place when the optional
-peer failed to load), `hint` (the hint message), `error` (the
+peer failed to load) with `load-retry` (its Retry button), `hint` (the hint message), `error` (the
 error message). The grid scrolls in the block axis and explicitly clips inline overflow, so an
 allocation narrower than one option does not introduce a second scrollbar. While windowing is
 active the rows are wrapped in `virtual-spacer`
@@ -179,9 +182,11 @@ supply `groups` directly instead. The loader never throws; a missing or failed p
 `console.warn` and leaves `groups` empty, and the picker then **fails closed and visibly**: the
 grid renders a distinct localized `[part="load-error"]` surface instead of the ordinary
 `[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
-zero-match search or a deliberate `groups = []` opt-out, and announces the same message once
+zero-match search or a deliberate `groups = []` opt-out, announces the same message once
 through the document's shared assertive live region (not a shadow-root `role="alert"`, which
-announces unreliably). Assigning `groups` afterwards clears it. The adapter buckets the peer's flat
+announces unreliably) and emits `lr-load-error` (no detail). The failed load is not cached: the
+`load-retry` button (or a later locale change) loads again, and a successful retry clears the
+failure. Assigning `groups` also clears it. The adapter buckets the peer's flat
 entry list by numeric group id and returns only the public `{ key, label, emojis }` shape. The picker
 privately maps auto-loaded group ids 0–9 to the existing `emojiPickerGroup*` locale strings; override
 those through `registerLyraLocale()` or `.strings`. An unknown future group id uses `Group {id}`.

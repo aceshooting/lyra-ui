@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-select` since `unreleased`; use event `@lr-selection-change`; removal not before `28.0.0` — lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -36,7 +36,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   unset
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
-  its own copy on toggle _then_ emits `lr-select`; reassign to control
+  its own copy on toggle _then_ emits `lr-selection-change`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
   `lr-checkbox`.
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
@@ -102,17 +102,22 @@ region. Initial empty content, loading intermediates, and reconnects are not rep
 
 **Events:**
 
-- `lr-select` (`detail: RetrievalResultsSelectDetail` = `{ chunkIds: string[]; chunks: RetrievalChunk[] }`)
-  — the _complete_ updated selection, both as ids and as exactly one canonical record per id, so a
-  host needn't re-look-up ids against its own copy on every toggle. This derived detail is always
-  canonicalized nonblank/first-wins regardless of the legacy `without-dedupe` switch. It is the only
-  host-level report of a row toggle: the row checkbox's `lr-checkbox-toggle-request`, native
-  `input`/`change`, and `lr-input`/`lr-change` stay inside the component.
+- `lr-selection-change` (`detail: RetrievalResultsSelectionChangeDetail` = `{ selectedChunkIds:
+string[]; chunks: RetrievalChunk[] }`) — the _complete_ updated selection, both as ids and as
+  exactly one canonical record per id, so a host needn't re-look-up ids against its own copy on every
+  toggle. This derived detail is always canonicalized nonblank/first-wins regardless of the legacy
+  `without-dedupe` switch. It is the only host-level report of a row toggle: the row checkbox's
+  `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
+  component. Its deprecated alias `lr-select` (`detail: { chunkIds, chunks }`, the same
+  selection) is dispatched right after it.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
-  `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`.
+  `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`. A row's
+  `lr-chunk-toggle` and the virtual list's scroll events stay inside: the component keeps each
+  row's "Show more" state itself, so it survives scrolling a virtualized row out and back and a
+  re-sort.
 
 **Slots:** none.
 
@@ -124,7 +129,8 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 `group` part; grouped/virtualized mode only), `select` (per-row `lr-checkbox`, omitted while
 `without-selection` is set), `row-body` (carries `data-selected`), `row-body-selected` (additional part
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
-`presentation="compact"`), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
+`presentation="compact"`; at most 32 entries, each value formatted within the same bounds as a
+`lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —

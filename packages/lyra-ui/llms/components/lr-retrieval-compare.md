@@ -22,8 +22,9 @@ dense/sparse/rerank/final score breakdowns.
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
 `topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
-`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label?: string` (fallback name
-for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `headingLevel: LyraHeadingLevel =
+'3'` (attribute `heading-level`, each set heading; `'none'` keeps the visible text without heading
+semantics); `label?: string` (fallback name for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
 owner, while an explicitly empty host label stays empty on the region).
 `RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
@@ -38,7 +39,9 @@ controlled selection, rendering, or events.
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
 
 Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
-is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
+is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled. A result
+button is named by its rank and source title (a blank name shows the localized "untitled source");
+its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
 
 **Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default

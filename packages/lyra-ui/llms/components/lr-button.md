@@ -114,9 +114,12 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 - `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
   Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
   assignment is observable
-- `type: 'button' | 'submit' | 'reset' = 'button'`
+- `type: 'button' | 'submit' | 'reset' = 'button'` — matched ASCII case-insensitively like the native
+  attribute (`type="Submit"` submits); an unknown value is `'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
-  clearing `disabled`
+  clearing `disabled`. A button that holds keyboard focus when `loading` turns on keeps it on the
+  host (through a temporary `tabindex="-1"`) and gets it back when `loading` clears, so an
+  async-submit flow does not lose the user's place
 - `disabled: boolean = false` (reflected)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
@@ -154,13 +157,19 @@ overrides apply, and **`SubmitEvent.submitter` is that native button, not the ho
 set, `requestSubmit()` has a `null` submitter. Presence, including an explicitly empty string,
 selects the transient path; string attributes are copied verbatim. Link mode ignores all of this.
 
+While it is the form's default button (the first submit control), Enter in a native single-line
+`<input>` of that form submits through it, following the platform's implicit-submission rules: a
+disabled default button blocks the submission, an enabled one applies its `name`/`value` and `form*`
+overrides, and several native fields no longer leave Enter inert.
+
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
 submit/reset behavior in `<button>` mode. `getForm()` returns the browser-resolved form owner,
 including an external owner selected by the `form` attribute. `checkValidity()`, `reportValidity()`,
 and `setCustomValidity(message)` delegate to `ElementInternals`; `resetValidity()` clears only the
 consumer error and restores the current `required`/`value` constraint. `formStateRestoreCallback()`
-restores `value` for session history/autofill without changing submitter-only form-data semantics.
+restores `value` for session history/autofill without changing submitter-only form-data semantics,
+and `formAssociatedCallback()` re-arms the default-button Enter handling when the form owner changes.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
 (disabled while `disabled` or `loading`). The internal button's
@@ -246,14 +255,14 @@ the `loading` spinner's rotation period; that token itself collapses to `0.001ms
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
-(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem).
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 2rem, 2.25rem, 2.5rem, 3.5rem).
 These are minimum-height floors; content and nested actions can make a composed control taller.
 Each token is read only by its own tier
 (`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
 ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
 Circle and automatically detected icon-only buttons add the shared `--lr-icon-button-size` floor
-on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below 40px.
+on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below it.
 Ordinary single-line labelled buttons keep the exact ladder heights above unless their content
 requires more room.
 

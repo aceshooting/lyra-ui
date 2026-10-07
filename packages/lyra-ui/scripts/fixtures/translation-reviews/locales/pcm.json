@@ -2,12 +2,12 @@
   "locale": "pcm",
   "direction": "ltr",
   "source": {
-    "keyCount": 1395,
-    "sha256": "sha256:2871efcb95a2a1cbad4baae3b68cd532422f9f03149932cd4d4399f6801369f7"
+    "keyCount": 1402,
+    "sha256": "sha256:fc31e42521e3f0df6c1dfa6b5a61075121143b6e0fb6fa0e0ad37f619c210f5c"
   },
   "catalog": {
-    "keyCount": 1395,
-    "sha256": "sha256:8791f34cdee2a8b9a1cc39b4dd2d656dae4fe4cf18549573a6b66e522cd0ae59"
+    "keyCount": 1402,
+    "sha256": "sha256:713d8abda7cf3d02a16d7e9dc728c87a3558c431e1cd19a758df27f583b4cefd"
   },
   "translator": {
     "status": "complete-original",

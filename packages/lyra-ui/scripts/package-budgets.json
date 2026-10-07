@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard npm tarball ceilings measured after release metadata generation. Required public artifacts and explicit reviewed exceptions are validated independently of artifact hygiene.",
+  "$comment": "Hard npm tarball ceilings measured after release metadata generation. Required public artifacts and explicit reviewed exceptions are validated independently of artifact hygiene. Current exact packed and unpacked measurements retain tight existing headroom; file-count derivation reserves seven artifacts beyond the measured 308-alias inventory.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -10,7 +10,7 @@
   "packedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 7653029,
+    "reviewedMeasurementBytes": 7690209,
     "headroomBytes": 33960,
     "targetAt25PercentBytes": 5872345,
     "favorableIncompletePackageProbeBytes": 6088928
@@ -18,22 +18,22 @@
   "unpackedBudgetPolicy": {
     "strategy": "measured-required-artifact-exception",
     "exceptionReason": "required-public-artifacts-exceed-25-percent-target",
-    "reviewedMeasurementBytes": 34854812,
+    "reviewedMeasurementBytes": 34930235,
     "headroomBytes": 139713,
     "targetAt25PercentBytes": 28882563,
-    "reviewedOn": "2026-09-28"
+    "reviewedOn": "2026-10-07"
   },
   "fileCountBudget": {
     "baseArtifactCeiling": 2500,
-    "stableTagAliasCount": 307,
+    "stableTagAliasCount": 308,
     "emittedFilesPerAlias": 1,
-    "measuredEntrypointRemainder": 1341,
+    "measuredEntrypointRemainder": 1386,
     "nextComponentArtifactHeadroom": 7,
-    "entrypointHeadroom": 1348
+    "entrypointHeadroom": 1393
   },
   "maximum": {
-    "packedBytes": 7686989,
-    "unpackedBytes": 34994525,
-    "fileCount": 4155
+    "packedBytes": 7724169,
+    "unpackedBytes": 35069948,
+    "fileCount": 4201
   }
 }

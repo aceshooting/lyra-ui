@@ -59,8 +59,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 307,
-    "automatedAccessibility": 306,
+    "componentCount": 308,
+    "automatedAccessibility": 307,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
     "visualEnrolled": 92,
@@ -221,7 +221,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 466,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -417,7 +417,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 466,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3035,7 +3035,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
-              "line": 9,
+              "line": 10,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3209,7 +3209,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
-              "line": 232,
+              "line": 233,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -3731,7 +3731,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.class.ts",
-              "line": 312,
+              "line": 309,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8887,7 +8887,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/checkbox/checkbox-remediation.test.ts",
-          "src/components/forms/checkbox/checkbox.test.ts"
+          "src/components/forms/checkbox/checkbox.test.ts",
+          "src/components/forms/checkbox/label-wrap.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -10747,6 +10748,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/color-picker/color-picker-remediation.test.ts",
+              "test": "is one roving radiogroup with a single tab stop",
+              "target": "picker",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/color-picker/color-picker.test.ts",
               "test": "falls back to the localized color name for an explicitly empty swatch label",
               "target": "el",
@@ -10884,7 +10891,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1173,
+              "line": 1216,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11012,7 +11019,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
-              "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
+              "test": "force-closes when ${cause} even when lr-hide is vetoed",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -11114,7 +11121,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2771,
+              "line": 2824,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13935,7 +13942,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
-              "line": 9,
+              "line": 10,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14416,7 +14423,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid-boundaries.test.ts",
-              "line": 10,
+              "line": 13,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -14501,7 +14508,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2827,
+              "line": 2838,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14692,7 +14699,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
-              "line": 10,
+              "line": 11,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15282,7 +15289,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 463,
+              "line": 466,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17360,8 +17367,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -17389,9 +17394,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/layout/drilldown-panel/drilldown-panel.test.ts",
+              "test": "keeps focus on the enabled pager button and announces each range when paging reaches the last page",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -17405,10 +17415,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "applicable",
-          "status": "not-recorded",
+          "applicability": "not-applicable",
+          "status": "not-applicable",
           "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -17496,8 +17506,7 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -17509,6 +17518,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/drilldown-panel/drilldown-panel-lazy.test.ts",
           "src/components/layout/drilldown-panel/drilldown-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20915,7 +20925,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1489,
+              "line": 1490,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23062,7 +23072,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-              "line": 13,
+              "line": 14,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23642,7 +23652,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 1019,
+              "line": 1020,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27185,7 +27195,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 554,
+              "line": 555,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28375,7 +28385,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 991,
+              "line": 966,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31044,7 +31054,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/message-actions/message-actions.class.ts",
-              "line": 867,
+              "line": 868,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33674,7 +33684,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
-              "test": "does not emit lr-filter when a keyboard selection commits and resets the query (multiple)",
+              "test": "force-closes when ${cause} even when lr-hide is vetoed",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -33765,7 +33775,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2771,
+              "line": 2824,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34338,7 +34348,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 621,
+              "line": 622,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35077,7 +35087,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 14,
+              "line": 15,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37453,7 +37463,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 615,
+              "line": 613,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39642,8 +39652,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/rating/rating.test.ts",
-              "test": "exposes a keyboard-accessible rating slider",
+              "file": "src/components/overlays/rating/rating-remediation.test.ts",
+              "test": "snaps a fractional precision without leaking floating-point noise",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -41352,6 +41362,12 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-compare/retrieval-compare.test.ts",
+              "test": "names a result by its rank and title, and describes it with the text and scores",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/retrieval/retrieval-compare/retrieval-compare.test.ts",
               "test": "renders a localized empty state and remains accessible at populated state",
               "target": "populated",
               "state": "populated"
@@ -41634,7 +41650,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 542,
+              "line": 554,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41729,7 +41745,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "test": "Enter in the query field submits, emitting lr-search with the full RetrievalQuery",
+              "test": "reports typing and clearing as lr-input with the query already updated, and keeps every other field event inside",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -41757,7 +41773,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 996,
+              "line": 1034,
               "kind": "320px allocation test signal"
             }
           ]
@@ -41820,7 +41836,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 395,
+              "line": 401,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43112,7 +43128,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 955,
+              "line": 956,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43185,6 +43201,12 @@
             },
             {
               "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
+              "test": "keeps an authored interactive glyph decorative: skipped by Tab and never the click target",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
               "test": "keeps host naming on the host while every nested playback control owns its purpose name",
               "target": "el",
               "state": "populated"
@@ -43198,7 +43220,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
-              "test": "pins ArrowLeft/ArrowRight step direction to a fixed next/previous meaning in both LTR and RTL, independent of native engine handling",
+              "test": "keeps an authored interactive glyph decorative: skipped by Tab and never the click target",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -43509,6 +43531,186 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/sequence-strip/sequence-strip.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-signature-pad",
+      "family": "forms",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "reducedMotion",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "is accessible in its empty, populated, disabled and invalid states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "is accessible in its empty, populated, disabled and invalid states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "is accessible in its empty, populated, disabled and invalid states",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "is accessible in its empty, populated, disabled and invalid states",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "draws with the keyboard and announces the pen state",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "keeps physical arrow directions in a right-to-left document",
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
+              "test": "fits a 320px allocation",
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/forms/signature-pad/signature-pad.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -43839,7 +44041,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 868,
+              "line": 869,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44364,7 +44566,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 541,
+              "line": 562,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45232,7 +45434,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-              "line": 12,
+              "line": 13,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46670,7 +46872,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 191,
+              "line": 192,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -46952,8 +47154,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/swatch-picker/swatch-picker.test.ts",
-              "test": "keeps duplicate-valued swatches as distinct occurrences for selection and navigation",
+              "file": "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
+              "test": "moves through a wrapped row with Up and Down as well as Left and Right",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -48726,7 +48928,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 860,
+              "line": 861,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53602,7 +53804,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 748,
+              "line": 749,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53819,7 +54021,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 748,
+              "line": 749,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

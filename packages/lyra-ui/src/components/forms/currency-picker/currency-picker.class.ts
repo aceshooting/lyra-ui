@@ -8,7 +8,7 @@ import { resolveCurrencyPresentation } from './currency-presentation.js';
 import type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_currencyPickerLabel, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_currencyPickerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js';
@@ -64,23 +64,10 @@ export class LyraCurrencyPicker extends LyraCatalogPickerBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     currencyPickerLabel: LYRA_DEFAULT_currencyPickerLabel,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    noData: LYRA_DEFAULT_noData,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
-    restore: LYRA_DEFAULT_restore,
-    retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
-    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

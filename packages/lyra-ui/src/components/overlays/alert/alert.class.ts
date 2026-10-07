@@ -452,12 +452,18 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   /** @internal */
   [TOAST_REGION_SET_ACTIVE](owner: ToastRegionController, active: boolean): void {
     if (this.parentElement !== owner) return;
-    const focusTarget = this.focusReturnTarget?.isConnected && !composedContains(this, this.focusReturnTarget)
-      ? this.focusReturnTarget
-      : nearestExternalFocusTarget(this);
+    let resolvedFocusTarget: HTMLElement | null | undefined;
+    const focusTarget = (): HTMLElement | null => {
+      if (resolvedFocusTarget !== undefined) return resolvedFocusTarget;
+      resolvedFocusTarget = this.focusReturnTarget?.isConnected && !composedContains(this, this.focusReturnTarget)
+        ? this.focusReturnTarget
+        : nearestExternalFocusTarget(this);
+      return resolvedFocusTarget;
+    };
     const focusRepair = active
       ? this.pendingFocusRepair
       : this.pendingFocusRepair ?? captureComposedFocusRepair(this, focusTarget);
+    const returnFocusTarget = !active && focusRepair ? focusTarget() : null;
     this.toastRegionOwner = owner;
     this.toastRegionActive = active;
     this.toggleAttribute('data-toast-queued', !active);
@@ -477,7 +483,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
       this.beginToastActivation();
     } else {
       this.transitionToken += 1;
-      if (focusRepair) applyComposedFocusRepair(focusRepair, focusTarget);
+      if (focusRepair) applyComposedFocusRepair(focusRepair, returnFocusTarget);
       this.pendingFocusRepair = undefined;
       this.clearAutoHide();
     }

@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "da8c78136840be9116f2",
+      "fingerprint": "46cef1eed712a401dfbd",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "685d509311e17f912372",
+      "fingerprint": "e2c052171e1aa6c09054",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "11971715f6b23f48e7e7",
+      "fingerprint": "97d3a80e3b826a20e437",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "3c95692ef1ecf7f81f72",
+      "fingerprint": "0d7fb5185bd7fa8e8e7e",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -7321,7 +7321,7 @@
       "module": "src/components/forms/swatch-picker/swatch-picker.class.ts",
       "exportName": "SwatchPickerItem",
       "kind": "interface",
-      "fingerprint": "96881368416dc38098c6",
+      "fingerprint": "d52f91ba5d8927d6dfe0",
       "routes": [
         "src/all.ts",
         "src/components/forms/index.ts",
@@ -11340,10 +11340,25 @@
       "fingerprint": "38e326acc0d6e26343b1",
       "routes": [
         "src/all.ts",
+        "src/components/lr-chunk-inspector.ts",
         "src/components/lr-graph.ts",
+        "src/components/lr-grounding-summary.ts",
+        "src/components/lr-memory-panel.ts",
+        "src/components/lr-provenance-panel.ts",
+        "src/components/lr-retrieval-results.ts",
+        "src/components/retrieval/chunk-inspector/chunk-inspector.class.ts",
+        "src/components/retrieval/chunk-inspector/chunk-inspector.ts",
         "src/components/retrieval/graph/graph.class.ts",
         "src/components/retrieval/graph/graph.ts",
+        "src/components/retrieval/grounding-summary/grounding-summary.class.ts",
+        "src/components/retrieval/grounding-summary/grounding-summary.ts",
         "src/components/retrieval/index.ts",
+        "src/components/retrieval/memory-panel/memory-panel.class.ts",
+        "src/components/retrieval/memory-panel/memory-panel.ts",
+        "src/components/retrieval/provenance-panel/provenance-panel.class.ts",
+        "src/components/retrieval/provenance-panel/provenance-panel.ts",
+        "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
+        "src/components/retrieval/retrieval-results/retrieval-results.ts",
         "src/lyra.ts",
         "src/ssr/all.ts"
       ],
@@ -11635,7 +11650,7 @@
       "module": "src/components/retrieval/rag-answer/rag-answer.class.ts",
       "exportName": "LyraRagCitationSelectDetail",
       "kind": "interface",
-      "fingerprint": "571b3bf16cbb0cc81ce7",
+      "fingerprint": "7146affdbb98e5adeae4",
       "routes": [
         "src/all.ts",
         "src/components/lr-rag-answer.ts",
@@ -11767,7 +11782,7 @@
       "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
       "exportName": "RetrievalStage",
       "kind": "interface",
-      "fingerprint": "1cdf0a6b9594f3427c66",
+      "fingerprint": "783c0da7d72f1f646019",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-trace.ts",
@@ -14075,7 +14090,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "afe18c61b4c2ae7690e5",
+      "fingerprint": "8dfb160e600c78cec143",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14982,7 +14997,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "fc17eef5d2179501f88e",
+      "fingerprint": "f3f0081427b07d30eaa9",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15116,7 +15131,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "0620efa0370b2d8940d5",
+      "fingerprint": "f7e923609ec7e262420b",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15700,7 +15715,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "c2d232b3132481a922b8",
+      "fingerprint": "eaa8558d9a16fbf6f3d3",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15716,7 +15731,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "13b2d31629924de5c79d",
+      "fingerprint": "d4c6b917978b9f102c06",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15732,7 +15747,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "6babdebadfab9ebae679",
+      "fingerprint": "2041075b1cb870be6118",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16259,7 +16274,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "c95c900898e5631f8170",
+      "fingerprint": "f606dc384e477826dab3",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16276,7 +16291,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "57d2d81beb7ecec393e0",
+      "fingerprint": "e5a90fcd7d13594d1819",
       "routes": [
         "src/vue.ts"
       ],
@@ -16685,7 +16700,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "48ba4a6cdbe9e27c91de",
+      "fingerprint": "550a2ecc63576706cebf",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16710,7 +16725,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "69fcdf285355fe6037c1",
+      "fingerprint": "24b0e1b0aab3ff2cd535",
       "routes": [
         "src/localization.ts"
       ],
@@ -17287,28 +17302,6 @@
         "kind": "component",
         "tag": "lr-currency-picker",
         "declaration": "LyraCurrencyEntry"
-      }
-    },
-    {
-      "module": "src/components/forms/currency-picker/currency-picker.class.ts",
-      "exportName": "LyraCurrencyChangeDetail",
-      "kind": "interface",
-      "fingerprint": "1a82076ff3ff741b0cac",
-      "routes": [
-        "src/all.ts",
-        "src/components/forms/currency-picker/currency-picker.class.ts",
-        "src/components/forms/currency-picker/currency-picker.ts",
-        "src/components/forms/index.ts",
-        "src/components/lr-currency-picker.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
-      ],
-      "document": "llms/forms.md",
-      "family": "forms",
-      "locator": {
-        "kind": "component",
-        "tag": "lr-currency-picker",
-        "declaration": "LyraCurrencyChangeDetail"
       }
     },
     {
