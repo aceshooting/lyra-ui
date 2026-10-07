@@ -22,8 +22,10 @@ disconnected connector offers Connect, a connected connector offers Disconnect, 
 connector offers Retry, and a connecting connector has no available action. The component never
 reads credentials, starts a server, or makes network requests. Error text is caller-supplied text
 that the host has already localized. Assign a new `.connectors` array after host updates; the
-component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows.
-`disabled` gates every action. Host `aria-label` names the internal group.
+component takes an owned snapshot, keeps the first nonblank identity, and renders at most 100 rows
+keyed by id. `disabled` gates every action. Host `aria-label` names the internal group. An acted-on
+connector's status changes are announced, and focus on its vanished action waits on `status` until
+the next action appears.
 
 **Properties:** `label?: string` (attribute `label`) — visible fieldset legend; when omitted or
 `null`, the component uses the localized `connectorManagerLabel`, while an explicit empty string
@@ -42,9 +44,9 @@ remains empty.
 | `name` | Host-supplied connector name. |
 | `kind` | Localized connector kind. |
 | `description` | Optional host-supplied description. |
-| `status` | Localized controlled connection status. |
+| `status` | Localized controlled connection status (`tabindex="-1"`). |
 | `error` | Optional host-localized error text. |
-| `action` | Native action button. |
+| `action` | Native action button, themed through the shared `--lr-button-*` tokens. |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 

@@ -47,7 +47,8 @@ either, the visible tool title names it. This precedence applies in ordinary and
 - `status: 'pending'|'running'|'success'|'error'|'denied'|'incomplete' = 'pending'` (reflected) —
   drives the header's status badge; same status vocabulary as `<lr-tool-call-chip>`. `incomplete`
   (21.1.0) is a call that ended without a result; its badge reads `Incomplete` in the neutral
-  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair
+  pending look, through its own `--lr-tool-result-dialog-incomplete-*` pair; an unknown value
+  normalizes and reflects as `pending`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; omitted
   from the header entirely when unset
 - `maximized: boolean = false` (reflected) — near-fullscreen presentation of the same open dialog

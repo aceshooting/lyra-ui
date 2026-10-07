@@ -3014,11 +3014,13 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraCommunityCardEventMap;
     eventNames:       | 'lr-drill'
-      | 'lr-entity-activate';
+      | 'lr-entity-activate'
+      | 'lr-entity-select';
     cssNames:       | '--lr-community-card-bg'
       | '--lr-community-card-compact-gap'
       | '--lr-community-card-compact-padding';
     attributeAliases: {
+      'aria-level'?: LyraAttributeValue<string | number | null>;
       'max-members'?: LyraCommunityCard['maxMembers'];
     };
   };
@@ -3567,6 +3569,7 @@ export interface LyraComponentTypeMap {
       | 'lr-column-move'
       | 'lr-column-pin'
       | 'lr-column-resize'
+      | 'lr-column-resize-request'
       | 'lr-column-visibility-change'
       | 'lr-copy'
       | 'lr-copy-error'
@@ -3580,6 +3583,7 @@ export interface LyraComponentTypeMap {
       | 'lr-row-collapse'
       | 'lr-row-expand'
       | 'lr-row-select'
+      | 'lr-search-change'
       | 'lr-sort-change'
       | 'lr-sort-request'
       | 'request';
@@ -3668,6 +3672,7 @@ export interface LyraComponentTypeMap {
       | 'autocapitalize'
       | 'autocomplete'
       | 'autoCorrect'
+      | 'clearable'
       | 'clearLabel'
       | 'customError'
       | 'dayContent'
@@ -3715,7 +3720,9 @@ export interface LyraComponentTypeMap {
       | 'validators'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsRange'
+      | 'valueAsUTCDate'
       | 'weekdayFormat'
       | 'withClear'
       | 'withHint'
@@ -3823,7 +3830,9 @@ export interface LyraComponentTypeMap {
       | 'today'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsRange'
+      | 'valueAsUTCDate'
       | 'view'
       | 'weekdayFormat'
       | 'withOutsideDays'
@@ -3833,6 +3842,7 @@ export interface LyraComponentTypeMap {
     events: LyraDatePickerEventMap;
     eventNames:       | 'change'
       | 'input'
+      | 'lr-clear'
       | 'lr-focus-day'
       | 'lr-view-change';
     cssNames:       | '--lr-date-picker-cell-size'
@@ -3847,6 +3857,7 @@ export interface LyraComponentTypeMap {
       | '--lr-date-picker-nav-hover-bg'
       | '--lr-date-picker-preset-active-bg'
       | '--lr-date-picker-preset-hover-bg'
+      | '--lr-date-picker-preset-pressed-bg'
       | '--lr-date-picker-preset-selected-bg'
       | '--lr-date-picker-preset-selected-border'
       | '--lr-date-picker-preset-selected-color'
@@ -4219,7 +4230,17 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-anchor-result'
       | 'lr-close'
       | 'lr-download'
-      | 'lr-render-error';
+      | 'lr-highlight-activate'
+      | 'lr-load'
+      | 'lr-location-change'
+      | 'lr-page-change'
+      | 'lr-page-viewer-state-change'
+      | 'lr-render-error'
+      | 'lr-search-change'
+      | 'lr-slide-change'
+      | 'lr-text-select'
+      | 'lr-viewer-diagnostic'
+      | 'lr-zoom-change';
     cssNames:       | '--lr-document-viewer-download-link-active-bg'
       | '--lr-document-viewer-download-link-hover-bg'
       | '--lr-document-viewer-max-height'
@@ -4655,7 +4676,6 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-ebook-viewer-max-height';
     attributeAliases: {
       'active-highlight-id'?: LyraEbookViewer['activeHighlightId'];
-      'aria-label'?: LyraAttributeValue<string | null>;
       'max-height'?: LyraEbookViewer['maxHeight'];
     };
   };
@@ -6218,18 +6238,16 @@ export interface LyraComponentTypeMap {
       | 'maxZoom'
       | 'minZoom'
       | 'name'
-      | 'resetZoom'
       | 'rotation'
       | 'src'
       | 'strings'
       | 'zoom'
-      | 'zoomIn'
-      | 'zoomOut'
       | 'zoomStep',
       {}
     >;
     events: LyraImageViewerEventMap;
     eventNames:       | 'lr-anchor-result'
+      | 'lr-annotatable-change'
       | 'lr-annotation-create'
       | 'lr-fit-change'
       | 'lr-highlight-activate'
@@ -6350,6 +6368,7 @@ export interface LyraComponentTypeMap {
       | 'placeholder'
       | 'readonly'
       | 'required'
+      | 'selectionDirection'
       | 'selectionEnd'
       | 'selectionStart'
       | 'size'
@@ -6360,7 +6379,9 @@ export interface LyraComponentTypeMap {
       | 'type'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsNumber'
+      | 'valueAsUTCDate'
       | 'withClear'
       | 'withHint'
       | 'withLabel'
@@ -6397,6 +6418,7 @@ export interface LyraComponentTypeMap {
       | '--lr-input-gap'
       | '--lr-input-padding-block'
       | '--lr-input-padding-inline'
+      | '--lr-input-placeholder-color'
       | '--lr-input-radius'
       | '--lr-input-time-picker-active-bg'
       | '--lr-input-time-picker-focus-bg'
@@ -6693,7 +6715,6 @@ export interface LyraComponentTypeMap {
       LyraLightbox,
       | 'accessibleLabel'
       | 'fit'
-      | 'goTo'
       | 'images'
       | 'index'
       | 'lightDismiss'
@@ -6701,9 +6722,7 @@ export interface LyraComponentTypeMap {
       | 'loop'
       | 'maxZoom'
       | 'minZoom'
-      | 'next'
       | 'open'
-      | 'previous'
       | 'strings'
       | 'withoutCounter'
       | 'zoomStep',
@@ -7810,6 +7829,7 @@ export interface LyraComponentTypeMap {
       | 'placeholder'
       | 'readonly'
       | 'required'
+      | 'selectionDirection'
       | 'selectionEnd'
       | 'selectionStart'
       | 'size'
@@ -7820,7 +7840,9 @@ export interface LyraComponentTypeMap {
       | 'type'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsNumber'
+      | 'valueAsUTCDate'
       | 'withClear'
       | 'withHint'
       | 'withLabel'
@@ -7856,6 +7878,7 @@ export interface LyraComponentTypeMap {
       | '--lr-input-gap'
       | '--lr-input-padding-block'
       | '--lr-input-padding-inline'
+      | '--lr-input-placeholder-color'
       | '--lr-input-radius'
       | '--lr-input-time-picker-active-bg'
       | '--lr-input-time-picker-focus-bg'
@@ -7965,6 +7988,7 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'rows'
       | 'strings'
+      | 'types'
       | 'virtualizeAt',
       {}
     >;
@@ -8080,6 +8104,7 @@ export interface LyraComponentTypeMap {
       | 'placeholder'
       | 'readonly'
       | 'required'
+      | 'selectionDirection'
       | 'selectionEnd'
       | 'selectionStart'
       | 'size'
@@ -8090,7 +8115,9 @@ export interface LyraComponentTypeMap {
       | 'type'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsNumber'
+      | 'valueAsUTCDate'
       | 'withClear'
       | 'withHint'
       | 'withLabel'
@@ -8128,6 +8155,7 @@ export interface LyraComponentTypeMap {
       | '--lr-input-gap'
       | '--lr-input-padding-block'
       | '--lr-input-padding-inline'
+      | '--lr-input-placeholder-color'
       | '--lr-input-radius'
       | '--lr-input-time-picker-active-bg'
       | '--lr-input-time-picker-focus-bg'
@@ -8215,6 +8243,8 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'type'
       | 'value'
+      | 'withHint'
+      | 'withLabel'
       | 'withMask',
       {
         form: HTMLFormElement | string | null;
@@ -8247,6 +8277,8 @@ export interface LyraComponentTypeMap {
       'custom-error'?: LyraOtpInput['customError'];
       'error-text'?: LyraOtpInput['errorText'];
       'value'?: LyraOtpInput['defaultValue'];
+      'with-hint'?: LyraOtpInput['withHint'];
+      'with-label'?: LyraOtpInput['withLabel'];
       'with-mask'?: LyraOtpInput['withMask'];
     };
   };
@@ -8448,6 +8480,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraPathStripEventMap;
     eventNames:       | 'lr-entity-activate'
+      | 'lr-entity-select'
       | 'lr-relation-activate';
     cssNames: never;
     attributeAliases: {};
@@ -8536,6 +8569,7 @@ export interface LyraComponentTypeMap {
       LyraPhoneInput,
       | 'accessibleLabel'
       | 'adapter'
+      | 'appearance'
       | 'autocapitalize'
       | 'autocomplete'
       | 'autoCorrect'
@@ -8569,7 +8603,9 @@ export interface LyraComponentTypeMap {
       | 'size'
       | 'spellcheck'
       | 'strings'
-      | 'value',
+      | 'value'
+      | 'withHint'
+      | 'withLabel',
       {
         form: HTMLFormElement | string | null;
       }
@@ -8610,6 +8646,8 @@ export interface LyraComponentTypeMap {
       'invalid-text'?: LyraPhoneInput['invalidText'];
       'phone-label'?: LyraPhoneInput['phoneLabel'];
       'value'?: LyraPhoneInput['defaultValue'];
+      'with-hint'?: LyraPhoneInput['withHint'];
+      'with-label'?: LyraPhoneInput['withLabel'];
     };
   };
   'lr-pie-chart': {
@@ -11845,6 +11883,7 @@ export interface LyraComponentTypeMap {
       LyraTimeInput,
       | 'appearance'
       | 'autocomplete'
+      | 'clearable'
       | 'customError'
       | 'defaultValue'
       | 'disabled'
@@ -11868,7 +11907,9 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'value'
       | 'valueAsDate'
+      | 'valueAsLocalDate'
       | 'valueAsNumber'
+      | 'valueAsUTCDate'
       | 'withClear'
       | 'withHint'
       | 'withLabel'
@@ -11920,6 +11961,7 @@ export interface LyraComponentTypeMap {
       | '--lr-time-input-fill'
       | '--lr-time-input-focus-border-color'
       | '--lr-time-input-gap'
+      | '--lr-time-input-placeholder-color'
       | '--lr-time-input-radius'
       | '--lr-time-input-segment-active-bg'
       | '--lr-time-input-segment-focus-bg'
@@ -11984,6 +12026,9 @@ export interface LyraComponentTypeMap {
       | '--lr-time-range-preset-pressed-bg'
       | '--lr-time-range-preset-pressed-border-color'
       | '--lr-time-range-preset-radius'
+      | '--lr-time-range-preset-selected-bg'
+      | '--lr-time-range-preset-selected-border-color'
+      | '--lr-time-range-preset-selected-color'
       | '--lr-time-range-size-scale'
       | '--lr-time-range-track-size';
     attributeAliases: {
@@ -13311,7 +13356,8 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'blur'
       | 'error'
       | 'focus'
-      | 'load';
+      | 'load'
+      | 'lr-zoom-change';
     cssNames:       | '--lr-zoomable-frame-control-hover-bg'
       | '--lr-zoomable-frame-zoom';
     attributeAliases: {

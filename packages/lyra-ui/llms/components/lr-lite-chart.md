@@ -99,9 +99,11 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   duplicated table or adopt `lr-chart` and pull in Chart.js for a button — the cheap component
   stuck with the expensive workaround. A supplied `slot="data-table"` follows the same disclosure
   state. Unset, nothing renders and behavior is unchanged.
-  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` (default
-  `var(--lr-color-brand-quiet)`) and `--lr-lite-chart-data-table-toggle-active-bg` (default: that
-  hover colour mixed by `--lr-color-mix-active`).
+  Themeable via `--lr-lite-chart-data-table-toggle-hover-bg` and
+  `--lr-lite-chart-data-table-toggle-active-bg`, which fall back to the family-wide
+  `--lr-chart-data-table-toggle-hover-bg`/`-active-bg` and then to `var(--lr-color-brand-quiet)` and
+  that colour mixed by `--lr-color-mix-active`. The button sits in its own row directly above the
+  table.
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -233,13 +235,16 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   painted inside the shadow root and exposed through that token instead.
 - `labels`, `datasets`, and `selectedIndices` are clone-owned, bounded, frozen snapshots. Mutating
   a previously assigned array or nested series data has no effect; create and reassign a new
-  collection.
+  collection. `labels` keeps its first 10,000 entries; each series keeps its first 10,000 values,
+  fewer when more than four series share the 45,000-value bound (a development-mode warning reports
+  the trim), so a long series is shortened rather than dropped.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated. Authored floors can exceed the available plot height. Linear and logarithmic stacks
   push subsequent segments along their signed pixel cursor; zero values remain unfloored.
-- `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
-  oldest categories
+- `appendData(label, values, maxPoints?)` — appends one aligned category and keeps a rolling window
+  of the newest `maxPoints` categories, never more than the `datasets` bound above (also the
+  default)
 
 **Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
 `datasetIndex`, `index`, `label`, and `value`. `lr-point-activate` is emitted for the same pointer
@@ -274,7 +279,10 @@ content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `bar
 possibly circular or BigInt-bearing application data that a fingerprint can't serialize safely, so a
 fresh, small SVG render is cheaper and more correct than a lossy cache. The shared sampling path
 keeps that render bounded to 1,000 category×series marks/keyboard records, retaining endpoints
-instead of materializing an unbounded hidden DOM or SVG tree.
+instead of materializing an unbounded hidden DOM or SVG tree. The sample is evenly spaced, not
+extreme-preserving, while the value axis still spans the complete data: a line can stop short of
+the axis maximum when the spike that set it falls between samples. Pre-aggregate (for example a
+minimum and maximum per bucket) when every spike must be drawn.
 
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
@@ -305,7 +313,7 @@ blank instead of reporting a misleading zero. Built-in SVG marks, keyboard targe
 alternative share one endpoint-preserving sample of at most 1,000 category×series records. When
 sampling occurs, a localized `data-truncation` notice is shown and announced; provide
 `slot="data-table"` for a complete paginated, virtualized, or application-owned alternative, which
-suppresses the generated sample and notice.
+suppresses the generated sample; the notice then says only the plot is sampled.
 
 **Themeable custom properties:** `--lr-chart-height` (same public host-level property and precedence
 as `lr-chart`; it always wins over the `height` property's private fallback);

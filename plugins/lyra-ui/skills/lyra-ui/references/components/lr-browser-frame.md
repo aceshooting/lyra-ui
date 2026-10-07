@@ -27,11 +27,13 @@ pan/zoom of the frame content (slot the image/video inside a `lr-zoomable-frame`
 the pings overlay assumes the unzoomed content box in that composition).
 
 **Properties:** `frameSrc: string = ''` (attribute `frame-src`) — image/MJPEG stream URL rendered as
-an `<img>` (safe-URL-gated via `safeMediaSrc`); ignored once the default slot has content. `url:
+an `<img>` (safe-URL-gated via `safeMediaSrc`; its alt falls back to the frame label without a
+`url`); ignored once the default slot has content. `url:
 string = ''` — address shown read-only in the toolbar (`dir="ltr"`, truncating, full value in
 `title`). `phase: LyraStreamPhase = 'idle'` (reflected; `'idle' | 'connecting' | 'streaming' |
 'stalled'`). `controller:
 'agent' | 'user' = 'agent'` (reflected) — who is driving; switches the take-over button's label.
+Unknown values normalize and reflect as `'agent'`.
 `pings: BrowserPing[] = []` (attribute: false, each `{ id, x, y, kind: 'click' | 'type' | 'scroll' |
 'move' }` — `x`/`y` are percent (0–100) of the frame's `object-fit: contain` content box,
 letterboxing-aware). Empty/blank ping ids and later duplicates are omitted before overlay rendering.
@@ -46,8 +48,8 @@ the `frame-src` image. `actions` — extra toolbar controls.
 session, no detail.
 
 **CSS parts:** `base` (`role="group"`), `toolbar`, `url`, `status` (visible, non-live text),
-`controller-badge`, `actions`, `take-over-button` and `stop-button` (neither rendered while
-`without-controls`), `viewport`, `frame` (the
+`controller-badge`, `actions`, `take-over-button` and `stop-button` (themed through the shared
+`--lr-button-*` tokens, neither rendered while `without-controls`), `viewport`, `frame` (the
 `frame-src` `<img>`, absent once the default slot is populated), `ping` (one action-ping marker,
 carries `data-kind`).
 

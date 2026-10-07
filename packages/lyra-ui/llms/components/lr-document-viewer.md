@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -51,10 +51,10 @@ value, without suppressing the visible `name` heading.
   Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
-  `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
-  badge) still re-fires.
+  Re-assigning the identical value does not re-scroll; call `scrollToAnchor()` to repeat a jump.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — highlights forwarded to the resolved
-  renderer after the shared trimmed, nonempty, first-wins identity normalization.
+  renderer after the shared trimmed, nonempty, first-wins identity normalization. Re-assigning the
+  same array or `payload` object is a no-op.
 
 **Events:**
 
@@ -82,12 +82,23 @@ value, without suppressing the visible `name` heading.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 - `lr-render-error` — `detail: { error }`. The fallback preview or an embedded renderer emits this
   when fetching, parsing, sanitizing, or rendering fails; the composed event reaches the document
-  viewer unchanged.
+  viewer unchanged. The shell also emits it when a renderer fails to load or throws.
+- Composed through from the open renderer and typed on `LyraDocumentViewerEventMap`: `lr-load`
+  (`{ pageCount }` PDF, `{ slideCount }` PPTX, `{ cellCount, language }` notebook),
+  `lr-text-select`, `lr-highlight-activate`, `lr-search-change`, `lr-page-change`/`lr-zoom-change`
+  (PDF), `lr-page-viewer-state-change` (PDF/PPTX), `lr-slide-change` (PPTX), `lr-location-change`
+  (EPUB), and `lr-viewer-diagnostic`.
+
+**Methods:** `scrollToAnchor(target): Promise<boolean>` jumps to `target` (also to repeat a jump).
+`search(query): Promise<number>`, `searchNext()`, `searchPrevious()` and `clearSearch()` drive the
+open renderer's search when it declares `capabilities.search`, else resolve `0`/`false` (closed,
+loading, or the fallback preview).
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
 it renders explicit `aria-busy="true"|"false"`. Visible loading/error text is ordinary non-live
 shadow content; later loading and error transitions use the pre-mounted shared document-level
-polite and assertive sinks, respectively;
+polite and assertive sinks, respectively; `spinner` and `error` — the shared loading treatment and
+the generic error text inside `body`;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -148,12 +159,14 @@ for the native download action's hover and pressed backgrounds.
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
-`csv-viewer-register.js`, `xml-viewer-register.js`), which installs that kind's registration
+`csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`), which installs
+that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
-registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all eight at once, for
+registers. `document-viewer/document-viewer-kinds.js` imports and re-exports all nine at once, for
 a consumer who wants every built-in kind available lazily without importing each entry
 individually. `<lr-document-viewer>` itself (`document-viewer.js`) is always a separate import.
+A lazy registration's declared capabilities apply unless its loaded definition declares its own.
 
 ```html
 <lr-document-viewer

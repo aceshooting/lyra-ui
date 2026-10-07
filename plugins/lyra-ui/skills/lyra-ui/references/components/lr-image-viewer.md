@@ -47,15 +47,16 @@ inherited anchor-target surface is
 `anchorKinds: readonly LyraAnchorKind[] = ['region']`.
 
 **Methods:** `rotate()` advances `rotation` by 90°. `zoomIn()`, `zoomOut()`, and `resetZoom()` adjust
-the embedded pan-zoom surface's zoom. `scrollToAnchor(target: LyraAnchor | string):
+the embedded pan-zoom surface's zoom; `resetZoom()` keeps the pan position. `scrollToAnchor(target: LyraAnchor | string):
 Promise<boolean>` resolves a canonical finite, positive, in-bounds `region` anchor (or unique
 highlight id) after the image loads, scrolls its rendered target into the pan/zoom viewport, and
 reports true only when the target visibly intersects that viewport. Malformed/out-of-range regions
 report false.
 
 **Events:** `lr-load` (`detail: { naturalWidth, naturalHeight }`), `lr-zoom-change` (`detail: {
-zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detail: { fit }`),
-`lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
+zoom }`), `lr-rotation-change` (`detail: { rotation }`) and `lr-fit-change` (`detail: { fit }`),
+which also fire for programmatic changes, `lr-annotatable-change` (`detail: { annotatable }`, the
+annotate toggle only), `lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
 

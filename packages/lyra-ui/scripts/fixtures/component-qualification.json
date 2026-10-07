@@ -2911,7 +2911,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "rtl",
           "narrowAllocation",
           "forcedColors",
@@ -2940,9 +2939,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/archive-viewer/archive-viewer.test.ts",
+              "test": "reports a selection that only fires selectionchange (touch handles) once, and not again for an unchanged keyup",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -3054,7 +3058,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
@@ -4793,7 +4796,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4829,8 +4832,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -4838,16 +4843,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -5022,7 +5033,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5058,8 +5069,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -5067,16 +5080,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -5946,7 +5965,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5982,8 +6001,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -5991,16 +6012,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -8057,7 +8084,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8101,8 +8128,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -8110,16 +8139,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -11441,7 +11476,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 298,
+              "line": 295,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12065,7 +12100,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/confirm-bar/confirm-bar.test.ts",
-              "test": "escape-denies maps Escape on [part=\"base\"] to the same outcome as clicking Deny",
+              "test": "escape-denies leaves the proposal alone when Escape closed a slotted popup or is composing",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -14297,6 +14332,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/data-grid/data-grid-keyboard.test.ts",
+              "test": "announces multiple selection on the grid and names each row control by its row",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/data-grid/data-grid-remediation.test.ts",
               "test": "is accessible in the error state",
               "target": "element",
@@ -14449,7 +14490,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2554,
+              "line": 2827,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14487,8 +14528,10 @@
           "src/components/data/data-grid/data-grid-columns.test.ts",
           "src/components/data/data-grid/data-grid-export.test.ts",
           "src/components/data/data-grid/data-grid-interaction.test.ts",
+          "src/components/data/data-grid/data-grid-keyboard.test.ts",
           "src/components/data/data-grid/data-grid-measured-shrink.test.ts",
           "src/components/data/data-grid/data-grid-ownership.test.ts",
+          "src/components/data/data-grid/data-grid-pipeline.test.ts",
           "src/components/data/data-grid/data-grid-processing.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-selection.test.ts",
@@ -14866,6 +14909,7 @@
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
+          "src/components/forms/date-picker/date-input-locale-parse.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -15060,6 +15104,7 @@
           "src/components/forms/date-picker/calendar-core.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
+          "src/components/forms/date-picker/date-input-locale-parse.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -16662,7 +16707,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 347,
+              "line": 384,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17033,7 +17078,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17069,8 +17114,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -17078,16 +17125,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -23234,7 +23287,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 980,
+              "line": 993,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23279,7 +23332,9 @@
           "src/components/retrieval/graph/graph-identity.test.ts",
           "src/components/retrieval/graph/graph-layout.test.ts",
           "src/components/retrieval/graph/graph-loader.test.ts",
+          "src/components/retrieval/graph/graph-rebinding.test.ts",
           "src/components/retrieval/graph/graph-remediation.test.ts",
+          "src/components/retrieval/graph/graph-scale-cost.test.ts",
           "src/components/retrieval/graph/graph.test.ts",
           "src/components/retrieval/graph/retrieval-retirements.test.ts"
         ],
@@ -24521,7 +24576,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24557,8 +24612,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -24566,16 +24623,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -25353,7 +25416,7 @@
           "evidence": [
             {
               "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
-              "line": 12,
+              "line": 13,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25959,6 +26022,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -26135,7 +26199,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -26165,9 +26228,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/schema-viewer/schema-viewer.test.ts",
+              "test": "is one tab stop whose node triggers step with ArrowUp/ArrowDown and Home/End",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -26267,7 +26335,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -27014,8 +27081,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
-              "test": "the actual preset-search story displays canonical query and match metadata after native input",
+              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
+              "test": "caps search results and gives them one roving tab stop",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -27106,7 +27173,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 535,
+              "line": 554,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27142,6 +27209,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-aliases.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts"
         ],
@@ -27629,7 +27697,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27665,8 +27733,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -27674,16 +27744,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -27859,7 +27935,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27895,8 +27971,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -27904,16 +27982,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -28544,7 +28628,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3641,
+              "line": 3676,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32411,6 +32495,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -32969,6 +33054,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/neighbor-list/neighbor-list-lazy.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -33336,6 +33422,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/notebook-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer.test.ts"
         ],
@@ -33505,6 +33592,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -33735,7 +33823,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
-              "test": "applies label/hint attribute precedence and error-slot precedence without concatenating sources",
+              "test": "renders label, hint and error text before their slotted content, like every sibling field",
               "target": "el",
               "state": "populated"
             },
@@ -33862,7 +33950,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 340,
+              "line": 346,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34518,7 +34606,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
-              "test": "keeps hidden reset text inside a nested scroller at ${width}px in ${direction}",
+              "test": "leaves browser zoom shortcuts with Ctrl, Meta or Alt to the browser",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -34529,7 +34617,7 @@
           "evidence": [
             {
               "file": "src/components/media/pan-zoom/pan-zoom-remediation.test.ts",
-              "line": 33,
+              "line": 49,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34879,7 +34967,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4771,
+              "line": 4905,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -34964,7 +35052,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "test": "keeps the nested loading skeleton out of the viewer live-region contract",
+              "test": "shows the shared viewer loading treatment, outside the viewer live-region contract",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -34976,7 +35064,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 12,
+              "line": 14,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35648,7 +35736,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35691,8 +35779,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -35700,16 +35790,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -35860,7 +35956,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35896,8 +35992,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -35905,16 +36003,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -36733,7 +36837,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "keyboard",
           "reducedMotion",
           "narrowAllocation",
           "visual",
@@ -36757,9 +36860,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
+              "test": "moves keyboard focus to the other pager button when the focused one disables itself",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -36836,7 +36944,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pptx-viewer/pptx-viewer.test.ts",
-              "test": "keeps the nested loading skeleton out of the viewer live-region contract",
+              "test": "shows the shared viewer loading treatment, outside the viewer live-region contract",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -36871,7 +36979,6 @@
         }
       },
       "knownLimitations": [
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -38348,7 +38455,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38384,8 +38491,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -38393,16 +38502,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -42205,7 +42320,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 564,
+              "line": 586,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42241,8 +42356,10 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -42250,16 +42367,22 @@
           "src/components/charts/chart/chart-feature-loader.test.ts",
           "src/components/charts/chart/chart-forced-colors.test.ts",
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
+          "src/components/charts/chart/chart-input-cap.test.ts",
+          "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
+          "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
+          "src/components/charts/chart/chart-table-toggle-layout.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
+          "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
           "src/components/charts/chart/histogram-bin.test.ts",
           "src/components/charts/chart/histogram.test.ts",
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
+          "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -48586,7 +48709,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 817,
+              "line": 860,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49539,6 +49662,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -52237,6 +52361,12 @@
             },
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
+              "test": "names a dialog whose visible heading is blank with the localized default",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
               "test": "uses a direct accessibleLabel to name the dialog panel without reflecting a host aria-label",
               "target": "el",
               "state": "open"
@@ -53491,6 +53621,7 @@
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
+          "src/components/data/tree/tree-lifecycle.test.ts",
           "src/components/data/tree/tree-navigation.test.ts",
           "src/components/data/tree/tree-presentation-accessible-label.test.ts",
           "src/components/data/tree/tree-presentation-aria-position.test.ts",
@@ -53707,6 +53838,7 @@
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
+          "src/components/data/tree/tree-lifecycle.test.ts",
           "src/components/data/tree/tree-navigation.test.ts",
           "src/components/data/tree/tree-presentation-accessible-label.test.ts",
           "src/components/data/tree/tree-presentation-aria-position.test.ts",
@@ -56018,7 +56150,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 357,
+              "line": 359,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

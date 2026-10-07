@@ -7485,6 +7485,15 @@
             "default": false
           },
           {
+            "name": "pendingApproval",
+            "attribute": null,
+            "type": "ApprovalAction | null",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "readonly",
             "attribute": "readonly",
             "type": "boolean",
@@ -7595,7 +7604,26 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "finalizePendingApproval",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "revertPendingApproval",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -12982,7 +13010,7 @@
             "name": "--lr-box-plot-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-box-plot-fill-color-1",
@@ -13814,8 +13842,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "agent"
+            "hasDefault": false
           },
           {
             "name": "frame-src",
@@ -13874,8 +13901,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "agent"
+            "hasDefault": false
           },
           {
             "name": "frameSrc",
@@ -31613,7 +31639,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-community-card",
+            "kind": "event",
+            "name": "lr-entity-activate",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-entity-select",
+              "usage": "@lr-entity-select"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -31635,6 +31675,15 @@
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "aria-level",
+            "property": "aria-level",
+            "type": "string | number | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "frame",
             "property": "frame",
@@ -31753,6 +31802,25 @@
           },
           {
             "name": "lr-entity-activate",
+            "type": "CustomEvent<{ entityId: string }>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-community-card",
+              "kind": "event",
+              "name": "lr-entity-activate",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-entity-select",
+                "usage": "@lr-entity-select"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-entity-select",
             "type": "CustomEvent<{ entityId: string }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -38007,7 +38075,7 @@
           {
             "name": "row-key",
             "property": "rowKey",
-            "type": "string | null",
+            "type": "| string | ((row: Row) => DataGridKey | null | undefined) | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -38183,6 +38251,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "dataTruncated",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "error",
@@ -38421,7 +38498,7 @@
           {
             "name": "rowKey",
             "attribute": "row-key",
-            "type": "string | null",
+            "type": "| string | ((row: Row) => DataGridKey | null | undefined) | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -38666,6 +38743,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-column-resize-request",
+            "type": "CustomEvent< Readonly<{ columnId: string; columnKey: string; width: number }> >",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-column-visibility-change",
             "type": "CustomEvent<DataGridColumnVisibilityDetail>",
             "cancelable": "never",
@@ -38740,6 +38823,12 @@
           {
             "name": "lr-row-select",
             "type": "CustomEvent<Readonly<DataGridSelectionDetail<Row>>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-search-change",
+            "type": "CustomEvent<Readonly<{ searchTerm: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -39999,6 +40088,16 @@
             "default": ""
           },
           {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "custom-error",
             "property": "customError",
             "type": "string | null",
@@ -40478,6 +40577,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "clearLabel",
@@ -40967,9 +41076,27 @@
             "hasDefault": false
           },
           {
+            "name": "valueAsLocalDate",
+            "attribute": null,
+            "type": "Date | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "valueAsRange",
             "attribute": null,
             "type": "DateRange",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "valueAsUTCDate",
+            "attribute": null,
+            "type": "Date | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -41145,7 +41272,7 @@
           {
             "name": "lr-hide",
             "type": "CustomEvent<null>",
-            "cancelable": "always",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           },
           {
@@ -42317,9 +42444,27 @@
             "hasDefault": false
           },
           {
+            "name": "valueAsLocalDate",
+            "attribute": null,
+            "type": "Date | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "valueAsRange",
             "attribute": null,
             "type": "DateRange",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "valueAsUTCDate",
+            "attribute": null,
+            "type": "Date | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -42404,6 +42549,12 @@
             "constructor": "InputEvent",
             "bubbles": true,
             "composed": true
+          },
+          {
+            "name": "lr-clear",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-focus-day",
@@ -42643,6 +42794,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-date-picker-preset-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-date-picker-preset-selected-bg",
@@ -46064,7 +46220,7 @@
             "name": "--lr-document-preview-spin-duration",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-transition-ambient)"
+            "default": "var(--lr-duration-ambient) var(--lr-easing-linear)"
           }
         ],
         "cssStates": [],
@@ -46318,10 +46474,62 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-highlight-activate",
+            "type": "LyraAnchorTargetEventMap['lr-highlight-activate']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-load",
+            "type": "CustomEvent< | LyraPdfViewerEventMap['lr-load']['detail'] | LyraPptxViewerEventMap['lr-load']['detail'] | LyraNotebookViewerEventMap['lr-load']['detail'] >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-location-change",
+            "type": "LyraEbookViewerEventMap['lr-location-change']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-page-change",
+            "type": "LyraPdfViewerEventMap['lr-page-change']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-page-viewer-state-change",
+            "type": "LyraPdfViewerEventMap['lr-page-viewer-state-change']",
+            "cancelable": "never"
+          },
+          {
             "name": "lr-render-error",
             "type": "CustomEvent<{ error: unknown }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-search-change",
+            "type": "CustomEvent<LyraSearchChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-slide-change",
+            "type": "LyraPptxViewerEventMap['lr-slide-change']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-text-select",
+            "type": "LyraAnchorTargetEventMap['lr-text-select']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-viewer-diagnostic",
+            "type": "LyraPptxViewerEventMap['lr-viewer-diagnostic']",
+            "cancelable": "never"
+          },
+          {
+            "name": "lr-zoom-change",
+            "type": "LyraPdfViewerEventMap['lr-zoom-change']",
+            "cancelable": "never"
           }
         ],
         "parts": [
@@ -46331,6 +46539,14 @@
           },
           {
             "name": "download-link",
+            "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "spinner",
             "deprecated": null
           }
         ],
@@ -46367,7 +46583,67 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "clearSearch",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "scrollToAnchor",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "target",
+                    "type": "LyraAnchor | string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "search",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "query",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<number>"
+              }
+            ]
+          },
+          {
+            "name": "searchNext",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "searchPrevious",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -50617,16 +50893,6 @@
             "default": null
           },
           {
-            "name": "aria-label",
-            "property": "accessibleLabel",
-            "type": "string | null",
-            "reflects": false,
-            "inferred": false,
-            "deprecated": null,
-            "hasDefault": true,
-            "default": null
-          },
-          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -50839,6 +51105,10 @@
           },
           {
             "name": "previous-icon",
+            "deprecated": null
+          },
+          {
+            "name": "spinner",
             "deprecated": null
           },
           {
@@ -51469,8 +51739,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           },
           {
             "name": "selectedPointId",
@@ -53175,7 +53444,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-entity-dossier",
+            "kind": "event",
+            "name": "lr-entity-activate",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-entity-select",
+              "usage": "@lr-entity-select"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -53430,6 +53713,19 @@
             "name": "lr-entity-activate",
             "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number; }>",
             "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-entity-dossier",
+              "kind": "event",
+              "name": "lr-entity-activate",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-entity-select",
+                "usage": "@lr-entity-select"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+            },
             "constructor": "CustomEvent"
           },
           {
@@ -53440,7 +53736,7 @@
           },
           {
             "name": "lr-entity-select",
-            "type": "CustomEvent<{ entityId: string }>",
+            "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -56810,6 +57106,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "dataTruncated",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "label",
             "attribute": "label",
@@ -62029,7 +62334,7 @@
           },
           {
             "name": "lr-viewport-change",
-            "type": "CustomEvent<{ k: number; x: number; y: number }>",
+            "type": "CustomEvent<{ zoom: number; x: number; y: number; k: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -62323,12 +62628,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -62374,12 +62678,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -68134,15 +68437,6 @@
             "default": ""
           },
           {
-            "name": "resetZoom",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "rotation",
             "attribute": "rotation",
             "type": "LyraImageRotation",
@@ -68172,24 +68466,6 @@
             "default": 1
           },
           {
-            "name": "zoomIn",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "zoomOut",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "zoomStep",
             "attribute": "zoom-step",
             "type": "number",
@@ -68205,6 +68481,12 @@
           {
             "name": "lr-anchor-result",
             "type": "CustomEvent<AnchorResultDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-annotatable-change",
+            "type": "CustomEvent<{ annotatable: boolean }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -68436,6 +68718,15 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "resetZoom",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "rotate",
             "overloads": [
               {
@@ -68457,6 +68748,24 @@
                   }
                 ],
                 "returnType": "Promise<boolean>"
+              }
+            ]
+          },
+          {
+            "name": "zoomIn",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "zoomOut",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
               }
             ]
           }
@@ -70283,7 +70592,7 @@
             "name": "--lr-input-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-input-focus-border-color",
@@ -70314,6 +70623,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-color,var(--lr-color-text-quiet))"
           },
           {
             "name": "--lr-input-radius",
@@ -72708,7 +73023,7 @@
           },
           {
             "name": "lr-selection-change",
-            "type": "CustomEvent<{ selectedNodeId: string | null }>",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeId: string | null; selectedNodeIds: string[]; selectedEdgeIds: string[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -73981,15 +74296,6 @@
             "hasDefault": false
           },
           {
-            "name": "goTo",
-            "attribute": null,
-            "type": "(index: number) => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "images",
             "attribute": null,
             "type": "readonly LyraLightboxImage[]",
@@ -74059,29 +74365,11 @@
             "default": 0.5
           },
           {
-            "name": "next",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "open",
             "attribute": "open",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "previous",
-            "attribute": null,
-            "type": "() => void",
-            "readonly": false,
-            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },
@@ -74269,11 +74557,45 @@
             ]
           },
           {
+            "name": "goTo",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "index",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "hide",
             "overloads": [
               {
                 "parameters": [],
                 "returnType": "Promise<void>"
+              }
+            ]
+          },
+          {
+            "name": "next",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "previous",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
               }
             ]
           },
@@ -76263,7 +76585,7 @@
             "name": "--lr-lite-chart-data-table-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-chart-data-table-toggle-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-lite-chart-selected-outline-color",
@@ -77551,8 +77873,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[0, 0]"
+            "hasDefault": false
           },
           {
             "name": "label",
@@ -77651,8 +77972,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[0, 0]"
+            "hasDefault": false
           },
           {
             "name": "choropleth",
@@ -83432,8 +83752,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "[]"
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -87010,7 +87329,7 @@
             "name": "--lr-input-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-input-focus-border-color",
@@ -87041,6 +87360,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-color,var(--lr-color-text-quiet))"
           },
           {
             "name": "--lr-input-radius",
@@ -88278,6 +88603,16 @@
             "name": "rows",
             "attribute": null,
             "type": "readonly LyraNeighborRow[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "types",
+            "attribute": null,
+            "type": "readonly LyraNodeTypeStyle[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -90375,7 +90710,7 @@
             "name": "--lr-input-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-input-focus-border-color",
@@ -90406,6 +90741,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-padding-inline)"
+          },
+          {
+            "name": "--lr-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-input-action-color,var(--lr-color-text-quiet))"
           },
           {
             "name": "--lr-input-radius",
@@ -91385,6 +91726,26 @@
             "default": ""
           },
           {
+            "name": "with-hint",
+            "property": "withHint",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "with-label",
+            "property": "withLabel",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "with-mask",
             "property": "withMask",
             "type": "boolean",
@@ -91706,6 +92067,26 @@
             "hasDefault": false
           },
           {
+            "name": "withHint",
+            "attribute": "with-hint",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withLabel",
+            "attribute": "with-label",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "withMask",
             "attribute": "with-mask",
             "type": "boolean",
@@ -91759,9 +92140,7 @@
             "name": "lr-clear",
             "type": "CustomEvent<null>",
             "cancelable": "never",
-            "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "constructor": "CustomEvent"
           },
           {
             "name": "lr-complete",
@@ -91861,7 +92240,7 @@
             "name": "--lr-otp-input-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-danger)"
+            "default": "var(--lr-otp-input-segment-border-color,var(--lr-color-border))"
           },
           {
             "name": "--lr-otp-input-mask-char",
@@ -91879,7 +92258,7 @@
             "name": "--lr-otp-input-segment-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-otp-input-segment-radius",
@@ -91925,6 +92304,10 @@
           },
           {
             "name": "--filled",
+            "deprecated": null
+          },
+          {
+            "name": "blank",
             "deprecated": null
           },
           {
@@ -94389,7 +94772,21 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": []
+        "deprecations": [
+          {
+            "tag": "lr-path-strip",
+            "kind": "event",
+            "name": "lr-entity-activate",
+            "since": "unreleased",
+            "replacement": {
+              "kind": "event",
+              "name": "lr-entity-select",
+              "usage": "@lr-entity-select"
+            },
+            "removalNotBefore": "28.0.0",
+            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+          }
+        ]
       },
       "qualification": {
         "status": "incomplete",
@@ -94465,6 +94862,25 @@
           {
             "name": "lr-entity-activate",
             "type": "CustomEvent<{ entityId: string; occurrenceIndex: number; }>",
+            "cancelable": "never",
+            "deprecated": {
+              "tag": "lr-path-strip",
+              "kind": "event",
+              "name": "lr-entity-activate",
+              "since": "unreleased",
+              "replacement": {
+                "kind": "event",
+                "name": "lr-entity-select",
+                "usage": "@lr-entity-select"
+              },
+              "removalNotBefore": "28.0.0",
+              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+            },
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-entity-select",
+            "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -94544,7 +94960,6 @@
       "dependencies": {
         "direct": [
           "lr-highlight-layer",
-          "lr-skeleton",
           "lr-virtual-list"
         ],
         "transitive": [],
@@ -95214,8 +95629,7 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           }
         ],
         "properties": [
@@ -95285,8 +95699,7 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           }
         ],
         "slots": [],
@@ -95591,6 +96004,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "appearance",
+            "property": "appearance",
+            "type": "LyraAppearance",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -95657,7 +96080,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "Select"
+            "default": "Country"
           },
           {
             "name": "custom-error",
@@ -95878,6 +96301,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "with-hint",
+            "property": "withHint",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "with-label",
+            "property": "withLabel",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -95899,6 +96342,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "appearance",
+            "attribute": "appearance",
+            "type": "LyraAppearance",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "outlined"
           },
           {
             "name": "autocapitalize",
@@ -95966,7 +96419,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "Select"
+            "default": "Country"
           },
           {
             "name": "customError",
@@ -96286,6 +96739,26 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "withHint",
+            "attribute": "with-hint",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withLabel",
+            "attribute": "with-label",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -96505,7 +96978,7 @@
             "name": "--lr-phone-input-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-danger)"
+            "default": "var(--lr-phone-input-border-color,var(--lr-color-border))"
           },
           {
             "name": "--lr-phone-input-padding-block",
@@ -100708,9 +101181,7 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [
-          "lr-skeleton"
-        ],
+        "direct": [],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -100816,7 +101287,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment', 'page']"
           },
           {
             "name": "highlights",
@@ -101005,6 +101476,10 @@
           },
           {
             "name": "slide-count",
+            "deprecated": null
+          },
+          {
+            "name": "spinner",
             "deprecated": null
           }
         ],
@@ -128463,6 +128938,15 @@
             "hasDefault": false
           },
           {
+            "name": "rowsTruncated",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "rowTotal",
             "attribute": null,
             "type": "(row: T) => unknown | undefined",
@@ -132001,13 +132485,13 @@
             "name": "--lr-textarea-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-textarea-focus-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-textarea-border-color)"
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-textarea-font-size",
@@ -133549,6 +134033,16 @@
             "default": ""
           },
           {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "custom-error",
             "property": "customError",
             "type": "string | null",
@@ -133811,6 +134305,16 @@
             "default": ""
           },
           {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "customError",
             "attribute": "custom-error",
             "type": "string | null",
@@ -134056,9 +134560,27 @@
             "hasDefault": false
           },
           {
+            "name": "valueAsLocalDate",
+            "attribute": null,
+            "type": "Date | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "valueAsNumber",
             "attribute": null,
             "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "valueAsUTCDate",
+            "attribute": null,
+            "type": "Date | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -134477,7 +134999,7 @@
             "name": "--lr-time-input-fill",
             "deprecated": null,
             "hasDefault": true,
-            "default": "transparent"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-time-input-focus-border-color",
@@ -134490,6 +135012,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-form-control-gap)"
+          },
+          {
+            "name": "--lr-time-input-placeholder-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-time-input-action-color,var(--lr-color-text-quiet))"
           },
           {
             "name": "--lr-time-input-radius",
@@ -135230,6 +135758,21 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-time-range-preset-selected-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-time-range-preset-selected-border-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-time-range-preset-selected-color",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-time-range-size-scale",
@@ -139514,6 +140057,14 @@
             "deprecated": null
           },
           {
+            "name": "edit-button-base",
+            "deprecated": null
+          },
+          {
+            "name": "edit-button-label",
+            "deprecated": null
+          },
+          {
             "name": "error",
             "deprecated": null
           },
@@ -140129,8 +140680,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           },
           {
             "name": "summary",
@@ -140219,8 +140769,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           },
           {
             "name": "summary",
@@ -141016,8 +141565,7 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           },
           {
             "name": "tool-name",
@@ -141097,8 +141645,7 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": true,
-            "default": "pending"
+            "hasDefault": false
           },
           {
             "name": "toolName",
@@ -151303,6 +151850,12 @@
             "constructor": "Event",
             "bubbles": false,
             "composed": false
+          },
+          {
+            "name": "lr-zoom-change",
+            "type": "CustomEvent<{ zoom: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
           }
         ],
         "parts": [
@@ -209437,7 +209990,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-date-input",
       "classification": "warning-required",
-      "rationale": "Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review.",
+      "rationale": "Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review. Its lr-hide is cancelable except when disabling the field or making it readonly closes an open popup, which a listener cannot veto; handlers that rely on vetoing every hide need review.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -209662,6 +210215,13 @@
           "member": "appearance",
           "expected": "'filled' | 'outlined' | 'filled-outlined'",
           "actual": "LyraAppearance"
+        },
+        {
+          "code": "cancelability-mismatch",
+          "section": "events",
+          "member": "wa-hide",
+          "expected": "always",
+          "actual": "conditional"
         }
       ]
     },

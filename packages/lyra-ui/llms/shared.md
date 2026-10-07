@@ -615,13 +615,16 @@ controls implement it themselves, to the platform's rules rather than an approxi
   Japanese/Chinese/Korean input; submitting there throws away the word being typed.
 - **A `keydown` a listener above already `preventDefault()`ed stays vetoed** — an open suggestion
   panel committing a selection, or your own shortcut, keeps the keystroke.
-- **The submitter is resolved, not skipped.** The form's default button — the first enabled submit
-  control in `form.elements` — is used as the submitter, so `SubmitEvent.submitter`, that button's
-  own `name`/`value` entry, and its `formaction`/`formmethod`/`formnovalidate` overrides all
-  survive. An `<lr-button type="submit">` is activated through its own `click()`, since a
-  form-associated custom element is never a legal `requestSubmit()` submitter.
+- **The submitter is resolved, not skipped.** The form's default button — the first submit control
+  in `form.elements` — is used as the submitter, so `SubmitEvent.submitter`, that button's own
+  `name`/`value` entry, and its `formaction`/`formmethod`/`formnovalidate` overrides all survive.
+  An `<lr-button type="submit">` is activated through its own `click()`, since a form-associated
+  custom element is never a legal `requestSubmit()` submitter.
+- **A disabled default button blocks implicit submission.** When the first submit control is
+  disabled (directly or by a `<fieldset disabled>`), Enter submits nothing — not through a later
+  submit button and not without a submitter — matching the platform.
 - **A submit-button-less form submits only from a single field**, matching the platform's rule that
-  a form with no default button refuses implicit submission when more than one text-entry field
+  a form with no submit button refuses implicit submission when more than one text-entry field
   blocks it.
 - **Validation still runs.** Submission goes through `requestSubmit()`, never `submit()`, so an
   invalid field blocks it exactly as a real submit button would.

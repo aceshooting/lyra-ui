@@ -116,7 +116,12 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   calling-code, and parser projection. An empty effective catalog resolves to `''`. Changing the
   country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
-  visible form-field chrome; each has a matching named slot.
+  visible form-field chrome; each has a matching named slot, and text plus slotted content both
+  render (text first), as on every sibling field. The
+  telephone input is described by the error before the hint.
+- `withLabel: boolean = false` / `withHint: boolean = false` (attributes `with-label`/`with-hint`)
+  — SSR slot-presence hints for slotted label/hint content that cannot be inspected before
+  hydration.
 - `placeholder: string = ''` — forwarded to the native telephone input.
 - `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
   (attribute `autocorrect`) — forwarded to the internal telephone input's own `spellcheck`/
@@ -131,10 +136,11 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   removes it from the accessibility tree entirely.)
 - `phoneLabel: string = ''` (attribute `phone-label`) — explicit accessible-name override for the
   native telephone input.
-- `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name.
-  Omitted copy uses the localized `select` message. Explicit text, including `'Select'` and `''`,
-  wins over locale strings. Removing the attribute restores the declared `'Select'` property
-  readback and resumes localization.
+- `countryLabel: string = 'Country'` (attribute `country-label`) — country-selector accessible name,
+  also shown as the trigger placeholder while no country is available. Omitted copy uses the
+  localized `countryPickerLabel` message (the name `lr-country-picker` uses). Explicit text,
+  including `'Country'` and `''`, wins over locale strings. Removing the attribute restores the
+  declared `'Country'` property readback and resumes localization.
 - `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
   validation message for dial-like input that can still become valid with more digits. Omitted
   copy uses the localized `phoneInputIncomplete` message. Explicit nonempty text, including the
@@ -165,7 +171,9 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
 **Events:** each text edit emits native `InputEvent` `input` then `lr-input`; telephone-input commit
 emits native `Event` `change` then `lr-change`; and a country pick emits both pairs in order:
 `input`, `lr-input`, `change`, `lr-change`. Native events carry no custom detail; the aliases carry
-`{ value, inputValue, country, valid, status }`.
+`{ value, inputValue, country, valid, status }`. During IME composition the native `input` events
+are relayed but the text is neither parsed nor reformatted (rewriting it would cancel the
+composition); the composed text is parsed once when the composition ends, with one `lr-input`.
 Internal `focus`/`blur` are relayed once as realm-correct native `FocusEvent`s preserving `relatedTarget`.
 `lr-invalid` has no detail and is the one bubbling/composed alias
 when native validity fails. Programmatic value writes remain silent.
@@ -200,7 +208,14 @@ receives the `start` alias slot's content), `end`, `country`
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
 `error` is ordinary visible validation text referenced by the native telephone input through
-`aria-describedby`, not a shadow `role="alert"`. Native invalid/focus feedback therefore has one
+`aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
+content, like every sibling field. Style
+the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
+invalid after interaction, including after a failed submit or `reportValidity()`), or
+`--lr-phone-input-invalid-border-color`, which defaults to the resting border. Focus shows the
+brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
+`'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
+exactly like `lr-input`. Native invalid/focus feedback therefore has one
 description path instead of being duplicated by a second live-region announcement.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on

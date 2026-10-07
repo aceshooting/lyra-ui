@@ -33,15 +33,15 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
   `src`, using the same `contain`/`width`/`actual` vocabulary as `<lr-image-viewer>`. `actual`
   preserves the historical natural-size layout; the other modes resolve against the viewport and
   update with its allocation, including when an image loads after the frame first renders.
-- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative host label remains on
-  the host while the focusable viewport receives the localized inspection-surface purpose name.
-  A property-only value names the viewport and updates reactively without creating a host attribute. This avoids cloning one author label onto both the outer component and nested `role="group"`. An explicitly empty direct property remains empty; a present host attribute, including an empty one, leaves the viewport's localized purpose name intact.
+- `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
+  `aria-label` attribute does the same, and an empty attribute stays empty. Without either (or with
+  an empty property) the viewport gets the localized inspection-surface name.
 
 **Methods:** `zoomIn()`, `zoomOut()`, and `resetZoom()` update zoom and emit `lr-zoom-change`
 (`detail: { zoom }`). `resetZoom()` preserves pan; `resetView()` also scrolls the viewport to the
 origin. Reset reaches 100% exactly whenever it is within `minZoom`/`maxZoom`; it is not quantized to
 the nearest `zoomStep`. The viewport accepts `+`/`=`, `-`/`_`, and `0`, without consuming keys from
-a slotted editor. The three zoom buttons are independently tabbable inside a labelled `group`; the
+a slotted editor; with Ctrl, Cmd or Alt they stay the browser's page-zoom shortcuts. The three zoom buttons are independently tabbable inside a labelled `group`; the
 container does not claim toolbar arrow-key navigation.
 
 **Slots:** default — inspected content, ignored while `src` renders an image.

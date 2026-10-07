@@ -179,7 +179,10 @@ the host carries no `required` attribute, so the marker keys off a `data-require
 component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
 never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector
 cannot follow `::part()`), so it is not a selector hook you can use from outside. Enum and boolean
-fields render as `<lr-select>` controls with their own labels. The outer schema validator owns
+fields render as `<lr-select>` controls (number fields as `<lr-number-input>`) with their own
+label, hint and error, so `description`/`error` parts belong to text fields and the form. A choice
+error lists the displayed labels of up to 10 single-choice options, else a short invalid-selection
+message. The outer schema validator owns
 presence, so the nested control stays `.required=false` while its host receives
 `aria-required="true"` for a required property.
 
@@ -273,7 +276,8 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
 - `value` and `schema` are detached, deeply frozen assignment-time snapshots. Reassign either
   property after changing caller-owned input; direct in-place mutation cannot alter the component,
   and neither its own `checkValidity()`/`reportValidity()` nor native form validation resnapshots the
-  original object.
+  original object. Re-assigning the same object is not a change (a parent re-render keeps the user's
+  edits); assign a new object to discard them.
 - `lr-validity-change` fires once immediately at connect time even before any user interaction, so a
   form with an unmet required field announces `valid: false` on mount, not only after the first edit.
 

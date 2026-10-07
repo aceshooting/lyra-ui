@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -43,9 +43,10 @@ shared hit target (42px including the row border at the default theme); `l` and 
   normalize to reflected `text` before native validity and type-dependent chrome are projected
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
-  (reflected) — the shared field-surface vocabulary. `outlined` (the mapped default) draws a border
-  without a fill; `filled-outlined` draws both, `filled` drops the border, `plain` drops
-  both, and `accent` tints both with the brand color. Each value does nothing but swap
+  (reflected) — the shared field-surface vocabulary, painted the same on every text and date field:
+  `outlined` (the mapped default) is the surface fill with a border; `filled-outlined` is the raised
+  fill with a border, `filled` the raised fill alone, `plain` neither, and `accent` a quiet brand
+  tint with a brand border. Each value does nothing but swap
   `--lr-input-fill`/`--lr-input-border-color`, so either can be retuned without a
   `::part(input-wrapper)` rule
 - `filled: boolean = false` (reflected) — Shoelace alias for the filled treatment
@@ -72,7 +73,10 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `hint: string = ''`
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
   are set. `withLabel`/`withHint` (`with-label`/`with-hint`) provide optional SSR slot-presence hints
-- `errorText: string = ''` (attribute `error-text`)
+- `errorText: string = ''` (attribute `error-text`) — consumer validation text; the field never
+  renders its own `validationMessage`. While invalid after interaction the host carries
+  `data-invalid`, the attribute every Lyra field publishes next to
+  `:state(user-invalid)`.
 - `accessibleLabel: string | null = null` (attribute `aria-label`)
 - `autocomplete: string = ''`
 - `title: string = ''` — forwarded to the native input
@@ -89,11 +93,11 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
   `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
   — forwarded verbatim to the native
-  input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
-  `type="time"`. On `lr-input` itself the `min`/`max` _attributes_ are number-converted, so a
-  non-numeric bound only survives a direct property assignment; the declared type also admits a
-  string so a subclass can narrow the attribute parsing to its own native type's literal form —
-  `lr-native-time-input` does exactly that. Inert for the other types
+  input and validated by it, for `type="number"` and the `date`/`datetime-local`/`time` types;
+  `step` is equally meaningful on `type="time"`. A numeric `min`/`max` _attribute_ reads back as a
+  number; any other attribute text (`2026-01-01`, `09:00`, `2026-01-01T09:00`) reads back as that
+  string and bounds the native date/time input, exactly like a property assignment. Inert for the
+  other types
 - `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
   bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
   Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
@@ -143,7 +147,9 @@ access), `focus(options?: FocusOptions)`, `blur()`, `select()`. Also forwards th
 selection/editing surface, mirroring `lr-textarea`'s identical passthrough: `selectionStart: number
 | null` and `selectionEnd: number | null` (readable/writable; `null` both before the internal input
 has rendered and whenever `type` doesn't support selection — only `text`/`search`/`password` do,
-matching the native `<input>`'s own contract), `setSelectionRange(start, end, direction?)`
+matching the native `<input>`'s own contract), `selectionDirection: 'forward' | 'backward' | 'none'
+| null` (same `null` rule, and assigning `null` sets `'none'`),
+`setSelectionRange(start, end, direction?)`
 (no-op before render, otherwise throws the same native `InvalidStateError` a native `<input>` would
 for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
 before render; syncs `value` afterward without emitting a user event).
@@ -156,8 +162,16 @@ stays invalid.
 Three more native passthroughs:
 
 - `valueAsDate: Date | null` / `valueAsNumber: number` — native getters/setters for date/time and
-  numeric input types. Assignment synchronizes `value`, form value, and validity without emitting a
-  user edit event; unsupported types retain the native `null`/`NaN` behavior.
+  numeric input types, with the native UTC convention (`type="date"` is UTC midnight, `type="time"`
+  is 1970-01-01 with UTC clock fields), unlike the local-time accessors of `lr-date-input`,
+  `lr-date-picker` and `lr-time-input`. Assignment synchronizes `value`, form value, and validity
+  without emitting a user edit event; unsupported types retain the native `null`/`NaN` behavior.
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` — explicit
+  conventions for `date`, `time` and `datetime-local`: local reads a date at local midnight, a time
+  on today's local date and a datetime-local in local time; UTC reads a date at UTC midnight, a time
+  on 1970-01-01 UTC (both exactly `valueAsDate`) and a datetime-local in UTC. Setters write the given
+  Date's local or UTC fields silently (`null`/invalid clears); other types read `null` and ignore
+  assignment.
 
 - `showPicker(): void` — opens the browser's own picker for the current `type` (the time picker, and
   whatever chooser the platform offers for the other types), delegating to the internal native
@@ -235,7 +249,7 @@ lozenge. `pill` changes its private default to `--lr-radius-pill`; an inherited 
 value still wins. `lr-number-input`/`lr-native-time-input` inherit both
 unchanged. The separate segmented `lr-time-input` also consumes the documented input theme tokens.
 
-`--lr-input-fill` (default `transparent`) is the control row's background and
+`--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
 `--lr-input-border-color` (default `var(--lr-color-border)`) its border color. `appearance` changes
 their private fallback roles rather than the public hooks, and the documented defaults are
 `appearance="outlined"`'s values. Ancestor theme wrappers therefore still win. Setting either
@@ -248,6 +262,8 @@ for the focused border. Built-in clear/password
 actions and `lr-number-input` steppers share `--lr-input-action-color`,
 `--lr-input-action-hover-color`, `--lr-input-action-active-color`, and
 `--lr-input-action-active-bg`; all fall back to the previous text/surface semantic tokens.
+`--lr-input-placeholder-color` colours the placeholder text and falls back to
+`--lr-input-action-color`, so retinting the actions alone still retints the placeholder.
 For `type="time"`, the browser-native picker indicator gains disabled-gated hover and focus-visible
 affordances through `--lr-input-time-picker-hover-bg`, `--lr-input-time-picker-active-bg`,
 `--lr-input-time-picker-focus-bg`, and `--lr-input-time-picker-focus-ring` (falling back to
@@ -269,9 +285,11 @@ what is specific to it.
   `--lr-theme-form-control-radius` on the same ancestor to give these controls one shared corner
   radius across every tier; without it, the compact `2xs`/`xs` tiers retain their smaller default
   radius.
-- **`appearance` is the fill vocabulary and nothing else.** `accent` (the loud semantic fill),
-  `filled` (a quiet tint of the same tone), `outlined` (a border, no fill), `filled-outlined`
-  (both) and `plain` (neither). Container treatment uses `frame` (`card`/`plain`).
+- **`appearance` is the fill vocabulary and nothing else.** On the text and date fields
+  (`lr-input`, `lr-textarea`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-otp-input`)
+  every value paints the same: `outlined` (surface fill and border), `filled-outlined` (raised fill
+  and border), `filled` (raised fill, no border), `plain` (neither) and `accent` (a quiet brand tint
+  with a brand border, so typed text keeps its contrast). Container treatment uses `frame` (`card`/`plain`).
   `lr-button` adds `quiet` and `link`. Text fields
   (`lr-input`, `lr-textarea`, and `lr-select`) default to `outlined`; `lr-button` defaults to `accent`.
 - **`pill` rounds the control's ends.** Available on `lr-input`, `lr-number-input`, `lr-time-input`,
@@ -306,12 +324,15 @@ rather than an approximation of them:
 - An Enter **during IME composition** commits the highlighted candidate; submitting there would
   throw away the word being typed, so it is skipped.
 - A keydown already `defaultPrevented` by a listener above stays vetoed.
-- The **submitter is resolved, not skipped**: the form's default button is the first enabled submit
+- The **submitter is resolved, not skipped**: the form's default button is the first submit
   control in `form.elements`, so its `name`/`value` entry and its
   `formaction`/`formmethod`/`formnovalidate` overrides all reach the submission. A native button
   goes through `form.requestSubmit(submitter)`; an `<lr-button type="submit">` is a form-associated
   custom element, which `requestSubmit()` rejects with a `TypeError`, so it is activated through its
   own `click()` — the same path a real click takes.
+- A **disabled default button blocks** implicit submission: when the first submit control is
+  disabled (directly or by a `<fieldset disabled>`), Enter submits nothing, never a later submit
+  button and never the form without a submitter, matching the platform.
 - A form with **no** submit button submits implicitly only when it holds at most one field that
   blocks implicit submission, matching the platform.
 - It runs through `requestSubmit()`, never `submit()`, so the `submit` event fires and interactive

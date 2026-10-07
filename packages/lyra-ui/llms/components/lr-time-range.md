@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,22 +54,22 @@ semantics.
   return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
   Leaving the property unset preserves the numeric-only contract
 - `presets: readonly TimeRangePreset[] = []` (attribute: false) — readonly `TimeRangePreset {
-label: string; start: number; end: number; id?: string }`; a bounded frozen snapshot of optional
-  discrete presets (e.g. "Last 7 days") rendered as a
+label: string; start: number; end: number; id?: string }`; a bounded frozen array of the caller's
+  own valid preset objects (e.g. "Last 7 days"), labels and bounds read once on assignment, rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
   unaffected and both interaction modes coexist; picking one sets both handles and emits the same
   native/prefixed input and change sequences a committed drag or keyboard step would. Preset
   endpoints are clamped and ordered once, and that same normalized pair drives both application
   and `aria-pressed`/`data-active` projection. The optional `id` is a caller-owned
-  correlation key copied into the snapshot verbatim and never read by the control itself; an
+  correlation key, echoed verbatim on `appliedPreset` and never read by the control itself; an
   untagged preset is unaffected
-- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the frozen
-  `presets` snapshot whose button produced the current range. Preset application updates this
+- `appliedPreset: TimeRangePreset | undefined` (read-only, attribute: false) — the caller's own
+  `presets` entry whose button produced the current range. Preset application updates this
   identity before its synchronous event sequence, so it can be read inside `input`/`change` or
   `lr-input`/`lr-change` handlers. It remains `undefined` before a preset is selected and is
   cleared by a real manual handle move, a controlled endpoint change away from that preset, a
   preset-collection replacement, or a form reset. Numeric equality never infers identity; no-op
-  endpoint writes and reassigning the same preset snapshot preserve it
+  endpoint writes and reassigning the same `presets` array preserve it
 - `customError: string | null` (attribute `custom-error`, reflected) — consumer validation message
 
 **Events:** a native-style composed `input` (no detail) then `lr-input` (`detail: { start, end }`),
@@ -149,6 +149,9 @@ palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
 `--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
 `--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
 to exactly the token the rule used before they existed, so the default rendering is unchanged.
+`--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
+`--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
+and win over the `preset-active-*` names, so one theme can style both controls' applied preset.
 
 Pointer states and handle chrome are independently themeable too:
 

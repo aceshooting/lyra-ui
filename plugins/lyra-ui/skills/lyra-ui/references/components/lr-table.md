@@ -178,7 +178,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
 - `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
-  10,000 rows; reassign to update). Records are retained
+  10,000 rows; reassign a new array to update — rebinding the array `rows`, `columns`,
+  `selectedRowKeys` or `expandedRowKeys` last received is a no-op). Records are retained
   here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
   before filtering, counts, pagination, focus, actions, and events
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
@@ -218,6 +219,8 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   the table's own internal state
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
   currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
+- `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
+  rows the snapshot keeps; the rest are not shown, counted, paged or exported
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -376,7 +379,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   `announce` stays unset so the failure is spoken once, not twice. Remove any host
   `role="status"`/`role="alert"` hand-added before this property existed once it is set —
   otherwise the failure is announced a third time, through the native role as well.
-- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog); a supplied string, including `''`, renders verbatim
+- `emptyHeading?: string` (attribute `empty-heading`) — omission renders localized `noData` (`'No data'` in the built-in English catalog) for a table with no rows and localized `noMatches` (`'No matches'`) when rows exist but the filter excludes them all; a supplied string, including `''`, renders verbatim in both cases
 - `emptyDescription: string = ''` (attribute `empty-description`)
 - `emptyColumnsHeading?: string` (attribute `empty-columns-heading`) — heading of the built-in
   no-columns state; omission renders localized `noColumns` (`'No columns configured'` in the built-in English catalog); a supplied string,

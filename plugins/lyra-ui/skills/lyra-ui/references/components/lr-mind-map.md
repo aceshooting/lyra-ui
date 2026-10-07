@@ -25,7 +25,9 @@ radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module,
 **Properties:**
 
 - `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub
+LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
+  A tree too large for one collection snapshot (10,000 entries / 50,000 values) keeps its first
+  50,000 topics, shallowest first, as `{ id, label, children }` records
 - `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
   the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
@@ -52,7 +54,7 @@ render-cap notice, present only above 500 currently-visible nodes), `live-region
 announcement region), `empty` (shown when `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
-ring). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
+ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
 the halo drawn around a topic node's dot on `:hover`, giving mouse users the same "this is
 clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 

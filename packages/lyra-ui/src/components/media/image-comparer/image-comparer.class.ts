@@ -11,7 +11,7 @@ import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './image-comparer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_imageComparerLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_imageComparerLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -78,7 +78,6 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     imageComparerLabel: LYRA_DEFAULT_imageComparerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END

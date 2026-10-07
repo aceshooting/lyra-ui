@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 38 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -41,8 +41,10 @@ empty selection safely while preserving `null` readback; a subsequent valid valu
 Live constraints repair roving state without moving focus from an unrelated control. If a focused
 cell becomes unavailable, focus recovers onto an enabled cell. Explicit distant bounds seed the
 bounded automatic search within the permitted domain; a genuinely empty domain has no enabled roving
-stop. Selected day and range-endpoint buttons retain their foreground/background pairing during
-hover and press; author state-token overrides remain available. Month/year/decade state buttons
+stop. Selected day and range-endpoint buttons, the selected month/year/decade item, and the
+applied preset button retain their foreground/background pairing during hover and press (unset,
+their hover and press paint starts from the selected fill); author state-token overrides remain
+available. Month/year/decade state buttons
 retain the common typography, padding, border reset, and minimum action size.
 
 The `calendar-core.ts` helper `formatISO()` returns an empty string for invalid dates or years
@@ -53,8 +55,13 @@ The ISO model is proleptic Gregorian in every locale and supports years `0000`�
 `0000`–`0099` without JavaScript's `Date` 1900 remap. Navigation anchors remain within that domain;
 moving past either boundary leaves a valid roving stop and does not change the selected value. Month/day names and visible day/week digits follow the effective locale while
 formatters explicitly select the Gregorian calendar. `lr-date-input` uses locale `formatRange()`
-for range presentation and normalizes locale digits plus bidi marks before parsing, so its own
-Arabic/Persian display round-trips to the same ISO value.
+for range presentation and normalizes locale digits plus bidi marks before parsing. Typed text is
+read against the locale's own numeric pattern (spaced separators such as Czech `7. 10. 2026`,
+suffixes such as Bulgarian `7.10.2026 г.`, year-first orders, and ranges whose shared fields are
+collapsed, such as German `07.–09.10.2026`), so the field's own display round-trips to the same ISO
+value in every locale. Other all-numeric text is read in the locale's day/month/year order and is
+never handed to the engine's `Date.parse()`; text that does not form a complete date is rejected as
+bad input.
 
 ### `lr-date-picker`
 
@@ -87,9 +94,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   satisfy `minRange`/`maxRange`; invalid outcomes render disabled and do not emit value events.
   Interior dates need not all be enabled. A same-day manual completion obeys those same inclusive
   length limits. Long preset labels wrap in narrow allocations, including unbroken text and RTL.
-  The active button carries `aria-pressed="true"` and `data-active`. Deliberately the same
-  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, so the library has one
-  preset vocabulary rather than two — the only difference is the unit (ISO dates, not numbers)
+  The active button carries `aria-pressed="true"` and `data-active`. The same
+  `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, with ISO dates instead
+  of numbers; unlike the time range, a bound may be left open. `appliedPreset` is the caller's own
+  entry object on both
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
   `clear()` removes identity before synchronous `input`/`change` listeners run; an external value
@@ -119,26 +127,39 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `mode: 'single'|'range' = 'single'` (reflected; unknown values normalize to `single`)
 - `months: 1|2 = 1` (reflected; finite values are truncated and clamped to `1..2`)
 - `pageBy: 'months'|'single' = 'months'` (attribute `page-by`, reflected)
-- `readonly: boolean = false` (reflected)
+- `readonly: boolean = false` (reflected) — the value cannot change (day clicks, Enter/Space and
+  presets are inert), but the calendar stays navigable: no day is disabled by it, the roving tab
+  stop stays on the selected day, month/year paging works, and the grid carries
+  `aria-readonly="true"`.
 - `size: LyraSize = 'm'` (reflected; the shared `2xs`–`xl` ladder plus
   `small`/`medium`/`large` aliases)
 - `today: string = ''` (reflected ISO override for deterministic today styling/constraints)
 - `value: string = ''` (reflected)
 - `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
-  accessors; setters are silent and normalize reversed ranges)
+  accessors at local midnight, unlike the UTC midnight of a native `<input type="date">` and
+  `lr-input type="date"`; setters read local date fields, are silent and normalize reversed ranges)
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` (JS-only) — the
+  single-mode value at local midnight (identical to `valueAsDate`) or at UTC midnight (the native
+  reading); setters read the given Date's local or UTC calendar fields, `null`/invalid clears, and
+  both are silent. The same two names exist on `lr-input`, `lr-time-input`, `lr-date-input` and
+  `lr-date-picker`, so code that moves values between them can pick one convention explicitly
 - `view: 'days'|'months'|'years'|'decades' = 'days'` (reflected)
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (attribute `weekday-format`, reflected)
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
 Lyra retains the additive `previousLabel`/`nextLabel` accessible-label overrides and the `selection`
 range getter. Their initial readback remains `'Previous month'` and `'Next month'`; omitted labels
-localize, while explicit text, the built-in English labels, and empty strings win over locale and
-`.strings` copy. Removing either label attribute restores localized omission while preserving
+localize (`previousMonth`/`nextMonth` in the days view, the generic `previous`/`next` in the
+months/years/decades views, which page by 1, 12 and 120 years), while explicit text, the built-in
+English labels, and empty strings win over locale and `.strings` copy in every view. Year-range
+titles and decade labels use the locale's own range format (`formatRange()`), as `lr-date-input`
+does for its ranges. Removing either label attribute restores localized omission while preserving
 `null` property readback.
 
 **Methods:** `clear()`, `focus(options?)`, `goToToday()`, and
 `goToDate(date: string | Date)`. Valid navigation dates are clamped to `min`/`max`; invalid values
-are ignored.
+are ignored. `clear()` is a no-op while blank, disabled, or readonly; otherwise it emits `input`,
+`change`, then `lr-clear` — the clear sequence every Lyra field uses.
 
 **Keyboard:** The day grid uses one roving Tab stop. Month, year, and decade selection views do the
 same: Arrow keys move through their four-column visual grid (with horizontal movement mirrored in
@@ -150,7 +171,8 @@ and pending-range limits; activating an unavailable period is a no-op.
 
 **Events:** all are non-cancelable. `input` is a bubbling/composed native `InputEvent` (including
 the first endpoint of a range); `change` is a bubbling/composed native `Event` for committed
-values. `lr-focus-day` carries `{ date: Date }`, and `lr-view-change` carries `{ view, date }`.
+values. `lr-focus-day` carries `{ date: Date }`, `lr-view-change` carries `{ view, date }`, and
+`lr-clear` (no detail) follows `clear()`'s `input`/`change`.
 
 **Slots:** `header`, `previous-icon`, `next-icon`, and `footer`. A dynamic
 `day-YYYY-MM-DD` slot is also accepted as a Lyra extension and takes precedence over `dayContent`.
@@ -184,8 +206,9 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   (reflected) — the library's shared field-surface vocabulary, matching `lr-select`'s trigger and
   `lr-combobox`'s own `appearance`. `outlined` (the default) is a bordered surface; `filled` swaps
   the border for a raised fill; `filled-outlined` keeps both; `plain` drops both; `accent` paints
-  the loud brand fill with on-brand text (the placeholder, start/end adornments and clear/expand
-  buttons all ride that on-brand color rather than the quiet-text tokens). An unsupported value,
+  a quiet brand tint with a brand border, so the typed date keeps its normal contrast. Every text
+  and date field shares this table.
+  An unsupported value,
   including a raw attribute/property write outside this type, clamps to the `'outlined'` default
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 12.0.0) — the `presets` entry
   whose button produced the current `value`, or `undefined` when the value was picked on the
@@ -246,9 +269,17 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   validator-level fallback.
 - `value: string = ''` (JS property)
 - `valueAsDate: Date | null` and `valueAsRange: { from: Date|null; to: Date|null }` (JS-only
-  accessors; setters are silent and normalize reversed ranges)
+  accessors at local midnight, unlike the UTC midnight of a native `<input type="date">` and
+  `lr-input type="date"`; setters read local date fields, are silent and normalize reversed ranges)
+- `valueAsLocalDate: Date | null` / `valueAsUTCDate: Date | null` (JS-only) — the
+  single-mode value at local midnight (identical to `valueAsDate`) or at UTC midnight (the native
+  reading); setters read the given Date's local or UTC calendar fields, `null`/invalid clears, and
+  both are silent. The same two names exist on `lr-input`, `lr-time-input`, `lr-date-input` and
+  `lr-date-picker`, so code that moves values between them can pick one convention explicitly
 - `weekdayFormat: 'narrow'|'short'|'long' = 'short'` (reflected)
 - `withClear: boolean = false`, `withHint: boolean = false`, and `withLabel: boolean = false`
+- `clearable: boolean = false` (reflected) — the spelling `lr-input`, `lr-select` and `lr-combobox`
+  use for the clear action; equivalent to `withClear`, and either one renders it
 - `withOutsideDays: boolean = false` and `withWeekNumbers: boolean = false` (reflected)
 
 Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
@@ -266,8 +297,12 @@ element-valued `form` IDL.
 `show()`. The shared form contract additionally exposes `getForm()`, `checkValidity()`, and
 `reportValidity()`; Lyra's native wrapper also exposes `click()`. `show()` and `hide()` return promises that settle after their corresponding transition;
 they do nothing when already settled, and respect cancellation of their request event. `clear()`
-is a no-op while blank, disabled, or readonly; otherwise it emits `lr-clear`, then `input`, then
-`change`. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+is a no-op while blank, disabled, or readonly; otherwise it emits `input`, then `change`, then
+`lr-clear`. The clear button runs the same sequence and then
+returns focus to the text field; `clear()` itself leaves focus where it is. Lyra also retains native-wrapper `select()`, `setSelectionRange()`, and `setRangeText()`.
+The nested calendar (`::part(date-picker)`) is rendered only while the popup is open or closing,
+so a page of closed date inputs carries no hidden calendars; each opening starts from the value's
+month.
 The text input is itself the popup-opening combobox owner: it exposes `role="combobox"`,
 `aria-haspopup="dialog"`, and explicit `aria-controls`/`aria-expanded` alongside the expand button.
 Host focus/click/show/clear calls are synchronous no-ops as soon as direct or fieldset disablement
@@ -283,9 +318,12 @@ internal native date input.
 `FocusEvent`s preserving `relatedTarget`; each is dispatched exactly once from the host and is
 bubbling, composed, and non-cancelable. `lr-show`/`lr-hide` are cancelable requests emitted before state changes;
 `lr-after-show`/`lr-after-hide` are non-cancelable and fire after rendering and popup animations
-settle. `lr-clear` is non-cancelable. `lr-invalid` **is** cancelable: `preventDefault()` on it
-suppresses the browser's native validation bubble and `reportValidity()`'s focus/scroll of this
-control, without making the control valid — see "The validity alias is cancelable in 8.0.0" above.
+settle. A close forced by disabling `lr-date-input` (directly or through a `<fieldset>`) or making
+it `readonly` still emits `lr-hide`, but non-cancelable, so a listener cannot hold the calendar open
+over a control that can no longer be used. `lr-clear` is non-cancelable. `lr-invalid` **is**
+cancelable: `preventDefault()` on it suppresses the browser's native validation bubble and
+`reportValidity()`'s focus/scroll of this control, without making the control valid — see "The
+validity alias is cancelable in 8.0.0" above.
 
 **Slots (10):** `clear-icon`, dynamic `day-YYYY-MM-DD`, `end`, `expand-icon`, `footer`, `hint`,
 `label`, `next-icon`, `previous-icon`, and `start`. Lyra additionally retains `error`, which
@@ -299,7 +337,8 @@ target, so a row with an adornment that is narrower than those actions plus the 
 rather than collapsing the field.
 
 **Custom states:** `blank`, `disabled`, `open`, and `range`; the shared form-associated mixin also
-exposes its validity states.
+exposes its validity states. The host carries `data-invalid` while it is invalid after interaction,
+the attribute every Lyra field publishes next to `:state(user-invalid)`.
 
 **CSS parts (21):** `clear-button`, `date-input`, `date-picker`, `presets` and `preset-button`
 (forwarded from the nested `lr-date-picker` via `exportparts`, so the quick-range row is styleable
@@ -440,7 +479,10 @@ and `dateTimeFormat(locale, options)`.
   `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
   currently-selected paint for a `presets` quick-range button. Defaults are
   `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
-  `var(--lr-color-brand)` respectively.
+  `var(--lr-color-brand)` respectively. `--lr-date-picker-preset-pressed-bg` names the pressed
+  paint the way `<lr-time-range>` does and wins over `--lr-date-picker-preset-active-bg`; across
+  both controls, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
+  `preset-hover-*` the hover.
 - `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its

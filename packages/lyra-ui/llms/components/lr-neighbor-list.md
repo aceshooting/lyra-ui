@@ -24,6 +24,9 @@ graph data) and never mutates a graph.
 
 - `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
 'in' | 'out' | 'both'; node: LyraEntity }`
+- `types: LyraNodeTypeStyle[] = []` (attribute: false) — `lr-graph` `nodeTypes` pass-through that names
+  each node's type by its label, as `lr-entity-card` does; lr-knowledge-graph-explorer and
+  lr-entity-dossier forward theirs
 - `groupByRelation: boolean = false` (attribute `group-by-relation`) — inserts a `group-header` row per
   distinct `relation`
 - `expandable: boolean = false` — renders a per-row expand-in-graph icon button

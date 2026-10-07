@@ -76,8 +76,11 @@ deeply-nested node's own shadow root still reaches it).
 
 - `data: readonly LyraTreeNodeData[] = []` (attribute: false) — the object child model; ignored
   while any author-written `<lr-tree-item>` child is present. Assignment installs a detached,
-  recursively frozen snapshot: mutate caller data only before assignment, then reassign after
-  changes. Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  recursively frozen snapshot: mutate caller data only before assignment, then reassign a new array
+  after changes (rebinding the same array is a no-op). A refresh is diffed by id: a node whose
+  fields (including an icon template from the same literal with equal values) and children are
+  unchanged keeps its previous object, so its row neither re-renders nor re-seeds element state.
+  Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
   was omitted or the inspected-position ceiling was reached. Collapsed branches do not instantiate descendants; disclosure projects only normalized
@@ -114,8 +117,13 @@ multiple mode. `dataTruncated: boolean` reports bounded/malformed normalization 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
 child) or moves into an already-expanded node's first child. ArrowLeft collapses an expanded node, or
-moves focus to its parent. Home/End jump to the first/last visible node. Enter/Space activate
-`select()` on the focused node. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
+moves focus to its parent. Home/End jump to the first/last visible node. Alt-modified keys are left
+to the browser (Alt+Arrow is back/forward on Windows and Linux). Enter/Space activate
+`select()` on the focused node. Interactive content inside an item's label (a button, a link, a
+nested control) keeps its own keys and clicks: they neither navigate nor select the row. The roving
+stop follows real focus, including focus a host moves by
+script; a programmatic `expand()`/`expandAll()` leaves it in place, and a collapse that hides it moves
+it to the collapsed row. While `reorderable`, **Ctrl/Cmd**+ArrowUp/ArrowDown moves the focused
 node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
 browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
 binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
@@ -142,7 +150,8 @@ roving stop to the next reachable row instead of stranding it, and the state is 
 and resolved only after the affected rendered item cascade settles).
 
 **Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
-snapshot are frozen) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
+snapshot are frozen; fired for user selection and when a `data` refresh removes or re-seeds selected
+rows) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
 component, so nothing moves until the host reassigns a reordered `data` — focus then follows the
 moved node. The live region likewise announces a completed move only after the rendered sibling
@@ -197,7 +206,9 @@ when assigned):
 
 - `item?: LyraTreeNodeData` (attribute: false) — the whole subtree as one object, normally assigned by
   `<lr-tree>` from its `data`. An assigned `item` **wins** for label/disabled/children and seeds
-  `selected`/`lazy`; a refreshed object identity re-seeds those values. Light-DOM children are
+  `selected`/`lazy`; a refreshed object identity re-seeds `lazy`, and re-seeds `selected` only when
+  it sets `selected` explicitly or carries a different `id` — a same-id refresh that omits
+  `selected` (the lazy-load reply, a badge update) keeps the tree-managed selection. Light-DOM children are
   ignored while `item` is assigned. Outside an owning tree, an omitted `item.selected` leaves
   `aria-selected` off the host; an owning tree always publishes explicit true/false state. Assign
   `undefined` to return safely to the declarative model and reset data-seeded selected/lazy state

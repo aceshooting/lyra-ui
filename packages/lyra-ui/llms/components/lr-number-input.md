@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -133,8 +133,9 @@ but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` ti
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
 minimum box from `--lr-icon-button-size`.
-The inherited `--lr-input-focus-border-color` and four `--lr-input-action-*` hooks also apply to
-the numeric row and its steppers, so their state paint can be isolated from other form controls.
+The inherited `--lr-input-focus-border-color`, `--lr-input-placeholder-color` and four
+`--lr-input-action-*` hooks also apply to the numeric row and its steppers, so their state paint can
+be isolated from other form controls.
 The exact-320px RTL story keeps long label/hint copy and both fixed-size steppers within the host.
 
 ```html

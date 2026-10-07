@@ -38,8 +38,8 @@ its content.
   drives the glyph, accent color, and `status-text`; same status vocabulary as
   `<lr-tool-result-dialog>` so a call's chip and its detail dialog always agree; `incomplete`
   (21.1.0) is a call that ended without a result (an interrupted stream, a cancelled run) and reads
-  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; unknown
-  runtime values render the pending icon, text, and accessible label instead of failing the update
+  `Incomplete` (`statusIncomplete`) with its own static glyph in the neutral `pending` tone; an
+  unknown value normalizes and reflects as `pending`
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset

@@ -281,6 +281,9 @@ structured points retain their y-value formatting.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
   an explicitly assigned `config` property wins over the slotted object. Invalid/non-object JSON is
   ignored without evaluating script or exposing prototype-pollution keys to the merge.
+  The copy is bounded per member: `config.data` keeps at most 10,000 entries per array and 100,000
+  values in total, while `options` and `plugins` have their own bounds, so a large data set never
+  displaces the caller's options.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only.
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
@@ -298,8 +301,10 @@ structured points retain their y-value formatting.
   drawn
 - `chart: LyraChartInstance | undefined` (readonly-by-convention) — peer-neutral structural view of
   the live Chart.js instance; absent before load and after disconnect
-- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
-  keeps only the newest `maxPoints`. Each labels/datasets member is written back to the surface
+- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and keeps a
+  rolling window of the newest `maxPoints` (at most 10,000, also the default: `labels` and each
+  series keep only the first 10,000 entries of a longer assigned array, with a development-mode
+  warning). Each labels/datasets member is written back to the surface
   that owns it: an explicitly overridden `config.data` member stays in `config`, while an omitted
   member continues through the simplified property and retains its generated Chart.js styling.
   Point-based scatter/bubble series are left unchanged because appending their x/y/r coordinates
@@ -431,8 +436,10 @@ DOM legend, generated table, keyboard-operable datum model, generated point-deta
 and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
 the selected category and series indexes are distributed
 deterministically and retain their first and last endpoints; a localized `data-truncation` notice
-is shown and announced. Supplying `slot="data-table"` suppresses the generated detailed sample and
-notice, so use that escape hatch when the complete data set needs pagination, virtualization, or
+is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
+between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
+bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and
+changes the notice to say only the plot is sampled, so use that escape hatch when the complete data set needs pagination, virtualization, or
 another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
 Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
 

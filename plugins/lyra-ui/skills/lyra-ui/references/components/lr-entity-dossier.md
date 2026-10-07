@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -55,10 +55,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
   `aria-label` names the dossier as a whole and is not cloned onto the strip
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
-(`composed: true`): `lr-entity-select` (`detail: { entityId }`, surfaced from the embedded entity
-card or neighbor list), `lr-entity-activate` (`detail: { entityId, occurrenceIndex? }` — surfaced
-from the embedded provenance panel's own community card or relationship path strip, the only
-source carrying `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+(`composed: true`): `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
+embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
+add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
 `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
 expanded }`), `lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'

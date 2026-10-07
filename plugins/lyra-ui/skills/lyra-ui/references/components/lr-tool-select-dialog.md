@@ -68,7 +68,8 @@ string; disabled?: boolean; disabledReason?: string }` — one selectable agent 
 - `useDefaults: boolean = false` (attribute `use-defaults`, reflected) — whether the conversation is
   using the default tool set (`true`) or a custom selection (`false`).
 - `label?: string` — the dialog's visible heading and accessible name. Omission uses localized
-  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal.
+  `selectTools`; every supplied string, including `"Select tools"` and `""`, remains literal (a blank
+  one still names the dialog with `selectTools`).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — a non-empty host attribute names
   the semantic dialog owner, taking precedence over a direct property value. Without either, its
   visible heading supplies the accessible name.
@@ -191,6 +192,7 @@ checkboxes for editing.
 - The search input is the first focusable element in the panel and receives focus automatically on open.
 - Matching rows mount in batches of 200. Selected matches reserve positions in the current batch,
   and a localized `[part="limit"]` notice plus `[part="load-more"]` button mounts the next 200;
-  searching always considers the complete first-wins tool catalog.
+  searching always considers the complete first-wins tool catalog. Rows are keyed by tool id, and a
+  toggle never removes a shown row.
 
 ---

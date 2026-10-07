@@ -34,10 +34,16 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 request and keeps the decision dialog pending.
 The selection and close events are non-cancelable notifications.
 
+**Settling a vetoed decision:** `pendingApproval` (read-only, `'approve' | 'deny' | null`) is the
+held decision; after persisting it call `finalizePendingApproval()` (or resolve the request), after a
+failure `revertPendingApproval()` to retry in the same dialog.
+
 Resolved rows (`approved`/`denied`) are never actionable. Replacing `requests` reconciles stale
 selection and dialog state before another activation can use it; a request that disappears or is
 resolved while open closes the dialog, and reentrant host updates during selection cannot reopen a
-stale request.
+stale request. An open request with unchanged arguments keeps its draft and pending decision across
+new arrays. A resolved decision is announced, and focus lost with it moves to the next pending row
+(else the `count` part). Rows are keyed by request id.
 
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,

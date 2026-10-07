@@ -125,9 +125,9 @@ to the shared document-level polite sink only while the viewer and its composed 
 exposed to the accessibility tree). Search painting is best-effort: a page outside the virtualized
 render window is skipped and repainted once its text layer mounts, and a match spanning a text-layer
 span boundary that `Range.surroundContents()` can't wrap stays unpainted (still reachable via
-`searchNext()`). The loading skeleton is decorative and paired with an ordinary visually-hidden
-localized label; later loading and error transitions use the shared document-level polite and
-assertive sinks, respectively, without adding live semantics inside the viewer shadow.
+`searchNext()`). While loading, `spinner` shows the shared visible loading treatment; later
+loading and error transitions use the shared document-level polite and assertive sinks,
+respectively, without adding live semantics inside the viewer shadow.
 
 **Known capability boundaries** — deliberate, not defects, and stated here so they need not be
 rediscovered: text search and `LyraAnchor` text-quote resolution match **exact** text only, after
@@ -146,7 +146,8 @@ matched against the element the selected text originates in:
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
-which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-bg` (default
+which writes this token inline on `[part="base"]`; unlike the siblings' `max-height` it is a fixed
+height, not a cap. `--lr-pdf-viewer-toolbar-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the `toolbar` part, independent of the shared
 `--lr-color-brand-quiet` token. `--lr-pdf-viewer-toolbar-button-hover-bg`
 (default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface

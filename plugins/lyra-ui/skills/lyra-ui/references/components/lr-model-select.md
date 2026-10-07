@@ -37,6 +37,12 @@ Composing key events (`isComposing` or legacy `keyCode === 229`) remain with the
 custom-value editor: they do not navigate options, commit a selection or custom value, or close the
 popup. Ordinary keyboard behavior resumes after composition.
 
+In catalog (closed-dropdown) mode the trigger has `<lr-select>`'s type-ahead: printable keystrokes
+accumulate into one search that resets after 500 ms without typing, and the next enabled row whose
+label starts with it (after the active row while the list is open, after the committed row while it
+is closed, wrapping) becomes the active row while open or is committed, with `lr-change`, while
+closed. Space joins a search already in progress; otherwise it keeps its activation meaning.
+
 When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
 focus follows the available replacement. If the new owner is disabled or inert, focus returns to
 the available element that led into the picker, or to the stable `form-control` owner when no
@@ -55,7 +61,9 @@ focus move.
   shorthand uses the same string for both id and label; readonly tuples/arrays are accepted. Ids
   must be nonempty and unique and object rows require a nonblank string label: malformed rows and
   later duplicates are omitted first-wins before mode selection, rendering, focus reconciliation,
-  selection, or preview lookup.
+  selection, or preview lookup. Like the international pickers' catalogs, at most the first 1,024
+  entries are read, and only through own data properties: a row whose `id` or `label` is an
+  accessor is omitted without running it.
 - `LyraModelCatalogEntry extends LyraCatalogEntry { icon?: string }` — one model row. An
   optional literal `icon` (for example, an emoji) renders decoratively before `label`; it does not
   change the option's accessible name.

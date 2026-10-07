@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecations** none
+- **Deprecated event** `lr-entity-activate` since `unreleased`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
 - **Optional peers** none
 - **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -29,7 +29,8 @@ reverse?: boolean }`
   non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-activate` (`detail: { entityId, occurrenceIndex }`, a node element activated),
+**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated;
+the deprecated alias `lr-entity-activate` follows with the same detail),
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, an edge element activated —
 source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
 that position. `occurrenceIndex` is the original supplied array position, so repeated entity ids

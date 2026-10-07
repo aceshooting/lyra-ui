@@ -23,7 +23,7 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 
 Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
-Path-node `lr-entity-activate` is consumed by the explorer and enters the same selection, graph
+Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, and `matchCountExact`.
@@ -106,7 +106,8 @@ filtered-out id). None change `selectedNodeId` or filters.
 
 **Events:**
 
-- `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
+- `lr-selection-change` (`detail: { selectedNodeId: string | null, selectedNodeIds, selectedEdgeIds }`, the last two
+  in `lr-graph`'s shape) — emitted after the explorer
   changes its own selection through search, graph, keyboard/neighborhood/path activation, or
   closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
   `selectedNodeId` remain silent, and one interaction emits at most once even when a composed
@@ -142,7 +143,8 @@ pin toggle; no effect while `details` is overridden.
 
 **CSS parts:** `base` (`role="group"` unless a non-empty host label owns the component), `toolbar`,
 `search` (the search `lr-input`), `legend` (the
-composed `lr-graph-legend`), `search-results` (only while `query` is non-empty),
+composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
+one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.

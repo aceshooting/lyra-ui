@@ -19,9 +19,9 @@
 Lists entry names and human-readable declared uncompressed sizes inside a `.zip` archive. It is
 listing-only: entry content is never inflated, rendered, or previewed, and the component has no
 runtime archive-parser dependency. One owned central-directory parser validates local-header
-bounds, supported compression methods, entry names, and the 10,000-entry/100 MB declared-expansion
-ceilings, then returns the immutable metadata used directly by the listing. The list composes
-`<lr-virtual-list>` for large archives.
+bounds, supported compression methods, entry names, and the 10,000-entry ceiling (nothing is
+inflated, so a large declared size is listed), then returns the immutable metadata used directly by
+the listing. The list composes `<lr-virtual-list>` for large archives.
 
 **Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
 `max-height`) — a host-level `aria-label` takes precedence over `name` by attribute presence,

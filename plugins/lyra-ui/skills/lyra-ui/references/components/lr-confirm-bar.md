@@ -18,7 +18,8 @@
 
 An inline, non-modal approve/deny block for one proposed action — the in-flow sibling of
 `lr-tool-approval-dialog` for confirmations that should sit in the transcript instead of hijacking
-focus. Same `lr-approve-request`/`lr-deny-request` event shapes as the dialog, and the same
+focus. It raises the dialog's `lr-approve-request`/`lr-deny-request` events, but only the bar's
+details carry `waitUntil()`. It uses the same
 `toolApprovalHeading`/`toolApprovalArgsLabel`/`deny`/`approve` localization keys, so the two always
 translate in lockstep. Non-modal by contract: no focus trap, no scroll lock, no Escape/backdrop
 semantics, and it never steals focus when it appears in the transcript. "Never steals focus" and
@@ -64,7 +65,7 @@ both are set. Before 9.0.0 the density knob alone did both jobs; a bar that reli
 is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
 `.decision` to finalize, or clear `.pendingAction` back to `null` to bounce back to the undecided
-state.
+state. Unknown `decision`/`pendingAction` values read as `null`.
 `waitUntil(promise)` in the event detail is the declarative form of that same state machine and
 needs no `preventDefault()`: the bar sets `pendingAction` itself, and the promise's settlement
 finalizes `decision` or clears `pendingAction` and returns focus to the control that can retry.
@@ -79,6 +80,7 @@ the document when it finishes parsing, never for one a host swaps in afterward �
 use. Focuses the Deny control when it's present and actually focusable (not `disabled`, not
 hidden), else the always-present `[part="status"]`. `escapeDenies: boolean = false` (attribute
 `escape-denies`, reflected) — maps Escape on `[part="base"]` to the same outcome as clicking Deny.
+An Escape handled by a popup inside the bar (or typed during IME composition) never denies.
 A no-op while `disabled`, already decided, or `pendingAction` is set, exactly like clicking Deny itself, and
 never stops propagation when it was a no-op, so an unrelated enclosing dialog's own Escape handling
 still sees the event. Scoped to this element's own `[part="base"]` rather than `document`: this bar

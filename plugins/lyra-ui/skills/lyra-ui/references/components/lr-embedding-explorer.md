@@ -39,9 +39,11 @@ Above 1,000 points, the plot renders a deterministic, evenly spaced sample of th
 count bounded while the sampled points stay representative of the full plotted distribution; a
 localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
 still derive from the complete `points` array, so a decimated view keeps the same scale and the
-same complete legend as the full plot.
+same complete legend as the full plot. The selected point is always drawn, even when the sample
+skipped it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) is
+itself sampled evenly across its whole length, and the notice counts the full input.
 
-**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
+**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space (not on key repeat).
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
 `limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.

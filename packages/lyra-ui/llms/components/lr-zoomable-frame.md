@@ -46,10 +46,9 @@ a focused zoom control.
   sequential-keyboard iframe interaction by making the browsing context native `inert`, and opt
   into best-effort same-origin theme sync. The inert frame also refuses programmatic focus/click
   and carries no unsupported `aria-disabled` claim.
-- `accessibleLabel: string | null` (attribute `aria-label`) — a declarative attribute remains on
-  the host while the iframe gets its localized purpose title, avoiding a duplicate name on two
-  semantic owners. A property-only value names the iframe and updates reactively without creating a host attribute. Explicit empty host naming is preserved
-  as an empty iframe title rather than replaced through truthiness.
+- `accessibleLabel: string | null` (attribute `aria-label`) — titles the iframe; a host
+  `aria-label` attribute does the same, and an empty attribute stays an empty title. Without
+  either (or with an empty property) the iframe gets its localized purpose title.
 - readonly `iframe?: HTMLIFrameElement`, `contentWindow: Window | null`, and
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
@@ -75,7 +74,8 @@ flattened subtrees are always inert and hidden from assistive technology, so use
 rather than a second interactive control; the native zoom buttons remain the sole focus and pointer
 actions.
 
-**Events:** internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
+**Events:** `lr-zoom-change` (`detail: { zoom }`) when `zoomIn()`/`zoomOut()` (buttons or keys)
+change `zoom`; assigning `zoom` stays silent. Internal `focus`/`blur` from the iframe are relayed exactly once as owner-realm native
 `FocusEvent`s (bubbling and composed, preserving external `relatedTarget`; a transition to or from an internal zoom control uses `null` because retargeting that control to the host would suppress the relay);
 native `load` and `error` are relayed exactly once from the current iframe
 generation as non-bubbling, non-composed `Event` instances. Navigation/source-policy changes

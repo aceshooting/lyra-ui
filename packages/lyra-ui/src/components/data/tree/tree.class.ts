@@ -28,7 +28,7 @@ import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_treeNodeMoved } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { TreeBadge, LyraTreeNodeData, TreeSelection };
@@ -420,7 +420,6 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     noData: LYRA_DEFAULT_noData,
     treeNodeMoved: LYRA_DEFAULT_treeNodeMoved,
   };

@@ -26,13 +26,15 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 **Properties:**
 
 - `resource: McpAppResource | null = null` (attribute: false) — a non-empty logical `uri` plus
-  exactly one executable source: `{ uri, html, src?: never, ... }` for inline content or
-  `{ uri, src, html?: never, ... }` for a relative/HTTP(S) document URL. Shared optional fields are
-  `title`, `csp`, `permissions`, and `metadata`. Runtime validation enforces the non-empty identity,
-  exact-one-source invariant, and remote URL scheme even for untyped JavaScript callers. CSP domain
-  arrays accept HTTP(S) origins only. The resource and nested CSP arrays are clone-owned, bounded,
-  and frozen; reassign a new resource record after changes. Permissions are optional booleans for
-  camera, microphone, geolocation, clipboard read, and clipboard write.
+  exactly one executable source: `{ uri, html, src?: never, csp?, ... }` for inline content or
+  `{ uri, src, html?: never, csp?: never, ... }` for a relative/HTTP(S) document URL (a remote
+  document follows its own server's CSP). Shared optional fields are `title`, `permissions`, and
+  `metadata`. Runtime validation enforces the non-empty identity, exact-one-source invariant, and
+  remote URL scheme even for untyped JavaScript callers. CSP domain arrays accept HTTP(S) origins
+  with a plain DNS or IP host only. The resource and nested CSP arrays are clone-owned, bounded,
+  and frozen; reassign a new resource record after changes (an equal record keeps the frame).
+  Permissions are optional booleans for camera, microphone, geolocation, clipboard read, and
+  clipboard write.
 - `height: number | string = 320`, `maxHeight: number | string = 800` (attribute `max-height`) —
   requested and maximum frame heights: a number of pixels, or a CSS length in `px`, `rem`, `em`,
   `vw` or `vh` (resolved when set; a numeric attribute stays a number). Runtime values and resize
@@ -50,7 +52,7 @@ request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration,
 stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
 The initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
-the executable document. Frame requests and host messages after bootstrap use that port. A same-frame
+the executable document; that port is the only channel (window messages are ignored). A same-frame
 navigation closes the port, invalidates the nonce and generation, and mounts a fresh sandbox before
 host data can be delivered.
 
@@ -59,12 +61,12 @@ host data can be delivered.
 
 **Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
 (`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
-`lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+`lr-mcp-open-link` (`{ href }`, an absolute http(s) or mailto URL), `lr-mcp-log`
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
-Changing `resource`, adopting the host into another document, or reconnecting it mounts a fresh
-iframe/window generation; messages from the prior `contentWindow` are ignored even when two
+Changing `resource` to a different document, adopting the host into another document, or
+reconnecting it mounts a fresh iframe/window generation; messages from the prior `contentWindow` are ignored even when two
 opaque-origin inline documents otherwise look alike.
 
 The host-to-frame direction is correlated the same way. `lr-mcp-tool-call`'s

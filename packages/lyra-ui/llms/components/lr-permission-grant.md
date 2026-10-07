@@ -18,7 +18,9 @@
 
 `lr-permission-grant` presents one host-defined permission request using its `requestId`, optional
 visible `label`, `description`, and caller-supplied `scope`. Its controlled `status` is `'pending'`,
-`'granted'`, or `'denied'`; only a pending request displays actions. The buttons emit
+`'approved'` (alias `'granted'`), or `'denied'`; unknown values read as `'pending'`. Only a pending
+request displays actions; once settled, focus on a decision button moves to the `status` text. The
+buttons emit
 `lr-permission-decision` with `{ requestId, decision }`, where decision is `'allow-once'`,
 `'allow-session'`, or `'deny'`. A missing/blank identity and `disabled` state gate every action.
 The host must validate the displayed scope, authorize the operation, persist any decision, and
@@ -35,9 +37,9 @@ overrides the internal fieldset name.
 | `scope-label` | Localized scope label. |
 | `scope` | Host-supplied requested scope. |
 | `scope-row` | Scope label and value row. |
-| `status` | Localized controlled request status. |
+| `status` | Localized controlled request status (`tabindex="-1"`). |
 | `actions` | Decision buttons, shown only while pending. |
-| `decision` | One native decision button. |
+| `decision` | One native decision button, themed through the shared `--lr-button-*` tokens. |
 
 
 **Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.

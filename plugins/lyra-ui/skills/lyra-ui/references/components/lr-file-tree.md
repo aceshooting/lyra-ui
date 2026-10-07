@@ -25,13 +25,25 @@ inspected-position budgets.
 
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
-the first 10,000 inspected source positions across 64 descendant levels; reassign after changes),
+the first 10,000 inspected source positions across 64 descendant levels; reassign after changes;
+rebinding the same array is a no-op). The composed `<lr-tree>` holds at most 1,000 rows: when the
+whole listing is larger, each collapsed directory is projected as a single lazy row whose children
+load from the snapshot when it expands, so every top-level entry stays reachable;
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
 accessible-name override for the internal `<lr-tree>`, where omission reads back `undefined` and falls
 back to the localized default while an explicitly empty string renders as an empty label.
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
+
+**Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
+duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
+more rows than the composed tree's 1,000-row budget.
+
+**Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
+lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
+once per expansion attempt, and expands when `setChildren()` (or a reassigned `nodes`) supplies its
+children; an empty result ends the busy state without expanding. No placeholder row is rendered.
 
 **Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
@@ -40,6 +52,7 @@ including an explicit empty string; removing it restores `label` or the localize
 **Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
 `lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
 row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
-expanded).
+expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
+`lr-selection-change` events stay inside the component.
 
 **CSS parts:** `base` — the root wrapper.

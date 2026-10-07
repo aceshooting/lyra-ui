@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,12 +34,16 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
 - `value: string` (also accepts a `Date` or `null` when assigned) — strict `HH:mm`, optional
   `:ss`/`.sss`; `Date` reads local clock fields without timezone conversion. Invalid strings and
   `null` normalize to `''`. `valueAsNumber` is milliseconds since midnight (`NaN` while blank),
-  and `valueAsDate` applies the clock fields to today's local date (`null` while blank). Both are
-  settable, like the native `<input type="time">` properties they mirror: assigning `valueAsNumber`
+  and `valueAsDate` applies the clock fields to today's local date (`null` while blank) — unlike
+  the native `<input type="time">.valueAsDate` used by `lr-native-time-input` and
+  `lr-input type="time"`, which is 1970-01-01 with UTC clock fields, so a Date moved between them
+  shifts by the UTC offset. Both are settable, like the native properties: assigning `valueAsNumber`
   sets `value` from the same scale, and out-of-range or non-finite figures clear the field rather
   than wrapping into a different time; assigning `valueAsDate` reads the same local clock fields
   back off the Date, so it round-trips with the getter, and `null`/an invalid Date clears. Both
-  assignments are silent, again like the native properties.
+  assignments are silent, again like the native properties. `valueAsLocalDate` (identical to
+  `valueAsDate`) and `valueAsUTCDate` (UTC clock fields on 1970-01-01, the native reading) name the
+  two conventions explicitly; their setters read local or UTC clock fields.
 - `defaultValue`, `name`, `form`, `disabled`, `required`, `customError`, `getForm()`,
   `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()` use the shared form-control
   contract. Reset restores the current declarative `value` default; `readonly` remains focusable
@@ -62,7 +66,8 @@ readback. Explicit empty strings remain empty; later supplied text renders norma
   `aria-label` wins for the internal editing surface's accessible name.
 - `open = false`, `placement = 'bottom-start'`, and `distance = 0` control the picker.
   `show()` / `hide()` return `Promise<void>` and settle after the matching `lr-after-*` event.
-- `withClear = false` (`with-clear`) adds a localized clear action. `withNow = false`
+- `withClear = false` (`with-clear`) adds a localized clear action; `clearable = false`
+  (reflected), the spelling `lr-input`/`lr-select`/`lr-combobox` use, is equivalent. `withNow = false`
   (`with-now`) adds a localized Now footer unless the `footer` slot replaces it.
 - `autocomplete = ''` is forwarded to a visually hidden, nameless native time input used only as
   the browser autofill seam; the FACE host remains the sole submitted control.
@@ -84,8 +89,9 @@ Pasting a canonical time replaces the full value as one edit. Alt+ArrowDown open
 Inside a picker column, one enabled option is tabbable; ArrowUp/ArrowDown rove, Home/End jump to
 the bounds, and Enter/Space activate the focused native option button. Disabled controls project
 `disabled` and `tabindex=-1` to every picker option.
-`readonly` keeps navigation and popup browsing but blocks commits; `disabled` removes the tab stop,
-popup, validation, and form submission.
+`readonly` keeps the segments focusable and navigable but blocks commits, and the picker never
+opens (setting `readonly` closes an open one; the expand button is disabled) — the same rule as
+`lr-date-input`; `disabled` removes the tab stop, popup, validation, and form submission.
 
 **Events:** native `input` on user edits and native `change` on a complete commit; compatibility
 aliases `lr-input` / `lr-change` carry `{ value }`. `focus` / `blur` cross the shadow boundary once.
@@ -108,7 +114,9 @@ adornments shrink and ellipsize. The exact-320px RTL story keeps that copy, the 
 fixed-size actions, and the open picker contained.
 
 `error` is ordinary visible validation text referenced by the segmented input through
-`aria-describedby`, not a shadow `role="alert"`. Native `reportValidity()`/focus feedback therefore
+`aria-describedby`, not a shadow `role="alert"`. It shows only consumer `errorText` or `error`-slot
+content, like every sibling field. Style the invalid state with `:state(user-invalid)` or
+the `data-invalid` host attribute (present while invalid after interaction). Native `reportValidity()`/focus feedback therefore
 has one description path instead of being duplicated by a second live-region announcement.
 The group and every spinbutton expose explicit stateful `aria-invalid`: visible property/slotted
 error chrome makes it `"true"` immediately, as does intrinsic/custom invalidity after interaction;
@@ -133,9 +141,10 @@ ancestor theme wrapper or direct-host value overrides those fallbacks. Also avai
 `--lr-time-input-border-color`, `--lr-time-input-fill`, and `--lr-time-input-color` for the
 appearance surface; `--lr-time-input-focus-border-color`;
 `--lr-time-input-segment-hover-bg`, `--lr-time-input-segment-active-bg`, and
-`--lr-time-input-segment-focus-bg`; `--lr-time-input-action-color`,
-`--lr-time-input-action-hover-color`, `--lr-time-input-action-hover-bg`, and
-`--lr-time-input-action-active-bg`; and `--lr-time-input-column-hover-bg`,
+`--lr-time-input-segment-focus-bg`; `--lr-time-input-action-color` (the resting clear/expand
+glyphs), `--lr-time-input-action-hover-color`, `--lr-time-input-action-hover-bg`, and
+`--lr-time-input-action-active-bg`; `--lr-time-input-placeholder-color` (an empty segment's `--`,
+falling back to the action color); and `--lr-time-input-column-hover-bg`,
 `--lr-time-input-column-active-bg`, `--lr-time-input-column-selected-bg`,
 `--lr-time-input-column-selected-color`, `--lr-time-input-column-selected-font-weight`,
 `--lr-time-input-column-selected-hover-bg`, and `--lr-time-input-column-selected-active-bg`.

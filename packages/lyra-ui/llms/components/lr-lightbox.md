@@ -34,8 +34,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
-- `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
-  event) when `images` shrinks.
+- `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
+  `lr-index-change`) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
@@ -75,8 +75,9 @@ object. Use
 `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
 `lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
-only for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()`; **not** when a consumer sets `index`/`images` directly); `lr-zoom-change` (`detail: {
+for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
+`goTo()` — and when a shrinking `images` moves the shown image; **not** when a consumer sets
+`index` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`

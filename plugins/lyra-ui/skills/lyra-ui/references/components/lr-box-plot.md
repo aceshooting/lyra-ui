@@ -39,7 +39,8 @@ apply when the component reconnects.
   write their complete next snapshot back to this property; programmatic writes reconcile silently.
 - `labels`, `datasets`, and `hiddenDatasets` are clone-owned, bounded, frozen snapshots. Mutating a
   previously assigned array or nested series data has no effect; create and reassign a new
-  collection.
+  collection. Each series keeps at most its first 7,500 ÷ (number of series) boxes (a
+  development-mode warning reports a trim), so a long series is shortened, never dropped.
 - `withLegend: boolean = false` (attribute `with-legend`) — renders a wrapping DOM legend whose
   buttons toggle box-series visibility without clipping long labels.
 - `legendPosition: 'top'|'bottom'|'start'|'end' = 'bottom'` (attribute `legend-position`) — logical,
@@ -58,9 +59,10 @@ apply when the component reconnects.
   family-wide `spoken` surface for the generated summary and `export` for CSV cells; the legacy
   positional formatter receives `table` for the spoken/export compatibility paths, its normal
   surface name for axis, tooltip, and table work, and no fallback for a `visual` context. The
-  context-object formatter takes precedence. Tick calls name `axis: 'y'`, and a tooltip value now
-  carries the hovered datum's `datasetIndex`, `index`, `label`, `seriesLabel` and
-  `statistic: 'median'` instead of discarding what the callback was handed.
+  context-object formatter takes precedence. Tick calls name `axis: 'y'`. With a formatter
+  installed the tooltip keeps all five statistics: under the series name it lists min, Q1, median,
+  Q3 and max, one per line, each formatted with its own `statistic` (`min`, `q1`, `median`, `q3`,
+  `max`) plus the hovered box's source `datasetIndex`, `index`, `label` and `seriesLabel`.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
   table.
 - `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
@@ -107,7 +109,7 @@ accessible table alternative.
 description use at most 1,000 category×series records. When sampling is needed, its category and
 series indexes are deterministic and retain the first and last endpoint; a localized
 `data-truncation` notice is shown and announced. A slotted `data-table` replaces the generated
-detailed sample and notice, making it the escape hatch for complete data.
+detailed sample, and the notice then says only the plot is sampled, making it the escape hatch for complete data.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
 `legend-item`, `legend-item-hidden` (added to a legend item while its box series is hidden),
@@ -146,10 +148,11 @@ individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-ch
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
 pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
-`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks rather
-than inheriting the chart pair, since its stylesheet is not a re-export:
-`--lr-box-plot-data-table-toggle-hover-bg` (defaults to `--lr-color-brand-quiet`) and
-`--lr-box-plot-data-table-toggle-active-bg` (defaults to its standard active color mix).
+`lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks that
+fall back to the family-wide pair: `--lr-box-plot-data-table-toggle-hover-bg` (defaults to
+`--lr-chart-data-table-toggle-hover-bg`, then `--lr-color-brand-quiet`) and
+`--lr-box-plot-data-table-toggle-active-bg` (defaults to `--lr-chart-data-table-toggle-active-bg`,
+then its standard active color mix).
 
 **Forced colors:** under `forced-colors: active` the eight-color ramp is remapped onto the small
 repeating system-color cycle the platform exposes, so series 1/4/7 (and 2/5/8, 3/6) would otherwise

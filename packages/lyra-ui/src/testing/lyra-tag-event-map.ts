@@ -564,7 +564,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-context-meter': { 'lr-segment-activate-request': true },
   'lr-country-picker': { 'lr-invalid': true },
   'lr-currency-picker': { 'lr-invalid': true },
-  'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-retry-request': true, 'lr-sort-request': true },
+  'lr-data-grid': { 'lr-cell-contextmenu': true, 'lr-column-resize-request': true, 'lr-retry-request': true, 'lr-sort-request': true },
   'lr-date-input': { 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-details': { 'lr-hide': true, 'lr-show': true },
   'lr-dialog': { 'lr-close-request': true, 'lr-hide': true, 'lr-initial-focus': true, 'lr-request-close': true, 'lr-show': true },

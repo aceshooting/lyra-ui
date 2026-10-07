@@ -49,14 +49,18 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
-maxSamples?)` appends finite raw samples and optionally retains only the newest samples.
+maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
+(at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
+10,000 samples, with a development-mode warning).
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate`, `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` — inherited; `lr-point-activate`'s `index` is the bucket index and
-`label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
+`label` the generated bucket range string (`"lo–hi"`; both bounds show two significant digits of
+the bin width, with no fraction digits once the width reaches 10 and no forced trailing zero, so
+`0–5`, `0.011–0.0148` and `1,000,000–1,100,000`).
 
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.

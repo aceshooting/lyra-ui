@@ -27,11 +27,6 @@ import {
   type TreeItemOwnerContext,
 } from './tree-owner-controller.js';
 import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES, type LyraTreeNodeData } from './tree-types.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 /** Internal slot nested `<lr-tree-item>` children are moved into, so the default slot can stay the
  *  label the way `wa-tree-item`/`sl-tree-item` markup expects. Assigned by this component. */
 const CHILDREN_SLOT = 'children';
@@ -208,15 +203,7 @@ export interface LyraTreeItemEventMap {
  * @status stable
  * @since 8.0.0
  */
-export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
-  // GENERATED DEFAULT-STRING SLICE: START
-  /** @internal */
-  protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
-    ...super.defaultStrings,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
-  };
-  // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = eventCollectionSupport;
+export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-expand',

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aiden0z/pptx-renderer` — see `llms/peers.md`
-- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,10 +28,12 @@ speaker notes, and several advanced effects are not rendered.
 `label` and `name`. `maxHeight` caps the scrollable `[part="container"]`; invalid CSS `max-height`
 values, declaration breaks, and `url()` are ignored. `highlights`, `activeHighlightId`, `anchor`,
 and `anchorKinds`
-(`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
-DOM text. Lyra defines no fragment ids for slides. A fragment can resolve only an exact DOM `id`
-exposed by the optional renderer in its currently mounted output; renderer-owned ids are not a
-stable Lyra navigation contract. Use `page`/`goToSlide()` or a text-quote anchor instead.
+(`['text-quote', 'fragment', 'page']`) provide the shared text-viewer contract when the renderer
+exposes DOM text. A `text-quote` anchor resolves anywhere in the deck (its `prefix`/`suffix` picking
+among repeats), and a `{ kind: 'page', page }` anchor goes to that one-based slide. Lyra defines no fragment ids for slides. A fragment can
+resolve only an exact DOM `id` exposed by the optional renderer in its currently mounted output;
+renderer-owned ids are not a stable Lyra navigation contract. Use `page`/`goToSlide()` or a
+text-quote anchor instead.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation using the
 renderer's zero-based index. A current renderer rejection is contained, enters the localized error
@@ -75,13 +77,13 @@ highlights are passive and cannot be activated.
 The three shared text-viewer events bubble and compose and are non-cancelable.
 
 **CSS parts:** `base` (the named region with explicit `aria-busy="true"|"false"`), `header`, `name`,
-`notice`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`, `next-button`,
-`next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
+`notice`, `spinner`, `error`, `nav`, `previous-button`, `previous-icon`, `slide-count`,
+`next-button`, `next-icon`, `container`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
 latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
 only while the viewer and its composed ancestors are exposed to the accessibility tree). While
-loading, the decorative skeleton is paired with an ordinary visually-hidden localized label; later
-loading and error transitions use the shared document-level polite and assertive sinks,
-respectively, without adding live semantics inside the viewer shadow. The previous/next chevrons
+loading, `spinner` shows the shared visible loading treatment; later loading and error transitions
+use the shared document-level polite and assertive sinks, respectively, without adding live
+semantics inside the viewer shadow. The previous/next chevrons
 mirror under effective RTL direction, including inherited `dir` changes.
 
 **Themeable custom properties:** `--lr-pptx-viewer-max-height` (default `none`) — maximum block
@@ -90,7 +92,7 @@ property, which writes this token inline.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
-filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+filenames, declaring `{ anchors: ['text-quote', 'fragment', 'page'], search: true, textSelect: true }`
 capabilities and forwarding `anchor`/`highlights` to the mounted viewer. That forwarding preserves
 the request across the registry hop; it does not create stable fragment ids in renderer output.
 

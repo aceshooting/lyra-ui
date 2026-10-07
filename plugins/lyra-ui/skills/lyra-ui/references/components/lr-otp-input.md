@@ -70,7 +70,8 @@ form-associated surface (`name`, `value`, `defaultValue`, `customError` (`custom
 **Methods:** `focus()`, `blur()`, `click()`, `select()`,
 `setSelectionRange(start, end, direction?)`, `setRangeText(replacement, start?, end?, selectMode?)`,
 `clear()`, `resetValidity()`, and `formStateRestoreCallback(state, reason)`. `clear()` empties a
-nonempty code, emits `lr-clear`, and returns focus to the real input. `resetValidity()` clears only
+nonempty code with `input`, `change`, then `lr-clear` and leaves focus where it is; it is a no-op
+while blank, disabled, or readonly. `resetValidity()` clears only
 a consumer-supplied custom error and recomputes the intrinsic required/completeness constraints.
 The browser restoration callback sanitizes string state and restores unsupported state shapes as
 the empty value. `select()` selects the real compact-string value; typing replaces its selected
@@ -100,7 +101,8 @@ host facade changes all move the fixed-cell keyboard target, so printable, Delet
 edit the cell at the live compact caret rather than a stale internal index.
 
 **Events:** native `InputEvent` `input` (including editing payload), native `Event` `change`, and
-`lr-clear` (no detail) when a nonempty field is cleared by the user or `clear()`. Fixed-cell edits
+`lr-clear` (no detail) after `clear()`'s `input`/`change` — editing the field empty with
+Backspace/Delete or typing never emits it. Fixed-cell edits
 emit `input` immediately and one `change` when the field settles on blur or Enter. Intermediate IME
 composition events stay on the real input without sanitizing or committing; the final
 non-composing input commits and relays once. `lr-complete` (`detail: { value }`) fires only on an
@@ -108,8 +110,11 @@ incomplete-to-complete transition, so replacing a filled cell does not complete 
 bubbles, composes, and is cancelable. With `autosubmit`, the component submits its owning form
 after the event unless a listener calls `preventDefault()`. That submission is deferred one task,
 so a listener that decides asynchronously (`await`-ing a check before letting the form go) can
-still veto it; it then goes through the same resolved default button as Enter-to-submit, so
-`SubmitEvent.submitter` and the button's own `name`/`value` reach the submission. The real input's native
+still veto it; it then follows exactly the implicit-submission rules of Enter-to-submit: it
+goes through the form's default (first) submit button, so `SubmitEvent.submitter` and the button's
+own `name`/`value` reach the submission; it submits nothing while that button is disabled; and a
+form without any submit button is submitted only when it holds no other field that blocks implicit
+submission. The real input's native
 `focus` and `blur` are re-dispatched from the host as bubbling, composed events since the originals
 do not cross the shadow boundary. Replacing the live or default code, resetting/restoring the form state, or disconnecting
 the component before the deferred task runs retires that completion's submission; a task for code
@@ -133,9 +138,9 @@ fills accepted characters from the first cell in one input operation. The public
 `value` concatenates occupied cells; a middle hole is a visual editing state and is not encoded in
 that string.
 
-**Slots:** `label` and `hint` provide rich content when their matching attributes are empty; a
-nonempty `label`/`hint` attribute wins when both sources are supplied. The `error` slot replaces
-`errorText` when both are supplied. Sources are never concatenated.
+**Slots:** `label`, `hint`, and `error` render after the matching `label`/`hint`/`errorText` text,
+so both show when both are supplied — the rule every sibling field follows. `withLabel` and
+`withHint` (`with-label`/`with-hint`) are SSR presence hints for slotted label/hint content.
 
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),
@@ -165,11 +170,12 @@ on the element, or set `--lr-theme-otp-input-segment-size` on an ancestor to res
 in the subtree at once — the retained per-cell hooks below are not re-declared anywhere in the
 shared layer and inherit normally.
 
-The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `transparent`),
+The retained per-cell hooks are `--lr-otp-input-segment-fill` (default `var(--lr-color-surface)`),
 `--lr-otp-input-segment-border-color` (default `var(--lr-color-border)`), and
 `--lr-otp-input-segment-radius` (defaulting through `--segment-border-radius` to the shared
 form-control radius). `filled` uses the raised-surface fill with a transparent cell border;
-`filled-outlined` adds the shared border; `outlined` keeps the transparent fill and shared border.
+`filled-outlined` adds the shared border; `outlined` uses the surface fill and shared border, like
+every sibling field.
 `contained` makes individual cells transparent, borderless, square segments inside the single
 raised, bordered row whose radius remains controlled by `--segment-border-radius`.
 Active and invalid states are independently themeable through
@@ -177,8 +183,11 @@ Active and invalid states are independently themeable through
 `--lr-otp-input-invalid-border-color`, with the shared focus and danger colors retained as
 fallbacks.
 
-**CSS custom states:** `--blank`, `--filled`, `disabled`, and `readonly`, plus the shared
-form-associated validity states.
+**CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
+publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
+plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
+after interaction, and `--lr-otp-input-invalid-border-color` defaults to the
+resting segment border, so no danger edge paints unless you set it or style `:state(user-invalid)`.
 
 **Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
 message; `required` and empty reports `valueMissing`. Intrinsic invalid segment styling and the

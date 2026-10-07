@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,7 +66,8 @@ renders at the start of the action row, before Deny/Edit/Approve.
   `wrap: 'hard'|'soft'|'off' = 'soft'`, `inputMode: string = ''` (attribute `inputmode`),
   and `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the raw-JSON
   `<textarea>` while editing; the defaults keep browser editing assistance from changing JSON text.
-- `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected) — which
+- `pendingAction: 'approve' | 'deny' | null = null` (attribute `pending-action`, reflected; unknown
+  values read as `null`) — which
   decision is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called
   `preventDefault()` on the now-cancelable event; the pending button shows `loading`, the other is
   `disabled` (Approve is also still `disabled` while an in-progress edit is invalid JSON,
@@ -115,8 +116,8 @@ rendered before the built-in Deny/Edit/Approve buttons.
 `approve-button-end`, `approve-button-spinner` (`deny-button`/`approve-button` are each an
 `<lr-button>` host; these five per-button parts are re-exported from its own `lr-button` parts via
 `exportparts`. Each `*-button-base` route accepts the button's same-node `base` and `button`
-wrapper aliases, so either name survives the nested shadow boundary; `edit-button` stays a plain
-`<button>`, unaffected by this).
+wrapper aliases, so either name survives the nested shadow boundary). `edit-button` is an
+`<lr-button>` too, re-exporting `edit-button-base` and `edit-button-label`.
 
 **Themeable custom properties:** `--lr-tool-approval-dialog-overlay-color` (default
 `var(--lr-color-overlay)` — the backdrop scrim color, the same shared token `<lr-dialog>` and
@@ -195,8 +196,8 @@ shared composed-tree focus traversal used by the other modal families.
   button is always `brand` here) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
-  `deny-button-base`/`approve-button-base` sub-parts instead. `edit-button` is unaffected and stays
-  a raw `<button>`.
+  `deny-button-base`/`approve-button-base` sub-parts instead, and `edit-button` CSS onto
+  `edit-button-base`.
 - Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in, matching
   `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, and the sibling tool dialogs.
 - An `lr-approve-request`/`lr-deny-request` listener can call `preventDefault()` to keep the decision open while

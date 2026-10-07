@@ -43,6 +43,8 @@ modes use the same expression semantics at initial render and after a theme chan
   did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
   only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
   disconnect/reconnect opens at the last settled camera rather than the originally declared one.
+  Re-assigning the identical `center` array (a parent re-render) is not a new request, even after
+  a gesture or fit; assign a new array to re-centre.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -444,12 +446,10 @@ large collection is invisible until someone walks the data by hand. Both `chorop
 reduced figure in the feature — a log, a bucket, an index — and keep the exact value in your own
 payload beside the map.
 
-- `label?: string` — purpose-specific accessible name for MapLibre's actual focusable canvas.
-  A nonempty host `aria-label` remains on the host and is not duplicated onto the canvas; the canvas
-  uses `label` or the localized map name. Omitting `label` localizes the default `map` message; an
-  explicit empty string suppresses that default and renders an empty canvas name. An explicitly
-  empty host `aria-label` is separately preserved as an empty canvas name. The non-semantic
-  `[part="base"]` wrapper is not named instead.
+- `label?: string` — accessible name for MapLibre's actual focusable canvas. A host `aria-label`
+  (an empty one included) wins and names the canvas. Omitting `label` localizes the default `map`
+  message; an explicit empty string suppresses that default and renders an empty canvas name. The
+  non-semantic `[part="base"]` wrapper is not named instead.
 
 **Authoring types:** `LyraMapLegendEntry`, `LyraMapLegendPattern`, `LyraMapLegendProjection`, `LyraMapChoroplethLayer`,
 `LyraMapGeoJsonDataLayer`, `LyraMapDataLayerKind`, `LyraMapClusterOptions`, `LyraMapHeatmapOptions`,

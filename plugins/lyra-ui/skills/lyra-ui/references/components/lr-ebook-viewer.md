@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `epubjs` — see `llms/peers.md`
-- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,9 +26,10 @@ Genuine native `Selection`/`Range` objects from the current chapter iframe are a
 platform accessors, including across document realms. Arbitrary peer-owned accessors remain
 uninvoked, and callbacks from replaced or disconnected books cannot emit stale selections.
 
-**Properties:** `src: string = ''` and `name: string = ''`. A plain `aria-label` attribute on the
-host overrides the reading region's accessible name — by attribute presence, so an explicitly empty
-`aria-label=""` still wins over `name`. (There is no matching JS property: the `accessibleLabel`
+**Properties:** `src: string = ''` and `name: string = ''`. A non-empty host `aria-label` names the
+host, and the inner reading region then drops its own `role="region"` and name (the shared viewer
+rule); an explicitly empty `aria-label=""` still wins over `name` on that region. (There is
+no matching JS property: the `accessibleLabel`
 property was removed in 9.0.0, where it had never been readable or writable to any effect — set the
 attribute.) `maxHeight: string = ''`
 (attribute `max-height`) caps the `mount` area epub.js renders into; invalid CSS `max-height`
@@ -40,7 +41,8 @@ loading it's recorded and applied once ready, set after it applies immediately, 
 call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
 the peer-reported CFI and is displayed. `anchorKinds: readonly LyraAnchorKind[] = ['cfi',
 'text-quote']` (this
-viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract). A `text-quote`
+anchor's trimmed quote is found section by section, its `prefix`/`suffix` picking among repeats.
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
@@ -69,7 +71,7 @@ Selection text is capped at 4,096 code units and selection rectangles at 1,000.
 **CSS parts:** `base` (explicit `aria-busy="true"|"false"`; visible loading text is ordinary
 non-live shadow content and later loading transitions use the shared document-level polite sink),
 `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
-`mount`, and `error` (ordinary visible text; later error transitions use the shared document-level
+`mount`, `spinner` (the shared loading treatment), and `error` (ordinary visible text; later error transitions use the shared document-level
 assertive sink), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
 anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
 while the viewer and its composed ancestors are exposed to the accessibility tree). Search results

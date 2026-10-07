@@ -39,8 +39,9 @@ expandable?: boolean; communityId?: string }`;
 color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraGraphNode.type` value:
   `label` feeds the spoken "typed node" summary, and `shape`/`color` drive rendering per node.
   Per-node fill resolution precedence is `LyraGraphNode.color` (most specific) > the matched
-  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index in
-  `nodeTypes` (`--lr-graph-cat-1` through `-8`, wrapping every 8 entries) > the untyped
+  `LyraNodeTypeStyle.color` > an ordered categorical fallback palette assigned by the type's index among
+  the label-bearing `nodeTypes` entries, matching `lr-graph-legend`'s rows (`--lr-graph-cat-1` through
+  `-8`, wrapping every 8 entries) > the untyped
   `--lr-graph-node-fill` default; both data-driven color sources are sanitized the same way as
   `LyraGraphNode.color` itself. A typed node with no matching `nodeTypes` entry renders as a plain
   circle with the untyped default fill
@@ -52,7 +53,7 @@ color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraG
 string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
 boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
-  tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
+  tooltip fallback and is drawn as visible edge text only with `withEdgeLabels`; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching
   SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
   value uses `1.5`. A zero-width or fully transparent edge remains in the nonvisual topology
@@ -130,7 +131,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   DPR-aware `<canvas>`; every event/method/property behaves identically to `'svg'`, with hit-testing
   resolved via an offscreen color-picking canvas instead of DOM event targets. Trade-offs: no
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
-  native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
+  native SVG `<title>` tooltip (replaced by `part="tooltip"`), no per-item hover/press tint (hover
+  still emits its events and shows the tooltip), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
   button per visible node/link/hull; the canvas repaints a non-color dashed/ring focus cue for the
   currently focused node, link, or hull and uses a system color under forced colors. In both renderers, node, link, and community-hull picking keeps at
@@ -152,7 +154,7 @@ edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by t
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
 (`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { k, x, y }`, a frame-coalesced camera/layout signal).
+(`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced camera/layout signal).
 
 **Slots:** none.
 
@@ -187,7 +189,7 @@ The ordered categorical fallback palette for a typed node with no `LyraNodeTypeS
 `--lr-graph-cat-6` (default `var(--lr-theme-graph-cat-6,#f470b8)`),
 `--lr-graph-cat-7` (default `var(--lr-theme-graph-cat-7,#52d6e8)`), and
 `--lr-graph-cat-8` (default `var(--lr-theme-graph-cat-8,#c9d1d9)`). Assignment follows the type's
-index in `nodeTypes` and wraps every eight entries; the `--lr-theme-graph-cat-*` inputs are the
+index among label-bearing `nodeTypes` entries (the legend's row order) and wraps every eight entries; the `--lr-theme-graph-cat-*` inputs are the
 preferred theme-level overrides.
 `--lr-graph-edge-label-halo` (default `var(--lr-color-surface)`) — the legibility halo painted
 behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
@@ -205,9 +207,9 @@ adopted stylesheets, and media-query theme transitions); a host does not need to
 to make new token values visible.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
-together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
-capabilities the graph uses; a missing package or malformed module fails closed through the
-localized `part="error"` alert. Install with
+together; lazy-`import()`ed once per page, and a failed load is retried by the next graph). Each loaded
+module is validated for the named callable capabilities the graph uses; a missing package or malformed
+module fails closed through the localized `part="error"` alert. Install with
 `pnpm add d3-force d3-drag d3-zoom d3-selection`.
 
 ```html
@@ -304,7 +306,9 @@ part="link">` with no extra wrapping element, so existing consumers who never se
 `selection-mode`) gates click/keyboard selection; the component never mutates
 `selectedNodeIds: string[] = []` / `selectedEdgeIds: string[] = []` (both attribute: false) itself,
 only emits `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`) — the host assigns them back,
-mirroring `lr-heatmap`'s `selectedCell` contract. `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
+mirroring `lr-heatmap`'s `selectedCell` contract. In `'none'`, a controlled selection still paints
+`data-selected` and reads as `aria-current="true"`; in `'single'`, activating the selected item clears
+it, except as the second press of the double-activate expand gesture (Enter auto-repeat never counts). `dimmedNodeIds: string[] = []` / `dimmedEdgeIds:
 string[] = []` (both attribute: false) are the same controlled shape for dimming instead of
 selecting — the component never assigns either itself, only renders `data-dimmed` on the matching
 `[part="node"]`/`[part="link"]`, themed via `--lr-graph-dimmed-opacity` (default `0.35` — visible out
@@ -325,7 +329,7 @@ matches the entry id. `focusNodeId: string | null = null` (attribute `focus-node
 focus ring (`[part="focus-halo"]`) around one node;
 `focusNode(id, options?)` and `fit(options?)` are the imperative camera-tween counterparts (pan/zoom
 to a node, or to fit the whole graph), both resolving once the tween settles. `lr-viewport-change`
-(`detail: { k, x, y }`, the live d3-zoom camera transform) fires at most once per animation frame,
+(`detail: { zoom, x, y }` plus the deprecated alias `k`, the live d3-zoom camera transform) fires at most once per animation frame,
 coalescing every source that can move a rendered node's screen position — a pan/zoom gesture, a
 `focusNode()`/`fit()` tween, and every simulation tick — so a consumer anchoring its own UI (e.g. a
 details popover) to a node's `getBoundingClientRect()` can re-read it from this event instead of

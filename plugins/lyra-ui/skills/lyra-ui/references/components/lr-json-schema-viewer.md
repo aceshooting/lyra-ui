@@ -34,6 +34,8 @@ JSON-Schema required-property list instead of rejecting the entire tree.
 
 **Events:** `lr-schema-select` (`{ schemaPath, schema }`, with an RFC 6901-style JSON Pointer).
 
+**Keyboard:** the tree is one tab stop; ArrowUp/ArrowDown and Home/End move between node triggers.
+
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
 `description`, `constraints`, `issue`, `limit`, `issue-limit`, `empty`. `issue-limit` is the
 localized resource-ceiling status shown when caller-supplied validation issues exceed the rendered

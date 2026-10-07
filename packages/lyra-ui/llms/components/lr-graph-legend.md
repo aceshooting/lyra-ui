@@ -33,7 +33,8 @@ string; shape?: 'circle' | 'square' | 'diamond' }`, the shared `lr-graph.nodeTyp
   `lr-visibility-change`
 - `withoutInteraction: boolean = false` (attribute `without-interaction`, reflected) — renders plain,
   non-interactive rows instead of the default toggle `<button>` rows.
-- `label: string = ''` — fallback accessible name for the `role="group"` wrapper. A non-empty host
+- `label?: string` — fallback accessible name for the `role="group"` wrapper; omitted, the localized
+  default applies, while an explicitly empty `label` stays empty. A non-empty host
   `aria-label` makes the host the sole overall owner (the wrapper omits its duplicate role/name);
   an explicitly empty host label stays empty on the wrapper
 
@@ -51,8 +52,8 @@ accepted assignment and announcement.
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
 independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
 every other quiet-text surface; `--lr-graph-legend-hidden-swatch-opacity` (default `0.5`) controls
-only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through `-8`
-(the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
+only that row's decorative swatch opacity. Also paints `--lr-graph-cat-1` through `-8` live, exactly
+as `lr-graph` paints untyped-color nodes, so a theme switch repaints both alike, plus shared tokens.
 
 **Optional peer deps:** none.
 
