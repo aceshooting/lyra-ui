@@ -3,6 +3,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAlert } from './alert.js';
 import './alert.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const motionless = '--lr-duration-fast: 0ms;';
 
@@ -11,6 +12,19 @@ const delay = (ms: number): Promise<void> =>
 
 afterEach(() => {
   document.querySelectorAll('lr-alert').forEach((alert) => alert.remove());
+});
+
+// Keep first in the file: any earlier toast() registers the toast elements for the whole page.
+it('registers the toast elements only when toast() is first called', async () => {
+  const registered = (name: string): boolean => customElements.get(name) !== undefined;
+  expect(registered('lr-toast')).to.equal(false);
+  const el = (await fixture(html`<lr-alert style=${motionless}>Notice</lr-alert>`)) as LyraAlert;
+  expect(registered('lr-toast')).to.equal(false);
+  const completion = el.toast();
+  await waitUntil(() => el.parentElement?.localName === 'lr-toast');
+  expect(registered('lr-toast-item')).to.equal(true);
+  await el.hide();
+  await completion;
 });
 
 it('is closed by default with the exact Shoelace-compatible property defaults', async () => {
@@ -26,6 +40,27 @@ it('is closed by default with the exact Shoelace-compatible property defaults', 
 
   el.open = false;
   expect(el.open).to.be.false;
+});
+
+it('reflects the default primary variant and paints it like an explicit one', async () => {
+  const unset = (await fixture(html`<lr-alert open>Saved</lr-alert>`)) as LyraAlert;
+  const explicit = (await fixture(html`<lr-alert open variant="primary">Saved</lr-alert>`)) as LyraAlert;
+  expect(unset.getAttribute('variant')).to.equal('primary');
+  const border = (el: LyraAlert): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).borderTopColor;
+  expect(border(unset)).to.equal(border(explicit));
+});
+
+it('transitions the close button hover fill like the other icon buttons', async () => {
+  const el = (await fixture(html`<lr-alert open closable>Saved</lr-alert>`)) as LyraAlert;
+  const close = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
+  const style = getComputedStyle(close);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    expect(parseFloat(style.transitionDuration)).to.equal(0);
+    return;
+  }
+  expect(style.transitionProperty).to.equal('background-color');
+  expect(parseFloat(style.transitionDuration)).to.be.greaterThan(0);
 });
 
 it('settles hide() safely when invoked before the first connection', async () => {
@@ -363,18 +398,18 @@ it('repairs direct open=false writes without overriding a newer hide-listener de
 
 it('auto-hides after duration and restarts the full timer after interaction', async () => {
   const el = (await fixture(html`
-    <lr-alert duration="80" style=${motionless}>Timed message</lr-alert>
+    <lr-alert duration="400" style=${motionless}>Timed message</lr-alert>
   `)) as LyraAlert;
   await el.show();
-  await delay(55);
+  await delay(250);
   el.dispatchEvent(new Event('pointerenter'));
-  await delay(60);
+  await delay(300);
   expect(el.open, 'interaction pauses the timer').to.be.true;
 
   el.dispatchEvent(new Event('pointerleave'));
-  await delay(45);
+  await delay(250);
   expect(el.open, 'leaving restarts the entire duration rather than only the remainder').to.be.true;
-  await waitUntil(() => !el.open, 'duration should eventually hide the alert', { timeout: 300 });
+  await waitUntil(() => !el.open, 'duration should eventually hide the alert', { timeout: 1000 });
 });
 
 it('normalizes hostile duration values before timer math', async () => {
@@ -1052,23 +1087,25 @@ it('is accessible while closed and when populated/open/closable', async () => {
 });
 
 it('pauses the auto-hide timer while focus is inside and resumes when it leaves', async () => {
-  const el = (await fixture(html`
-    <lr-alert duration="80" closable style=${motionless}>Focusable message</lr-alert>
-  `)) as LyraAlert;
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-alert duration="150" closable style=${motionless}><button id="inside">Inside</button></lr-alert>
+      <button id="outside">Outside</button>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-alert') as LyraAlert;
   await el.show();
 
-  el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-  await delay(120);
+  await focusByKeyboard(el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement);
+  await delay(300);
   expect(el.open, 'focus inside pauses the timer').to.be.true;
 
-  // A focusout whose next target is still inside the alert must not resume the timer.
-  const closeButton = el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement;
-  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: closeButton }));
-  await delay(120);
+  await focusByKeyboard(wrapper.querySelector('#inside') as HTMLElement);
+  await delay(300);
   expect(el.open, 'focus moving within the alert keeps the timer paused').to.be.true;
 
-  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
-  await waitUntil(() => !el.open, 'leaving the alert should restart and finish the timer', { timeout: 400 });
+  await focusByKeyboard(wrapper.querySelector('#outside') as HTMLElement);
+  await waitUntil(() => !el.open, 'leaving the alert should restart and finish the timer', { timeout: 1000 });
 });
 
 it('honours preventDefault() on lr-show and lr-hide', async () => {

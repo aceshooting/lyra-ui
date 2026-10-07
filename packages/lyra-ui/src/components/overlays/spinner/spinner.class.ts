@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import {
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
@@ -91,7 +92,8 @@ export class LyraSpinner extends LyraElement {
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records, observer) => {
+          if (!accessibleTextRecordsMatter(observer, records)) return;
           this.bindLabelObserverTargets();
           this.recomputeVisibleLabelText();
         })

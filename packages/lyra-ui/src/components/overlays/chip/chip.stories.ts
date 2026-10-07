@@ -291,13 +291,13 @@ export const ExactHeight: Story = {
     docs: {
       description: {
         story:
-          'Interactive chips floor their tap target with the shared `--lr-icon-button-size` (40px by default), while `--lr-chip-min-height` can make the visible pill taller. `--lr-chip-height` pins an exact visual height; values below the shared target are for non-interactive display chips only.',
+          'Interactive chips floor their tap target with the shared `--lr-icon-button-size` (36px by default), while `--lr-chip-min-height` can make the visible pill taller. `--lr-chip-height` pins an exact visual height; values below the shared target are for non-interactive display chips only.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-      <lr-chip toggleable style="--lr-chip-min-height: 40px;">Tall target</lr-chip>
+      <lr-chip toggleable style="--lr-chip-min-height: 44px;">Tall target</lr-chip>
       <lr-chip toggleable style="--lr-chip-height: var(--lr-icon-button-size);">Pinned to the shared target</lr-chip>
       <lr-chip style="--lr-chip-height: 18px;">Compact display</lr-chip>
     </div>

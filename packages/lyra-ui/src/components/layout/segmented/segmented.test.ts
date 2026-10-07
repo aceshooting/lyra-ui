@@ -3,10 +3,12 @@ import { html as litHtml } from "lit";
 import "./segmented.js";
 import type { LyraSegmented, LyraSegmentedItem } from "./segmented.js";
 import { styles } from "./segmented.styles.js";
+import { scrollOverflowFadeStyles } from "../../../internal/scroll-overflow.styles.js";
 import "../../forms/select/select.js";
 import type { LyraSelect } from "../../forms/select/select.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 const items = (): LyraSegmentedItem[] => [
   { value: "day", label: "Day" },
@@ -176,6 +178,52 @@ describe("lr-segmented", () => {
     );
     await el.updateComplete;
     expect(el.value).to.equal("day"); // wrapped from the last item back to the first
+  });
+
+  it("selects the next/previous item on ArrowDown/ArrowUp, like a native radio group", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const press = (key: string): void => {
+      el.shadowRoot!.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
+      );
+    };
+    segmentButtons(el)[1]!.focus();
+    press("ArrowDown");
+    await el.updateComplete;
+    expect(el.value).to.equal("month");
+    press("ArrowUp");
+    await el.updateComplete;
+    expect(el.value).to.equal("week");
+  });
+
+  it("disables the whole control: aria-disabled on the group and every segment, no selection or arrow movement", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="day" disabled></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const buttons = segmentButtons(el);
+    expect(el.disabled).to.be.true;
+    expect(base.getAttribute("aria-disabled")).to.equal("true");
+    expect(buttons.every((b) => b.getAttribute("aria-disabled") === "true")).to.be.true;
+
+    let changes = 0;
+    el.addEventListener("lr-change", () => changes++);
+    buttons[2]!.click();
+    buttons[0]!.focus();
+    buttons[0]!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal("day");
+    expect(changes).to.equal(0);
+
+    el.disabled = false;
+    await el.updateComplete;
+    expect(base.hasAttribute("aria-disabled")).to.be.false;
+    buttons[2]!.click();
+    expect(el.value).to.equal("month");
   });
 
   it("skips disabled items during keyboard navigation", async () => {
@@ -837,7 +885,7 @@ describe("item icon", () => {
   });
 
   it("removes the decorative edge mask under forced colors", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
+    const css = scrollOverflowFadeStyles.cssText.replace(/\s+/g, " ");
     expect(css).to.contain("@media (forced-colors: active)");
     const forcedColors = css.slice(
       css.indexOf("@media (forced-colors: active)")
@@ -1530,43 +1578,38 @@ describe("size", () => {
 });
 
 describe("lr-segmented auto-reveal", () => {
-  // scrollIntoView is unimplemented as a real geometry op under headless test layout, and asserting
-  // scroll offsets is flaky; spy on the call + its args instead (the documented contract).
-  function spyScroll(
-    el: LyraSegmented
-  ): Array<ScrollIntoViewOptions | boolean | undefined> {
-    const calls: Array<ScrollIntoViewOptions | boolean | undefined> = [];
-    for (const btn of segmentButtons(el)) {
-      btn.scrollIntoView = (arg?: ScrollIntoViewOptions | boolean) => {
-        calls.push(arg);
-      };
-    }
-    return calls;
+  const many = Array.from({ length: 30 }, (_, index) => ({ value: `v${index}`, label: `Option ${index}` }));
+
+  /** An overflowing track below the fold of a scrollable ancestor; reduced motion makes reveals instant. */
+  async function overflowing(dir = "ltr"): Promise<{ scroller: HTMLElement; el: LyraSegmented; base: HTMLElement }> {
+    const scroller = (await fixture(html`
+      <div dir=${dir} data-lr-motion="reduce" style="block-size:150px;overflow:auto">
+        <div style="block-size:400px"></div>
+        <lr-segmented style="inline-size:200px" value="v0" .items=${many}></lr-segmented>
+      </div>
+    `)) as HTMLElement;
+    const el = scroller.querySelector("lr-segmented") as LyraSegmented;
+    await el.updateComplete;
+    await nextFrames();
+    return { scroller, el, base: el.shadowRoot!.querySelector('[part="base"]') as HTMLElement };
   }
 
-  it("scrolls the newly-selected segment into view when value changes programmatically", async () => {
-    const el = (await fixture(
-      html`<lr-segmented value="day" .items=${items()}></lr-segmented>`
-    )) as LyraSegmented;
-    await el.updateComplete;
-    const calls = spyScroll(el);
-    el.value = "month";
-    await el.updateComplete;
-    expect(calls.length).to.equal(1);
-    expect((calls[0] as ScrollIntoViewOptions).block).to.equal("nearest");
-  });
+  for (const dir of ["ltr", "rtl"]) {
+    it(`reveals a programmatic value by scrolling only the track, never an ancestor (${dir})`, async () => {
+      const { scroller, el, base } = await overflowing(dir);
+      expect(base.scrollLeft).to.equal(0);
+      el.value = "v29";
+      await el.updateComplete;
+      await waitUntil(() => Math.abs(base.scrollLeft) > 0);
+      expect(scroller.scrollTop).to.equal(0);
+    });
+  }
 
   it("does not scroll on the first render (initial mount)", async () => {
-    // Spy is installed via a subclass hook is overkill; instead assert that a fresh element with a
-    // preset value did not move focus/scroll by checking no throw and that value is applied. The
-    // updated() guard requires a PREVIOUS value, so first render cannot call scrollToValue.
     const el = (await fixture(
       html`<lr-segmented value="week" .items=${items()}></lr-segmented>`
     )) as LyraSegmented;
     await el.updateComplete;
-    // If updated() had scrolled on first paint it would have queried a segment; the guard
-    // (changed.get('value') !== undefined) prevents that. Assert the selection is correct and the
-    // component is stable.
     expect(el.value).to.equal("week");
     const checked = segmentButtons(el).find(
       (b) => b.getAttribute("aria-checked") === "true"
@@ -1574,55 +1617,29 @@ describe("lr-segmented auto-reveal", () => {
     expect(checked?.getAttribute("data-value")).to.equal("week");
   });
 
-  it("scrollToValue() is a public method that scrolls a segment without selecting it", async () => {
-    const el = (await fixture(
-      html`<lr-segmented value="day" .items=${items()}></lr-segmented>`
-    )) as LyraSegmented;
-    await el.updateComplete;
-    const calls = spyScroll(el);
-    el.scrollToValue("month");
-    expect(calls.length).to.equal(1);
-    // Selection is unchanged -- scrollToValue reveals only.
-    expect(el.value).to.equal("day");
+  it("scrollToValue() reveals a segment without selecting it", async () => {
+    const { scroller, el, base } = await overflowing();
+    el.scrollToValue("v29");
+    await waitUntil(() => base.scrollLeft > 0);
+    expect(el.value).to.equal("v0");
+    expect(scroller.scrollTop).to.equal(0);
   });
 
-  it("uses behavior:auto under prefers-reduced-motion (branch coverage via forced query)", async () => {
-    // We cannot toggle the real media query in wtr; assert the call is made and carries a valid
-    // behavior string. Both branches resolve to a legal ScrollIntoViewOptions.behavior.
+  it("scrolls smoothly unless reduced motion is requested", async () => {
     const el = (await fixture(
-      html`<lr-segmented value="day" .items=${items()}></lr-segmented>`
+      html`<lr-segmented value="v0" style="inline-size:200px" .items=${many}></lr-segmented>`
     )) as LyraSegmented;
     await el.updateComplete;
-    const calls = spyScroll(el);
-    el.scrollToValue("week");
-    const behavior = (calls[0] as ScrollIntoViewOptions).behavior;
-    expect(["auto", "smooth"]).to.include(behavior);
-  });
-
-  it("forces behavior:auto by stubbing matchMedia to report prefers-reduced-motion: reduce", async () => {
-    const el = (await fixture(
-      html`<lr-segmented value="day" .items=${items()}></lr-segmented>`
-    )) as LyraSegmented;
-    await el.updateComplete;
-    const calls = spyScroll(el);
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) =>
-      ({
-        matches: query === "(prefers-reduced-motion: reduce)",
-        media: query,
-        onchange: null,
-        addListener: () => {},
-        removeListener: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        dispatchEvent: () => false,
-      }) as MediaQueryList) as typeof window.matchMedia;
-    try {
-      el.scrollToValue("week");
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
-    expect((calls[0] as ScrollIntoViewOptions).behavior).to.equal("auto");
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const calls: Array<ScrollToOptions | undefined> = [];
+    base.scrollBy = ((arg?: ScrollToOptions) => {
+      calls.push(arg);
+    }) as typeof base.scrollBy;
+    el.scrollToValue("v29");
+    expect(calls.map((call) => call?.behavior)).to.deep.equal(["smooth"]);
+    el.setAttribute("data-lr-motion", "reduce");
+    el.scrollToValue("v28");
+    expect(calls.map((call) => call?.behavior)).to.deep.equal(["smooth", "auto"]);
   });
 });
 
@@ -1665,6 +1682,23 @@ describe("focus rehoming under a hostile DOM", () => {
     expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal(
       "segment"
     );
+  });
+});
+
+describe("lr-segmented rebinding", () => {
+  it("keeps the snapshot and a focused non-tabbable segment when the same items array is rebound", async () => {
+    const source = items();
+    const el = (await fixture(
+      html`<lr-segmented .items=${source} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const snapshot = el.items;
+    await focusByKeyboard(segmentButtons(el)[0]!);
+    el.items = source;
+    await el.updateComplete;
+    expect(el.items === snapshot).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute("data-value")).to.equal("day");
+    el.items = [...source];
+    expect(el.items === snapshot).to.equal(false);
   });
 });
 

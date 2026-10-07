@@ -9,9 +9,31 @@ import {
   isActionableElement,
   isComposedFocusAvailable,
   isSemanticActionElement,
+  nearestExternalFocusTarget,
   nextHostUpdateOpportunity,
   repairComposedFocus,
 } from './focus-navigation.js';
+
+it('resolves a lazy repair candidate only while focus is inside the owner', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="owner"><button id="inside">Inside</button></section><button id="candidate">Candidate</button></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#owner')!;
+  let calls = 0;
+  const lazy = (): HTMLElement | null => {
+    calls += 1;
+    return nearestExternalFocusTarget(owner);
+  };
+
+  root.querySelector<HTMLButtonElement>('#candidate')!.focus();
+  expect(captureComposedFocusRepair(owner, lazy)).to.equal(null);
+  expect(calls).to.equal(0);
+
+  root.querySelector<HTMLButtonElement>('#inside')!.focus();
+  const repair = captureComposedFocusRepair(owner, lazy);
+  expect(calls).to.equal(1);
+  expect(repair?.candidate.id).to.equal('candidate');
+});
 
 it('repairs focus after an owned focused branch disappears without overriding newer focus', async () => {
   const root = await fixture<HTMLDivElement>(html`

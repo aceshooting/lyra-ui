@@ -119,10 +119,8 @@ export const styles = css`
   :host(:where([inline])) [part='base'] { gap: var(--lr-space-xs); }
   :host(:where([inline])) [part='icon'] { font-size: var(--lr-font-size-m); }
   :host(:where([inline])) [part='heading'] { margin-block-end: 0; }
+  [part='close-icon'] { display: inline-flex; align-items: center; justify-content: center; }
   :host(:where([inline])) [part='close-icon'] {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
   }

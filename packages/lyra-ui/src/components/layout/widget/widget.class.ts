@@ -8,6 +8,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { type LyraSize } from '../../../internal/variants.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { captureFocusReturnOpener, DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -24,13 +25,16 @@ import {
 } from '../../../internal/persisted-restore.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../../internal/icons.js';
 import { styles } from './widget.styles.js';
 import { sanitizeCssInset } from '../../../internal/safe-css.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_widgetCollapse, LYRA_DEFAULT_widgetExitFullscreen, LYRA_DEFAULT_widgetExpand, LYRA_DEFAULT_widgetExpandToFullscreen, LYRA_DEFAULT_widgetFullscreenPanel, LYRA_DEFAULT_widgetViewGroup } from '../../../internal/default-strings.generated.js';
@@ -276,7 +280,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, scrollOverflowFadeStyles, styles];
 
   // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
   // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
@@ -355,6 +359,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ reflect: true }) size: LyraSize = 'm';
 
   private effectiveViews: readonly Readonly<LyraWidgetView>[] = Object.freeze([]);
+  private viewsSource?: unknown;
 
   /** Named alternate views for the panel body. Assignment takes a bounded, recursively frozen
    *  snapshot (except `icon`, preserved by reference -- see `snapshotWidgetViews`'s doc); mutate a
@@ -367,6 +372,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     return this.effectiveViews;
   }
   set views(value: readonly LyraWidgetView[]) {
+    if (value === this.viewsSource || value === this.effectiveViews) return;
+    this.viewsSource = value;
     const previous = this.effectiveViews;
     this.effectiveViews = snapshotWidgetViews(value);
     this.requestUpdate('views', previous);
@@ -377,13 +384,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
    *  externally; also updated internally when a view toggle is clicked. */
   @property({ attribute: false }) activeViewId = '';
 
-  @state() private hasActionsSlot = false;
-  @state() private hasIconSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private hasLabelSlot = false;
   /** Text content of a slotted `label`, so the fullscreen dialog's accessible name can see rich
    *  slotted label content the same way it already sees the plain `label` property. */
   @state() private labelSlotText?: string;
-  @state() private hasSublabelSlot = false;
 
   private overlayHandle?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -394,6 +399,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     },
   });
   private explicitTrigger?: HTMLElement;
+  private fullscreenOpener?: HTMLElement | null;
+  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private labelSlotObserver?: MutationObserver;
   private readonly labelUpgrades = new CustomElementUpgradeObserver(() => {
     if (!this.isConnected || !this.labelSlotObserver) return;
@@ -420,20 +427,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      this.hasActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'actions'
-      );
-      this.hasIconSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'icon'
-      );
       const labelChildren = Array.from(this.children).filter(
         (el) => el.getAttribute('slot') === 'label'
       );
       this.hasLabelSlot = labelChildren.length > 0;
       this.labelSlotText = this.readLabelSlotText(labelChildren);
-      this.hasSublabelSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'sublabel'
-      );
       // Restore a persisted `collapsed` preference once, before the first render, so the restored
       // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
       // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
@@ -587,6 +585,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.nativeModal.hide();
     super.disconnectedCallback();
     this.overlayHandle?.suspend();
+    this.deferredFocusReturn.cancel();
     this.resetOwnerRealmWork();
   }
 
@@ -619,6 +618,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   private activateFullscreenOverlay(): void {
     this.nativeModal.prepare();
+    this.deferredFocusReturn.cancel();
+    this.fullscreenOpener = this.explicitTrigger ?? captureFocusReturnOpener(this);
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -637,19 +638,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
+    // Covers an opener the host only re-shows after the exit.
+    const opener = this.fullscreenOpener;
+    this.fullscreenOpener = undefined;
+    if (opener) {
+      this.deferredFocusReturn.schedule({
+        host: this,
+        candidates: () => [opener],
+        isCurrent: () => !this.fullscreen,
+      });
+    }
   }
-
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-
-  private onIconSlotChange = (e: Event): void => {
-    this.hasIconSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
 
   private onLabelSlotChange = (e: Event): void => {
     const assigned = (e.target as HTMLSlotElement).assignedElements({
@@ -667,7 +666,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
     const generation = this.labelSlotObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
+    const observer = new MutationObserverCtor((records) => {
+      if (!accessibleTextRecordsMatter(observer, records)) return;
       if (
         this.labelSlotObserver !== observer ||
         this.labelSlotObserverDocument !== ownerDocument ||
@@ -707,12 +707,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.labelSlotObserver = undefined;
     this.labelSlotObserverDocument = undefined;
   }
-
-  private onSublabelSlotChange = (e: Event): void => {
-    this.hasSublabelSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
 
   private setActiveView = (viewId: string): void => {
     if (viewId !== this.activeViewId) {
@@ -801,8 +795,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         <div part="header">
           <div part="title">
             ${renderInertPresentation(
-              html`<slot name="icon" @slotchange=${this.onIconSlotChange}></slot>`,
-              { part: 'icon', hidden: !this.hasIconSlot },
+              html`<slot name="icon"></slot>`,
+              { part: 'icon', hidden: !this.slotPresence.has('icon') },
             )}
             <div part="label-group">
               <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}
@@ -812,15 +806,15 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
               >
               <span
                 part="sublabel"
-                ?hidden=${!hasSublabel && !this.hasSublabelSlot}
-                ><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}
+                ?hidden=${!hasSublabel && !this.slotPresence.has('sublabel')}
+                ><slot name="sublabel"
                   >${this.sublabel}</slot
                 ></span
               >
             </div>
           </div>
-          <div part="actions" ?hidden=${!this.hasActionsSlot}>
-            <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
+          <div part="actions" ?hidden=${!this.slotPresence.has('actions')}>
+            <slot name="actions"></slot>
           </div>
           ${views.length > 0
             ? html`<div
@@ -871,7 +865,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="fullscreen-button"
                 type="button"
-                aria-pressed=${this.fullscreen ? 'true' : 'false'}
                 aria-label=${this.fullscreen
                   ? this.localize('widgetExitFullscreen')
                   : this.localize('widgetExpandToFullscreen')}

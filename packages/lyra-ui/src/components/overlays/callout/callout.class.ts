@@ -5,12 +5,13 @@ import {
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
 import { composedParentElement } from '../../../internal/active-element.js';
+import { closeIcon } from '../../../internal/icons.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { AnnouncementUpgradeObserver } from '../../../internal/announcement-text.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
-  collectComposedFocusTargets,
+  nearestExternalFocusTarget,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -92,39 +93,6 @@ const calloutAppearanceConverter = {
     normalizeCalloutAppearance(value) ?? null,
 };
 
-function isComposedWithin(owner: Element, candidate: Element): boolean {
-  let current: Element | null = candidate;
-  while (current) {
-    if (current === owner) return true;
-    current = composedParentElement(current);
-  }
-  return false;
-}
-
-function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
-  const documentElement = owner.ownerDocument?.documentElement;
-  if (!documentElement) return null;
-  const targets = collectComposedFocusTargets(documentElement, {
-    mode: 'programmatic',
-  }).elements;
-  const owned = targets
-    .map((target, index) => (isComposedWithin(owner, target) ? index : -1))
-    .filter((index) => index >= 0);
-  if (owned.length === 0) return null;
-  const first = owned[0]!;
-  const last = owned[owned.length - 1]!;
-  return (
-    targets
-      .slice(last + 1)
-      .find((target) => !isComposedWithin(owner, target)) ??
-    targets
-      .slice(0, first)
-      .reverse()
-      .find((target) => !isComposedWithin(owner, target)) ??
-    null
-  );
-}
-
 /**
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
@@ -175,7 +143,7 @@ function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
  * @csspart close-button-control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface (background, radius, hover/press fill, focus ring and hit-area
  *   floor) now sits one shadow boundary deeper than `close-button`.
- * @csspart close-icon - The close button's visible "×" glyph, independent of the control's hit
+ * @csspart close-icon - The close button's visible "×" icon, independent of the control's hit
  *   target size -- shrinks in the `inline` variant while the hit target stays full-size.
  * @cssprop [--lr-callout-bg=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
  *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
@@ -218,10 +186,6 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     contextualSizes,
     styles,
   ];
-
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-  }
 
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
@@ -438,10 +402,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('open') && !this.open) {
-      const repair = captureComposedFocusRepair(
-        this,
-        nearestExternalFocusTarget(this)
-      );
+      const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
       if (repair) applyComposedFocusRepair(repair);
     }
   }
@@ -601,10 +562,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return 'brand';
   }
   private close = (): void => {
-    const repair = captureComposedFocusRepair(
-      this,
-      nearestExternalFocusTarget(this)
-    );
+    const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
     const event = this.emit('lr-close-request', { reason: 'close-button' }, { cancelable: true });
     if (!event.defaultPrevented) {
       if (repair) applyComposedFocusRepair(repair);
@@ -646,7 +604,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
         aria-label=${this.localize('close')}
         @click=${this.close}
       >
-        <span part="close-icon" aria-hidden="true" inert>×</span>
+        <span part="close-icon" aria-hidden="true" inert>${closeIcon()}</span>
       </lr-icon-button>
     </div>`;
   }

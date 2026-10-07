@@ -541,15 +541,15 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
   8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
 - `width?: string`
 - `height?: string`
-- `label?: string` — accessible name used when `announce` is set (rendered as visually-hidden text
-  inside `[part="base"]`). Only absence uses the localized loading default; every explicit caller
-  value—including `label="Loading…"` and `label=""`—is preserved literally. Prefer a description
-  of what's actually loading, e.g. `label="Loading chart"`.
-- `announce: boolean = false` (reflected) — opt one meaningful placeholder into `role="status"`
-  and localized hidden text. The false default preserves the decorative bare Web Awesome/Shoelace
-  skeleton contract and prevents repeated placeholders from producing duplicate announcements.
-  An author-supplied host role remains authoritative; the component adds and removes the status
-  role only when it owns that opt-in role.
+- `label?: string` — text announced when `announce` is set. Only absence uses the localized
+  loading default; every explicit caller value—including `label="Loading…"`—is preserved
+  literally. Prefer a description of what's actually loading, e.g. `label="Loading chart"`.
+- `announce: boolean = false` (reflected) — opt one meaningful placeholder into a polite
+  announcement of its label through the shared light-DOM sink (once after it mounts, and again
+  when `label` changes), the same mechanism as `lr-callout`/`lr-empty`. The false default
+  preserves the decorative bare Web Awesome/Shoelace skeleton contract and prevents repeated
+  placeholders from producing duplicate announcements. The component adds no host role or shadow
+  text; an author-supplied role remains authoritative.
 
 **Events:** none.
 
@@ -1149,7 +1149,8 @@ relied on `<lr-chip selected>` to create an action.
   preserves the original chip dimensions. The `small`/`medium`/`large` spellings are exact aliases
   of `s`/`m`/`l` and round-trip unchanged. Unsupported attributes and untyped property writes
   normalize to reflected `m`.
-- `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
+- `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
+  (reflected) — `primary` is an alias that renders as `brand`.
   **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
   loud-color-on-quiet-tint convention: background is the
@@ -1187,7 +1188,9 @@ relied on `<lr-chip selected>` to create an action.
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-toggle-request`
 (`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
 Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
-Calling `preventDefault()` keeps the current `selected` state unchanged).
+Calling `preventDefault()` keeps the current `selected` state unchanged), then `lr-chip-change`
+(`detail: { value, selected }` — non-cancelable, fired after an accepted request has changed
+`selected`; setting `selected` directly fires neither).
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
 (toggle or remove button); a disabled control refuses focus/click, and a passive chip's `click()`
@@ -1249,6 +1252,9 @@ that follow each `size`, so setting one on the element or a theme ancestor remai
 corner radius of both `[part='base']` and `[part='remove-button']`, kept in sync so retuning one
 retunes both, retunable without a `::part()` rule, and unlike the density quintet above it does not
 vary by `size`; the same `--lr-button-radius` pattern —
+`--lr-chip-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)`) — the
+remove button's hover fill, which its pressed fill mixes from, like `lr-tag`'s
+`--lr-tag-remove-hover-bg` —
 plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-fill-loud`/`-fill-quiet`, `--lr-color-surface`, `--lr-color-border`, `--lr-color-text`,
 `--lr-color-mix-active`,
@@ -2618,7 +2624,9 @@ label overrides it; `with-value` controls only whether the locale-formatted perc
 Live label mutations and reassignment stay synchronized through nested forwarding slots. Hidden,
 inert, CSS-hidden and `aria-hidden` branches do not name the role; a visible descendant can restore
 text suppressed only by an ancestor's `visibility:hidden|collapse`. Host `aria-label` precedence is
-presence-based, so an explicitly empty value remains empty rather than invoking a fallback.
+presence-based, so an explicitly empty value remains empty rather than invoking a fallback. Under
+reduced motion an `indeterminate` bar (and ring) stops moving and renders full length, dimmed, so
+it never reads as a partial value.
 
 **Slots:** default — label content; `label` — compatibility alias for the default slot.
 **CSS parts:** `base` and `progress-bar` are aliases on the same progressbar; `track`, `indicator`,
@@ -2653,7 +2661,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
 (reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
-`lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`),
+`lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`;
+`primary` is an alias of `brand`, and an unsupported value falls back to `brand` on both),
 `withValue: boolean = false` (attribute `with-value`),
 `label: string = ''` (the mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
@@ -2729,8 +2738,8 @@ the app level.
   (reflected) — the semantic palette. `primary` renders through the same brand palette while
   remaining `primary` on property reads, selectors, serialization and reflection. `lr-tag`
   additionally accepts and preserves `text`, rendering the neutral plain treatment.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the same visual-density scale
-  `<lr-chip>` uses, for typography/padding/minimum block size; `m` preserves the original badge
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) — the shared
+  `2xs`–`xl` visual-density ladder (without `lr-chip`'s extra `3xs`), for typography/padding/minimum block size; `m` preserves the original badge
   dimensions. Both short and long upstream spellings round-trip verbatim while resolving to the
   same private effective size for rendering.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
@@ -2753,6 +2762,7 @@ the app level.
   treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
   intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
   because the two pinned upstreams disagree on both defaults.
+- `value?: string` — opaque bookkeeping value echoed in `lr-remove`'s detail; never rendered.
 - `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
   8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
@@ -2761,10 +2771,14 @@ the app level.
   attribute keeps removal enabled until both are absent. Assigning `false` through either property
   clears both attributes, while assigning `true` reflects that property's own spelling.
 
-**Events:** `lr-remove` — noncancelable, no detail, bubbles and composes. Emitted by `lr-tag` only (a
-badge emits nothing at all) when the remove button is activated by click or by Enter/Space while
-focused; it is a real native `<button>`, so both come for free. Only rendered, and therefore only
-fired, while `withRemove` / `removable` is set, and the event's `target` is the tag itself.
+**Events:** `lr-remove` — noncancelable, bubbles and composes, `detail: { value }` echoing the tag's
+`value` property (`undefined` when never set), exactly like `lr-chip`'s, so one handler serves both.
+Emitted by `lr-tag` only (a badge emits nothing at all) when the remove button is activated by click
+or by Enter/Space while focused; it is a real native `<button>`, so both come for free. Only
+rendered, and therefore only fired, while `withRemove` / `removable` is set, and the event's
+`target` is the tag itself. `lr-tag` and `lr-chip` share the removable-pill contract: `lr-remove`
+with `{ value }`, the `removable` attribute (`with-remove` is `lr-tag`'s upstream-mirroring alias),
+`--lr-<tag>-remove-hover-bg` and the same × glyph size; only `lr-chip` has `disabled`.
 
 Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces the request. The
 tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
@@ -2928,7 +2942,8 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
 
 **Methods:** `show(): Promise<void>` and `hide(): Promise<void>` resolve after their respective
 after-event. `toast(): Promise<void>` moves the same alert instance into Lyra's singleton logical
-top-end toast region, shows it, and resolves after it hides and is removed. Keep the reference to
+top-end toast region, shows it, and resolves after it hides and is removed. The first call on a page
+that has not registered `lr-toast` loads the toast elements first. Keep the reference to
 reuse the same identity with another `toast()` call. An alert adopted into another same-origin
 document uses that document's toast region, timers, motion preference, and focus realm. If external
 DOM reconciliation removes a toast without hiding it, the pending promise settles after that

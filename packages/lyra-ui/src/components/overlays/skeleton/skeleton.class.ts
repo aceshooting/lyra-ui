@@ -1,7 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
+import type { AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './skeleton.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -15,9 +15,9 @@ export type LyraSkeletonEffect = 'pulse' | 'sheen' | 'none';
 /**
  * `<lr-skeleton>` — a loading placeholder mirroring the public Web Awesome/Shoelace skeleton
  * surface under the `lr-` prefix. It is decorative by default like both upstreams; `announce`
- * opts one placeholder into a localized status. An author-supplied host role remains authoritative;
- * the component adds/removes `role="status"` only when it owns that opt-in role. Geometry is
- * exposed as `shape`.
+ * opts one placeholder into a localized polite announcement through the shared light-DOM sink,
+ * like `lr-callout` and `lr-empty`. The component never adds a host role; an author-supplied one
+ * stays authoritative. Geometry is exposed as `shape`.
  *
  * @customElement lr-skeleton
  * @csspart base - Compatibility name for the placeholder shape.
@@ -44,7 +44,7 @@ export class LyraSkeleton extends LyraElement {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles];
 
   /** Placeholder geometry. This is named `shape` so it cannot be confused with semantic tone. */
   @property({ reflect: true, useDefault: true }) shape: LyraSkeletonShape = 'text';
@@ -52,54 +52,62 @@ export class LyraSkeleton extends LyraElement {
   @property() width?: string;
   @property() height?: string;
 
-  /** Opts this placeholder into a localized status announcement. Leave unset for decorative
-   *  skeletons, including repeated members of a group whose loading state is announced once. */
+  /** Opts this placeholder into announcing its `label` through the shared polite sink once it
+   *  mounts (and again when `label` changes). Leave unset for decorative skeletons, including
+   *  repeated members of a group whose loading state is announced once. */
   @property({ type: Boolean, reflect: true }) announce = false;
 
-  /** Accessible name announced via `role="status"`. Absence uses the localized loading string;
-   *  every supplied value, including the English fallback or an empty string, remains literal. */
+  /** Text announced when `announce` is set. Absence uses the localized loading string; every
+   *  supplied value, including the English fallback, remains literal. */
   @property() label?: string;
 
-  /** True only while this component, rather than the author, owns the current status role. */
-  private ownsStatusRole = false;
+  private sink?: AnnouncementSink;
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    const role = this.getAttribute('role');
-    if (this.announce) {
-      if (role === null) {
-        this.setAttribute('role', 'status');
-        this.ownsStatusRole = true;
-      } else if (role !== 'status') {
-        this.ownsStatusRole = false;
-      }
-    } else if (this.ownsStatusRole) {
-      if (role === 'status') this.removeAttribute('role');
-      this.ownsStatusRole = false;
-    }
+  override disconnectedCallback(): void {
+    this.sink?.release();
+    this.sink = undefined;
+    super.disconnectedCallback();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('width') || changed.has('height')) {
-      if (this.width) {
-        this.style.setProperty('--lr-skeleton-w', this.width);
-      } else {
-        this.style.removeProperty('--lr-skeleton-w');
+    if (!this.announce) {
+      this.sink?.release();
+      this.sink = undefined;
+    } else if (changed.has('announce') || changed.has('label')) {
+      // Loaded on first use: only an opted-in skeleton ever announces.
+      void import('../../../internal/announcer.js').then(({ acquireAnnouncementSink }) => {
+        if (!this.announce || !this.isConnected) return;
+        this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+        // Text follows a frame after the sink mounts so assistive technology is already watching it.
+        this.ownerDocument.defaultView?.requestAnimationFrame(() => {
+          if (this.announce) this.sink?.announce(this.label ?? this.localize('loading'));
+        });
+      });
+    }
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('width')) this.applySize('--lr-skeleton-w', this.width);
+    if (changed.has('height')) this.applySize('--lr-skeleton-h', this.height);
+  }
+
+  /** `willUpdate` runs in SSR (no CSSOM there), so the server writes plain lengths into `style`. */
+  private applySize(name: string, value?: string): void {
+    if (typeof document === 'undefined') {
+      if (value && /^[\w\s.%+*/(),-]+$/.test(value)) {
+        this.setAttribute('style', [this.getAttribute('style'), `${name}:${value}`].filter(Boolean).join(';'));
       }
-      if (this.height) {
-        this.style.setProperty('--lr-skeleton-h', this.height);
-      } else {
-        this.style.removeProperty('--lr-skeleton-h');
-      }
+    } else if (value) {
+      this.style.setProperty(name, value);
+    } else {
+      this.style.removeProperty(name);
     }
   }
 
   override render(): TemplateResult {
-    const label = this.label === undefined ? this.localize('loading') : this.label;
-    return html`<span part="base indicator" data-effect=${this.effect}
-      >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span
-    >`;
+    return html`<span part="base indicator" data-effect=${this.effect}></span>`;
   }
 }
 

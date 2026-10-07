@@ -4,11 +4,12 @@ import { closeIcon } from '../../../internal/icons.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
-  collectComposedFocusTargets,
+  nearestExternalFocusTarget,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -71,21 +72,6 @@ interface AlertTransitionRequest {
   reject: (reason?: unknown) => void;
   resolve: () => void;
   settled: boolean;
-}
-
-function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
-  const targets = collectComposedFocusTargets(owner.ownerDocument.documentElement, {
-    mode: 'programmatic',
-  }).elements;
-  const owned = targets
-    .map((target, index) => composedContains(owner, target) ? index : -1)
-    .filter((index) => index >= 0);
-  if (owned.length === 0) return null;
-  const first = owned[0]!;
-  const last = owned[owned.length - 1]!;
-  return targets.slice(last + 1).find((target) => !composedContains(owner, target))
-    ?? targets.slice(0, first).reverse().find((target) => !composedContains(owner, target))
-    ?? null;
 }
 
 /**
@@ -159,7 +145,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     if (this.openRequest) return this.openRequest.target === normalized;
     const repair = normalized
       ? null
-      : captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+      : captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
     // The veto point sits ahead of the state change because every path -- `show()`, `hide()`,
     // `toast()`, the close button, the auto-hide timer, and reflected-attribute writes -- funnels
     // through this request. Initial declarative `open` markup is state, not a transition, so it
@@ -414,7 +400,8 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
   }
 
   /**
-   * Move this alert into Lyra's singleton logical top-end toast region. The returned promise
+   * Move this alert into Lyra's singleton logical top-end toast region, first loading the toast
+   * elements if the page has not registered them. The returned promise
    * resolves after the alert hides and is removed, or after a lasting external disconnect; the
    * same instance can be toasted again later. An already-open alert queued behind the active
    * window becomes hidden and inert without replaying its show lifecycle when promoted; focus in
@@ -434,24 +421,30 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
     this.toastLifecycleGeneration += 1;
     this.toastActivationStarted = false;
 
-    const region = getToastRegion(undefined, this.ownerDocument);
     const onAfterHide = (): void => {
       if (this.toastRegionOwner && this.parentElement === this.toastRegionOwner) this.remove();
       this.finishToast();
     };
     this.toastAfterHide = onAfterHide;
     this.addEventListener('lr-after-hide', onAfterHide, { once: true });
-    const controller = region as Partial<ToastRegionController>;
-    if (typeof controller[TOAST_REGION_ENQUEUE] === 'function') {
-      controller[TOAST_REGION_ENQUEUE](this);
-    } else {
-      // An adopted, already-upgraded alert can outlive the registry that defined it. Do not fall
-      // back to an unbounded unknown `<lr-toast>` in that owner document: discard the unavailable
-      // operation and settle the public promise deterministically.
-      if (region.childElementCount === 0) region.remove();
-      this.remove();
-      this.finishToast();
-    }
+    const enqueue = (): void => {
+      if (this.toastPromise !== completion) return;
+      const region = getToastRegion(undefined, this.ownerDocument);
+      const controller = region as Partial<ToastRegionController>;
+      if (typeof controller[TOAST_REGION_ENQUEUE] === 'function') {
+        controller[TOAST_REGION_ENQUEUE](this);
+      } else {
+        // An adopted, already-upgraded alert can outlive the registry that defined it. Do not fall
+        // back to an unbounded unknown `<lr-toast>` in that owner document: discard the unavailable
+        // operation and settle the public promise deterministically.
+        if (region.childElementCount === 0) region.remove();
+        this.remove();
+        this.finishToast();
+      }
+    };
+    // Dynamic so an alert that is never toasted does not ship the toast stack.
+    if (this.ownerDocument.defaultView?.customElements.get(tag('toast'))) enqueue();
+    else void import('../toast/toast.js').then(enqueue, enqueue);
 
     return completion;
   }

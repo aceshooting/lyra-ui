@@ -1,16 +1,16 @@
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import {
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
-import { composedParentElement } from '../../../internal/active-element.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
-  collectComposedFocusTargets,
+  nearestExternalFocusTarget,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -19,6 +19,7 @@ import { closeIcon } from '../../../internal/icons.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraSizeAlias, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -26,7 +27,7 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_selec
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
-export type ChipVariant = LyraVariant;
+export type ChipVariant = LyraVariant | 'primary';
 /** The shared six-step ladder plus one step below it (a chip is the library's smallest labelled
  *  surface and needs a tier that fits inside a table cell, which no other component does), plus
  *  the `small`/`medium`/`large` aliases `<lr-badge>`/`<lr-callout>` already accept for the six
@@ -39,7 +40,7 @@ const CHIP_SIZE = literalSetConverter<ChipSize>(
   'm'
 );
 const CHIP_VARIANT = literalSetConverter<ChipVariant>(
-  ['neutral', 'brand', 'success', 'warning', 'danger'],
+  ['neutral', 'brand', 'primary', 'success', 'warning', 'danger'],
   'neutral'
 );
 
@@ -56,40 +57,8 @@ export interface LyraChipEventMap {
   'lr-remove': CustomEvent<ChipRemoveDetail>;
   /** Cancelable proposal of the next `selected` state from the toggle control. */
   'lr-chip-toggle-request': CustomEvent<ChipSelectDetail>;
-}
-
-function isComposedWithin(owner: Element, candidate: Element): boolean {
-  let current: Element | null = candidate;
-  while (current) {
-    if (current === owner) return true;
-    current = composedParentElement(current);
-  }
-  return false;
-}
-
-function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
-  const targets = collectComposedFocusTargets(
-    owner.ownerDocument.documentElement,
-    {
-      mode: 'programmatic',
-    }
-  ).elements;
-  const owned = targets
-    .map((target, index) => (isComposedWithin(owner, target) ? index : -1))
-    .filter((index) => index >= 0);
-  if (owned.length === 0) return null;
-  const first = owned[0]!;
-  const last = owned[owned.length - 1]!;
-  return (
-    targets
-      .slice(last + 1)
-      .find((target) => !isComposedWithin(owner, target)) ??
-    targets
-      .slice(0, first)
-      .reverse()
-      .find((target) => !isComposedWithin(owner, target)) ??
-    null
-  );
+  /** Non-cancelable notification after the toggle commits a new `selected` state. */
+  'lr-chip-change': CustomEvent<ChipSelectDetail>;
 }
 
 function sourceParent(node: Node): Element | null {
@@ -185,6 +154,8 @@ function isSourceLabelAvailable(node: Node): boolean {
  * opted into toggle mode via `toggleable` and `removable` is not set.
  * `detail: { value, selected }` contains the proposed next state. Cancelable; preventing it keeps
  * the current `selected` state unchanged.
+ * @event lr-chip-change - Non-cancelable notification after a toggle request is accepted and
+ * `selected` has changed. `detail: { value, selected }`. Not fired when `selected` is set directly.
  * @method focus - Forwards focus to the chip's active remove or toggle button.
  * @method blur - Forwards blur to the chip's active remove or toggle button.
  * @method click - Activates the chip's active remove or toggle button; passive chips retain the
@@ -212,6 +183,9 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @cssprop [--lr-chip-radius=var(--lr-radius)] - Corner radius of the pill and of the remove
  * button, kept in sync so retuning one retunes both. `pill` changes its private default to
  * `var(--lr-radius-pill)`. Does not vary by `size` tier.
+ * @cssprop [--lr-chip-remove-hover-bg=color-mix(in srgb, currentColor 16%, transparent)] -
+ *   Background of the remove button on hover; the pressed fill mixes from it. Mirrors
+ *   `<lr-tag>`'s `--lr-tag-remove-hover-bg`.
  * @cssprop [--lr-chip-icon-size=var(--lr-font-size-sm)] - Font size of the `start` slot wrapper.
  * Its private default follows each `size` step's icon size; an inherited or direct public value
  * remains authoritative.
@@ -313,16 +287,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
    *  single-line, ellipsis-truncated `[part="label"]`. */
   @property({ type: Boolean, reflect: true }) wrap = false;
 
-  // A `[part]` always contains a literal `<slot>` child regardless of
-  // assigned content, so `:empty` never matches — real emptiness is tracked
-  // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
-  // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
-  @state() private hasStartSlot = false;
-  // Same rationale as hasStartSlot above -- mirrors <lr-badge>'s hasEndSlot, adapted to chip's
-  // already-established SSR-safe seeding path (recomputeHasEndSlot + seedFirstRenderState) rather
-  // than badge's willUpdate-based seed, since only this file needs to survive server-rendered
-  // hydration.
-  @state() private hasEndSlot = false;
+  // A `[part]` always contains a literal `<slot>` child regardless of assigned content, so
+  // `:empty` never matches -- real emptiness is tracked in JS and reflected through `hidden`.
+  private readonly slotPresence = new SlotPresenceController(this);
   // The server cannot inspect assigned nodes. Keep its first render on the empty-label fallback,
   // then seed from light DOM before a browser-only first paint (or immediately after hydration).
   private cachedLabelText = '';
@@ -347,8 +314,6 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.addEventListener('slotchange', this.onLabelSlotChange);
     this.syncLabelObservation();
     const sampleBrowserState = (): void => {
-      this.recomputeHasStartSlot();
-      this.recomputeHasEndSlot();
       if (this.tracksActionLabel) this.recomputeLabelText(true, true);
     };
     if (this.hasUpdated) {
@@ -372,7 +337,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)
       ?.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records, observer) => {
+          if (!accessibleTextRecordsMatter(observer, records)) return;
           this.bindLabelObserverTargets();
           this.syncHostActionRole();
           this.updateBrowserDerivedState(() => this.recomputeLabelText());
@@ -397,46 +363,6 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.pendingControlFocusRepair = undefined;
     super.disconnectedCallback();
   }
-
-  private recomputeHasStartSlot(): void {
-    const children = (this as unknown as { children?: HTMLCollection })
-      .children;
-    if (!children) return;
-    this.hasStartSlot = Array.from(children).some(
-      (el) => el.getAttribute('slot') === 'start'
-    );
-  }
-
-  // Reads the light-DOM `slot` attribute directly (via `recomputeHasStartSlot`, already the
-  // trusted computation above) rather than the live `assignedElements()` snapshot: WebKit has
-  // been observed reporting the latter transiently empty for an unrelated forwarding-slot chain
-  // nested inside the assigned element (see `<lr-switch>`'s equivalent fix), even though the
-  // assigned child's own `slot` attribute never changed.
-  private onStartSlotChange = (): void => {
-    const update = (): void => {
-      if (!this.isConnected) return;
-      this.recomputeHasStartSlot();
-    };
-    this.updateBrowserDerivedState(update);
-  };
-
-  private recomputeHasEndSlot(): void {
-    const children = (this as unknown as { children?: HTMLCollection })
-      .children;
-    if (!children) return;
-    this.hasEndSlot = Array.from(children).some(
-      (el) => el.getAttribute('slot') === 'end'
-    );
-  }
-
-  // Same rationale as `onStartSlotChange` above.
-  private onEndSlotChange = (): void => {
-    const update = (): void => {
-      if (!this.isConnected) return;
-      this.recomputeHasEndSlot();
-    };
-    this.updateBrowserDerivedState(update);
-  };
 
   // Only the default slot's own content counts toward the remove/toggle button's accessible name --
   // text incidentally living inside the (decorative) `start`/`end` slots shouldn't leak into
@@ -513,10 +439,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   private onRemoveClick = (): void => {
     if (this.disabled) return;
-    const repair = captureComposedFocusRepair(
-      this,
-      nearestExternalFocusTarget(this)
-    );
+    const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
     this.emit('lr-remove', { value: this.value });
     if (repair && (!this.isConnected || !this.removable))
       applyComposedFocusRepair(repair);
@@ -530,7 +453,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       { value: this.value, selected },
       { cancelable: true }
     );
-    if (!request.defaultPrevented) this.selected = selected;
+    if (request.defaultPrevented) return;
+    this.selected = selected;
+    this.emit('lr-chip-change', { value: this.value, selected });
   };
 
   private get primaryControl(): HTMLButtonElement | null {
@@ -581,7 +506,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.pendingControlFocusRepair =
       captureComposedFocusRepair(
         this,
-        nearestExternalFocusTarget(this) ??
+        () =>
+          nearestExternalFocusTarget(this) ??
           this.renderRoot.querySelector<HTMLButtonElement>(
             '[part="remove-button"], [part="toggle-button"]'
           )
@@ -623,25 +549,19 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     return html`
       <span part="base">
         ${renderInertPresentation(
-          html`<slot
-            name="start"
-            @slotchange=${this.onStartSlotChange}
-          ></slot>`,
-          {
-            part: 'start',
-            hidden: !this.renderSlotPresence(this.hasStartSlot),
-          }
+          html`<slot name="start"></slot>`,
+          { part: 'start', hidden: !this.slotPresence.has('start') }
         )}
         ${renderInertPresentation(
           html`<slot @slotchange=${this.onLabelSlotChange}></slot>`,
           { part: 'label', presentation: toggleMode }
         )}
         ${renderInertPresentation(
-          html`<slot name="end" @slotchange=${this.onEndSlotChange}></slot>`,
+          html`<slot name="end"></slot>`,
           {
             part: 'end',
             presentation: toggleMode,
-            hidden: !this.renderSlotPresence(this.hasEndSlot),
+            hidden: !this.slotPresence.has('end'),
           }
         )}
         ${toggleMode

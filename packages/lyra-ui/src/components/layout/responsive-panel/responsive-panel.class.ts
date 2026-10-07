@@ -6,6 +6,7 @@ import { resolveCssLength } from '../../../internal/css-length.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   activateOverlay,
   deepActiveElement,
@@ -231,8 +232,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   @state() private belowBreakpoint = false;
   @state() private resolvedMode: LyraResponsivePanelEffectiveMode = 'inline';
-  @state() private hasHeaderSlot = false;
-  @state() private hasFooterSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   /** Fallback accessible name sourced from the `header` slot's content -- see `detectHeadingText()`. */
   @state() private headingText?: string;
 
@@ -269,12 +269,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.isFirstUpdate) {
-      this.hasHeaderSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'header'
-      );
-      this.hasFooterSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'footer'
-      );
       this.headingText = this.detectHeadingText();
     }
     if (!this.isFirstUpdate && changed.has('overlayBreakpoint') && this.isConnected) {
@@ -416,12 +410,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.resetHeaderObserver();
   }
 
-  private queueOwnerMicrotask(callback: VoidFunction): void {
+  private queueOwnerMicrotask(callback: VoidFunction, nextFrame = false): void {
     const ownerDocument = this.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
     if (!ownerWindow || !this.isConnected) return;
     const generation = this.ownerRealmGeneration;
-    ownerWindow.queueMicrotask(() => {
+    const run = (): void => {
       if (
         this.ownerRealmGeneration !== generation ||
         !this.isConnected ||
@@ -430,7 +424,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         return;
       }
       callback();
-    });
+    };
+    if (nextFrame) ownerWindow.requestAnimationFrame(run);
+    else ownerWindow.queueMicrotask(run);
   }
 
   private activateOverlayChrome(): void {
@@ -466,10 +462,8 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         const entry = entries.find((candidate) => candidate.target === this) ?? entries[0];
         const inlineSize = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
         if (inlineSize !== undefined) {
-          // A mode flip can change fixed/flow descendants. Commit after the ResizeObserver
-          // delivery checkpoint so Chromium never reports a loop merely because presentation
-          // chrome changed during observation.
-          this.queueOwnerMicrotask(() => this.applyMeasuredInlineSize(inlineSize));
+          // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
+          this.queueOwnerMicrotask(() => this.applyMeasuredInlineSize(inlineSize), true);
         }
       });
       this.resizeObserver.observe(this);
@@ -508,7 +502,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   };
 
   private syncHeaderSlot(assigned: Element[]): void {
-    this.hasHeaderSlot = assigned.length > 0;
     this.headingText = this.detectHeadingText();
     this.resetHeaderObserver();
     if (assigned.length === 0 || !this.isConnected) return;
@@ -545,12 +538,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.headerObserver = undefined;
     this.headerObserverDocument = undefined;
   }
-
-  private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
 
   // Only direct children slotted into `header` are scanned -- same depth
   // limit lr-dialog's own detectHeading() applies to its direct children.
@@ -617,14 +604,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
           aria-label=${overlay && !this.nativeModal.requested ? accessibleName : nothing}
           tabindex=${overlay ? '-1' : nothing}
         >
-          <div part="header" ?hidden=${!this.hasHeaderSlot}>
+          <div part="header" ?hidden=${!this.slotPresence.has('header')}>
             <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
           </div>
           <div part="body">
             <slot></slot>
           </div>
-          <div part="footer" ?hidden=${!this.hasFooterSlot}>
-            <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
+          <div part="footer" ?hidden=${!this.slotPresence.has('footer')}>
+            <slot name="footer"></slot>
           </div>
           ${this.nativeModal.renderHelperSlot()}
         </div>

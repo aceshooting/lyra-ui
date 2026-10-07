@@ -11,6 +11,7 @@ import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -460,6 +461,21 @@ describe("rich label/sublabel", () => {
 });
 
 describe("views", () => {
+  it("keeps its snapshot when the same views array is rebound", async () => {
+    const source = [
+      { viewId: "chart", label: "Chart" },
+      { viewId: "table", label: "Table" },
+    ];
+    const el = (await fixture(
+      html`<lr-widget label="Usage" .views=${source}></lr-widget>`
+    )) as LyraWidget;
+    const snapshot = el.views;
+    el.views = source;
+    expect(el.views === snapshot).to.equal(true);
+    el.views = [...source];
+    expect(el.views === snapshot).to.equal(false);
+  });
+
   it("uses viewId for view identity and activeViewId for the controlled selection", async () => {
     const el = await fixture<LyraWidget>(html`
       <lr-widget
@@ -1141,12 +1157,14 @@ it("hides the actions wrapper when no actions content is slotted, shows it once 
   el.appendChild(button);
   actionsSlot.dispatchEvent(new Event("slotchange"));
   await el.updateComplete;
+  await el.updateComplete;
 
   expect(actions.hasAttribute("hidden")).to.be.false;
   expect(actionsSlot.assignedElements().length).to.equal(1);
 
   el.removeChild(button);
   actionsSlot.dispatchEvent(new Event("slotchange"));
+  await el.updateComplete;
   await el.updateComplete;
 
   expect(actions.hasAttribute("hidden")).to.be.true;
@@ -1539,20 +1557,20 @@ it("emits a cancelable lr-fullscreen-request before lr-fullscreen-change, vetoin
   expect(el.fullscreen).to.equal(false);
 });
 
-it("reflects the fullscreen-button aria-pressed and aria-label with the fullscreen state", async () => {
+it("names the fullscreen-button for the action it performs, without aria-pressed on the swapping name", async () => {
   const el = (await fixture(
     html`<lr-widget label="x" expandable>content</lr-widget>`
   )) as LyraWidget;
   const btn = el.shadowRoot!.querySelector(
     '[part="fullscreen-button"]'
   ) as HTMLButtonElement;
-  expect(btn.getAttribute("aria-pressed")).to.equal("false");
+  expect(btn.hasAttribute("aria-pressed")).to.equal(false);
   expect(btn.getAttribute("aria-label")).to.equal("Expand to fullscreen");
 
   btn.click();
   await el.updateComplete;
 
-  expect(btn.getAttribute("aria-pressed")).to.equal("true");
+  expect(btn.hasAttribute("aria-pressed")).to.equal(false);
   expect(btn.getAttribute("aria-label")).to.equal("Exit fullscreen");
 });
 
@@ -1638,6 +1656,24 @@ it("exits fullscreen on Escape even when entered by setting the fullscreen prope
   await el.updateComplete;
 
   expect(el.fullscreen).to.be.false;
+});
+
+it("returns focus to an opener the host re-shows only after fullscreen exits", async () => {
+  const wrapper = await fixture(
+    html`<div><button id="opener">Open</button><lr-widget label="x" expandable>content</lr-widget></div>`
+  );
+  const opener = wrapper.querySelector("#opener") as HTMLButtonElement;
+  const el = wrapper.querySelector("lr-widget") as LyraWidget;
+  await focusByKeyboard(opener);
+  el.fullscreen = true;
+  await el.updateComplete;
+  opener.hidden = true;
+
+  el.fullscreen = false;
+  await el.updateComplete;
+  opener.hidden = false;
+
+  await waitUntil(() => document.activeElement === opener, "focus returned to the opener");
 });
 
 it("exits fullscreen on backdrop click", async () => {
@@ -2686,12 +2722,12 @@ it("tracks slotted sublabel content through slotchange", async () => {
     >
   `);
   await el.updateComplete;
-  const flags = el as unknown as { hasSublabelSlot: boolean };
-  expect(flags.hasSublabelSlot).to.be.true;
+  const sublabel = el.shadowRoot!.querySelector('[part="sublabel"]') as HTMLElement;
+  expect(sublabel.hidden).to.be.false;
   el.querySelector('[slot="sublabel"]')!.remove();
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await el.updateComplete;
-  expect(flags.hasSublabelSlot).to.be.false;
+  expect(sublabel.hidden).to.be.true;
 });
 
 it("fades the edges of the header action and view-toggle rows only while they overflow", async () => {

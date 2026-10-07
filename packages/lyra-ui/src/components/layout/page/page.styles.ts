@@ -11,8 +11,6 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     color: var(--lr-color-text);
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   [part~="page"] {

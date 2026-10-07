@@ -75,7 +75,10 @@ export const styles = css`
     );
     transition: inline-size var(--lr-transition-base);
   }
+  /* Still (no animation): full length and dimmed, so it never reads as a value; keyframes restore the sweep. */
   :host([indeterminate]) [part="indicator"] {
+    inline-size: 100%;
+    opacity: 0.4;
     animation: var(--_lr-motion-animation, lr-progress-slide
       var(--lr-progress-duration, var(--lr-transition-ambient)) infinite
       alternate);
@@ -99,9 +102,13 @@ export const styles = css`
   }
   @keyframes lr-progress-slide {
     from {
+      inline-size: 40%;
+      opacity: 1;
       transform: translateX(-100%);
     }
     to {
+      inline-size: 40%;
+      opacity: 1;
       transform: translateX(250%);
     }
   }
@@ -114,9 +121,13 @@ export const styles = css`
   }
   @keyframes lr-progress-slide-rtl {
     from {
+      inline-size: 40%;
+      opacity: 1;
       transform: translateX(100%);
     }
     to {
+      inline-size: 40%;
+      opacity: 1;
       transform: translateX(-250%);
     }
   }
@@ -232,9 +243,12 @@ export const ringStyles = css`
         var(--indicator-transition-duration, var(--lr-transition-base))
       );
   }
+  /* Without the animation the indicator is the whole ring, dimmed; the keyframes restore the arc. */
   :host([indeterminate]) [part="indicator"] {
     transform-box: fill-box;
     transform-origin: center;
+    stroke-dasharray: none;
+    opacity: 0.4;
     animation: var(--_lr-motion-animation, lr-progress-ring-spin
       var(--lr-progress-duration, var(--lr-transition-ambient)) infinite);
   }
@@ -250,7 +264,14 @@ export const ringStyles = css`
     font-size: var(--lr-font-size-sm);
   }
   @keyframes lr-progress-ring-spin {
+    from {
+      opacity: 1;
+      stroke-dasharray: 264;
+      transform: rotate(0);
+    }
     to {
+      opacity: 1;
+      stroke-dasharray: 264;
       transform: rotate(360deg);
     }
   }

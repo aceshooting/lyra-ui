@@ -135,6 +135,13 @@ it('lets per-instance close strings reach the rendered action', async () => {
   ).to.equal('Dismiss callout');
 });
 
+it('draws the close glyph with the shared SVG icon instead of a font-dependent text character', async () => {
+  const el = (await fixture(html`<lr-callout closable>Message</lr-callout>`)) as LyraCallout;
+  const glyph = el.shadowRoot!.querySelector<HTMLElement>('[part="close-icon"]')!;
+  expect(glyph.querySelector('svg') === null).to.equal(false);
+  expect((glyph.textContent ?? '').trim()).to.equal('');
+});
+
 it('inherits the panel font through the close control and text glyph', async () => {
   const el = (await fixture(html`
     <lr-callout closable style="--lr-callout-font-size: 20px">Message</lr-callout>

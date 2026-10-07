@@ -488,6 +488,19 @@ describe("lr-remove", () => {
     expect((event.target as HTMLElement).localName).to.equal('lr-tag');
   });
 
+  it("reports the tag's value in the lr-remove detail, like lr-chip", async () => {
+    const tag = (await fixture(html`<lr-tag with-remove value="beta">Beta</lr-tag>`)) as LyraTag;
+    expect(tag.value).to.equal("beta");
+    const removed = oneEvent(tag, "lr-remove");
+    removeButton(tag)!.click();
+    expect((await removed).detail).to.deep.equal({ value: "beta" });
+
+    const unset = (await fixture(html`<lr-tag with-remove>Beta</lr-tag>`)) as LyraTag;
+    const unsetRemoved = oneEvent(unset, "lr-remove");
+    removeButton(unset)!.click();
+    expect((await unsetRemoved).detail).to.deep.equal({ value: undefined });
+  });
+
   it("leaves removal to consumer state after pointer activation", async () => {
     const host = (await fixture(
       html`<div><lr-tag with-remove>beta</lr-tag></div>`

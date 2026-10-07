@@ -1786,7 +1786,7 @@ or any ancestor to retheme only the hover or pressed move affordance.
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
-non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
+non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
 Re-picking the selected value never clears it; for an optional choice the user may clear, or for
 zero-or-more pressed buttons, use `lr-toggle-group`.
@@ -1805,6 +1805,9 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
   host-level `aria-label` wins by attribute presence, including an explicitly empty value.
+- `disabled: boolean = false` (reflected) — disables the whole control: the `radiogroup` and every
+  segment report `aria-disabled="true"` and neither pointer nor keyboard selects. An item's own
+  `disabled` is unaffected.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) —
   visual size on the library's **shared** ladder, the same `--lr-form-control-*` scale
   `lr-input`/`lr-select`/`lr-combobox`/`lr-button` resolve, so a row of mixed controls set to one
@@ -1831,8 +1834,9 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 **Methods:**
 
 - `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
-  the (possibly overflowing) track, without changing the selection. Honors
-  `prefers-reduced-motion` (falls back to `behavior: 'auto'`). This runs automatically when `value`
+  the (possibly overflowing) track, without changing the selection. Scrolls only the track, never
+  the page or another scroll ancestor. Honors `prefers-reduced-motion` (falls back to
+  `behavior: 'auto'`). This runs automatically when `value`
   is changed programmatically (keyboard navigation already reveals the focused segment on its own),
   so you only need to call it for the "reveal without selecting" case.
 
@@ -3114,7 +3118,8 @@ The overlay presentation remains interactive when opened outside an existing nat
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
-First-party invention (no `wa-*`/`sl-*` counterpart).
+Docked inside a host with a definite block size, the panel stays within it and scrolls its body;
+an unsized host hugs the content. First-party invention (no `wa-*`/`sl-*` counterpart).
 
 **Properties:**
 
@@ -5334,7 +5339,9 @@ code migrating from `wa-page` should treat Lyra's always-finite `number` result 
 **Events:** `lr-nav-toggle-request` (cancelable; `detail: { open }` is the `navOpen` state proposed
 by `showNavigation()`/`hideNavigation()`/`toggleNavigation()` or a built-in dismissal — backdrop
 click, Escape, or the default/custom navigation-toggle control, all of which route through those
-same methods. Call `preventDefault()` to leave `navOpen` unchanged.)
+same methods. Call `preventDefault()` to leave `navOpen` unchanged.), then `lr-nav-open-change`
+(non-cancelable; `detail: { open }`) once an accepted request has changed `navOpen`; setting
+`navOpen` directly fires neither.
 
 The default mobile toggle is a native button with localized open/close names and explicit
 `aria-haspopup="dialog"`, `aria-expanded="true|false"`, plus `aria-controls` pointing to this

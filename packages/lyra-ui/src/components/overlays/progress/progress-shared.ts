@@ -21,6 +21,13 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 
+const PROGRESS_VARIANTS = ['neutral', 'brand', 'primary', 'success', 'warning', 'danger'];
+
+/** An unsupported `variant` falls back to the documented `brand` default; `primary` stays an alias. */
+export function normalizeProgressVariant<T extends string>(variant: T): T | 'brand' {
+  return PROGRESS_VARIANTS.includes(variant) ? variant : 'brand';
+}
+
 /** Fallback `max` for both progress components, and the value a non-positive `max` falls back to. */
 const PROGRESS_DEFAULT_MAX = 100;
 

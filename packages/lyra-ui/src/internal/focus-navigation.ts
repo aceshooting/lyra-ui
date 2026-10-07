@@ -442,15 +442,33 @@ function resolveComposedFocusRepairTargets(
   return targets;
 }
 
-/** Captures a repair only when deep focus is currently inside the branch about to disappear. */
+/** The focus target just after `owner`'s composed subtree (else just before it), or null. Walks the document. */
+export function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
+  const targets = collectComposedFocusTargets(owner.ownerDocument.documentElement, {
+    mode: 'programmatic',
+  }).elements;
+  const owned = targets
+    .map((target, index) => (composedContains(owner, target) ? index : -1))
+    .filter((index) => index >= 0);
+  if (owned.length === 0) return null;
+  const first = owned[0]!;
+  const last = owned[owned.length - 1]!;
+  return targets.slice(last + 1).find((target) => !composedContains(owner, target))
+    ?? targets.slice(0, first).reverse().find((target) => !composedContains(owner, target))
+    ?? null;
+}
+
+/** Captures a repair only when deep focus is currently inside the branch about to disappear. A
+ *  thunk `candidate` is resolved only then, so an expensive lookup is skipped otherwise. */
 export function captureComposedFocusRepair(
   owner: Element,
-  candidate: HTMLElement | null,
+  candidate: HTMLElement | null | (() => HTMLElement | null),
 ): ComposedFocusRepairSnapshot | null {
-  if (!candidate || candidate.ownerDocument !== owner.ownerDocument) return null;
   const activeElement = deepActiveElementIn(owner.ownerDocument);
   if (!activeElement || !composedContains(owner, activeElement)) return null;
-  return { activeElement, candidate, document: owner.ownerDocument, owner };
+  const resolved = typeof candidate === 'function' ? candidate() : candidate;
+  if (!resolved || resolved.ownerDocument !== owner.ownerDocument) return null;
+  return { activeElement, candidate: resolved, document: owner.ownerDocument, owner };
 }
 
 /**

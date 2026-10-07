@@ -6,6 +6,18 @@ import type {
 } from "./responsive-panel.js";
 import { resolveResponsivePanelEffectiveMode } from "./responsive-panel.js";
 
+const loopErrors: string[] = [];
+window.addEventListener(
+  "error",
+  (event) => {
+    if (!event.message.includes("ResizeObserver loop")) return;
+    loopErrors.push(event.message);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  },
+  true
+);
+
 it("falls back to the owner window resize signal when ResizeObserver is unavailable", async () => {
   const descriptor = Object.getOwnPropertyDescriptor(window, "ResizeObserver");
   Object.defineProperty(window, "ResizeObserver", {
@@ -51,7 +63,7 @@ it('accepts both fallback and target-specific ResizeObserver entry shapes', asyn
       [{ target: document.body, contentRect: { width: 320 } } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
-    await Promise.resolve();
+    await nextFrame();
     await el.updateComplete;
     expect(el.effectiveMode).to.equal('overlay');
 
@@ -59,7 +71,7 @@ it('accepts both fallback and target-specific ResizeObserver entry shapes', asyn
       [{ target: el, contentBoxSize: [{ inlineSize: 800 }] } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,
     );
-    await Promise.resolve();
+    await nextFrame();
     await el.updateComplete;
     await el.updateComplete;
     expect(el.effectiveMode).to.equal('inline');
@@ -783,6 +795,7 @@ it("hides the header/footer wrappers when nothing is slotted into them, shows th
     new Event("slotchange")
   );
   await el.updateComplete;
+  await el.updateComplete;
 
   expect(header.hasAttribute("hidden")).to.be.false;
   expect(footer.hasAttribute("hidden")).to.be.false;
@@ -1147,6 +1160,40 @@ it("keeps deliberate wide widgets scrollable inside the responsive-panel body", 
 
   expect(body.scrollWidth).to.be.greaterThan(body.clientWidth);
   expect(getComputedStyle(body).overflowX).to.equal("auto");
+});
+
+it("crosses the overlay breakpoint without a ResizeObserver loop error", async () => {
+  loopErrors.length = 0;
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 1000px;">
+      <lr-responsive-panel open>Docked content</lr-responsive-panel>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector("lr-responsive-panel") as LyraResponsivePanel;
+  await waitUntil(() => el.effectiveMode === "inline");
+  wrapper.style.inlineSize = "400px";
+  await waitUntil(() => el.effectiveMode === "overlay");
+  await nextFrame();
+  await nextFrame();
+  wrapper.style.inlineSize = "1000px";
+  await waitUntil(() => el.effectiveMode === "inline");
+  await nextFrame();
+  await nextFrame();
+  expect(loopErrors).to.deep.equal([]);
+});
+
+it("scrolls the body of a docked panel inside a height-bounded host", async () => {
+  const el = (await fixture(html`
+    <lr-responsive-panel mode="inline" open style="block-size: 200px; inline-size: 320px;">
+      <div style="block-size: 600px;">Tall content</div>
+    </lr-responsive-panel>
+  `)) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+
+  expect(panel.getBoundingClientRect().height).to.be.at.most(200);
+  expect(body.scrollHeight).to.be.greaterThan(body.clientHeight);
 });
 
 describe("overlay state cssprops", () => {

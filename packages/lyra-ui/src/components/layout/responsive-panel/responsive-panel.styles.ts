@@ -18,6 +18,12 @@ export const styles = css`
   :host([open]) [part='base'] {
     display: block;
   }
+  /* Docked: a flex column capped at the host's height, so a bounded host scrolls the body. */
+  :host([open]) [part='base']:not(.overlay) {
+    display: flex;
+    flex-direction: column;
+    max-block-size: 100%;
+  }
   :host([open]) [part='base'].overlay {
     display: flex;
     position: fixed;
@@ -49,6 +55,7 @@ export const styles = css`
   /* Inline (docked) presentation: a normal panel in the page's layout flow, bordered like a card so
      it reads as a distinct region. */
   [part='base']:not(.overlay) [part='panel'] {
+    flex: 1 1 auto;
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-radius-container);
     overflow: auto;

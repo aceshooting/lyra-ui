@@ -25,6 +25,7 @@ export const styles = css`
        the default and the pill is opt-in via [pill] below, matching lr-badge/lr-tag: while this was
        unconditionally --lr-radius-pill, a pill attribute was indistinguishable from its absence. */
     --_lr-chip-radius: var(--lr-radius);
+    --_lr-chip-remove-hover-background: color-mix(in srgb, currentColor 16%, transparent);
     /* Component density floor. Interactive controls also enforce the shared
        --lr-icon-button-size hit target; non-interactive display chips get no floor. */
     --_lr-chip-min-height: var(--lr-size-1-5rem);
@@ -275,17 +276,15 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='remove-button']:not(:disabled):hover {
-    background: color-mix(in srgb, currentColor 16%, transparent);
+    background: var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background));
   }
   /* Pressed lays --lr-color-mix-active of currentColor over the hover's scrim, more than doubling
      the tint the hover produced. currentColor rather than --lr-color-mix-partner: this button sits
      INSIDE the pill, whose variant may have painted a loud fill beneath it, so the pill's own ink
      is the only colour guaranteed to contrast there, while --lr-color-mix-partner follows the PAGE
-     text and would point the opposite way from the hover on a non-neutral chip. The hover value is
-     restated rather than referenced because it is a literal here, not a public custom property
-     (unlike lr-tag's --lr-tag-remove-hover-bg). */
+     text and would point the opposite way from the hover on a non-neutral chip. */
   [part='remove-button']:not(:disabled):active {
-    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), color-mix(in srgb, currentColor 16%, transparent));
+    background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-chip-remove-hover-bg, var(--_lr-chip-remove-hover-background)));
   }
   [part='remove-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

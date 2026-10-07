@@ -7,11 +7,8 @@ import type { LyraEmpty } from './empty.js';
 // A stand-in for a component that forwards its own light-DOM content into
 // `lr-empty`'s slots through nested `<slot>` elements (e.g. a card/widget
 // wrapper that renders `lr-empty` under the hood and re-projects its own
-// children into it). From `lr-empty`'s point of view, `this.children` are
-// these forwarding `<slot>` elements themselves, not the consumer's real
-// content, so `willUpdate`'s light-DOM check can't tell whether anything is
-// actually assigned -- only reading the fully flattened slot assignment
-// (what `firstUpdated`'s fallback does) resolves it correctly.
+// children into it): `lr-empty`'s own children are the forwarding `<slot>`
+// elements, not the consumer's real content.
 class EmptySlotForwardWrapper extends HTMLElement {
   constructor() {
     super();
@@ -29,11 +26,8 @@ class EmptySlotForwardWrapper extends HTMLElement {
 customElements.define('empty-slot-forward-wrapper', EmptySlotForwardWrapper);
 
 // Same forwarding shape as `EmptySlotForwardWrapper` above, but for the
-// heading/description parts, and deliberately without setting the `heading`/
-// `description` attributes -- so `willUpdate`'s guess (driven purely by the
-// forwarding `<slot>` elements' presence) is the only thing making those
-// parts look non-empty until `firstUpdated` reconciles against the real,
-// fully-flattened slot assignment.
+// heading/description parts, deliberately without the `heading`/`description`
+// attributes.
 class EmptyHeadingDescriptionForwardWrapper extends HTMLElement {
   constructor() {
     super();
@@ -50,6 +44,21 @@ class EmptyHeadingDescriptionForwardWrapper extends HTMLElement {
   }
 }
 customElements.define('empty-heading-description-forward-wrapper', EmptyHeadingDescriptionForwardWrapper);
+
+class EmptyFallbackForwardWrapper extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    const empty = document.createElement('lr-empty');
+    const descriptionSlot = document.createElement('slot');
+    descriptionSlot.name = 'description';
+    descriptionSlot.slot = 'description';
+    descriptionSlot.textContent = 'Default description';
+    empty.append(descriptionSlot);
+    root.append(empty);
+  }
+}
+customElements.define('empty-fallback-forward-wrapper', EmptyFallbackForwardWrapper);
 
 class EmptyLiveTextForwardWrapper extends HTMLElement {
   constructor() {
@@ -80,9 +89,6 @@ if (!customElements.get('empty-live-text-forward-wrapper')) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function asAny(el: LyraEmpty): any {
-  return el;
-}
 
 it('renders heading, description, and slotted content', async () => {
   const el = (await fixture(
@@ -489,38 +495,17 @@ it('does not collapse the icon wrapper when icon content carries an explicit emp
   expect(icon.hasAttribute('hidden')).to.be.false;
 });
 
-it('reconciles a forwarded slot with no assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+it('hides the icon and actions wrappers of a forwarded slot that carries no content', async () => {
   const wrapper = (await fixture(
     html`<empty-slot-forward-wrapper></empty-slot-forward-wrapper>`,
   )) as EmptySlotForwardWrapper;
   const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
   await el.updateComplete;
-  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
-  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-
-  // The full lifecycle (willUpdate's guess, plus whatever this browser's
-  // slotchange timing already fixed) already converges on the right answer.
-  expect(icon.hasAttribute('hidden')).to.be.true;
-  expect(actions.hasAttribute('hidden')).to.be.true;
-
-  // Isolate firstUpdated itself from slotchange: force the state back to
-  // willUpdate's naive guess -- which only sees the forwarding `<slot>`
-  // elements as "children" and always assumes content is present -- to
-  // prove firstUpdated alone reconciles against the real, fully-flattened
-  // slot assignment, which is still empty (no content was ever provided to
-  // the wrapper).
-  asAny(el).hasIcon = true;
-  asAny(el).hasActions = true;
-  icon.removeAttribute('hidden');
-  actions.removeAttribute('hidden');
-
-  el.firstUpdated(new Map());
-
-  expect(icon.hasAttribute('hidden')).to.be.true;
-  expect(actions.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="icon"]')!.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="actions"]')!.hasAttribute('hidden')).to.be.true;
 });
 
-it('reconciles a forwarded slot with assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+it('shows the icon and actions wrappers of a forwarded slot with assigned content', async () => {
   const wrapper = (await fixture(
     html`<empty-slot-forward-wrapper>
       <span>icon</span>
@@ -529,57 +514,21 @@ it('reconciles a forwarded slot with assigned content, via firstUpdated, when wi
   )) as EmptySlotForwardWrapper;
   const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
   await el.updateComplete;
-  const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
-  const actions = el.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
-
-  expect(icon.hasAttribute('hidden')).to.be.false;
-  expect(actions.hasAttribute('hidden')).to.be.false;
-
-  // Force the opposite wrong precondition and prove firstUpdated corrects it
-  // back to visible from the real (non-empty) flattened assignment.
-  asAny(el).hasIcon = false;
-  asAny(el).hasActions = false;
-  icon.setAttribute('hidden', '');
-  actions.setAttribute('hidden', '');
-
-  el.firstUpdated(new Map());
-
-  expect(icon.hasAttribute('hidden')).to.be.false;
-  expect(actions.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="icon"]')!.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="actions"]')!.hasAttribute('hidden')).to.be.false;
 });
 
-it('reconciles a forwarded heading/description slot with no assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+it('hides the heading and description wrappers of a forwarded slot that carries no content', async () => {
   const wrapper = (await fixture(
     html`<empty-heading-description-forward-wrapper></empty-heading-description-forward-wrapper>`,
   )) as EmptyHeadingDescriptionForwardWrapper;
   const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
   await el.updateComplete;
-  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
-  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
-
-  // The full lifecycle already converges on the right answer, same as the
-  // icon/actions case above.
-  expect(heading.hasAttribute('hidden')).to.be.true;
-  expect(description.hasAttribute('hidden')).to.be.true;
-
-  // Isolate firstUpdated itself from slotchange: force the state back to
-  // willUpdate's naive guess -- which only sees the forwarding `<slot>`
-  // elements as "children" and always assumes content is present -- to prove
-  // firstUpdated alone reconciles against the real, fully-flattened slot
-  // assignment, which is still empty (no content was ever provided to the
-  // wrapper, and the `heading`/`description` attributes are also unset).
-  asAny(el).hasHeadingSlot = true;
-  asAny(el).hasDescriptionSlot = true;
-  heading.removeAttribute('hidden');
-  description.removeAttribute('hidden');
-
-  el.firstUpdated(new Map());
-
-  expect(heading.hasAttribute('hidden')).to.be.true;
-  expect(description.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.hasAttribute('hidden')).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="description"]')!.hasAttribute('hidden')).to.be.true;
 });
 
-it('reconciles a forwarded heading/description slot with assigned content, via firstUpdated, when willUpdate guessed wrong', async () => {
+it('shows the heading and description wrappers of a forwarded slot with assigned content', async () => {
   const wrapper = (await fixture(
     html`<empty-heading-description-forward-wrapper>
       <span slot="heading">Nothing here</span>
@@ -588,47 +537,26 @@ it('reconciles a forwarded heading/description slot with assigned content, via f
   )) as EmptyHeadingDescriptionForwardWrapper;
   const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
   await el.updateComplete;
-  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
-  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
-
-  expect(heading.hasAttribute('hidden')).to.be.false;
-  expect(description.hasAttribute('hidden')).to.be.false;
-
-  // Force the opposite wrong precondition and prove firstUpdated corrects it
-  // back to visible from the real (non-empty) flattened assignment.
-  asAny(el).hasHeadingSlot = false;
-  asAny(el).hasDescriptionSlot = false;
-  heading.setAttribute('hidden', '');
-  description.setAttribute('hidden', '');
-
-  el.firstUpdated(new Map());
-
-  expect(heading.hasAttribute('hidden')).to.be.false;
-  expect(description.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="heading"]')!.hasAttribute('hidden')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="description"]')!.hasAttribute('hidden')).to.be.false;
 });
 
-it('keeps a forwarded heading/description visible via firstUpdated when the attribute has text but nothing is slotted', async () => {
+it('shows a forwarded heading/description wrapper while the property has text and hides it once cleared', async () => {
   const wrapper = (await fixture(
-    html`<empty-heading-description-forward-wrapper></empty-heading-description-forward-wrapper>`,
-  )) as EmptyHeadingDescriptionForwardWrapper;
+    html`<empty-fallback-forward-wrapper></empty-fallback-forward-wrapper>`,
+  )) as HTMLElement;
   const el = wrapper.shadowRoot!.querySelector('lr-empty') as LyraEmpty;
-  el.heading = 'No results';
+  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
+  await el.updateComplete;
+  expect(description.hasAttribute('hidden'), 'forwarding-slot fallback is not consumer content').to.be.true;
+
   el.description = 'Try a different search.';
   await el.updateComplete;
-  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
-  const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
-
-  // Force the wrong-hidden precondition: no content is ever slotted through
-  // this forwarding wrapper, so the flattened slot assignment is empty --
-  // firstUpdated must fall back to the non-empty `heading`/`description`
-  // attribute instead of collapsing the part.
-  heading.setAttribute('hidden', '');
-  description.setAttribute('hidden', '');
-
-  el.firstUpdated(new Map());
-
-  expect(heading.hasAttribute('hidden')).to.be.false;
   expect(description.hasAttribute('hidden')).to.be.false;
+
+  el.description = '';
+  await el.updateComplete;
+  expect(description.hasAttribute('hidden')).to.be.true;
 });
 
 it('reacts to icon and actions content added or removed after initial mount (slotchange)', async () => {

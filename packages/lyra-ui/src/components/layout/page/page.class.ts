@@ -13,6 +13,7 @@ import {
   acquireAriaOwnership,
   type AriaOwnershipLease,
 } from '../../../internal/aria-ownership.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
@@ -50,6 +51,8 @@ interface CustomToggleOwnership {
 export interface LyraPageEventMap {
   /** Cancelable proposed `navOpen` state; `preventDefault()` leaves `navOpen` unchanged. */
   'lr-nav-toggle-request': CustomEvent<{ open: boolean }>;
+  /** Non-cancelable notification after an accepted request has changed `navOpen`. */
+  'lr-nav-open-change': CustomEvent<{ open: boolean }>;
 }
 
 /**
@@ -113,6 +116,8 @@ export interface LyraPageEventMap {
  *   `hideNavigation()`, `toggleNavigation()`, or a built-in dismissal (backdrop click, Escape, the
  *   default navigation-toggle button). Call `preventDefault()` to leave `navOpen` unchanged.
  *   `detail: { open }`.
+ * @event lr-nav-open-change - Non-cancelable notification after an accepted request has changed
+ *   `navOpen`. Not fired when `navOpen` is set directly. `detail: { open }`.
  * @csspart aside - Wrapper for the `aside` slot and the complementary landmark.
  * @csspart banner - Wrapper for the `banner` slot.
  * @csspart base - Compatibility name for the root Page wrapper; use `page`.
@@ -313,6 +318,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (this.view === 'mobile' && this.navOpen) this.nativeModal.show();
+    // Idrefs do not cross the shadow boundary: reflect them as element references on the dialog owner.
+    const describedBy = this.view === 'mobile' && this.navOpen ? this.getAttribute('aria-describedby') : null;
+    for (const dialog of this.renderRoot.querySelectorAll<HTMLElement>('[part="drawer"], [data-native-modal-carrier]')) {
+      syncAriaDescribedByElements(this, dialog, describedBy);
+    }
     if (
       changed.has('mobileBreakpoint') &&
       changed.get('mobileBreakpoint') !== undefined
@@ -346,7 +356,12 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
           entries.find((candidate) => candidate.target === this) ?? entries[0];
         const inlineSize =
           entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
-        if (inlineSize !== undefined) this.applyMeasuredInlineSize(inlineSize);
+        // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
+        if (inlineSize !== undefined) {
+          view?.requestAnimationFrame(() => {
+            if (this.isConnected) this.applyMeasuredInlineSize(inlineSize);
+          });
+        }
       });
       this.resizeObserver.observe(this);
       return;
@@ -677,6 +692,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const request = this.emit('lr-nav-toggle-request', { open: next }, { cancelable: true });
     if (request.defaultPrevented) return;
     this.navOpen = next;
+    this.emit('lr-nav-open-change', { open: next });
   }
 
   /** Open mobile navigation. Desktop navigation is already visible, but the state is retained so
@@ -720,10 +736,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const mobile = this.view === 'mobile';
     const overlayOpen = mobile && this.navOpen;
     const navigationLabel = this.accessibleLabel ?? this.localize('navigation');
-    // The host idref lives in light DOM; role="dialog" lives on this shadow-internal drawer,
-    // which never inherits it across the shadow boundary on its own -- forward it explicitly so a
-    // consumer's <lr-page aria-describedby="hint"> reaches the dialog AT actually announces.
-    const hostDescribedBy = this.getAttribute('aria-describedby');
     return html`
       <div part="base page" @click=${this.onPageClick}>
         <a
@@ -777,7 +789,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
               role=${overlayOpen && !this.nativeModal.requested ? 'dialog' : nothing}
               aria-modal=${overlayOpen && !this.nativeModal.requested ? 'true' : nothing}
               aria-label=${overlayOpen && !this.nativeModal.requested ? navigationLabel : nothing}
-              aria-describedby=${overlayOpen && hostDescribedBy ? hostDescribedBy : nothing}
               aria-hidden=${mobile && !this.navOpen ? 'true' : nothing}
               tabindex=${overlayOpen ? '-1' : nothing}
               ?inert=${mobile && !this.navOpen}
@@ -797,7 +808,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
               </nav>
               ${this.nativeModal.renderHelperSlot()}
             </div>
-          </div>`, { label: navigationLabel, describedBy: hostDescribedBy })}
+          </div>`, { label: navigationLabel })}
 
           <main id=${this.mainId} part="main" tabindex="-1">
             <div part="main-header"><slot name="main-header"></slot></div>

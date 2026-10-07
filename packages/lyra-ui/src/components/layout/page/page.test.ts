@@ -1,6 +1,7 @@
 import {
   aTimeout,
   elementUpdated,
+  nextFrame,
   expect,
   fixture,
   html,
@@ -17,6 +18,18 @@ import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
+
+const loopErrors: string[] = [];
+window.addEventListener(
+  'error',
+  (event) => {
+    if (!event.message.includes('ResizeObserver loop')) return;
+    loopErrors.push(event.message);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  },
+  true
+);
 
 interface PageTestAccess {
   applyMeasuredInlineSize(width: number): void;
@@ -191,7 +204,7 @@ it('localizes the skip link, navigation landmark, and open/close toggle names', 
   expect(toggle.getAttribute('aria-label')).to.equal('Fermer la navigation');
 });
 
-it('forwards a host aria-describedby onto the internal role="dialog" mobile drawer', async () => {
+it('relates the internal role="dialog" mobile drawer to the host aria-describedby target', async () => {
   const page = (await fixture(html`
     <lr-page style="inline-size:320px" aria-describedby="page-hint">
       <span id="page-hint" hidden>Extra context for assistive tech</span>
@@ -202,9 +215,48 @@ it('forwards a host aria-describedby onto the internal role="dialog" mobile draw
   page.showNavigation();
   await page.updateComplete;
 
-  const drawer = byPart(page, 'drawer');
+  const drawer = byPart(page, 'drawer') as HTMLElement & { ariaDescribedByElements: Element[] | null };
   expect(drawer.getAttribute('role')).to.equal('dialog');
-  expect(drawer.getAttribute('aria-describedby')).to.equal('page-hint');
+  expect(drawer.ariaDescribedByElements?.[0]?.id).to.equal('page-hint');
+
+  page.hideNavigation();
+  await page.updateComplete;
+  expect(drawer.ariaDescribedByElements === null).to.equal(true);
+});
+
+it('sizes to its content in a shrink-to-fit allocation instead of collapsing to a narrow fallback', async () => {
+  const wrapper = (await fixture(html`
+    <div style="display:grid;place-items:center;inline-size:1400px">
+      <lr-page><div style="inline-size:1000px">Wide content</div></lr-page>
+    </div>
+  `)) as HTMLElement;
+  const page = wrapper.querySelector('lr-page') as LyraPage;
+  await page.updateComplete;
+  expect(page.getBoundingClientRect().width).to.be.at.least(1000);
+  expect(page.view).to.equal('desktop');
+});
+
+it('crosses the mobile breakpoint without a ResizeObserver loop error', async () => {
+  loopErrors.length = 0;
+  const wrapper = (await fixture(html`
+    <div style="inline-size:1000px">
+      <lr-page>
+        ${Array.from({ length: 40 }, (_, index) => html`<a slot="navigation" href=${`#a${index}`}>Link ${index}</a>`)}
+        ${Array.from({ length: 30 }, () => html`<p>Content paragraph that fills the main region.</p>`)}
+      </lr-page>
+    </div>
+  `)) as HTMLElement;
+  const page = wrapper.querySelector('lr-page') as LyraPage;
+  await waitUntil(() => page.view === 'desktop');
+  wrapper.style.inlineSize = '400px';
+  await waitUntil(() => page.view === 'mobile');
+  await nextFrame();
+  await nextFrame();
+  wrapper.style.inlineSize = '1000px';
+  await waitUntil(() => page.view === 'desktop');
+  await nextFrame();
+  await nextFrame();
+  expect(loopErrors).to.deep.equal([]);
 });
 
 it('pins overflow-y alongside overflow-x on [part="page"] so the unset axis cannot compute to auto', async () => {
@@ -322,6 +374,20 @@ it('emits a cancelable lr-nav-toggle-request before mutating navOpen, honoring a
     page.navOpen,
     'a defaultPrevented lr-nav-toggle-request must not mutate navOpen'
   ).to.be.true;
+});
+
+it('emits a non-cancelable lr-nav-open-change after navOpen commits, and not for a vetoed request', async () => {
+  const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+  const seen: unknown[] = [];
+  page.addEventListener('lr-nav-open-change', (event) => {
+    seen.push({ detail: (event as CustomEvent).detail, navOpen: page.navOpen, cancelable: event.cancelable });
+  });
+  page.showNavigation();
+  expect(seen).to.deep.equal([{ detail: { open: true }, navOpen: true, cancelable: false }]);
+
+  page.addEventListener('lr-nav-toggle-request', (event) => event.preventDefault(), { once: true });
+  page.hideNavigation();
+  expect(seen.length).to.equal(1);
 });
 
 describe('lr-nav-toggle-request and its retired lr-nav-toggle alias', () => {
@@ -1028,6 +1094,7 @@ it('falls back to the first ResizeObserver entry and to contentRect.width, and i
       ],
       {} as ResizeObserver
     );
+    await nextFrame();
     await page.updateComplete;
     expect(page.view).to.equal('mobile');
 
@@ -1041,6 +1108,7 @@ it('falls back to the first ResizeObserver entry and to contentRect.width, and i
       ],
       {} as ResizeObserver
     );
+    await nextFrame();
     await page.updateComplete;
     expect(page.view).to.equal('mobile');
   } finally {

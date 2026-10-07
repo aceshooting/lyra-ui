@@ -12,6 +12,7 @@ import {
   observeScrollOverflow,
   SCROLL_OVERFLOW_ATTRIBUTE,
 } from '../../../internal/scroll-overflow.js';
+import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './stepper.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -214,19 +215,22 @@ function checkmarkGlyph() {
  * @since 4.0.0
  */
 export class LyraStepper extends LyraElement<LyraStepperEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
   /** Ordered step data. Never mutated by this component -- see the class doc's controlled-
    *  component contract. Empty (the default) renders nothing. Each step's optional `title`
    *  renders as a native `title` tooltip on that step -- e.g. to explain why a `disabled` step is
    *  locked. */
   private effectiveSteps: readonly Readonly<LyraStepItem>[] = Object.freeze([]);
+  private stepsSource?: unknown;
 
   @property({ attribute: false })
   get steps(): readonly LyraStepItem[] {
     return this.effectiveSteps;
   }
   set steps(value: readonly LyraStepItem[]) {
+    if (value === this.stepsSource || value === this.effectiveSteps) return;
+    this.stepsSource = value;
     const previous = this.effectiveSteps;
     this.effectiveSteps = snapshotSteps(value);
     this.requestUpdate('steps', previous);
@@ -569,21 +573,24 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     if (!ResizeObserverConstructor) return;
     const generation = this.resizeObserverGeneration;
     const observer = new ResizeObserverConstructor((entries) => {
-      if (
-        this.resizeObserver !== observer ||
-        this.resizeObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument ||
-        this.baseEl !== observedElement
-      ) {
-        return;
-      }
       const box = entries[0]?.contentBoxSize?.[0];
       const width = box
         ? box.inlineSize
         : observedElement.getBoundingClientRect().width;
-      this.measuredInlineSize = width;
-      this.updateEffectiveOrientation(width, true);
+      // Next frame: the flip changes the observed box's height, which loops the observer if done inside it.
+      ownerDocument.defaultView?.requestAnimationFrame(() => {
+        if (
+          this.resizeObserver !== observer ||
+          this.resizeObserverGeneration !== generation ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument ||
+          this.baseEl !== observedElement
+        ) {
+          return;
+        }
+        this.measuredInlineSize = width;
+        this.updateEffectiveOrientation(width, true);
+      });
     });
     this.resizeObserver = observer;
     this.resizeObservedElement = observedElement;
@@ -700,7 +707,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
      *  changes what a step *is*, never what progress it reports. The `step-label` span stays
      *  written out at each call site rather than joining this helper: it is the step's meaningful
      *  text content, and check:hit-area reads that statically to tell a labelled control from a
-     *  compact icon-only one that owes the 40px floor. */
+     *  compact icon-only one that owes the shared hit-area floor. */
     const stepGlyphs = (step: Readonly<LyraStepItem>, index: number) =>
       html`${step.icon !== undefined
         ? html`<span part="step-icon" aria-hidden="true" inert

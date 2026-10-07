@@ -9,7 +9,6 @@ import { AnnouncementUpgradeObserver } from '../../../internal/announcement-text
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { hasRealContent } from '../../../internal/a11y.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
@@ -181,46 +180,10 @@ export class LyraEmpty extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (
-      this.announcementsArmed &&
-      (changed.has('heading') || changed.has('description'))
-    ) {
+    if (this.announcementsArmed) {
       this.announceCurrentContent();
-      this.observeAnnouncementContent();
+      if (changed.has('heading') || changed.has('description')) this.observeAnnouncementContent();
     }
-  }
-
-  override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    // Resolve forwarding slots against their flattened assignment. During hydration this direct
-    // wrapper correction waits until the server-equivalent first update has been observed.
-    this.updateBrowserDerivedState(() => {
-      this.reconcileSlotHidden(
-        this.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement,
-        this.shadowRoot!.querySelector('[part="icon"]') as HTMLElement,
-      );
-      this.reconcileSlotHidden(
-        this.shadowRoot!.querySelector('slot[name="actions"]') as HTMLSlotElement,
-        this.shadowRoot!.querySelector('[part="actions"]') as HTMLElement,
-      );
-      this.reconcileSlotHidden(
-        this.shadowRoot!.querySelector('slot[name="heading"]') as HTMLSlotElement,
-        this.shadowRoot!.querySelector('[part="heading"]') as HTMLElement,
-        this.heading.length > 0,
-      );
-      this.reconcileSlotHidden(
-        this.shadowRoot!.querySelector('slot[name="description"]') as HTMLSlotElement,
-        this.shadowRoot!.querySelector('[part="description"]') as HTMLElement,
-        this.description.length > 0,
-      );
-    });
-  }
-
-  private reconcileSlotHidden(slot: HTMLSlotElement, wrapper: HTMLElement, hasFallbackContent = false): void {
-    wrapper.toggleAttribute(
-      'hidden',
-      !hasFallbackContent && !hasRealContent(slot.assignedNodes({ flatten: true })),
-    );
   }
 
   private announcementObservationOptions(): MutationObserverInit {
@@ -265,22 +228,8 @@ export class LyraEmpty extends LyraElement {
     this.observeAnnouncementContent();
   };
 
-  /** Light-DOM mutation delivery precedes the slotchange/Lit update that unhides the corresponding
-   * heading or description wrapper. Reconcile those two wrappers from the already-current native
-   * slot assignment before extracting text, so the observer's coalesced mutation batch produces
-   * one complete announcement instead of an intermediate heading-only entry. */
   private scheduleAnnouncement(): void {
     if (!this.announcementsArmed) return;
-    const headingSlot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="heading"]');
-    const headingWrapper = this.shadowRoot?.querySelector<HTMLElement>('[part="heading"]');
-    if (headingSlot && headingWrapper) {
-      this.reconcileSlotHidden(headingSlot, headingWrapper, this.heading.length > 0);
-    }
-    const descriptionSlot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="description"]');
-    const descriptionWrapper = this.shadowRoot?.querySelector<HTMLElement>('[part="description"]');
-    if (descriptionSlot && descriptionWrapper) {
-      this.reconcileSlotHidden(descriptionSlot, descriptionWrapper, this.description.length > 0);
-    }
     this.announceCurrentContent();
   }
 
@@ -295,7 +244,8 @@ export class LyraEmpty extends LyraElement {
       // empty or accessibility-hidden. Keep that fact separate from the flattened text extractor.
       assigned: (slot?.assignedNodes() ?? []).length > 0,
       text: (slot?.assignedNodes({ flatten: true }) ?? [])
-        .map((node) => this.announcementUpgrades.collect(node, roots))
+        // The wrapper's `hidden` lags the slot assignment by a render, so it must not gate the text.
+        .map((node) => this.announcementUpgrades.collect(node, roots, { skipRootAncestorValidation: true, requireRendered: false }))
         .join(' '),
     };
   }

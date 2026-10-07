@@ -1,4 +1,5 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './skeleton.js';
 import type { LyraSkeleton, LyraSkeletonEffect } from './skeleton.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -6,13 +7,15 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-skeleton', 'variant');
 
+const sink = (): HTMLElement | null => document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`);
+const sinkText = (): string => sink()?.textContent ?? '';
+
 it('defaults to a decorative text shape like the mirrored upstream skeletons', async () => {
   const el = (await fixture(html`<lr-skeleton></lr-skeleton>`)) as LyraSkeleton;
   expect(el.shape).to.equal('text');
   expect(el.effect).to.equal('none');
   expect(el.announce).to.be.false;
   expect(el.hasAttribute('role')).to.equal(false);
-  expect(el.shadowRoot!.querySelectorAll('.sr-only').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part~="indicator"]')).to.exist;
 });
 
@@ -207,54 +210,49 @@ it('reverses the sheen sweep under dir="rtl" so it travels in the reading direct
   expect(getComputedStyle(rtlBase).animationDirection).to.equal('reverse');
 });
 
-it('defaults an opted-in accessible name to "Loading…" and reflects a custom label', async () => {
-  const defaulted = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
-  expect(defaulted.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');
+it('announces the default "Loading…" or a custom label once through the shared polite sink', async () => {
+  await fixture(html`<lr-skeleton announce></lr-skeleton>`);
+  await waitUntil(() => sinkText() === 'Loading…');
 
-  const labeled = (await fixture(
-    html`<lr-skeleton announce label="Loading chart"></lr-skeleton>`,
-  )) as LyraSkeleton;
-  expect(labeled.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading chart');
+  await fixture(html`<lr-skeleton announce label="Loading chart"></lr-skeleton>`);
+  await waitUntil(() => sinkText().includes('Loading chart'));
+  expect(sink()!.childElementCount).to.equal(2);
 });
 
-it('localizes the default accessible name via this.localize() when .strings overrides the shared loading key', async () => {
-  const el = (await fixture(
-    html`<lr-skeleton announce .strings=${{ loading: 'Chargement…' }}></lr-skeleton>`,
-  )) as LyraSkeleton;
-  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Chargement…');
+it('adds no host role or shadow text for the announcement', async () => {
+  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
+  await waitUntil(() => sinkText() === 'Loading…');
+  expect(el.announce).to.be.true;
+  expect(el.hasAttribute('role')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('.sr-only') === null).to.equal(true);
+});
+
+it('localizes the default announced name via this.localize() when .strings overrides the shared loading key', async () => {
+  await fixture(html`<lr-skeleton announce .strings=${{ loading: 'Chargement…' }}></lr-skeleton>`);
+  await waitUntil(() => sinkText() === 'Chargement…');
 });
 
 it('keeps an explicit label="Loading…" ahead of a strings override', async () => {
-  const el = (await fixture(html`
+  await fixture(html`
     <lr-skeleton announce label="Loading…" .strings=${{ loading: 'Chargement…' }}></lr-skeleton>
-  `)) as LyraSkeleton;
-  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('Loading…');
+  `);
+  await waitUntil(() => sinkText() === 'Loading…');
 });
 
 it('remains decorative after an explicit false property write', async () => {
   const el = (await fixture(html`<lr-skeleton .announce=${false}></lr-skeleton>`)) as LyraSkeleton;
 
   expect(el.hasAttribute('role')).to.equal(false);
-  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
+  expect(sink() === null).to.equal(true);
 });
 
-it('the announce attribute opts into status semantics and localized hidden text', async () => {
+it('releases the shared sink when announce is disabled', async () => {
   const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
-
-  expect(el.announce).to.be.true;
-  expect(el.getAttribute('role')).to.equal('status');
-  expect(el.shadowRoot!.querySelector('.sr-only')?.textContent).to.equal('Loading…');
-});
-
-it('removes status semantics when announce is disabled after rendering', async () => {
-  const el = (await fixture(html`<lr-skeleton announce></lr-skeleton>`)) as LyraSkeleton;
-  expect(el.getAttribute('role')).to.equal('status');
+  await waitUntil(() => sinkText() === 'Loading…');
 
   el.announce = false;
   await el.updateComplete;
-
-  expect(el.hasAttribute('role')).to.equal(false);
-  expect((el.shadowRoot!.querySelector('.sr-only')) === (null)).to.equal(true);
+  expect(sink() === null).to.equal(true);
 });
 
 it('is accessible', async () => {

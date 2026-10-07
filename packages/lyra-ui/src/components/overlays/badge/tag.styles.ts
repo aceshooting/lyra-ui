@@ -40,6 +40,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
+    font-size: var(--lr-size-0-75em);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);

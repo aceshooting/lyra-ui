@@ -1,16 +1,16 @@
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { html, nothing, type PropertyValues } from 'lit';
-import { query, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import {
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
-import { composedParentElement } from '../../../internal/active-element.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
-  collectComposedFocusTargets,
+  nearestExternalFocusTarget,
 } from '../../../internal/focus-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -25,35 +25,11 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext } from '../../../in
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraTagEventMap {
-  'lr-remove': CustomEvent<null>;
+  'lr-remove': CustomEvent<{ value?: string }>;
 }
 
 /** Badge tones plus Shoelace's tag-only plain-text treatment. */
 export type TagVariant = BadgeVariant | 'text';
-
-function isComposedWithin(owner: Element, candidate: Element): boolean {
-  let current: Element | null = candidate;
-  while (current) {
-    if (current === owner) return true;
-    current = composedParentElement(current);
-  }
-  return false;
-}
-
-function nearestExternalFocusTarget(owner: Element): HTMLElement | null {
-  const targets = collectComposedFocusTargets(owner.ownerDocument.documentElement, {
-    mode: 'programmatic',
-  }).elements;
-  const owned = targets
-    .map((target, index) => isComposedWithin(owner, target) ? index : -1)
-    .filter((index) => index >= 0);
-  if (owned.length === 0) return null;
-  const first = owned[0]!;
-  const last = owned[owned.length - 1]!;
-  return targets.slice(last + 1).find((target) => !isComposedWithin(owner, target))
-    ?? targets.slice(0, first).reverse().find((target) => !isComposedWithin(owner, target))
-    ?? null;
-}
 
 function sourceParent(node: Node): Element | null {
   if (node.parentElement) return node.parentElement;
@@ -100,6 +76,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * Enter/Space while focused — native `<button>` behavior). The consumer owns the state update and
  * DOM removal. Only rendered, and therefore only fired, while `withRemove` or its
  * Shoelace-compatible `removable` alias is set. The event's `target` is the tag.
+ * `detail: { value }` echoes the tag's `value` (`undefined` when never set), like `<lr-chip>`.
  * @csspart base - The tag surface.
  * @csspart start - Wrapper around the `start` slot. Hidden entirely while empty.
  * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
@@ -131,13 +108,13 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     removable: { attribute: 'removable', type: Boolean, noAccessor: true },
   };
 
-  protected override get semanticRole(): null {
-    return null;
-  }
-
   protected override get effectiveVariant(): LyraVariant {
     return this.variant === 'text' ? 'neutral' : super.effectiveVariant;
   }
+
+  /** Opaque consumer bookkeeping value, echoed verbatim in `lr-remove`'s detail (`undefined` when
+   *  never set) -- never read, validated or rendered by the tag itself. */
+  @property() value?: string;
 
   private removeEnabled = false;
   private changingRemoveAliasAttribute = false;
@@ -241,7 +218,8 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
       this.labelObserver = undefined;
       return;
     }
-    this.labelObserver ??= new MutationObserverCtor(() => {
+    this.labelObserver ??= new MutationObserverCtor((records, observer) => {
+      if (!accessibleTextRecordsMatter(observer, records)) return;
       this.bindLabelObserverTargets();
       this.syncHostActionRole();
       this.updateBrowserDerivedState(() => this.recomputeLabelText());
@@ -309,8 +287,8 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
 
   private onRemoveClick = (): void => {
     if (!this.withRemove) return;
-    const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
-    this.emit('lr-remove');
+    const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
+    this.emit('lr-remove', { value: this.value });
     if (repair && (!this.isConnected || !this.withRemove)) applyComposedFocusRepair(repair);
   };
 
@@ -342,7 +320,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     super.willUpdate(changed);
     if (changed.has('withRemove')) {
       if (!this.withRemove) {
-        const repair = captureComposedFocusRepair(this, nearestExternalFocusTarget(this));
+        const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
         if (repair) applyComposedFocusRepair(repair);
       }
       this.syncLabelObserver();

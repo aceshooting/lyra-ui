@@ -5,12 +5,14 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import {
+  accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
 } from '../../../internal/accessibility-visibility.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import { styles } from './card.styles.js';
@@ -240,13 +242,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     return resolveGuardedRel(this.rel, this.target);
   }
 
-  @state() private hasHeaderSlot = false;
-  @state() private hasMediaSlot = false;
-  @state() private hasImageSlot = false;
-  @state() private hasFooterSlot = false;
-  @state() private hasActionsSlot = false;
-  @state() private hasHeaderActionsSlot = false;
-  @state() private hasFooterActionsSlot = false;
+  private readonly slotPresence = new SlotPresenceController(this);
   @state() private accessibleContentText = '';
   private contentObserver?: MutationObserver;
   private readonly contentUpgrades = new CustomElementUpgradeObserver(() => {
@@ -286,29 +282,6 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
           ? previous
           : undefined;
     }
-    if (!this.hasUpdated) {
-      this.hasHeaderSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'header'
-      );
-      this.hasMediaSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'media'
-      );
-      this.hasImageSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'image'
-      );
-      this.hasFooterSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'footer'
-      );
-      this.hasActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'actions'
-      );
-      this.hasHeaderActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'header-actions'
-      );
-      this.hasFooterActionsSlot = Array.from(this.children).some(
-        (el) => el.getAttribute('slot') === 'footer-actions'
-      );
-    }
     this.syncAccessibleContentText();
   }
 
@@ -328,42 +301,6 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       target?.focus();
     }, 'card-owner-focus');
   }
-
-  private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onMediaSlotChange = (e: Event): void => {
-    this.hasMediaSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onImageSlotChange = (e: Event): void => {
-    this.hasImageSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onHeaderActionsSlotChange = (e: Event): void => {
-    this.hasHeaderActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
-  private onFooterActionsSlotChange = (e: Event): void => {
-    this.hasFooterActionsSlot =
-      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
-      0;
-  };
 
   /**
    * A card is a *container*, so it cannot forbid focusable children the way `<lr-chip>`'s
@@ -454,7 +391,8 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
     const generation = this.contentObserverGeneration;
-    const observer = new MutationObserverCtor(() => {
+    const observer = new MutationObserverCtor((records) => {
+      if (!accessibleTextRecordsMatter(observer, records)) return;
       if (
         this.contentObserver !== observer ||
         this.contentObserverDocument !== ownerDocument ||
@@ -505,12 +443,12 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   }
 
   override render(): TemplateResult {
-    const hasMedia = this.withMedia || this.hasMediaSlot || this.hasImageSlot;
-    const hasHeaderActions =
-      this.withHeaderActions || this.hasHeaderActionsSlot || this.hasActionsSlot;
-    const hasHeader = this.withHeader || this.hasHeaderSlot || hasHeaderActions;
-    const hasFooterActions = this.withFooterActions || this.hasFooterActionsSlot;
-    const hasFooter = this.withFooter || this.hasFooterSlot || hasFooterActions;
+    const has = (name: string): boolean => this.slotPresence.has(name);
+    const hasMedia = this.withMedia || has('media') || has('image');
+    const hasHeaderActions = this.withHeaderActions || has('header-actions') || has('actions');
+    const hasHeader = this.withHeader || has('header') || hasHeaderActions;
+    const hasFooterActions = this.withFooterActions || has('footer-actions');
+    const hasFooter = this.withFooter || has('footer') || hasFooterActions;
     const href = safeLinkHref(this.href);
     const activatable = this.actionable && !href;
     // Only an activation owner can be disabled; a passive card has nothing to turn off, so the
@@ -541,27 +479,21 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
           ></button>`
         : nothing}
       <div part="media image" ?hidden=${!hasMedia}>
-        <slot name="media" @slotchange=${this.onMediaSlotChange}></slot>
-        <slot name="image" @slotchange=${this.onImageSlotChange}></slot>
+        <slot name="media"></slot>
+        <slot name="image"></slot>
       </div>
       <div part="header" ?hidden=${!hasHeader}>
-        <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
+        <slot name="header"></slot>
         <div part="actions" ?hidden=${!hasHeaderActions}>
-          <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
-          <slot
-            name="header-actions"
-            @slotchange=${this.onHeaderActionsSlotChange}
-          ></slot>
+          <slot name="actions"></slot>
+          <slot name="header-actions"></slot>
         </div>
       </div>
       <div part="body"><slot></slot></div>
       <div part="footer" ?hidden=${!hasFooter}>
-        <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
+        <slot name="footer"></slot>
         <span class="footer-actions" ?hidden=${!hasFooterActions}>
-          <slot
-            name="footer-actions"
-            @slotchange=${this.onFooterActionsSlotChange}
-          ></slot>
+          <slot name="footer-actions"></slot>
         </span>
       </div>
     `;

@@ -2,6 +2,7 @@ import {
   fixture,
   expect,
   html,
+  nextFrame,
   oneEvent,
   elementUpdated,
   waitUntil,
@@ -16,6 +17,18 @@ import {
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
+
+const loopErrors: string[] = [];
+window.addEventListener(
+  "error",
+  (event) => {
+    if (!event.message.includes("ResizeObserver loop")) return;
+    loopErrors.push(event.message);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  },
+  true
+);
 
 const steps = () => [
   { stepId: "basics", label: "Basics", state: "completed" as const },
@@ -78,11 +91,12 @@ const BASELINE_OBSERVERS = 1;
  *  construction order (which is an implementation detail, and wrong the moment a second observer
  *  is added). Safe to over-deliver: the scroll-overflow callback ignores its entries entirely and
  *  just re-measures its own track. */
-function fireResizeAll(
+async function fireResizeAll(
   callbacks: ResizeObserverCallback[],
   width: number
-): void {
+): Promise<void> {
   for (const callback of callbacks) fireResize(callback, width);
+  await nextFrame();
 }
 
 function fireResize(callback: ResizeObserverCallback, width: number): void {
@@ -129,6 +143,16 @@ function installOwnerMatchMediaStub(
 }
 
 describe("lr-stepper", () => {
+  it("keeps its snapshot when the same steps array is rebound", async () => {
+    const source = steps();
+    const el = (await fixture(html`<lr-stepper .steps=${source}></lr-stepper>`)) as LyraStepper;
+    const snapshot = el.steps;
+    el.steps = source;
+    expect(el.steps === snapshot).to.equal(true);
+    el.steps = [...source];
+    expect(el.steps === snapshot).to.equal(false);
+  });
+
   it("uses stepId as the public step identity", async () => {
     const el = await fixture<LyraStepper>(html`
       <lr-stepper
@@ -895,6 +919,26 @@ describe("lr-stepper", () => {
     );
   });
 
+  it("crosses its orientation breakpoint without a ResizeObserver loop error", async () => {
+    loopErrors.length = 0;
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 900px;">
+        <lr-stepper orientation-breakpoint="500" narrow-orientation="vertical" .steps=${steps()}></lr-stepper>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector("lr-stepper") as LyraStepper;
+    await waitUntil(() => el.effectiveOrientation === "horizontal");
+    wrapper.style.inlineSize = "300px";
+    await waitUntil(() => el.effectiveOrientation === "vertical");
+    await nextFrame();
+    await nextFrame();
+    wrapper.style.inlineSize = "900px";
+    await waitUntil(() => el.effectiveOrientation === "horizontal");
+    await nextFrame();
+    await nextFrame();
+    expect(loopErrors).to.deep.equal([]);
+  });
+
   it("switches the navigation axis from its own inline-size breakpoint and reports the effective orientation", async () => {
     const spy = installResizeObserverSpy();
     try {
@@ -909,7 +953,7 @@ describe("lr-stepper", () => {
       expect(spy.callbacks.length).to.equal(BASELINE_OBSERVERS + 1);
       expect(el.effectiveOrientation).to.equal("horizontal"); // unmeasured yet -- assumes wide
 
-      fireResizeAll(spy.callbacks, 320);
+      await fireResizeAll(spy.callbacks, 320);
       await elementUpdated(el);
       expect(el.effectiveOrientation).to.equal("vertical");
       expect(el.getAttribute("data-effective-orientation")).to.equal(
@@ -930,7 +974,7 @@ describe("lr-stepper", () => {
       expect(el.shadowRoot!.activeElement === buttons[2]).to.equal(true);
 
       const changed = oneEvent(el, "lr-stepper-orientation-change");
-      fireResizeAll(spy.callbacks, 700);
+      await fireResizeAll(spy.callbacks, 700);
       expect((await changed).detail).to.deep.equal({
         orientation: "horizontal",
       });
@@ -1032,14 +1076,14 @@ describe("lr-stepper", () => {
         expect(px.callbacks.length).to.be.greaterThan(BASELINE_OBSERVERS);
 
         for (const { el, callbacks } of [rem, px]) {
-          fireResizeAll(callbacks, 499);
+          await fireResizeAll(callbacks, 499);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("vertical");
           expect(el.getAttribute("data-effective-orientation")).to.equal(
             "vertical"
           );
 
-          fireResizeAll(callbacks, 500);
+          await fireResizeAll(callbacks, 500);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("horizontal");
           expect(el.getAttribute("data-effective-orientation")).to.equal(
@@ -1075,11 +1119,11 @@ describe("lr-stepper", () => {
           attr,
           { el: prop, callbacks: propCallbacks },
         ]) {
-          fireResizeAll(callbacks, 320);
+          await fireResizeAll(callbacks, 320);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("vertical");
 
-          fireResizeAll(callbacks, 700);
+          await fireResizeAll(callbacks, 700);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("horizontal");
         }
@@ -1093,12 +1137,12 @@ describe("lr-stepper", () => {
       const spy = installResizeObserverSpy({ inert: true });
       try {
         const { el, callbacks } = await mount(spy, "31.25rem"); // 500px @ 16px root
-        fireResizeAll(callbacks, 600);
+        await fireResizeAll(callbacks, 600);
         await elementUpdated(el);
         expect(el.effectiveOrientation).to.equal("horizontal"); // 600 >= 500
 
         document.documentElement.style.fontSize = "20px"; // 31.25rem is now 625px
-        fireResizeAll(callbacks, 600);
+        await fireResizeAll(callbacks, 600);
         await elementUpdated(el);
         expect(el.effectiveOrientation).to.equal("vertical"); // 600 < 625 -- re-read, not frozen
       } finally {

@@ -1,13 +1,14 @@
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
+import { accessibleTextRecordsMatter, bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize, LyraVariant } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
 import {
   formatProgressPercent,
   joinAccessibleVisibleText,
+  normalizeProgressVariant,
   progressPercent,
   progressSafeMax,
   progressSafeValue,
@@ -70,9 +71,6 @@ export class LyraProgressBar extends LyraElement {
 
   static override styles = [LyraElement.styles, variants, styles];
 
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-  }
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
@@ -102,19 +100,17 @@ export class LyraProgressBar extends LyraElement {
     this.bindLabelObserverTargets();
     this.recomputeVisibleLabelText();
   });
-  private pendingLabelRefresh?: {
-    ownerWindow: Window;
-    kind: 'frame' | 'timeout';
-    handle: number;
-  };
   private readonly onLabelSlotChange = (event: Event): void => {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     this.bindLabelObserverTargets();
     this.recomputeVisibleLabelText();
-    this.requestUpdate();
-    this.scheduleCascadeLabelRefresh();
   };
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('variant')) this.variant = normalizeProgressVariant(this.variant);
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -145,63 +141,13 @@ export class LyraProgressBar extends LyraElement {
     this.labelUpgrades.disconnect();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records, observer) => {
+          if (!accessibleTextRecordsMatter(observer, records)) return;
           this.bindLabelObserverTargets();
           this.recomputeVisibleLabelText();
-          this.requestUpdate();
-          this.scheduleCascadeLabelRefresh();
         })
       : undefined;
     this.bindLabelObserverTargets();
-  }
-
-  private scheduleCascadeLabelRefresh(): void {
-    const ownerWindow = this.ownerDocument?.defaultView;
-    if (!ownerWindow) return;
-
-    const pending = this.pendingLabelRefresh;
-    if (pending?.ownerWindow === ownerWindow) return;
-    if (pending) this.cancelCascadeLabelRefresh();
-
-    const frameId = ownerWindow.requestAnimationFrame(() => {
-      const current = this.pendingLabelRefresh;
-      if (
-        current?.ownerWindow !== ownerWindow ||
-        current.kind !== 'frame' ||
-        current.handle !== frameId
-      ) {
-        return;
-      }
-      if (!this.isConnected || this.ownerDocument.defaultView !== ownerWindow) {
-        this.pendingLabelRefresh = undefined;
-        return;
-      }
-
-      const timeoutId = ownerWindow.setTimeout(() => {
-        const next = this.pendingLabelRefresh;
-        if (
-          next?.ownerWindow !== ownerWindow ||
-          next.kind !== 'timeout' ||
-          next.handle !== timeoutId
-        ) {
-          return;
-        }
-        this.pendingLabelRefresh = undefined;
-        if (this.isConnected && this.ownerDocument.defaultView === ownerWindow) {
-          this.recomputeVisibleLabelText();
-        }
-      }, 0);
-      this.pendingLabelRefresh = { ownerWindow, kind: 'timeout', handle: timeoutId };
-    });
-    this.pendingLabelRefresh = { ownerWindow, kind: 'frame', handle: frameId };
-  }
-
-  private cancelCascadeLabelRefresh(): void {
-    const pending = this.pendingLabelRefresh;
-    if (!pending) return;
-    if (pending.kind === 'frame') pending.ownerWindow.cancelAnimationFrame(pending.handle);
-    else pending.ownerWindow.clearTimeout(pending.handle);
-    this.pendingLabelRefresh = undefined;
   }
 
   private bindLabelObserverTargets(): void {
@@ -213,7 +159,6 @@ export class LyraProgressBar extends LyraElement {
     this.labelObserver?.disconnect();
     this.labelUpgrades.disconnect();
     this.labelObserver = undefined;
-    this.cancelCascadeLabelRefresh();
     super.disconnectedCallback();
   }
 
@@ -274,7 +219,7 @@ export class LyraProgressBar extends LyraElement {
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
       <div part="label" ?hidden=${!hasVisibleLabel}><slot @slotchange=${this.onLabelSlotChange}></slot><slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.withValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
-      <div part="track"><div part="indicator" style="inline-size:${this.indeterminate ? '40%' : `${this.percent}%`}"></div></div>
+      <div part="track"><div part="indicator" style=${this.indeterminate ? nothing : `inline-size:${this.percent}%`}></div></div>
     </div>`;
   }
 }

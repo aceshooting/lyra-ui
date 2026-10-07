@@ -1,7 +1,7 @@
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
+import { accessibleTextRecordsMatter, bindAccessibleTextObserver } from '../../../internal/accessibility-visibility.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
@@ -9,6 +9,7 @@ import type { LyraProgressVariant } from './progress-bar.class.js';
 import {
   formatProgressPercent,
   joinAccessibleVisibleText,
+  normalizeProgressVariant,
   progressPercent,
   progressSafeMax,
   progressSafeValue,
@@ -80,9 +81,6 @@ export class LyraProgressRing extends LyraElement {
 
   static override styles = [LyraElement.styles, variants, ringStyles];
 
-  override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
-    super.attributeChangedCallback(name, oldValue, newValue);
-  }
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
   @property({ type: Number, reflect: true }) value = 0;
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
@@ -126,6 +124,11 @@ export class LyraProgressRing extends LyraElement {
     this.recomputeVisibleLabelText();
   };
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has('variant')) this.variant = normalizeProgressVariant(this.variant);
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('slotchange', this.onLabelSlotChange);
@@ -156,7 +159,8 @@ export class LyraProgressRing extends LyraElement {
     const MutationObserverCtor = (this.ownerDocument as Document | undefined)?.defaultView
       ?.MutationObserver;
     this.labelObserver = MutationObserverCtor
-      ? new MutationObserverCtor(() => {
+      ? new MutationObserverCtor((records, observer) => {
+          if (!accessibleTextRecordsMatter(observer, records)) return;
           this.bindLabelObserverTargets();
           this.recomputeVisibleLabelText();
         })

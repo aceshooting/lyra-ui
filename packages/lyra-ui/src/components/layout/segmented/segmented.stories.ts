@@ -61,6 +61,20 @@ export const WithDisabledItem: Story = {
   `,
 };
 
+export const Disabled: Story = {
+  render: () => html`
+    <lr-segmented
+      disabled
+      .items=${[
+        { value: 'day', label: 'Day' },
+        { value: 'week', label: 'Week' },
+        { value: 'month', label: 'Month' },
+      ]}
+      value="week"
+    ></lr-segmented>
+  `,
+};
+
 export const WithIcons: Story = {
   name: 'With leading icons',
   render: () => html`

@@ -96,119 +96,13 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
-  /* Edge fade gated on real overflow: ScrollOverflowController sets data-scroll-overflow from a
-     scrollWidth/clientWidth measurement, and unconditionally a row narrower than its own two
-     2rem-per-edge fades reads as half-transparent and disabled. One-sided and RTL-aware like
-     lr-tab-group/lr-segmented/lr-stepper via data-scroll-start/data-scroll-end (same controller,
-     logical, live on scroll). :where() pins specificity to the [data-scroll-overflow]-only
-     baseline, so the later forced-colors override on the same base selectors wins by source
-     order. */
-  [part="actions"][data-scroll-overflow]:where([data-scroll-start][data-scroll-end]),
-  [part="view-toggles"][data-scroll-overflow]:where(
-      [data-scroll-start][data-scroll-end]
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part="actions"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ),
-  [part="view-toggles"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
-  [part="actions"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ),
-  [part="view-toggles"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part="actions"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ),
-  :host(:dir(rtl))
-    [part="view-toggles"][data-scroll-overflow]:where(
-      [data-scroll-end]:not([data-scroll-start])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
-      var(--lr-mask-opaque)
-    );
-  }
-  :host(:dir(rtl))
-    [part="actions"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ),
-  :host(:dir(rtl))
-    [part="view-toggles"][data-scroll-overflow]:where(
-      [data-scroll-start]:not([data-scroll-end])
-    ) {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-    mask-image: linear-gradient(
-      to right,
-      var(--lr-mask-opaque),
-      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
-      transparent
-    );
-  }
   [part="view-toggle"] {
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
     /* Both axes, matching collapse-button/fullscreen-button: min-inline-size floors the pill at the
-       square icon-button size, so a 13px glyph in a 40px pill has ~11px of slack that the default
-       justify-content (normal => flex-start) dumped on the trailing side -- 4.5px off true center
+       square icon-button size, so a 13px glyph in that pill has slack that the default
+       justify-content (normal => flex-start) dumped on the trailing side -- off true center
        once the asymmetric inline padding counts. A labeled toggle fills its fit-sized pill. */
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
@@ -389,17 +283,6 @@ export const styles = css`
     [part="collapse-button"],
     [part="fullscreen-button"] {
       transition: none !important;
-    }
-  }
-  @media (forced-colors: active) {
-    [part="actions"],
-    [part="view-toggles"],
-    [part="actions"][data-scroll-overflow],
-    [part="view-toggles"][data-scroll-overflow],
-    :host(:dir(rtl)) [part="actions"][data-scroll-overflow],
-    :host(:dir(rtl)) [part="view-toggles"][data-scroll-overflow] {
-      -webkit-mask-image: none;
-      mask-image: none;
     }
   }
 `;

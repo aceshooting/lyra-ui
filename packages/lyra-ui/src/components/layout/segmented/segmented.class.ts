@@ -7,6 +7,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
+import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './segmented.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -88,7 +89,7 @@ function snapshotSegmentedItems(
  * `<lr-segmented>` — a single-select button row with the WAI-ARIA APG `radiogroup` contract
  * built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or
  * arrow-key move both select immediately, like a native radio group), cyclic Arrow/Home/End
- * navigation among non-disabled items. First-party invention --
+ * navigation among non-disabled items (ArrowDown/ArrowUp step like ArrowRight/ArrowLeft). First-party invention --
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
  * settings/filter-panel UI. Supports the library's shared `size` ladder, the same one
  * `<lr-select>`/`<lr-combobox>`/`<lr-input>` use, so it can sit flush beside those controls in a
@@ -119,7 +120,7 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the track actually overflows, so a row that fits is never dimmed.
  * @cssprop [--lr-segmented-track-min-height=var(--lr-form-control-height)] - Minimum height of the
- *   `base` track, taken from the `size` tier's shared control height; the `2.5rem` (40px) default
+ *   `base` track, taken from the `size` tier's shared control height; the `2.25rem` (36px) default
  *   applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared
  *   default-tier floor. The private default follows `size`; a public value inherited from an
  *   ancestor or set directly on the element remains authoritative in every tier.
@@ -167,10 +168,11 @@ function snapshotSegmentedItems(
  * @since 4.0.0
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
-  static override styles = [LyraElement.styles, sizes, styles];
+  static override styles = [LyraElement.styles, sizes, scrollOverflowFadeStyles, styles];
 
   private effectiveItems: readonly Readonly<LyraSegmentedItem>[] =
     Object.freeze([]);
+  private itemsSource?: unknown;
 
   /** The button row's immutable, bounded items. Later duplicate values are ignored. */
   @property({ attribute: false })
@@ -178,6 +180,8 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     return this.effectiveItems;
   }
   set items(value: readonly LyraSegmentedItem[]) {
+    if (value === this.itemsSource || value === this.effectiveItems) return;
+    this.itemsSource = value;
     const previous = this.effectiveItems;
     this.effectiveItems = snapshotSegmentedItems(value);
     this.requestUpdate('items', previous);
@@ -191,6 +195,10 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  host `aria-label` wins by attribute presence, including an explicitly empty value. The resolved
    *  name is set on the `role="radiogroup"` element. */
   @property() label = '';
+
+  /** Disables the whole control: the radiogroup and every segment report `aria-disabled`, and
+   *  neither pointer nor keyboard selects. Each item's own `disabled` is unaffected. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Visual size, on the library's shared ladder — the same `--lr-form-control-*` scale
    *  `<lr-input>`/`<lr-select>`/`<lr-combobox>`/`<lr-button>` use, so a row of mixed controls at one
@@ -214,7 +222,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   );
 
   private select(item: Readonly<LyraSegmentedItem>): void {
-    if (item.disabled) return;
+    if (item.disabled || this.disabled) return;
     if (item !== this.selectedItem) {
       const valueChanged = item.value !== this.value;
       this.selectedItem = item;
@@ -242,16 +250,15 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   }
 
   /** Scroll the segment with the given `value` into view within the (possibly overflowing) track.
-   *  Public so a consumer can reveal a segment without selecting it. */
+   *  Public so a consumer can reveal a segment without selecting it. Scrolls only the track. */
   scrollToValue(value: string): void {
-    const index = this.items.findIndex((item) => item.value === value);
-    this.segmentButtonAt(index)?.scrollIntoView({
-      block: 'nearest',
-      inline: 'nearest',
-      behavior: prefersReducedMotion(this)
-        ? 'auto'
-        : 'smooth',
-    });
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const segment = this.segmentButtonAt(this.items.findIndex((item) => item.value === value));
+    if (!base || !segment) return;
+    const track = base.getBoundingClientRect();
+    const rect = segment.getBoundingClientRect();
+    const left = rect.left < track.left ? rect.left - track.left : Math.max(0, rect.right - track.right);
+    if (left) base.scrollBy({ left, behavior: prefersReducedMotion(this) ? 'auto' : 'smooth' });
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -330,6 +337,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.disabled) return;
     const navigable = this.items
       .map((item, index) => ({ item, index }))
       .filter(({ item }) => !item.disabled);
@@ -352,10 +360,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     let targetIndex: number;
     switch (e.key) {
       case forwardKey:
+      case 'ArrowDown':
         targetIndex =
           currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
         break;
       case backwardKey:
+      case 'ArrowUp':
         targetIndex =
           currentIndex < 0
             ? navigable.length - 1
@@ -400,6 +410,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
         part="base"
         role="radiogroup"
         aria-label=${ariaLabel}
+        aria-disabled=${this.disabled ? 'true' : nothing}
         @keydown=${this.onKeyDown}
       >
         ${repeat(
@@ -412,7 +423,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             data-index=${index}
             role="radio"
             aria-checked=${index === fallbackSelectedIndex ? 'true' : 'false'}
-            aria-disabled=${item.disabled ? 'true' : 'false'}
+            aria-disabled=${item.disabled || this.disabled ? 'true' : 'false'}
             tabindex=${index === tabbableIndex ? '0' : '-1'}
             @click=${() => this.select(item)}
           >

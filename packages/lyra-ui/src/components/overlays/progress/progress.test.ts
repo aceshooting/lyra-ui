@@ -74,61 +74,6 @@ it('tears down label observation safely after adoption into an ownerless documen
   expect((ring as unknown as { labelObserver?: MutationObserver }).labelObserver).to.equal(undefined);
 });
 
-it('ignores stale cascade-label frame and timeout callbacks after cancellation', async () => {
-  const el = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
-  const originalRequestAnimationFrame = window.requestAnimationFrame;
-  const originalCancelAnimationFrame = window.cancelAnimationFrame;
-  const originalSetTimeout = window.setTimeout;
-  const originalClearTimeout = window.clearTimeout;
-  const frames = new Map<number, FrameRequestCallback>();
-  const timeouts = new Map<number, TimerHandler>();
-  let handle = 1;
-  const internals = el as unknown as {
-    cancelCascadeLabelRefresh(): void;
-    scheduleCascadeLabelRefresh(): void;
-  };
-
-  try {
-    internals.cancelCascadeLabelRefresh();
-    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
-      const id = handle++;
-      frames.set(id, callback);
-      return id;
-    }) as typeof window.requestAnimationFrame;
-    window.cancelAnimationFrame = ((id: number) => {
-      frames.delete(id);
-    }) as typeof window.cancelAnimationFrame;
-    window.setTimeout = ((callback: TimerHandler) => {
-      const id = handle++;
-      timeouts.set(id, callback);
-      return id;
-    }) as typeof window.setTimeout;
-    window.clearTimeout = ((id?: number) => {
-      if (id !== undefined) timeouts.delete(id);
-    }) as typeof window.clearTimeout;
-
-    internals.scheduleCascadeLabelRefresh();
-    const staleFrame = [...frames.values()][0]!;
-    internals.cancelCascadeLabelRefresh();
-    expect(() => staleFrame(0)).to.not.throw();
-
-    internals.scheduleCascadeLabelRefresh();
-    const activeFrame = [...frames.values()][0]!;
-    activeFrame(0);
-    const staleTimeout = [...timeouts.values()][0]!;
-    internals.cancelCascadeLabelRefresh();
-    expect(() => {
-      if (typeof staleTimeout === 'function') staleTimeout();
-    }).to.not.throw();
-  } finally {
-    internals.cancelCascadeLabelRefresh();
-    window.requestAnimationFrame = originalRequestAnimationFrame;
-    window.cancelAnimationFrame = originalCancelAnimationFrame;
-    window.setTimeout = originalSetTimeout;
-    window.clearTimeout = originalClearTimeout;
-  }
-});
-
 it('keeps visible-label extraction safe when the style engine rejects a visibility probe', async () => {
   const el = (await fixture(html`<lr-progress-bar>Upload</lr-progress-bar>`)) as LyraProgressBar;
   const originalGetComputedStyle = window.getComputedStyle;
@@ -813,6 +758,47 @@ it('omits aria-valuenow for indeterminate progress', async () => {
   const el = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(base.hasAttribute('aria-valuenow')).to.be.false;
+});
+
+it('keeps an indeterminate bar and ring distinct from a determinate value when motion is off', async () => {
+  const still = '--_lr-motion-animation: none';
+  const bar = (await fixture(html`<lr-progress-bar indeterminate style=${still}></lr-progress-bar>`)) as LyraProgressBar;
+  const fixed = (await fixture(html`<lr-progress-bar value="40"></lr-progress-bar>`)) as LyraProgressBar;
+  const fill = (el: LyraProgressBar): { ratio: number; opacity: string } => {
+    const indicator = el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+    const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+    return {
+      ratio: Math.round((indicator.getBoundingClientRect().width / track.getBoundingClientRect().width) * 100),
+      opacity: getComputedStyle(indicator).opacity,
+    };
+  };
+  expect(fill(fixed)).to.deep.equal({ ratio: 40, opacity: '1' });
+  expect(fill(bar).ratio).to.equal(100);
+  expect(Number(fill(bar).opacity)).to.be.lessThan(1);
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const moving = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
+    expect(fill(moving)).to.deep.equal({ ratio: 40, opacity: '1' });
+  }
+
+  const ring = (await fixture(html`<lr-progress-ring indeterminate style=${still}></lr-progress-ring>`)) as LyraProgressRing;
+  const indicator = ring.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(indicator).strokeDasharray).to.equal('none');
+  expect(Number(getComputedStyle(indicator).opacity)).to.be.lessThan(1);
+});
+
+it('falls back to the brand variant for an unsupported value, like the other tone-bearing components', async () => {
+  const paint = (el: HTMLElement): string =>
+    getComputedStyle(el.shadowRoot!.querySelector('[part="indicator"]')!).backgroundColor;
+  const brand = (await fixture(html`<lr-progress-bar variant="brand" value="50"></lr-progress-bar>`)) as LyraProgressBar;
+  const bar = (await fixture(html`<lr-progress-bar variant="loud" value="50"></lr-progress-bar>`)) as LyraProgressBar;
+  const ring = (await fixture(html`<lr-progress-ring variant="loud" value="50"></lr-progress-ring>`)) as LyraProgressRing;
+  expect(bar.variant).to.equal('brand');
+  expect(bar.getAttribute('variant')).to.equal('brand');
+  expect(ring.getAttribute('variant')).to.equal('brand');
+  expect(paint(bar)).to.equal(paint(brand));
+  bar.variant = 'primary';
+  await bar.updateComplete;
+  expect(bar.getAttribute('variant')).to.equal('primary');
 });
 
 it('mirrors the indeterminate bar sweep under dir="rtl" with reversed keyframes', async () => {

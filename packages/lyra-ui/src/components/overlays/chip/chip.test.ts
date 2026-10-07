@@ -54,7 +54,7 @@ it('defaults to size="m", variant="neutral", removable=false, disabled=false, pi
 
 it('normalizes unsupported closed-set attributes and untyped property writes', async () => {
   const el = (await fixture(
-    html`<lr-chip size="huge" variant="primary">Tag</lr-chip>`,
+    html`<lr-chip size="huge" variant="loud">Tag</lr-chip>`,
   )) as LyraChip;
   expect(el.size).to.equal('m');
   expect(el.getAttribute('size')).to.equal('m');
@@ -66,7 +66,7 @@ it('normalizes unsupported closed-set attributes and untyped property writes', a
   await el.updateComplete;
   const foreign = el as unknown as Record<string, unknown>;
   foreign['size'] = 'huge';
-  foreign['variant'] = 'primary';
+  foreign['variant'] = 'loud';
   await el.updateComplete;
   expect(el.size).to.equal('m');
   expect(el.getAttribute('size')).to.equal('m');
@@ -387,11 +387,16 @@ it('keeps the progressive server start adornment visible during hydration, then 
   const icon = el.shadowRoot?.querySelector('[part="start"]');
   expect(icon?.hasAttribute('hidden')).to.be.false;
 
-  await waitUntil(
-    () => (el as unknown as { hasStartSlot: boolean }).hasStartSlot,
-    'the corrective hydration update must adopt the declarative start adornment',
-  );
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await el.updateComplete;
   expect(el.shadowRoot?.querySelector('[part="start"]') === icon).to.be.true;
+  expect(icon?.hasAttribute('hidden')).to.be.false;
+
+  el.querySelector('[slot="start"]')!.remove();
+  await waitUntil(
+    () => icon?.hasAttribute('hidden'),
+    'the adopted presence must follow the declarative start adornment',
+  );
 });
 
 it('derives the removable name before the first paint on a browser-only mount', async () => {
@@ -852,6 +857,47 @@ describe('selected', () => {
     button.click();
     expect(selectedDuringEvent).to.be.false;
     expect(el.selected).to.be.false;
+  });
+
+  it('renders variant="primary" with the brand palette, like lr-badge and lr-alert', async () => {
+    const paint = (el: LyraChip): string =>
+      getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).backgroundColor;
+    const brand = (await fixture(html`<lr-chip variant="brand">Tag</lr-chip>`)) as LyraChip;
+    const primary = (await fixture(html`<lr-chip variant="primary">Tag</lr-chip>`)) as LyraChip;
+    expect(primary.variant).to.equal('primary');
+    expect(primary.getAttribute('variant')).to.equal('primary');
+    expect(paint(primary)).to.equal(paint(brand));
+  });
+
+  it('retints the hovered remove fill through --lr-chip-remove-hover-bg, like lr-tag', async () => {
+    const el = (await fixture(
+      html`<lr-chip removable style="--lr-transition-fast: 0s; --lr-chip-remove-hover-bg: rgb(1, 2, 3);">Tag</lr-chip>`,
+    )) as LyraChip;
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+    try {
+      await hoverUntilMatched(button, 'the remove button never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)',
+        `hover background stayed ${getComputedStyle(button).backgroundColor}`,
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
+  it('emits lr-chip-change after the toggle commits, and not for a vetoed request', async () => {
+    const el = (await fixture(html`<lr-chip toggleable value="a">Tag</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    const seen: unknown[] = [];
+    el.addEventListener('lr-chip-change', (event) => {
+      seen.push({ detail: (event as CustomEvent).detail, selected: el.selected, cancelable: event.cancelable });
+    });
+    button.click();
+    expect(seen).to.deep.equal([{ detail: { value: 'a', selected: true }, selected: true, cancelable: false }]);
+
+    el.addEventListener('lr-chip-toggle-request', (event) => event.preventDefault(), { once: true });
+    button.click();
+    expect(seen.length).to.equal(1);
   });
 
   it('keeps action naming live and forwards host focus/blur/click to the primary control', async () => {
@@ -1576,8 +1622,8 @@ describe('chip control-guard hardening', () => {
     el.remove();
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    expect(start.hidden, 'a stale start slotchange after disconnect must not flip hasStartSlot').to.be.false;
-    expect(end.hidden, 'a stale end slotchange after disconnect must not flip hasEndSlot').to.be.false;
+    expect(start.hidden, 'a stale start slotchange after disconnect must not flip the start wrapper').to.be.false;
+    expect(end.hidden, 'a stale end slotchange after disconnect must not flip the end wrapper').to.be.false;
   });
 });
 

@@ -17,20 +17,6 @@ export const styles = css`
     display: block;
   }
 
-  /* Shoelace calls its brand/default tone "primary". Re-point the shared semantic slots instead
-     of introducing a second colour vocabulary for this compatibility component. */
-  :host([variant='primary']) {
-    --lr-color-fill-quiet: var(--lr-color-brand-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-brand-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-brand-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-brand-border-quiet);
-    --lr-color-border-normal: var(--lr-color-brand-border-normal);
-    --lr-color-border-loud: var(--lr-color-brand-border-loud);
-    --lr-color-on-quiet: var(--lr-color-brand-on-quiet);
-    --lr-color-on-normal: var(--lr-color-brand-on-normal);
-    --lr-color-on-loud: var(--lr-color-brand-on-loud);
-  }
-
   [part='base'] {
     position: relative;
     display: grid;
@@ -152,6 +138,7 @@ export const styles = css`
     color: inherit;
     font: inherit;
     cursor: pointer;
+    transition: background-color var(--lr-transition-fast);
   }
 
   [part~='close-button']:where(:hover) {
@@ -191,7 +178,8 @@ export const styles = css`
   }
 
   @media (prefers-reduced-motion: reduce) {
-    [part='base'] {
+    [part='base'],
+    [part~='close-button'] {
       transition: none;
     }
 
