@@ -7,6 +7,7 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import "./message-feedback.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import type { LyraMessageFeedback } from "./message-feedback.js";
 import type { LyraChip } from "../../overlays/chip/chip.class.js";
 import { hoverUntilMatched, resetMouse } from "../../../../test/wtr-mouse.js";
@@ -665,11 +666,13 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
       el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute("data-open")
     ).to.equal(true);
     expect(textarea.disabled).to.equal(true);
+    const earlier = new Set(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > *`));
     const liveText = (): string =>
-      el
-        .shadowRoot!.querySelector("lr-live-region")!
-        .shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
+      [...document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"] > *`)]
+        .filter((node) => !earlier.has(node))
+        .at(-1)?.textContent ?? "";
     expect(liveText()).to.equal("");
+    expect(el.shadowRoot!.querySelector("lr-live-region") === null, "no per-control region element").to.be.true;
 
     expect(el.revertPendingSubmit(submissionId)).to.be.true;
     await el.updateComplete;

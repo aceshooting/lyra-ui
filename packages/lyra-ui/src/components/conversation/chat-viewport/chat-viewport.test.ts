@@ -7,6 +7,7 @@ import type { LyraChatViewport } from "./chat-viewport.js";
 import type { LyraVirtualList } from "../../layout/virtual-list/virtual-list.class.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 function sinkElement(
   politeness: "polite" | "assertive",
@@ -1416,7 +1417,7 @@ describe("virtual mode", () => {
     ).to.equal("0");
   });
 
-  it("ignores visible-range events bubbling from a nested consumer list", async () => {
+  it("ignores scroll events bubbling from a nested consumer list", async () => {
     const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
     await el.updateComplete;
     const owned = el.querySelector("lr-virtual-list") as LyraVirtualList;
@@ -1425,8 +1426,8 @@ describe("virtual mode", () => {
     (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent = true;
 
     nested.dispatchEvent(
-      new CustomEvent("lr-visible-range-change", {
-        detail: { start: 0, end: 1 },
+      new CustomEvent("lr-virtual-scroll", {
+        detail: { scrollTop: 0, viewportHeight: 0 },
         bubbles: true,
         composed: true,
       })
@@ -1551,13 +1552,9 @@ describe("virtual mode", () => {
 
     let fired = false;
     el.addEventListener("lr-follow-change", () => (fired = true));
-    // Simulates the range event a later, unrelated append produces while not at the bottom --
-    // never actually user-caused.
-    list.dispatchEvent(
-      new CustomEvent("lr-visible-range-change", {
-        detail: { start: 10, end: 18 },
-      })
-    );
+    // A later, unrelated scroll away from the bottom -- never actually user-caused.
+    base.scrollTop = 0;
+    list.dispatchEvent(new CustomEvent("lr-virtual-scroll", { detail: { scrollTop: 0, viewportHeight: 120 } }));
     expect(
       fired,
       "a stuck pendingUserIntent would misattribute this as a user release"
@@ -1577,7 +1574,7 @@ describe("virtual mode", () => {
       new WheelEvent("wheel", { bubbles: true, composed: true })
     );
     // A realistic streamed-token append cadence: far sooner than a wall-clock timeout could ever
-    // safely expire on (active token streaming fires range-changed events much more often than
+    // safely expire on (active token streaming fires scroll events much more often than
     // once every few hundred milliseconds), but well after the gesture's own settle window, so a
     // fix that proactively clears a no-op gesture's intent (rather than waiting out a generous
     // fixed timeout) must not misattribute this.
@@ -1585,11 +1582,8 @@ describe("virtual mode", () => {
 
     let fired = false;
     el.addEventListener("lr-follow-change", () => (fired = true));
-    list.dispatchEvent(
-      new CustomEvent("lr-visible-range-change", {
-        detail: { start: 10, end: 18 },
-      })
-    );
+    base.scrollTop = 0;
+    list.dispatchEvent(new CustomEvent("lr-virtual-scroll", { detail: { scrollTop: 0, viewportHeight: 120 } }));
     expect(
       fired,
       "a same-burst append must not be misattributed as a user release"
@@ -1597,26 +1591,79 @@ describe("virtual mode", () => {
     expect(el.follow).to.be.true;
   });
 
-  it("ignores a malformed visible-range detail instead of treating it as a real range update", async () => {
-    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
-    await el.updateComplete;
-    await nextFrame();
-    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+  function autoHeightFixture(heights: number[]) {
+    return html`
+      <lr-chat-viewport style="block-size:120px">
+        <lr-virtual-list
+          style="--lr-virtual-list-height:120px"
+          row-height="auto"
+          .items=${heights.map((h, id) => ({ id, h }))}
+          .renderItem=${(item: { id: number; h: number }) =>
+            html`<div style="block-size:${item.h}px">row ${item.id}</div>`}
+          .keyFunction=${(item: { id: number }) => item.id}
+        ></lr-virtual-list>
+      </lr-chat-viewport>
+    `;
+  }
 
-    let fired = false;
-    el.addEventListener("lr-follow-change", () => (fired = true));
-    for (const detail of [
-      undefined,
-      { start: Number.NaN, end: 5 },
-      { start: -1, end: 5 },
-      { start: 8, end: 5 },
-    ]) {
-      list.dispatchEvent(
-        new CustomEvent("lr-visible-range-change", { detail })
-      );
-    }
-    expect(fired, "a malformed detail must not flip follow").to.be.false;
+  const distanceFromEnd = (base: HTMLElement) =>
+    base.scrollHeight - base.scrollTop - base.clientHeight;
+
+  it("follows an appended row and a last row that grows in place", async () => {
+    const el = (await fixture(autoHeightFixture(Array(8).fill(40)))) as LyraChatViewport;
+    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+    await nextFrame();
+    await nextFrame();
+    const base = list.scrollContainer!;
+    expect(distanceFromEnd(base)).to.be.at.most(1);
+
+    list.items = [...list.items, { id: 8, h: 40 }];
+    await waitUntil(() => distanceFromEnd(base) <= 1, "append was not followed");
+
+    const last = list.renderedRows.at(-1)!.querySelector("div")!;
+    last.style.blockSize = "300px";
+    await waitUntil(
+      () => base.scrollHeight > 600 && distanceFromEnd(base) <= 1,
+      "growth of the last row was not followed"
+    );
     expect(el.follow).to.be.true;
+  });
+
+  it("releases follow on a user scroll inside a last row taller than the viewport", async () => {
+    const el = (await fixture(autoHeightFixture([40, 40, 400]))) as LyraChatViewport;
+    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+    await nextFrame();
+    await nextFrame();
+    const base = list.scrollContainer!;
+    expect(distanceFromEnd(base)).to.be.at.most(1);
+
+    base.dispatchEvent(new WheelEvent("wheel", { bubbles: true, composed: true }));
+    base.scrollTop -= 100;
+    await waitUntil(() => !el.follow, "follow was not released");
+  });
+
+  it("counts and scrolls a list fed through source", async () => {
+    const el = (await fixture(html`
+      <lr-chat-viewport style="block-size:120px" unread-start-index="45">
+        <lr-virtual-list
+          style="--lr-virtual-list-height:120px"
+          row-height="40"
+          .source=${{ count: 50, itemAt: (i: number) => i }}
+          .renderItem=${(item: unknown) => html`row ${item}`}
+        ></lr-virtual-list>
+      </lr-chat-viewport>
+    `)) as LyraChatViewport;
+    const list = el.querySelector("lr-virtual-list") as LyraVirtualList;
+    await nextFrame();
+    const base = list.scrollContainer!;
+    expect(distanceFromEnd(base)).to.be.at.most(1);
+
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]')!;
+    expect(pill.textContent).to.contain("5");
+    base.scrollTop = 0;
+    expect(el.scrollToUnread({ behavior: "auto" })).to.be.true;
   });
 
   it("scrollToUnread() defers to the slotted list, returning false when the index is out of range", async () => {
@@ -1723,8 +1770,8 @@ it("is accessible populated with real chat messages, an unread divider, and a fa
 
 // -- Keyboard scroll gestures count as user intent ---------------------------
 
-it("treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys", async () => {
-  for (const key of ["PageUp", "ArrowUp", "Home"]) {
+it("treats PageUp/ArrowUp/Home/Shift+Space as a user scroll gesture, and ignores other keys", async () => {
+  for (const key of ["PageUp", "ArrowUp", "Home", " "]) {
     const el = (await fixture(
       html`<lr-chat-viewport></lr-chat-viewport>`
     )) as LyraChatViewport;
@@ -1732,7 +1779,7 @@ it("treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys"
     const scroll = el.shadowRoot!.querySelector(
       '[part="scroll"]'
     ) as HTMLElement;
-    scroll.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    scroll.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, shiftKey: key === " " }));
     expect(
       (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent,
       `${key} marks user intent, the same as a wheel or touchmove gesture`
@@ -1744,11 +1791,78 @@ it("treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys"
   )) as LyraChatViewport;
   await el.updateComplete;
   const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
-  for (const key of ["PageDown", "ArrowDown", "End", "a"]) {
+  for (const key of ["PageDown", "ArrowDown", "End", "a", " "]) {
     scroll.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
     expect(
       (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent,
       `${key} is not a scroll-back gesture`
     ).to.be.false;
   }
+});
+
+it("registers its wheel and touchmove intent listeners as passive", async () => {
+  const passive: Record<string, unknown> = {};
+  const original = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (
+    this: EventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions
+  ) {
+    if ((type === "wheel" || type === "touchmove") && (this as Element).getAttribute?.("part") === "scroll") {
+      passive[type] = typeof options === "object" ? options.passive : undefined;
+    }
+    return original.call(this, type, listener, options);
+  };
+  try {
+    await fixture(html`<lr-chat-viewport></lr-chat-viewport>`);
+  } finally {
+    EventTarget.prototype.addEventListener = original;
+  }
+  expect(passive).to.deep.equal({ wheel: true, touchmove: true });
+});
+
+async function engineAnchorsScroll(): Promise<boolean> {
+  const box = await fixture<HTMLElement>(
+    html`<div style="block-size:50px;overflow:auto"><div style="block-size:200px"></div></div>`
+  );
+  box.scrollTop = 100;
+  const inserted = document.createElement("div");
+  inserted.style.blockSize = "30px";
+  box.prepend(inserted);
+  await nextFrame();
+  return box.scrollTop > 100;
+}
+
+it("keeps the reading position when content above it grows while follow is released", async function () {
+  if (!(await engineAnchorsScroll())) this.skip();
+  const el = (await fixture(
+    html`<lr-chat-viewport style="block-size:200px"
+      >${Array.from({ length: 20 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+    >`
+  )) as LyraChatViewport;
+  await nextFrame();
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+  scroll.dispatchEvent(new WheelEvent("wheel", { bubbles: true, composed: true }));
+  scroll.scrollTop = 300;
+  await waitUntil(() => !el.follow, "follow was not released");
+  const reading = el.children[10] as HTMLElement;
+  const before = reading.getBoundingClientRect().top;
+
+  const older = document.createElement("div");
+  older.style.blockSize = "120px";
+  el.prepend(older);
+  await nextFrame();
+  expect(Math.abs(reading.getBoundingClientRect().top - before)).to.be.at.most(1);
+});
+
+it("paints the themed focus ring on the keyboard-focused transcript", async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport style="--lr-focus-ring-color: rgb(1, 2, 3)"
+      >${row("m0")}</lr-chat-viewport
+    >`
+  )) as LyraChatViewport;
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+  await focusByKeyboard(scroll);
+  expect(getComputedStyle(scroll).outlineColor).to.equal("rgb(1, 2, 3)");
 });

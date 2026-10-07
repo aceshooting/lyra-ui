@@ -1247,8 +1247,8 @@ it("uses owner-window geometry and observers, and retires an adopted positioning
 
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
-    // Force styleMap to recompute after adoption without creating fresh child custom elements in
-    // the destination document (constructed stylesheets intentionally remain document-scoped).
+    // Force a re-render after adoption without creating fresh child custom elements in the
+    // destination document (constructed stylesheets intentionally remain document-scoped).
     el.requestUpdate();
     await el.updateComplete;
     const toolbar = el.shadowRoot!.querySelector(
@@ -1314,7 +1314,7 @@ it("uses owner-window geometry and observers, and retires an adopted positioning
   }
 });
 
-it("never lets a non-finite rect reach the styleMap-bound coordinates (CSS injection/NaN hardening)", async () => {
+it("never lets a non-finite rect reach the toolbar coordinates (CSS injection/NaN hardening)", async () => {
   const el = (await fixture(
     html`<lr-selection-toolbar open text="selected"></lr-selection-toolbar>`
   )) as LyraSelectionToolbar;
@@ -1329,18 +1329,16 @@ it("never lets a non-finite rect reach the styleMap-bound coordinates (CSS injec
     bottom: NaN,
   } as unknown as DOMRectReadOnly;
   await el.updateComplete;
-  const coordinates = (
-    el as unknown as { coordinates(): Record<string, string> }
-  ).coordinates();
-  expect(coordinates["--_lr-selection-toolbar-inline-start"]).to.match(
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  expect(toolbar.style.getPropertyValue("--_lr-selection-toolbar-inline-start")).to.match(
     /^-?\d+(\.\d+)?px$/
   );
-  expect(coordinates["--_lr-selection-toolbar-block-start"]).to.match(
+  expect(toolbar.style.getPropertyValue("--_lr-selection-toolbar-block-start")).to.match(
     /^-?\d+(\.\d+)?px$/
   );
 });
 
-it("computes ownerless coordinates without consulting ambient viewport geometry", async () => {
+it("renders ownerless without consulting ambient viewport geometry", async () => {
   const inertDocument =
     document.implementation.createHTMLDocument("ownerless toolbar");
   const innerWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
@@ -1357,10 +1355,8 @@ it("computes ownerless coordinates without consulting ambient viewport geometry"
         throw new Error("ambient viewport consulted");
       },
     });
-    const coordinates = (
-      el as unknown as { coordinates(): Record<string, string> }
-    ).coordinates();
-    expect(coordinates["--_lr-selection-toolbar-inline-start"]).to.equal("0px");
+    el.requestUpdate();
+    await el.updateComplete;
   } finally {
     if (innerWidth) Object.defineProperty(window, "innerWidth", innerWidth);
     else Reflect.deleteProperty(window, "innerWidth");
@@ -1856,4 +1852,28 @@ describe("top-layer escape", () => {
     expect(el.shadowRoot!.querySelector('[part="toolbar"]') === null, "closing removes the toolbar").to.equal(true);
     expect(toolbar.matches(":popover-open"), "removal releases the top layer").to.equal(false);
   });
+});
+
+it("ignores keys a slotted control already handled or that come from a text field", async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected">
+      <div slot="actions" id="handled" tabindex="0"></div>
+      <input slot="actions" id="field" value="hello" />
+    </lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const handled = el.querySelector<HTMLElement>("#handled")!;
+  handled.addEventListener("keydown", (event) => event.preventDefault());
+  handled.focus();
+  handled.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true, composed: true, cancelable: true }));
+  await aTimeout(0);
+  expect(document.activeElement === handled, "a handled key stays with its control").to.be.true;
+
+  const field = el.querySelector<HTMLInputElement>("#field")!;
+  field.focus();
+  const event = new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, composed: true, cancelable: true });
+  field.dispatchEvent(event);
+  await aTimeout(0);
+  expect(event.defaultPrevented).to.be.false;
+  expect(document.activeElement === field).to.be.true;
 });

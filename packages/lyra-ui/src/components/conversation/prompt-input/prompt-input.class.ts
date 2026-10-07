@@ -26,7 +26,15 @@ import type {
 } from '../../media/attachment-trigger/attachment-trigger.class.js';
 import type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
 export type { LyraSourceEntry } from '../../retrieval/source-picker/source-picker.class.js';
-import { firstByRetrievalIdentity as firstByPromptIdentity } from '../../retrieval/retrieval-identity.js';
+import {
+  canonicalIdentityList,
+  firstByRetrievalIdentity as firstByPromptIdentity,
+} from '../../retrieval/retrieval-identity.js';
+import { guard } from 'lit/directives/guard.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 import type {
   LyraMentionItem,
   LyraMentionPopover,
@@ -120,7 +128,8 @@ type LyraPromptInputCustomEventName = Exclude<
  * Deliberately not form-associated: this is a composite application interaction whose complete
  * state includes attachments, source scope, model, voice, and queued turns, not one successful
  * string form entry. Observe `lr-input` for controlled text and handle `lr-submit` as the
- * submission request. `label` names the prompt section; it is not generic field chrome.
+ * submission request. `label` names the prompt section; it is not generic field chrome. A host
+ * `aria-describedby` describes the composed textarea.
  *
  * The composed text surface exposes the same native editing-assistance, selection, and range-edit
  * APIs as `<lr-chat-composer>`. Silent `setRangeText()` calls keep this outer `value` synchronized
@@ -149,7 +158,8 @@ type LyraPromptInputCustomEventName = Exclude<
  * @event lr-submit - Prompt submission was requested. `detail: { value }`.
  * @event lr-stop - Stop generation was requested.
  * @event lr-mention-select - A mention or slash command was inserted.
- * @event lr-attachments-add - Files were selected. `detail: { files, capability }`.
+ * @event lr-attachments-add - Files were selected. `detail: { files, capability, rejected,
+ *   remainingFiles, remainingTotalSize }`, forwarded from `lr-attachment-trigger`'s `lr-files`.
  * @event lr-attachment-remove - Attachment removal was requested. `detail: { attachmentId }`.
  * @event lr-model-change - Model selection changed. `detail: { value, inCatalog }`.
  * @event lr-voice-change - Voice selection changed. `detail: { value, inCatalog }`.
@@ -224,6 +234,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     return this._value;
   }
   set value(next: string) {
+    if (next === this._value) return;
     const old = this._value;
     this._value = next;
     this.suggestionCaretGeneration += 1;
@@ -251,6 +262,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ type: Number, attribute: 'maxlength' }) maxLength?: number;
   /** Forwarded to the composed composer: plain Enter inserts a newline instead of submitting. */
   @property({ type: Boolean, attribute: 'without-enter-submit' }) withoutEnterSubmit = false;
+  /** Forwarded to the composed composer: gates Send without disabling the textarea or Stop. */
+  @property({ type: Boolean, attribute: 'submit-disabled' }) submitDisabled = false;
+  /** Forwarded to the composed composer: a busy composer shows a disabled Send instead of Stop. */
+  @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;
+  // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
+  @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
+  // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
+  @property({ type: Number, attribute: 'max-rows' }) maxRows = 8;
 
   /** Forwarded to the composed native textarea. `spellcheck="false"` parses as `false`, matching
    * the textarea's true default while remaining usable from plain HTML. */
@@ -310,6 +329,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @state() private activeSuggestion: ActiveSuggestion | null = null;
   private readonly slotPresence = new SlotPresenceController(this);
   @query('lr-chat-composer') private composer?: LyraChatComposer;
+  private descriptionLease?: ResolvedAriaRelationshipLease;
   @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
   private suggestionAnchor?: HTMLElement;
   private pendingSuggestionValue: string | undefined;
@@ -424,14 +444,29 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.onCompositeKeyDown, true);
+    if (this.hasUpdated) this.syncDescription();
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('keydown', this.onCompositeKeyDown, true);
     this.suggestionCaretGeneration += 1;
     this.closeSuggestions();
+    this.descriptionLease?.release();
+    this.descriptionLease = undefined;
     super.disconnectedCallback();
   }
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    void this.composer?.updateComplete.then(this.syncDescription);
+  }
+
+  private syncDescription = (): void => {
+    const target = this.composer?.input;
+    if (this.isConnected && target && !this.descriptionLease) {
+      this.descriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+    }
+  };
 
   protected override updated(_changed: PropertyValues): void {
     super.updated(_changed);
@@ -692,16 +727,25 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     });
   }
 
+  private readonly firstByIdentity = new WeakMap<object, readonly unknown[]>();
+
+  /** First-wins rows per assigned snapshot, so children keep one stable collection. */
+  private firstById<T>(values: readonly T[], identity: (value: T) => unknown): readonly T[] {
+    let retained = this.firstByIdentity.get(values) as readonly T[] | undefined;
+    if (!retained) this.firstByIdentity.set(values, (retained = firstByPromptIdentity(values, identity)));
+    return retained;
+  }
+
   private get effectiveSources(): readonly LyraSourceEntry[] {
-    return firstByPromptIdentity(this.sources, (source) => source.id);
+    return this.firstById(this.sources, (source) => source.id);
   }
 
   private get effectiveSelectedSourceIds(): readonly string[] {
-    return firstByPromptIdentity(this.selectedSourceIds, (sourceId) => sourceId);
+    return canonicalIdentityList(this.selectedSourceIds);
   }
 
   private get effectiveQueue(): readonly PromptQueueItem[] {
-    return firstByPromptIdentity(this.queue, (item) => item.id);
+    return this.firstById(this.queue, (item) => item.id);
   }
 
   private renderDefaultAttachmentTrigger(): TemplateResult {
@@ -849,7 +893,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       ${queue.length
         ? html`<lr-prompt-queue
             part="queue"
-            .items=${queue}
+            .items=${guard([queue], () => queue)}
             .disabled=${this.disabled}
             @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>
               this.reemit(event, 'lr-queue-change')}
@@ -879,6 +923,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .minLength=${this.minLength}
         .maxLength=${this.maxLength}
         .withoutEnterSubmit=${this.withoutEnterSubmit}
+        .submitDisabled=${this.submitDisabled}
+        .withoutStop=${this.withoutStop}
+        .minRows=${this.minRows}
+        .maxRows=${this.maxRows}
         aria-label=${label}
         @lr-input=${this.onInput}
         @lr-change=${this.onChange}

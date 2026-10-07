@@ -2,17 +2,21 @@ import { focusAfterPointer } from '../../../../test/wtr-focus.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-message.js";
-import "../../utility/live-region/live-region.js";
 import "../markdown/markdown-core.js";
 import type { LyraChatMessage } from "./chat-message.js";
-import type { LyraLiveRegion } from "../../utility/live-region/live-region.js";
+import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setReducedMotion } from "../../../../test/wtr-media.js";
 
-function liveRegionText(el: LyraChatMessage): string {
-  const region = el.shadowRoot!.querySelector(
-    "lr-live-region"
-  ) as LyraLiveRegion;
-  return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
+let earlierAnnouncements = new Set<Element>();
+beforeEach(() => {
+  earlierAnnouncements = new Set(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}] > *`));
+});
+
+/** The latest announcement made during the current test, optionally of one politeness. */
+function liveRegionText(politeness?: "polite" | "assertive"): string {
+  const selector = politeness ? `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="${politeness}"] > *` : `[${ANNOUNCEMENT_SINK_ATTRIBUTE}] > *`;
+  const fresh = [...document.querySelectorAll(selector)].filter((node) => !earlierAnnouncements.has(node));
+  return fresh.at(-1)?.textContent ?? "";
 }
 
 // These locale-formatting fixtures intentionally retain English messages.
@@ -353,10 +357,8 @@ it("degrades an out-of-set post-mount status transition to sent instead of freez
 });
 
 it("does not announce whatever status a message happens to mount with", async () => {
-  const el = (await fixture(
-    html`<lr-chat-message status="failed">hi</lr-chat-message>`
-  )) as LyraChatMessage;
-  expect(liveRegionText(el)).to.equal("");
+  await fixture(html`<lr-chat-message status="failed">hi</lr-chat-message>`);
+  expect(liveRegionText()).to.equal("");
 });
 
 it("does not announce a status transition that happened while detached", async () => {
@@ -369,14 +371,14 @@ it("does not announce a status transition that happened while detached", async (
   wrapper.appendChild(el);
   await el.updateComplete;
   await new Promise((resolve) => requestAnimationFrame(resolve));
-  expect(liveRegionText(el)).to.equal("");
+  expect(liveRegionText()).to.equal("");
 
   el.status = "streaming";
   await el.updateComplete;
   el.status = "sent";
   await el.updateComplete;
   expect(
-    liveRegionText(el),
+    liveRegionText(),
     "a transition after reconnect must not remain suppressed"
   ).to.equal("Message complete.");
 });
@@ -388,11 +390,8 @@ it('announces a transition to status="failed" assertively via the internal live-
   el.status = "failed";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal("Message failed to send.");
-  const region = el.shadowRoot!.querySelector(
-    "lr-live-region"
-  ) as LyraLiveRegion;
-  expect(region.mode).to.equal("assertive");
+  expect(liveRegionText("assertive")).to.equal("Message failed to send.");
+  expect(el.shadowRoot!.querySelector("lr-live-region") === null, "no per-message region element").to.be.true;
 });
 
 it('announces a streaming -> sent transition politely, but not other transitions into "sent"', async () => {
@@ -403,14 +402,14 @@ it('announces a streaming -> sent transition politely, but not other transitions
   el.status = "sending";
   await el.updateComplete;
   expect(
-    liveRegionText(el),
+    liveRegionText(),
     "streaming -> sending is not an announced transition"
   ).to.equal("");
 
   el.status = "sent";
   await el.updateComplete;
   expect(
-    liveRegionText(el),
+    liveRegionText(),
     "sending -> sent (not streaming -> sent) is not announced"
   ).to.equal("");
 });
@@ -422,11 +421,7 @@ it("announces streaming -> sent directly", async () => {
   el.status = "sent";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal("Message complete.");
-  const region = el.shadowRoot!.querySelector(
-    "lr-live-region"
-  ) as LyraLiveRegion;
-  expect(region.mode).to.equal("polite");
+  expect(liveRegionText("polite")).to.equal("Message complete.");
 });
 
 it("still announces streaming -> sent when both are set within the same task, with no render in between", async () => {
@@ -442,7 +437,7 @@ it("still announces streaming -> sent when both are set within the same task, wi
   el.status = "sent";
   await el.updateComplete;
 
-  expect(liveRegionText(el)).to.equal("Message complete.");
+  expect(liveRegionText()).to.equal("Message complete.");
 });
 
 it("hides the header/footer/avatar/badges/attachments/actions wrappers until something is slotted", async () => {
@@ -979,10 +974,10 @@ it("localizes the live-region status-change announcements via this.localize()", 
   await el.updateComplete;
   el.status = "sent";
   await el.updateComplete;
-  expect(liveRegionText(el)).to.equal("Terminé.");
+  expect(liveRegionText()).to.equal("Terminé.");
   el.status = "failed";
   await el.updateComplete;
-  expect(liveRegionText(el)).to.equal("Échec.");
+  expect(liveRegionText()).to.equal("Échec.");
 });
 
 it("is accessible in the default, empty state", async () => {
@@ -1210,7 +1205,7 @@ describe("failure slot", () => {
     await el.updateComplete;
 
     expect(
-      liveRegionText(el),
+      liveRegionText(),
       "the host owns announcing its own alert content"
     ).to.equal("");
   });
@@ -1421,11 +1416,7 @@ describe("failure slot", () => {
     ).to.equal("Failed to send");
     expect(el.shadowRoot!.querySelector('[part="status-indicator"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
-    expect(liveRegionText(el)).to.equal("Message failed to send.");
-    const region = el.shadowRoot!.querySelector(
-      "lr-live-region"
-    ) as LyraLiveRegion;
-    expect(region.mode).to.equal("assertive");
+    expect(liveRegionText("assertive")).to.equal("Message failed to send.");
   });
 
   it("leaves outside-actions behavior unaffected when the failure slot is also in use", async () => {

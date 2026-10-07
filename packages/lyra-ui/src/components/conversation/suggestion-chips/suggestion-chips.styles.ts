@@ -67,8 +67,8 @@ export const styles = css`
      hover/active rules above are gated on :not(:disabled) rather than overridden here, because CSS
      :hover still matches a natively disabled button. */
   [part~='chip']:disabled {
-    cursor: default;
-    opacity: var(--lr-suggestion-chips-disabled-opacity, 0.5);
+    cursor: not-allowed;
+    opacity: var(--lr-suggestion-chips-disabled-opacity, var(--lr-opacity-disabled));
   }
   [part~='chip']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

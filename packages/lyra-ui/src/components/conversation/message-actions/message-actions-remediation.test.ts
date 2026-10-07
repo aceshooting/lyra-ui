@@ -1,4 +1,8 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import '../../overlays/overlay/dropdown.js';
+import '../../layout/menu/menu.js';
+import '../../layout/menu/menu-item.js';
 import './message-actions.js';
 import '../message-feedback/message-feedback.js';
 import type { LyraMessageActions } from './message-actions.js';
@@ -30,4 +34,41 @@ describe('slotted feedback editor navigation', () => {
       });
     }
   }
+});
+
+it('leaves keys an open slotted menu handled with that menu', async () => {
+  const toolbar = await fixture<LyraMessageActions>(html`
+    <lr-message-actions .controls=${['regenerate', 'edit']}>
+      <lr-dropdown style="--lr-transition-fast:0ms">
+        <button slot="trigger" type="button">More</button>
+        <lr-menu label="More">
+          <lr-menu-item value="a">A</lr-menu-item>
+          <lr-menu-item value="b">B</lr-menu-item>
+        </lr-menu>
+      </lr-dropdown>
+    </lr-message-actions>
+  `);
+  const dropdown = toolbar.querySelector('lr-dropdown') as HTMLElement & { open: boolean };
+  const [first, last] = [...toolbar.querySelectorAll<HTMLElement>('lr-menu-item')];
+  dropdown.open = true;
+  await waitUntil(() => last!.checkVisibility(), 'the menu opened');
+  last!.focus();
+  await sendKeys({ press: 'Home' });
+  await waitUntil(() => document.activeElement !== last, 'Home moved focus');
+  expect(document.activeElement === first, 'Home stays inside the menu').to.be.true;
+  expect(dropdown.open).to.be.true;
+});
+
+it('leaves caret keys to a slotted text field', async () => {
+  const toolbar = await fixture<LyraMessageActions>(html`
+    <lr-message-actions .controls=${['regenerate']}><input value="hello" /></lr-message-actions>
+  `);
+  await toolbar.updateComplete;
+  const input = toolbar.querySelector('input')!;
+  input.focus();
+  input.setSelectionRange(2, 2);
+  const event = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true, cancelable: true });
+  input.dispatchEvent(event);
+  expect(event.defaultPrevented).to.be.false;
+  expect(document.activeElement === input).to.be.true;
 });

@@ -27,7 +27,7 @@ import {
   trueDefaultSpellcheckConverter,
 } from '../../../internal/converters.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -356,7 +356,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
   @query('[part="submit-button"]') private submitButtonEl?: HTMLButtonElement;
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private sink?: AnnouncementSink;
 
   private readonly panelId = nextId('message-feedback-panel');
   private readonly upToolbarAction = this.createToolbarAction('up');
@@ -502,7 +502,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     super.requestUpdate(name, oldValue, options);
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+  }
+
   override disconnectedCallback(): void {
+    this.sink?.release();
+    this.sink = undefined;
     this.lifecycleGeneration += 1;
     this.invalidatePendingSubmission();
     this.upToolbarAction.releaseTabIndex?.();
@@ -749,7 +756,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.setPending(false);
     if (settlement === 'finalize') {
       this.panelOpen = false;
-      this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });
+      this.sink?.announce(this.localize('feedbackSubmitted'));
       this.scheduleSettlementFocus(transaction, 'thumb');
       return;
     }
@@ -918,7 +925,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
               </div>
             `
           : nothing}
-        <lr-live-region></lr-live-region>
       </div>
     `;
   }

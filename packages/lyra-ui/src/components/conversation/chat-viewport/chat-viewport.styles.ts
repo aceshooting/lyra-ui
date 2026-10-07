@@ -28,8 +28,11 @@ export const styles = css`
        identical reason. */
     overflow-x: hidden;
     overflow-y: auto;
-    overflow-anchor: none;
     padding: var(--lr-space-m);
+  }
+  [part='scroll']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * max(var(--lr-focus-ring-offset), var(--lr-focus-ring-width)));
   }
   /* Virtual mode. Keyed off [part='base']'s data-virtual marker, not :host(:has(> lr-virtual-list)):
      :has() is invalid inside :host() (Chromium reports CSS.supports('selector(:host(:has(> em)))')

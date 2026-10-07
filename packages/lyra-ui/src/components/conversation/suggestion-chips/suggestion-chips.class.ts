@@ -75,7 +75,7 @@ interface PendingSuggestionFocus {
  *   centers every line, the wrapped final one included — what `::part(base)` alone cannot do.
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
- * @cssprop [--lr-suggestion-chips-disabled-opacity=0.5] - Opacity of a chip whose suggestion sets `disabled`.
+ * @cssprop [--lr-suggestion-chips-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a chip whose suggestion sets `disabled`.
  * @status stable
  * @since 4.0.0
  */
@@ -270,6 +270,8 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     return -1;
   }
 
+  private stopEvent = (e: Event): void => e.stopPropagation();
+
   private onKeyDown = (e: KeyboardEvent): void => {
     const suggestions = this.effectiveSuggestions;
     const n = suggestions.length;
@@ -325,7 +327,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
       <div part="base" role="group" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
         ${this.wrap
           ? html`<div part="row" class="row">${chips}</div>`
-          : html`<lr-scroller orientation="horizontal" without-scrollbar><div part="row" class="row">${chips}</div></lr-scroller>`}
+          : html`<lr-scroller orientation="horizontal" without-scrollbar @lr-scroll=${this.stopEvent}><div part="row" class="row">${chips}</div></lr-scroller>`}
       </div>
     `;
   }

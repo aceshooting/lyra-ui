@@ -2060,3 +2060,19 @@ describe('card chrome theming hooks', () => {
     );
   });
 });
+
+function describedByIds(textarea: HTMLTextAreaElement & { ariaDescribedByElements?: readonly Element[] | null }): string[] {
+  return Reflect.has(textarea, "ariaDescribedByElements")
+    ? Array.from(textarea.ariaDescribedByElements ?? []).map((node) => node.id)
+    : textarea.getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+}
+
+it("resolves a host aria-describedby onto its textarea", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="composer-hint">Shift+Enter for a new line</p>
+    <lr-chat-composer aria-describedby="composer-hint"></lr-chat-composer>
+  </div>`);
+  const el = wrapper.querySelector("lr-chat-composer") as LyraChatComposer;
+  await el.updateComplete;
+  expect(describedByIds(el.input!)).to.include("composer-hint");
+});

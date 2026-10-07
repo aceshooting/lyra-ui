@@ -12,6 +12,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -233,6 +234,7 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * ignored before rendering or proposing a mutation, so every `itemId` remains unambiguous.
  * When the host accepts a removal while that row's action owns focus, the equivalent action on
  * the nearest surviving row receives focus; an emptied queue focuses its stable region instead.
+ * An accepted reorder keeps focus on the moved row's action, or its nearest enabled one.
  * Controlled updates never steal focus when the removed row did not own it.
  *
  * Public item sequences are bounded, frozen snapshots. Admitted item identities remain opaque only
@@ -244,7 +246,7 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
  * @event lr-send-now - Immediate send was requested. `detail: { item }`.
  * @csspart base - The queue wrapper.
- * @csspart heading - The queue heading.
+ * @csspart heading - The queue heading; omitted when the visible label is empty.
  * @csspart list - The ordered queue list.
  * @csspart item - One queued prompt.
  * @csspart value - Read-only prompt text while `readonly`.
@@ -308,6 +310,8 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
    *  own accessible name independently). */
   @property() label?: string;
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  /** Heading level of the visible label; `none` renders it as plain text. */
+  @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
 
   private pendingRemovalFocus?: {
     targetId?: string;
@@ -364,11 +368,13 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       ? this.cachedCanonicalItemsFor(changed.get('items'))
       : EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
     const items = this.effectiveItems;
-    const rowRemoved = changed.has('items') && !items.some((item) => item.id === focusedId);
+    const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
+    const index = items.findIndex((item) => item.id === focusedId);
+    const rowRemoved = changed.has('items') && index < 0;
+    const rowMoved = Boolean(action) && changed.has('items') && index >= 0 && index !== previousIndex;
     const editorRemoved = editorFocused && changed.has('readonly') && this.readonly;
     const controlDisabled = changed.has('disabled') && this.disabled;
-    if (!rowRemoved && !editorRemoved && !controlDisabled) return;
-    const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
+    if (!rowRemoved && !rowMoved && !editorRemoved && !controlDisabled) return;
     const target = rowRemoved
       ? items[Math.min(Math.max(previousIndex, 0), items.length - 1)]
       : items.find((item) => item.id === focusedId);
@@ -552,16 +558,20 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const visibleLabel = this.label == null ? this.localize('promptQueueLabel') : this.label;
     const accessibleLabel = this.accessibleLabel ?? visibleLabel;
     const items = this.effectiveItems;
+    const level = resolveHeadingLevel(this.headingLevel);
     return html`<section
       part="base"
       aria-label=${accessibleLabel}
       tabindex="-1"
       @input=${this.containNativeEvent}
       @change=${this.containNativeEvent}
+      @lr-change=${this.containNativeEvent}
       @focus=${this.containNativeEvent}
       @blur=${this.containNativeEvent}
     >
-      <h3 part="heading">${visibleLabel}</h3>
+      ${visibleLabel
+        ? html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>`
+        : nothing}
       ${items.length
         ? html`<ol part="list" role="list">
             ${repeat(items, (item) => item.id, (item, index) => this.renderItem(item, index, items.length))}

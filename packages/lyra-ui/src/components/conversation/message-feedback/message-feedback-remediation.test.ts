@@ -36,3 +36,10 @@ describe('pending feedback settlement focus', () => {
     }
   }
 });
+
+it('paints the thumbs from the shared icon-button tokens', async () => {
+  const el = await fixture<LyraMessageFeedback>(html`<lr-message-feedback style="--lr-icon-button-radius: 7px; --lr-icon-button-color: rgb(1, 2, 3); --lr-icon-button-bg: rgb(4, 5, 6)"></lr-message-feedback>`);
+  const up = el.shadowRoot!.querySelector<HTMLElement>('[part="up-button"]')!;
+  const style = getComputedStyle(up);
+  expect([style.borderTopLeftRadius, style.color, style.backgroundColor]).to.deep.equal(['7px', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+});

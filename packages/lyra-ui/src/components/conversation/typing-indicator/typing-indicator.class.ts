@@ -4,6 +4,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './typing-indicator.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -50,12 +51,11 @@ export type TypingIndicatorLabelPlacement = 'none' | 'after';
  *
  * Accessibility: this indicator typically mounts and unmounts around a real
  * generation lifecycle (appears when a response starts, disappears once one
- * arrives) rather than emitting a stream of updates of its own, so it does
- * *not* route through `<lr-live-region>`/`Announcer`
- * (`../../internal/announcer.js`) — that machinery exists to coalesce many
- * rapidly-changing announcements into one, and there is only ever a single
- * announcement here: the mount itself. A plain `role="status"` plus an
- * accessible name derived from `label` is sufficient, set both as an
+ * arrives), so it announces its label once per mount (and again when `label`
+ * changes) through the document's shared polite announcement sink — a live
+ * region that already exists before the text arrives, unlike a `role="status"`
+ * host that appears together with its own text. The host keeps `role="status"`
+ * and an accessible name derived from `label`, set both as an
  * `aria-label` on the host *and* as a visually-hidden text node in the
  * shadow tree, so the name survives even if only one of the two is picked up
  * by a given assistive-tech/browser pairing. An empty or whitespace-only
@@ -115,9 +115,9 @@ export class LyraTypingIndicator extends LyraElement {
   /** Which decorative presentation to render. */
   @property({ reflect: true }) shape: TypingIndicatorShape = 'dots';
 
-  /** Accessible name, exposed via `role="status"`. Not re-announced on every
-   *  animation frame — only mount (and any later change to this property)
-   *  produces a new announcement. Removing the attribute restores the localized fallback; an
+  /** Accessible name, exposed via `role="status"` and announced through the shared polite sink.
+   *  Not re-announced on every animation frame — only mount (and any later change to this
+   *  property) produces a new announcement. Removing the attribute restores the localized fallback; an
    *  explicit host aria-label keeps precedence. An empty or whitespace-only value falls
    *  back to the localized "Thinking…" copy (see
    *  `accessibleLabel`) so the component never loses its accessible name. */
@@ -141,6 +141,33 @@ export class LyraTypingIndicator extends LyraElement {
   // this component, just wrote) is captured as the override.
   private appliedAriaLabel: string | null = null;
   private explicitAriaLabel: string | null = null;
+  private sink?: AnnouncementSink;
+  private announcedLabel?: string;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.sink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    if (this.hasUpdated) this.announce();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.sink?.release();
+    this.sink = undefined;
+    this.announcedLabel = undefined;
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.announce();
+  }
+
+  private announce(): void {
+    const label = this.accessibleLabel;
+    if (label === this.announcedLabel) return;
+    this.announcedLabel = label;
+    this.sink?.announce(label);
+  }
 
   /** The accessible name actually used: an explicit host `aria-label` wins outright; otherwise
    *  falls back to the localized `'thinking'` message (`"Thinking…"` in English) when `label` is

@@ -1,5 +1,7 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { expect, fixture, html, oneEvent } from "@open-wc/testing";
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from "@web/test-runner-commands";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 import type { DocumentRef } from "../../../ai/types.js";
 import "./prompt-queue.js";
 import type {
@@ -106,9 +108,7 @@ it('suppresses the localized default label when label is explicitly empty', asyn
   const el = (await fixture(
     html`<lr-prompt-queue label=""></lr-prompt-queue>`,
   )) as LyraPromptQueue;
-  expect(
-    el.shadowRoot!.querySelector('[part="heading"]')?.textContent?.trim(),
-  ).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="heading"]') === null, 'no empty heading').to.be.true;
   expect(
     el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label'),
   ).to.equal('');
@@ -529,7 +529,7 @@ it("emits edit, remove, and send-now requests with stable ids", async () => {
   expect(sendEvent.detail.item.id).to.equal("one");
 });
 
-it("contains native input/change events from its child editors", async () => {
+it("contains native input/change and lr-change events from its child editors", async () => {
   const wrapper = await fixture(html`<div>
     <lr-prompt-queue .items=${items}></lr-prompt-queue>
   </div>`);
@@ -539,11 +539,15 @@ it("contains native input/change events from its child editors", async () => {
   let changes = 0;
   wrapper.addEventListener("input", () => inputs++);
   wrapper.addEventListener("change", () => changes++);
+  wrapper.addEventListener("lr-change", () => changes++);
 
   editor.dispatchEvent(
     new InputEvent("input", { bubbles: true, composed: true })
   );
   editor.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+  editor.dispatchEvent(
+    new CustomEvent("lr-change", { bubbles: true, composed: true, detail: { value: "x" } })
+  );
 
   expect(inputs).to.equal(0);
   expect(changes).to.equal(0);
@@ -812,3 +816,49 @@ it("applies per-instance localized strings", async () => {
     el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
   ).to.equal("Localized prompt backlog");
 });
+
+it("renders its heading at the requested level", async () => {
+  const el = (await fixture(html`<lr-prompt-queue></lr-prompt-queue>`)) as LyraPromptQueue;
+  const heading = () => el.shadowRoot!.querySelector('[part="heading"]')!;
+  expect(heading().getAttribute("role")).to.equal("heading");
+  expect(heading().getAttribute("aria-level")).to.equal("3");
+  el.headingLevel = "2";
+  await el.updateComplete;
+  expect(heading().getAttribute("aria-level")).to.equal("2");
+  el.headingLevel = "none";
+  await el.updateComplete;
+  expect(heading().hasAttribute("role")).to.be.false;
+  el.setAttribute("heading-level", "4");
+  await el.updateComplete;
+  el.removeAttribute("heading-level");
+  await el.updateComplete;
+  expect(heading().getAttribute("aria-level")).to.equal("3");
+});
+
+for (const [action, row, expected] of [
+  ["down", 1, "up"],
+  ["up", 1, "down"],
+  ["down", 0, "down"],
+] as const) {
+  it(`keeps keyboard focus on the moved row after an accepted Move ${action} (row ${row})`, async () => {
+    const queued: PromptQueueItem[] = [
+      { id: "one", value: "First" },
+      { id: "two", value: "Second" },
+      { id: "three", value: "Third" },
+    ];
+    const el = (await fixture(html`<lr-prompt-queue .items=${queued}></lr-prompt-queue>`)) as LyraPromptQueue;
+    el.addEventListener("lr-queue-change", (event) => {
+      el.items = event.detail.items;
+    });
+    const id = queued[row]!.id;
+    await focusByKeyboard(
+      el.shadowRoot!.querySelectorAll<HTMLElement>(`[data-action="${action}"]`)[row]!
+    );
+    await sendKeys({ press: "Enter" });
+    await waitUntil(() => el.items[row]?.id !== id, "the move was accepted");
+    await el.updateComplete;
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.closest("[data-id]")?.getAttribute("data-id")).to.equal(id);
+    expect(focused?.getAttribute("data-action")).to.equal(expected);
+  });
+}

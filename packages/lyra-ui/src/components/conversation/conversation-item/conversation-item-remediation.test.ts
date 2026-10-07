@@ -59,3 +59,10 @@ for (const legacy of [false, true]) {
     });
   }
 }
+
+it('paints the rename button from the shared icon-button tokens', async () => {
+  const el = await fixture<LyraConversationItem>(html`<lr-conversation-item style="--lr-icon-button-radius: 7px; --lr-icon-button-color: rgb(1, 2, 3); --lr-icon-button-bg: rgb(4, 5, 6)" label="A"></lr-conversation-item>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="rename-button"]')!;
+  const style = getComputedStyle(button);
+  expect([style.borderTopLeftRadius, style.color, style.backgroundColor]).to.deep.equal(['7px', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)']);
+});

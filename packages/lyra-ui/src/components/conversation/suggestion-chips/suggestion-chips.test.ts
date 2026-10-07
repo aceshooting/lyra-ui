@@ -472,3 +472,24 @@ describe('--lr-suggestion-chips-hover-bg / -hover-border', () => {
     }
   });
 });
+
+it('keeps its internal scroller events inside the component', async () => {
+  const wrapper = await fixture(html`<div><lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips></div>`);
+  const el = wrapper.querySelector('lr-suggestion-chips') as LyraSuggestionChips;
+  let leaked = 0;
+  wrapper.addEventListener('lr-scroll', () => leaked++);
+  el.shadowRoot!.querySelector('lr-scroller')!.dispatchEvent(
+    new CustomEvent('lr-scroll', { bubbles: true, composed: true, detail: {} }),
+  );
+  expect(leaked).to.equal(0);
+});
+
+it('dims a disabled chip with the theme disabled opacity', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`<lr-suggestion-chips
+    style="--lr-theme-opacity-disabled: 0.38"
+    .suggestions=${[{ suggestionId: 'a', label: 'A', disabled: true }]}
+  ></lr-suggestion-chips>`);
+  const chip = el.shadowRoot!.querySelector<HTMLElement>('[part~="chip"]')!;
+  expect(getComputedStyle(chip).opacity).to.equal('0.38');
+  expect(getComputedStyle(chip).cursor).to.equal('not-allowed');
+});

@@ -4,11 +4,11 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { styleMap } from 'lit/directives/style-map.js';
 import type { DocumentLocator } from '../../../ai/types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { composedParentElement } from '../../../internal/active-element.js';
+import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -44,6 +44,16 @@ import {
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_selectionAsk, LYRA_DEFAULT_selectionCite, LYRA_DEFAULT_selectionQuote, LYRA_DEFAULT_selectionToolbarLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+const COMPOSITE_ROLES = new Set(['menu', 'menubar', 'listbox', 'tree', 'treegrid', 'grid', 'tablist', 'radiogroup']);
+
+/** Whether `element` belongs to a composite widget (an open menu, a listbox…) that owns its own roving focus. */
+function insideComposite(element: Element, root: Element): boolean {
+  for (let node = composedParentElement(element); node && node !== root; node = composedParentElement(node)) {
+    if (COMPOSITE_ROLES.has(node.getAttribute('role') ?? '')) return true;
+  }
+  return false;
+}
 
 export type SelectionAction = 'ask' | 'quote' | 'cite' | 'copy';
 
@@ -165,6 +175,8 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   @property() text = '';
   /** Clone-owned selection anchor. Reassign a new record after changing any path segment. */
   @property({ attribute: false }) anchor: DocumentLocator | null = null;
+  /** Viewport rect of the selection. Reassign it on `selectionchange` and whenever an ancestor
+   *  scrolls; the toolbar itself repositions only for viewport resizes. */
   @property({ attribute: false }) rect: DOMRectReadOnly | null = null;
   /**
    * Controlled action set. A focused action survives reordering by id; if it is removed, focus
@@ -400,8 +412,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       includeRoot: false,
     }).elements.filter(
       (button) =>
-        Boolean(isSemanticActionElement(button)) ||
-        this.hasAuthoredActionTabIndex(button)
+        (Boolean(isSemanticActionElement(button)) ||
+          this.hasAuthoredActionTabIndex(button)) &&
+        !insideComposite(button, toolbar)
     );
   }
 
@@ -662,11 +675,12 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   };
 
   private onToolbarKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || isEditableKeyEventTarget(event)) return;
     const buttons = this.actionButtons();
     if (buttons.length === 0) return;
-    const originIndex = buttons.findIndex((button) =>
-      event.composedPath().includes(button)
-    );
+    const path = event.composedPath();
+    const originIndex = buttons.findIndex((button) => path.includes(button));
+    if (originIndex < 0 && path[0] !== event.currentTarget) return;
     const currentIndex =
       originIndex >= 0 ? originIndex : this.activeActionIndex;
     const forward =
@@ -731,10 +745,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     }
   }
 
-  /** Coerces a caller-supplied `rect` to finite geometry before it reaches any style sink --
-   *  `rect` is typed `DOMRectReadOnly`, but TS cannot enforce that across the property boundary,
-   *  and `coordinates()` feeds a `styleMap()` whose first commit serializes the whole `style`
-   *  value as one string (see `sanitizeCssColor`'s doc comment for why that matters). */
+  /** Coerces a caller-supplied `rect` to finite geometry before it reaches the toolbar's inline
+   *  style -- `rect` is typed `DOMRectReadOnly`, but TS cannot enforce that across the property
+   *  boundary. */
   private safeRect(rect: DOMRectReadOnly): {
     left: number;
     top: number;
@@ -810,48 +823,6 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private px(value: number): string {
     return `${finiteRange(value, 0, -Number.MAX_VALUE, Number.MAX_VALUE)}px`;
-  }
-
-  private coordinates(): Record<string, string> {
-    const view = this.ownerDocument.defaultView;
-    const viewport = view
-      ? this.viewportBounds(view)
-      : {
-          left: 0,
-          top: 0,
-          width: 0,
-          height: 0,
-          right: 0,
-          bottom: 0,
-          layoutWidth: 0,
-        };
-    const fallbackInline = finiteMidpoint(viewport.left, viewport.right);
-    const rect = this.rect
-      ? this.safeRect(this.rect)
-      : {
-          left: fallbackInline,
-          top: viewport.top,
-          width: 0,
-          height: 0,
-          right: fallbackInline,
-          bottom: viewport.top,
-          inlineCenter: fallbackInline,
-        };
-    const desiredInline = finiteRange(
-      rect.inlineCenter,
-      viewport.left,
-      viewport.left,
-      viewport.right,
-    );
-    const block = finiteRange(rect.top, viewport.top, viewport.top, viewport.bottom);
-    const logicalInline =
-      this.effectiveDirection === 'rtl'
-        ? finiteAdd(viewport.layoutWidth, -desiredInline)
-        : desiredInline;
-    return {
-      '--_lr-selection-toolbar-inline-start': this.px(logicalInline),
-      '--_lr-selection-toolbar-block-start': this.px(block),
-    };
   }
 
   /** Resolves the shared selection-anchor and collision-edge distance from the host's live
@@ -1047,7 +1018,6 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       role="toolbar"
       aria-label=${label}
       tabindex="-1"
-      style=${styleMap(this.coordinates())}
       @focusin=${this.onToolbarFocusIn}
       @focusout=${this.onToolbarFocusOut}
       @focus=${this.containNativeEvent}

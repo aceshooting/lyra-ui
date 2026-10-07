@@ -616,7 +616,9 @@ properties:
 - `--lr-chat-message-user-bubble-color` (default `var(--lr-color-text)`) — bubble text color for
   `message-role="user"`.
 
-Prefer these over re-pointing the shared token a default happens to reference. Overriding
+Prefer these over re-pointing the shared token a default happens to reference.
+`[part='collapse-button']` reads the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states) first. Overriding
 `--lr-color-brand-quiet` on the host also retints `[part='collapse-button']:hover` within this same
 component, and which shared token backs each role's fill is not a stable contract — it changed
 between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
@@ -653,9 +655,8 @@ via `::part(bubble)`) so message bubbles stay visually distinct from the surroun
 > "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
 > wrapper's _direct_ children, not a nested `<lr-*>` host's shadow DOM.
 
-**Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
-component, auto-imported alongside this one, not an npm peer) for the status-transition
-announcements described below.
+**Optional peer deps:** none. The status-transition announcements described below go through the
+document's shared live region; no element is rendered per message.
 
 ```html
 <lr-chat-message message-role="assistant" status="streaming">
@@ -673,14 +674,11 @@ announcements described below.
 
 Accessibility of `status`: the current status is always available as plain visible text
 (`[part="status-text"]`), never color alone. A transition _to_ `"failed"`, or _from_ `"streaming"` to
-`"sent"` (a stream finishing), is additionally announced through the internal `<lr-live-region>` —
+`"sent"` (a stream finishing), is additionally announced through the document's shared live region —
 `"failed"` announces assertively (`"Message failed to send."`), a streaming→sent completion announces
 politely (`"Message complete."`) — so a screen-reader user not currently focused on this message
 still learns about it. No other status transition is announced (e.g. `streaming`→`sending`, or
-`sending`→`sent` without having passed through `streaming`, produce no announcement). This differs
-from `<lr-typing-indicator>`'s deliberately simpler `role="status"` approach, appropriate there
-since that component only ever announces once (its own mount); this component's `status` can flip
-between several values across a single element's lifetime.
+`sending`→`sent` without having passed through `streaming`, produce no announcement).
 
 **Known gotchas:**
 
@@ -796,11 +794,10 @@ off it — untouched.
 ```
 
 Accessibility: since this indicator typically mounts and unmounts around a real generation lifecycle
-(appears when a response starts, disappears once one arrives) rather than emitting a stream of
-updates of its own, it does **not** route through `<lr-live-region>`/the internal `Announcer` —
-that machinery exists to coalesce many rapidly-changing announcements into one, and there is only
-ever a single announcement here: the mount itself. `role="status"` plus an accessible name derived
-from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
+(appears when a response starts, disappears once one arrives), it announces its label once per
+mount (and again when `label` changes) through the document's shared polite announcement sink — a
+live region that already exists before the text arrives. `role="status"` plus an accessible name
+derived from `label` is set both as `aria-label` on the host _and_ as a visually-hidden text node
 (`.sr-only`) in the shadow tree, so the name survives even if only one of the two is picked up by a
 given assistive-tech/browser pairing. The animated shape itself is `aria-hidden="true"` — it's
 decorative; `label` is the entire accessible content, nothing narrates individual animation frames.
@@ -878,7 +875,7 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
 - `minLength?: number` (attribute `minlength`) and `maxLength?: number` (attribute `maxlength`) —
   forwarded native text-length constraints; invalid/unset values impose no bound
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — names the internal textarea;
-  wins over placeholder and the localized composer label
+  wins over placeholder and the localized composer label. A host `aria-describedby` describes it.
 - `spellcheck: boolean = true` — forwarded to the internal `<textarea>`
 - `autocapitalize: string = ''` — forwarded to the internal `<textarea>`; empty omits the attribute
 - `autocorrect: boolean = true` — forwarded to the internal `<textarea>` and reflected canonically
@@ -1223,10 +1220,12 @@ plus bubbling/composed `blur` and `focus` with `null` detail relayed from the re
 **CSS parts:** `base`, `base-menu-open` (state alias on `base` while a menu opened from the
 `actions` slot is open), `active-indicator` (decorative, rendered only while `active`),
 `select-button`, `start`, `content`, `label`, `label-input`, `rename-button`, `excerpt`, `meta`, `timestamp`,
-`actions`
+`actions`. `rename-button` reads the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states), like `lr-thread-list`'s row actions beside it.
 
 **Custom state:** `menu-open` — the host matches `:state(menu-open)` while an `lr-dropdown`,
-`lr-popover` or `lr-context-menu` opened from the `actions` slot is open (including one composed
+`lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`,
+`lr-date-input`, `lr-time-input`, `lr-export-button`) opened from the `actions` slot is open (including one composed
 inside another component's shadow root), however it was opened; `[part="base"]` then also carries
 `base-menu-open`, and the row keeps its hover tint (an `active` row keeps its active tint). The menu
 sits in the browser top layer, where Chromium and WebKit stop matching `:hover` and `:focus-within`
@@ -2607,8 +2606,10 @@ becomes unavailable, focus moves to the nearest survivor or the stable toolbar, 
 newer external focus move. Keyboard movement starts from the action that actually received the event,
 even after a controlled state write changed the remembered stop.
 
-ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor remain native editing keys.
-Roving navigation still operates on the actual toolbar and thumb actions.
+ArrowLeft/ArrowRight/Home/End from a slotted feedback comment editor, or any slotted text field,
+remain native editing keys, and a key a slotted control already handled (`preventDefault()`, as an
+open `lr-menu` does) stays with it. Items of a slotted composite widget (an open menu, a listbox)
+are never toolbar stops. Roving navigation still operates on the actual toolbar and thumb actions.
 
 **Properties:** `controls: MessageActionControl[] = []` (attribute: false) —
 `MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback'` (exported here); which built-ins
@@ -2621,8 +2622,8 @@ opens). `feedbackPending: boolean` (read-only, nonreflecting) — true only whil
 feedback control awaits settlement; it has no `feedback-pending` attribute or change event.
 `revealOnInteraction: boolean = false` (reflected, attribute `reveal-on-interaction`) — hides
 the bar until the closest `lr-chat-message` ancestor is hovered, or the toolbar contains focus. It
-also stays revealed while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from a slotted
-control is open, since that menu sits in the browser top layer, where focus inside it does not
+also stays revealed while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`) opened
+from a slotted control is open, since that menu sits in the browser top layer, where focus inside it does not
 count as focus within the toolbar in Chromium and WebKit.
 `label?: string` — accessible name override for the toolbar. Omitting it localizes the default
 `messageActionsLabel` message; an explicit empty string suppresses that default and renders no
@@ -2740,7 +2741,9 @@ toolbar actions change availability or order.
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
 `commentable` is set), `reasons` (the reason-chip group), `comment` (the comment `<textarea>`), and
-`submit-button`.
+`submit-button`. The thumbs read the shared `--lr-icon-button-*` tokens (`bg`, `color`, `radius` and
+their `-hover`/`-active` states), matching the `lr-icon-button` actions beside them in
+`lr-message-actions`.
 
 **Themeable custom properties:** six pressed-state hooks, three per thumb —
 `--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),
@@ -2917,10 +2920,12 @@ around the `avatar` slot, only shown while the slot has content), and `label`.
 The transcript scroll container: owns stick-to-bottom behavior while an answer streams, the "jump to
 latest" pill, and the unread divider. Two supported content shapes, auto-detected: ordinary element
 children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-virtual-list`
-(_virtual mode_, detected via `instanceof`). In virtual mode this component defers all scrolling to
-the slotted list's own `scrollToIndex()`. Follow/release state machine: while `follow` is engaged,
-content growth re-scrolls to the end; release happens only on a user-intent gesture (wheel,
-touchmove, scrollbar-drag, or PageUp/ArrowUp/Home while the log region has focus) that leaves the
+(_virtual mode_, detected by its `scrollToIndex()`/`scrollContainer` API, so custom prefixes and
+other realms work). In virtual mode this component defers all scrolling to the slotted list's own
+`scrollToIndex()` and follows its content extent (`items` or `source`) as rows are appended or grow.
+Follow/release state machine: while `follow` is engaged, content growth re-scrolls to the end;
+release happens only on a user-intent gesture (wheel, touchmove, scrollbar-drag, or
+PageUp/ArrowUp/Home/Shift+Space while the log region has focus) that leaves the
 view more than `bottomThreshold` from the end — a scroll caused by this component's own programmatic
 scrolling, or by a layout shift, never releases it. Reaching the bottom again by any means re-engages
 `follow`. The shadow `role="log"` always remains `aria-live="off"`, which avoids announcing every
@@ -2934,7 +2939,8 @@ sink and produces no announcements.
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
-counted as "at bottom." `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
+counted as "at bottom," in both modes. While `follow` is released, the browser's native scroll
+anchoring keeps the reading position when content above it changes. `unreadStartIndex: number | null = null` (attribute `unread-start-index`) —
 index of the first unread item (element-child index in slotted mode, `items` index in virtual mode);
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
@@ -3045,7 +3051,7 @@ cannot do (once the chips wrap, the row fills the available inline size and each
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
-on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `0.5`) — opacity of a chip whose
+on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
@@ -3122,13 +3128,16 @@ accepted). Invalid values and attribute removal restore `m`. Slotted rows retain
 The search gutter and clear button keep their own independent custom properties. `filter?: (thread, query) => boolean`
 (attribute: false) — overrides the default case-insensitive `title` + `excerpt` substring match.
 `grouping: ThreadListGrouping = 'date'` — data mode: bucket rows under localized date headers
-(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived), use the
+(Pinned/Today/Yesterday/Previous 7 days/Previous 30 days/one bucket per month/Archived; a future
+timestamp counts as Today, a missing or invalid one files under Previous 30 days), use the
 arbitrary grouping callbacks below, or render a flat list. `groupBy?: (thread: LyraChatThread) => string`
 (attribute: false) derives each group id in `grouping="custom"`; rows whose callback throws or
 returns a malformed or blank ID are omitted from that grouped view, and omitting the callback leaves
 custom mode flat. `getGroupLabel?: (context: ThreadGroupContext) => string` (attribute: false) supplies the
 plain-text accessible/visible label; `renderGroupAdornment?: (context) => TemplateResult` supplies
-separate rich content beside the toggle without nesting it inside the button. `groupOrder?: string[] | ((a: string, b:
+separate rich content beside the toggle without nesting it inside the button. Both are re-invoked
+when the threads, grouping inputs, locale or the callback itself change, or on `requestUpdate()`;
+other updates (selection, size, label) reuse the built item model. `groupOrder?: string[] | ((a: string, b:
 string) => number)` (attribute: false) supplies an explicit order or comparator; ids omitted from an
 array follow in first-seen order. `collapsedGroupIds: string[] = []` (attribute: false) is the
 collapsed state for both date and custom groups, **self-managed by default**: activating the
@@ -3262,7 +3271,7 @@ prefix: `row-item-base`, `row-item-base-menu-open`, `row-item-active-indicator`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 
 **Row menu-open state:** `row-item-base-menu-open` is carried by `row-item-base` while a menu that
-`renderActions` opened from that row (`lr-dropdown`, `lr-popover` or `lr-context-menu`) is open,
+`renderActions` opened from that row (`lr-dropdown`, `lr-popover`, `lr-context-menu` or a picker (`lr-select`, `lr-combobox`, `lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`)) is open,
 however it was opened. That menu sits in the browser top layer, where Chromium and WebKit stop
 matching `:hover` and `:focus-within` on the row while the pointer or keyboard focus is inside it.
 A menu trigger revealed on row hover or focus must key on this state too, or it hides while its own
@@ -3297,12 +3306,15 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-group-toggle-active-color` (default
 `var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
 and pressed states. `--lr-thread-list-row-action-hover-bg` (default
-`var(--lr-color-surface-raised)`), `--lr-thread-list-row-action-hover-color` (default
-`var(--lr-color-text)`), `--lr-thread-list-row-action-active-bg` (default `color-mix(in oklab,
-var(--lr-thread-list-row-action-hover-bg, var(--lr-color-surface-raised)),
-var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
-`--lr-thread-list-row-action-active-color` (default
-`var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))`) do the same for row actions.
+`var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
+(default `var(--lr-icon-button-color-hover, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
+(default `var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
+var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
+var(--lr-color-mix-active)))`), and `--lr-thread-list-row-action-active-color` (default
+`var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color,
+var(--lr-icon-button-color-hover, var(--lr-color-text))))`) do the same for row actions. Row actions
+and the search clear button otherwise read the shared `--lr-icon-button-*` tokens (`bg`, `color`,
+`radius` and their `-hover`/`-active` states), so an icon-button theme reaches them too.
 
 **Themeable search geometry:** `--lr-thread-list-search-padding` (default `var(--lr-space-s)`) is
 the gutter around the search row and `--lr-thread-list-search-gap` (default `var(--lr-space-xs)`)
@@ -4257,6 +4269,9 @@ request. `label` names the prompt section; it is not generic field chrome.
 (attribute `readonly`, reflected); `minLength?: number` (attribute `minlength`) and
 `maxLength?: number` (attribute `maxlength`);
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
+`submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
+(attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
+(attribute `max-rows`) forward to the composed `lr-chat-composer` with its semantics;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,
@@ -4276,7 +4291,7 @@ readonly PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `
 `label?: string` — accessible name for the prompt section. Omitting it localizes the default
 `promptInputLabel` message; an explicit empty string suppresses that default and renders no label.
 `accessibleLabel: string | null = null` (attribute `aria-label`) — wins over `label` and the
-localized default.
+localized default. A host `aria-describedby` describes the composed textarea.
 Source roots and queued prompts require unique nonblank `id` values; malformed rows and later
 duplicates are omitted first-wins before section gating and child forwarding. Controlled selected
 source ids use the same unique nonblank projection.
@@ -4303,7 +4318,8 @@ are no-ops before the textarea has rendered.
 **Events:** native `input`, `change`, `focus`, and `blur` are each relayed once from the primary
 textarea, paired with `lr-input` and `lr-change`; `lr-submit` (`{ value }`),
 `lr-stop` (`null`), `lr-mention-select` (`{ suggestionId, index, label, trigger }`),
-`lr-attachments-add` (`{ capability, files }`), `lr-attachment-remove` (`{ attachmentId }`),
+`lr-attachments-add` (`lr-attachment-trigger`'s `lr-files` detail: `{ capability, files, rejected,
+remainingFiles, remainingTotalSize }`), `lr-attachment-remove` (`{ attachmentId }`),
 `lr-model-change`/`lr-voice-change`
 (`{ value, inCatalog }`), `lr-sources-change` (`{ selectedSourceIds }`), `lr-queue-change`
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
@@ -4346,12 +4362,15 @@ proposed queue; send-now emits the complete selected item.
 
 When a focused row action requests removal and the host applies the proposed queue, focus moves to
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
-receives focus. Removing an unfocused row does not move focus.
+receives focus. Removing an unfocused row does not move focus. An accepted Move up/down keeps focus on
+the moved row's action, or its nearest enabled action once that one is disabled at the queue's edge.
 
 **Properties:** `items: readonly PromptQueueItem[] = []` (attribute: false); `readonly: boolean = false`
 (reflected) — renders each queued prompt as read-only text instead of an editor;
 `disabled: boolean = false` (reflected);
-`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`label?: string`; `accessibleLabel: string | null = null` (attribute `aria-label`);
+`headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`) — the visible label's heading
+level; `'none'` renders it as plain text.
 `PromptQueueItem = { id: string; value: string; attachments?: readonly DocumentRef[]; createdAt?: number;
 metadata?: Record<string, unknown> }`.
 
@@ -4359,7 +4378,7 @@ Item ids are occurrence identities. Empty ids and later duplicates are ignored b
 proposing a mutation, preserving one unambiguous `itemId`. Attachment names render visibly for both
 editable and read-only rows; the host `label` is also the visible queue heading. Omitting `label`
 localizes the default `promptQueueLabel` message; an explicit empty string suppresses that default
-and renders no visible heading (`accessibleLabel` still overrides the region's accessible name
+and renders no heading element at all (`accessibleLabel` still overrides the region's accessible name
 independently).
 
 Supported item and attachment fields are read once when `items` is assigned; create and reassign a
@@ -4419,7 +4438,9 @@ ownership even when the detach lasts past an event-loop turn.
 The four built-in actions are the shipped set, and `actions` only reorders or subsets them. A
 product-specific fifth action ("translate", "define", "search web") goes in the `actions` slot
 instead: slotted elements render after the built-ins **inside** the same `role="toolbar"` element
-and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored), so adding one does not mean
+and join the same roving-tabindex group (Home/End/Arrow, RTL-mirrored; keys a slotted control
+already handled, caret keys in a text field and items of a slotted menu or listbox are left to that
+control), so adding one does not mean
 reimplementing the toolbar's positioning, keyboard, and dismissal behavior. A slotted action brings
 its own accessible name and click handling; this component only manages its tab stop, and re-derives
 the group whenever the slot's assigned elements change. The group resolves actual composed action
@@ -4428,7 +4449,9 @@ stops, while multiple actionable descendants remain independently arrow-reachabl
 movement starts from the action that received the event rather than stale controlled state.
 
 `rect` is the sole public positioning input. Internal computed coordinates are intentionally
-private so controlled rect updates cannot be silently overridden by stale authored CSS.
+private so controlled rect updates cannot be silently overridden by stale authored CSS. The toolbar
+repositions itself only for viewport resizes: reassign `rect` on `selectionchange` and whenever the
+document or a scrolling ancestor (such as an `lr-chat-viewport` transcript) scrolls.
 **Themeable custom properties:** `--lr-selection-toolbar-placement-gap` (default
 `var(--lr-space-s)`) is the non-negative distance from the selection and from viewport edges while
 the toolbar avoids collisions. It accepts unitless pixel values, `px`, `rem`, and `em` values, and

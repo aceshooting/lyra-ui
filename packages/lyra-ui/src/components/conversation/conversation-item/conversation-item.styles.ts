@@ -213,20 +213,27 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
-    border-radius: calc(var(--lr-radius) * 0.6);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
+    background: var(--lr-icon-button-bg, transparent);
+    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
   [part='rename-button']:hover {
-    background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
-    color: var(--lr-color-text);
+    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
+    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
   }
   [part='rename-button']:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-text);
+    background: var(
+      --lr-icon-button-bg-active,
+      color-mix(
+        in oklab,
+        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part='rename-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

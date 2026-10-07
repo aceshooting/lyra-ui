@@ -28,6 +28,10 @@ import {
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import {
+  acquireResolvedAriaRelationship,
+  type ResolvedAriaRelationshipLease,
+} from '../../../internal/aria-controls.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -153,7 +157,8 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *
  * Deliberately no label/hint/error chrome -- a composite chat-input control, not a labeled form
  * field; wrap it in your own layout for that context. A host `aria-label` is forwarded to the
- * internal textarea and takes precedence over the placeholder-derived name.
+ * internal textarea and takes precedence over the placeholder-derived name; a host
+ * `aria-describedby` describes the textarea.
  *
  * `lr-submit`'s `detail.value` is always the exact, untrimmed current
  * value (`detail.value === value` at the moment it fires) -- trimming is
@@ -353,6 +358,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   @state() private touched = false;
 
   @query('textarea') private textareaEl?: HTMLTextAreaElement;
+  private descriptionLease?: ResolvedAriaRelationshipLease;
   private textareaResizeObserver?: ResizeObserver;
   private textareaResizeObserverDocument?: Document;
   private textareaResizeObserverTarget?: HTMLTextAreaElement;
@@ -489,6 +495,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     super.firstUpdated(changed);
     this.resizeTextarea();
     this.armTextareaResizeObserver();
+    this.descriptionLease ??= acquireResolvedAriaRelationship(this, this.input, 'aria-describedby');
   }
 
   override connectedCallback(): void {
@@ -505,12 +512,15 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     if (this.hasUpdated) {
       this.armTextareaResizeObserver();
       this.resizeTextarea();
+      this.descriptionLease ??= acquireResolvedAriaRelationship(this, this.input, 'aria-describedby');
     }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resetTextareaResizeWork();
+    this.descriptionLease?.release();
+    this.descriptionLease = undefined;
   }
 
   override adoptedCallback(): void {

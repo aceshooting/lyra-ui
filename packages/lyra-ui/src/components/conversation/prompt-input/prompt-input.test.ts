@@ -733,6 +733,61 @@ it("does not overwrite a controlled caret after suggestion selection", async () 
   expect(composer.selectionEnd).to.equal(3);
 });
 
+it("restores the caret after a mention insert when a controlled host echoes the same value", async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .mentionItems=${[{ suggestionId: "ada", label: "Ada" }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector("lr-chat-composer") as LyraChatComposer;
+  composer.value = "Hello @ad world";
+  await composer.updateComplete;
+  composer.setSelectionRange(9, 9);
+  composer.dispatchEvent(
+    new CustomEvent("lr-input", { bubbles: true, composed: true, detail: { value: composer.value } })
+  );
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector("lr-mention-popover") as LyraMentionPopover;
+  await popover.updateComplete;
+
+  el.addEventListener("lr-input", (event) => {
+    el.value = (event as CustomEvent<{ value: string }>).detail.value;
+  }, { once: true });
+  popover.dispatchEvent(
+    new CustomEvent("lr-mention-select", {
+      bubbles: true,
+      composed: true,
+      detail: { suggestionId: "ada", index: 0, label: "Ada" },
+    })
+  );
+  await el.updateComplete;
+  await composer.updateComplete;
+  await Promise.resolve();
+
+  expect(el.value).to.equal("Hello @Ada  world");
+  expect(composer.selectionStart).to.equal(11);
+});
+
+it("keeps its composed queue and source collections stable while the prompt changes", async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .queue=${[{ id: "q1", value: "next" }]}
+      .sources=${[{ id: "s1", label: "Source" }]}
+      .selectedSourceIds=${["s1"]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const queue = el.shadowRoot!.querySelector("lr-prompt-queue") as HTMLElement & { items: unknown };
+  const picker = el.shadowRoot!.querySelector("lr-source-picker") as HTMLElement & {
+    sources: unknown;
+    selectedSourceIds: unknown;
+  };
+  const before = [queue.items, picker.sources, picker.selectedSourceIds];
+  el.value = "typed";
+  await el.updateComplete;
+  const after = [queue.items, picker.sources, picker.selectedSourceIds];
+  expect(after.map((value, index) => value === before[index])).to.deep.equal([true, true, true]);
+});
+
 it("recognizes slash commands and clears suggestions after ordinary input", async () => {
   const el = (await fixture(
     html`<lr-prompt-input></lr-prompt-input>`
@@ -2137,4 +2192,29 @@ describe('voice preview requests', () => {
     expect(requests.map((event) => event.cancelable)).to.deep.equal([true]);
     expect(requests.map((event) => event.defaultPrevented)).to.deep.equal([true]);
   });
+});
+
+function describedByIds(textarea: HTMLTextAreaElement & { ariaDescribedByElements?: readonly Element[] | null }): string[] {
+  return Reflect.has(textarea, "ariaDescribedByElements")
+    ? Array.from(textarea.ariaDescribedByElements ?? []).map((node) => node.id)
+    : textarea.getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+}
+
+it("forwards a host aria-describedby and the composer's row, submit and stop knobs", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="prompt-hint">Shift+Enter for a new line</p>
+    <lr-prompt-input
+      aria-describedby="prompt-hint"
+      submit-disabled
+      without-stop
+      min-rows="2"
+      max-rows="4"
+    ></lr-prompt-input>
+  </div>`);
+  const el = wrapper.querySelector("lr-prompt-input") as LyraPromptInput;
+  await el.updateComplete;
+  const composer = el.shadowRoot!.querySelector("lr-chat-composer") as LyraChatComposer;
+  await composer.updateComplete;
+  expect([composer.submitDisabled, composer.withoutStop, composer.minRows, composer.maxRows]).to.deep.equal([true, true, 2, 4]);
+  await waitUntil(() => describedByIds(composer.input!).includes("prompt-hint"), "the host description reaches the textarea");
 });

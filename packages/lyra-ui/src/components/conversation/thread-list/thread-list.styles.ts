@@ -109,22 +109,26 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: 0;
-    border-radius: var(--lr-radius-xs);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
+    background: var(--lr-icon-button-bg, transparent);
+    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
     font: inherit;
     cursor: pointer;
   }
   [part='clear-button']:hover {
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text);
+    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
+    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
   }
   [part='clear-button']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-icon-button-bg-active,
+      color-mix(
+        in oklab,
+        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
+    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part='clear-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -219,8 +223,6 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     inline-size: var(--lr-size-1rem);
-    font-size: var(--lr-font-size-lg);
-    font-weight: var(--lr-font-weight-normal);
   }
   lr-virtual-list::part(group-adornment) {
     flex: 0 0 auto;
@@ -252,34 +254,43 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: 0;
-    border-radius: var(--lr-radius-xs);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-icon-button-radius, var(--lr-radius-xs));
+    background: var(--lr-icon-button-bg, transparent);
+    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
     font: inherit;
     cursor: pointer;
   }
   lr-virtual-list::part(row-action):hover {
     background: var(
       --lr-thread-list-row-action-hover-bg,
-      var(--lr-color-surface-raised)
+      var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))
     );
-    color: var(--lr-thread-list-row-action-hover-color, var(--lr-color-text));
+    color: var(
+      --lr-thread-list-row-action-hover-color,
+      var(--lr-icon-button-color-hover, var(--lr-color-text))
+    );
   }
   lr-virtual-list::part(row-action):active {
     background: var(
       --lr-thread-list-row-action-active-bg,
-      color-mix(
-        in oklab,
-        var(
-          --lr-thread-list-row-action-hover-bg,
-          var(--lr-color-surface-raised)
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      var(
+        --lr-icon-button-bg-active,
+        color-mix(
+          in oklab,
+          var(
+            --lr-thread-list-row-action-hover-bg,
+            var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))
+          ),
+          var(--lr-color-mix-partner) var(--lr-color-mix-active)
+        )
       )
     );
     color: var(
       --lr-thread-list-row-action-active-color,
-      var(--lr-thread-list-row-action-hover-color, var(--lr-color-text))
+      var(
+        --lr-icon-button-color-active,
+        var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-color-hover, var(--lr-color-text)))
+      )
     );
   }
   lr-virtual-list::part(row-action):focus-visible {

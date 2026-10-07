@@ -27,6 +27,8 @@ import {
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
+import { composedParentElement } from '../../../internal/active-element.js';
+import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import type {
   LyraClipboardWriteFailure,
@@ -78,6 +80,16 @@ interface DisabledProjection {
 }
 
 const MAX_TOOLBAR_ACTIONS = 100;
+const COMPOSITE_ROLES = new Set(['menu', 'menubar', 'listbox', 'tree', 'treegrid', 'grid', 'tablist', 'radiogroup']);
+
+/** Whether `element` belongs to a composite widget (an open menu, a listbox…) that owns its own roving focus. */
+function insideComposite(element: Element, root: Element): boolean {
+  for (let node = composedParentElement(element); node && node !== root; node = composedParentElement(node)) {
+    if (COMPOSITE_ROLES.has(node.getAttribute('role') ?? '')) return true;
+  }
+  return false;
+}
+
 const MAX_DESCRIPTOR_PROTOTYPES = 100;
 
 function isObjectValue(value: unknown): value is object {
@@ -731,6 +743,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       }
     };
     const visit = (element: Element): void => {
+      if (insideComposite(element, this)) return;
       if (isLyraToolbarActionProvider(element)) {
         addProvider(element, element);
         return;
@@ -907,6 +920,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onToolbarKeyDown = (e: KeyboardEvent): void => {
+    if (e.defaultPrevented || isEditableKeyEventTarget(e)) return;
     const stops = this.logicalActions();
     if (stops.length === 0) return;
     const path = e.composedPath();

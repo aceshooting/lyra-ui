@@ -28,26 +28,29 @@ export const styles = css`
     padding: 0;
     font: inherit;
     border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-radius);
-    background: transparent;
-    color: var(--lr-color-text-quiet);
+    border-radius: var(--lr-icon-button-radius, var(--lr-radius));
+    background: var(--lr-icon-button-bg, transparent);
+    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
     cursor: pointer;
   }
   /* Authored state qualifiers stay low-weight and composable; consumer-part precedence is verified
      from rendered computed style, not from selector arithmetic. */
   :where([part="up-button"]):hover:where(:not(:disabled)),
   :where([part="down-button"]):hover:where(:not(:disabled)) {
-    background: var(--lr-color-surface-raised);
-    color: var(--lr-color-text);
+    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
+    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
   }
   :where([part="up-button"]):active:where(:not(:disabled)),
   :where([part="down-button"]):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    background: var(
+      --lr-icon-button-bg-active,
+      color-mix(
+        in oklab,
+        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
     );
-    color: var(--lr-color-text);
+    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part="up-button"]:focus-visible,
   [part="down-button"]:focus-visible {

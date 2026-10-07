@@ -4,7 +4,10 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { LyraVirtualList, type LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import type {
+  LyraVirtualList,
+  LyraVirtualListIndexedSource,
+} from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
 import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -38,14 +41,20 @@ interface OwnedAnimationFrame {
   handle: number;
 }
 
+const virtualCount = (list: LyraVirtualList): number => {
+  const source = list.source ?? list.items;
+  return Array.isArray(source) ? source.length : finiteCount((source as LyraVirtualListIndexedSource).count);
+};
+
 /**
  * `<lr-chat-viewport>` — the transcript scroll container: owns stick-to-bottom behavior while an
  * answer streams, the "jump to latest" pill, and the unread divider.
  *
  * **Two supported content shapes, auto-detected:** ordinary element children (typically
  * `<lr-chat-message>`s -- *slotted mode*), or exactly one `<lr-virtual-list>` (*virtual mode*,
- * detected via `instanceof` against the imported class so custom prefixes keep working). In virtual
- * mode this component defers all scrolling to the slotted list's own `scrollToIndex()`, and sizes
+ * detected by its `scrollToIndex()`/`scrollContainer` API, so custom prefixes and other realms keep
+ * working). In virtual mode this component defers all scrolling to the slotted list's own
+ * `scrollToIndex()`, follows its content extent (`items` or `source`) as it grows, and sizes
  * that list to its own height -- without which the list would scroll inside `lr-virtual-list`'s
  * 24rem `--lr-virtual-list-height` default no matter how tall this viewport is. That sizing is a
  * percentage, so virtual mode needs a height-bounded parent, the same requirement slotted mode's
@@ -194,9 +203,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private get virtualListEl(): LyraVirtualList | null {
-    const children = this.messageElements;
-    return children.length === 1 && children[0] instanceof LyraVirtualList
-      ? (children[0] as LyraVirtualList)
+    const [only, ...rest] = this.messageElements;
+    return only && rest.length === 0 && 'scrollToIndex' in only && 'scrollContainer' in only
+      ? (only as unknown as LyraVirtualList)
       : null;
   }
 
@@ -331,7 +340,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       : (options?.behavior ?? 'smooth');
     const list = this.virtualListEl;
     if (list) {
-      if (unreadStartIndex >= list.items.length) return false;
+      if (unreadStartIndex >= virtualCount(list)) return false;
       list.scrollToIndex(unreadStartIndex, { align: 'start', behavior });
       return true;
     }
@@ -342,9 +351,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private performScrollToEnd(behavior: 'auto' | 'smooth'): void {
-    const list = this.virtualListEl;
+    const list = this.listenedVirtualList;
     if (list) {
-      if (list.items.length > 0) list.scrollToIndex(list.items.length - 1, { align: 'end', behavior });
+      const count = virtualCount(list);
+      if (count > 0) list.scrollToIndex(count - 1, { align: 'end', behavior });
       return;
     }
     const el = this.scrollEl;
@@ -353,8 +363,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private get totalCount(): number {
-    const list = this.virtualListEl;
-    return list ? list.items.length : this.messageElements.length;
+    const list = this.listenedVirtualList;
+    return list ? virtualCount(list) : this.messageElements.length;
   }
 
   private get unreadCount(): number {
@@ -373,7 +383,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   private updateUnreadDividerPosition(): void {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
-    if (this.virtualListEl || unreadStartIndex == null) {
+    if (this.listenedVirtualList || unreadStartIndex == null) {
       this.unreadDividerTop = null;
       this.syncSemanticUnreadBoundary();
       return;
@@ -398,7 +408,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private syncSemanticUnreadBoundary(target?: HTMLElement): void {
-    if (!target || this.virtualListEl) {
+    if (!target || this.listenedVirtualList) {
       this.unreadBoundaryEl?.remove();
       this.unreadBoundaryEl = undefined;
       return;
@@ -420,7 +430,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private markUserIntent = (): void => {
     this.pendingUserIntent = true;
     this.cancelPendingUserIntentExpiry();
-    // A gesture that actually produced a scroll is consumed by onScroll()/onVirtualRangeChanged()
+    // A gesture that actually produced a scroll is consumed by onScroll()/onVirtualScroll()
     // well within two animation frames -- slotted mode's own [part="scroll"] fires 'scroll'
     // directly off the native scroll; virtual mode's longest chain is one requestAnimationFrame
     // (the slotted list's own scroll-coalescing) plus a Lit microtask update, both of which land
@@ -454,6 +464,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     });
     this.pendingUserIntentExpiryFrame = firstFrame;
   };
+
+  private readonly passiveIntent = { handleEvent: () => this.markUserIntent(), passive: true };
 
   private cancelPendingUserIntentExpiry(): void {
     const frame = this.pendingUserIntentExpiryFrame;
@@ -524,11 +536,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'PageUp' || e.key === 'ArrowUp' || e.key === 'Home') this.markUserIntent();
+    if (e.key === 'PageUp' || e.key === 'ArrowUp' || e.key === 'Home' || (e.key === ' ' && e.shiftKey)) {
+      this.markUserIntent();
+    }
   };
 
   private onScroll = (): void => {
-    const el = this.scrollEl;
+    const list = this.listenedVirtualList;
+    const el = list ? list.scrollContainer : this.scrollEl;
     if (!el) return;
     const distanceFromEnd = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = distanceFromEnd <= this.effectiveBottomThreshold;
@@ -541,34 +556,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (userCaused && this.follow) this.follow = false;
   };
 
-  private onVirtualRangeChanged = (e: Event): void => {
-    const list = this.virtualListEl;
-    if (!list) return;
-    if (e.composedPath()[0] !== list) return;
-    const detail = (e as CustomEvent<LyraVirtualListRange>).detail;
-    if (
-      !detail ||
-      !Number.isFinite(detail.start) ||
-      !Number.isFinite(detail.end) ||
-      detail.start < 0 ||
-      detail.end < detail.start
-    ) {
-      return;
-    }
-    const atBottom = list.items.length > 0 && detail.end >= list.items.length - 1;
-    if (atBottom) {
-      this.clearUserIntent();
-      if (!this.follow) this.follow = true;
-      return;
-    }
-    const userCaused = this.consumeUserIntent() || this.scrollbarDragActive;
-    if (userCaused) {
-      if (this.follow) this.follow = false;
-      return;
-    }
-    // Not user-caused and not at the bottom -- new items were appended (or the viewport itself
-    // resized). While follow is engaged, catch back up.
-    if (this.follow) this.performScrollToEnd('auto');
+  private onVirtualScroll = (e: Event): void => {
+    if (e.composedPath()[0] === this.listenedVirtualList) this.onScroll();
   };
 
   private onSlotChange = (): void => {
@@ -738,9 +727,22 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.teardownObservers();
     this.observerWindow = owner ?? undefined;
     this.armedMode = mode;
+    const generation = ++this.armGeneration;
     if (list) {
       this.listenedVirtualList = list;
-      list.addEventListener('lr-visible-range-change', this.onVirtualRangeChanged as EventListener);
+      list.addEventListener('lr-virtual-scroll', this.onVirtualScroll);
+      // Watch the spacer's style: a ResizeObserver on it would trip the list's row-measurement delivery.
+      const MutationObserverCtor = owner?.MutationObserver;
+      void list.updateComplete.then(() => {
+        const spacer = list.scrollContainer?.querySelector('[part="spacer"]');
+        if (!spacer || !MutationObserverCtor || generation !== this.armGeneration) return;
+        const observer = new MutationObserverCtor(() => {
+          if (this.contentMutationObserver === observer) this.scheduleGrowthTick();
+        });
+        this.contentMutationObserver = observer;
+        observer.observe(spacer, { attributeFilter: ['style'] });
+        if (this.follow) this.performScrollToEnd('auto');
+      });
     } else {
       const content = this.contentEl;
       if (content) {
@@ -834,7 +836,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // "scheduled an update after an update completed" dev-mode notice. A microtask hop clears that
     // callback first. Mirrors the identical pattern (and reasoning) in
     // LyraVirtualList.attachContainerListeners()'s own initial measurement.
-    const generation = ++this.armGeneration;
     queueMicrotask(() => {
       if (!this.isConnected || generation !== this.armGeneration) return;
       this.updateUnreadDividerPosition();
@@ -848,10 +849,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.contentResizeObserver = undefined;
     this.contentMutationObserver?.disconnect();
     this.contentMutationObserver = undefined;
-    this.listenedVirtualList?.removeEventListener(
-      'lr-visible-range-change',
-      this.onVirtualRangeChanged as EventListener,
-    );
+    this.listenedVirtualList?.removeEventListener('lr-virtual-scroll', this.onVirtualScroll);
     this.listenedVirtualList = undefined;
     this.observerWindow = undefined;
     this.armedMode = null;
@@ -880,8 +878,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           aria-label=${label}
           tabindex=${virtual ? nothing : '0'}
           @scroll=${this.onScroll}
-          @wheel=${this.markUserIntent}
-          @touchmove=${this.markUserIntent}
+          @wheel=${this.passiveIntent}
+          @touchmove=${this.passiveIntent}
           @pointerdown=${this.onPointerDown}
           @keydown=${this.onKeyDown}
         >

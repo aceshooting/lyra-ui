@@ -83,18 +83,29 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     margin-inline-start: auto;
     border: none;
-    background: transparent;
-    color: var(--lr-color-text-quiet);
-    border-radius: var(--lr-radius);
+    background: var(--lr-icon-button-bg, transparent);
+    color: var(--lr-icon-button-color, var(--lr-color-text-quiet));
+    border-radius: var(--lr-icon-button-radius, var(--lr-radius));
     cursor: pointer;
   }
   [part='collapse-button']:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet));
+    color: var(--lr-icon-button-color-hover, var(--lr-color-brand));
   }
   [part='collapse-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    color: var(--lr-color-brand);
+    background: var(
+      --lr-icon-button-bg-active,
+      color-mix(
+        in oklab,
+        var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-active)
+      )
+    );
+    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-brand)));
+  }
+  [part~='bubble']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   [part='collapse-button']:focus-visible,
   [part='retry-button']:focus-visible {

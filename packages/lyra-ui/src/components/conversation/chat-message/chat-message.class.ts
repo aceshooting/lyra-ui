@@ -7,8 +7,8 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.class.js';
+import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
 import { styles } from './chat-message.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -115,19 +115,13 @@ export interface LyraChatMessageEventMap {
  * Accessibility of `status`: the current status is always available as
  * plain visible text (`[part="status-text"]`), never color alone. A
  * transition *to* `"failed"`, or *from* `"streaming"` to `"sent"` (a stream
- * finishing), is additionally announced through an internal
- * `<lr-live-region>` (see that component's header for the throttled-
- * announcement wiring this composes) so a screen-reader user who isn't
+ * finishing), is additionally announced through the document's shared live
+ * region (assertive for a failure, polite for a completion) so a screen-reader user who isn't
  * currently focused on this message still learns about it — *unless* the
  * `failure` slot has content, in which case this internal announcement is
  * skipped: the host's own `role="alert"` failure content is expected to
  * announce itself, and firing both would double-announce the same failure
- * with two different (and differently specific) messages. This differs
- * from `<lr-typing-indicator>`'s deliberately simpler `role="status"`
- * approach — that component only ever has one thing to announce (its own
- * mount); this one has a `status` that can flip between several values
- * across a single element's lifetime, which is exactly the coalescing job
- * `<lr-live-region>` exists for.
+ * with two different (and differently specific) messages.
  *
  * `messageRole` identifies the author (`user`/`assistant`/`system`, matching
  * the vocabulary of chat/completion APIs). The platform `role` property remains available for
@@ -286,7 +280,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  entirely-replaces-the-built-in-UI `header` slot. */
   @state() private hasFailureSlot = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private politeSink?: AnnouncementSink;
+  private assertiveSink?: AnnouncementSink;
   @query('[part="bubble"]') private bubbleEl?: HTMLElement;
 
   private readonly bodyId = nextId('chat-message-body');
@@ -374,6 +369,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.politeSink ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.assertiveSink ??= acquireAnnouncementSink('assertive', { document: this.ownerDocument, source: this });
     if (this.statusAtDisconnect !== undefined) {
       // Suppress only a status update queued while detached. Reparenting an
       // unchanged message must not silence its next genuine transition.
@@ -385,6 +382,9 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   override disconnectedCallback(): void {
     this.statusAtDisconnect = this.status;
     this.isMounting = true;
+    this.politeSink?.release();
+    this.assertiveSink?.release();
+    this.politeSink = this.assertiveSink = undefined;
     super.disconnectedCallback();
   }
 
@@ -418,18 +418,14 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   private announceStatusChange(previous: ChatMessageStatus): void {
     if (previous === this.status) return;
-    const region = this.liveRegion;
-    if (!region) return;
     if (this.status === 'failed') {
       // The `failure` slot's own content is expected to carry `role="alert"` and announce itself --
       // see the class doc's "Accessibility of `status`" paragraph. Firing this generic announcement
       // on top of that would double-announce the same failure.
       if (this.hasFailureSlot) return;
-      region.mode = 'assertive';
-      region.announce(this.localize('chatFailedAnnounce'), { force: true });
+      this.assertiveSink?.announce(this.localize('chatFailedAnnounce'));
     } else if (previous === 'streaming' && this.status === 'sent') {
-      region.mode = 'polite';
-      region.announce(this.localize('chatCompleteAnnounce'), { force: true });
+      this.politeSink?.announce(this.localize('chatCompleteAnnounce'));
     }
   }
 
@@ -460,10 +456,15 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
 
   private toggleCollapsed = (): void => {
     const detail = { expanded: this.collapsed } as const;
-    const request = this.emit('lr-toggle-request', detail, { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.collapsed = !detail.expanded;
-    this.emit('lr-toggle', detail);
+    requestThenCommit({
+      requestDetail: detail,
+      emitRequest: (requestDetail, init: { cancelable: true }) =>
+        this.emit('lr-toggle-request', requestDetail, init),
+      commit: () => {
+        this.collapsed = !detail.expanded;
+        this.emit('lr-toggle', detail);
+      },
+    });
   };
 
   private onRetryClick = (): void => {
@@ -555,7 +556,6 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
             : nothing}
           ${actionsOutside ? nothing : actionsBlock}
         </div>
-        <lr-live-region></lr-live-region>
       </div>
       ${actionsOutside ? actionsBlock : nothing}
     `;
