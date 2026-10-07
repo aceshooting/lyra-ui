@@ -1,4 +1,7 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
+import type { LyraPushToTalk } from '../push-to-talk/push-to-talk.js';
 import './realtime-session.js';
 import type { LyraRealtimeSession, LyraRealtimeSessionEventMap } from './realtime-session.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
@@ -455,4 +458,55 @@ it('uses break-word, not anywhere, on the status text', async () => {
   await el.updateComplete;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
   expect(getComputedStyle(status).overflowWrap).to.equal('break-word');
+});
+
+it('cancels a take in progress when withoutCapture hides the capture', async () => {
+  const media = navigator.mediaDevices.getUserMedia;
+  const Recorder = window.MediaRecorder;
+  const Context = window.AudioContext;
+  navigator.mediaDevices.getUserMedia = (async () => ({ getTracks: () => [{ stop() {} }] })) as unknown as typeof media;
+  window.MediaRecorder = class {
+    static isTypeSupported(): boolean { return false; }
+    state = 'inactive';
+    mimeType = '';
+    onstop: (() => void) | null = null;
+    start(): void { this.state = 'recording'; }
+    stop(): void { this.state = 'inactive'; this.onstop?.(); }
+  } as unknown as typeof MediaRecorder;
+  window.AudioContext = class {
+    state = 'running';
+    createMediaStreamSource() { return { connect() {} }; }
+    createAnalyser() { return { fftSize: 0, frequencyBinCount: 1, getByteTimeDomainData() {} }; }
+    resume() { return Promise.resolve(); }
+    close() { return Promise.resolve(); }
+  } as unknown as typeof AudioContext;
+  try {
+    const el = await fixture<LyraRealtimeSession>(html`<lr-realtime-session state="connected"></lr-realtime-session>`);
+    const capture = el.shadowRoot!.querySelector('lr-push-to-talk') as LyraPushToTalk;
+    await capture.updateComplete;
+    expect(await capture.start()).to.be.true;
+    let cancelled = false;
+    el.addEventListener('lr-record-cancel', () => (cancelled = true));
+    el.withoutCapture = true;
+    await waitUntil(() => cancelled, 'the session host never heard the take end');
+    expect(capture.state).to.equal('idle');
+  } finally {
+    navigator.mediaDevices.getUserMedia = media;
+    window.MediaRecorder = Recorder;
+    window.AudioContext = Context;
+  }
+});
+
+it('names the mute toggle by its action without aria-pressed', async () => {
+  const el = await fixture<LyraRealtimeSession>(html`<lr-realtime-session state="connected" muted></lr-realtime-session>`);
+  const mute = el.shadowRoot!.querySelector('[part="mute"]')!;
+  expect(mute.hasAttribute('aria-pressed')).to.be.false;
+  expect(mute.textContent?.trim()).to.equal('Unmute microphone');
+});
+
+it('keeps the newest transcript entries past the collection limit', () => {
+  expectDevWarning(collectionTruncationWarningKey('lr-realtime-session', 'entries'));
+  const el = document.createElement('lr-realtime-session') as LyraRealtimeSession;
+  el.entries = Array.from({ length: 10_005 }, (_, i) => ({ id: String(i), text: `line ${i}` }));
+  expect(el.entries.at(-1)?.id).to.equal('10004');
 });

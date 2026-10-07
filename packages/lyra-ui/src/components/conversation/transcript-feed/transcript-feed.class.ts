@@ -93,6 +93,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, srOnly, styles];
 
@@ -137,9 +138,13 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return finiteCount(this.maxRenderedEntries, 500);
   }
 
+  private normalizedMemo?: { source: readonly LyraTranscriptEntry[]; entries: LyraTranscriptEntry[] };
+
   private get normalizedEntries(): LyraTranscriptEntry[] {
+    const source = this.entries;
+    if (this.normalizedMemo?.source === source) return this.normalizedMemo.entries;
     const seen = new Set<string>();
-    return this.entries.filter((entry) => {
+    const entries = source.filter((entry) => {
       if (entry === null || typeof entry !== 'object') return false;
       if (
         typeof entry.id !== 'string' ||
@@ -150,6 +155,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
       seen.add(entry.id);
       return true;
     });
+    this.normalizedMemo = { source, entries };
+    return entries;
   }
 
   private get renderedEntries(): LyraTranscriptEntry[] {
@@ -292,25 +299,23 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return !prev || prev.speaker !== current.speaker;
   }
 
-  private formatTs(value: LyraTimestamp): string | null {
-    const date = normalizeLyraTimestamp(value);
-    if (!date) return null;
-    if (this.formatTimestamp) return this.formatTimestamp(date);
-    return getDateTimeFormat(this.effectiveLocale, { hour: 'numeric', minute: '2-digit' }).format(date);
-  }
-
-  private renderEntry(entry: LyraTranscriptEntry, showSpeaker: boolean, interim: boolean): TemplateResult {
+  private renderEntry(
+    entry: LyraTranscriptEntry,
+    showSpeaker: boolean,
+    interim: boolean,
+    format?: (date: Date) => string,
+  ): TemplateResult {
     const parts = ['entry'];
     if (interim) parts.push('interim');
-    const timestamp = entry.timestamp == null ? null : this.formatTs(entry.timestamp);
+    const date = format && entry.timestamp != null ? normalizeLyraTimestamp(entry.timestamp) : null;
     return html`
       <div part=${parts.join(' ')} ?data-interim=${interim}>
-        ${showSpeaker && entry.speaker ? html`<span part="speaker">${entry.speaker}</span>` : nothing}
+        ${showSpeaker && typeof entry.speaker === 'string' && entry.speaker
+          ? html`<span part="speaker">${entry.speaker}</span>`
+          : nothing}
         <span part="text" dir="auto">${entry.text}</span>
         ${interim ? html`<span class="sr-only">${this.localize('transcriptFeedInterim')}</span>` : nothing}
-        ${this.withTimestamps && timestamp !== null
-          ? html`<span part="timestamp">${timestamp}</span>`
-          : nothing}
+        ${date ? html`<span part="timestamp">${format!(date)}</span>` : nothing}
       </div>
     `;
   }
@@ -319,6 +324,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     const entries = this.renderedEntries;
     const finals = entries.filter((entry) => !entry.interim);
     const interims = entries.filter((entry) => entry.interim);
+    const format = !this.withTimestamps
+      ? undefined
+      : this.formatTimestamp ??
+        getDateTimeFormat(this.effectiveLocale, { hour: 'numeric', minute: '2-digit' }).format;
     const empty = entries.length === 0;
     return html`
       <div
@@ -340,7 +349,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
                 ${repeat(
                   finals,
                   (e) => e.id,
-                  (entry, i) => this.renderEntry(entry, this.showSpeakerFor(finals, i), false),
+                  (entry, i) => this.renderEntry(entry, this.showSpeakerFor(finals, i), false, format),
                 )}
               </div>
               ${interims.length
@@ -349,7 +358,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
                       ${repeat(
                         interims,
                         (e) => e.id,
-                        (entry, i) => this.renderEntry(entry, this.showSpeakerFor(interims, i), true),
+                        (entry, i) => this.renderEntry(entry, this.showSpeakerFor(interims, i), true, format),
                       )}
                     </div>
                   `

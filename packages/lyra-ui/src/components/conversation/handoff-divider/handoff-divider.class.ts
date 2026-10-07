@@ -1,8 +1,7 @@
 import type { PropertyValues } from 'lit';
 import { html, type TemplateResult } from 'lit';
-import { property, query, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './handoff-divider.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -13,12 +12,9 @@ import { LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffLabel, LYRA_DEFAUL
 /**
  * `<lr-handoff-divider>` — a labeled semantic separator marking control transfer between agents
  * in a transcript ("Transferred to Research Agent"), with an optional agent avatar. Purely
- * presentational: no events, no interactivity, no restore semantics.
- *
- * The computed label is announced once, on first connect, through an internal
- * `<lr-live-region>` — a single mount-time announcement is enough since a handoff lands
- * mid-stream and there is only ever one thing to say. Later property changes re-render the
- * visible/accessible label but never re-announce.
+ * presentational: no events, no interactivity, no restore semantics. It never announces itself:
+ * like other transcript content it is silent on mount, so a live container (for example
+ * `<lr-chat-viewport live="polite">`) announces a newly appended handoff.
  *
  * @customElement lr-handoff-divider
  * @slot avatar - The incoming agent's `<lr-avatar>` (or icon), at the start of the chip. Hidden
@@ -58,18 +54,11 @@ export class LyraHandoffDivider extends LyraElement {
 
   @state() private hasAvatarSlot = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
-
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasAvatarSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'avatar');
     }
-  }
-
-  override firstUpdated(changed: PropertyValues): void {
-    super.firstUpdated(changed);
-    this.liveRegion?.announce(this.getAttribute('aria-label') ?? this.computedLabel, { force: true });
   }
 
   // Reads the light-DOM `slot` attribute directly rather than the live `assignedElements()`
@@ -105,7 +94,6 @@ export class LyraHandoffDivider extends LyraElement {
         </span>
         <span part="line" aria-hidden="true"></span>
       </div>
-      <lr-live-region></lr-live-region>
     `;
   }
 }

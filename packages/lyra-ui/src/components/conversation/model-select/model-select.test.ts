@@ -1465,7 +1465,7 @@ describe("touched state (disabled-forced blur)", () => {
   });
 });
 
-it("clears an active row when an open catalog is replaced, even if the same id remains", async () => {
+it("keeps the active row by id when an open catalog is replaced", async () => {
   const el = (await fixture(
     html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
@@ -1493,8 +1493,8 @@ it("clears an active row when an open catalog is replaced, even if the same id r
     })
   );
 
-  expect(changed).to.be.false;
-  expect(el.value).to.equal("");
+  expect(changed).to.be.true;
+  expect(el.value).to.equal(CATALOG[0]);
 });
 
 it("preserves an open free-text draft while a replacement catalog is refiltered", async () => {
@@ -3013,21 +3013,15 @@ describe("row state feedback on the already-selected option", () => {
     const btn = trigger(el);
     // Driven through the component's own ArrowDown handling rather than by hand-stamping
     // [data-active], so this covers the rendered aria-activedescendant highlight itself.
-    let active: HTMLElement | null = null;
-    for (let step = 0; step < 5; step++) {
+    for (const key of ["ArrowUp", "ArrowDown"]) {
       btn.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          key: "ArrowDown",
-          bubbles: true,
-          cancelable: true,
-        })
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
       );
       await el.updateComplete;
-      active = el.shadowRoot!.querySelector<HTMLElement>(
-        '[part="option"][data-active]'
-      );
-      if (active?.getAttribute("aria-selected") === "true") break;
     }
+    const active = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="option"][data-active]'
+    );
     expect(
       active?.getAttribute("aria-selected"),
       "arrowing reached the selected row"

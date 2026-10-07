@@ -213,6 +213,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   private pointerListenerDocument?: Document;
   private pointerListener?: (event: PointerEvent) => void;
   private _activeIndex = -1;
+  private revealPending = false;
   private _query = '';
   private _open = false;
   private _value = '';
@@ -346,7 +347,19 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     const old = this._activeIndex;
     this.options.beforeActiveIndexChange?.(next, old);
     this._activeIndex = next;
+    this.revealPending = true;
     this.options.onStateChange('activeIndex', old);
+  }
+
+  /** Scrolls only the listbox so the active row is visible; never page ancestors. */
+  private revealActiveRow(): void {
+    const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
+    const row = listbox?.querySelector<HTMLElement>('[part="option"][data-active]');
+    if (!listbox || row?.offsetParent !== listbox) return;
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+    if (top < listbox.scrollTop) listbox.scrollTop = top;
+    else if (bottom > listbox.scrollTop + listbox.clientHeight) listbox.scrollTop = bottom - listbox.clientHeight;
   }
 
   get query(): string {
@@ -447,6 +460,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     if (resolved) {
       this.cancelListboxHideWatch();
       this.setListboxHidden(false);
+      if (this.closedMode) {
+        this.setActiveIndex(
+          this.effectiveEntries.findIndex((entry) => entry.id === this._value && entry.disabled !== true),
+        );
+      }
     } else {
       // Deferred past the host's next render: that render is what drops `:host([open])` and
       // actually starts the CSS exit transition `scheduleListboxHide()` needs to observe.
@@ -831,6 +849,8 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   updated(reposition: boolean): void {
     if (reposition) this.syncPopup();
+    if (this.revealPending && this._open) this.revealActiveRow();
+    this.revealPending = false;
   }
 
   private containsFocusTarget(target: EventTarget | null): boolean {

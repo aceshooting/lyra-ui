@@ -235,7 +235,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='preview-button'][aria-pressed='true'] {
+  [part='preview-button'][data-playing] {
     border-color: var(--lr-voice-picker-preview-active-border, var(--lr-color-brand));
     color: var(--lr-voice-picker-preview-active-color, var(--lr-color-brand));
   }

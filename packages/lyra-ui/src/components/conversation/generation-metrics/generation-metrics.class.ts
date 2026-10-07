@@ -154,7 +154,7 @@ const GENERATION_METRICS_STATUS = literalSetConverter<GenerationMetricsStatus>(
  *
  * @customElement lr-generation-metrics
  * @event lr-stop - The built-in Stop button was clicked. No detail payload.
- * @csspart base - The root inline layout container.
+ * @csspart base - The root inline layout container; takes focus from a focused Stop button that unmounts.
  * @csspart elapsed - The elapsed-time segment, e.g. `"12.3s"`. Always rendered (reads `"0.0s"` while idle).
  * @csspart tokens - The token-count segment, e.g. `"340 tokens"`. Only rendered when `token-count` is set.
  * @csspart throughput - The throughput segment, e.g. `"27 tok/s"`. Only rendered when a value is available (host-supplied or derived; see the class doc).
@@ -218,6 +218,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   // `status` becomes complete -- see the class doc's "ticker" paragraph.
   @state() private elapsedMs = 0;
 
+  private stopFocused = false;
   private tickTimer?: number;
   private tickTimerOwner?: Window;
   private tickTimerDocument?: Document;
@@ -278,6 +279,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   // first-update special case needed.
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.stopFocused = this.shadowRoot?.activeElement?.getAttribute('part') === 'stop-button';
     if (changed.has('status')) {
       if (this.status === 'running') {
         if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
@@ -309,6 +311,9 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     if (changed.has('status')) {
       if (this.status === 'running') this.startTicker();
       else this.stopTicker();
+    }
+    if (this.stopFocused && !this.renderRoot.querySelector('[part="stop-button"]')) {
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
     }
   }
 
@@ -391,7 +396,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
     }
     const tokenCount = this.validTokenCount;
     if (tokenCount !== undefined) {
-      const elapsedSeconds = this.elapsedMs / 1000;
+      const elapsedSeconds = (this.status === 'running' ? this.computeElapsedMs() : this.elapsedMs) / 1000;
       if (elapsedSeconds >= 1) return tokenCount / elapsedSeconds;
     }
     return undefined;
@@ -415,7 +420,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
         : 'generationStatusTokensCount';
 
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1">
         <span part="elapsed">${this.localize(elapsed.key, undefined, elapsed.values)}</span>
         ${hasTokens
           ? html`<span part="tokens"

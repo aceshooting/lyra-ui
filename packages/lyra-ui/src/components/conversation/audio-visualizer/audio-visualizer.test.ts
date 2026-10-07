@@ -1096,6 +1096,26 @@ describe('live analyser draw loop', () => {
     }
   });
 
+  it('parks the loop and suspends the context once every analysed track has ended', async () => {
+    const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', FakeRunningAudioContext);
+    try {
+      const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+      const track = { readyState: 'live' as MediaStreamTrackState };
+      el.stream = { getAudioTracks: () => [track] } as unknown as MediaStream;
+      await el.updateComplete;
+      await waitFrame();
+      await waitFrame();
+      expect(frameHandle(el)).to.not.be.undefined;
+      track.readyState = 'ended';
+      await waitFrame();
+      await waitFrame();
+      expect(frameHandle(el)).to.be.undefined;
+      expect((el as unknown as { audioCtx?: { state: string } }).audioCtx?.state).to.equal('suspended');
+    } finally {
+      restoreAudioContext();
+    }
+  });
+
   it('draws waveform samples directly from analyser time-domain data when mode is waveform', async () => {
     const restoreAudioContext = replaceOwnProperty(window, 'AudioContext', FakeRunningAudioContext);
     try {
@@ -1819,4 +1839,24 @@ describe('draw() defensive branches', () => {
       }
     });
   }
+});
+
+it('reads the reduced-motion preference on change, not on every animation frame', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer state="thinking"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  await waitFrame();
+  const matchMedia = window.matchMedia;
+  let calls = 0;
+  window.matchMedia = ((query: string) => {
+    calls += 1;
+    return matchMedia.call(window, query);
+  }) as typeof window.matchMedia;
+  try {
+    await waitFrame();
+    await waitFrame();
+    await waitFrame();
+  } finally {
+    window.matchMedia = matchMedia;
+  }
+  expect(frameHandle(el)).to.not.be.undefined;
+  expect(calls).to.equal(0);
 });

@@ -111,7 +111,7 @@ export interface LyraStreamStatusEventMap {
  * @csspart resume - The interrupted connection's resume button.
  * @event lr-stall - Fired whenever the effective phase transitions into `stalled`.
  * @event lr-recover - Fired whenever the effective phase transitions out of `stalled`.
- * @csspart base - The root layout container.
+ * @csspart base - The root layout container; takes focus from a focused resume button that unmounts.
  * @csspart indicator - The decorative (`aria-hidden`) status dot.
  * @csspart phase - Persistent localized phase text.
  * @csspart message - Wrapper around the default slot; only rendered while readonly `phase` is `stalled`.
@@ -223,6 +223,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.resumeFocused = this.shadowRoot?.activeElement?.getAttribute('part') === 'resume';
     if (!this.hasUpdated) {
       this.hasActionsSlot = this.hasSlotted('actions');
       this.hasMessageContent = Array.from(this.childNodes).some(
@@ -253,6 +254,9 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     }
 
     this.onPhaseChanged(previous, current);
+    if (this.resumeFocused && !this.renderRoot.querySelector('[part="resume"]')) {
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
+    }
   }
 
   override connectedCallback(): void {
@@ -430,6 +434,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   }
 
   private resumeDispatching = false;
+  private resumeFocused = false;
   private requestResume(): void {
     if (this.resumeDispatching || this.disabled || !this.resumable || this.phase !== 'interrupted') return;
     this.resumeDispatching = true;
@@ -442,7 +447,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   override render(): TemplateResult {
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1">
         <span part="indicator" aria-hidden="true"></span>
         <span part="phase">${this.phaseText}</span>
         ${this.phase === 'stalled'

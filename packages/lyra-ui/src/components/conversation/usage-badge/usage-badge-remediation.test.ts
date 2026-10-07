@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './usage-badge.js';
 import '../../overlays/dialog/dialog.js';
 import type { LyraUsageBadge } from './usage-badge.js';
@@ -84,4 +85,39 @@ it('yields Escape while its tooltip part is unrendered and resumes without movin
     await resetMouse();
     await dialog.close('api');
   }
+});
+
+it('lets document listeners observe the Escape that closes its tooltip', async () => {
+  const badge = await fixture<LyraUsageBadge>(html`<lr-usage-badge tokens-in="12"></lr-usage-badge>`);
+  const base = badge.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  await focusByKeyboard(base);
+  await waitUntil(() => badge.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')?.hidden === false, 'the focused tooltip did not open');
+  let seen = false;
+  const listener = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') seen = true;
+  };
+  document.addEventListener('keydown', listener);
+  try {
+    await sendKeys({ press: 'Escape' });
+    await badge.updateComplete;
+  } finally {
+    document.removeEventListener('keydown', listener);
+  }
+  expect(seen).to.be.true;
+  expect(badge.shadowRoot!.querySelector<HTMLElement>('[part="tooltip"]')!.hidden).to.be.true;
+});
+
+it('merges a host aria-describedby with its tooltip description', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <p id="usage-help">Billed monthly</p>
+    <lr-usage-badge tokens-in="12" aria-describedby="usage-help"></lr-usage-badge>
+  </div>`);
+  const badge = wrapper.querySelector<LyraUsageBadge>('lr-usage-badge')!;
+  await badge.updateComplete;
+  const base = badge.shadowRoot!.querySelector('[part="base"]') as HTMLElement & { ariaDescribedByElements: Element[] | null };
+  const ids = (): string[] => (base.ariaDescribedByElements ?? []).map((node) => node.getAttribute('part') ?? node.id);
+  expect(ids()).to.deep.equal(['usage-help']);
+  await focusByKeyboard(base);
+  await badge.updateComplete;
+  expect(ids()).to.deep.equal(['usage-help', 'tooltip']);
 });

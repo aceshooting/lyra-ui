@@ -10,6 +10,8 @@ import type { LyraToolTimeline, ToolTimelineEntry } from "../../agent-tools/tool
 import type { LyraToolApprovalDialog } from "../../agent-tools/tool-approval-dialog/tool-approval-dialog.class.js";
 import "../../forms/button/button.js";
 import "./agent-workspace.js";
+import { expectDevWarning } from "../../../../test/expected-dev-warnings.js";
+import { collectionTruncationWarningKey } from "../../../internal/collection-snapshot.js";
 import type { LyraAgentWorkspace } from "./agent-workspace.class.js";
 
 const run: AgentRun = {
@@ -1160,4 +1162,31 @@ describe('empty header-actions wrapper', () => {
     button.remove();
     await waitUntil(() => getComputedStyle(actions()).display === 'none');
   });
+});
+
+it("keeps the newest messages when the snapshot budget runs out", () => {
+  expectDevWarning(collectionTruncationWarningKey("lr-agent-workspace", "messages"));
+  const el = document.createElement("lr-agent-workspace") as LyraAgentWorkspace;
+  const rows = Array.from({ length: 9_000 }, (_, i) => ({ a: i, b: i, c: i, d: i, e: i }));
+  el.messages = [
+    { id: "history", role: "assistant", text: "Rows", metadata: { rows } },
+    { id: "question", role: "user", text: "Next?" },
+    { id: "answer", role: "assistant", text: "Streaming" },
+  ];
+  expect(el.messages.map((message) => message.id)).to.deep.equal(["question", "answer"]);
+});
+
+it("does not re-feed unchanged detail data on an unrelated re-render", async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace
+    .tools=${[{ id: "tool-1", name: "search", args: {}, status: "success" }]}
+    .retrievalChunks=${[chunk]}
+  ></lr-agent-workspace>`);
+  const timeline = el.shadowRoot!.querySelector("lr-tool-timeline") as LyraToolTimeline;
+  const results = el.shadowRoot!.querySelector("lr-retrieval-results") as HTMLElement & { chunks: unknown };
+  const entries = timeline.entries;
+  const chunks = results.chunks;
+  el.composerValue = "draft";
+  await el.updateComplete;
+  expect(timeline.entries === entries).to.be.true;
+  expect(results.chunks === chunks).to.be.true;
 });

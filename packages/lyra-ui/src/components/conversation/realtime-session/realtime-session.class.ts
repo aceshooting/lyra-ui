@@ -101,6 +101,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -136,8 +137,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   @property({ attribute: 'session-id' }) sessionId = '';
   @property({ attribute: false }) entries: readonly LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true }) muted = false;
-  /** Hides native push-to-talk capture. Hiding a focused capture transfers focus to the current
-   *  connect/disconnect action; hiding it while another control owns focus leaves that focus alone. */
+  /** Hides native push-to-talk capture, cancelling a take in progress (`lr-record-cancel`). Hiding a
+   *  focused capture transfers focus to the current connect/disconnect action; hiding it while
+   *  another control owns focus leaves that focus alone. */
   @property({ type: Boolean, attribute: 'without-capture', reflect: true }) withoutCapture = false;
 
   /** Accessible name for the session shell. Omitting it localizes the default
@@ -308,7 +310,6 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
                   <button
                     part="mute"
                     type="button"
-                    aria-pressed=${this.muted ? 'true' : 'false'}
                     @click=${() => this.emit('lr-mute-change', { muted: !this.muted })}
                   >
                     ${this.localize(this.muted ? 'realtimeSessionUnmute' : 'realtimeSessionMute')}
@@ -324,9 +325,12 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
         ${this.state === 'error'
           ? html`<p part="error">${this.localize('realtimeSessionConnectionFailed')}</p>`
           : nothing}
-        ${!this.withoutCapture
-          ? html`<lr-push-to-talk part="capture" .disabled=${!active || this.muted} level-events></lr-push-to-talk>`
-          : nothing}
+        <lr-push-to-talk
+          part="capture"
+          ?hidden=${this.withoutCapture}
+          .disabled=${!active || this.muted || this.withoutCapture}
+          level-events
+        ></lr-push-to-talk>
         <lr-transcript-feed
           part="transcript"
           .sessionId=${this.sessionId}

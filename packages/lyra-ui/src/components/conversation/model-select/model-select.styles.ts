@@ -37,7 +37,7 @@ export const styles = css`
     --_lr-model-select-font-size: var(--lr-form-control-font-size);
     --_lr-model-select-expand-size: var(--lr-size-1-75rem);
     --_lr-model-select-gap-default: var(--lr-space-xs);
-    --_lr-model-select-radius-default: var(--lr-radius);
+    --_lr-model-select-radius-default: var(--lr-form-control-radius);
     /* The shared field focus halo (internal/form-control.styles.ts). The PUBLIC name stays
        undeclared -- only this private copy of it is declared -- so a value set on :root or any
        ancestor still reaches this trigger, while the halo itself is painted in one place for every
@@ -239,15 +239,12 @@ export const styles = css`
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
-    max-block-size: var(--lr-size-18rem);
+    max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
     overflow-x: hidden;
     inline-size: max-content;
-    min-inline-size: var(--lr-size-12rem);
-    max-inline-size: min(
-      var(--lr-popover-viewport-clamp),
-      var(--lr-size-28rem)
-    );
+    min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
+    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem), var(--lr-positioner-available-inline-size, 100vw));
     padding: var(--lr-space-xs);
     /* Fill and edge from the shared overlay-surface family
        (internal/overlay-surface.styles.ts). The radius arm stays this component's own hook, with

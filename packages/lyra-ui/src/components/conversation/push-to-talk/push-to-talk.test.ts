@@ -94,6 +94,10 @@ class FakeAudioContext {
   close(): Promise<void> {
     return Promise.resolve();
   }
+  resume(): Promise<void> {
+    this.state = "running";
+    return Promise.resolve();
+  }
 }
 
 function stubSuccessfulCapture(): () => void {
@@ -583,6 +587,9 @@ describe("owner-window capture runtime", () => {
       }
       createAnalyser(): FakeAnalyserNode {
         return new FakeAnalyserNode();
+      }
+      resume(): Promise<void> {
+        return Promise.resolve();
       }
       close(): Promise<void> {
         audioContextCloses++;
@@ -1503,27 +1510,29 @@ describe("hold mode", () => {
 // -- Toggle mode -----------------------------------------------------------
 
 describe("toggle mode", () => {
-  it("click starts and a second click stops, toggling aria-pressed", async () => {
+  it("click starts and a second click stops, naming the next action without aria-pressed", async () => {
     const restore = stubSuccessfulCapture();
     try {
       const el = (await fixture(
         html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`
       )) as LyraPushToTalk;
       const btn = trigger(el);
-      expect(btn.getAttribute("aria-pressed")).to.equal("false");
+      expect(btn.hasAttribute("aria-pressed")).to.be.false;
+      expect(btn.getAttribute("aria-label")).to.equal("Start recording");
 
       const startPromise = oneEvent(el, "lr-record-start");
       btn.click();
       await startPromise;
       await el.updateComplete;
-      expect(btn.getAttribute("aria-pressed")).to.equal("true");
+      expect(btn.hasAttribute("aria-pressed")).to.be.false;
+      expect(btn.getAttribute("aria-label")).to.equal("Stop recording");
       expect(el.state).to.equal("recording");
 
       const stopPromise = oneEvent(el, "lr-record-stop");
       btn.click();
       await stopPromise;
       await el.updateComplete;
-      expect(btn.getAttribute("aria-pressed")).to.equal("false");
+      expect(btn.getAttribute("aria-label")).to.equal("Start recording");
       expect(el.state).to.equal("idle");
     } finally {
       restore();
@@ -2476,4 +2485,39 @@ it('uses the recorder default format when none of the preferred MIME types are s
     FakeMediaRecorder.isTypeSupported = originalSupport;
     restore();
   }
+});
+
+it("leaves an idle Escape to an enclosing dialog", async () => {
+  const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk></lr-push-to-talk>`);
+  const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true, cancelable: true });
+  trigger(el).dispatchEvent(escape);
+  expect(escape.defaultPrevented).to.be.false;
+});
+
+it("resumes a level-meter AudioContext created suspended", async () => {
+  const restore = stubSuccessfulCapture();
+  class SuspendedAudioContext extends FakeAudioContext {
+    override state = "suspended";
+  }
+  (window as unknown as { AudioContext: unknown }).AudioContext = SuspendedAudioContext;
+  try {
+    const el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk level-events></lr-push-to-talk>`);
+    expect(await el.start()).to.be.true;
+    const audioCtx = (el as unknown as { audioCtx?: { state: string } }).audioCtx;
+    expect(audioCtx?.state).to.equal("running");
+    el.cancel();
+  } finally {
+    restore();
+  }
+});
+
+it("projects a host aria-describedby onto the trigger", async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <p id="ptt-help">Hold Space to talk</p>
+    <lr-push-to-talk aria-describedby="ptt-help"></lr-push-to-talk>
+  </div>`);
+  const el = wrapper.querySelector<LyraPushToTalk>("lr-push-to-talk")!;
+  await el.updateComplete;
+  const described = (trigger(el) as HTMLElement & { ariaDescribedByElements: Element[] | null }).ariaDescribedByElements;
+  expect(described?.map((node) => node.id)).to.deep.equal(["ptt-help"]);
 });

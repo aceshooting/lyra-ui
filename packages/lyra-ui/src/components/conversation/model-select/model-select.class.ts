@@ -164,7 +164,7 @@ export interface LyraModelSelectEventMap {
  * @cssprop [--lr-model-select-font-size=var(--lr-form-control-font-size)] - Trigger/combobox font size, scaled by `size` off the shared control ladder.
  * @cssprop [--lr-model-select-expand-size=var(--lr-size-1-75rem)] - Decorative expand-icon box size, scaled by `size`.
  * @cssprop [--lr-model-select-gap=var(--lr-space-xs)] - Trigger, combobox, and option child gap.
- * @cssprop [--lr-model-select-radius=var(--lr-radius)] - Trigger, combobox, listbox, and option corner radius.
+ * @cssprop [--lr-model-select-radius=var(--lr-form-control-radius)] - Trigger, combobox, listbox, and option corner radius.
  * @cssprop [--lr-model-select-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below.
  * @cssprop [--lr-model-select-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background.
  * @cssprop [--lr-model-select-trigger-hover-border-color=var(--lr-model-select-trigger-border-color)] - Trigger
@@ -510,7 +510,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
       // draft itself. Rebase only for controlled-value changes or a structural mode switch;
       // otherwise a provider polling its model list would erase what the user is typing.
       this.catalogPicker.reconcileRows(
-        undefined,
+        this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.dataset['value'],
         changed.has('value') || changed.has('allowCustom') || modeChanged,
         false,
       );
@@ -877,7 +877,9 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
         aria-disabled=${disabled ? 'true' : nothing}
         ?data-active=${id === activeId}
       >
-        ${entry.icon ? html`<span part="option-icon" aria-hidden="true" inert>${entry.icon}</span>` : nothing}
+        ${typeof entry.icon === 'string' && entry.icon
+          ? html`<span part="option-icon" aria-hidden="true" inert>${entry.icon}</span>`
+          : nothing}
         <span part="option-label">${entry.label}</span>
         ${entry.synthetic ? html`<span part="option-badge">${this.localize('notInCatalog')}</span>` : ''}
       </div>`;

@@ -852,3 +852,11 @@ it('prevents synchronous resume reentry while permitting later host retries', as
   button.click();
   expect(calls).to.equal(2);
 });
+
+it('moves focus from Resume to the status when the stream reconnects', async () => {
+  const el = (await fixture(html`<lr-stream-status connection-state="interrupted" resumable></lr-stream-status>`)) as LyraStreamStatus;
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[part="resume"]')!);
+  el.connectionState = 'connecting';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});

@@ -361,18 +361,18 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   @property() provider = '';
   /** The bounded, clone-owned, frozen full voice list. Omit (or leave empty) to fall back to plain
    *  free-text entry. Catalog ids must be nonempty and unique; later duplicates are omitted
-   *  entirely, first wins. A blank/whitespace-only id is never selectable, keyboard-reachable, or
-   *  previewable, but still renders as an inert trailing row rather than silently vanishing (see
-   *  `malformedCatalogEntries`). Replacing the catalog retires any internal preview before the
-   *  rendered candidate can change; reassign a new array after row changes. */
+   *  entirely, first wins; rows with a blank/whitespace-only id are omitted. Replacing the catalog
+   *  retires any internal preview before the rendered candidate can change; reassign a new array
+   *  after row changes. */
   @property({ attribute: false })
   get catalog(): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
     return this._catalog;
   }
   set catalog(next: LyraCatalog<LyraVoiceCatalogEntry> | undefined) {
     const old = this._catalog;
-    if (next === old) return;
+    if (next === old || next === this.catalogSource) return;
     if (this.internalPreviewTargetId !== null) this.stopInternalPreview();
+    this.catalogSource = next;
     this._catalog = snapshotVoiceCatalog(next);
     this.requestUpdate('catalog', old);
   }
@@ -431,6 +431,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private pendingPreviewId: string | null = null;
   private previewGeneration = 0;
   private _catalog?: LyraCatalog<LyraVoiceCatalogEntry>;
+  private catalogSource?: unknown;
   private _fieldsetDisabled = false;
   private _name = '';
   private _disabled = false;
@@ -622,7 +623,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         this.renderRoot.querySelector('[part="option"][data-active]') as HTMLElement | null
       )?.dataset['value'];
       const rows = this.closedMode ? this.effectiveEntries : this.filteredEntries;
-      this.catalogPicker.reconcileRows(activeValue, false);
+      this.catalogPicker.reconcileRows(activeValue, this.open && changed.has('value'));
       this.reconcilePreviewVisibility(this.open, rows);
     }
     if (changed.has('withoutPreview') && this.withoutPreview) this.stopInternalPreview();
@@ -817,26 +818,6 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    *  description substring, case-insensitive). */
   private get filteredEntries(): DisplayEntry[] {
     return this.catalogPicker.filteredEntries;
-  }
-
-  /**
-   * Raw `catalog` rows the shared controller drops as malformed (blank/whitespace `id`) --
-   * rendered as inert trailing options rather than silently vanishing, so a malformed row a host
-   * accidentally supplies is still visible for debugging. Never in `effectiveEntries`/
-   * `filteredEntries`, so never selectable, never keyboard-reachable, and never active: `entry.id`
-   * is always `''`, which `requestPreview()`'s `if (!voiceId) return;` guard and
-   * `handleListboxClick()`'s `visibleEntries` lookup both already treat as a no-op.
-   */
-  private get malformedCatalogEntries(): DisplayEntry[] {
-    const raw = this.catalog;
-    if (!raw || raw.length === 0) return [];
-    const out: DisplayEntry[] = [];
-    for (const item of raw) {
-      const record: LyraVoiceCatalogEntry = typeof item === 'string' ? { id: item, label: item } : item;
-      if (typeof record?.id === 'string' && record.id.trim() !== '') continue;
-      out.push({ ...record, id: '', synthetic: false });
-    }
-    return out;
   }
 
   private labelFor(id: string): string {
@@ -1123,9 +1104,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {
       const id = `${this.listId}-opt-${i}`;
-      // A blank id is never a real selection (it's a malformed row rendered inertly -- see
-      // `malformedCatalogEntries`), even when `this.value` also happens to be `''`.
-      const selected = entry.id !== '' && entry.id === this.value;
+      const selected = entry.id === this.value;
       const meta = [entry.language, entry.description].filter(Boolean).join(' · ');
       return html`<div
         part="option"
@@ -1203,7 +1182,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       <button
         part="preview-button"
         type="button"
-        aria-pressed=${playing ? 'true' : 'false'}
+        ?data-playing=${playing}
         aria-label=${this.previewButtonLabel}
         ?disabled=${this.effectiveDisabled || !candidate}
         @click=${this.onPreviewButtonClick}
@@ -1256,7 +1235,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         </button>
         ${this.renderPreviewButton()}
       </div>
-      ${this.renderListbox([...rows, ...this.malformedCatalogEntries], activeId, this.localize('voicePickerNoVoices'))}
+      ${this.renderListbox(rows, activeId, this.localize('voicePickerNoVoices'))}
       ${this.renderHintError(hasError, hasHint)}
     `;
   }
@@ -1307,7 +1286,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
         </div>
         ${this.renderPreviewButton()}
       </div>
-      ${this.renderListbox([...rows, ...this.malformedCatalogEntries], activeId, this.localize('noMatches'))}
+      ${this.renderListbox(rows, activeId, this.localize('noMatches'))}
       ${this.renderHintError(hasError, hasHint)}
     `;
   }

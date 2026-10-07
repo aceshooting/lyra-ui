@@ -4,6 +4,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
@@ -36,10 +37,15 @@ import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversa
 
 const MAX_RENDERED_MESSAGES = 500;
 
+// Keyed by the owned (frozen) snapshot, so a projection is recomputed only when its input changes.
+const projections = new WeakMap<object, { identity: unknown; result: unknown[] }>();
+
 function firstByWorkspaceIdentity<T>(
   items: readonly T[],
   identity: (item: T) => unknown
 ): T[] {
+  const known = projections.get(items);
+  if (known?.identity === identity) return known.result as T[];
   const result: T[] = [];
   const seen = new Set<string>();
   for (const item of items) {
@@ -53,8 +59,18 @@ function firstByWorkspaceIdentity<T>(
     seen.add(id);
     result.push(item);
   }
+  projections.set(items, { identity, result });
   return result;
 }
+
+const workspaceId = (item: { readonly id?: unknown }): unknown => item.id;
+
+const toolIdentity = (entry: ToolTimelineEntry): unknown => {
+  const id = entry.id;
+  if (typeof id !== 'string' || id.trim() === '') return undefined;
+  const sourceKey = entry.sourceKey;
+  return `${typeof sourceKey === 'string' ? sourceKey : ''}\u0000${id}`;
+};
 
 interface EffectiveWorkspaceMessage {
   message: ChatMessage;
@@ -183,6 +199,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     'citations',
     'contextSegments',
   ]);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['messages']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -297,28 +314,26 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   private get effectiveTools(): readonly ToolTimelineEntry[] {
-    return firstByWorkspaceIdentity(this.tools, (entry) => {
-      const id = entry.id;
-      if (typeof id !== 'string' || id.trim() === '') return undefined;
-      const sourceKey = entry.sourceKey;
-      return `${typeof sourceKey === 'string' ? sourceKey : ''}\u0000${id}`;
-    });
+    return firstByWorkspaceIdentity(this.tools, toolIdentity);
   }
 
   private get effectiveRetrievalChunks(): readonly RetrievalChunk[] {
-    return firstByWorkspaceIdentity(this.retrievalChunks, (chunk) => chunk.id);
+    return firstByWorkspaceIdentity(this.retrievalChunks, workspaceId);
   }
 
   private get effectiveCitations(): readonly Citation[] {
-    return firstByWorkspaceIdentity(this.citations, (citation) => citation.id);
+    return firstByWorkspaceIdentity(this.citations, workspaceId);
   }
 
   private get effectiveContextSegments(): readonly ContextInspectorSegment[] {
-    return firstByWorkspaceIdentity(this.contextSegments, (segment) => segment.id);
+    return firstByWorkspaceIdentity(this.contextSegments, workspaceId);
   }
+
+  private messagesMemo?: { source: readonly ChatMessage[]; result: readonly EffectiveWorkspaceMessage[] };
 
   private get effectiveMessages(): readonly EffectiveWorkspaceMessage[] {
     const source = this.messages;
+    if (this.messagesMemo?.source === source) return this.messagesMemo.result;
     const seen = new Set<string>();
     const messages: EffectiveWorkspaceMessage[] = [];
     for (let sourceIndex = 0; sourceIndex < source.length; sourceIndex++) {
@@ -329,6 +344,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       seen.add(id);
       messages.push({ message, sourceIndex });
     }
+    this.messagesMemo = { source, result: messages };
     return messages;
   }
 
@@ -429,7 +445,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         ${tools.length > 0
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceTools')}</h3>
-              <lr-tool-timeline .entries=${tools}></lr-tool-timeline>
+              <lr-tool-timeline .entries=${guard([tools], () => tools)}></lr-tool-timeline>
             </section>`
           : nothing}
         ${retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
@@ -450,7 +466,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               <h3 part="section-heading">${this.localize('agentWorkspaceGrounding')}</h3>
               <lr-grounding-summary
                 .assessment=${this.groundingAssessment}
-                .citations=${citations}
+                .citations=${guard([citations], () => citations)}
               ></lr-grounding-summary>
             </section>`
           : nothing}

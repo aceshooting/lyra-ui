@@ -418,3 +418,10 @@ it('is accessible non-restorable', async () => {
   const el = (await fixture(html`<lr-checkpoint label="Before refactor" without-restore></lr-checkpoint>`)) as LyraCheckpoint;
   await expect(el).to.be.accessible();
 });
+
+it('names the busy restore button by its visible "Restoring…" text', async () => {
+  const el = (await fixture(html`<lr-checkpoint label="Before refactor" restoring></lr-checkpoint>`)) as LyraCheckpoint;
+  const button = el.shadowRoot!.querySelector('[part="restore-button"]')!;
+  expect(button.hasAttribute('aria-label')).to.be.false;
+  expect(button.textContent!.trim()).to.equal('Restoring…');
+});

@@ -173,6 +173,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private dprQuery?: MediaQueryList;
   private dprChangeListener?: (event: MediaQueryListEvent) => void;
   private stopMotionWatch?: () => void;
+  private reducedMotion = false;
   private drawFrameRequest?: OwnedAnimationFrame;
   private lastAmbientDrawMs = 0;
   private generatedAriaLabel?: string;
@@ -249,7 +250,9 @@ export class LyraAudioVisualizer extends LyraElement {
     this.watchDpr();
     // The draw loop parks itself while ambient output is static under reduced motion, so a
     // preference flip must restart it (and re-simplify/re-animate the pattern) explicitly.
-    this.stopMotionWatch = observeReducedMotion(this, () => {
+    this.reducedMotion = prefersReducedMotion(this);
+    this.stopMotionWatch = observeReducedMotion(this, (reduced) => {
+      this.reducedMotion = reduced;
       if (this.isConnected) this.scheduleDraw();
     });
     // A reconnect may land under a different theme scope, so neither canvas colors nor the ambient
@@ -537,7 +540,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private get isTimeDriven(): boolean {
     if (this.analyser && this.audioCtx?.state === 'running') return true;
     if (this.level != null) return false;
-    if (prefersReducedMotion(this)) return false;
+    if (this.reducedMotion) return false;
     return this.state !== 'idle';
   }
 
@@ -560,7 +563,8 @@ export class LyraAudioVisualizer extends LyraElement {
     // otherwise still draw and re-arm itself before the observer's `cancelAnimationFrame` call
     // catches up. Redraws resume once the observer reports intersecting again via `scheduleDraw()`.
     if (!this.visibilityKnown || !this.visible) return;
-    const reduced = prefersReducedMotion(this);
+    if (this.analyser && !this.hasUsableAudioStream) this.syncAnalyser();
+    const reduced = this.reducedMotion;
     if (reduced && !this.hasLiveSignal) {
       if (nowMs - this.lastAmbientDrawMs < AMBIENT_REDUCED_MOTION_INTERVAL_MS) {
         this.scheduleDraw();
@@ -646,7 +650,7 @@ export class LyraAudioVisualizer extends LyraElement {
       const n = this.mode === 'waveform' ? WAVEFORM_SAMPLES : this.effectiveBarCount;
       return new Array(n).fill(this.effectiveLevel);
     }
-    return this.ambientAmplitudes(nowMs, prefersReducedMotion(this));
+    return this.ambientAmplitudes(nowMs, this.reducedMotion);
   }
 
   /** Resolves and validates the two drawing colors once; the theme/color-scheme observers and

@@ -219,7 +219,7 @@ it('keeps readonly controls browseable while blocking user commits and preservin
   trigger(closed!).focus();
   trigger(closed!).click();
   await closed!.updateComplete;
-  const browse = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  const browse = new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true });
   trigger(closed!).dispatchEvent(browse);
   await closed!.updateComplete;
   expect(browse.defaultPrevented).to.equal(true);
@@ -503,23 +503,6 @@ it('a value not present in catalog renders as a synthetic stale row with the not
   expect(stale.querySelector('[part="option-badge"]')!.textContent).to.equal('not in catalog');
 });
 
-it('renders a malformed (blank-id) catalog row as an inert trailing option instead of dropping it silently', async () => {
-  const el = (await fixture(
-    html`<lr-voice-picker
-      .catalog=${[...OBJECT_CATALOG, { id: '   ', label: 'Ghost voice' }]}
-      value="aria"
-    ></lr-voice-picker>`,
-  )) as LyraVoicePicker;
-  el.open = true;
-  await el.updateComplete;
-  const optionRows = Array.from(rows(el));
-  const malformedRow = optionRows.find((row) => row.getAttribute('data-value') === '');
-  expect(malformedRow === undefined).to.be.false;
-  expect(malformedRow!.textContent).to.contain('Ghost voice');
-  expect(malformedRow!.getAttribute('aria-selected')).to.equal('false');
-  expect(malformedRow!.hasAttribute('data-synthetic')).to.be.false;
-});
-
 describe('resting border and fill theme cssprops', () => {
   it('leaves the resting trigger border and fill at the shared tokens when the hooks are unset', async () => {
     const el = (await fixture(
@@ -748,13 +731,11 @@ describe('row state feedback on the already-selected option', () => {
     const el = await openWithSelectedMiddleRow();
     // Driven through the component's own ArrowDown handling rather than by hand-stamping
     // [data-active], so this covers the rendered aria-activedescendant highlight itself.
-    let active: HTMLElement | null = null;
-    for (let step = 0; step < 5; step++) {
-      trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    for (const key of ['ArrowUp', 'ArrowDown']) {
+      trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
       await el.updateComplete;
-      active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
-      if (active?.getAttribute('aria-selected') === 'true') break;
     }
+    const active = el.shadowRoot!.querySelector<HTMLElement>('[part="option"][data-active]');
     expect(active?.getAttribute('aria-selected'), 'arrowing reached the selected row').to.equal('true');
     expect(
       getComputedStyle(active!).backgroundColor,
@@ -1072,13 +1053,13 @@ it('an unprevented request with a previewUrl plays through an internal <audio>, 
     previewButton(el).click();
     const ev = await changePromise;
     expect(ev.detail).to.deep.equal({ voiceId: 'aria' });
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(true);
 
     const stopPromise = oneEvent(el, 'lr-preview-change');
     previewButton(el).click(); // same voice -- toggles off, no new lr-preview-request
     const stopEv = await stopPromise;
     expect(stopEv.detail).to.deep.equal({ voiceId: null });
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -1103,14 +1084,14 @@ it('publishes internal preview start only after the current play() promise fulfi
     await Promise.resolve();
     await el.updateComplete;
     expect(changes).to.deep.equal([]);
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
 
     const started = oneEvent(el, 'lr-preview-change');
     resolvePlay();
     expect((await started).detail).to.deep.equal({ voiceId: 'aria' });
     await el.updateComplete;
     expect(changes).to.deep.equal(['aria']);
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(true);
   } finally {
     restore();
   }
@@ -1130,7 +1111,7 @@ it('keeps a rejected pending play silent and never exposes a false playing state
     await el.updateComplete;
 
     expect(changes).to.deep.equal([]);
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
     restore();
@@ -1152,7 +1133,7 @@ it('contains a synchronous media play failure without publishing a preview state
     await el.updateComplete;
     expect(changes).to.deep.equal([]);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -1180,7 +1161,7 @@ it('publishes a start immediately followed by a stop when a genuine audio error 
     audio!.dispatchEvent(new Event('error'));
 
     expect(sequence).to.deep.equal(['aria', null]);
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
     resolvePlay?.();
@@ -1215,7 +1196,7 @@ it('retires the playing voice before dispatching a prevented request for another
 
     expect(sequence).to.deep.equal(['preview:null', 'request:nova']);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -1269,7 +1250,7 @@ it('retires the playing voice before catalog replacement changes the rendered ca
 
     expect(changes).to.deep.equal([null]);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -1413,7 +1394,7 @@ it('preventDefault()ing lr-preview-request suppresses internal playback entirely
   previewButton(el).click();
   await el.updateComplete;
   expect(changed).to.be.false;
-  expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
 });
 
 it('a voice with no previewUrl still fires the request event but never plays internally', async () => {
@@ -1425,7 +1406,7 @@ it('a voice with no previewUrl still fires the request event but never plays int
   const ev = await reqPromise;
   expect(ev.detail).to.deep.equal({ voiceId: 'sage', previewUrl: undefined });
   await el.updateComplete;
-  expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
 });
 
 it('without-preview renders no preview affordances at all', async () => {
@@ -2058,14 +2039,6 @@ it("previewCandidateId (and the trigger's aria-activedescendant) tracks the high
   const btn = trigger(el);
   btn.click();
   await el.updateComplete;
-  btn.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key: 'ArrowDown',
-      bubbles: true,
-      cancelable: true,
-    })
-  );
-  await el.updateComplete;
   expect(btn.getAttribute('aria-activedescendant')).to.not.equal('');
   expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview alloy');
 
@@ -2104,17 +2077,15 @@ it('retires playback before active-option navigation changes the visible preview
     const changes: Array<string | null> = [];
     el.addEventListener('lr-preview-change', (event) => changes.push(event.detail.voiceId));
 
-    move();
-    await el.updateComplete;
     expect(changes).to.deep.equal([]);
     expect(previewButton(el).getAttribute('aria-label')).to.equal('Stop preview');
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(true);
 
     move();
     await el.updateComplete;
     expect(changes).to.deep.equal([null]);
     expect(previewButton(el).getAttribute('aria-label')).to.equal('Preview Sage');
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -2153,19 +2124,6 @@ it('labelFor falls back to the raw id when there is no catalog to look up a labe
 
 // -- Preview guards and edge cases -------------------------------------------
 
-it('the per-row preview icon is a no-op for an entry with an empty id (defensive requestPreview guard)', async () => {
-  const catalog = [{ id: '', label: 'Untitled', previewUrl: 'https://example.test/x.mp3' }];
-  const el = (await fixture(html`<lr-voice-picker .catalog=${catalog}></lr-voice-picker>`)) as LyraVoicePicker;
-  el.open = true;
-  await el.updateComplete;
-  let requested = false;
-  el.addEventListener('lr-preview-request', () => (requested = true));
-  const icon = rows(el)[0]!.querySelector('[part="option-preview"]') as HTMLElement;
-  icon.click();
-  await el.updateComplete;
-  expect(requested).to.be.false;
-});
-
 it('a previewUrl with a disallowed scheme is silently dropped by safeMediaSrc -- no internal playback', async () => {
   const catalog = [{ id: 'x', label: 'X', previewUrl: 'javascript:alert(1)' }];
   const el = (await fixture(
@@ -2178,7 +2136,7 @@ it('a previewUrl with a disallowed scheme is silently dropped by safeMediaSrc --
   await reqPromise;
   await el.updateComplete;
   expect(changed).to.be.false;
-  expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
 });
 
 it('stopping an active internal preview via the standalone button releases the <audio> element', async () => {
@@ -2193,13 +2151,13 @@ it('stopping an active internal preview via the standalone button releases the <
     const startPromise = oneEvent(el, 'lr-preview-change');
     previewButton(el).click();
     await startPromise;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(true);
 
     const stopPromise = oneEvent(el, 'lr-preview-change');
     previewButton(el).click(); // audioEl is still set after fulfilled playback -- cleanup branch
     const stopEv = await stopPromise;
     expect(stopEv.detail).to.deep.equal({ voiceId: null });
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -2228,7 +2186,7 @@ it('a pending play rejection after the same candidate was canceled stays silent'
     await new Promise((r) => setTimeout(r, 0));
     expect(changes).to.deep.equal([]);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }
@@ -2258,7 +2216,7 @@ it('ignores a stale play fulfillment after the pending candidate was superseded'
 
     expect(changes).to.deep.equal([]);
     expect(el.value).to.equal('sage');
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
     restore();
@@ -3017,11 +2975,11 @@ it('an ended event from a superseded audio element does not stop the current pre
     stale.addEventListener('ended', (el as unknown as { onAudioEnded: (e: Event) => void }).onAudioEnded);
     stale.dispatchEvent(new Event('ended'));
     await el.updateComplete;
-    expect(previewButton(el).getAttribute('aria-pressed'), 'a stale ended event is ignored').to.equal('true');
+    expect(previewButton(el).hasAttribute('data-playing'), 'a stale ended event is ignored').to.equal(true);
 
     current.dispatchEvent(new Event('ended'));
     await el.updateComplete;
-    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    expect(previewButton(el).hasAttribute('data-playing')).to.equal(false);
   } finally {
     restore();
   }

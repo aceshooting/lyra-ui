@@ -1,4 +1,6 @@
-import { fixture, expect, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, aTimeout, waitUntil, html } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import './generation-metrics.js';
 import { LiveDerivedThroughput } from './generation-metrics.stories.js';
 import type { LyraGenerationMetrics } from './generation-metrics.js';
 
@@ -35,4 +37,23 @@ describe('generation metrics live example', () => {
     await aTimeout(1150);
     expect(status.tokenCount).to.equal(stopped);
   });
+});
+
+it('derives throughput from the current elapsed time between ticks', async () => {
+  const el = await fixture<LyraGenerationMetrics>(html`<lr-generation-metrics
+    status="running" token-count="50" .startedAt=${Date.now() - 1000}
+  ></lr-generation-metrics>`);
+  await aTimeout(500);
+  el.tokenCount = 75;
+  await el.updateComplete;
+  const rate = Number.parseFloat(el.shadowRoot!.querySelector('[part="throughput"]')!.textContent!);
+  expect(rate).to.be.below(60);
+});
+
+it('moves focus from Stop to the readout when the run ends', async () => {
+  const el = await fixture<LyraGenerationMetrics>(html`<lr-generation-metrics status="running"></lr-generation-metrics>`);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[part="stop-button"]')!);
+  el.status = 'complete';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });

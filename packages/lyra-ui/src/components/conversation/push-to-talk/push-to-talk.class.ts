@@ -7,6 +7,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pushToTalkCancelled, LYRA_DEFAULT_pushToTalkDenied, LYRA_DEFAULT_pushToTalkError, LYRA_DEFAULT_pushToTalkHold, LYRA_DEFAULT_pushToTalkRequesting, LYRA_DEFAULT_pushToTalkStart, LYRA_DEFAULT_pushToTalkStarted, LYRA_DEFAULT_pushToTalkStop, LYRA_DEFAULT_pushToTalkStopped, LYRA_DEFAULT_pushToTalkUnsupported } from '../../../internal/default-strings.generated.js';
@@ -129,9 +130,10 @@ export interface LyraPushToTalkEventMap {
  * APIs only.
  *
  * `mode="hold"` (the default) is a press-and-hold gesture: pointerdown/Enter-or-Space-keydown starts,
- * pointerup/keyup/blur stops. `mode="toggle"` is click-to-start/click-to-stop with `aria-pressed`.
- * Escape cancels the in-progress take in either mode (discarding it — `lr-record-cancel`, never
- * `lr-record-stop`). `state` is a read-only lifecycle reflected to the `data-state` attribute (not
+ * pointerup/keyup/blur stops. `mode="toggle"` is click-to-start/click-to-stop; its label names the
+ * next action. Escape cancels the in-progress take in either mode (discarding it — `lr-record-cancel`,
+ * never `lr-record-stop`); an idle Escape is left to enclosing overlays. `state` is a read-only
+ * lifecycle reflected to the `data-state` attribute (not
  * `state`, avoiding any ambiguity with a native form-control `state`): `'idle' | 'requesting' |
  * 'denied' | 'recording' | 'error'`. A host-level `aria-label` (set on `<lr-push-to-talk>` itself)
  * overrides the computed trigger label by attribute presence, including an explicit empty value.
@@ -252,6 +254,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="trigger"]') private trigger?: HTMLButtonElement;
+  private describedByReflected = false;
 
   private recorder?: MediaRecorder;
   private chunks: Blob[] = [];
@@ -480,6 +483,14 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     if (changed.has('withoutTimer')) this.syncElapsedTimer(owner);
     if (changed.has('maxDurationMs')) this.syncMaxDurationTimer(owner);
     if (changed.has('levelEvents')) this.syncLevelMeter(owner);
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const describedBy = this.getAttribute('aria-describedby');
+    if (describedBy || this.describedByReflected) {
+      this.describedByReflected = syncAriaDescribedByElements(this, this.trigger, describedBy);
+    }
   }
 
   override focus(options?: FocusOptions): void {
@@ -852,6 +863,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
     if (!AudioCtxCtor) return;
     const audioCtx = new AudioCtxCtor();
+    void audioCtx.resume().catch(() => {});
     this.audioCtx = audioCtx;
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
@@ -966,6 +978,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.disabled) return;
     if (e.key === 'Escape') {
+      if (this._state !== 'requesting' && this._state !== 'recording') return;
       e.preventDefault();
       this.cancel();
       return;
@@ -1039,7 +1052,6 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         part="trigger"
         type="button"
         aria-label=${this.triggerLabel}
-        aria-pressed=${this.mode === 'toggle' ? (recording ? 'true' : 'false') : nothing}
         ?disabled=${this.disabled || !supported}
         @pointerdown=${this.onPointerDown}
         @pointerup=${this.onPointerUp}

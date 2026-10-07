@@ -1041,7 +1041,8 @@ reads as stalled.
 
 An interrupted connection disarms the stall timer. `lr-resume` (`detail: null`, bubbling and
 composed) requests host-managed resume; the component never reconnects or changes state in response
-to the click. The host must update `connectionState` after handling the request.
+to the click. The host must update `connectionState` after handling the request; a focused resume
+button hands focus to the `base` container as it unmounts.
 
 **Methods:**
 
@@ -1368,6 +1369,8 @@ accumulate into one search that resets after 500 ms without typing, and the next
 label starts with it (after the active row while the list is open, after the committed row while it
 is closed, wrapping) becomes the active row while open or is committed, with `lr-change`, while
 closed. Space joins a search already in progress; otherwise it keeps its activation meaning.
+Opening the closed dropdown starts on the committed row, and keyboard navigation scrolls only the
+listbox to keep the active row visible; a catalog refresh keeps the active row by id.
 
 When `catalog`/`allowCustom` replaces a focused trigger with the free-text input or vice versa,
 focus follows the available replacement. If the new owner is disabled or inert, focus returns to
@@ -1560,7 +1563,7 @@ rather than a control metric, so the shared ladder has no equivalent and its per
 local. `size` is the primary lever; override a cssprop directly only to retune a single element or
 step outside the scale entirely. `--lr-model-select-gap` (default `var(--lr-space-xs)`) controls the
 child gap in the trigger, combobox, and option rows; `--lr-model-select-radius` (default
-`var(--lr-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
+`var(--lr-form-control-radius)`) controls the corner radius of the trigger, combobox, listbox, and option rows.
 Both remain inheritable fallback arms, so set them on an ancestor to retheme a group without
 changing unrelated controls. `--lr-model-select-trigger-border-color` (default
 `var(--lr-color-border)`) and `--lr-model-select-trigger-fill` (default `var(--lr-color-surface)`)
@@ -1926,7 +1929,8 @@ A compact, ticking status readout shown alongside an in-progress AI response: el
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
 equivalent). Renders as e.g. `12.3s · 340 tokens · 27 tok/s [Stop]`.
 
-The host handles `lr-stop` by stopping its own producer and setting `status` to `complete`. A
+The host handles `lr-stop` by stopping its own producer and setting `status` to `complete`; a
+focused Stop button hands focus to the `base` readout as it unmounts. A
 restart supplies a fresh `startedAt`, resets its token count, and retires the previous producer
 timer. The live example wires this lifecycle on mount, so its first Stop and every Restart take
 effect immediately.
@@ -2758,8 +2762,9 @@ reading them. Unset, each falls back to exactly the token its rule used before.
 A mic capture button owning the full `getUserMedia` + `MediaRecorder` lifecycle: permission request,
 recording, optional chunked streaming, teardown. The one place in this library that touches the
 microphone — no SDK, no LiveKit/ElevenLabs import, native browser APIs only. `mode="hold"` (the
-default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop with
-`aria-pressed`. Escape cancels the in-progress take in either mode.
+default) is a press-and-hold gesture; `mode="toggle"` is click-to-start/click-to-stop, its label
+naming the next action. Escape cancels the in-progress take in either mode; an idle Escape is left to
+enclosing overlays. A host `aria-describedby` describes the trigger.
 
 For example, `<lr-push-to-talk><span slot="microphone-icon">MIC</span></lr-push-to-talk>` replaces
 the idle microphone glyph. Use `recording-icon` separately for the recording state.
@@ -2892,13 +2897,14 @@ interim entry exists), `jump-button` (shown only while `follow` is `false`), and
 
 A labeled semantic separator marking control transfer between agents in a transcript ("Transferred
 to Research Agent"), with an optional agent avatar. Purely presentational: no events, no
-interactivity, no restore semantics. The computed label is announced once, on first connect,
-through an internal `<lr-live-region>`.
+interactivity, no restore semantics. It never announces itself: like other transcript content it is
+silent on mount, so a live container such as `<lr-chat-viewport live="polite">` announces a newly
+appended handoff.
 
 **Properties:** `toAgent: string = ''` (attribute `to-agent`), `fromAgent: string = ''` (attribute
 `from-agent`), and `label: string = ''`. With both agent names the localized text is “Transferred
 from {from} to {to}”; `label` overrides it. An explicit host `aria-label`, including an empty one,
-wins for the separator and mount-time announcement.
+wins for the separator.
 
 **Slots:** `avatar` — the incoming agent's `<lr-avatar>` (or icon), hidden entirely while empty.
 
@@ -3382,7 +3388,8 @@ plain marker with no button.
 `withoutRestoreConfirmation: boolean = false` (attribute `without-restore-confirmation`) — skips
 the inline confirm step so Restore fires the event immediately.
 `restoring: boolean = false` (reflected) — host-set busy state: the Restore button becomes
-`aria-disabled="true"` with a spinner beside the localized "Restoring…" text.
+`aria-disabled="true"` with a spinner beside the localized "Restoring…" text, which is then also
+its accessible name.
 
 **Slots:** default — optional supplemental content under the marker row (e.g. what changed since
 this point).
@@ -3421,7 +3428,7 @@ Compact, static resource strip for one message or run — tokens in/out, cost, l
 hover or keyboard-focus tooltip breakdown. Purely formatting: computes no counts, rates, or prices; every segment
 is independently optional, and with nothing set, nothing renders at all (not even a focusable shell).
 The tooltip reuses `lr-tool-call-chip`'s hover/keyboard-focus/Escape/`aria-describedby` contract
-wholesale; focus of any kind describes the badge.
+wholesale; focus of any kind describes the badge, and a host `aria-describedby` is merged with it.
 Not `lr-context-meter` (occupancy of a fixed capacity); not `lr-generation-metrics` (live, with a
 Stop button) — this is static after the fact.
 
@@ -4456,7 +4463,7 @@ clamped by the composed visualizer); `stream: MediaStream | null = null`; `sessi
 entry announcement identity; `entries: LyraTranscriptEntry[] = []` (attribute: false);
 `muted: boolean = false` (reflected);
 `withoutCapture: boolean = false` (attribute `without-capture`, reflected) — hides native
-push-to-talk capture; `label?: string` — accessible name for the session shell. Omitting it localizes the
+push-to-talk capture and cancels a take in progress with `lr-record-cancel`; `label?: string` — accessible name for the session shell. Omitting it localizes the
 default `realtimeSessionLabel` message; an explicit empty string suppresses that default and
 renders no label. Invalid attribute or direct-property values for `state` and
 `voiceState` normalize to their safe defaults (`'disconnected'` and `'idle'`) through the same

@@ -2,12 +2,6 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './handoff-divider.js';
 import type { LyraHandoffDivider } from './handoff-divider.js';
 
-async function getLiveRegionText(el: LyraHandoffDivider): Promise<string> {
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  return el.shadowRoot!.querySelector('lr-live-region')!.shadowRoot!.querySelector('[part="region"]')!
-    .textContent!;
-}
-
 it('defaults to toAgent="", fromAgent="", label=""', async () => {
   const el = (await fixture(html`<lr-handoff-divider></lr-handoff-divider>`)) as LyraHandoffDivider;
   expect(el.toAgent).to.equal('');
@@ -71,56 +65,35 @@ describe('avatar slot', () => {
   });
 });
 
-describe('mount-time announcement', () => {
-  it('announces the computed label once on first connect', async () => {
-    const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
-    expect(await getLiveRegionText(el)).to.equal('Transferred to Research Agent');
-  });
+it('stays silent on mount, like the transcript around it', async () => {
+  const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const region = el.shadowRoot!.querySelector('lr-live-region')?.shadowRoot?.querySelector('[part="region"]');
+  expect(region?.textContent ?? '').to.equal('');
+});
 
-  it('never re-announces on a later property change', async () => {
-    const el = (await fixture(html`<lr-handoff-divider to-agent="Research Agent"></lr-handoff-divider>`)) as LyraHandoffDivider;
-    await getLiveRegionText(el);
-    el.toAgent = 'Planner Agent';
-    await el.updateComplete;
-    // The live region's own text should still reflect the FIRST (mount-time) announcement, not
-    // the later property change.
-    expect(await getLiveRegionText(el)).to.equal('Transferred to Research Agent');
-  });
-
-  it('announces the host aria-label that names the separator instead of a different computed label', async () => {
-    const el = (await fixture(html`
-      <lr-handoff-divider
-        aria-label="Control passed to the escalation team"
-        to-agent="Research Agent"
-      ></lr-handoff-divider>
-    `)) as LyraHandoffDivider;
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
-      'Control passed to the escalation team',
-    );
-    expect(await getLiveRegionText(el)).to.equal('Control passed to the escalation team');
-  });
-
-  it('preserves an explicitly empty host aria-label by presence', async () => {
-    const el = (await fixture(html`
-      <lr-handoff-divider aria-label="" to-agent="Research Agent"></lr-handoff-divider>
-    `)) as LyraHandoffDivider;
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
-    expect(await getLiveRegionText(el)).to.equal('');
-  });
+it('names the separator with a host aria-label, including an empty one', async () => {
+  const el = (await fixture(html`
+    <lr-handoff-divider aria-label="Control passed to the escalation team" to-agent="Research Agent"></lr-handoff-divider>
+  `)) as LyraHandoffDivider;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Control passed to the escalation team');
+  el.setAttribute('aria-label', '');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('');
 });
 
 describe('localization', () => {
-  it('localizes the agent-only computed label (handoffToAgent) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+  it('localizes the agent-only computed label (handoffToAgent) via .strings', async () => {
     const el = (await fixture(html`
       <lr-handoff-divider to-agent="Research Agent" .strings=${{ handoffToAgent: 'Transféré à {agent}' }}></lr-handoff-divider>
     `)) as LyraHandoffDivider;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Transféré à Research Agent');
     expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Transféré à Research Agent');
-    expect(await getLiveRegionText(el)).to.equal('Transféré à Research Agent');
   });
 
-  it('localizes the from/to computed label (handoffFromToAgent) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+  it('localizes the from/to computed label (handoffFromToAgent) via .strings', async () => {
     const el = (await fixture(html`
       <lr-handoff-divider
         from-agent="Planner"
@@ -130,16 +103,14 @@ describe('localization', () => {
     `)) as LyraHandoffDivider;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Transféré de Planner à Research Agent');
-    expect(await getLiveRegionText(el)).to.equal('Transféré de Planner à Research Agent');
   });
 
-  it('localizes the generic fallback label (handoffLabel) via .strings, reaching both the rendered label and the mount-time announcement', async () => {
+  it('localizes the generic fallback label (handoffLabel) via .strings', async () => {
     const el = (await fixture(html`
       <lr-handoff-divider .strings=${{ handoffLabel: 'Transfert de contrôle' }}></lr-handoff-divider>
     `)) as LyraHandoffDivider;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('aria-label')).to.equal('Transfert de contrôle');
-    expect(await getLiveRegionText(el)).to.equal('Transfert de contrôle');
   });
 });
 

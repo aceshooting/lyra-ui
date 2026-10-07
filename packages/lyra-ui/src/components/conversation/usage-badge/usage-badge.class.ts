@@ -8,6 +8,7 @@ import type { UsageBadgeOverlayHandle } from './usage-badge-overlay-runtime.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { resolveIdReferencesIn, updateDescriptionBaseline } from '../../../internal/aria-reflection.js';
 import { durationMessageValue } from '../../../internal/duration.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -139,6 +140,7 @@ export class LyraUsageBadge extends LyraElement {
 
   private readonly tooltipId = nextId('usage-badge-tooltip');
   private tooltipOverlay?: UsageBadgeOverlayHandle;
+  private hostDescribed = false;
   private tooltipRuntime?: typeof import('./usage-badge-overlay-runtime.js');
   private tooltipOrder?: OverlayOrderReservation;
   private tooltipOpening?: { readonly ready: Promise<void>; readonly cancel: () => void };
@@ -169,6 +171,19 @@ export class LyraUsageBadge extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const describedBy = this.getAttribute('aria-describedby');
+    const base = this.renderRoot.querySelector<HTMLElement & { ariaDescribedByElements?: Element[] | null }>(
+      '[part="base"]',
+    );
+    if (base && 'ariaDescribedByElements' in base && (describedBy || this.hostDescribed)) {
+      const tooltip = this.describesTooltip ? this.renderRoot.querySelector('[part="tooltip"]') : null;
+      const elements = resolveIdReferencesIn(this.getRootNode(), describedBy);
+      if (tooltip) elements.push(tooltip);
+      updateDescriptionBaseline(base, () => {
+        base.ariaDescribedByElements = elements.length ? elements : null;
+      });
+      this.hostDescribed = !!describedBy;
+    }
     if (changed.has('tooltipOpen')) {
       this.tooltipOverlay?.deactivate({ restoreFocus: false });
       this.tooltipOverlay = undefined;
@@ -366,10 +381,14 @@ export class LyraUsageBadge extends LyraElement {
     if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229) return;
     if (this.tooltipOpening) this.cancelTooltipOpening();
     if (this.tooltipOpen && this.tooltipOverlay?.isTopmost()) {
-      e.stopPropagation();
+      e.preventDefault();
       this.hideTooltip();
     }
   };
+
+  private get describesTooltip(): boolean {
+    return this.hasInteractiveTooltip && (this.tooltipOpen || this.focusDescribed);
+  }
 
   override render(): TemplateResult {
     // Nothing to show or describe remains an inert shell (no tabindex, role, or aria-label), while
@@ -388,7 +407,7 @@ export class LyraUsageBadge extends LyraElement {
         aria-label=${!interactive
           ? nothing
           : this.getAttribute('aria-label') ?? this.localize('usageBadgeLabel')}
-        aria-describedby=${interactive && (this.tooltipOpen || this.focusDescribed) ? this.tooltipId : nothing}
+        aria-describedby=${this.describesTooltip ? this.tooltipId : nothing}
         @mouseenter=${this.onMouseEnter}
         @mouseleave=${this.onMouseLeave}
         @focus=${this.onFocus}
