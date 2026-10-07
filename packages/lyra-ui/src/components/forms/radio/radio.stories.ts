@@ -105,7 +105,7 @@ export const LabelIndent: StoryObj = {
       <div>
         <lr-radio value="json">JSON</lr-radio>
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-radio-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-radio-label-indent, 2.075rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           Nested objects preserved; largest file size.
         </p>
@@ -113,7 +113,7 @@ export const LabelIndent: StoryObj = {
       <div>
         <lr-radio value="csv">CSV</lr-radio>
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-radio-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-radio-label-indent, 2.075rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           Flat rows only; opens directly in a spreadsheet.
         </p>

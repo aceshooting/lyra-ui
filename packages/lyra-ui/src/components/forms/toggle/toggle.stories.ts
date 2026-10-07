@@ -91,7 +91,7 @@ export const Sizes: Story = {
     docs: {
       description: {
         story:
-          'The toggle follows the shared size ladder, including for icon-only content. Every tier keeps a 24px target on both axes and a coarse pointer floors every tier at 44px; only fine-pointer `2xs`, `xs` and `s` sit below the 40px compact floor, so keep `m` or larger where that floor matters.',
+          'The toggle follows the shared size ladder, including for icon-only content. Every tier keeps a 24px target on both axes and a coarse pointer floors every tier at 44px; only fine-pointer `2xs`, `xs` and `s` sit below the `--lr-icon-button-size` floor, so keep `m` or larger where that floor matters.',
       },
     },
   },

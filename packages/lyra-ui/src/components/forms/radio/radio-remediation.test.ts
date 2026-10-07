@@ -1,4 +1,6 @@
 import { aTimeout, expect, fixture, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraRadio } from './radio.js';
 import type { LyraRadioGroup } from './radio-group.js';
 import type { LyraSwitch } from '../switch/switch.js';
@@ -118,3 +120,120 @@ for (const [tag, role, local] of [
     }
   });
 }
+
+it('marks a required radio group user-invalid once focus leaves it without a choice', async () => {
+  const wrapper = await fixture<HTMLElement>('<div><lr-radio-group required label="Plan"><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group><button type="button">after</button></div>');
+  const group = wrapper.querySelector<LyraRadioGroup>('lr-radio-group')!;
+  await settle(group);
+  await focusByKeyboard(group.querySelector<LyraRadio>('lr-radio')!);
+  expect(group.matches(':state(user-invalid)')).to.equal(false);
+  await sendKeys({ press: 'Tab' });
+  await group.updateComplete;
+  expect(group.matches(':state(user-invalid)')).to.equal(true);
+  expect(group.shadowRoot!.querySelector('[role="radiogroup"]')!.getAttribute('aria-invalid')).to.equal('true');
+});
+
+it('exposes a standalone required radio as aria-invalid only after interaction', async () => {
+  const el = await fixture<LyraRadio>('<lr-radio required name="x" value="a">A</lr-radio>');
+  const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+  expect(base.getAttribute('aria-invalid')).to.equal('false');
+  el.reportValidity();
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+});
+
+for (const [tag, part] of [['lr-radio', 'circle'], ['lr-radio-button', 'button']] as const) {
+  it(`${tag} paints its invalid state through --lr-radio-invalid-border-color`, async () => {
+    const el = await fixture<LyraRadio>(`<${tag} required style="--lr-radio-invalid-border-color: rgb(1, 2, 3)">A</${tag}>`);
+    el.reportValidity();
+    await el.updateComplete;
+    expect(getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+}
+
+it('does not count the blur a fieldset disable forces as interaction', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>('<fieldset><lr-radio required name="x" value="a">A</lr-radio></fieldset>');
+  const el = fieldset.querySelector<LyraRadio>('lr-radio')!;
+  await settle(el);
+  await focusByKeyboard(el);
+  fieldset.disabled = true;
+  fieldset.disabled = false;
+  await settle(el);
+  expect(el.matches(':state(user-invalid)')).to.equal(false);
+});
+
+it('does not count the control swap of an appearance change as interaction', async () => {
+  const el = await fixture<LyraRadio>('<lr-radio required name="x" value="a">A</lr-radio>');
+  await settle(el);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[role="radio"]')!);
+  el.appearance = 'button';
+  await settle(el);
+  expect(el.matches(':state(user-invalid)')).to.equal(false);
+});
+
+it('keeps one run observer until the option set changes', async () => {
+  const Original = window.ResizeObserver;
+  let created = 0;
+  window.ResizeObserver = class extends Original {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      created += 1;
+    }
+  };
+  try {
+    const group = await fixture<LyraRadioGroup>('<lr-radio-group orientation="horizontal"><lr-radio-button value="a">A</lr-radio-button><lr-radio-button value="b">B</lr-radio-button></lr-radio-group>');
+    await settle(group);
+    const before = created;
+    const [a, b] = group.querySelectorAll<LyraRadio>('lr-radio-button');
+    b!.click();
+    await settle(group);
+    a!.click();
+    await settle(group);
+    group.size = 'l';
+    await settle(group);
+    expect(created).to.equal(before);
+  } finally {
+    window.ResizeObserver = Original;
+  }
+});
+
+it('emits lr-activate for every activation, after lr-change when the selection moves', async () => {
+  const group = await fixture<LyraRadioGroup>('<lr-radio-group value="a"><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group>');
+  await settle(group);
+  const seen: string[] = [];
+  for (const type of ['lr-change', 'lr-activate'] as const) {
+    group.addEventListener(type, (event) => seen.push(`${type}:${(event as CustomEvent<{ value: string }>).detail.value}`));
+  }
+  const [a, b] = group.querySelectorAll<LyraRadio>('lr-radio');
+  a!.click();
+  b!.click();
+  expect(seen).to.deep.equal(['lr-activate:a', 'lr-change:b', 'lr-activate:b']);
+  const standalone = await fixture<LyraRadio>('<lr-radio checked value="s">S</lr-radio>');
+  let activated = '';
+  standalone.addEventListener('lr-activate', (event) => { activated = (event as CustomEvent<{ value: string }>).detail.value; });
+  standalone.click();
+  expect(activated).to.equal('s');
+});
+
+it('dims the group chrome while disabled and outlines the options while invalid', async () => {
+  const disabled = await fixture<LyraRadioGroup>('<lr-radio-group disabled label="Plan" hint="Hint" error-text="Error"><lr-radio value="a">A</lr-radio></lr-radio-group>');
+  for (const part of ['label', 'hint', 'error']) {
+    expect(Number(getComputedStyle(disabled.shadowRoot!.querySelector(`[part~="${part}"]`)!).opacity), part).to.be.below(1);
+  }
+  const group = await fixture<LyraRadioGroup>('<lr-radio-group required label="Plan"><lr-radio value="a">A</lr-radio></lr-radio-group>');
+  const options = group.shadowRoot!.querySelector('[part~="radios"]')!;
+  expect(getComputedStyle(options).borderTopStyle).to.equal('none');
+  group.reportValidity();
+  await group.updateComplete;
+  expect(getComputedStyle(options).borderTopStyle).to.equal('solid');
+});
+
+it('makes standalone radios that share a name and form owner mutually exclusive', async () => {
+  const form = await fixture<HTMLFormElement>('<form><lr-radio name="plan" value="a">A</lr-radio><lr-radio name="plan" value="b">B</lr-radio><lr-radio value="c">C</lr-radio></form>');
+  const [a, b, c] = form.querySelectorAll<LyraRadio>('lr-radio');
+  a!.click();
+  b!.click();
+  c!.click();
+  expect([a!.checked, b!.checked, c!.checked]).to.deep.equal([false, true, true]);
+  expect(new FormData(form).getAll('plan')).to.deep.equal(['b']);
+});

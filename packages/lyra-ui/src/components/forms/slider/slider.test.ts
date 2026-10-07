@@ -1205,7 +1205,7 @@ it("does not poison value with NaN when step is 0", async () => {
     new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
   );
   expect(Number.isNaN(el.valueAsNumber)).to.be.false;
-  expect(el.valueAsNumber).to.equal(20);
+  expect(el.valueAsNumber).to.equal(21);
 });
 
 it("restores the mapped step default when the step attribute is removed", async () => {

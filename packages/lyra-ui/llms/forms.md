@@ -2232,9 +2232,12 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 - `withStart: boolean = false` / `withEnd: boolean = false` (attributes `with-start`/`with-end`) —
   Web Awesome SSR presence hints that keep the matching adornment wrapper mounted before slot
   assignment is observable
-- `type: 'button' | 'submit' | 'reset' = 'button'`
+- `type: 'button' | 'submit' | 'reset' = 'button'` — matched ASCII case-insensitively like the native
+  attribute (`type="Submit"` submits); an unknown value is `'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
-  clearing `disabled`
+  clearing `disabled`. A button that holds keyboard focus when `loading` turns on keeps it on the
+  host (through a temporary `tabindex="-1"`) and gets it back when `loading` clears, so an
+  async-submit flow does not lose the user's place
 - `disabled: boolean = false` (reflected)
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
@@ -2272,13 +2275,19 @@ overrides apply, and **`SubmitEvent.submitter` is that native button, not the ho
 set, `requestSubmit()` has a `null` submitter. Presence, including an explicitly empty string,
 selects the transient path; string attributes are copied verbatim. Link mode ignores all of this.
 
+While it is the form's default button (the first submit control), Enter in a native single-line
+`<input>` of that form submits through it, following the platform's implicit-submission rules: a
+disabled default button blocks the submission, an enabled one applies its `name`/`value` and `form*`
+overrides, and several native fields no longer leave Enter inert.
+
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
 submit/reset behavior in `<button>` mode. `getForm()` returns the browser-resolved form owner,
 including an external owner selected by the `form` attribute. `checkValidity()`, `reportValidity()`,
 and `setCustomValidity(message)` delegate to `ElementInternals`; `resetValidity()` clears only the
 consumer error and restores the current `required`/`value` constraint. `formStateRestoreCallback()`
-restores `value` for session history/autofill without changing submitter-only form-data semantics.
+restores `value` for session history/autofill without changing submitter-only form-data semantics,
+and `formAssociatedCallback()` re-arms the default-button Enter handling when the form owner changes.
 
 **Events:** a plain native `click` bubbles and composes through the shadow boundary unmodified
 (disabled while `disabled` or `loading`). The internal button's
@@ -2364,14 +2373,14 @@ the `loading` spinner's rotation period; that token itself collapses to `0.001ms
 The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
 `--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
 `--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
-(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem).
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 2rem, 2.25rem, 2.5rem, 3.5rem).
 These are minimum-height floors; content and nested actions can make a composed control taller.
 Each token is read only by its own tier
 (`--lr-button-size-s` also serves `size="small"`, and so on for the other two aliases), and all are
 ignored by `appearance="link"`.
 Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
 Circle and automatically detected icon-only buttons add the shared `--lr-icon-button-size` floor
-on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below 40px.
+on both axes, so the compact `2xs`/`xs` tiers cannot collapse those standalone targets below it.
 Ordinary single-line labelled buttons keep the exact ladder heights above unless their content
 requires more room.
 
@@ -2539,10 +2548,13 @@ until `<lr-icon>` is registered by something else.
   selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
   `href`
 
-With neither `accessibleLabel` nor `label` set, the name falls back to the localized
-`iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
-app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
-button whose purpose isn't generic.
+The accessible name is the host `aria-label` (forwarded by presence, so an explicitly empty value
+stays empty), then `label`, then a name the slotted content already carries — visible text, an
+`aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
+Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
+rather than being empty — override it per instance with `.strings` or app-wide with
+`registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a button whose purpose
+isn't generic. Slotted content is re-checked on `slotchange`, not on text edits inside it.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
 native button. `aria-pressed` (`true`, `false`, `mixed`) supports icon-only toggle actions such as
@@ -2604,7 +2616,7 @@ natural aspect ratio.
 **CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
 DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
-**Themeable custom properties:** `--lr-icon-button-size` (default `2.5rem`) is the **minimum**
+**Themeable custom properties:** `--lr-icon-button-size` (default `2.25rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
 than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
 library-wide token (declared on every `lr-*` host by the shared token layer, and the shared minimum tappable size
@@ -4103,7 +4115,8 @@ inside scrolling containers, including single-row `nowrap` palettes. Public
 A single-select picker over a small, fixed set of color swatches with the WAI-ARIA APG
 `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, automatic
 activation (click or arrow-key move both select immediately, like a native radio group), cyclic
-Arrow/Home/End navigation. First-party invention (no Web Awesome equivalent). Distinct from
+Arrow/Home/End navigation (Up/Down as well as Left/Right, so a wrapped grid moves with either
+pair). First-party invention (no Web Awesome equivalent). Distinct from
 `lr-color-picker`, which is a freeform picker over the whole colour space — this picks exactly one
 of N designer-chosen named colors, the shape apps otherwise hand-roll as a row of round
 accent-color buttons. Its `items` are the _only_ choices; a `lr-color-picker`'s `swatches` are a
@@ -4119,13 +4132,16 @@ blocked focus preserves outside focus and emits no native focus inside the picke
 
 - `items: readonly SwatchPickerItem[] = []` (attribute: false) — `SwatchPickerItem { readonly value:
 string; readonly color: string; readonly label: string; readonly icon?: unknown; readonly
-gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is used as the
   swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
   never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
   `icon` is an optional custom shape rendered _instead of_ the plain filled circle. Its rendered
   subtree stays visible but is inert and hidden from assistive technology, so the swatch button
   remains the sole action. `gemstone` selects the canonical faceted glyph when
-  `mode="gemstone"`. An explicit `icon` wins over `gemstone`. Assignments are bounded and copied
+  `mode="gemstone"`. An explicit `icon` wins over `gemstone`. `disabled: true` marks one swatch
+  unavailable: a real `disabled` button that arrow keys skip and that cannot be selected, dimmed
+  like a disabled picker, while the rest of the row stays selectable. Assignments are bounded to the
+  first 512 items and copied
   into a frozen owned snapshot; mutate a new array/item and reassign it to update the palette.
   Fresh items with unchanged fields retain their radio nodes and keyboard focus without a blur.
   Custom icons match by identity. Duplicate values remain distinct occurrences; surviving original
@@ -4173,8 +4189,9 @@ fires nothing else. When an activation _does_ move the selection, `lr-change` is
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
 swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — its private default
-follows `size` and is floored at 24px; the selected one is
-`[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
+follows `size` and is floored at 24px), `swatch-selected` (a token added to the selected swatch's
+part list, so `::part(swatch-selected)` styles it from outside), `swatch-fill` (the filled circle
+inside it, sized via
 `--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, with a private default that also
 follows `size` —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
@@ -4278,10 +4295,11 @@ class AccentTrigger extends LitElement {
 - each swatch's fill comes from its option's `color`, applied through a per-swatch custom property
   set inline on `[part='swatch']` and read by `[part='swatch-fill']`, so a consumer's
   `::part(swatch-fill)` `background-color` rule can still override it.
-- style the selected state through `--lr-swatch-picker-selected-color`/`-selected-blur`/
-  `-shine-duration`, not through `::part(swatch)[aria-checked='true']` from outside: the CSS Shadow
-  Parts spec only allows a fixed set of pseudo-classes after `::part()`, not arbitrary attribute
-  selectors, so that combinator can silently fail to match depending on the engine.
+- style the selected swatch from outside with `::part(swatch-selected)` or the
+  `--lr-swatch-picker-selected-color`/`-selected-blur`/`-shine-duration` tokens, not through
+  `::part(swatch)[aria-checked='true']`: the CSS Shadow Parts spec only allows a fixed set of
+  pseudo-classes after `::part()`, not arbitrary attribute selectors, so that combinator never
+  matches.
 - the semantic `radiogroup` lives inside shadow DOM. Set `accessibleLabel` or a host `aria-label`;
   the component deliberately forwards the resulting name to that internal role.
 - the automatic gemstone glyph's checked-state halo/shine is themed through
@@ -4467,6 +4485,8 @@ Explicit empty text stays empty; later supplied text renders normally.
 - `hint: string = ''` — WA supporting text below the control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text
   surface; `hint` wins when both properties are set
+- `withHint: boolean = false` (attribute `with-hint`) — WA SSR presence hint for slotted supporting
+  text that cannot be inspected until hydration
 - `errorText: string = ''` (attribute `error-text`) — owned error text associated with the inner
   checkbox; custom markup can use the `error` slot
 - `size: LyraSize = 'm'` (reflected) — control size on the shared ladder, accepting both
@@ -4499,6 +4519,8 @@ never happened. Blurring the control, or a `reportValidity()` call, still marks 
 is the native `:user-invalid` timing.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control;
+focus/click and stale keyboard/pointer activation are synchronous no-ops as soon as direct or
+fieldset disablement starts, even before the next render;
 `getForm()` returns its owning form (including an external owner selected by `form`).
 `setCustomValidity(message)` sets or clears a consumer-supplied error ("those terms have been
 superseded"): a non-empty message raises `customError` and blocks submission, `''` restores the
@@ -4512,8 +4534,9 @@ name. `hint` is the WA supporting-text slot;
 `help-text` is the Shoelace spelling for the same described-by surface.
 `error` supplies custom error markup on the same owned error surface as `errorText`.
 
-The label, hint, and error wrappers can shrink and wrap at arbitrary boundaries inside a 320px LTR
-or RTL allocation. The checkbox square and its shared interactive target remain fixed-size.
+The label, hint, and error wrappers wrap at word boundaries inside a 320px LTR or RTL allocation,
+breaking inside a word only when it is wider than the row. The checkbox square and its shared
+interactive target remain fixed-size.
 
 The default slot deliberately remains the checkbox's one visible, clickable label; there is no
 separate top-of-field label property or slot. `form-control` wraps that checkbox plus its error and
@@ -4521,7 +4544,8 @@ hint, matching `lr-switch` without duplicating the label idiom.
 
 The `checkbox`/`base` semantic role owner retains `--lr-icon-button-size` as its minimum inline and
 block size at every tier. The visible `box` remains tied to `size`, so a label-less `2xs` checkbox
-centres a compact square inside a 40px clickable target instead of inflating the glyph itself.
+centres a compact square inside a `--lr-icon-button-size` clickable target instead of inflating the
+glyph itself.
 
 The label wrapper tracks flattened forwarding-slot assignment and later mutations. Its presence is
 visual: an element-only icon or intentionally visible `aria-hidden` decoration keeps the wrapper,
@@ -4567,9 +4591,9 @@ corresponding brand/brand-quiet/danger token. While checked or indeterminate, an
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
 active `size` tier's shared control height, so the box lines up with an
 `lr-input`/`lr-select`/`lr-button` of the same `size` instead of carrying a scale of its own; at the
-default `m` tier it resolves to `1.75rem`, exactly what the control shipped with before it had a
-`size` at all. The `--lr-icon-button-size` cap is kept, so a consumer compacting that theme token
-compacts this control with it. Set it to pin the box independently of the tier.
+default `m` tier it resolves to `1.575rem`. The `--lr-icon-button-size` cap is kept, so a consumer
+compacting that theme token compacts this control with it. Set it to pin the box independently of
+the tier.
 
 **`--lr-checkbox-label-indent`** — the inline distance from the control's start edge to the start of
 the label text: the box plus the gap beside it. It defaults to
@@ -4589,8 +4613,8 @@ substitute the one you actually use:
 .checkbox-hint {
   padding-inline-start: calc(
     min(
-        var(--lr-theme-icon-button-size, 2.5rem),
-        calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)
+        var(--lr-theme-icon-button-size, 2.25rem),
+        calc(var(--lr-theme-form-control-height-m, 2.25rem) * 0.7)
       ) + var(--lr-theme-space-s, 0.5rem)
   );
 }
@@ -4687,8 +4711,8 @@ programmatic `click()` activation path) emits
 the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
 control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
 helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
-a consumer observes a control they didn't write. `input` is an `InputEvent`; `change` is an
-`Event`. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
+a consumer observes a control they didn't write. `input` and `change` are plain `Event`s, as on a
+native checkbox. Both bubble and compose, and neither carries a detail — read `event.target.checked`.
 None of the four fires for a programmatic `.checked`
 assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events. `lr-invalid` (no detail) fires when a validity
@@ -4721,6 +4745,10 @@ survives every toggle and a form reset; `setCustomValidity('')` or `resetValidit
 never reflect, default/attribute changes cannot overwrite a dirty live state, and `form.reset()`
 restores the current default before making the control pristine again.
 
+The internal `role="switch"` exposes explicit stateful `aria-invalid`: visible error chrome makes it
+`"true"` immediately; otherwise it becomes true only after interaction while intrinsic/custom
+validity fails.
+
 **Slots:**
 
 - default — rich label content rendered beside the semantic switch owner. Clicking plain label
@@ -4748,9 +4776,11 @@ pill-shaped background), `thumb` (the circular knob), `label` (wrapper around th
 and `--lr-switch-thumb-offset` (default `var(--lr-size-2px)`) — component-local geometry knobs set
 on `:host`, since a fully-rounded pill/thumb needs a radius well past the shared `--lr-radius`
 default. Both track dimensions ride the shared `size` ladder, so at the default `m` tier they
-resolve to exactly the `1.25rem` × `2.25rem` the switch shipped with before it had a `size` at all.
+resolve to `1.125rem` × `2.025rem`.
 WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 `--lr-switch-gap` (default `var(--lr-space-s)`) independently controls the track-to-label gap.
+`--lr-switch-invalid-border` (default `var(--lr-color-danger)`) is the outline `[part='track']`
+paints while the switch matches `:state(user-invalid)`.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
 fill. `--lr-switch-checked-track-fill` (default `--lr-color-brand`) independently retints its
@@ -4859,7 +4889,9 @@ single numeric string entry.
 
 - `min: number = 0`
 - `max: number = 100`
-- `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
+- `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode, where the
+  arrow keys move by a hundredth of the span, PageUp/PageDown by a tenth, and `stepUp()`/`stepDown()`
+  do nothing
 - `range: boolean = false` (reflected) — two-handle mode; see above
 - `minValue: number = 0` (attribute `min-value`) — the lower handle's value in `range` mode.
   Assigning past `maxValue` pushes `maxValue` to the same number
@@ -4894,6 +4926,8 @@ single numeric string entry.
   explicitly empty value; range mode then suppresses `aria-labelledby` on its group owner as well.
   When error and hint content are both present, every handle's `aria-describedby` references the
   error first and the hint second. Rich slotted error content replaces the plain `errorText` copy.
+  Every handle exposes `aria-invalid="true"` while error content is visible, and otherwise only after
+  the user has interacted while a custom error is set.
 - `helpText: string = ''` (`help-text`) and the `help-text` slot are Shoelace aliases for `hint`.
 - `withLabel: boolean = false` / `withHint: boolean = false` (`with-label`/`with-hint`) are SSR
   presence hints; hydrated instances also discover populated slots automatically.
@@ -5107,7 +5141,7 @@ is present for upstream form-surface parity but adds no missing-value constraint
 - `with-markers` silently draws nothing when `step` is 0/negative or when the domain implies more
   than 100 intervals. That is a deliberate ceiling, not a bug — check the rendered `[part="marker"]`
   count rather than assuming the ticks are there.
-- The visible thumb is deliberately below the library's usual 40px icon-button floor — 16px at the
+- The visible thumb is deliberately below the library's usual icon-button floor — 14.4px at the
   default `m` tier, and smaller at the tighter ones. A transparent `::before` carries the hit/drag
   area at `max(28px, calc(var(--lr-slider-thumb-size) * 1.75))`, which clears WCAG 2.5.8's 24px
   minimum at **every** tier, while a 40px _visible_ thumb would make two range handles overlap
@@ -5166,9 +5200,15 @@ restores the current default.
 **Events:** a standalone selection emits, in order, native-style composed `input`, `lr-input`,
 native-style composed `change`, then `lr-change`; both aliases carry `{ checked, value }`. An owned
 radio emits none of those child value events; its group emits the sole aggregate sequence described
-below, so capture and bubble listeners cannot observe two differently shaped event sets. The
-internal control's native `focus` and `blur` are re-dispatched as bubbling, composed host events.
+below, so capture and bubble listeners cannot observe two differently shaped event sets. A
+standalone radio also emits `lr-activate` (`{ value }`) on every activation, including a click on
+the radio that is already checked, after the value events when the selection moved. Standalone
+radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
+others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
+`focus` and `blur` are re-dispatched as bubbling, composed host events.
 `lr-invalid` (no detail) belongs to the standalone radio; an aggregate group emits its own alias.
+A standalone required radio exposes `aria-invalid="true"` once the user has interacted with it or
+validation has been revealed.
 
 **Slots:** default label content. In `appearance="button"`, `start`/`prefix` share the leading
 wrapper and `end`/`suffix` share the trailing wrapper, matching `lr-radio-button`; changing away
@@ -5190,11 +5230,8 @@ an empty-label control; the visible density can still grow with the shared size 
 
 **Themeable custom properties:**
 
-- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height)
-  - 0.7))`; `1.75rem`at the default`m`tier) — the edge length of`[part='circle']`, derived from
-the active `size`tier's shared control height so a radio lines up with an`lr-input`/`lr-select`/`lr-button`of the same`size`.
-- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5),
-calc(var(--lr-form-control-height) * 0.3))`; `0.75rem` at `m`) — the edge length of `[part='dot']`,
+- `--lr-radio-circle-size` (default `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`; `1.575rem` at the default `m` tier) — the edge length of `[part='circle']`, derived from the active `size` tier's shared control height so a radio lines up with an `lr-input`/`lr-select`/`lr-button` of the same `size`.
+- `--lr-radio-dot-size` (default `min(calc(var(--lr-radio-circle-size) * 0.5), calc(var(--lr-form-control-height) * 0.3))`; `0.675rem` at `m`) — the edge length of `[part='dot']`,
   capped at half the circle so it can never outgrow its ring, whatever is done to either the ladder
   or the `--lr-icon-button-size` cap.
 - `--lr-radio-radius` (default `--lr-radius-pill`) — the corner radius of the control's own chrome.
@@ -5217,7 +5254,9 @@ The pointer states are independently themeable with `--lr-radio-hover-border-col
 `var(--lr-color-brand)`), `--lr-radio-active-border-color` (defaulting through the hover border),
 and `--lr-radio-active-ring-color` (default `var(--lr-color-brand-quiet)`). While checked, an unset
 hover or active border falls back to `--lr-radio-checked-border-color`, so a themed checked border
-survives the pointer.
+survives the pointer. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`) is the
+indicator border while the radio matches `:state(user-invalid)`; `lr-radio-button` and
+`appearance="button"` apply it to the button border.
 WA's `--checked-icon-color` and `--checked-icon-scale` aliases feed the selected indicator's color
 and scale.
 
@@ -5275,8 +5314,8 @@ The inherited derived reads `effectiveName` and `effectiveSize` expose the resol
 size used by the button's form and chrome logic.
 
 **Events:** identical to `lr-radio` — a standalone selection emits `input`, `lr-input`, `change`,
-then `lr-change` (both aliases carry `{ checked, value }`); an owning `lr-radio-group` emits the
-aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
+then `lr-change` (both aliases carry `{ checked, value }`) and every activation emits `lr-activate`;
+an owning `lr-radio-group` emits the aggregate sequence instead. The internal control's `focus` / `blur` are re-emitted because they do
 not cross the shadow boundary. `lr-invalid` (no detail) belongs to a standalone radio button; an aggregate group emits
 its own alias.
 
@@ -5312,7 +5351,8 @@ pointer states; `--lr-radio-button-checked-bg`, `--lr-radio-button-checked-borde
 `--lr-radio-button-checked-color` control checked rest; and the corresponding
 `--lr-radio-button-checked-hover-bg`, `--lr-radio-button-checked-hover-border-color`,
 `--lr-radio-button-checked-active-bg`, and `--lr-radio-button-checked-active-border-color` hooks
-control checked pointer states. The inherited `--lr-radio-hover-border-color`,
+control checked pointer states. `--lr-radio-invalid-border-color` (default `var(--lr-color-danger)`)
+is the button border while it matches `:state(user-invalid)`. The inherited `--lr-radio-hover-border-color`,
 `--lr-radio-active-border-color`, and `--lr-radio-active-ring-color` remain visible in generated
 metadata but apply only to the base radio's circular chrome. All fallbacks preserve the existing
 brand, on-brand, quiet, and color-mix treatments.
@@ -5547,9 +5587,9 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 ## `lr-radio-group`
 
-A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and the orientation's arrow
-axis move focus and select the next enabled radio: Up/Down when vertical, Left/Right when
-horizontal. Horizontal direction mirrors under RTL, and disabled options are skipped.
+A labeled, keyboard-navigable group of `lr-radio` controls. Home/End and all four arrow keys move
+focus and select the next enabled radio, whatever the orientation: Down/Right select the next
+option and Up/Left the previous one. Left/Right mirror under RTL, and disabled options are skipped.
 
 For an exactly-one choice in button chrome (text alignment, view mode), prefer this group with
 `lr-radio-button` over `lr-toggle-group`: `role="radio"` conveys exclusivity and position, which
@@ -5587,15 +5627,20 @@ form ownership, fieldset disablement, reset, and session restoration all live on
 default and cannot overwrite a dirty selection. Reset restores that current default, and session
 restore selects the stored value silently even when it arrives before the radio children.
 A required but pristine group keeps `aria-invalid="false"` on its internal radiogroup; the value
-error is projected only after interaction or a native validity check (`checkValidity()`,
-`reportValidity()`, or form-level validation), while explicit error chrome is immediate.
+error is projected only after interaction (a selection, or focus leaving the group) or a native
+validity check (`reportValidity()`, or form-level validation), while explicit error chrome is
+immediate. While the group matches `:state(user-invalid)` the option collection is outlined with
+`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), and a disabled group dims its
+label, hint and error to `--lr-opacity-disabled` like `lr-checkbox-group`.
 
 **Events:** per owned selection — including keyboard activation — the group emits, in order,
-a bubbling/composed `InputEvent` named `input`, `lr-input`, a bubbling/composed `Event` named
+a bubbling/composed `Event` named `input`, `lr-input`, a bubbling/composed `Event` named
 `change`, then exactly one group-owned `lr-change`. The two native events carry no detail (read
 `event.target.value`);
 both prefixed aliases carry `{ value, radio }`. The selected child does not emit its standalone
-value events. Ownership is resolved synchronously, so immediate removal restores standalone
+value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
+including one on the already-selected option — also emits `lr-activate` (`{ value, radio }`) after
+those events. Ownership is resolved synchronously, so immediate removal restores standalone
 behavior and immediate reparenting routes the event to the new group without waiting for a
 mutation-observer turn. `lr-invalid` (no detail) is group-owned and fires when the group's validity
 check fails; a consumer listening above the group does not receive a second prefixed alias from the
@@ -5617,7 +5662,9 @@ hidden and no glyph is painted.
 
 **Themeable custom properties:** `--lr-radio-group-row-gap` (default
 `calc(var(--lr-form-control-height) * 0.2)`) — the vertical gap between the group's label, its
-options and its messages, scaled by `size` through the shared control ladder.
+options and its messages, scaled by `size` through the shared control ladder — and
+`--lr-radio-group-invalid-border` (default `var(--lr-color-danger)`), the border around the options
+while the group is `:state(user-invalid)`.
 
 **Methods:** `setCustomValidity(message = '')` sets or clears a group-level consumer error. A
 non-empty message raises `customError` and blocks submission; `setCustomValidity('')` and
@@ -5653,10 +5700,12 @@ remembered while the group remains authoritative, and removing the group size, m
 out, or disconnecting the group restores the latest authored child value. This matches Web
 Awesome's unset-default behavior.
 
-**Slots:** default checkboxes, `label`, `hint`, `error`.
-**Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
-all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
-group boundary, so an ancestor does not receive a second, differently shaped sequence.
+**Slots:** default checkboxes, `label`, `hint`, `error`; the `hint` and `errorText` props render
+alongside slotted hint/error content, like every other group.
+**Events:** a user toggle emits exactly one group-owned `input`, `lr-input`, `change`, then
+`lr-change`; all four carry `{ value: string[] }`. The owned child's corresponding events are
+consumed at the group boundary, so an ancestor does not receive a second, differently shaped
+sequence.
 Programmatic child `checked`/`value` synchronization is silent and completes synchronously, so a
 same-task `new FormData(form)` or validity query observes the same state as the child.
 `lr-invalid` (no detail) is the group's one bubbling/composed native-validity alias.
@@ -6096,8 +6145,9 @@ to the declarative value or to empty when none was supplied.
 
 Colour is never the only channel carrying state: the trigger's `aria-describedby` points at a
 visually-hidden span spelling the current value out in text, the panel shows it in an editable
-field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
-a tint alone.
+field, and the selected palette swatch is marked with `aria-checked` plus a check mark rather than
+a tint alone. The palette is one roving `radiogroup` with a single tab stop: the arrow keys (Left/Right
+swap under RTL), Home and End move to and select the next enabled swatch, like `lr-swatch-picker`.
 
 Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
 required empty picker starts pristine, so the popup trigger and panel value input both expose
@@ -6130,14 +6180,17 @@ accepts `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large`; the interactiv
 independently retains the `--lr-icon-button-size` floor),
 and:
 
-- `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
+- `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in, matched
+  case-insensitively; `rgba` and the other `*a` spellings name the base format (alpha comes from
+  `opacity`) and anything else is `hex`. Parsing is
   always permissive regardless of it. The format button cycles through the four in that order
 - `opacity: boolean = false` — enables the alpha channel: an opacity slider appears in the panel and
   the serialized value gains its alpha-carrying twin (`hexa`/`rgba`/`hsla`/`hsva`). With it unset,
   picking a palette entry forces alpha back to 1
 - `uppercase: boolean = false` — serializes `value` in upper case (`#FF0000` rather than `#ff0000`);
   applies to the whole string, function names included (`RGB(255, 0, 0)`)
-- `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
+- `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette (the first 512
+  entries, each parsed once when assigned), given as a
   `;`-separated string, an array of colour strings, or an array of
   `{ color: string; label?: string; disabled?: boolean; icon?: unknown }` objects. Any colour the
   picker can parse is accepted; blank entries are dropped. An entry that is _not_ parseable is kept
@@ -6229,8 +6282,8 @@ doesn't move the serialized value emits nothing, so dragging within a single rou
 silent.
 
 **Keyboard.** The grid handle, hue handle and opacity handle are each a real `role="slider"` with a
-localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow by 10,
-and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
+localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow and
+PageUp/PageDown by 10, and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
 never do. One discrete press pairs a keydown (`input`/`lr-input`) with a keyup
 (`change`/`lr-change`); OS key repeat re-fires the edit pair but still commits once. The panel is
 Escape-dismissible and returns focus to the trigger; a pointerdown outside the element closes it
@@ -6274,7 +6327,7 @@ here exactly as they do on `lr-input`. With no label text the part is hidden and
 painted.
 
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
-not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.5rem`,
+not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
 inline and block sizes are each
 `max(var(--lr-color-picker-swatch-size), var(--lr-icon-button-size))`: compact tiers center a smaller
@@ -7227,6 +7280,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly label: string;
     readonly icon?: unknown;
     readonly gemstone?: GemstoneKey;
+    readonly disabled?: boolean;
   }`
 
 - **`components-forms-textarea-textarea-contracts`** — Supporting data types and helpers for this component family.
@@ -7322,10 +7376,10 @@ ellipsizes), `end`. There are no state parts: style the reflected host attribute
 
 **Hit area.** Unlike `lr-icon-button`, the toggle keeps the size ladder, including for icon-only
 content. Every tier floors both axes at 1.5rem (24px, the WCAG 2.5.8 minimum) and an icon-only
-toggle is at least square; the default `m` tier equals the 2.5rem (40px) `--lr-icon-button-size`
+toggle is at least square; the default `m` tier equals the 2.25rem (36px) `--lr-icon-button-size`
 floor; under a coarse pointer every tier floors at 2.75rem (44px). Only fine-pointer `2xs`/`xs`/`s`
-sit below 40px — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
-where the compact 40px floor matters.
+sit below it — keep `m` or larger, or use `lr-icon-button` with a consumer-managed `aria-pressed`,
+where the icon-button floor matters.
 
 **Pressed look.** The pressed state paints `--lr-color-fill-quiet` from the `variant` row plus a loud
 `--lr-color-border-loud` border. That border is the state's 3:1 non-text indicator (WCAG 1.4.11): a
@@ -7339,7 +7393,9 @@ and press get outline affordances, and disabled toggles read as `GrayText` at fu
 `--lr-toggle-color` (default `var(--lr-color-text)`), `--lr-toggle-bg` (default
 `transparent`), `--lr-toggle-border-color` (built-in default transparent for `plain`,
 `var(--lr-color-border)` for `outlined`), `--lr-toggle-hover-bg` (default
-`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`),
+`color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`,
+the unpressed pointer fill only), `--lr-toggle-pressed-hover-bg` (default a hover mix of
+`--lr-toggle-pressed-bg`, the pressed pointer fill),
 `--lr-toggle-pressed-bg` (default `var(--lr-color-fill-quiet)`), `--lr-toggle-pressed-color`
 (default `var(--lr-color-on-quiet)`) and `--lr-toggle-pressed-border-color` (default
 `var(--lr-color-border-loud)`).

@@ -13,6 +13,7 @@ import {
   finiteRange,
 } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { clampSteppedValue } from '../../../internal/step-value.js';
 import {
   attachInternalsSafely,
   getFormOwner,
@@ -63,6 +64,8 @@ const MANAGED_ARIA_LABEL_ATTRIBUTE = 'data-lr-rating-managed-label';
 /** A `<= 0` precision would divide-by-zero when `setValue` snaps `next / precision`; keep it
  *  comfortably positive and no coarser than the star count itself. */
 const MIN_PRECISION = 0.01;
+/** PageUp/PageDown move by this many precision units. */
+const PAGE_STEPS = 10;
 
 /** Visual density of the rendered symbols, on the library's one size ladder. */
 export type LyraRatingSize = LyraSize;
@@ -122,13 +125,14 @@ function starSolid(): SVGTemplateResult {
  * reset target, so changing `value` never silently rewrites what `form.reset()` restores.
  *
  * The host is the single focusable `role="slider"` owner and carries its value/name/state ARIA,
- * including explicit `aria-invalid="true"|"false"` from effective intrinsic/custom validity.
+ * including explicit `aria-invalid="true"|"false"`: intrinsic/custom invalidity is exposed once the
+ * user has interacted (rated, blurred, `reportValidity()` or a submission attempt).
  * The shadow symbol row is presentational chrome, so host ARIA customization cannot create a
  * second competing slider.
  *
  * Deliberately no label/hint/error chrome: `label` here is an accessible-name override, not visible
  * label text. A rating is a row of symbols with no field frame of its own, so a consumer wanting a
- * labeled field wraps this element in their own layout, exactly as `<lr-slider>` does.
+ * labeled field wraps this element in their own layout, or names it with an external `<label for>`.
  *
  * Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
  *
@@ -137,7 +141,7 @@ function starSolid(): SVGTemplateResult {
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
  * @event lr-activate - Fired on every interactive commit of a rating -- a click on a symbol, or an
- *   Arrow/Home/End key -- whether or not the value actually moved. `detail: { value }` carries the
+ *   Arrow/Page/Home/End key -- whether or not the value actually moved. `detail: { value }` carries the
  *   committed rating. Bubbling and composed, so a host outside the shadow tree receives it.
  *   Not cancelable: it is a notification that the user committed a rating, not a veto point, and
  *   nothing in this component branches on it. Re-committing the current rating is the case
@@ -350,7 +354,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // Retain `focusout` as an interaction signal for delegated/synthetic integration flows. The
     // host's own native `blur` listener below marks real focus transitions directly. Registered
     // once, in the constructor, so a disconnect/reconnect cycle cannot stack duplicates.
-    this.addEventListener('focusout', this.markInteracted);
+    this.addEventListener('focusout', this.markBlurInteracted);
     this.addEventListener('keydown', this.onHostKeyDown as EventListener);
     this.addEventListener('blur', this.onBlur);
     this.syncValidityStates();
@@ -596,6 +600,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // matching, even though a required-and-unrated control is still `invalid`.
     this._hasInteracted = false;
     this.syncValidityStates();
+    this.syncHostSemantics();
   }
 
   formStateRestoreCallback(
@@ -716,6 +721,13 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (this._hasInteracted) return;
     this._hasInteracted = true;
     this.syncValidityStates();
+    this.syncHostSemantics();
+  };
+
+  /** `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered. */
+  private markBlurInteracted = (): void => {
+    if (this.effectiveDisabled || this.matches(':disabled')) return;
+    this.markInteracted();
   };
 
   private setValue(next: number): void {
@@ -724,11 +736,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     // marked before the no-op guard below, since clicking the star already selected is still
     // interaction even though it changes nothing.
     this.markInteracted();
-    const precision = this.safePrecision;
-    const clamped = Math.max(
-      0,
-      Math.min(this.safeMax, Math.round(next / precision) * precision)
-    );
+    const clamped = clampSteppedValue(next, 0, this.safeMax, this.safePrecision);
     if (clamped !== this.value) {
       this.value = clamped;
       dispatchNativeEvent(this, 'change');
@@ -766,7 +774,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     const rawValue = star - 1 + logicalFraction;
     return Math.max(
       precision,
-      Math.min(this.safeMax, Math.ceil(rawValue / precision) * precision)
+      clampSteppedValue(Math.ceil(rawValue / precision) * precision, 0, this.safeMax, precision)
     );
   }
 
@@ -827,6 +835,14 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       event.preventDefault();
       this.setValue(this.safeValue - this.safePrecision);
     }
+    if (event.key === 'PageUp') {
+      event.preventDefault();
+      this.setValue(this.safeValue + this.safePrecision * PAGE_STEPS);
+    }
+    if (event.key === 'PageDown') {
+      event.preventDefault();
+      this.setValue(this.safeValue - this.safePrecision * PAGE_STEPS);
+    }
     if (event.key === 'Home') {
       event.preventDefault();
       this.setValue(0);
@@ -857,8 +873,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
 
   private onBlur = (event: FocusEvent): void => {
-    if (event.target !== this) return;
-    this.markInteracted();
+    if (event.target === this) this.markBlurInteracted();
   };
 
   /**
@@ -915,7 +930,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
       this.setAttribute('aria-required', this.required ? 'true' : 'false');
       this.setAttribute(
         'aria-invalid',
-        this.internals.validity.valid ? 'false' : 'true'
+        this._hasInteracted && !this.internals.validity.valid ? 'true' : 'false'
       );
       this.setAttribute('data-effective-size', this.effectiveSize);
       if (

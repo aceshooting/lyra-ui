@@ -16,8 +16,8 @@ export const styles = css`
     display: inline-block;
     /* Square swatch whose edge IS the shared form-control height, so it reads the one ladder
        (internal/sizes.styles.ts), which matches both spellings per tier -- size="small" and
-       size="s" resolve identically, no alias rules. The fallback arm names the default tier's own
-       value, keeping the documented size without the ladder sheet. */
+       size="s" resolve identically, no alias rules. The fallback arm is only reached without the
+       ladder sheet. */
     --_lr-color-picker-swatch-size: var(
       --lr-form-control-height,
       var(--lr-size-2-5rem)
@@ -240,8 +240,8 @@ export const styles = css`
       var(--_lr-color-picker-swatch-color)
     );
   }
-  [part~="trigger"]:where(:hover),
-  [part~="trigger"]:where(:hover)::before {
+  :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:hover),
+  :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:hover)::before {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
@@ -249,8 +249,8 @@ export const styles = css`
   }
   /* Pressed deepens the same edge rather than tinting the box: its pseudo-element paints the
      selected colour, so mixing the fill would misreport the value the swatch exists to show. */
-  [part~="trigger"]:where(:active),
-  [part~="trigger"]:where(:active)::before {
+  :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:active),
+  :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:active)::before {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -402,15 +402,15 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     transform: translateY(-50%);
   }
-  [part~="slider"]:where(:hover)::before {
+  :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:hover)::before {
     box-shadow: 0 0 0 var(--lr-border-width-thin)
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
-  [part~="slider"]:where(:hover) {
+  :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:hover) {
     outline: var(--lr-border-width-thin) solid
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
   }
-  [part~="slider"]:where(:active)::before {
+  :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:active)::before {
     box-shadow: 0 0 0 var(--lr-border-width-medium)
       color-mix(
         in oklab,
@@ -418,7 +418,7 @@ export const styles = css`
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       );
   }
-  [part~="slider"]:where(:active) {
+  :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:active) {
     outline: var(--lr-border-width-medium) solid
       color-mix(
         in oklab,
@@ -493,8 +493,8 @@ export const styles = css`
   :host(:dir(rtl)) [part~="slider-handle"] {
     transform: translate(50%, -50%);
   }
-  [part~="grid-handle"]:where(:hover),
-  [part~="slider-handle"]:where(:hover) {
+  :host(:not(:disabled):not([readonly])) [part~="grid-handle"]:where(:hover),
+  :host(:not(:disabled):not([readonly])) [part~="slider-handle"]:where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
@@ -503,8 +503,8 @@ export const styles = css`
   /* A knob's pressed state is the grab: the ring deepens and the cursor closes, the whole
      feedback before the value moves. Its fill is the live colour, so it stays untouched, as with
      the trigger. */
-  [part~="grid-handle"]:where(:active),
-  [part~="slider-handle"]:where(:active) {
+  :host(:not(:disabled):not([readonly])) [part~="grid-handle"]:where(:active),
+  :host(:not(:disabled):not([readonly])) [part~="slider-handle"]:where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -552,7 +552,7 @@ export const styles = css`
   /* no-pressed-state: pressing a text field places a caret rather than activating a target, and
      the engaged state is already drawn by :focus-visible below. Native text inputs have no
      pressed treatment either. */
-  [part~="input"]:where(:hover) {
+  :host(:not(:disabled):not([readonly])) [part~="input"]:where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
@@ -585,8 +585,8 @@ export const styles = css`
        need to ease; without this these buttons' paint snaps while lr-button/lr-icon-button ease. */
     transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
   }
-  [part~="format-button"]:where(:hover),
-  [part~="eyedropper-button"]:where(:hover) {
+  :host(:not(:disabled):not([readonly])) [part~="format-button"]:where(:hover),
+  :host(:not(:disabled):not([readonly])) [part~="eyedropper-button"]:where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
@@ -595,8 +595,8 @@ export const styles = css`
   /* These two carry their own surface fill, unlike the swatches, so pressed is the shared
      background mix: the button sinks toward the text colour over the deeper edge, the same
      direction in light and dark. */
-  [part~="format-button"]:where(:active),
-  [part~="eyedropper-button"]:where(:active) {
+  :host(:not(:disabled):not([readonly])) [part~="format-button"]:where(:active),
+  :host(:not(:disabled):not([readonly])) [part~="eyedropper-button"]:where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -641,14 +641,14 @@ export const styles = css`
        swatch's edge snaps while lr-button/lr-icon-button ease. */
     transition: border-color var(--lr-transition-fast);
   }
-  [part~="swatch"]:where(:not(:disabled)):where(:hover) {
+  :host(:not([readonly])) [part~="swatch"]:not([part~="swatch-selected"]):where(:not(:disabled)):where(:hover) {
     border-color: var(
       --lr-color-picker-hover-border-color,
       var(--lr-color-brand)
     );
   }
   /* Edge only, again: ::after paints the palette entry's own colour over this box. */
-  [part~="swatch"]:where(:not(:disabled)):where(:active) {
+  :host(:not([readonly])) [part~="swatch"]:not([part~="swatch-selected"]):where(:not(:disabled)):where(:active) {
     border-color: color-mix(
       in oklab,
       var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
@@ -687,6 +687,17 @@ export const styles = css`
     z-index: var(--lr-layer-content);
   }
 
+  :host([readonly]) [part~="trigger"],
+  :host([readonly]) [part~="grid"],
+  :host([readonly]) [part~="grid-handle"],
+  :host([readonly]) [part~="slider"],
+  :host([readonly]) [part~="slider-handle"],
+  :host([readonly]) [part~="swatch"],
+  :host([readonly]) [part~="format-button"],
+  :host([readonly]) [part~="eyedropper-button"] {
+    cursor: default;
+  }
+
   :host(:disabled) {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
@@ -723,7 +734,7 @@ export const styles = css`
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   ${glassScrollLayerStyles}

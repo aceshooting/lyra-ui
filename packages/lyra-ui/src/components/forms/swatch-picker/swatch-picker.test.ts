@@ -22,7 +22,7 @@ const options = () => [
 
 function swatches(el: LyraSwatchPicker): HTMLButtonElement[] {
   return [
-    ...el.shadowRoot!.querySelectorAll('[part="swatch"]'),
+    ...el.shadowRoot!.querySelectorAll('[part~="swatch"]'),
   ] as HTMLButtonElement[];
 }
 
@@ -1054,7 +1054,7 @@ describe("lr-swatch-picker", () => {
     // out of the interactive hit target so the hit box can grow to the shared minimum tappable size
     // without inflating the visible ring/fill (see [part='swatch']'s own styles.ts comment).
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*var\(--lr-swatch-picker-selected-color, var\(--_lr-swatch-picker-selected-color\)\)/
+      /\[part~='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*var\(--lr-swatch-picker-selected-color, var\(--_lr-swatch-picker-selected-color\)\)/
     );
   });
 
@@ -1217,7 +1217,7 @@ describe("lr-swatch-picker", () => {
   it("disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule", async () => {
     const css = normalizedStyles();
     expect(css).to.match(
-      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]:not\(\[data-lr-gemstone-selected\]\)\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
+      /@media \(prefers-reduced-motion: reduce\) \{[^]*\[part~='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\][^]*\[part='swatch-icon'\]:not\(\[data-lr-gemstone-selected\]\)\s*\{[^}]*animation:\s*none[^}]*\}[^]*\}/
     );
 
     try {
@@ -1322,7 +1322,7 @@ describe("lr-swatch-picker", () => {
         ></lr-swatch-picker>`
       );
       const swatch = el.shadowRoot!.querySelector(
-        '[part="swatch"]'
+        '[part~="swatch"]'
       ) as HTMLElement;
       const fill = el.shadowRoot!.querySelector(
         '[part="swatch-fill"]'
@@ -1344,7 +1344,7 @@ describe("lr-swatch-picker", () => {
       ["large", "l"],
     ];
     const swatchOf = (el: Element) =>
-      el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
+      el.shadowRoot!.querySelector('[part~="swatch"]') as HTMLElement;
     const fillOf = (el: Element) =>
       el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
     for (const [alias, step] of pairs) {

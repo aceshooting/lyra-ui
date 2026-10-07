@@ -3,14 +3,14 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     /* 70% of the tier's control height on the shared size ladder (internal/sizes.styles.ts), so the
-       box lines up with a same-size lr-input/lr-select/lr-button; at "m" that is exactly the
-       1.75rem it shipped with before it had a size. The --lr-icon-button-size cap stays so
-       compacting that theme token compacts this control too. */
+       box lines up with a same-size lr-input/lr-select/lr-button. The --lr-icon-button-size cap
+       stays so compacting that theme token compacts this control too. */
     --_lr-checkbox-box-size: min(
       var(--lr-icon-button-size),
       calc(var(--lr-form-control-height) * 0.7)
     );
     display: inline-block;
+    max-inline-size: 100%;
     /* Private default for the public label-indent hook: the box's floor plus the label gap, the
        same two terms the layout below uses. Overridable on an ancestor or the checkbox itself, but
        never on a sibling -- custom properties inherit down, not sideways, so a sibling <p> computes
@@ -29,6 +29,7 @@ export const styles = css`
     gap: 0;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    max-inline-size: 100%;
   }
   .checkbox-owner {
     display: inline-flex;
@@ -56,7 +57,8 @@ export const styles = css`
     box-sizing: border-box;
     /* The inline icon-affordance sizing convention of lr-combobox's clear-button and lr-select's
        toggle: --lr-icon-button-size capped at the tier's own share of the control height -- a real
-       touch target without ballooning to the full 2.5rem meant for standalone icon-only buttons. */
+       touch target without ballooning to the full --lr-icon-button-size meant for standalone icon-only
+       buttons. */
     min-inline-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
     min-block-size: var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size));
     /* The glyph is drawn at 1em, so the box owns the font size that scales it. Pinned to the ladder
@@ -159,7 +161,7 @@ export const styles = css`
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   @media (prefers-reduced-motion: reduce) {

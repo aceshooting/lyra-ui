@@ -3,6 +3,7 @@ import {
   isCurrentlyAssociatedLabel,
   observeExternalLabelAssociations,
   resolveExternalLabels,
+  resolveExternalLabelText,
 } from '../../../internal/form-control-labels.js';
 
 interface ButtonLabelHost extends HTMLElement, ReactiveControllerHost {
@@ -12,18 +13,6 @@ interface ButtonLabelHost extends HTMLElement, ReactiveControllerHost {
   readonly renderRoot: HTMLElement | DocumentFragment;
   click(): void;
   focus(options?: FocusOptions): void;
-}
-
-function labelText(node: Node, host: Node): string {
-  if (node === host) return '';
-  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
-  let text = '';
-  for (const child of node.childNodes) text += labelText(child, host);
-  return text;
-}
-
-function resolvedLabel(labels: readonly HTMLLabelElement[], host: Node): string {
-  return labels.map((label) => labelText(label, host).trim()).filter(Boolean).join(' ');
 }
 
 class ButtonExternalLabelController implements ReactiveController {
@@ -64,7 +53,7 @@ class ButtonExternalLabelController implements ReactiveController {
       this.release();
       return;
     }
-    const name = resolvedLabel(this.labels, this.host);
+    const name = resolveExternalLabelText(this.labels, this.host);
     const target = this.host.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (!target || !name) {
       this.release();

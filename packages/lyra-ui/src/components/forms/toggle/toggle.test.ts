@@ -734,3 +734,22 @@ describe('<lr-toggle>', () => {
     expect(notifications.length).to.equal(2);
   });
 });
+
+it('keeps a pressed toggle on its own fill under the pointer when --lr-toggle-hover-bg is set', async () => {
+  const plain = await fixture<LyraToggle>(html`<lr-toggle pressed style="--lr-transition-fast: 0s">Bold</lr-toggle>`);
+  const themed = await fixture<LyraToggle>(
+    html`<lr-toggle pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(1, 2, 3)">Bold</lr-toggle>`,
+  );
+  try {
+    await hoverUntilMatched(control(plain), 'the pointer never hovered the plain toggle');
+    await settlePointer();
+    const expected = getComputedStyle(control(plain)).backgroundColor;
+    await hoverUntilMatched(control(themed), 'the pointer never hovered the themed toggle');
+    await waitUntil(
+      () => getComputedStyle(control(themed)).backgroundColor === expected,
+      'a pressed toggle must not take the unpressed hover fill',
+    );
+  } finally {
+    await resetMouse();
+  }
+});

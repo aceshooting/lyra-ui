@@ -975,7 +975,7 @@ it("does not mark touched/hasInteracted from a blur caused by the control itself
     html`<lr-checkbox required>Agree</lr-checkbox>`
   )) as LyraCheckbox;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+  const isTouched = () => (el as unknown as { hasInteracted: boolean }).hasInteracted;
   const hasInteracted = () =>
     (el as unknown as { hasInteracted: boolean }).hasInteracted;
 
@@ -1022,7 +1022,7 @@ it("does not mark touched if an ancestor fieldset disabling a focused control al
   const el = form.querySelector("lr-checkbox") as LyraCheckbox;
   const fieldset = form.querySelector("fieldset") as HTMLFieldSetElement;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+  const isTouched = () => (el as unknown as { hasInteracted: boolean }).hasInteracted;
 
   base.focus();
   expect(

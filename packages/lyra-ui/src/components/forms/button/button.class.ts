@@ -37,12 +37,13 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { literalSetConverter, omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import {
   currentValidityValidator,
   type LyraFormValidator,
 } from '../form-validator.js';
+import { findDefaultButton, isImplicitSubmission, submitFormImplicitly } from '../../../internal/submit-on-enter.js';
 import { createButtonExternalLabelController } from './button-external-label.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -68,6 +69,10 @@ export type ButtonFormEnctype =
   | 'text/plain';
 /** Native `formmethod` vocabulary. `'dialog'` closes an ancestor `<dialog>` instead of submitting. */
 export type ButtonFormMethod = 'get' | 'post' | 'dialog';
+
+const BUTTON_TYPE = literalSetConverter<ButtonType>(['button', 'submit', 'reset'], 'button');
+/** Native `<input>` types where Enter submits the form implicitly. */
+const IMPLICIT_SUBMIT_INPUT = /^(text|search|url|tel|email|password|date|month|week|time|datetime-local|number)$/;
 
 export interface LyraButtonEventMap {
   focus: FocusEvent;
@@ -343,6 +348,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   private _value = '';
   private _required = false;
   private _variant: LyraVariant = 'neutral';
+  private _type: ButtonType = 'button';
+  private injectedHostTabIndex = false;
+  private implicitForm: HTMLFormElement | null = null;
   private readonly localDescriptionIds = '';
   private externalDescriptionLease?: NativeControlDescriptionLease;
   private internals: ElementInternals;
@@ -528,8 +536,17 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
    *  ellipsis-truncated `[part="label"]`. */
   @property({ type: Boolean, reflect: true }) wrap = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
-   *  for why this component (not the shadow-internal `<button>`) owns that behavior. */
-  @property() type: ButtonType = 'button';
+   *  for why this component (not the shadow-internal `<button>`) owns that behavior. Matched
+   *  ASCII case-insensitively like the native attribute; an unknown value is `'button'`. */
+  @property({ converter: { fromAttribute: (value: string | null) => BUTTON_TYPE.normalize(value?.toLowerCase()) } })
+  get type(): ButtonType {
+    return this._type;
+  }
+  set type(next: ButtonType) {
+    const old = this._type;
+    this._type = BUTTON_TYPE.normalize(typeof next === 'string' ? next.toLowerCase() : next);
+    this.requestUpdate('type', old);
+  }
   /** The value submitted alongside `name`. Meaningful only together with a `name`, matching a
    *  native submit button. */
   /**
@@ -571,7 +588,8 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   @property({ attribute: 'formtarget' }) formTarget?: string;
   /** Shows an internal spinner in place of interaction affordance and disables the button, without
    *  clearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are
-   *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). */
+   *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). Keyboard focus
+   *  held by the button moves to the host while loading and returns when it clears. */
   @property({ type: Boolean, reflect: true }) loading = false;
 
   /** When set to a safe link URL, the button's root renders as a real `<a href=…>` instead of a
@@ -720,6 +738,36 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     this.value = typeof state === 'string' ? state : '';
   }
 
+  /** While this is the form's default button, Enter in a native text field submits through it. */
+  private syncImplicitSubmission(form: HTMLFormElement | null = this.getForm()): void {
+    const next = this.type === 'submit' && this.isConnected ? form : null;
+    if (next === this.implicitForm) return;
+    this.implicitForm?.removeEventListener('keydown', this.onFormKeyDown);
+    this.implicitForm = next;
+    next?.addEventListener('keydown', this.onFormKeyDown);
+  }
+
+  /** Re-arms the default-button Enter handling when the form owner changes. */
+  formAssociatedCallback(form: HTMLFormElement | null): void {
+    this.syncImplicitSubmission(form);
+  }
+
+  private onFormKeyDown = (event: KeyboardEvent): void => {
+    const field = event.target;
+    const form = this.implicitForm;
+    if (
+      !form ||
+      !isImplicitSubmission(event) ||
+      !(field instanceof HTMLInputElement) ||
+      !IMPLICIT_SUBMIT_INPUT.test(field.type) ||
+      field.form !== form ||
+      this.baseEl?.localName === 'a' ||
+      findDefaultButton(form) !== this
+    ) return;
+    event.preventDefault();
+    submitFormImplicitly(form);
+  };
+
   /** Runs the form action after every listener on the composed click path had its veto turn. */
   private runClickDefaultAction(): void {
     if (this.type === 'submit') {
@@ -834,6 +882,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncDescribedByElements();
+    this.syncImplicitSubmission();
     this.updateValidity();
     this.syncButtonStates();
     // `disconnectedCallback` tears the observer down, and a reconnect (drag-drop reparent, a
@@ -847,6 +896,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
+    this.syncImplicitSubmission(null);
     this.iconOnlyObserver.disarm();
     super.disconnectedCallback();
   }
@@ -859,6 +909,15 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Rendering `loading` disables the focused native button, and the platform would then drop
+    // focus to <body>; park it on the host until the button is enabled again.
+    if (changed.has('loading') && this.loading && this.shadowRoot?.activeElement === this.baseEl) {
+      if (!this.hasAttribute('tabindex')) {
+        this.tabIndex = -1;
+        this.injectedHostTabIndex = true;
+      }
+      HTMLElement.prototype.focus.call(this, { preventScroll: true });
+    }
     // Seed the wrapper-visibility flags from light-DOM children before the first render, so the
     // adornment wrappers start collapsed/expanded correctly rather than flashing full-width for a
     // frame until the first `slotchange` fires. Refreshed thereafter by
@@ -911,6 +970,13 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('type')) this.syncImplicitSubmission();
+    if (changed.has('loading') && !this.loading && this.injectedHostTabIndex) {
+      const parked = this.ownerDocument.activeElement === this && !this.shadowRoot?.activeElement;
+      this.removeAttribute('tabindex');
+      this.injectedHostTabIndex = false;
+      if (parked) this.baseEl?.focus({ preventScroll: true });
+    }
     syncAriaControlsElements(this, this.baseEl, this.triggerControls);
     this.syncDescribedByElements();
     // `labelEl` exists from this point on (every render keeps the same wrapper node in place), so

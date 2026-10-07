@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './slider.js';
 import type { LyraSlider } from './slider.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function thumb(slider: LyraSlider): HTMLElement {
   return slider.shadowRoot!.querySelector<HTMLElement>('[role="slider"]')!;
@@ -283,5 +284,77 @@ describe('slider pointer buttons', () => {
       expect(slider.value).to.be.greaterThan(20);
       expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
     });
+  }
+});
+
+describe('slider validity exposure', () => {
+  it('exposes visible error chrome as aria-invalid', async () => {
+    const slider = await fixture<LyraSlider>(html`<lr-slider error-text="Too high"></lr-slider>`);
+    expect(thumb(slider).getAttribute('aria-invalid')).to.equal('true');
+  });
+
+  it('exposes a custom error only once the user has interacted', async () => {
+    const slider = await fixture<LyraSlider>(html`<lr-slider value="20"></lr-slider>`);
+    slider.setCustomValidity('Rejected');
+    await slider.updateComplete;
+    expect(thumb(slider).getAttribute('aria-invalid')).to.equal('false');
+    thumb(slider).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await slider.updateComplete;
+    expect(thumb(slider).getAttribute('aria-invalid')).to.equal('true');
+  });
+
+  it('does not count the blur a fieldset disable forces as interaction', async () => {
+    const fieldset = await fixture<HTMLFieldSetElement>(html`<fieldset><lr-slider value="20"></lr-slider></fieldset>`);
+    const slider = fieldset.querySelector('lr-slider')!;
+    slider.setCustomValidity('Rejected');
+    thumb(slider).focus();
+    fieldset.disabled = true;
+    fieldset.disabled = false;
+    await slider.updateComplete;
+    expect(slider.matches(':state(user-invalid)')).to.equal(false);
+  });
+
+  it('does not count the thumb swap of a range-mode switch as interaction', async () => {
+    const slider = await fixture<LyraSlider>(html`<lr-slider value="20"></lr-slider>`);
+    slider.setCustomValidity('Rejected');
+    await focusByKeyboard(thumb(slider));
+    slider.range = true;
+    await slider.updateComplete;
+    await waitUntil(() => slider.shadowRoot!.activeElement?.matches('[part~="thumb-min"]') ?? false, 'focus follows to the min thumb');
+    expect(slider.matches(':state(user-invalid)')).to.equal(false);
+  });
+});
+
+describe('slider unstepped mode', () => {
+  for (const attribute of ['step="0"', 'step="any"']) {
+    it(`moves by a hundredth of the span with the arrow and page keys (${attribute})`, async () => {
+      const slider = await fixture<LyraSlider>(`<lr-slider min="0" max="50" value="20" ${attribute}></lr-slider>`);
+      const press = (key: string): void => {
+        thumb(slider).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      };
+      press('ArrowRight');
+      expect(slider.valueAsNumber).to.equal(20.5);
+      press('PageUp');
+      expect(slider.valueAsNumber).to.equal(25.5);
+      press('ArrowLeft');
+      press('PageDown');
+      expect(slider.valueAsNumber).to.equal(20);
+    });
+  }
+});
+
+describe('slider tooltip placement', () => {
+  for (const direction of ['ltr', 'rtl']) {
+    for (const placement of ['left', 'right']) {
+      it(`keeps a ${placement} bubble clear of the thumb in ${direction}`, async () => {
+        const wrapper = await fixture<HTMLElement>(`<div dir="${direction}" style="inline-size: 300px; padding: 40px"><lr-slider with-tooltip tooltip-placement="${placement}" value="40" aria-label="Level"></lr-slider></div>`);
+        const slider = wrapper.querySelector<LyraSlider>('lr-slider')!;
+        await slider.updateComplete;
+        const handle = thumb(slider).getBoundingClientRect();
+        const bubble = slider.shadowRoot!.querySelector<HTMLElement>('[part~="tooltip"]')!.getBoundingClientRect();
+        const gap = placement === 'right' ? bubble.left - handle.right : handle.left - bubble.right;
+        expect(gap).to.be.within(-0.5, 20);
+      });
+    }
   }
 });

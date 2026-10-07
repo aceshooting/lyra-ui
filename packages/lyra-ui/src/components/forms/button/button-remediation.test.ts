@@ -1,9 +1,10 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import './button.js';
 import '../icon-button/icon-button.js';
 import type { LyraButton } from './button.js';
 import type { LyraIconButton } from '../icon-button/icon-button.js';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 describe('lr-button semantic state forwarding', () => {
   it('forwards pressed and current state reactively without adding a second role owner', async () => {
@@ -167,3 +168,76 @@ for (const tag of ['lr-button', 'lr-icon-button'] as const) {
     });
   });
 }
+
+it('keeps keyboard focus on the host while loading, then hands it back', async () => {
+  const el = await fixture<LyraButton>(html`<lr-button>Save</lr-button>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  await focusByKeyboard(el);
+  expect(el.shadowRoot!.activeElement === base, 'precondition: the button holds focus').to.equal(true);
+  el.loading = true;
+  await el.updateComplete;
+  await nextFrame();
+  await nextFrame();
+  expect(document.activeElement === el, 'focus parks on the host').to.equal(true);
+  el.loading = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === base, 'focus returns to the button').to.equal(true);
+  expect(el.hasAttribute('tabindex'), 'the temporary tabindex is removed').to.equal(false);
+});
+
+it('names itself from an external label without its hidden helper text', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><label for="hidden-helper-button">Save <span aria-hidden="true">Ctrl+S</span></label><lr-button id="hidden-helper-button">Go</lr-button></div>`);
+  const el = wrapper.querySelector<LyraButton>('lr-button')!;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Save');
+});
+
+it('matches type case-insensitively, like a native button', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-button type="Submit">Go</lr-button></form>`);
+  const el = form.querySelector<LyraButton>('lr-button')!;
+  expect(el.type).to.equal('submit');
+  let submitted = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitted += 1;
+  });
+  el.click();
+  expect(submitted).to.equal(1);
+  (el as unknown as { type: string }).type = 'RESET';
+  expect(el.type).to.equal('reset');
+});
+
+describe('lr-button as the default submit button for native fields', () => {
+  const enterIn = async (markup: string, target = 'input'): Promise<FormData[]> => {
+    const form = await fixture<HTMLFormElement>(markup);
+    const submissions: FormData[] = [];
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submissions.push(new FormData(form, (event as SubmitEvent).submitter));
+    });
+    form.querySelector<HTMLElement>(target)!.focus();
+    await sendKeys({ press: 'Enter' });
+    return submissions;
+  };
+
+  it('submits nothing past a disabled lr-button', async () => {
+    const submissions = await enterIn('<form><input name="q" value="x"><lr-button type="submit" disabled>Go</lr-button></form>');
+    expect(submissions).to.have.length(0);
+  });
+
+  it('submits with the lr-button name and value', async () => {
+    const submissions = await enterIn('<form><input name="q" value="x"><lr-button type="submit" name="op" value="search">Go</lr-button></form>');
+    expect(submissions).to.have.length(1);
+    expect(submissions[0]!.get('op')).to.equal('search');
+  });
+
+  it('submits from one of several native fields', async () => {
+    const submissions = await enterIn('<form><input name="a"><input name="b"><lr-button type="submit">Go</lr-button></form>');
+    expect(submissions).to.have.length(1);
+  });
+
+  it('leaves Enter in a native checkbox alone', async () => {
+    const submissions = await enterIn('<form><input type="checkbox" name="c"><lr-button type="submit">Go</lr-button></form>');
+    expect(submissions).to.have.length(0);
+  });
+});

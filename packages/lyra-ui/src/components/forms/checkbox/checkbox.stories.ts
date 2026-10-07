@@ -210,15 +210,15 @@ export const LabelIndent: Story = {
           >Daily digest</lr-checkbox
         >
         <!-- This sibling cannot inherit from the checkbox, so its fallback mirrors the default
-             2.25rem indent rather than pretending to read the component's private default. -->
+             2.075rem indent rather than pretending to read the component's private default. -->
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.075rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           One email each morning summarizing the previous day.
         </p>
       </div>
       <div
-        style="--indent: calc(min(var(--lr-theme-icon-button-size, 2.5rem), calc(var(--lr-theme-form-control-height-m, 2.5rem) * 0.7)) + var(--lr-theme-space-s, 0.5rem));"
+        style="--indent: calc(min(var(--lr-theme-icon-button-size, 2.25rem), calc(var(--lr-theme-form-control-height-m, 2.25rem) * 0.7)) + var(--lr-theme-space-s, 0.5rem));"
       >
         <lr-checkbox value="weekly">Weekly roundup</lr-checkbox>
         <p

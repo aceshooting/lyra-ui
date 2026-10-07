@@ -38,7 +38,7 @@ const buttonChromeStyles = css`
   [part="label"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   /* Adornments truncate rather than wrap, so the ellipsis needs a non-wrapping line to fire.
      [part='label'] above deliberately keeps its wrap -- only these capped slots ellipsize. */
@@ -111,6 +111,9 @@ const buttonChromeStyles = css`
       var(--lr-radio-button-hover-border-color, var(--lr-color-brand))
     );
   }
+  :host(:state(user-invalid)) [part~="button"] {
+    border-color: var(--lr-radio-invalid-border-color, var(--lr-color-danger));
+  }
   :host(:focus-visible) [part~="button"],
   [part~="button"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -181,7 +184,6 @@ export const styles = css`
        tags, so a consumer overriding it needn't know which tag it is. */
     --_lr-radio-radius: var(--lr-form-control-radius);
     display: inline-flex;
-    min-inline-size: 0;
     max-inline-size: 100%;
   }
   :host([pill]) {
@@ -195,7 +197,6 @@ export const appearanceStyles = css`
   :host([appearance="button"]) {
     --_lr-radio-radius: var(--lr-form-control-radius);
     display: inline-flex;
-    min-inline-size: 0;
     max-inline-size: 100%;
   }
   :host([appearance="button"][pill]) {

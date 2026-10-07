@@ -868,7 +868,7 @@ describe("lr-radio-group size", () => {
 });
 
 describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
-  it("defaults vertical, exposes aria-orientation, and ignores horizontal arrows", async () => {
+  it("defaults vertical, exposes aria-orientation, and accepts both arrow pairs", async () => {
     const group = (await fixture(html`
       <lr-radio-group label="Choice">
         <lr-radio value="a" checked>A</lr-radio>
@@ -885,20 +885,10 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
     expect(group.getAttribute("orientation")).to.equal("vertical");
     expect(radiogroup.getAttribute("aria-orientation")).to.equal("vertical");
 
-    const ignored = new KeyboardEvent("keydown", {
-      key: "ArrowRight",
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-    });
-    aBase.dispatchEvent(ignored);
-    expect(ignored.defaultPrevented).to.be.false;
-    expect(a.checked).to.be.true;
-
     const changed = oneEvent(group, "change");
     aBase.dispatchEvent(
       new KeyboardEvent("keydown", {
-        key: "ArrowDown",
+        key: "ArrowRight",
         bubbles: true,
         composed: true,
         cancelable: true,
@@ -906,6 +896,18 @@ describe("lr-radio-group orientation, focus, and compatibility aliases", () => {
     );
     await changed;
     expect(b.checked).to.be.true;
+
+    const back = oneEvent(group, "change");
+    (b.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowUp",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      })
+    );
+    await back;
+    expect(a.checked).to.be.true;
   });
 
   it("uses horizontal RTL arrows and skips disabled options", async () => {

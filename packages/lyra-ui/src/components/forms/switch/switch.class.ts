@@ -9,11 +9,7 @@ import { setCustomState, syncValidityStates } from '../../../internal/custom-sta
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
-import {
-  dispatchNativeEvent,
-  dispatchNativeInputEvent,
-  relayNativeEvent,
-} from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import {
   installInteractionOnInvalid,
   installInvalidEventAlias,
@@ -40,7 +36,7 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_switchRequired } from '../../.
 
 
 export interface LyraSwitchEventMap {
-  input: InputEvent;
+  input: Event;
   change: Event;
   'lr-input': CustomEvent<{ checked: boolean; value: string }>;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
@@ -86,7 +82,7 @@ export interface LyraSwitchEventMap {
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
- * @event {InputEvent} input - The user toggled the switch; bubbling and composed like a native form event.
+ * @event {Event} input - The user toggled the switch; bubbling and composed like a native form event.
  * @event lr-input - Prefixed compatibility alias for `input`; `detail: { checked, value }`.
  * @event {Event} change - Fired immediately after `input` for the same user toggle, matching the native
  * checkbox/radio contract a form library expects from a boolean control.
@@ -143,6 +139,8 @@ export interface LyraSwitchEventMap {
  * @csspart form-control-help-text - Shoelace name for the same hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-switch-gap=var(--lr-space-s)] - Gap between the track and label.
+ * @cssprop [--lr-switch-invalid-border=var(--lr-color-danger)] - Outline color of `[part='track']`
+ *   while the switch matches `:state(user-invalid)`.
  * @cssprop [--lr-switch-track-inline-size=calc(var(--lr-switch-track-block-size) * 1.8)] - Inline
  *   size of the track, and (with the block size) the distance the thumb travels when checked.
  *   Derived from the block size, so re-sizing the track keeps its aspect ratio.
@@ -258,18 +256,12 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   @state() private hasHelpTextSlot = false;
   @state() private hasErrorSlot = false;
   private labelObserver?: MutationObserver;
-  // Set on the control's first `blur`; gates the `aria-invalid` reflection
-  // below so validity styling never flashes on first render, mirroring
-  // `<lr-checkbox>`'s/`<lr-combobox>`'s identical `touched` field.
-  @state() private touched = false;
-  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
-   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the
-   *  instant it happens, and so is interactive validation — `reportValidity()` and a submission
-   *  attempt alike, via `installInteractionOnInvalid()` — exactly as it does for native
-   *  `:user-invalid`. A silent `checkValidity()` alone never counts. Not `@state`: nothing in
-   *  `render()` reads it. */
-  private hasInteracted = false;
+  /** Whether the user has acted on this control yet, which gates `user-valid`/`user-invalid` and
+   *  intrinsic `aria-invalid`: a toggle is an interaction the instant it happens, and so is
+   *  interactive validation — `reportValidity()` and a submission attempt alike, via
+   *  `installInteractionOnInvalid()` — as for native `:user-invalid`. A silent `checkValidity()`
+   *  alone never counts. */
+  @state() private hasInteracted = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -544,7 +536,6 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   }
 
   formResetCallback(): void {
-    this.touched = false;
     this.hasInteracted = false;
     this.restoreCheckedFromDefault();
     this.reflectValidityStates();
@@ -645,7 +636,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
         // `lr-`-prefixed alias is invisible to every form library, validation helper, and
         // `<form>`-level `change` listener that binds the native names, which is the ordinary way
         // a consumer observes a control they did not write.
-        dispatchNativeInputEvent(this);
+        dispatchNativeEvent(this, 'input');
         this.emit('lr-input', { checked: this.checked, value: this.value });
         dispatchNativeEvent(this, 'change');
         this.emit('lr-change', { checked: this.checked, value: this.value });
@@ -679,11 +670,10 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     // setter, with the span's `tabIndex` still `0` at that point -- the exact same observable race
     // as `<lr-input>`'s `onBlur`, just reached through the FACE
     // disabled-state's forced blur rather than a native `<input disabled>`'s. That is not a user
-    // interaction: marking `touched` for it could reenter an in-flight Lit update and trip Lit's
+    // interaction: marking it interacted could reenter an in-flight Lit update and trip Lit's
     // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
     // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
     if (!this.liveDisabled) {
-      this.touched = true;
       this.hasInteracted = true;
       this.reflectValidityStates();
     }
@@ -832,6 +822,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     const describedBy = [hasError ? 'switch-error' : '', hasHint ? 'switch-hint' : '']
       .filter(Boolean)
       .join(' ');
+    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
         <span class="switch-layout" part="row" @click=${this.onClick}>
@@ -842,7 +833,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
             tabindex=${this.effectiveDisabled ? '-1' : '0'}
             aria-checked=${this.checked ? 'true' : 'false'}
             aria-required=${this.required ? 'true' : 'false'}
-            aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+            aria-invalid=${invalid ? 'true' : 'false'}
             aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
             aria-label=${this.getAttribute('aria-label') ?? nothing}
             aria-labelledby=${this.hasAttribute('aria-label') ? nothing : 'switch-label'}

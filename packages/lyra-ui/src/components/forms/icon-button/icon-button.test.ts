@@ -256,6 +256,19 @@ it('strips event-handler and href attributes when cloning slotted bare-geometry 
   expect(clonedUse === null || !clonedUse.hasAttribute('xlink:href')).to.be.true;
 });
 
+it('keeps a same-document href on slotted bare use geometry, written as an unprefixed href', async () => {
+  const el = (await fixture(html`
+    <lr-icon-button aria-label="Star">
+      <use id="same" href="#glyph"></use>
+      <use id="legacy" xlink:href="#glyph"></use>
+      <use id="external" href="https://tracker.test/a.svg#x"></use>
+    </lr-icon-button>
+  `)) as LyraIconButton;
+  await el.updateComplete;
+  const href = (id: string) => el.shadowRoot!.querySelector(`[part="fallback"] #${id}`)!.getAttribute('href');
+  expect([href('same'), href('legacy'), href('external')]).to.deep.equal(['#glyph', '#glyph', null]);
+});
+
 it('rejects executable and embedded descendants and secondary resource sinks from inert geometry', async () => {
   const flag = window as unknown as Record<string, unknown>;
   delete flag['__lrIconButtonSlotXss'];
@@ -930,4 +943,31 @@ it('forwards host aria-keyshortcuts through button/link changes and removal', as
   expect(control().localName).to.equal('button'); expect(control().getAttribute('aria-keyshortcuts')).to.equal('Control+B');
   el.removeAttribute('aria-keyshortcuts'); await el.updateComplete;
   expect(control().hasAttribute('aria-keyshortcuts')).to.equal(false);
+});
+
+it('lets slotted content that carries a name name the button, falling back only when it carries none', async () => {
+  const named = await fixture<LyraIconButton>(html`<lr-icon-button><span>Close dialog</span></lr-icon-button>`);
+  expect(named.control!.hasAttribute('aria-label')).to.equal(false);
+  const labelled = await fixture<LyraIconButton>(
+    html`<lr-icon-button><svg role="img" aria-label="Close" viewBox="0 0 1 1"></svg></lr-icon-button>`,
+  );
+  expect(labelled.control!.hasAttribute('aria-label')).to.equal(false);
+  for (const content of [
+    html`<svg aria-hidden="true" viewBox="0 0 1 1"></svg>`,
+    html`<span hidden>Close</span>`,
+  ]) {
+    const unnamed = await fixture<LyraIconButton>(html`<lr-icon-button>${content}</lr-icon-button>`);
+    expect(unnamed.control!.getAttribute('aria-label')).to.equal('Button');
+  }
+  const late = await fixture<LyraIconButton>(html`<lr-icon-button></lr-icon-button>`);
+  expect(late.control!.getAttribute('aria-label')).to.equal('Button');
+  const text = document.createElement('span');
+  text.textContent = 'Later name';
+  late.append(text);
+  await waitUntil(() => !late.control!.hasAttribute('aria-label'), 'slotted text never named the button');
+});
+
+it('keeps an explicitly empty host aria-label rather than replacing it with the fallback', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button aria-label="" label="Close"><span>Close dialog</span></lr-icon-button>`);
+  expect(el.control!.getAttribute('aria-label')).to.equal('');
 });

@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   syncAriaControlsElements,
   acquireResolvedAriaRelationship,
@@ -48,8 +49,8 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
   if (isUnsafeSvgCloneElement(node.localName)) return null;
   const copy = node.ownerDocument.createElementNS(SVG_NAMESPACE, node.localName);
   for (const attribute of node.attributes) {
-    if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value)) continue;
-    copy.setAttribute(attribute.name, attribute.value);
+    if (isUnsafeSvgCloneAttribute(attribute.name, attribute.value, node.localName)) continue;
+    copy.setAttribute(attribute.name === 'xlink:href' ? 'href' : attribute.name, attribute.value);
   }
   for (const child of node.childNodes) {
     if (child.nodeType === 3) {
@@ -62,7 +63,26 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
   return copy;
 }
 
+/** Whether slotted nodes already carry an accessible name: visible text, `aria-label` or `alt`. */
+function namesControl(nodes: Iterable<Node>): boolean {
+  for (const node of nodes) {
+    if (node.nodeType === 3) {
+      if (node.textContent?.trim()) return true;
+      continue;
+    }
+    const el = node as Element;
+    if (el.nodeType !== 1 || el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') continue;
+    if (el.getAttribute('aria-label')?.trim() || el.getAttribute('alt')?.trim()) return true;
+    if (namesControl((el.shadowRoot ?? el).childNodes)) return true;
+  }
+  return false;
+}
+
 /** `<lr-icon-button>` — an accessible icon-only action button.
+ *
+ * Its accessible name is the host `aria-label` (forwarded by presence, including an explicitly empty
+ * value), then `label`, then a name the slotted content already carries; the localized generic
+ * fallback applies only when none of them supplies one.
  *
  * Set `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted
  * content is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so
@@ -127,7 +147,7 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * accessibility trade-off it is. Scaling the glyph inside that floor is a separate concern and
  * already has its own inherited input, `--lr-icon-size`.
  *
- * Lowering the size for a dense action row below the ordinary 2.5rem/40px floor is safe ONLY
+ * Lowering the size for a dense action row below the ordinary 2.25rem/36px floor is safe ONLY
  * through an ancestor lever -- `--lr-theme-icon-button-size` (application-wide) or
  * `--lr-icon-button-size-scope` (one subtree). The coarse-pointer/no-hover media rule in
  * `internal/tokens.styles.ts`'s `baseTokens` reads both, and floors the RENDERED hit area back at
@@ -164,7 +184,7 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present
  *   in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`,
  *   or custom element never mounts it.
- * @cssprop [--lr-icon-button-size=2.5rem] - Minimum tappable inline and block size of the native
+ * @cssprop [--lr-icon-button-size=2.25rem] - Minimum tappable inline and block size of the native
  *   button — a **floor**, not a fixed size: content larger than it grows the button and keeps its
  *   own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on
  *   every `lr-*` host by `tokens.styles.ts`, and the shared minimum tappable size several other components
@@ -282,6 +302,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    *  geometry with no SVG parent of its own -- see `needsSvgNamespaceFallback`. Mounts the internal
    *  `[part="fallback"]` SVG, which `updated()` then populates via `syncFallbackGeometry()`. */
   @state() private hasBareGeometry = false;
+  /** Whether the slotted content already names the control, which suppresses the generic fallback. */
+  @state() private contentNamed = false;
 
   /** Resolved `rel` for the rendered anchor: author tokens minus `opener`, plus the
    *  `noopener noreferrer` guard whenever `target` is set. `undefined` when nothing remains, so the
@@ -334,8 +356,9 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
    * idempotent.
    */
   private onSlotChangeFromSlot(slot: HTMLSlotElement): void {
-    const assigned = slot.assignedElements({ flatten: true });
-    this.hasBareGeometry = assigned.some((el) => needsSvgNamespaceFallback(el));
+    const assigned = slot.assignedNodes({ flatten: true });
+    this.hasBareGeometry = assigned.some((node) => node.nodeType === 1 && needsSvgNamespaceFallback(node as Element));
+    this.contentNamed = namesControl(assigned);
   }
 
   override connectedCallback(): void {
@@ -379,6 +402,13 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     super.adoptedCallback();
     this.releaseExternalDescription();
     if (this.isConnected && this.hasUpdated) this.syncDescribedByElements();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.seedFirstRenderState(() => {
+      this.contentNamed = namesControl(this.childNodes);
+    });
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -504,7 +534,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
       ? this.triggerPressed : nothing;
     const current = ['page', 'step', 'location', 'date', 'time', 'true', 'false'].includes(this.triggerCurrent ?? '')
       ? this.triggerCurrent : nothing;
-    const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
+    const label = hostAriaLabel(this) ?? (this.label || (this.contentNamed ? nothing : this.localize('iconButtonLabel')));
     const content = html`${this.icon || this.src
       ? html`<lr-icon
           name=${this.icon || nothing}

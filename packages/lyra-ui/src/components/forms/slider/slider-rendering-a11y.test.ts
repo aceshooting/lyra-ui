@@ -539,6 +539,7 @@ it("projects both aria-invalid polarities to every focusable range thumb", async
   ).to.deep.equal(["false", "false"]);
 
   el.setCustomValidity("Choose another interval.");
+  el.reportValidity();
   await el.updateComplete;
   expect(el.checkValidity()).to.equal(false);
   expect(

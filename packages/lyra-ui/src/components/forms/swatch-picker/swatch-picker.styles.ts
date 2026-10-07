@@ -48,9 +48,8 @@ export const styles = css`
     --_lr-swatch-picker-wrap: wrap;
   }
   /* A swatch is a square tap target in a wrapping grid, not a form-control row, so it has its own
-     ladder: it agrees with --lr-form-control-height from m up, but the shared 2xs/xs steps
-     (20/24px) would land at or under the WCAG 2.5.8 minimum. Both tier spellings still match, as in
-     internal/sizes.styles.ts. */
+     ladder rather than --lr-form-control-height: the shared 2xs/xs steps (20/24px) would land at or
+     under the WCAG 2.5.8 minimum. Both tier spellings still match, as in internal/sizes.styles.ts. */
   :host([size="2xs"]) {
     --_lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
     --_lr-swatch-picker-fill-size: var(
@@ -104,7 +103,7 @@ export const styles = css`
     min-inline-size: 0;
     gap: var(--lr-swatch-picker-gap, var(--_lr-swatch-picker-gap));
   }
-  [part="swatch"] {
+  [part~="swatch"] {
     box-sizing: border-box;
     /* The hit target is sized by --lr-swatch-picker-hit-size (default --lr-size-2-5rem, per tier
        below, floored at 24px for WCAG 2.5.8); the VISIBLE fill by --lr-swatch-picker-fill-size
@@ -179,20 +178,20 @@ export const styles = css`
   /* Keys off the button's own native :disabled, which is what render() binds, so the swatch that is
      inert is the swatch that dims. :host(:disabled) would be dead code: this control is
      deliberately not form-associated, so the UA computes no disabled state for the host. */
-  [part="swatch"]:disabled {
+  [part~="swatch"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part="swatch"]:not(:disabled):hover [part="swatch-fill"],
-  [part="swatch"]:not(:disabled):hover [part="swatch-icon"] {
+  [part~="swatch"]:not(:disabled):hover [part="swatch-fill"],
+  [part~="swatch"]:not(:disabled):hover [part="swatch-icon"] {
     transform: scale(1.2);
   }
-  [part="swatch"]:focus-visible {
+  [part~="swatch"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part="swatch"][aria-checked="true"] [part="swatch-fill"],
-  [part="swatch"][aria-checked="true"] [part="swatch-icon"] {
+  [part~="swatch"][aria-checked="true"] [part="swatch-fill"],
+  [part~="swatch"][aria-checked="true"] [part="swatch-icon"] {
     transform: scale(1.2);
   }
   /* A scale, not a colour mix: this part's fill IS the option's colour, and tinting it would
@@ -201,11 +200,11 @@ export const styles = css`
      Deliberately AFTER the aria-checked rule above -- both are (0,3,0), so order is the only thing
      giving the already-selected swatch, the likeliest one to be pressed again, any pressed
      feedback. */
-  [part="swatch"]:not(:disabled):active [part="swatch-fill"],
-  [part="swatch"]:not(:disabled):active [part="swatch-icon"] {
+  [part~="swatch"]:not(:disabled):active [part="swatch-fill"],
+  [part~="swatch"]:not(:disabled):active [part="swatch-icon"] {
     transform: scale(0.95);
   }
-  [part="swatch"][aria-checked="true"] [part="swatch-fill"] {
+  [part~="swatch"][aria-checked="true"] [part="swatch-fill"] {
     box-shadow: 0 0
       var(
         --lr-swatch-picker-selected-blur,
@@ -248,7 +247,7 @@ export const styles = css`
      share one definition. Without this exclusion both rules would match the same element and,
      since this selector's 3 attribute selectors always outrank that rule's 1, this rule would
      silently win every time, making the import above dead weight. */
-  [part="swatch"][aria-checked="true"]
+  [part~="swatch"][aria-checked="true"]
     [part="swatch-icon"]:not([data-lr-gemstone-selected]) {
     filter: drop-shadow(
       0 0
@@ -308,8 +307,8 @@ export const styles = css`
     [part="swatch-icon"] {
       transition: none;
     }
-    [part="swatch"][aria-checked="true"] [part="swatch-fill"],
-    [part="swatch"][aria-checked="true"]
+    [part~="swatch"][aria-checked="true"] [part="swatch-fill"],
+    [part~="swatch"][aria-checked="true"]
       [part="swatch-icon"]:not([data-lr-gemstone-selected]) {
       animation: none;
     }

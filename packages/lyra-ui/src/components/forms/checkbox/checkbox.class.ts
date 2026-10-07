@@ -5,7 +5,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 installFormControlLabelSupport();
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
-import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
+import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './checkbox.styles.js';
@@ -114,8 +114,9 @@ export interface LyraCheckboxEventMap {
  * Default-slot presence follows flattened rendered assignment and updates when forwarded content
  * changes. Visual elements, including decorative `aria-hidden` icons, keep the label wrapper;
  * accessible naming remains the browser's slot semantics unless a host `aria-label` is present.
- * The public label and supporting/error text wrap at arbitrary boundaries in constrained rows;
- * the fixed checkbox square and shared interactive target never shrink to make that fit.
+ * The public label and supporting/error text wrap at word boundaries in constrained rows, breaking
+ * inside a word only when it is wider than the row; the fixed checkbox square and shared
+ * interactive target never shrink to make that fit.
  * The internal checkbox role exposes explicit stateful `aria-invalid`: visible error chrome wins
  * immediately, while intrinsic/custom invalidity is exposed only after user interaction.
  *
@@ -276,6 +277,8 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   @property() hint = '';
   /** Shoelace alias for {@link hint}. */
   @property({ attribute: 'help-text' }) helpText = '';
+  /** WA SSR slot-presence hint used before light-DOM assignment can be inspected. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   /** Error text associated with the inner checkbox; custom markup can use the `error` slot. */
   @property({ attribute: 'error-text' }) errorText = '';
   // Visual-only mixed state, matching native `<input type="checkbox">`
@@ -292,18 +295,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   @state() private hasHintSlot = false;
   @state() private hasHelpTextSlot = false;
   @state() private hasErrorSlot = false;
-  // Set on the control's first `blur`; gates the `data-invalid`/`aria-invalid`
-  // reflection below so validity styling never flashes on first render,
-  // mirroring `<lr-combobox>`/`<lr-select>`'s identical `touched` field.
-  @state() private touched = false;
-  /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
-   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): a toggle is an interaction the
-   *  instant it happens, and so is interactive validation — `reportValidity()` and a submission
-   *  attempt alike, via `installInteractionOnInvalid()` — exactly as it does for native
-   *  `:user-invalid`. A silent `checkValidity()` alone never counts. Not `@state`: nothing in
-   *  `render()` reads it. */
-  private hasInteracted = false;
+  /** Whether the user has acted on this control yet, which gates `user-valid`/`user-invalid`, the
+   *  `data-invalid` hook and intrinsic `aria-invalid`: a toggle is an interaction the instant it
+   *  happens, and so is interactive validation — `reportValidity()` and a submission attempt alike,
+   *  via `installInteractionOnInvalid()` — as for native `:user-invalid`. A silent `checkValidity()`
+   *  alone never counts. */
+  @state() private hasInteracted = false;
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -313,7 +310,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // externally flattened nodes from forwarding slots because those nodes are not descendants of
   // this host and therefore are outside a host-only subtree observation.
   private labelObserver?: MutationObserver;
-  private hasSyncedDescribedByElements = false;
+  private externalDescriptionLease?: ResolvedAriaRelationshipLease;
   private _defaultChecked = false;
   private _checkedDirty = false;
   private settingDefaultChecked = false;
@@ -342,6 +339,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   /** Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning `<lr-checkbox-group>`. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled || this._groupDisabled;
+  }
+
+  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
+  private get liveDisabled(): boolean {
+    return this.effectiveDisabled || this.matches(':disabled');
   }
 
   get checked(): boolean {
@@ -489,6 +491,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncExternalDescription();
     this.updateValidity();
     const MutationObserverCtor = this.ownerDocument.defaultView?.MutationObserver;
     this.labelObserver = MutationObserverCtor
@@ -537,7 +540,14 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.hasErrorSlot = this.hasLightDomChildWithSlot('error');
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.releaseExternalDescription();
+    if (this.hasUpdated) this.syncExternalDescription();
+  }
+
   override disconnectedCallback(): void {
+    this.releaseExternalDescription();
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
@@ -550,32 +560,20 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    const describedBy = this.getAttribute('aria-describedby');
-    const hint = this.renderRoot.querySelector<HTMLElement>('#checkbox-hint');
-    const error = this.renderRoot.querySelector<HTMLElement>('#checkbox-error');
-    if (
-      !describedBy &&
-      !this.hasSyncedDescribedByElements &&
-      (!hint || hint.hidden) &&
-      (!error || error.hidden)
-    ) return;
-    const control = this.renderRoot.querySelector<HTMLElement>('[part~="base"]') ?? undefined;
-    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
-      this,
-      control,
-      describedBy,
-    );
-    if (control && 'ariaDescribedByElements' in control) {
-      const reflected = control as HTMLElement & { ariaDescribedByElements: Element[] | null };
-      const current = reflected.ariaDescribedByElements ?? [];
-      const internal = [error, hint].filter(
-        (element): element is HTMLElement => Boolean(element && !element.hidden),
-      );
-      reflected.ariaDescribedByElements = [
-        ...current.filter((element) => element !== hint && element !== error),
-        ...internal,
-      ];
-    }
+    this.syncExternalDescription();
+  }
+
+  private syncExternalDescription(): void {
+    if (!this.isConnected) return;
+    const target = this[VALIDITY_ANCHOR]();
+    if (!target) return;
+    if (this.externalDescriptionLease) this.externalDescriptionLease.update(target);
+    else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
+  }
+
+  private releaseExternalDescription(): void {
+    this.externalDescriptionLease?.release();
+    this.externalDescriptionLease = undefined;
   }
 
   /** Shared with every other form control: disabled (own, fieldset, or group) bars validation. */
@@ -603,7 +601,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // `syncFormState()`/setter shape.
   private reflectInvalid(): void {
     const barred = this.barredFromValidation;
-    this.toggleAttribute('data-invalid', !barred && this.touched && !this.internals.validity.valid);
+    this.toggleAttribute('data-invalid', !barred && this.hasInteracted && !this.internals.validity.valid);
     syncValidityStates(this.internals, {
       required: this.required,
       hasInteracted: this.hasInteracted,
@@ -625,7 +623,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
 
   formResetCallback(): void {
     this.restoreCheckedFromDefault();
-    this.touched = false;
     this.hasInteracted = false;
     this.reflectInvalid();
   }
@@ -720,12 +717,12 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
    *  `click()` forwarding -- `HTMLElement.prototype.click()` is otherwise a no-op on a custom
    *  element with no native click semantics of its own. */
   override click(): void {
-    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
+    if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
 
   /** Moves focus to the internal checkbox control. */
   override focus(options?: FocusOptions): void {
-    if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
+    if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 
   /** Removes focus from the internal checkbox control. */
@@ -734,7 +731,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   }
 
   private toggle(): void {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     const proposed = !this.checked;
     // The veto point sits BEFORE the write, not after it: a host that refuses this toggle (the
     // canonical case is an `<lr-checkbox-group>` owner refusing to let the last checked option be
@@ -747,15 +744,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
         this.emit('lr-checkbox-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
-        // The interacted flag is part of "exactly as the user found it": `reflectInvalid()` feeds
-        // it to `syncValidityStates()`, so setting it before the veto would let a REFUSED first
-        // toggle start matching `:state(user-invalid)` for a change that never happened (the
-        // `data-invalid`/`aria-invalid` pair is gated by `touched`, which only a blur sets, so it
-        // was never affected). It is set here, inside the commit, so only a toggle the host allowed
-        // reveals validity. A real user still ends up interacted a moment later either way --
-        // `onBlur` sets the same flag when focus leaves, which is the native `:user-invalid`
-        // timing. A listener that resolves the request by writing `checked` itself suppresses the
-        // commit, so that write counts as programmatic, exactly like any other `.checked =`.
+        // Set inside the commit, not before the veto: a REFUSED first toggle must not start
+        // matching `:state(user-invalid)` for a change that never happened. A listener that resolves
+        // the request by writing `checked` itself suppresses the commit, so that write counts as
+        // programmatic, exactly like any other `.checked =`.
         this.hasInteracted = true;
         this.checked = proposed;
         this.indeterminate = false;
@@ -783,7 +775,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.effectiveDisabled) return;
+    if (this.liveDisabled) return;
     if (e.repeat) return;
     // Native checkboxes toggle with Space. Enter remains available to the
     // surrounding form's own keyboard behavior.
@@ -902,8 +894,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     // form-associated custom element tracks the platform's own "actually disabled" concept
     // directly (the same concept that triggers the forced blur in the first place) and is already
     // correct by this point for both paths, so it is checked as well.
-    if (!this.effectiveDisabled && !this.matches(':disabled')) {
-      this.touched = true;
+    if (!this.liveDisabled) {
       this.hasInteracted = true;
       this.reflectInvalid();
     }
@@ -911,12 +902,16 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   };
 
   private onFocus = (event: FocusEvent): void => {
+    if (this.liveDisabled) {
+      event.stopPropagation();
+      return;
+    }
     relayNativeEvent(this, event);
   };
 
   override render(): TemplateResult {
     const mixed = this.indeterminate;
-    const hasHint = this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
+    const hasHint = this.withHint || this.hasHintSlot || this.hasHelpTextSlot || Boolean(this.hint || this.helpText);
     const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
     const controlParts = [
       'box',
@@ -924,14 +919,10 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
       this.checked ? 'checked control--checked' : '',
       mixed ? 'indeterminate control--indeterminate' : '',
     ].filter(Boolean).join(' ');
-    const describedBy = [
-      this.getAttribute('aria-describedby') ?? '',
-      hasError ? 'checkbox-error' : '',
-      hasHint ? 'checkbox-hint' : '',
-    ]
+    const describedBy = [hasError ? 'checkbox-error' : '', hasHint ? 'checkbox-hint' : '']
       .filter(Boolean)
       .join(' ');
-    const invalid = hasError || (this.touched && !this.internals.validity.valid);
+    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`
       <div part="form-control">
         <span class="checkbox-layout" part="row" @click=${this.onClick}>

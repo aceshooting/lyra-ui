@@ -37,7 +37,18 @@ export const styles = css`
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    gap: var(--lr-rating-gap, var(--symbol-spacing, var(--lr-space-xs)));
+    /* The default gap keeps adjacent symbol centres at least 1.5rem apart (WCAG 2.5.8); a public
+       gap value wins. */
+    gap: var(
+      --lr-rating-gap,
+      var(
+        --symbol-spacing,
+        max(
+          var(--lr-space-xs),
+          calc(var(--lr-size-1-5rem) - var(--lr-rating-size, var(--_lr-rating-size)))
+        )
+      )
+    );
     min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     min-block-size: var(--lr-icon-button-size);

@@ -874,7 +874,7 @@ it("fires input and change for arrow-key selection, matching click and Space", a
   const nativeInput = requiredItem(seen, 0, "native arrow input event");
   const inputAlias = requiredItem(seen, 1, "arrow input alias");
   const nativeChange = requiredItem(seen, 2, "native arrow change event");
-  expect(nativeInput.event instanceof InputEvent).to.be.true;
+  expect(nativeInput.event.constructor === Event).to.be.true;
   expect(nativeChange.event.constructor === Event).to.be.true;
   expect(
     nativeInput.event.target === group && nativeChange.event.target === group

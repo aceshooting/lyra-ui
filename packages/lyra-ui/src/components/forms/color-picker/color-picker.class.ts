@@ -14,7 +14,7 @@ import {
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { isRtl, rtlAwarePlacement } from '../../../internal/rtl.js';
-import { optionalLiteralSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, optionalLiteralSetConverter } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import {
@@ -26,6 +26,8 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { hasCustomState } from '../../../internal/custom-states.js';
+import { swatchKeyTarget } from '../swatch-picker/swatch-keys.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import {
   getOwnDataDescriptor,
@@ -39,7 +41,6 @@ import {
   formatColor,
   hsva,
   parseColor,
-  sameColor,
   withAlphaFormat,
   type LyraColorHsva,
   type LyraColorPickerFormat,
@@ -61,6 +62,11 @@ export type {
   LyraColorPickerOutputFormat,
 } from './color-core.js';
 export type { PlaceStrategy };
+
+const COLOR_FORMAT = literalSetConverter<LyraColorPickerFormat>(['hex', 'rgb', 'hsl', 'hsv'], 'hex');
+/** Case-insensitive; the `*a` spellings (`rgba`) name the base format, with alpha from `opacity`. */
+const normalizeColorFormat = (value: unknown): LyraColorPickerFormat =>
+  COLOR_FORMAT.normalize(typeof value === 'string' ? value.toLowerCase().replace(/a$/, '') : value);
 
 /** Unsupported values resolve to *absent* so this control's own mirrored default stays the
  *  fallback, rather than a member baked into the converter. */
@@ -87,16 +93,34 @@ export interface LyraColorPickerSwatch {
   icon?: unknown;
 }
 
-/** Arrow-key step, in percent/degrees. Shift multiplies it by {@link LARGE_STEP_MULTIPLIER}. */
+/** Arrow-key step, in percent/degrees. Shift or PageUp/PageDown multiplies it by
+ *  {@link LARGE_STEP_MULTIPLIER}. */
 const SMALL_STEP = 1;
-/** How much larger a shift+arrow step is than a plain arrow step. */
+/** How much larger a large step is than a plain arrow step. */
 const LARGE_STEP_MULTIPLIER = 10;
+const PAGE_KEYS: Readonly<Record<string, string>> = { PageUp: 'ArrowUp', PageDown: 'ArrowDown' };
 /** The order the format toggle cycles through. */
 const FORMAT_CYCLE: LyraColorPickerFormat[] = ['hex', 'rgb', 'hsl', 'hsv'];
-const MAX_COLOR_PICKER_SWATCHES = 10_000;
-const EMPTY_COLOR_PICKER_SWATCHES: readonly LyraColorPickerSwatch[] = Object.freeze([]);
+const MAX_COLOR_PICKER_SWATCHES = 512;
+/** A palette entry with its colour parsed once, so rendering never re-parses it. */
+interface ProjectedSwatch extends LyraColorPickerSwatch {
+  readonly parsed: LyraColorHsva | null;
+  readonly css: string;
+  readonly hexa: string;
+}
+const EMPTY_COLOR_PICKER_SWATCHES: readonly ProjectedSwatch[] = Object.freeze([]);
 
-function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwatch[] {
+function projectedSwatch(entry: LyraColorPickerSwatch): ProjectedSwatch {
+  const parsed = parseColor(entry.color);
+  return Object.freeze({
+    ...entry,
+    parsed,
+    css: parsed ? cssColor(parsed) : '',
+    hexa: parsed ? formatColor(parsed, 'hexa') : '',
+  });
+}
+
+function projectColorPickerSwatches(value: unknown): readonly ProjectedSwatch[] {
   try {
     if (typeof value === 'string') {
       return Object.freeze(
@@ -105,7 +129,7 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
           .slice(0, MAX_COLOR_PICKER_SWATCHES)
           .flatMap((entry) => {
             const color = entry.trim();
-            return color ? [Object.freeze({ color })] : [];
+            return color ? [projectedSwatch({ color })] : [];
           }),
       );
     }
@@ -119,13 +143,13 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
       length.value < 0
     )
       return EMPTY_COLOR_PICKER_SWATCHES;
-    const swatches: LyraColorPickerSwatch[] = [];
+    const swatches: ProjectedSwatch[] = [];
     for (let index = 0; index < Math.min(length.value, MAX_COLOR_PICKER_SWATCHES); index += 1) {
       const entry = getOwnDataDescriptor(value, String(index));
       if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       if (typeof entry.value === 'string') {
         const color = entry.value.trim();
-        if (color) swatches.push(Object.freeze({ color }));
+        if (color) swatches.push(projectedSwatch({ color }));
         continue;
       }
       if (entry.value === null || typeof entry.value !== 'object' || Array.isArray(entry.value)) continue;
@@ -162,7 +186,7 @@ function projectColorPickerSwatches(value: unknown): readonly LyraColorPickerSwa
         icon === MISSING_OWN_DATA_DESCRIPTOR || icon === UNSAFE_OWN_DATA_DESCRIPTOR
           ? undefined
           : icon.value;
-      swatches.push(Object.freeze({
+      swatches.push(projectedSwatch({
         color: color.value.trim(),
         ...(labelValue === undefined ? {} : { label: labelValue }),
         ...(disabledValue === undefined ? {} : { disabled: disabledValue as boolean }),
@@ -236,7 +260,9 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *
  * Colour is never the only channel carrying state: the trigger is described by the current value in
  * text, the panel shows it in an editable field, and the selected palette swatch is marked with
- * `aria-pressed` plus a check mark rather than a tint alone.
+ * `aria-checked` plus a check mark rather than a tint alone. The palette is one roving
+ * `radiogroup`: a single tab stop, with the arrow keys (Left/Right swap under RTL), Home and End
+ * moving to and selecting the next enabled swatch, like `<lr-swatch-picker>`.
  * Pointer drags are reversible previews: a release commits the latest colour, while cancellation,
  * lost capture, disablement, disconnection, or document adoption silently restores the colour and
  * submitted form value that existed before the gesture.
@@ -444,15 +470,27 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
    *  the visible swatch is denser. The Web Awesome / Shoelace spellings `small`/`medium`/`large`
    *  are accepted for `s`/`m`/`l`, so a migration is a tag rename with no attribute rewrite. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Output format for `value`. Input is always parsed permissively regardless of this. */
-  @property() format: LyraColorPickerFormat = 'hex';
+  private _format: LyraColorPickerFormat = 'hex';
+  /** Output format for `value`: `hex`, `rgb`, `hsl` or `hsv`, matched case-insensitively (`rgba`
+   *  and the other `*a` spellings name the base format; alpha comes from `opacity`). Anything else
+   *  is `hex`. Input is always parsed permissively regardless of this. */
+  @property({ converter: { fromAttribute: normalizeColorFormat } })
+  get format(): LyraColorPickerFormat {
+    return this._format;
+  }
+  set format(next: LyraColorPickerFormat) {
+    const old = this._format;
+    this._format = normalizeColorFormat(next);
+    this.requestUpdate('format', old);
+  }
   /** Enables the alpha channel: an opacity slider, and an alpha-carrying serialized value. */
   @property({ type: Boolean }) opacity = false;
   /** Serializes `value` in upper case (`#FF0000` rather than `#ff0000`). */
   @property({ type: Boolean }) uppercase = false;
-  /** Predefined palette. A `;`-separated string, an array of colour strings, or an array of
-   *  `{ color, label }` objects. Every colour the picker can parse is accepted. A blank object
-   *  label is treated as absent so the localized raw-colour accessible-name fallback remains. */
+  /** Predefined palette (the first 512 entries). A `;`-separated string, an array of colour
+   *  strings, or an array of `{ color, label }` objects. Every colour the picker can parse is
+   *  accepted. A blank object label is treated as absent so the localized raw-colour
+   *  accessible-name fallback remains. */
   @property() swatches: string | string[] | LyraColorPickerSwatch[] = '';
   /** Removes the button that cycles between formats. */
   @property({ type: Boolean, attribute: 'without-format-toggle' }) withoutFormatToggle = false;
@@ -900,9 +938,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   private swatchSource: unknown;
-  private projectedSwatches: readonly LyraColorPickerSwatch[] = EMPTY_COLOR_PICKER_SWATCHES;
+  private projectedSwatches: readonly ProjectedSwatch[] = EMPTY_COLOR_PICKER_SWATCHES;
 
-  private normalizedSwatches(): readonly LyraColorPickerSwatch[] {
+  private normalizedSwatches(): readonly ProjectedSwatch[] {
     const source = this.swatches;
     if (source !== this.swatchSource) {
       this.swatchSource = source;
@@ -1120,12 +1158,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private onGridKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled || this.readonly) return;
-    const step = SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1);
+    const key = PAGE_KEYS[event.key] ?? event.key;
+    const step = SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
     let next: LyraColorHsva | undefined;
     if (inline !== null) next = hsva(this.color.h, this.color.s + inline, this.color.v, this.color.a);
-    else if (event.key === 'ArrowUp') next = hsva(this.color.h, this.color.s, this.color.v + step, this.color.a);
-    else if (event.key === 'ArrowDown') next = hsva(this.color.h, this.color.s, this.color.v - step, this.color.a);
+    else if (key === 'ArrowUp') next = hsva(this.color.h, this.color.s, this.color.v + step, this.color.a);
+    else if (key === 'ArrowDown') next = hsva(this.color.h, this.color.s, this.color.v - step, this.color.a);
     else if (event.key === 'Home') next = hsva(this.color.h, 0, this.color.v, this.color.a);
     else if (event.key === 'End') next = hsva(this.color.h, 100, this.color.v, this.color.a);
     if (!next) return;
@@ -1135,12 +1174,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private onHueKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled || this.readonly) return;
-    const step = SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1);
+    const key = PAGE_KEYS[event.key] ?? event.key;
+    const step = SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1);
     const inline = this.inlineStep(event);
     let hue: number | undefined;
     if (inline !== null) hue = this.color.h + inline;
-    else if (event.key === 'ArrowUp') hue = this.color.h + step;
-    else if (event.key === 'ArrowDown') hue = this.color.h - step;
+    else if (key === 'ArrowUp') hue = this.color.h + step;
+    else if (key === 'ArrowDown') hue = this.color.h - step;
     else if (event.key === 'Home') hue = 0;
     else if (event.key === 'End') hue = 360;
     if (hue === undefined) return;
@@ -1152,12 +1192,13 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   private onAlphaKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled || this.readonly) return;
-    const step = (SMALL_STEP * (event.shiftKey ? LARGE_STEP_MULTIPLIER : 1)) / 100;
+    const key = PAGE_KEYS[event.key] ?? event.key;
+    const step = (SMALL_STEP * (event.shiftKey || key !== event.key ? LARGE_STEP_MULTIPLIER : 1)) / 100;
     const inline = this.inlineStep(event);
     let alpha: number | undefined;
     if (inline !== null) alpha = this.color.a + inline / 100;
-    else if (event.key === 'ArrowUp') alpha = this.color.a + step;
-    else if (event.key === 'ArrowDown') alpha = this.color.a - step;
+    else if (key === 'ArrowUp') alpha = this.color.a + step;
+    else if (key === 'ArrowDown') alpha = this.color.a - step;
     else if (event.key === 'Home') alpha = 0;
     else if (event.key === 'End') alpha = 1;
     if (alpha === undefined) return;
@@ -1220,9 +1261,9 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     this.onFieldChange(event);
   };
 
-  private onSwatchClick(swatch: LyraColorPickerSwatch): void {
+  private onSwatchClick(swatch: ProjectedSwatch): void {
     if (this.liveDisabled || this.readonly || swatch.disabled) return;
-    const parsed = parseColor(swatch.color);
+    const parsed = swatch.parsed;
     if (!parsed) return;
     this.commitColor(this.opacity ? parsed : hsva(parsed.h, parsed.s, parsed.v, 1));
   }
@@ -1326,7 +1367,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       @pointerdown=${(event: PointerEvent) => this.beginDrag(event, 'grid', event.currentTarget as HTMLElement)}
     >
       <!-- hit-area-exempt: the pointer target is the whole grid box, which is far larger than the
-           40px floor; this handle is the visual thumb drawn at the current point and is reached by
+           icon-button floor; this handle is the visual thumb drawn at the current point and is reached by
            keyboard through its own role="slider" contract. -->
       <div
         part="grid-handle"
@@ -1414,23 +1455,51 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     </div>`;
   }
 
-  private renderSwatches(entries: readonly LyraColorPickerSwatch[]): TemplateResult {
-    return html`<div part="swatches" role="group" aria-label=${this.localize('colorPickerSwatches')}>
-      ${entries.map((entry) => {
-        const parsed = parseColor(entry.color);
-        const selected = parsed !== null && sameColor(parsed, this.color);
-        const part = selected ? 'swatch swatch-selected' : 'swatch';
+  private onSwatchKeyDown = (event: KeyboardEvent): void => {
+    if (this.liveDisabled || this.readonly) return;
+    const entries = this.normalizedSwatches();
+    const origin = Number((event.target as HTMLElement).dataset['index']);
+    if (!Number.isInteger(origin)) return;
+    const target = swatchKeyTarget(
+      event.key,
+      origin,
+      entries.length,
+      (index) => entries[index]!.disabled === true,
+      isRtl(this),
+    );
+    if (target < 0) return;
+    event.preventDefault();
+    this.onSwatchClick(entries[target]!);
+    this.renderRoot.querySelectorAll<HTMLElement>('[part~="swatch"]')[target]?.focus();
+  };
+
+  private renderSwatches(entries: readonly ProjectedSwatch[]): TemplateResult {
+    const current = formatColor(this.color, 'hexa');
+    const selected = entries.findIndex((entry) => entry.hexa === current);
+    const tabbable = selected >= 0 && !entries[selected]!.disabled
+      ? selected
+      : entries.findIndex((entry) => !entry.disabled);
+    return html`<div
+      part="swatches"
+      role="radiogroup"
+      aria-label=${this.localize('colorPickerSwatches')}
+      @keydown=${this.onSwatchKeyDown}
+    >
+      ${entries.map((entry, index) => {
         const name = entry.label ?? this.localize('colorPickerSwatch', undefined, { color: entry.color });
         return html`
           <!-- hit-area-exempt: palette swatches are 24px targets separated by at least 4px, so
                adjacent centres stay 28px apart -- WCAG 2.5.8's target-spacing exception. -->
           <button
             type="button"
-            part=${part}
-            aria-pressed=${selected ? 'true' : 'false'}
+            role="radio"
+            part=${index === selected ? 'swatch swatch-selected' : 'swatch'}
+            data-index=${index}
+            aria-checked=${index === selected ? 'true' : 'false'}
             aria-label=${name}
+            tabindex=${index === tabbable ? '0' : '-1'}
             ?disabled=${this.effectiveDisabled || entry.disabled === true}
-            style=${styleMap(parsed ? { '--lr-color-picker-swatch-color': cssColor(parsed) } : {})}
+            style=${styleMap(entry.parsed ? { '--lr-color-picker-swatch-color': entry.css } : {})}
             @click=${() => this.onSwatchClick(entry)}
           >${entry.icon == null ? nothing : renderInertPresentation(entry.icon, { part: 'swatch-icon' })}</button>
         `;
@@ -1524,7 +1593,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // suppressing the host name must not orphan a rendered visible label from the control it names.
     const name = hostAriaLabel(this) ?? (!hasLabel ? this.localize('colorPicker') : '');
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
-    const userInvalid = this.internals.states.has('user-invalid');
+    const userInvalid = hasCustomState(this.internals, 'user-invalid');
     const invalid = hasError || userInvalid;
     const describedBy = this.localDescriptionIds = [
       hasError ? this.errorId : '',

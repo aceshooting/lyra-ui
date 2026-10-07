@@ -1025,7 +1025,7 @@ it("selects a swatch on click and marks the active one with more than colour alo
     ></lr-color-picker>`
   );
   const [red, green] = parts(el, "swatch") as [HTMLElement, HTMLElement];
-  expect(red.getAttribute("aria-pressed")).to.equal("false");
+  expect(red.getAttribute("aria-checked")).to.equal("false");
 
   const changed = oneEvent(el, "lr-change");
   green.click();
@@ -1035,8 +1035,8 @@ it("selects a swatch on click and marks the active one with more than colour alo
   );
   await el.updateComplete;
   expect(el.value).to.equal("#00ff00");
-  expect(parts(el, "swatch")[1]!.getAttribute("aria-pressed")).to.equal("true");
-  expect(parts(el, "swatch")[0]!.getAttribute("aria-pressed")).to.equal(
+  expect(parts(el, "swatch")[1]!.getAttribute("aria-checked")).to.equal("true");
+  expect(parts(el, "swatch")[0]!.getAttribute("aria-checked")).to.equal(
     "false"
   );
 });
@@ -1939,7 +1939,8 @@ it("closes on an outside pointerdown but not on one inside the panel", async () 
 it("retains overlay positioning and Escape ownership when an outside close is vetoed", async () => {
   const el = await opened();
   const panel = part(el, "panel");
-  expect(panel.style.position).to.not.equal("");
+  // Placement waits on the lazily imported positioner, so under load it lands after `open` settles.
+  await waitUntil(() => panel.style.position !== "", "the panel is placed");
   el.addEventListener("lr-hide", (event) => event.preventDefault(), {
     once: true,
   });
@@ -2083,7 +2084,7 @@ it("reflects placement and defaults to bottom-start", async () => {
 it("repositions the open panel when placement, size, or hoist changes", async () => {
   const el = await opened();
   const panel = part(el, "panel");
-  expect(panel.style.position).to.equal("absolute");
+  await waitUntil(() => panel.style.position === "absolute", "the panel is placed");
 
   // `hoist` flows through the very same "already open, reposition" branch as `placement`/`size`;
   // its effect on strategy is written synchronously, unlike the async left/top recomputation, so
@@ -2106,7 +2107,7 @@ it("supports inline rendering and chooses absolute versus hoisted fixed popup po
 
   const anchored = await opened();
   expect(anchored.hoist).to.equal(false);
-  expect(part(anchored, "panel").style.position).to.equal("absolute");
+  await waitUntil(() => part(anchored, "panel").style.position === "absolute", "the panel is placed");
 
   const hoisted = await opened(
     html`<lr-color-picker label="A" hoist></lr-color-picker>`
@@ -2126,7 +2127,7 @@ it("activates positioning and light-dismiss when an open inline panel changes to
 
   el.inline = false;
   await el.updateComplete;
-  expect(part(el, "panel").style.position).to.equal("absolute");
+  await waitUntil(() => part(el, "panel").style.position === "absolute", "the panel is placed");
 
   outside.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, composed: true })
@@ -2138,7 +2139,7 @@ it("activates positioning and light-dismiss when an open inline panel changes to
 
 it("tears down positioning and clears inline styling when switching from popup to inline while open", async () => {
   const el = await opened();
-  expect(part(el, "panel").style.position).to.equal("absolute");
+  await waitUntil(() => part(el, "panel").style.position === "absolute", "the panel is placed");
   el.inline = true;
   await el.updateComplete;
   expect(part(el, "panel").style.position).to.equal("");

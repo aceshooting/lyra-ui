@@ -52,3 +52,20 @@ it('uses the checked track fill independently of the unchecked token in resting,
     await resetMouse();
   }
 });
+
+it('exposes visible error chrome as aria-invalid', async () => {
+  const el = await fixture<LyraSwitch>('<lr-switch error-text="Required by policy">Enable</lr-switch>');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-invalid')).to.equal('true');
+});
+
+it('exposes and paints invalidity as soon as a toggle leaves a required switch off', async () => {
+  const el = await fixture<LyraSwitch>('<lr-switch required>Enable</lr-switch>');
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const track = el.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
+  expect(getComputedStyle(track).outlineStyle).to.equal('none');
+  base.click();
+  base.click();
+  await el.updateComplete;
+  expect(base.getAttribute('aria-invalid')).to.equal('true');
+  expect(getComputedStyle(track).outlineStyle).to.equal('solid');
+});

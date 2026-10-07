@@ -64,6 +64,7 @@ export interface LyraCheckboxGroupToggleRequestDetail {
 export interface LyraCheckboxGroupEventMap {
   'lr-invalid': CustomEvent<null>;
   input: CustomEvent<Readonly<{ value: readonly string[] }>>;
+  'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   change: CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-change': CustomEvent<Readonly<{ value: readonly string[] }>>;
   'lr-checkbox-group-toggle-request': CustomEvent<
@@ -90,6 +91,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @slot hint - Supporting text.
  * @slot error - Custom validation message.
  * @event input - User selection changed.
+ * @event lr-input - Prefixed alias for `input`; `detail: { value: string[] }`.
  * @event change - User selection changed.
  * @event lr-change - User selection changed; detail is `{ value: string[] }`. Not fired for a
  * toggle a listener refused through `lr-checkbox-group-toggle-request`.
@@ -201,15 +203,12 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
-  @state() private touched = false;
-  /** Whether the user has acted on this group yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
-   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): toggling a child checkbox is an
-   *  interaction the instant it happens, and so is interactive validation — `reportValidity()` and
-   *  a submission attempt alike, via `installInteractionOnInvalid()` — exactly as it does for
-   *  native `:user-invalid`. A silent `checkValidity()` alone never counts. Not `@state`: nothing
-   *  in `render()` reads it. */
-  private hasInteracted = false;
+  /** Whether the user has acted on this group yet, which gates `user-valid`/`user-invalid`, the
+   *  `data-invalid` hook and intrinsic `aria-invalid`: toggling a child checkbox is an interaction
+   *  the instant it happens, and so is interactive validation — `reportValidity()` and a submission
+   *  attempt alike, via `installInteractionOnInvalid()` — as for native `:user-invalid`. A silent
+   *  `checkValidity()` alone never counts. */
+  @state() private hasInteracted = false;
   @state() private hasLabelSlot = false;
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -365,6 +364,17 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     return Array.from(querySelectorAll.call(this, 'lr-checkbox')).filter((box) => this.ownsCheckbox(box));
   }
 
+  private cachedBoxes?: LyraCheckbox[];
+
+  /** The owned checkboxes, shared by the child-driven syncs of one task; DOM changes drop it. */
+  private syncBoxes(): LyraCheckbox[] {
+    if (!this.cachedBoxes) {
+      this.cachedBoxes = this.boxes;
+      queueMicrotask(() => { this.cachedBoxes = undefined; });
+    }
+    return this.cachedBoxes;
+  }
+
   /** Whether the group is disabled explicitly or by an ancestor fieldset. */
   get effectiveDisabled(): boolean {
     return this.disabled || this._fieldsetDisabled;
@@ -394,31 +404,18 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     }
   }
 
-  private readValue(): string[] {
-    return this.boxes.filter((box) => box.checked).map((box) => box.value ?? 'on');
-  }
-
-  // A group whose children share a `value` produces indistinguishable FormData entries -- the
-  // default `value = 'on'` on every `<lr-checkbox>` makes that the *easy* mistake, not an exotic
-  // one. Reads the content attribute as well as the property so this is still accurate while a
-  // child is queried before its own upgrade (`connectedCallback()` syncs in document order, so the
-  // group runs first); a child with neither has the same effective `'on'` the form value would use.
-  private warnOnDuplicateValues(): void {
-    const seen = new Set<string>();
-    for (const box of this.boxes) {
-      const value = box.value ?? (box as unknown as Element).getAttribute('value') ?? 'on';
-      if (!seen.has(value)) {
-        seen.add(value);
-        continue;
-      }
-      devWarnOnce(DUPLICATE_VALUE_WARNING_KEY, DUPLICATE_VALUE_WARNING);
-      return;
-    }
-  }
-
   private sync(): void {
-    const next = this.readValue();
-    this.warnOnDuplicateValues();
+    const next: string[] = [];
+    // Children sharing a `value` (the default `'on'` makes that the easy mistake) produce
+    // indistinguishable FormData entries. The content attribute is read too, so an un-upgraded child
+    // still counts.
+    const seen = new Set<string>();
+    for (const box of this.syncBoxes()) {
+      const value = box.value ?? (box as unknown as Element).getAttribute('value') ?? 'on';
+      if (seen.has(value)) devWarnOnce(DUPLICATE_VALUE_WARNING_KEY, DUPLICATE_VALUE_WARNING);
+      seen.add(value);
+      if (box.checked) next.push(value);
+    }
     const old = this._value;
     this._value = next;
     this.requestUpdate('value', old);
@@ -460,7 +457,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
    *  validity or the interaction flag. */
   private reflectValidityStates(): void {
     const barred = this.barredFromValidation;
-    this.toggleAttribute('data-invalid', !barred && this.touched && !this.internals.validity.valid);
+    this.toggleAttribute('data-invalid', !barred && this.hasInteracted && !this.internals.validity.valid);
     syncValidityStates(this.internals, {
       required: this.required,
       hasInteracted: this.hasInteracted,
@@ -486,6 +483,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     const detail = (): Readonly<{ value: readonly string[] }> =>
       Object.freeze({ value: this.value });
     this.emit('input', detail());
+    this.emit('lr-input', detail());
     this.emit('change', detail());
     this.emit('lr-change', detail());
   };
@@ -593,6 +591,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
 
   private onSlotChange = (): void => {
+    this.cachedBoxes = undefined;
     this.syncSupportSlotFlags();
     this.reconcileChildControllers();
     if (!this.applyPendingRestore() && !this.applyPendingValues()) this.sync();
@@ -623,9 +622,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     if (this.pendingRestoreValues === undefined || this.boxes.length === 0) return false;
     const values = this.pendingRestoreValues;
     this.pendingRestoreValues = undefined;
-    // A restore is not user interaction, so it clears the interacted flags; a plain `value`
+    // A restore is not user interaction, so it clears the interacted flag; a plain `value`
     // assignment deliberately does not.
-    this.touched = false;
     this.hasInteracted = false;
     this.applyValues(values);
     return true;
@@ -651,7 +649,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // on the same node regardless of registration order, so onChildEvent's
     // stopImmediatePropagation() reliably intercepts the child's event before it can ever
     // reach an ancestor listener -- this group's own, or one further up the tree.
+    this.cachedBoxes = undefined;
     this.addEventListener('input', this.onChildEvent, { capture: true });
+    this.addEventListener('lr-input', this.onChildEvent, { capture: true });
     this.addEventListener('change', this.onChildEvent, { capture: true });
     this.addEventListener('lr-change', this.onChildEvent, { capture: true });
     this.addEventListener('lr-checkbox-toggle-request', this.onChildToggleRequest, {
@@ -714,7 +714,9 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   override disconnectedCallback(): void {
     this.releaseExternalDescription();
     this.releaseRequiredDescription();
+    this.cachedBoxes = undefined;
     this.removeEventListener('input', this.onChildEvent, { capture: true });
+    this.removeEventListener('lr-input', this.onChildEvent, { capture: true });
     this.removeEventListener('change', this.onChildEvent, { capture: true });
     this.removeEventListener('lr-change', this.onChildEvent, { capture: true });
     this.removeEventListener('lr-checkbox-toggle-request', this.onChildToggleRequest, {
@@ -774,10 +776,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       const disabled = typeof blurredControl?.matches === 'function'
         ? blurredControl.matches(':disabled')
         : this.effectiveDisabled;
-      if (!disabled) {
-        this.touched = true;
-        this.hasInteracted = true;
-      }
+      if (!disabled) this.hasInteracted = true;
       this.sync();
     }, true);
   }
@@ -915,7 +914,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     } finally {
       this.suppressCheckboxSync = false;
     }
-    this.touched = false;
     this.hasInteracted = false;
     this.sync();
   }
@@ -939,7 +937,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     const hasHint = this.hasHintSlot || Boolean(this.hint) || this.withHint;
     const hasError = this.hasErrorSlot || Boolean(this.errorText);
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
-    const invalid = hasError || (this.touched && !this.internals.validity.valid);
+    const invalid = hasError || (this.hasInteracted && !this.internals.validity.valid);
     return html`<fieldset
       part="form-control"
       ?disabled=${this.effectiveDisabled}
@@ -951,8 +949,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
-      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>
-      <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}><slot name="error" @slotchange=${this.onSlotChange}>${this.errorText}</slot></div>
+      <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
+      <div part="error" id=${this.errorId} ?hidden=${!this.errorText && !this.hasErrorSlot}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
       <span
         id=${this.requiredDescriptionId}
         class="sr-only"

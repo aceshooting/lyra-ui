@@ -591,3 +591,29 @@ export const ImmediateDisable: StoryObj = {
     </div>
   `,
 };
+
+export const UnavailableSwatch: Story = {
+  name: 'Unavailable swatch and styled selection',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'An item with `disabled: true` renders a real disabled button that arrow keys skip. The selected swatch carries the `swatch-selected` part, so `::part(swatch-selected)` styles it from outside.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      #swatch-picker-unavailable::part(swatch-selected) {
+        outline: 2px dashed currentColor;
+        outline-offset: 2px;
+      }
+    </style>
+    <lr-swatch-picker
+      id="swatch-picker-unavailable"
+      aria-label="Accent color"
+      .items=${accents().map((item, index) => (index === 1 ? { ...item, disabled: true } : item))}
+      value="blue"
+    ></lr-swatch-picker>
+  `,
+};

@@ -5,8 +5,7 @@ export const groupStyles = css`
   :host {
     /* The group's own chrome rides the shared size ladder (internal/sizes.styles.ts): the row gap
        is a fraction of the tier's control height, not a fixed space token, so it stays in
-       proportion to the options beside it. At the default "m" tier it resolves to exactly the
-       pre-size --lr-space-s. */
+       proportion to the options beside it. */
     --_lr-radio-group-row-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
   }
@@ -49,6 +48,17 @@ export const groupStyles = css`
   [part="error"] {
     color: var(--lr-color-danger);
   }
+  :host(:state(user-invalid)) [part~="radios"] {
+    padding: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid
+      var(--lr-radio-group-invalid-border, var(--lr-color-danger));
+    border-radius: var(--lr-radius);
+  }
+  :host(:disabled) [part~="label"],
+  :host(:disabled) [part~="hint"],
+  :host(:disabled) [part="error"] {
+    opacity: var(--lr-opacity-disabled);
+  }
   [part="base"],
   [part="form-control"],
   [part~="label"],
@@ -57,6 +67,6 @@ export const groupStyles = css`
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 `;

@@ -98,6 +98,24 @@ export const Required: Story = {
   `,
 };
 
+export const InvalidChrome: Story = {
+  name: 'Invalid after interaction',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A required switch outlines its track (`--lr-switch-invalid-border`) and exposes `aria-invalid` once the user has toggled it off again or left it unset; `error-text` makes it invalid immediately.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; gap:0.75rem;">
+      <lr-switch required checked>Toggle me off</lr-switch>
+      <lr-switch error-text="Required by policy">Managed by your administrator</lr-switch>
+    </div>
+  `,
+};
+
 export const Interactive: Story = {
   render: () => html`
     <lr-switch

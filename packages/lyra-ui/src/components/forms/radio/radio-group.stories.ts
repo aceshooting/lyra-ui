@@ -111,3 +111,33 @@ export const ExternalDescription: StoryObj = {
     </lr-radio-group>
   `,
 };
+
+export const ReactivationAndInvalid: StoryObj = {
+  name: 'Re-selecting the chosen option and invalid chrome',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`lr-activate` fires on every activation, including a click on the option that is already selected. A required group outlines its options (`--lr-radio-group-invalid-border`) once focus has left it without a choice.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:grid; gap:1rem;">
+      <lr-radio-group
+        label="Plan"
+        value="a"
+        @lr-activate=${(e: CustomEvent<{ value: string }>) => {
+          const out = document.getElementById('radio-group-activate-log');
+          if (out) out.textContent = `lr-activate: ${e.detail.value}`;
+        }}
+      >
+        <lr-radio value="a">Starter</lr-radio><lr-radio value="b">Team</lr-radio>
+      </lr-radio-group>
+      <p id="radio-group-activate-log" style="font-family: monospace;">No activation yet.</p>
+      <lr-radio-group label="Delivery" required>
+        <lr-radio value="email">Email</lr-radio><lr-radio value="post">Post</lr-radio>
+      </lr-radio-group>
+    </div>
+  `,
+};

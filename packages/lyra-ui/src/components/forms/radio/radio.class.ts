@@ -42,6 +42,7 @@ export interface LyraRadioEventMap {
   change: Event;
   'lr-input': CustomEvent<{ checked: boolean; value: string }>;
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
+  'lr-activate': CustomEvent<{ value: string }>;
   focus: FocusEvent;
   blur: FocusEvent;
 }
@@ -101,6 +102,8 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * @event lr-change - Standalone prefixed compatibility alias for `change`.
  *   `detail: { checked, value }`. An owning radio group emits its aggregate value-event sequence
  *   instead of any child value events.
+ * @event lr-activate - A standalone radio was activated, including when it was already checked.
+ *   `detail: { value }`. An owning radio group emits its own `lr-activate` instead.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
  * @event lr-invalid - The standalone radio failed a validity check. Aggregate groups emit their
@@ -157,6 +160,9 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * `--lr-radio-checked-border-color`.
  * @cssprop [--lr-radio-active-ring-color=var(--lr-color-brand-quiet)] - Indicator ring while the
  * interactive row is pressed.
+ * @cssprop [--lr-radio-invalid-border-color=var(--lr-color-danger)] - Indicator border while the
+ * radio matches `:state(user-invalid)`; also the border of `<lr-radio-button>` and
+ * `appearance="button"`.
  * @cssprop [--checked-icon-color=var(--lr-radio-checked-dot-color)] - WA-compatible selected-glyph
  * color alias.
  * @cssprop [--checked-icon-scale=1] - WA-compatible selected-glyph scale alias.
@@ -237,13 +243,13 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   @state() private hasStart = false;
   @state() private hasEnd = false;
   private labelObserver?: MutationObserver;
-  /** Whether the user has acted on this radio yet, which is what gates the `user-valid`/
-   *  `user-invalid` custom states: a selection, a blur, or interactive validation
-   *  (`reportValidity()` or a submission attempt, via `installInteractionOnInvalid()`). A silent
-   *  `checkValidity()` alone never counts. A pristine required radio is genuinely invalid, but
-   *  styling it as an error before the user has done anything is hostile, which is the entire
-   *  reason the `user-*` pair exists. Not `@state`: nothing in `render()` reads it. */
-  private hasInteracted = false;
+  /** Whether the user has acted on this radio yet, which gates `user-valid`/`user-invalid` and
+   *  intrinsic `aria-invalid`: a selection, a blur, or interactive validation (`reportValidity()`
+   *  or a submission attempt, via `installInteractionOnInvalid()`). A silent `checkValidity()`
+   *  alone never counts. */
+  @state() private hasInteracted = false;
+  /** Set while an `appearance` change replaces the focused control; its blur is not interaction. */
+  private swappingControl = false;
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
@@ -429,8 +435,14 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     else this.externalDescriptionLease = acquireResolvedAriaRelationship(this, target, 'aria-describedby');
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.swappingControl = this.hasUpdated && changed.has('appearance');
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.swappingControl = false;
     this.syncExternalDescription();
   }
 
@@ -708,21 +720,31 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
 
   private select(): void {
     const group = this.group();
-    if (this.effectiveDisabled || this.checked) return;
-    this.hasInteracted = true;
+    if (this.effectiveDisabled) return;
+    if (!this.checked) this.hasInteracted = true;
     if (group) {
-      if (!group.selectRadio?.(this)) return;
+      group.selectRadio?.(this);
       return;
     }
-    this.checked = true;
-    dispatchNativeEvent(this, 'input');
-    this.emit('lr-input', { checked: true, value: this.value });
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { checked: true, value: this.value });
+    if (!this.checked) {
+      this.checked = true;
+      this.uncheckSameNameRadios();
+      dispatchNativeEvent(this, 'input');
+      this.emit('lr-input', { checked: true, value: this.value });
+      dispatchNativeEvent(this, 'change');
+      this.emit('lr-change', { checked: true, value: this.value });
+    }
+    this.emit('lr-activate', { value: this.value });
   }
-  /** Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own
-   *  `tabindex`, which is the only reason it is not private. */
-  protected get groupTabbable(): boolean { return this._tabbable; }
+  /** Standalone radios sharing a non-empty `name` and form owner behave like a native radio set. */
+  private uncheckSameNameRadios(): void {
+    if (!this.name) return;
+    for (const other of (this.getRootNode() as ParentNode).querySelectorAll<LyraRadio>(`${tag('radio')},${tag('radio-button')}`)) {
+      if (other !== this && other.name === this.name && other.form === this.form && !other.currentGroup()) {
+        other.checked = false;
+      }
+    }
+  }
   /** Actual contiguous button-run position. Standalone and non-adjacent controls stay rounded. */
   protected get buttonRunPosition(): RadioButtonRunPosition { return this._buttonRunPosition; }
 
@@ -764,7 +786,8 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     relayNativeEvent(this, event);
   };
   protected onBlur = (event: FocusEvent): void => {
-    if (!this.effectiveDisabled) {
+    // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
+    if (!this.effectiveDisabled && !this.matches(':disabled') && !this.swappingControl) {
       this.hasInteracted = true;
       this.reflectValidityStates();
     }
@@ -902,27 +925,35 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     `;
   }
 
+  /** @internal The button chrome `<lr-radio appearance="button">` and `<lr-radio-button>` share. */
+  protected renderButtonControl(): TemplateResult {
+    const parts = [
+      'base',
+      'button',
+      'control',
+      this.checked ? 'checked button--checked' : '',
+      this.effectiveDisabled ? 'disabled' : '',
+    ].filter(Boolean).join(' ');
+    return html`
+      <span part=${parts} data-run=${this.buttonRunPosition} role="radio"
+        tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
+        aria-checked=${this.checked ? 'true' : 'false'}
+        aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
+        aria-required=${this.effectiveRequired ? 'true' : 'false'}
+        aria-invalid=${this.invalid ? 'true' : 'false'}
+        aria-label=${this.getAttribute('aria-label') ?? nothing}
+        @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
+        ${this.renderButtonContent()}
+      </span>
+    `;
+  }
+
+  private get invalid(): boolean {
+    return this.hasInteracted && !this.internals.validity.valid;
+  }
+
   override render(): TemplateResult {
-    if (this.appearance === 'button') {
-      const parts = [
-        'base',
-        'button',
-        'control',
-        this.checked ? 'checked button--checked' : '',
-        this.effectiveDisabled ? 'disabled' : '',
-      ].filter(Boolean).join(' ');
-      return html`
-        <span part=${parts} data-run=${this.buttonRunPosition} role="radio"
-          tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
-          aria-checked=${this.checked ? 'true' : 'false'}
-          aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-          aria-required=${this.effectiveRequired ? 'true' : 'false'}
-          aria-label=${this.getAttribute('aria-label') ?? nothing}
-          @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
-          ${this.renderButtonContent()}
-        </span>
-      `;
-    }
+    if (this.appearance === 'button') return this.renderButtonControl();
     const controlParts = [
       'circle',
       'control',
@@ -934,6 +965,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
         aria-checked=${this.checked ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-required=${this.effectiveRequired ? 'true' : 'false'}
+        aria-invalid=${this.invalid ? 'true' : 'false'}
         aria-label=${this.getAttribute('aria-label') ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import type { TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { LyraRadio } from './radio.class.js';
@@ -33,9 +33,13 @@ import { styles } from './radio-button.styles.js';
  * @slot end - Content placed after the label.
  * @slot suffix - Shoelace-compatible alias for `end`, rendered through the same wrapper.
  * @event input - The user selected this radio.
+ * @event lr-input - A standalone radio button was selected; alias for `input`.
+ * `detail: { checked, value }`. An owning radio group emits its aggregate event instead.
  * @event change - The user selected this radio.
  * @event lr-change - A standalone radio button was selected. `detail: { checked, value }`. An
  * owning radio group emits its aggregate event instead.
+ * @event lr-activate - A standalone radio button was activated, including when it was already
+ * checked. `detail: { value }`. An owning radio group emits its own `lr-activate` instead.
  * @event focus - The internal control received focus.
  * @event blur - The internal control lost focus.
  * @event lr-invalid - The standalone radio button failed a validity check. Aggregate groups emit
@@ -70,6 +74,8 @@ import { styles } from './radio-button.styles.js';
  * @cssprop [--lr-radio-radius=var(--lr-form-control-radius)] - Corner radius of the outer edges of
  * the button row. Its private default follows the shared control radius and changes to
  * `--lr-radius-pill` for `pill`; an inherited or direct public value still wins.
+ * @cssprop [--lr-radio-invalid-border-color=var(--lr-color-danger)] - Button border while the control
+ * matches `:state(user-invalid)`.
  * @cssprop [--lr-radio-button-gap=var(--lr-space-xs)] - Gap between the start/prefix wrapper,
  * label, and end/suffix wrapper in both `<lr-radio-button>` and `<lr-radio appearance="button">`.
  * @cssprop [--lr-radio-button-hover-bg=var(--lr-color-brand-quiet)] - Unchecked button background
@@ -98,34 +104,7 @@ export class LyraRadioButton extends LyraRadio {
   static override styles = [LyraElement.styles, sizes, styles];
 
   override render(): TemplateResult {
-    const disabled = this.effectiveDisabled;
-    const parts = [
-      'base',
-      'button',
-      'control',
-      this.checked ? 'checked button--checked' : '',
-      disabled ? 'disabled' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    return html`
-      <span
-        part=${parts}
-        data-run=${this.buttonRunPosition}
-        role="radio"
-        tabindex=${disabled || !this.groupTabbable ? '-1' : '0'}
-        aria-checked=${this.checked ? 'true' : 'false'}
-        aria-disabled=${disabled ? 'true' : 'false'}
-        aria-required=${this.effectiveRequired ? 'true' : 'false'}
-        aria-label=${this.getAttribute('aria-label') ?? nothing}
-        @click=${this.onClick}
-        @keydown=${this.onKeyDown}
-        @focus=${this.onFocus}
-        @blur=${this.onBlur}
-      >
-        ${this.renderButtonContent()}
-      </span>
-    `;
+    return this.renderButtonControl();
   }
 }
 

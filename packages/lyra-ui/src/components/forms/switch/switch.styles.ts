@@ -8,7 +8,7 @@ export const styles = css`
        pill/thumb needs a radius well past --lr-radius's 0.375rem default, so it lives here rather
        than bent onto that shared token. Both track dimensions ride the shared size ladder
        (internal/sizes.styles.ts): half the tier's control height, inline size at the control's
-       long-standing 1.8:1 ratio -- at "m", exactly the 1.25rem x 2.25rem it shipped with. */
+       long-standing 1.8:1 ratio. */
     --_lr-switch-track-block-size: calc(var(--lr-form-control-height) * 0.5);
     --_lr-switch-track-inline-size: calc(
       var(--lr-switch-track-block-size, var(--_lr-switch-track-block-size)) *
@@ -64,6 +64,9 @@ export const styles = css`
   :host(:disabled) .switch-layout {
     cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
+  }
+  :host(:state(user-invalid)) [part~="track"] {
+    outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border, var(--lr-color-danger));
   }
 
   [part~="track"] {

@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -12,7 +12,7 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
+import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
   installInteractionOnInvalid,
@@ -186,7 +186,7 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * also cancels the native `invalid` event behind it, suppressing the browser's own validation
  * bubble so an app can present the failure its own way.
  * @slot label - Rich visible label content, appended after the plain `label` property.
- * @slot hint - Rich hint content, replacing the plain-text `hint` attribute.
+ * @slot hint - Rich hint content, rendered after the plain-text `hint`.
  * @slot help-text - Shoelace-compatible alias for the `hint` slot.
  * @slot error - Rich error content, replacing the plain-text `errorText` property.
  * @slot reference - Endpoint or unit references rendered beside the track.
@@ -354,7 +354,7 @@ export class LyraSlider extends LyraSliderBase {
   private _required = false;
   private _disabled = false;
   private _fieldsetDisabled = false;
-  private _hasInteracted = false;
+  @state() private _hasInteracted = false;
   private _min = 0;
   private _max = 100;
   private _step = 1;
@@ -563,7 +563,8 @@ export class LyraSlider extends LyraSliderBase {
     this.sanitizeCurrentValue();
   }
 
-  /** Step-grid interval; non-positive values select the unstepped mode.
+  /** Step-grid interval; non-positive values select the unstepped mode, where the arrow keys move
+   *  by a hundredth of the span (PageUp/PageDown by a tenth) and `stepUp()`/`stepDown()` do nothing.
    * @default 1 */
   get step(): number {
     return this._step;
@@ -687,13 +688,13 @@ export class LyraSlider extends LyraSliderBase {
    *  @default false */
   @property({ type: Boolean, reflect: true }) readonly = false;
 
-  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
     // Lit calls this synchronously for a property write, before a later pointer/key completion.
-    if (name === 'readonly' && this.readonly) {
+    if (args[0] === 'readonly' && this.readonly) {
       this.pendingKeyHandle = null;
       this.abortActiveDrags();
     }
-    super.requestUpdate(name, oldValue, options);
+    super.requestUpdate(...args);
   }
 
   /** Whether to draw a tick mark at every `step` position along the track. */
@@ -1078,19 +1079,15 @@ export class LyraSlider extends LyraSliderBase {
   };
 
   private markFocusoutInteracted = (): void => {
-    if (this.effectiveDisabled) return;
+    // Not interaction: a fieldset's forced blur (`:disabled` leads `effectiveDisabled`) or a range-mode thumb swap.
+    if (this.effectiveDisabled || this.matches(':disabled') || this.rangeFocusTransfer) return;
     this.markInteracted();
   };
 
   private syncInteractionStates(): void {
-    const states = this.internals.states;
-    const set = (name: string, active: boolean): void => {
-      if (active) states.add(name);
-      else states.delete(name);
-    };
-    set('disabled', this.effectiveDisabled);
-    set('dragging', this.drags.size > 0);
-    set('focused', this.focusedHandle !== null);
+    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
+    setCustomState(this.internals, 'dragging', this.drags.size > 0);
+    setCustomState(this.internals, 'focused', this.focusedHandle !== null);
   }
 
   /** Activates the first internal thumb control, mirroring `<lr-switch>`'s identical `override
@@ -1145,7 +1142,7 @@ export class LyraSlider extends LyraSliderBase {
     const { lo, hi } = this.domain();
     if (count === 0) return current;
     const direction = Math.sign(count);
-    const magnitude = this.step * Math.abs(count);
+    const magnitude = (this.step > 0 ? this.step : (hi - lo) / 100) * Math.abs(count);
     if (!Number.isFinite(magnitude)) return direction > 0 ? hi : lo;
     const candidate = current + direction * magnitude;
     return Number.isFinite(candidate) ? candidate : direction > 0 ? hi : lo;
@@ -1628,6 +1625,7 @@ export class LyraSlider extends LyraSliderBase {
     handle: SliderHandle,
     describedBy: string | undefined,
     labelledBy: string | undefined,
+    invalid: boolean,
   ): TemplateResult {
     const value = this.valueForHandle(handle);
     const bounds = this.reachableBounds(handle);
@@ -1675,7 +1673,7 @@ export class LyraSlider extends LyraSliderBase {
         aria-describedby=${describedBy ?? nothing}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-readonly=${this.readonly ? 'true' : 'false'}
-        aria-invalid=${this.internals.validity.valid ? 'false' : 'true'}
+        aria-invalid=${invalid ? 'true' : 'false'}
         style=${this.offsetStyle(percent)}
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(handle, e)}
         @keydown=${(e: KeyboardEvent) => this.onKeyDown(handle, e)}
@@ -1704,6 +1702,7 @@ export class LyraSlider extends LyraSliderBase {
     const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const hasReference = this.hasReferenceSlot;
     const describedBy = [hasError ? ERROR_ID : '', hasHint ? HINT_ID : ''].filter(Boolean).join(' ') || undefined;
+    const invalid = hasError || (this._hasInteracted && !this.internals.validity.valid);
     const labelledBy = hasLabel && !this.hasAttribute('aria-label') ? LABEL_ID : undefined;
     const valuePercent = this.percentOf(this.value);
     const offsetPercent = this.percentOf(
@@ -1754,12 +1753,13 @@ export class LyraSlider extends LyraSliderBase {
             </div>`
           : nothing}
         ${this.range
-          ? html`${this.renderHandle('min', describedBy, undefined)}${this.renderHandle(
+          ? html`${this.renderHandle('min', describedBy, undefined, invalid)}${this.renderHandle(
               'max',
               describedBy,
               undefined,
+              invalid,
             )}`
-          : this.renderHandle('value', describedBy, labelledBy)}
+          : this.renderHandle('value', describedBy, labelledBy, invalid)}
       </div>
       ${labelValue ? nothing : value}
       <div id=${ERROR_ID} part="error" ?hidden=${!hasError}>

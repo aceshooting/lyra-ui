@@ -15,6 +15,7 @@ import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
+import { swatchKeyTarget } from './swatch-keys.js';
 
 export interface SwatchPickerItem {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
@@ -32,6 +33,9 @@ export interface SwatchPickerItem {
   /** Canonical gemstone to render automatically in `mode="gemstone"`. An explicit `icon` still
    * wins, so a consumer can customize one option without leaving gemstone mode. */
   readonly gemstone?: GemstoneKey;
+  /** Marks this swatch unavailable: a genuinely `disabled` button that arrow keys skip, dimmed like
+   *  a disabled picker. The rest of the row stays selectable. */
+  readonly disabled?: boolean;
 }
 
 export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
@@ -50,7 +54,8 @@ export interface LyraSwatchPickerEventMap {
  * `<lr-swatch-picker>` -- a single-select picker over a small, fixed set of color swatches with
  * the WAI-ARIA APG `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving
  * tabindex, automatic activation (click or arrow-key move both select immediately, like a native
- * radio group), cyclic Arrow/Home/End navigation. Distinct from `<lr-color-picker>`'s freeform
+ * radio group), cyclic Arrow/Home/End navigation (Up/Down as well as Left/Right, so a wrapped grid
+ * moves with either pair). Distinct from `<lr-color-picker>`'s freeform
  * native color input -- this picks exactly one of N designer-chosen named colors, the shape apps
  * otherwise hand-roll as a row of round accent-color buttons.
  *
@@ -99,8 +104,9 @@ export interface LyraSwatchPickerEventMap {
  * @csspart base - The `role="radiogroup"` root.
  * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized via
  *   `--lr-swatch-picker-hit-size` (its private default follows `size` and is floored at 24px),
- *   independent of the smaller visible fill/icon rendered inside it. A public value wins. The
- *   selected one is `[part='swatch'][aria-checked='true']`.
+ *   independent of the smaller visible fill/icon rendered inside it. A public value wins.
+ * @csspart swatch-selected - Token added to the selected swatch, so it can be styled from outside
+ *   with `::part(swatch-selected)`.
  * @csspart swatch-fill - The compact filled circle rendered when the option has no custom `icon`.
  * @csspart swatch-icon - Optional decorative custom shape supplied by the option's `icon` field;
  *   its subtree is inert and hidden from assistive technology. When present it replaces
@@ -185,6 +191,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       item.label,
       identity(item.gemstone),
       identity(item.icon),
+      item.disabled === true,
     ]);
     const buckets = new Map<string, SwatchPickerItem[]>();
     // Reverse candidates so pop() consumes equivalent duplicate occurrences in their old order.
@@ -210,13 +217,14 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             typeof label !== 'string' ||
             label.trim() === ''
           ) continue;
-          const { icon, gemstone } = raw;
+          const { icon, gemstone, disabled } = raw;
           item = {
             value,
             color,
             label,
             ...(icon === undefined ? {} : { icon }),
             ...(gemstone === undefined ? {} : { gemstone }),
+            ...(disabled === true ? { disabled } : {}),
           };
         }
         const snapshot = buckets.get(snapshotKey(item))?.pop() ?? Object.freeze({ ...item });
@@ -299,7 +307,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   }
 
   private select(option: SwatchPickerItem, index: number): void {
-    if (this.disabled) return;
+    if (this.disabled || option.disabled) return;
     const previousIndex = this.resolveSelectedIndex();
     if (index !== previousIndex || option.value !== this.value) {
       const previousValue = this.value;
@@ -316,14 +324,14 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   private focusSwatch(index: number): void {
     if (this.disabled) return;
     const button = this.renderRoot.querySelector(
-      `[part="swatch"][data-index="${index}"]`
+      `[part~="swatch"][data-index="${index}"]`
     ) as HTMLElement | null;
     this.cancelFocusReveal();
     this.focusRevealFrame = requestAnimationFrame(() => {
       this.focusRevealFrame = undefined;
       if (!this.isConnected || this.disabled) return;
       const focused = activeElementIn(this.shadowRoot);
-      if (!(focused instanceof HTMLElement) || focused.getAttribute('part') !== 'swatch') return;
+      if (!(focused instanceof HTMLElement) || !focused.part.contains('swatch')) return;
       // Native focus can leave a partially visible radio clipped when its center already fits.
       // Resolve the current node after consumer updates and focus restoration have settled.
       focused.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
@@ -345,7 +353,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     super.willUpdate(changed);
     if (!changed.has('items')) return;
     const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
-    if (typeof active?.getAttribute !== 'function' || active.getAttribute('part') !== 'swatch') return;
+    if (!active?.part?.contains('swatch')) return;
     const previousOptions = changed.get('items') as
       | readonly SwatchPickerItem[]
       | undefined;
@@ -382,19 +390,22 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    *  selected one, the nearest survivor of a live palette mutation, or the first swatch when
    *  nothing has been selected yet. Mirrors the identical `tabbableIndex` fallback in `render()`. */
   private tabbableSwatch(): HTMLElement | null {
-    const selectedIndex = this.resolveSelectedIndex();
-    const tabbableIndex =
-      selectedIndex !== -1
-        ? selectedIndex
-        : Math.min(
-            this.fallbackTabbableIndex,
-            Math.max(0, this.items.length - 1)
-          );
     return (
       this.renderRoot?.querySelector(
-        `[part="swatch"][data-index="${tabbableIndex}"]`
+        `[part~="swatch"][data-index="${this.tabbableIndex()}"]`
       ) ?? null
     );
+  }
+
+  /** The one roving tab stop: the selected swatch, else the preserved live-palette position, moved
+   *  to the first available swatch when that one is disabled. */
+  private tabbableIndex(): number {
+    const selectedIndex = this.resolveSelectedIndex();
+    const index =
+      selectedIndex !== -1
+        ? selectedIndex
+        : Math.min(this.fallbackTabbableIndex, Math.max(0, this.items.length - 1));
+    return this.items[index]?.disabled ? this.items.findIndex((item) => !item.disabled) : index;
   }
 
   /** Activates the tabbable swatch, mirroring `<lr-switch>`'s identical `override click()`.
@@ -428,13 +439,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       .find(
         (candidate): candidate is HTMLElement =>
           (candidate as Partial<Node>).nodeType === 1 &&
-          (candidate as Partial<Element>).getAttribute?.('part') === 'swatch' &&
+          (candidate as HTMLElement).part?.contains('swatch') === true &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
     const focused = activeElementIn(this.shadowRoot);
     const candidate =
       fromEvent ??
-      (typeof focused?.getAttribute === 'function' && focused.getAttribute('part') === 'swatch'
+      (focused?.part?.contains('swatch')
         ? (focused as HTMLElement)
         : undefined);
     const index = Number(candidate?.dataset['index']);
@@ -450,32 +461,14 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     if (this.disabled) return;
     const navigable = this.items;
     if (navigable.length === 0) return;
-    const currentIndex = this.keyboardOriginIndex(e);
-    const rtl = isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
-
-    let targetIndex: number;
-    switch (e.key) {
-      case forwardKey:
-        targetIndex =
-          currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
-        break;
-      case backwardKey:
-        targetIndex =
-          currentIndex < 0
-            ? navigable.length - 1
-            : (currentIndex - 1 + navigable.length) % navigable.length;
-        break;
-      case 'Home':
-        targetIndex = 0;
-        break;
-      case 'End':
-        targetIndex = navigable.length - 1;
-        break;
-      default:
-        return;
-    }
+    const targetIndex = swatchKeyTarget(
+      e.key,
+      this.keyboardOriginIndex(e),
+      navigable.length,
+      (index) => navigable[index]!.disabled === true,
+      isRtl(this),
+    );
+    if (targetIndex < 0) return;
     e.preventDefault();
     const target = navigable[targetIndex]!;
     this.select(target, targetIndex);
@@ -493,13 +486,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     // the most recently preserved live-palette position, initially the first swatch, so the
     // radiogroup stays keyboard-reachable.
     const selectedIndex = this.resolveSelectedIndex();
-    const tabbableIndex =
-      selectedIndex !== -1
-        ? selectedIndex
-        : Math.min(
-            this.fallbackTabbableIndex,
-            Math.max(0, this.items.length - 1)
-          );
+    const tabbableIndex = this.tabbableIndex();
     return html`
       <div
         part="base"
@@ -525,14 +512,14 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             const isGemstoneGlyph = gemstoneAutoIcon !== null;
             return html`<button
               type="button"
-              part="swatch"
+              part=${index === selectedIndex ? 'swatch swatch-selected' : 'swatch'}
               data-index=${index}
               data-value=${option.value}
               role="radio"
               aria-checked=${index === selectedIndex ? 'true' : 'false'}
               aria-label=${option.label}
               title=${option.label}
-              ?disabled=${this.disabled}
+              ?disabled=${this.disabled || option.disabled === true}
               tabindex=${index === tabbableIndex ? '0' : '-1'}
               style=${styleMap(color ? { '--lr-swatch-color': color } : {})}
               @click=${() => this.select(option, index)}

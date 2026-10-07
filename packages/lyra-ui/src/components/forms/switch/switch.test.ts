@@ -653,7 +653,7 @@ describe("native form event contract", () => {
     if (!nativeInput || !aliasInput || !nativeChange) {
       throw new Error('The switch event sequence was incomplete.');
     }
-    expect(nativeInput.event instanceof InputEvent).to.be.true;
+    expect(nativeInput.event.constructor === Event).to.be.true;
     expect(nativeChange.event.constructor === Event).to.be.true;
     expect(nativeInput.event.target === el && nativeChange.event.target === el).to.be.true;
     expect(aliasInput.event instanceof CustomEvent).to.be.true;
@@ -1077,7 +1077,7 @@ it("does not mark touched from a blur the browser forces when the control become
     html`<lr-switch required>Label</lr-switch>`
   )) as LyraSwitch;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
-  const isTouched = () => (el as unknown as { touched: boolean }).touched;
+  const isTouched = () => (el as unknown as { hasInteracted: boolean }).hasInteracted;
 
   el.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;

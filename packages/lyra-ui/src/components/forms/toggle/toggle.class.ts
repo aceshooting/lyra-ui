@@ -111,9 +111,9 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  * **Hit area.** The toggle keeps the shared size ladder, including for icon-only content, rather
  * than flooring its box at `--lr-icon-button-size` the way `<lr-icon-button>` does. Every tier
  * still floors both axes at 1.5rem (24px, the WCAG 2.5.8 minimum), the default `m` tier equals the
- * 2.5rem icon-button floor, and a coarse pointer floors every tier at 2.75rem (44px); only
- * fine-pointer `2xs`/`xs`/`s` sit below 40px. Keep `m` or larger, or use `<lr-icon-button>` with a
- * consumer-managed `aria-pressed`, when the compact 40px floor matters.
+ * 2.25rem icon-button floor, and a coarse pointer floors every tier at 2.75rem (44px); only
+ * fine-pointer `2xs`/`xs`/`s` sit below it. Keep `m` or larger, or use `<lr-icon-button>` with a
+ * consumer-managed `aria-pressed`, when the icon-button floor matters.
  *
  * `getToolbarActions()` contributes this toggle as one logical action to an enclosing composite
  * toolbar (`<lr-message-actions>`), leasing the internal button's own `tabindex`. While grouped it
@@ -155,6 +155,8 @@ const STANDALONE: LyraToggleGroupProjection = Object.freeze({
  *   default is transparent for `plain` and `var(--lr-color-border)` for `outlined`.
  * @cssprop [--lr-toggle-hover-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  *   Fill of an unpressed toggle under the pointer.
+ * @cssprop [--lr-toggle-pressed-hover-bg=color-mix(in oklab, var(--lr-toggle-pressed-bg), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ *   Fill of a pressed toggle under the pointer.
  * @cssprop [--lr-toggle-pressed-bg=var(--lr-color-fill-quiet)] - Fill while pressed, from the
  *   `variant` row of the semantic colour grid.
  * @cssprop [--lr-toggle-pressed-color=var(--lr-color-on-quiet)] - Text and icon colour while pressed.

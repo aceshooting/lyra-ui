@@ -4,16 +4,14 @@ export const styles = css`
   :host {
     /* The indicator tracks the shared size ladder (internal/sizes.styles.ts): 70% of the tier's
        control height, so a radio lines up with an lr-input/lr-select/lr-button of the same size
-       rather than carrying its own scale. At the default "m" tier that is exactly the 1.75rem it
-       shipped with; the --lr-icon-button-size cap stays so compacting that theme token still
-       compacts this control. */
+       rather than carrying its own scale; the --lr-icon-button-size cap stays so compacting that
+       theme token still compacts this control. */
     --_lr-radio-circle-size: min(
       var(--lr-icon-button-size),
       calc(var(--lr-form-control-height) * 0.7)
     );
     /* Capped at half the circle so the dot can never outgrow its ring, whatever a consumer does to
-       the ladder or the --lr-icon-button-size cap above. 0.75rem at "m", the size it shipped
-       with. */
+       the ladder or the --lr-icon-button-size cap above. */
     --_lr-radio-dot-size: min(
       calc(var(--lr-radio-circle-size, var(--_lr-radio-circle-size)) * 0.5),
       calc(var(--lr-form-control-height) * 0.3)
@@ -23,7 +21,6 @@ export const styles = css`
        class and with it the pill value -- has one name to override. */
     --_lr-radio-radius: var(--lr-radius-pill);
     display: inline-block;
-    min-inline-size: 0;
     max-inline-size: 100%;
     /* Private default for the public label-indent hook: the layout's own two terms, the circle's
        floor plus the label gap. Overridable on an ancestor or on the radio, but never on a sibling
@@ -118,6 +115,9 @@ export const styles = css`
       var(--lr-radio-hover-border-color, var(--lr-radio-checked-border-color, var(--lr-color-brand)))
     );
   }
+  :host(:state(user-invalid)) [part~="circle"] {
+    border-color: var(--lr-radio-invalid-border-color, var(--lr-color-danger));
+  }
   [part~="circle"][part~="checked"] {
     /* Component-scoped indirection (mirrors lr-checkbox's --lr-checkbox-checked-bg/-border pair)
        so a consumer can retint this control's checked ring without hijacking the shared
@@ -140,7 +140,7 @@ export const styles = css`
   [part="label"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
   }

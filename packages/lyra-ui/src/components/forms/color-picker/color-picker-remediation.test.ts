@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { hoverUntilMatched, resetMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './color-picker.js';
 import type { LyraColorPicker } from './color-picker.js';
 
@@ -179,4 +180,109 @@ describe('color picker trigger external descriptions', () => {
     targetDocument.body.append(target, picker);
     await waitUntil(() => refs()[0] === target);
   });
+});
+
+function press(target: HTMLElement, key: string): void {
+  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, composed: true }));
+}
+
+describe('color picker palette', () => {
+  const palette = [
+    { color: '#ff0000', label: 'Red' },
+    { color: '#00ff00', label: 'Green' },
+    { color: '#0000ff', label: 'Blue', disabled: true },
+    { color: '#ffff00', label: 'Yellow' },
+  ];
+
+  it('is one roving radiogroup with a single tab stop', async () => {
+    const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#00ff00" .swatches=${palette}></lr-color-picker>`);
+    expect(part(picker, 'swatches').getAttribute('role')).to.equal('radiogroup');
+    const radios = [...picker.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="swatch"]')];
+    expect(radios.map((radio) => radio.getAttribute('role'))).to.deep.equal(['radio', 'radio', 'radio', 'radio']);
+    expect(radios.map((radio) => radio.getAttribute('aria-checked'))).to.deep.equal(['false', 'true', 'false', 'false']);
+    expect(radios.map((radio) => radio.tabIndex)).to.deep.equal([-1, 0, -1, -1]);
+    await expect(picker).to.be.accessible();
+  });
+
+  it('moves, selects and wraps with the arrow keys, skipping disabled entries', async () => {
+    const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline value="#00ff00" .swatches=${palette}></lr-color-picker>`);
+    const radios = [...picker.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="swatch"]')];
+    radios[1]!.focus();
+    press(radios[1]!, 'ArrowRight');
+    expect(picker.value).to.equal('#ffff00');
+    expect(picker.shadowRoot!.activeElement === radios[3]).to.equal(true);
+    press(radios[3]!, 'ArrowDown');
+    expect(picker.value).to.equal('#ff0000');
+    press(radios[0]!, 'End');
+    expect(picker.value).to.equal('#ffff00');
+    press(radios[3]!, 'Home');
+    expect(picker.value).to.equal('#ff0000');
+  });
+});
+
+it('parses a palette once instead of on every render', async () => {
+  const swatches = Array.from({ length: 100 }, (_, index) => `oklch(0.6 0.1 ${index * 3})`);
+  const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline .swatches=${swatches}></lr-color-picker>`);
+  await picker.updateComplete;
+  let probes = 0;
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (node instanceof HTMLElement && node.style.visibility === 'hidden') probes += 1;
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true });
+  for (const value of ['#112233', '#223344', '#334455']) {
+    picker.value = value;
+    await picker.updateComplete;
+  }
+  observer.disconnect();
+  expect(probes).to.equal(0);
+});
+
+it('normalizes format to its supported vocabulary', async () => {
+  const upper = await fixture<LyraColorPicker>(html`<lr-color-picker format="HEX" value="#ff0000"></lr-color-picker>`);
+  expect(upper.format).to.equal('hex');
+  const alpha = await fixture<LyraColorPicker>(html`<lr-color-picker format="rgba" opacity value="#ff0000"></lr-color-picker>`);
+  await alpha.updateComplete;
+  expect(alpha.format).to.equal('rgb');
+  expect(alpha.value).to.match(/^rgba\(/);
+  (alpha as unknown as { format: string }).format = 'bogus';
+  expect(alpha.format).to.equal('hex');
+});
+
+it('steps the colour handles by ten with PageUp and PageDown', async () => {
+  const picker = await fixture<LyraColorPicker>(html`<lr-color-picker inline opacity value="hsva(100, 50%, 50%, 0.5)"></lr-color-picker>`);
+  const hue = part(picker, 'hue-slider-handle');
+  press(hue, 'PageUp');
+  await picker.updateComplete;
+  expect(hue.getAttribute('aria-valuenow')).to.equal('110');
+  press(hue, 'PageDown');
+  await picker.updateComplete;
+  expect(hue.getAttribute('aria-valuenow')).to.equal('100');
+  press(part(picker, 'grid-handle'), 'PageUp');
+  expect(picker.getFormattedValue('hsv')).to.equal('hsv(100, 50%, 60%)');
+  const opacity = part(picker, 'opacity-slider-handle');
+  press(opacity, 'PageUp');
+  await picker.updateComplete;
+  expect(opacity.getAttribute('aria-valuenow')).to.equal('60');
+});
+
+it('paints no pointer affordance on its sliders while disabled or readonly', async () => {
+  const outlineOnHover = async (attribute: string): Promise<string> => {
+    const picker = await fixture<LyraColorPicker>(`<lr-color-picker inline ${attribute} value="#ff0000" style="--lr-transition-fast: 0s"></lr-color-picker>`);
+    const slider = part(picker, 'hue-slider');
+    try {
+      await hoverUntilMatched(slider, 'the pointer never hovered the slider');
+      await settlePointer();
+      return getComputedStyle(slider).outlineStyle;
+    } finally {
+      await resetMouse();
+    }
+  };
+  expect(await outlineOnHover('')).to.equal('solid');
+  expect(await outlineOnHover('disabled')).to.equal('none');
+  expect(await outlineOnHover('readonly')).to.equal('none');
 });

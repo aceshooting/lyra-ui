@@ -931,6 +931,7 @@ it("projects explicit valid and invalid states onto the host slider role", async
   expect(el.getAttribute("aria-invalid")).to.equal("false");
 
   el.setCustomValidity("That score is disputed.");
+  el.reportValidity();
   await el.updateComplete;
   expect(el.checkValidity()).to.be.false;
   expect(el.getAttribute("aria-invalid")).to.equal("true");

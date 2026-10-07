@@ -17,7 +17,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
-import { dispatchNativeEvent, dispatchNativeInputEvent } from '../../../internal/native-event-relay.js';
+import { dispatchNativeEvent } from '../../../internal/native-event-relay.js';
 import { isStaticValidityCheckInProgress, withStaticValidityCheck } from '../../../internal/invalid-event-alias.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
@@ -46,10 +46,11 @@ import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.ge
 
 
 export interface LyraRadioGroupEventMap {
-  input: InputEvent;
+  input: Event;
   change: Event;
   'lr-input': CustomEvent<{ value: string; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
+  'lr-activate': CustomEvent<{ value: string; radio: LyraRadio }>;
   'lr-invalid': CustomEvent<null>;
 }
 
@@ -84,10 +85,13 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @slot hint - Supporting text.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Validation text.
- * @event {InputEvent} input - Native event fired from the group when its selected value changes.
+ * @event {Event} input - Native event fired from the group when its selected value changes.
  * @event {Event} change - Native event fired after `input` for the same group selection.
  * @event lr-input - Prefixed alias for `input`; `detail: { value, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, radio }`.
+ * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
+ * whether or not the selection moved; emitted after `lr-change` when it did.
+ * `detail: { value, radio }`.
  * @event lr-invalid - The group's owned validity control failed a validity check. Cancelable:
  * calling `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
@@ -113,6 +117,8 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @csspart error - Validation text.
  * @cssprop [--lr-radio-group-row-gap=calc(var(--lr-form-control-height) * 0.2)] - Vertical gap
  * between the group's label, options and messages, scaled by `size`.
+ * @cssprop [--lr-radio-group-invalid-border=var(--lr-color-danger)] - Border around the option
+ * collection while the group matches `:state(user-invalid)`.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -136,10 +142,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-input',
     'lr-change',
+    'lr-activate',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
     'lr-input': Object.freeze(['radio']),
     'lr-change': Object.freeze(['radio']),
+    'lr-activate': Object.freeze(['radio']),
   });
   /** Public WA-compatible intrinsic validator catalog. */
   static get validators(): LyraFormValidator<LyraRadioGroup>[] {
@@ -174,7 +182,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   @property({ reflect: true,
     converter: declaredDefaultConverter<LyraSize>('m'),
   }) size: LyraSize = 'm';
-  /** Arrow-key axis and option layout. Left/right are mirrored under RTL in horizontal mode. */
+  /** Option layout and `aria-orientation`. Arrow keys move in either axis; Left/Right are mirrored under RTL. */
   orientation: RadioGroupOrientation = 'vertical';
   @property() label = '';
   @property() hint = '';
@@ -370,7 +378,6 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     }
     this.syncRadios();
     this.armMembershipObserver();
-    this.armRunResizeObserver();
     this.scheduleRunProjection();
   }
 
@@ -403,7 +410,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     // Vertical groups never join: every option keeps all four corners.
     const positions = this.orientation === 'horizontal'
       ? measureAdjacentRuns(radios, {
-        direction: getComputedStyle(this).direction === 'rtl' ? 'rtl' : 'ltr',
+        direction: this.effectiveDirection,
         joinable: (radio) => this.isButtonRadio(radio as LyraRadio),
       })
       : radios.map((): AdjacentRunPosition => 'standalone');
@@ -505,7 +512,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
-    this.syncRadios();
+    if (changed.has('size') || changed.has('orientation')) this.syncRadios();
   }
 
   private syncSupportSlots(): void {
@@ -608,8 +615,9 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
       for (const radio of radios) {
         radio.setGroupOwner(this);
       }
+      const membershipChanged = current.size !== this.managedRadios.size || radios.some((radio) => !this.managedRadios.has(radio));
       this.managedRadios = current;
-      this.armRunResizeObserver();
+      if (membershipChanged) this.armRunResizeObserver();
       for (const radio of radios) radio.setGroupDisabled(this.effectiveDisabled);
       const enabled = radios.filter((radio) => this.isRadioAvailable(radio));
       let checked = radios.filter((radio) => radio.checked);
@@ -675,28 +683,35 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   /** @internal */
   selectRadio(radio: LyraRadio): boolean {
     if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio)) return false;
-    this._valueDirty = true;
-    this.hasInteracted = true;
-    this.syncingRadios = true;
-    try {
-      for (const candidate of this.radios()) {
-        if (candidate.checked !== (candidate === radio)) candidate.checked = candidate === radio;
+    if (!radio.checked) {
+      this._valueDirty = true;
+      this.hasInteracted = true;
+      this.syncingRadios = true;
+      try {
+        for (const candidate of this.radios()) {
+          if (candidate.checked !== (candidate === radio)) candidate.checked = candidate === radio;
+        }
+      } finally {
+        this.syncingRadios = false;
       }
-    } finally {
-      this.syncingRadios = false;
+      this.syncRadios();
+      dispatchNativeEvent(this, 'input');
+      this.emit('lr-input', { value: radio.value, radio });
+      dispatchNativeEvent(this, 'change');
+      this.emit('lr-change', { value: radio.value, radio });
     }
-    this.syncRadios();
-    dispatchNativeInputEvent(this);
-    this.emit('lr-input', { value: radio.value, radio });
-    dispatchNativeEvent(this, 'change');
-    this.emit('lr-change', { value: radio.value, radio });
+    this.emit('lr-activate', { value: radio.value, radio });
     return true;
   }
+  private onFocusOut = (event: FocusEvent): void => {
+    // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
+    if (this.hasInteracted || this.effectiveDisabled || this.matches(':disabled') || (event.target as Element).matches(':disabled')) return;
+    this.hasInteracted = true;
+    this.reflectValidityStates();
+    this.requestUpdate();
+  };
   private onKeyDown = (event: KeyboardEvent): void => {
-    const arrows = this.orientation === 'horizontal'
-      ? ['ArrowRight', 'ArrowLeft']
-      : ['ArrowDown', 'ArrowUp'];
-    if (![...arrows, 'Home', 'End'].includes(event.key)) return;
+    if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if (this.effectiveDisabled) return;
     const radios = this.radios().filter((radio) => this.isRadioAvailable(radio));
     const current = event.target as LyraRadio;
@@ -705,12 +720,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (index < 0 || radios.length === 0) return;
     event.preventDefault();
     const rtl = this.effectiveDirection === 'rtl';
-    const forward = this.orientation === 'vertical'
-      ? event.key === 'ArrowDown'
-      : rtl ? event.key === 'ArrowLeft' : event.key === 'ArrowRight';
-    const backward = this.orientation === 'vertical'
-      ? event.key === 'ArrowUp'
-      : rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft';
+    const forward = event.key === 'ArrowDown' || event.key === (rtl ? 'ArrowLeft' : 'ArrowRight');
+    const backward = event.key === 'ArrowUp' || event.key === (rtl ? 'ArrowRight' : 'ArrowLeft');
     const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? radios.length - 1
       : forward ? (index + 1) % radios.length : backward ? (index - 1 + radios.length) % radios.length : index;
     // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
@@ -882,7 +893,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-orientation=${ariaOrientation}
         aria-invalid=${hasError || (this.hasInteracted && !this.internals.validity.valid) ? 'true' : 'false'}
-        @keydown=${this.onKeyDown}>
+        @keydown=${this.onKeyDown}
+        @focusout=${this.onFocusOut}>
         <div part="form-control">
           <div part="label form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
           <div part="radios form-control-input button-group button-group__base">

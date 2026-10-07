@@ -1793,17 +1793,17 @@ it('bars constraint validation while disabled, like a native disabled required c
 describe('touched state and blur', () => {
   it('marks touched on a real blur', async () => {
     const el = (await fixture(html`<lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-    const internal = el as unknown as { touched: boolean };
+    const internal = el as unknown as { hasInteracted: boolean };
     const box = el.querySelector('lr-checkbox') as LyraCheckbox;
     box.focus();
-    expect(internal.touched, 'not yet touched before any blur').to.be.false;
+    expect(internal.hasInteracted, 'not yet touched before any blur').to.be.false;
     box.blur();
-    expect(internal.touched, 'a real blur marks the group touched').to.be.true;
+    expect(internal.hasInteracted, 'a real blur marks the group touched').to.be.true;
   });
 
   it('does not mark touched from a blur the platform forces when a focused child checkbox becomes disabled', async () => {
     const el = (await fixture(html`<lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
-    const internal = el as unknown as { touched: boolean };
+    const internal = el as unknown as { hasInteracted: boolean };
     const box = el.querySelector('lr-checkbox') as LyraCheckbox;
     box.focus();
     expect(document.activeElement === box, 'the checkbox must actually hold focus for this test to be meaningful').to.be.true;
@@ -1821,7 +1821,7 @@ describe('touched state and blur', () => {
     } catch {
       /* This engine does not force-blur this shape; touched staying false is still what matters. */
     }
-    expect(internal.touched, 'a platform-forced blur from disabling must not mark the group touched').to.be.false;
+    expect(internal.hasInteracted, 'a platform-forced blur from disabling must not mark the group touched').to.be.false;
   });
 
   it('does not mark touched from a blur the platform forces when an ancestor fieldset disables a focused child checkbox', async () => {
@@ -1840,14 +1840,14 @@ describe('touched state and blur', () => {
       </form>
     `)) as HTMLFormElement;
     const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
-    const internal = group as unknown as { touched: boolean };
+    const internal = group as unknown as { hasInteracted: boolean };
     const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
     const box = group.querySelector('lr-checkbox') as LyraCheckbox;
     box.focus();
     expect(document.activeElement === box).to.be.true;
 
     fieldset.disabled = true;
-    expect(internal.touched, 'a fieldset-cascaded disable-forced blur must not mark the group touched').to.be.false;
+    expect(internal.hasInteracted, 'a fieldset-cascaded disable-forced blur must not mark the group touched').to.be.false;
   });
 });
 
@@ -2222,4 +2222,74 @@ describe('lr-checkbox-group-toggle-request', () => {
     expect(box.checked).to.be.true;
     await expect(el).to.be.accessible();
   });
+});
+
+it('republishes a child lr-input as the group lr-input carrying the aggregate value', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const seen: Array<{ type: string; target: EventTarget | null; detail: unknown }> = [];
+  for (const name of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(name, (event) => seen.push({ type: event.type, target: event.target, detail: (event as CustomEvent).detail }));
+  }
+  (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).click();
+  expect(seen.map(({ type }) => type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(seen.every(({ target }) => target === el)).to.be.true;
+  expect(seen[1]!.detail).to.deep.equal({ value: ['a'] });
+});
+
+it('reconciles a bulk of direct child writes without re-querying the catalog per checkbox', async () => {
+  const el = (await fixture(html`<lr-checkbox-group></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const boxes = Array.from({ length: 40 }, (_, index) => {
+    const box = document.createElement('lr-checkbox') as LyraCheckbox;
+    box.value = String(index);
+    return box;
+  });
+  el.append(...boxes);
+  await Promise.all(boxes.map((box) => box.updateComplete));
+  await el.updateComplete;
+
+  let queries = 0;
+  const nativeQuerySelectorAll = el.querySelectorAll.bind(el);
+  (el as unknown as { querySelectorAll: typeof el.querySelectorAll }).querySelectorAll = ((selector: string) => {
+    queries++;
+    return nativeQuerySelectorAll(selector);
+  }) as typeof el.querySelectorAll;
+
+  boxes.forEach((box) => { box.checked = true; });
+  await Promise.all(boxes.map((box) => box.updateComplete));
+
+  expect(el.value).to.have.length(boxes.length);
+  expect(queries).to.be.lessThan(boxes.length);
+});
+
+it('renders the hint and error props alongside slotted hint and error content', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group hint="Plain hint" error-text="Plain error">
+      <span slot="hint">Slotted hint</span>
+      <span slot="error">Slotted error</span>
+      <lr-checkbox value="a">A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  for (const [part, text] of [['hint', 'Plain hint'], ['error', 'Plain error']] as const) {
+    const walker = document.createTreeWalker(el.shadowRoot!.querySelector(`[part="${part}"]`)!, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && node.textContent?.trim() !== text) node = walker.nextNode();
+    const range = document.createRange();
+    range.selectNodeContents(node ?? el);
+    expect(node === null, `${part} prop text exists`).to.be.false;
+    expect(range.getClientRects().length, `${part} prop text is rendered`).to.be.greaterThan(0);
+  }
+});
+
+it('exposes invalidity as soon as a toggle leaves a required group empty', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group required><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const base = el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  base.click();
+  base.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('fieldset')!.getAttribute('aria-invalid')).to.equal('true');
+  expect(el.hasAttribute('data-invalid')).to.be.true;
 });

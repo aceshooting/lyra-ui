@@ -5,8 +5,7 @@ export const styles = css`
   :host {
     /* The group's chrome rides the shared size ladder (internal/sizes.styles.ts). Both gaps are
        fractions of the tier's control height rather than fixed space tokens, so they stay in
-       proportion to the options beside them; at the default "m" tier they resolve to exactly the
-       --lr-space-xs and --lr-space-s the group shipped with before it had a size at all. */
+       proportion to the options beside them. */
     --_lr-checkbox-group-row-gap: calc(var(--lr-form-control-height) * 0.1);
     --_lr-checkbox-group-option-gap: calc(var(--lr-form-control-height) * 0.2);
     display: block;
@@ -21,7 +20,8 @@ export const styles = css`
     padding: 0;
   }
   [part="form-control"] {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: var(--lr-checkbox-group-row-gap, var(--_lr-checkbox-group-row-gap));
   }
   /* The rendered legend's real part is "form-control-label" (checkbox-group.class.ts's render()),
@@ -30,14 +30,6 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
     font-size: var(--lr-form-control-font-size);
-  }
-  /* The required marker comes from the one shared sheet (internal/form-control.styles.ts) like
-     every other labelled control's, so its glyph, colour and spacing are consumer-settable. The
-     rule below suppresses this component's older hand-rolled glyph -- a literal <span> the legend
-     template still renders -- so the two never double up; it dies the moment that span leaves
-     checkbox-group.class.ts's render(). */
-  :host([required]) [part~="form-control-label"] > span[aria-hidden="true"] {
-    display: none;
   }
   ${formControlRequiredMarker}
   [part~='options'] {
@@ -73,7 +65,7 @@ export const styles = css`
   [part="error"] {
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   /* :host(:disabled), never :host([disabled]) -- on a form-associated custom element the UA
      computes :disabled from the group's own disabled attribute OR an ancestor fieldset's cascade,

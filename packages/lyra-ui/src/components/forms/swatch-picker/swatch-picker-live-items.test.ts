@@ -13,7 +13,7 @@ it('contains throwing item indices and fields while retaining a usable later swa
   expect(() => { el.items = items; }).not.to.throw();
   await el.updateComplete;
   expect(el.items.map(item => item.value)).to.deep.equal(['green']);
-  const swatch = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="swatch"]')!;
+  const swatch = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="swatch"]')!;
   expect(swatch.getAttribute('aria-label')).to.equal('Green');
   await focusByKeyboard(swatch);
   swatch.click();
@@ -23,16 +23,16 @@ it('contains throwing item indices and fields while retaining a usable later swa
 
 it('releases a removed focused palette and restores one tab stop when items return', async () => {
   const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker .items=${[green]} aria-label="Palette"></lr-swatch-picker>`);
-  const swatch = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="swatch"]')!;
+  const swatch = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="swatch"]')!;
   await focusByKeyboard(swatch);
   let changes = 0;
   el.addEventListener('lr-change', () => { changes += 1; });
   el.items = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll('[part="swatch"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part~="swatch"]').length).to.equal(0);
   expect(el.shadowRoot!.activeElement === null).to.equal(true);
   el.items = [green];
   await el.updateComplete;
-  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="swatch"][tabindex="0"]').length === 1);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="swatch"][tabindex="0"]').length === 1);
   expect(changes).to.equal(0);
 });

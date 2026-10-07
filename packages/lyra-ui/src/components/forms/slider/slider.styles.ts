@@ -4,8 +4,7 @@ import { formControlRequiredMarker } from '../../../internal/form-control.styles
 export const styles = css`
   :host {
     /* Every dimension rides the shared size ladder (internal/sizes.styles.ts), so a slider lines
-       up with an lr-input/lr-select/lr-button of the same size. At the default "m" tier the three
-       knobs resolve to the pre-size 1rem thumb, 0.25rem track and 1.5rem row. */
+       up with an lr-input/lr-select/lr-button of the same size. */
     --_lr-slider-thumb-size: calc(var(--lr-form-control-height) * 0.4);
     --_lr-slider-track-thickness: calc(
       var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size)) * 0.25
@@ -137,8 +136,8 @@ export const styles = css`
   :host(:dir(rtl)) [part="marker"] {
     transform: translate(50%, -50%);
   }
-  /* The dot is 16px at the default tier and smaller below, under the ~24px touch-target minimum,
-     so a transparent ::before widens the hit/drag area instead of the thumb. Additive only:
+  /* The dot is under the ~24px touch-target minimum at every tier, so a transparent ::before
+     widens the hit/drag area instead of the thumb. Additive only:
      onPointerMove reads just [part="track"]'s rect and the pointer coordinate, and a pointerdown
      in the ::before still reports e.target as the thumb (pseudo-elements have no event target).
      Mirrors lr-time-range's handle::before. */
@@ -314,6 +313,32 @@ export const styles = css`
       )
     );
   }
+  /* The bubble is anchored by its inline-start edge, which is the physical right edge under RTL, so
+     the left/right placements start from that edge there. */
+  :host(:dir(rtl)) [part~="tooltip"][data-placement="left"] {
+    transform: translate(calc(-1 * (var(
+            --thumb-width,
+            var(
+              --thumb-size,
+              var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))
+            )
+          ) * 0.5 + var(
+            --tooltip-offset,
+            calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))
+          ))), -50%);
+  }
+  :host(:dir(rtl)) [part~="tooltip"][data-placement="right"] {
+    transform: translate(calc(100% + var(
+            --thumb-width,
+            var(
+              --thumb-size,
+              var(--lr-slider-thumb-size, var(--_lr-slider-thumb-size))
+            )
+          ) * 0.5 + var(
+            --tooltip-offset,
+            calc(var(--lr-slider-tooltip-distance, 8) * var(--lr-size-1px))
+          )), -50%);
+  }
   [part~="tooltip-visible"] {
     opacity: 1;
   }
@@ -339,6 +364,12 @@ export const styles = css`
   [data-placement="right"] [part="tooltip__arrow"] {
     inset-inline-start: calc(var(--lr-space-xs) * -0.5);
     inset-block-start: calc(50% - var(--lr-space-xs) * 0.5);
+  }
+  :host(:dir(rtl)) [data-placement="left"] [part="tooltip__arrow"] {
+    inset-inline: calc(var(--lr-space-xs) * -0.5) auto;
+  }
+  :host(:dir(rtl)) [data-placement="right"] [part="tooltip__arrow"] {
+    inset-inline: auto calc(var(--lr-space-xs) * -0.5);
   }
   [part~="label"],
   [part="references"] {

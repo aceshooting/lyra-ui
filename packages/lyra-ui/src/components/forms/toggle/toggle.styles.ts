@@ -88,14 +88,13 @@ export const styles = css`
   }
 
   :host([pressed]) :where([part~='button']):not(:disabled):hover {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-toggle-hover-bg,
-        var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet))
-
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+    background: var(
+      --lr-toggle-pressed-hover-bg,
+      color-mix(
+        in oklab,
+        var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet)),
+        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
+      )
     );
   }
 
@@ -103,9 +102,8 @@ export const styles = css`
     background: color-mix(
       in oklab,
       var(
-        --lr-toggle-hover-bg,
+        --lr-toggle-pressed-hover-bg,
         var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet))
-
       ),
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
