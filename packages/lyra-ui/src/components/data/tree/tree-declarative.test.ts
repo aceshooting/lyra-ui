@@ -2,6 +2,8 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 expectDevWarning('lyra-tree-missing-accessible-name');
@@ -98,6 +100,50 @@ it('collapses staggered single-item attribute mutations into targeted, not whole
 // no empty state, a roving tabindex, arrow navigation and correct set-position ARIA.
 
 describe('tree declarative child model', () => {
+  it('tracks direct descendant and sibling focus within data-item shadow roots without selecting them', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Files" .data=${[
+      { id: 'root', label: 'Root', children: [
+        { id: 'first', label: 'First' }, { id: 'second', label: 'Second' },
+      ] },
+    ]}></lr-tree>`);
+    await el.expandAll();
+    const root = el.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const [first, second] = root.childItems();
+    await focusByKeyboard(root);
+    // Exercise the public focus method without moving through an external modality sentinel.
+    first!.focus();
+    await el.updateComplete;
+    expect(deepActiveElementIn(document) === first).to.equal(true);
+    expect(first!.tabIndex).to.equal(0);
+    expect(root.tabIndex).to.equal(-1);
+    second!.focus();
+    await el.updateComplete;
+    expect(deepActiveElementIn(document) === second).to.equal(true);
+    expect(second!.tabIndex).to.equal(0);
+    expect(first!.tabIndex).to.equal(-1);
+    expect(el.selectedItems.length).to.equal(0);
+  });
+
+  it('keeps an outer tree tab stop when a nested tree receives focus', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Outer">
+      <lr-tree-item label="Owner"><lr-tree label="Inner">
+        <lr-tree-item label="Nested"></lr-tree-item>
+      </lr-tree></lr-tree-item>
+      <lr-tree-item label="Peer"></lr-tree-item>
+    </lr-tree>`);
+    await el.updateComplete;
+    const owner = el.querySelector<LyraTreeItem>(':scope > lr-tree-item')!;
+    const inner = owner.querySelector<LyraTree>('lr-tree')!;
+    const nested = inner.querySelector<LyraTreeItem>('lr-tree-item')!;
+    await focusByKeyboard(owner);
+    nested.focus();
+    await inner.updateComplete;
+    await el.updateComplete;
+    expect(deepActiveElementIn(document) === nested).to.equal(true);
+    expect(nested.tabIndex).to.equal(0);
+    expect(owner.tabIndex).to.equal(0);
+    expect(el.selectedItems.length).to.equal(0);
+  });
   const declarative = html`
     <lr-tree label="Docs">
       <lr-tree-item label="Guides">
@@ -169,6 +215,128 @@ describe('tree declarative child model', () => {
     await el.collapseAll();
     await el.updateComplete;
     expect(guides.expanded).to.be.false;
+  });
+
+  it('moves the tab stop out of a collapsed deep subtree while preserving external focus', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <button type="button">Outside</button>
+        <lr-tree label="Docs">
+          <lr-tree-item label="Guides" expanded>
+            <lr-tree-item label="Install" expanded>
+              <lr-tree-item label="Setup"></lr-tree-item>
+            </lr-tree-item>
+            <lr-tree-item label="Usage"></lr-tree-item>
+          </lr-tree-item>
+          <lr-tree-item label="Reference" expanded>
+            <lr-tree-item label="API"></lr-tree-item>
+          </lr-tree-item>
+        </lr-tree>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraTree>('lr-tree')!;
+    await el.updateComplete;
+    const [guides, reference] = [...el.querySelectorAll<LyraTreeItem>(':scope > lr-tree-item')];
+    const setup = guides!.childItems()[0]!.childItems()[0]!;
+    await focusByKeyboard(setup);
+    await el.updateComplete;
+    expect(setup.tabIndex).to.equal(0);
+    const outside = wrapper.querySelector<HTMLButtonElement>('button')!;
+    await focusByKeyboard(outside);
+
+    reference!.collapse();
+    await el.updateComplete;
+    expect(setup.tabIndex, 'collapsing another branch keeps the active row').to.equal(0);
+    guides!.collapse();
+    await el.updateComplete;
+    expect(guides!.tabIndex).to.equal(0);
+    expect(setup.tabIndex).to.equal(-1);
+    expect(document.activeElement === outside).to.equal(true);
+  });
+
+  it('collapseAll() restores focused descendants to a visible top-level tab stop', async () => {
+    const el = await fixture<LyraTree>(declarative);
+    await el.expandAll();
+    const guides = el.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const install = guides.childItems()[0]!;
+    await focusByKeyboard(install);
+    await el.updateComplete;
+    expect(install.tabIndex).to.equal(0);
+
+    await el.collapseAll();
+    await el.updateComplete;
+    expect(guides.expanded).to.equal(false);
+    expect(guides.tabIndex).to.equal(0);
+    expect(install.tabIndex).to.equal(-1);
+    expect(document.activeElement === guides).to.equal(true);
+  });
+
+  it('does not adopt selection or toggles from a tree nested inside a row label', async () => {
+    const el = await fixture<LyraTree>(html`
+      <lr-tree label="Outer">
+        <lr-tree-item label="Outer row">
+          <lr-tree label="Inner">
+            <lr-tree-item label="Inner branch">
+              <lr-tree-item label="Inner leaf"></lr-tree-item>
+            </lr-tree-item>
+          </lr-tree>
+        </lr-tree-item>
+        <lr-tree-item label="Outer sibling"></lr-tree-item>
+      </lr-tree>
+    `);
+    const outer = el.querySelector<LyraTreeItem>(':scope > lr-tree-item')!;
+    const inner = outer.querySelector<LyraTree>('lr-tree')!;
+    await inner.updateComplete;
+    const branch = inner.querySelector<LyraTreeItem>('lr-tree-item')!;
+    let outerSelections = 0;
+    el.addEventListener('lr-selection-change', (event) => {
+      if (event.target === el) outerSelections++;
+    });
+
+    branch.expand();
+    branch.select();
+    await inner.updateComplete;
+    await el.updateComplete;
+
+    expect(branch.expanded).to.equal(true);
+    expect(inner.selectedItems.map((item) => item.nodeId)).to.deep.equal([branch.nodeId]);
+    expect(el.selectedItems.length).to.equal(0);
+    expect(outer.tabIndex).to.equal(0);
+    expect(outerSelections).to.equal(0);
+  });
+
+  it('recomputes ancestor selection after a deep authored leaf changes selected', async () => {
+    const el = await fixture<LyraTree>(html`
+      <lr-tree label="Docs" selection="multiple">
+        <lr-tree-item label="Guides" expanded>
+          <lr-tree-item label="Install" expanded>
+            <lr-tree-item label="Setup"></lr-tree-item>
+            <lr-tree-item label="Requirements"></lr-tree-item>
+          </lr-tree-item>
+        </lr-tree-item>
+      </lr-tree>
+    `);
+    await el.updateComplete;
+    const guides = el.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const install = guides.childItems()[0]!;
+    const [setup, requirements] = install.childItems();
+
+    setup!.selected = true;
+    await setup!.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(install.indeterminate).to.equal(true);
+    expect(guides.indeterminate).to.equal(true);
+    expect(requirements!.selected).to.equal(false);
+
+    requirements!.selected = true;
+    await requirements!.updateComplete;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(install.selected).to.equal(true);
+    expect(install.indeterminate).to.equal(false);
+    expect(guides.selected).to.equal(true);
+    expect(guides.indeterminate).to.equal(false);
   });
 
   it('skips a disabled slotted item in roving focus and arrow navigation', async () => {

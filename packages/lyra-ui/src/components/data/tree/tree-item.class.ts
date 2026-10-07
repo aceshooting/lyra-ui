@@ -1,3 +1,4 @@
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -530,10 +531,12 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     // before relying on future mutations; first connections remain hydration-aware in willUpdate().
     if (this.hasUpdated) this.sampleLightDomState();
     this.addEventListener('slotchange', this.handleLabelSlotChange);
+    this.addEventListener('focusin', this.onOwnedFocus);
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.handleLabelSlotChange);
+    this.removeEventListener('focusin', this.onOwnedFocus);
     this.lifecycleGeneration++;
     this.lazyGeneration++;
     this.cancelLifecycleTimer();
@@ -543,6 +546,12 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     if (this.lazy) this.expanded = false;
     super.disconnectedCallback();
   }
+
+  private onOwnedFocus = (event: FocusEvent): void => {
+    if (event.composedPath()[0] === this && deepActiveElementIn(this.ownerDocument) === this) {
+      this.ownerContext.focusOwner?.(this);
+    }
+  };
 
   override adoptedCallback(): void {
     super.adoptedCallback();

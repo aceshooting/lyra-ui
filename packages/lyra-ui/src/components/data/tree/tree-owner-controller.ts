@@ -20,6 +20,8 @@ export interface TreeItemOwnerContext {
   readonly indeterminate: boolean;
   /** Asks the owning tree to push context to child rows this item just rendered or revealed. */
   readonly syncOwner?: () => void;
+  /** Reports local item focus when shadow retargeting prevents the tree from receiving focusin. */
+  readonly focusOwner?: (item: HTMLElement) => void;
 }
 
 interface TreeItemOwner extends HTMLElement {
@@ -101,7 +103,8 @@ export function configureTreeItemOwner(
     previous.expandIcon === normalized.expandIcon &&
     previous.collapseIcon === normalized.collapseIcon &&
     previous.indeterminate === normalized.indeterminate &&
-    previous.syncOwner === normalized.syncOwner
+    previous.syncOwner === normalized.syncOwner &&
+    previous.focusOwner === normalized.focusOwner
   ) {
     return;
   }

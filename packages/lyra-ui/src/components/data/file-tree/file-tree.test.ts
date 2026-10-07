@@ -6,6 +6,7 @@ import type { LyraFileTree, FileTreeNode } from './file-tree.js';
 import type { LyraTree } from '../tree/tree.js';
 import type { LyraTreeItem } from '../tree/tree-item.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 
 expectDevWarning('lyra-tree-missing-accessible-name');
 
@@ -425,6 +426,92 @@ describe('lr-file-tree', () => {
     el.nodes = nodes;
     await el.updateComplete;
     expect(await el.revealPath('does/not/exist')).to.be.false;
+  });
+
+  it('fulfills a deeply nested lazy directory while retaining its ancestor siblings', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${[
+      { path: 'src', kind: 'directory', children: [
+        { path: 'src/lib', kind: 'directory', children: [
+          { path: 'src/lib/lazy', kind: 'directory', hasChildren: true },
+          { path: 'src/lib/keep.ts' },
+        ] },
+        { path: 'src/app.ts' },
+      ] },
+      { path: 'README.md' },
+    ]}></lr-file-tree>`);
+
+    expect(await el.revealPath('src/lib/lazy')).to.equal(true);
+    el.setChildren('src/lib/lazy', [{ path: 'src/lib/lazy/loaded.ts' }]);
+    await el.updateComplete;
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    await tree.updateComplete;
+
+    expect(el.nodes.map((node) => node.path)).to.deep.equal(['src', 'README.md']);
+    const src = required(el.nodes[0], 'src snapshot');
+    expect(src.children?.map((node) => node.path)).to.deep.equal(['src/lib', 'src/app.ts']);
+    const lib = required(src.children?.[0], 'lib snapshot');
+    expect(lib.children?.map((node) => node.path)).to.deep.equal(['src/lib/lazy', 'src/lib/keep.ts']);
+    expect(await el.revealPath('src/lib/lazy/loaded.ts')).to.equal(true);
+    await tree.updateComplete;
+    const srcRow = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const loaded = srcRow.childItems()[0]!.childItems()[0]!.childItems()[0]!;
+    expect(loaded.nodeId).to.equal('src/lib/lazy/loaded.ts');
+    expect(deepActiveElementIn(document) === loaded, 'the newly revealed file receives focus').to.equal(true);
+    expect(loaded.tabIndex).to.equal(0);
+  });
+
+  it('reveals over-budget descendants and forgets their projection when their ancestor collapses', async () => {
+    const listing: FileTreeNode[] = [
+      { path: 'src', kind: 'directory', children: [
+        { path: 'src/lib', kind: 'directory', children: [{ path: 'src/lib/app.ts' }] },
+      ] },
+      { path: 'docs', kind: 'directory', children: [{ path: 'docs/index.md' }] },
+      { path: 'vendor', kind: 'directory', children: Array.from({ length: 1_001 }, (_, index) => ({ path: `vendor/${index}.ts` })) },
+    ];
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${listing}></lr-file-tree>`);
+    expect(await el.revealPath('docs/index.md')).to.equal(true);
+    expect(await el.revealPath('src/lib/app.ts')).to.equal(true);
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    await tree.updateComplete;
+    const src = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    expect(src.childItems()[0]!.childItems()[0]!.tabIndex).to.equal(0);
+
+    src.collapse();
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(tree.data[0]!.children).to.equal(undefined);
+    expect(tree.data[1]!.children?.map((node) => node.id)).to.deep.equal(['docs/index.md']);
+
+    src.expand();
+    await el.updateComplete;
+    await tree.updateComplete;
+    const lib = src.childItems()[0]!;
+    expect(lib.nodeId).to.equal('src/lib');
+    expect(lib.expanded).to.equal(false);
+    expect(lib.lazy).to.equal(true);
+    expect(lib.childItems().length).to.equal(0);
+    expect(el.dataTruncated).to.equal(false);
+  });
+
+  it('expandAll() projects loaded over-budget branches and reports the omitted rows', async () => {
+    const listing: FileTreeNode[] = [
+      { path: 'src', kind: 'directory', children: [
+        { path: 'src/lib', kind: 'directory', children: [{ path: 'src/lib/app.ts' }] },
+      ] },
+      { path: 'vendor', kind: 'directory', children: Array.from({ length: 1_001 }, (_, index) => ({ path: `vendor/${index}.ts` })) },
+    ];
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${listing}></lr-file-tree>`);
+    expect(el.dataTruncated).to.equal(false);
+
+    await el.expandAll();
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    await tree.updateComplete;
+    const src = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    expect(src.expanded).to.equal(true);
+    expect(src.childItems()[0]!.expanded).to.equal(true);
+    expect(src.childItems()[0]!.childItems()[0]!.nodeId).to.equal('src/lib/app.ts');
+    expect(el.dataTruncated).to.equal(true);
+    expect(tree.data.map((node) => node.id)).to.deep.equal(['src', 'vendor']);
   });
 
   it('is accessible with a nested, git-status-decorated tree', async () => {

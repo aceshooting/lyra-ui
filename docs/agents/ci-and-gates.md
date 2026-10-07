@@ -928,6 +928,11 @@ component maximum measures 252,171 bytes. Only the 17 failing direct/aggregate c
 their next 64-byte boundary, with paired exact reviewed measurements. All passing canaries,
 route/marginal and CSS budgets, peer exclusions and measurement settings remain unchanged.
 
+Nested tree owner focus and newly expanded row settlement add 56–137 gzip bytes to five
+previously failing direct bundles. Only those five ceilings advance to their next 64-byte boundary,
+with paired exact measurements; passing limits, component aggregates, routes, CSS and exclusions
+remain unchanged.
+
 Absolute loader routes retain their callable exports while excluding deferred chunks. Their
 reviewed initial gzip measurements are 13,059 bytes for the CDN entry, 12,878 for the autoloader,
 1,469 for the locale loader and 11,201 for the scoped-registry loader. Their hard ceilings also use

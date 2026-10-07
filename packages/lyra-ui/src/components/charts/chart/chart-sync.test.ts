@@ -7,6 +7,7 @@ import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
 import { LazyChartSyncController } from './chart-sync-lazy.js';
+import { adoptChartSyncStyles } from './chart-sync-style-adoption.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 
@@ -41,6 +42,44 @@ async function hoverMark(chart: LyraLiteChart, index: number): Promise<void> {
 
 describe('chart synchronization', () => {
   afterEach(async () => { await resetMouse(); });
+
+  it('keeps sync chrome styled with the owner nonce when stylesheet adoption is rejected', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const doc = frame.contentDocument!;
+    const view = frame.contentWindow!;
+    const nonceDescriptor = Object.getOwnPropertyDescriptor(view, 'litNonce');
+    const host = doc.createElement('div');
+    const root = host.attachShadow({ mode: 'open' });
+    const crosshair = doc.createElement('div');
+    crosshair.setAttribute('part', 'sync-crosshair');
+    root.append(crosshair);
+    doc.body.append(host);
+    let rejected = 0;
+    Object.defineProperty(root, 'adoptedStyleSheets', {
+      configurable: true,
+      get: () => [],
+      set: () => { rejected += 1; throw new TypeError('stylesheet adoption unavailable'); },
+    });
+    Object.defineProperty(view, 'litNonce', { configurable: true, value: 'chart-style-nonce' });
+    let release: (() => void) | undefined;
+    try {
+      release = adoptChartSyncStyles(host);
+      expect(rejected).to.equal(1);
+      expect(root.querySelectorAll('style').length).to.equal(1);
+      expect(root.querySelector('style')!.nonce).to.equal('chart-style-nonce');
+      expect(view.getComputedStyle(crosshair).position).to.equal('absolute');
+      expect(view.getComputedStyle(crosshair).pointerEvents).to.equal('none');
+      release();
+      expect(root.querySelectorAll('style').length).to.equal(0);
+      expect(view.getComputedStyle(crosshair).position).to.equal('static');
+    } finally {
+      release?.();
+      Reflect.deleteProperty(root, 'adoptedStyleSheets');
+      if (nonceDescriptor) Object.defineProperty(view, 'litNonce', nonceDescriptor);
+      else Reflect.deleteProperty(view, 'litNonce');
+      host.remove();
+    }
+  });
 
   it('loads sync styles only for a group and rebinds them after adoption', async () => {
     const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);

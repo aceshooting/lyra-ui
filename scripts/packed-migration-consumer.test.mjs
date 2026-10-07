@@ -444,6 +444,73 @@ test('current shared chart tooltip ownership preserves all historical sites as e
     'Expectation changes only when independently checked ownership changes');
 });
 
+test('current shared chunk event ownership preserves exact manual decisions and target filtering', async () => {
+  const { createMemberMigrationCases, assertMemberMigrationReport } = await import('./packed-migration-consumer-cases.mjs');
+  const { readCurrentCompatibilityContext } = await import('../packages/lyra-ui/scripts/check-published-compatibility.mjs');
+  const { buildMigrationContract, migrateText } = await import('../packages/lyra-ui/scripts/migrate-wa.mjs');
+  const context = await readCurrentCompatibilityContext();
+  const inventory = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/component-inventory.json', import.meta.url), 'utf8'));
+  const ledger = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames.json', import.meta.url), 'utf8'));
+  const cases = createMemberMigrationCases(context, ledger);
+  assert.equal(cases.length, 390);
+  const shared = cases.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-chunk-toggle');
+  assert.deepEqual(shared.map(item => item.key.tag).sort(), ['lr-chunk-inspector', 'lr-entity-dossier', 'lr-provenance-panel']);
+  const contract = buildMigrationContract(inventory, { renameLedger: ledger, lyraVersion: context.packageVersion, compatibilityContext: context });
+  for (const item of shared) {
+    assert.equal(item.automatic, false, item.id);
+    assert.equal(item.sharedTargetReview, true, item.id);
+    assert.deepEqual(item.targetKeepers, ['lr-memory-panel'], item.id);
+    let handler;
+    const owner = { addEventListener(name, listener) { assert.equal(name, 'lr-chunk-toggle'); handler = listener; } };
+    const received = [];
+    const resolveListener = new Function('document', 'console', item.resolved.replace(')!', ')'));
+    resolveListener({ querySelector(selector) { assert.equal(selector, item.key.tag); return owner; } }, { log(event) { received.push(event); } });
+    const nestedEvent = { target: {}, currentTarget: owner };
+    const ownedEvent = { target: owner, currentTarget: owner };
+    handler(nestedEvent); handler(ownedEvent);
+    assert.deepEqual(received, [ownedEvent], 'A canonical listener receives only its own component events');
+    const file = `${item.id}.ts`;
+    const result = migrateText(item.input, contract, { file, origin: 'lyra-v21' });
+    assert.equal(result.content, item.input);
+    const report = { schemaVersion: 1, origin: 'lyra-v21', ...result, filesChanged: 0,
+      summary: { rewrites: result.changes.length, warnings: result.warnings.length, acknowledged: result.acknowledged } };
+    assertMemberMigrationReport(report, [{ ...item, file }], 'lyra-v21');
+    assert.match(result.warnings[0].message, /lr-memory-panel also dispatches lr-chunk-toggle/);
+    const acknowledged = migrateText(`// lyra-migrate-reviewed: RENAME_TARGET_SHARED_REVIEW:${item.key.name}\n${item.input}`, contract, { file, origin: 'lyra-v21' });
+    assert.equal(acknowledged.content.endsWith(item.input), true);
+    assert.deepEqual(acknowledged.changes, []); assert.deepEqual(acknowledged.warnings, []);
+    assert.equal(acknowledged.acknowledged, 1);
+    for (const [field, value] of [['warningCode', 'DEPRECATED_MEMBER_REVIEW'], ['target', 'lr-other-toggle'], ['column', item.column + 1], ['upstreamTag', 'lr-memory-panel']]) {
+      const drifted = structuredClone(report); drifted.warnings[0][field] = value;
+      assert.throws(() => assertMemberMigrationReport(drifted, [{ ...item, file }], 'lyra-v21'), `Manual ${field} drift must fail`);
+    }
+    const omittedOwner = structuredClone(report); omittedOwner.warnings[0].message = 'Not renamed: another component dispatches this event.';
+    assert.throws(() => assertMemberMigrationReport(omittedOwner, [{ ...item, file }], 'lyra-v21'));
+    for (const origin of ['lyra-v21', 'lyra-v22']) {
+      const resolved = migrateText(item.resolvedByOrigin?.[origin] ?? item.resolved, contract, { file, origin });
+      assert.deepEqual(resolved.changes, []); assert.deepEqual(resolved.warnings, []);
+      assert.equal(resolved.acknowledged, item.resolvedAcknowledgementsByOrigin[origin]);
+    }
+  }
+  for (const item of cases) for (const origin of ['lyra-v21', 'lyra-v22']) {
+    const file = `${item.id}.${item.extension}`;
+    const result = migrateText(item.input, contract, { file, origin });
+    const report = { schemaVersion: 1, origin, ...result, filesChanged: Number(result.content !== item.input),
+      summary: { rewrites: result.changes.length, warnings: result.warnings.length, acknowledged: result.acknowledged } };
+    assertMemberMigrationReport(report, [{ ...item, file }], origin);
+    assert.equal(result.content, origin === 'lyra-v21' && item.automatic ? item.resolved : item.input, `${item.id}/${origin}`);
+    const resolved = migrateText(item.resolvedByOrigin?.[origin] ?? item.resolved, contract, { file, origin });
+    assert.deepEqual(resolved.changes, [], `${item.id}/${origin}`);
+    assert.deepEqual(resolved.warnings, [], `${item.id}/${origin}`);
+    assert.equal(resolved.acknowledged, item.resolvedAcknowledgementsByOrigin[origin], `${item.id}/${origin}`);
+  }
+  const beforeSharedTarget = structuredClone(context);
+  beforeSharedTarget.exposure.event['lr-chunk-toggle'] = beforeSharedTarget.exposure.event['lr-chunk-toggle'].filter(tag => tag !== 'lr-memory-panel');
+  const historical = createMemberMigrationCases(beforeSharedTarget, ledger);
+  assert.equal(historical.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-chunk-toggle' && item.automatic).length, 3,
+    'Expectation changes only when independently checked ownership changes');
+});
+
 test('full member stage remains off until all390 are retired and rejects changed cohort identity', async () => {
   const { createMemberMigrationCases, selectMemberMigrationStage } = await import('./packed-migration-consumer-cases.mjs');
   const facts = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/22.0.0/facts.json', import.meta.url), 'utf8'));

@@ -647,6 +647,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         expandIcon,
         collapseIcon,
         syncOwner: this.requestContextSync,
+        focusOwner: this.onItemFocus,
       });
       if (frame.depth >= TREE_MAX_RENDER_DEPTH) continue;
       const children = this.childrenOf(frame.node);
@@ -1059,14 +1060,23 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    *  and makes it the roving target, so focus moved by script (`revealPath()`, a host's own
    *  `.focus()`) and the tab stop and arrow-key origin never disagree. */
   private onTreeFocusIn = (e: FocusEvent): void => {
-    const item = e.composedPath().find(
+    const path = e.composedPath();
+    const owner = path.find((target) => (target as Partial<Element>).localName === tag('tree'));
+    if (owner && owner !== this) return;
+    const item = path.find(
       (target): target is LyraTreeItem =>
         (target as Partial<Node>).nodeType === 1 &&
         (target as Partial<Element>).localName === tag('tree-item'),
     );
     if (!item) return;
+    this.onItemFocus(item);
+  };
+
+  private onItemFocus = (element: HTMLElement): void => {
+    const item = element as LyraTreeItem;
+    if (!this.isNavigable(item)) return;
     this.lastFocusedNodeId = item.nodeId;
-    if (this.isNavigable(item)) this.activeId = item.nodeId;
+    this.activeId = item.nodeId;
   };
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -1157,6 +1167,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
           syncOwner: this.requestContextSync,
+          focusOwner: this.onItemFocus,
         });
       }
     } else if (changed.has('activeId') || changed.has('data') || this.hasAuthoredItems) {
@@ -1176,6 +1187,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
           expandIcon: this.iconSource('expand-icon'),
           collapseIcon: this.iconSource('collapse-icon'),
           syncOwner: this.requestContextSync,
+          focusOwner: this.onItemFocus,
         });
       });
     }
@@ -1395,6 +1407,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         expandIcon: this.iconSource('expand-icon'),
         collapseIcon: this.iconSource('collapse-icon'),
         syncOwner: this.requestContextSync,
+        focusOwner: this.onItemFocus,
       });
       const targetPosition: Element | null = previousSibling
         ? previousSibling.nextElementSibling

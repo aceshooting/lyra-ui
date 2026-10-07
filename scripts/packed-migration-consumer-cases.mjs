@@ -57,18 +57,20 @@ export function createMemberMigrationCases(context, ledger) {
     assert.ok(Boolean(rule) !== Boolean(review || slotContent), `Missing or conflicting recipe: ${compatibilityKey(record.key)}`);
     if (rule) assert.equal(rule.to, record.policy.replacement.name, 'Ledger and policy target differ');
     const target = rule?.to ?? record.policy.replacement.name;
-    // CSS declarations reach nested components too. Bind expectations to independently checked
+    // Events and CSS declarations reach nested components. Bind expectations to independently checked
     // exposure rather than assuming a published rename stays global as new components adopt it.
-    const exposedBy = (name) => context.exposure?.['css-property']?.[name] ??
+    const exposureKind = kind === 'event' ? 'event' : 'css-property';
+    const surface = kind === 'event' ? 'events' : 'cssProperties';
+    const exposedBy = (name) => context.exposure?.[exposureKind]?.[name] ??
       Object.values(context.sourceComponents ?? {}).filter(component =>
-        component.surface?.cssProperties?.some(property => property.name === name)).map(component => component.tag);
-    const cssRenames = kind === 'css-property' && rule
+        component.surface?.[surface]?.some(member => member.name === name)).map(component => component.tag);
+    const sharedRenames = ['css-property', 'event'].includes(kind) && rule
       ? profile.renames.filter(entry => entry.kind === kind && entry.from === name) : [];
-    const movingOwners = new Set(cssRenames.filter(entry => entry.to === target && !entry.polarity).map(entry => entry.tag));
-    const targetKeepers = cssRenames.length ? exposedBy(target).filter(owner => !movingOwners.has(owner)).sort() : [];
+    const movingOwners = new Set(sharedRenames.filter(entry => entry.to === target && !entry.polarity).map(entry => entry.tag));
+    const targetKeepers = sharedRenames.length ? exposedBy(target).filter(owner => !movingOwners.has(owner)).sort() : [];
     const sharedTargetReview = targetKeepers.length > 0;
-    if (sharedTargetReview) {
-      assert.ok(cssRenames.every(entry => entry.to === target && !entry.polarity), 'Shared CSS target must have one uninverted replacement');
+    if (sharedTargetReview && kind === 'css-property') {
+      assert.ok(sharedRenames.every(entry => entry.to === target && !entry.polarity), 'Shared CSS target must have one uninverted replacement');
       assert.ok(exposedBy(name).every(owner => movingOwners.has(owner)), 'Shared CSS source ownership needs a separate reviewed recipe');
     }
     const anchor = `document.querySelector('${tag}')!`;
@@ -95,6 +97,9 @@ export function createMemberMigrationCases(context, ledger) {
     } else if (kind === 'event') {
       input = `${anchor}.addEventListener('${name}', event => console.log(event));\n`;
       resolved = `${anchor}.addEventListener('${target}', event => console.log(event));\n`;
+      if (sharedTargetReview) {
+        resolved = `${anchor}.addEventListener('${target}', event => { if (event.target !== event.currentTarget) return; console.log(event); });\n`;
+      }
       if (tag === 'lr-avatar-group') {
         input = `const view = html\`<${tag} size="medium" @${name}=${templateHandlerExpression}></${tag}>\`;\n`;
         resolved = input.replace(name, target);
@@ -120,7 +125,7 @@ export function createMemberMigrationCases(context, ledger) {
     return { id: [tag, kind, name || 'default'].join('_').replaceAll(/[^a-zA-Z0-9_-]/gu, '_'),
       key: record.key, record, input, resolved, extension, column, rule, review, slotContent, sharedTargetReview, targetKeepers,
       reportedTag: kind === 'css-property' && rule && new Set(profile.renames.filter(entry => entry.kind === kind && entry.from === name).map(entry => entry.tag)).size > 1 ? null : tag,
-      resolvedByOrigin: sharedTargetReview ? {
+      resolvedByOrigin: sharedTargetReview && kind === 'css-property' ? {
         'lyra-v21': `/* lyra-migrate-reviewed: NAME_GAINED_OWNER_REVIEW:${target} */\n${resolved}`,
         'lyra-v22': resolved,
       } : tag === 'lr-graph' && kind === 'event' && review ? {
@@ -128,7 +133,7 @@ export function createMemberMigrationCases(context, ledger) {
         'lyra-v22': resolved,
       } : undefined,
       resolvedAcknowledgementsByOrigin: {
-        'lyra-v21': Number(sharedTargetReview || (tag === 'lr-graph' && kind === 'event' && Boolean(review))),
+        'lyra-v21': Number((sharedTargetReview && kind === 'css-property') || (tag === 'lr-graph' && kind === 'event' && Boolean(review))),
         'lyra-v22': 0,
       },
       automatic: Boolean(rule && rule.polarity !== 'inverted' && !sharedTargetReview) };
@@ -165,7 +170,8 @@ export function assertMemberMigrationReport(report, cases, origin) {
         assert.equal(site.warningCode, item.sharedTargetReview ? 'RENAME_TARGET_SHARED_REVIEW' : item.slotContent ? 'DEPRECATED_CONTENT_REVIEW' : item.rule?.polarity === 'inverted' ? 'POLARITY_REVIEW' : 'DEPRECATED_MEMBER_REVIEW');
         assert.equal(site.target, item.slotContent ? null : item.rule?.to ?? item.record.policy.replacement.usage ?? item.record.policy.replacement.name);
         if (item.sharedTargetReview) {
-          assert.match(site.message, /Custom properties inherit into nested components/);
+          assert.match(site.message, item.key.kind === 'event'
+            ? /ignore events whose target is not this/ : /Custom properties inherit into nested components/);
           for (const owner of item.targetKeepers) assert.ok(site.message.includes(owner), `Shared target warning omitted ${owner}`);
         }
         if (item.review && item.record.state === 'retired') assert.ok(site.message.includes('was removed in 23.0.0'), site.message);

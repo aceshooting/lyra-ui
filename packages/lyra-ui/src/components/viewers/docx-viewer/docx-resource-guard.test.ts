@@ -10,6 +10,68 @@ import { assembleZip, zipEntry } from '../archive-viewer/fixtures/zip-builder.js
 
 
 describe('DOCX resource guard', () => {
+  it('accepts whitespace after closing names and rejects invalid closers or incomplete UTF-8', () => {
+    const valid = createDocxXmlDepthInspector(2);
+    valid.write(new TextEncoder().encode('<root><child/></root \t\n>'));
+    valid.close();
+    for (const closer of ['</root suffix>', '</ root>', '</root!>']) {
+      const invalid = createDocxXmlDepthInspector(2);
+      expect(() => invalid.write(new TextEncoder().encode('<root>' + closer))).to.throw(LyraResourceLimitError);
+    }
+    const incomplete = createDocxXmlDepthInspector(2);
+    incomplete.write(new TextEncoder().encode('<root/>'));
+    incomplete.write(new Uint8Array([0xc3]));
+    expect(() => incomplete.close()).to.throw(LyraResourceLimitError, 'invalid XML');
+  });
+
+  it('maps strict admission failures to resource errors and preserves cancellation', async () => {
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(new ArrayBuffer(0), undefined, undefined, { strictAdmission: true }));
+    const source = assembleZip([await zipEntry('word/document.xml', '<document/>')]);
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(source, undefined, undefined, { strictAdmission: true }));
+    const controller = new AbortController();
+    controller.abort();
+    let caught: unknown;
+    try {
+      await assertDocxArchiveWithinLimits(source, undefined, undefined, { strictAdmission: true, signal: controller.signal });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).to.be.instanceOf(DOMException);
+    expect((caught as DOMException).name).to.equal('AbortError');
+  });
+
+  it('counts unquoted relationship targets despite a malformed trailing attribute', async () => {
+    const source = assembleZip([
+      await zipEntry('_rels/.rels', '<Relationships><Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target=document.bin =/></Relationships>'),
+      await zipEntry('document.bin', '<document><paragraph/><paragraph/><paragraph/></document>'),
+    ]);
+    await assertDocxArchiveWithinLimits(source, 10, 10_000, { maxXmlNodes: 6 });
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(source, 10, 10_000, { maxXmlNodes: 5 }));
+  });
+
+  it('bounds depth of relationship-linked XML stored under a non-XML extension in strict mode', async () => {
+    const build = async (depth: number) => assembleZip([
+      await zipEntry('[Content_Types].xml', '<Types/>'),
+      await zipEntry('_rels/.rels', '<Relationships><Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="word/styles.dat"/></Relationships>'),
+      await zipEntry('word/document.xml', '<document/>'),
+      await zipEntry('word/styles.dat', '<style>'.repeat(depth) + '</style>'.repeat(depth), { deflate: true }),
+    ]);
+    await assertDocxArchiveWithinLimits(await build(DOCX_ZIP_LIMITS.depth), undefined, undefined, { strictAdmission: true });
+    await expectResourceLimit(async () => assertDocxArchiveWithinLimits(await build(DOCX_ZIP_LIMITS.depth + 1), undefined, undefined, { strictAdmission: true }));
+  });
+
+  it('shares the relationship byte ceiling across parts and accepts its exact boundary', async () => {
+    const ceiling = 8 * 1024 * 1024;
+    const xml = '<Relationships><!--' + 'x'.repeat(ceiling - '<Relationships><!----></Relationships>'.length) + '--></Relationships>';
+    const boundaryPart = await zipEntry('_rels/.rels', xml, { deflate: true });
+    const extraPart = await zipEntry('word/_rels/document.xml.rels', ' ');
+    await assertDocxArchiveWithinLimits(assembleZip([boundaryPart]));
+    await expectResourceLimit(() => assertDocxArchiveWithinLimits(assembleZip([
+      boundaryPart,
+      extraPart,
+    ])));
+  });
+
   it('counts only real XML nesting across chunks and rejects UTF-16 input', () => {
     const accepted = '<a>'.repeat(128) + '<!-- > </a> --><![CDATA[ > </a> ]]>' + '</a>'.repeat(128);
     const inspector = createDocxXmlDepthInspector(128);

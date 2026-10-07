@@ -11,6 +11,28 @@ function controllerHost(onAdd: (controller: ReactiveController) => void): HTMLEl
   });
 }
 
+for (const shadow of [false, true]) {
+  it(`reads only selected light-DOM label content when ${shadow ? 'the shadow root has no matching slot' : 'no shadow root exists'}`, () => {
+    const host = controllerHost(() => undefined);
+    const defaultLabel = document.createElement('span');
+    defaultLabel.textContent = 'Default label';
+    host.append(defaultLabel);
+    const label = document.createElement('span');
+    label.slot = 'label';
+    label.textContent = 'Named label';
+    const hint = document.createElement('span');
+    hint.slot = 'hint';
+    hint.textContent = 'Unrelated hint';
+    host.append(label, hint);
+    if (shadow) host.attachShadow({ mode: 'open' }).innerHTML = '<slot name="hint"></slot>';
+    const controller = new AccessibleTextController(host, ['label'], () => undefined);
+    expect(controller.text()).to.equal('Named label');
+    label.hidden = true;
+    expect(controller.hasContent()).to.equal(false);
+    expect(new AccessibleTextController(host, [''], () => undefined).text()).to.equal('Default label');
+  });
+}
+
 it('tracks assigned label text and releases its observer across lifecycle changes', async () => {
   let lifecycle: ReactiveController | undefined;
   const host = controllerHost((controller) => { lifecycle = controller; });

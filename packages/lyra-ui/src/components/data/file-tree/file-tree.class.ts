@@ -524,6 +524,8 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       }
       container = node;
     }
+    // The owner must bind newly expanded rows before their focus can update its roving tab stop.
+    await treeEl.updateComplete;
     node?.focus();
     return true;
   }
