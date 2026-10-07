@@ -624,13 +624,15 @@ export type {
 
 export {
   loadLibphonenumberAdapter,
-} from './components/forms/phone-input/phone-input.class.js';
+} from './components/forms/phone-input/phone-number-adapter.js';
 export type {
   LyraPhoneNumberStatus,
   LyraPhoneCountry,
   LyraPhoneNumberParseResult,
   LyraPhoneNumberAdapter,
   LibphonenumberModuleLike,
+} from './components/forms/phone-input/phone-number-adapter.js';
+export type {
   LyraPhoneInputEventDetail,
   LyraPhoneInputSelectionDirection,
 } from './components/forms/phone-input/phone-input.class.js';

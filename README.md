@@ -300,8 +300,9 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   *complete* suite weekly and before every release via
   [`full-engine.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml).
   [`test-all-browsers.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)
-  runs the complete suite against all five browsers (Chromium, Chrome, Edge, Firefox, Safari) on
-  demand — the tool of record for "does everything actually pass everywhere right now."
+  runs the complete suite on demand against Chromium, Chrome, and Edge by default (Firefox and
+  Safari when selected through its `browsers` input) — the tool of record for "does everything
+  actually pass everywhere right now."
 - Not tested against Internet Explorer or other browsers without native custom-element support.
 - **Exact version floors** (Chromium 120+, Gecko 121+, WebKit 16.4+), how they were derived, the CI
   matrix behind them, assistive-technology status, and the policy for engines outside the window:

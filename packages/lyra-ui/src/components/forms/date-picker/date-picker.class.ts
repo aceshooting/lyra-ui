@@ -244,7 +244,10 @@ function copyNativeDate(value: unknown): Date | null {
 /** A disabled-date assignment cannot turn a month render into an unbounded proxy walk. */
 const MAX_DISABLED_DATE_ENTRIES = 10_000;
 
-/** ISO keys of a `disabledDates` value, capped at 10,000 entries. */
+/**
+ * ISO keys of a `disabledDates` value, capped at 10,000 entries.
+ * @internal
+ */
 export function projectDisabledDateKeys(value: unknown): readonly string[] {
   if (typeof value === 'string') {
     return Object.freeze(
@@ -296,7 +299,10 @@ const WEEKDAY_NAMES: Readonly<Record<string, number>> = {
   saturday: 6,
 };
 
-/** Weekday numbers (0 = Sunday) named by a `disabledDaysOfWeek` value. */
+/**
+ * Weekday numbers (0 = Sunday) named by a `disabledDaysOfWeek` value.
+ * @internal
+ */
 export function parseDisabledWeekdays(value: unknown): Set<number> {
   return new Set(
     String(value || '')
@@ -308,7 +314,10 @@ export function parseDisabledWeekdays(value: unknown): Set<number> {
   );
 }
 
-/** Calendar days from `from` to `to`, both included, DST-safe. */
+/**
+ * Calendar days from `from` to `to`, both included, DST-safe.
+ * @internal
+ */
 export function inclusiveDayCount(from: Date, to: Date): number {
   const fromUtc = utcDate(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
   const toUtc = utcDate(to.getFullYear(), to.getMonth(), to.getDate()).getTime();

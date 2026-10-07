@@ -22,7 +22,9 @@ import { parseSync } from 'oxc-parser';
 // through the shared `internal/viewer-search.ts#announceSearchResult()` helper exactly like
 // `<lr-ebook-viewer>`'s existing occurrence -- that helper takes a `localize` callback parameter,
 // so its call site's key argument is a forwarded parameter, not a literal, by construction.
-const UNRESOLVED_CEILING = 30;
+// Bare `localize()` calls now count (+1), and `<lr-chart>` names its type through a literal
+// switch (-1).
+const UNRESOLVED_CEILING = 29;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));

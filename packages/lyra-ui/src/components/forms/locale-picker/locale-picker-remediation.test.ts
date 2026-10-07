@@ -50,7 +50,7 @@ for (const [tag, selector] of [
     const target = el.shadowRoot!.querySelector(selector)!;
     const source = wrapper.querySelector('p')!;
     await waitUntil(() => descriptions(target)[0] === source);
-    const expected = tag === 'lr-phone-input' ? ['External guidance', 'Local hint', 'Local error'] : ['External guidance', 'Local error', 'Local hint'];
+    const expected = ['External guidance', 'Local error', 'Local hint'];
     expect(descriptions(target).map((node) => node.textContent?.trim())).to.deep.equal(expected);
     const replacement = source.cloneNode(true) as HTMLElement;
     replacement.textContent = 'Replacement';

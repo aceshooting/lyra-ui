@@ -1,4 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { collectionTruncationWarningKey } from './internal/collection-snapshot.js';
+import { expectDevWarning } from '../test/expected-dev-warnings.js';
 
 import './components/agent-tools/activity-feed/activity-feed.js';
 import './components/agent-tools/agent-run/agent-run.js';
@@ -293,6 +295,7 @@ describe('original component collection ownership contracts', () => {
       expect(Object.isFrozen(snapshot[0]!.nested)).to.equal(true);
       expect(Object.isFrozen(snapshot[0]!.nested.values)).to.equal(true);
 
+      expectDevWarning(collectionTruncationWarningKey(tag, property));
       element[property] = Array.from(
         { length: COLLECTION_LIMIT + 5 },
         (_, index) => property === 'datasets'
@@ -327,6 +330,7 @@ describe('original component collection ownership contracts', () => {
       expect(Object.isFrozen(snapshot.nested)).to.equal(true);
       expect(Object.isFrozen(snapshot.nested.values)).to.equal(true);
 
+      expectDevWarning(collectionTruncationWarningKey(tag, property));
       element[property] = {
         label: 'oversized',
         nested: {
@@ -357,6 +361,7 @@ describe('original component collection ownership contracts', () => {
       expect(Object.isFrozen(snapshot)).to.equal(true);
       expect(Object.isFrozen(item)).to.equal(false);
 
+      expectDevWarning(collectionTruncationWarningKey(tag, property));
       element[property] = Array.from({ length: COLLECTION_LIMIT + 5 }, () => item);
       expect((element[property] as readonly unknown[]).length).to.equal(COLLECTION_LIMIT);
     });

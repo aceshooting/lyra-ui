@@ -197,21 +197,23 @@ along real data dependencies (verified against the actual scripts, not assumed) 
 gates run in parallel instead of queueing behind each other. If a check goes red, the job name in
 the PR checks list tells you which of these to reproduce locally:
 
-1. **`lint`** — three `lint_shard` workers independently install, then run a deterministic weighted
-   partition of the package's `contract-policy` commands plus `tsc --noEmit -p tsconfig.json`,
-   `test:types`, and `check:test-types`. The runner reads those commands directly from
-   `package.json`; there is no second
-   gate list to drift. Occurrence ordinals make the split disjoint and exhaustive even if a command
-   is deliberately repeated, source-controlled observations weight the expensive checks, and a new
-   valid command receives unit cost rather than disappearing. Every worker restores original policy
-   order within its own lane and uses a full-history checkout because the component-metadata gate may
-   move when the inventory changes. A stable `lint` aggregate runs with `always()` and fails unless
-   the entire matrix concluded `success`.
+1. **`lint`** — one job installs once, then runs `pnpm --filter @aceshooting/lyra-ui run lint:parallel`:
+   a deterministic weighted partition of the package's `contract-policy` commands plus
+   `tsc --noEmit -p tsconfig.json`, `test:types`, and `check:test-types` into three lanes that run
+   concurrently on that runner. The runner reads those commands directly from `package.json`; there
+   is no second gate list to drift. Occurrence ordinals make the split disjoint and exhaustive even
+   if a command is deliberately repeated, source-controlled per-command costs
+   (`scripts/fixtures/lint-command-costs.json`) weight the expensive checks, and a new valid command
+   receives unit cost rather than disappearing. Every lane restores original policy order within
+   itself, and the job uses a full-history checkout because the component-metadata gate may move
+   when the inventory changes. The job fails when any lane fails.
 
-   Hosted command costs are periodically remeasured for the weighted partition; the tests require
-   every current command to occur exactly once and keep estimated lane weights balanced. Local
-   `pnpm lint`, `scripts/ci.sh`, and release generation remain complete and sequential. The shard
-   entry is CI-only. No lint lane needs Playwright or a build because every command is static analysis.
+   Per-command costs are periodically remeasured from the job's `lint-timing` artifact with
+   `node packages/lyra-ui/scripts/ci-costs.mjs lint <lint-timing.jsonl>`; the tests require every
+   current command to occur exactly once and keep estimated lane weights balanced. Local `pnpm lint`,
+   `scripts/ci.sh`, and release generation remain complete and sequential, while `pnpm lint:parallel`
+   runs the same partition CI does. No lint lane needs Playwright or a build because every command
+   is static analysis.
 2. **`static-checks`** — everything needing neither a library build nor a docs build. Its inputs are
    already-committed files except for one read-only, content-addressed npm fetch. It validates
    workflow syntax and the generated release-qualification manifest; runs the release-integrity,
@@ -271,22 +273,20 @@ the PR checks list tells you which of these to reproduce locally:
    lanes use the Playwright image pinned in the workflow, so they do not install browser binaries
    or OS packages on each run.
 
-4. **`packed-consumer`** — a stable aggregate over three independent phases. The contract lane
-   needs `dist/` (the tarball's `files` list includes it) but nothing else `build-and-coverage`
-   needs, so it gets its own `pnpm build` rather than waiting on that job. It verifies the tarball's
-   required files, then runs the complete packed install/import/declaration/bundle/framework
-   contract and packed-size budget. Only ATTW is skipped in this lane. ATTW's 2,435 package
-   export entries are sorted and round-robin partitioned across sixteen runners (three with 153
-   entries and thirteen with 152). The inventory is derived from the current exports map, excluding
-   CSS and the classic-script bootstrap asset. One producer runs real `pnpm pack`, verifies tracked-source freshness,
-   and uploads the tarball with its SHA-256 checksum. Every worker verifies those same bytes and
-   checks the packed name, version, and ordered exports against its checkout before selecting its
-   partition. The 12-minute worker limit is unchanged; a measured 171-route partition took 4m55s,
-   whereas eight-way partitions took up to 10m42s before installation overhead. In parallel, the
-   public-API lane consumes the shared dist artifact from `build_and_coverage_build` and runs the
-   networked public-API semver gate. The aggregate requires the contract lane, all sixteen ATTW
-   shards (which require the package producer), and the public-API
-   lane. The ordinary local `pnpm check:packed-consumer` remains complete and unsharded; the
+4. **`packed-consumer`** — a stable aggregate over independent phases. The contract lane checks the
+   producers' checksum-verified tarballs (lyra-ui from the ATTW package job, lyra-flags and lyra-docs
+   from the companion-packages job) and never builds or packs. It verifies the tarballs' required
+   files, then runs the complete packed install/import/declaration/bundle/framework contract and
+   packed-size budget. Only ATTW is skipped in this lane. ATTW's package export entries are sorted
+   and round-robin partitioned across four jobs, each running four single-threaded `attw` processes
+   (`--workers 4`, one per vCPU). The inventory is derived from the current exports map, excluding
+   CSS and the classic-script bootstrap asset. One producer runs real `pnpm pack`, verifies
+   tracked-source freshness, and uploads the tarball with its SHA-256 checksum. Every worker verifies
+   those same bytes and checks the packed name, version, and ordered exports against its checkout
+   before selecting its partition. In parallel, the public-API lane consumes the shared dist
+   artifact from `build_and_coverage_build` and runs the networked public-API semver gate. The
+   aggregate requires the contract lane, all four ATTW shards (which require the package producer),
+   and the public-API lane. The ordinary local `pnpm check:packed-consumer` remains complete and unsharded; the
    CI-specific `pnpm check:packed-consumer:contracts` is the only path that skips ATTW.
 
    `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true` — a declaration whose JSDoc
@@ -331,9 +331,9 @@ Sharding happens after an optional `--filter` and at capture-axis granularity, n
 granularity. The unit test proves every capture is selected exactly once and shard sizes differ by
 at most one; an ordinary unsharded local run still exercises all 321 captures.
 
-A separate `platform-contracts` matrix runs the curated contract suite in nine Node 22 legs:
-Chromium in two shards, Firefox in four, and Chrome, Edge and Safari (WebKit) in one each.
-Seven legs use the pinned Playwright image; branded Chrome and Edge use the runner VM with
+A separate `platform-contracts` matrix runs the curated contract suite in six Node 22 legs:
+Firefox in two shards, and Chromium, Chrome, Edge and Safari (WebKit) in one each.
+Four legs use the pinned Playwright image; branded Chrome and Edge use the runner VM with
 bounded browser setup. Every leg installs with `--frozen-lockfile` and enables strict browser
 console checking. The primary packed-consumer jobs cover the supported Node floor, declarations,
 tree shaking and framework recipes without repeating that package matrix in each browser leg.
@@ -378,22 +378,24 @@ WTR_BROWSER=firefox WTR_STRICT_CONSOLE=1 \
 Run `pnpm build` first when the selected shard includes package-entrypoint tests. The deterministic
 discovery and sharding logic is covered by the package's blocking `test:tooling` suite.
 
-## Manually dispatched five-browser suite
+## Manually dispatched browser suite
 
-`.github/workflows/test-all-browsers.yml` runs the complete non-coverage suite in Chromium,
-Firefox, Chrome, Edge, and Safari (WebKit). Each browser's four existing deterministic shards run on
-independent runners through `scripts/test_all_browsers.sh`. The test process and concurrency shape
-are unchanged; scheduling the same shards independently removes their former sequential critical
-path without raising browser concurrency inside a shard. Five lightweight browser-named aggregate
-jobs preserve the stable release checks; the individual worker names expose the exact failed shard.
-This four-shard shape is deliberately distinct from `full-engine.yml`'s eight independently-hosted
-shards per Firefox/WebKit engine. Manual diagnostic runs may select a subset through the workflow
-input, but release qualification always dispatches the complete five-browser list.
+`.github/workflows/test-all-browsers.yml` runs the complete non-coverage suite in Chromium, Chrome,
+and Edge by default; its `browsers` input also accepts Firefox and Safari (WebKit), whose complete
+suites are release-required through `full-engine.yml` instead. One shared build job feeds every
+shard, and each browser's four deterministic shards run on independent runners through
+`scripts/test_all_browsers.sh`. The test process and concurrency shape are unchanged; scheduling the
+same shards independently removes their former sequential critical path without raising browser
+concurrency inside a shard. Lightweight browser-named aggregate jobs preserve the stable release
+checks; the individual worker names expose the exact failed shard. This four-shard shape is
+deliberately distinct from `full-engine.yml`'s eight independently-hosted shards per Firefox/WebKit
+engine. Manual diagnostic runs may select a subset through the workflow input, but release
+qualification always dispatches the default browser list.
 
-For a release, the generated qualification manifest requires all five named browser jobs from one
-successful `workflow_dispatch` run whose `head_branch` is `main` and whose `head_sha` is the exact
-release commit. A subset run therefore cannot qualify a release even when every job it did create
-succeeds.
+For a release, the generated qualification manifest requires the Chromium, Chrome, and Edge
+aggregate jobs from one successful `workflow_dispatch` run whose `head_branch` is `main` and whose
+`head_sha` is the exact release commit. A subset run therefore cannot qualify a release even when
+every job it did create succeeds.
 
 ## Local aggregate: `scripts/ci.sh`
 
@@ -418,10 +420,9 @@ the same checksum-pinned actionlint workflow gate as `static-checks`.
   When no explicit concurrency is assigned, Chromium retains its automatic default and
   WebKit/Safari retain the smaller of four pages or half the available CPUs. The aggregate runner
   budgets shard pages from the sum of Firefox's one-page and WebKit's four-page allocations.
-- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same nine
+- `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
   Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.9.1.
-  Its 9 legs are source-derived: Node 22 runs Chromium (2 shards), Chrome (1 shard), Edge (1 shard),
-  Firefox (4 shards), and Safari (1 shard).
+  Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch (`22.23.2`).
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;
@@ -523,8 +524,8 @@ apply to the first publication as well. See
    publishable dependent; the package-version delta, not the changeset list, is the release set.
    Only stable `major.minor.patch` versions are accepted.
 2. **Commit and qualify.** Review the diff, commit it as `chore(release): <pkg>@<version>`, and push
-   to main. Push CI runs on that commit; dispatch `test-all-browsers.yml` (all five browsers) and
-   `full-engine.yml` on main for the same commit. Any failure is fixed with a new commit, and the
+   to main. Push CI runs on that commit; dispatch `test-all-browsers.yml` (its default Chromium, Chrome, and Edge)
+   and `full-engine.yml` on main for the same commit. Any failure is fixed with a new commit, and the
    new HEAD is requalified.
 3. **Release on GitHub.** `gh workflow run release.yml --ref main` plans one
    `<directory>@<version>` tag per publishable package whose committed version has no tag yet (a
@@ -553,7 +554,7 @@ successful results for every job marked `release-qualification: required` or
 so a future gate cannot be added without becoming release-blocking. The exact expanded job names
 live in `.github/release-qualification.json`; `generate-release-qualification.mjs --check` derives
 them from all three workflow files and makes matrix or display-name drift a freshness failure. The
-Test All Browsers run must contain Chromium, Firefox, Chrome, Edge, and Safari; the full-engine run
+Test All Browsers run must contain Chromium, Chrome, and Edge; the full-engine run
 must contain all eight Firefox and all eight WebKit shards, with every job successful.
 The helper deliberately reads the named workflow runs and their jobs, not every check on the commit:
 the latter set includes the currently-running publish job and would deadlock on itself. Its pure
@@ -959,21 +960,21 @@ The gates expose six stable check families split along real data dependencies (`
 `static-checks`, `build-and-coverage`, `packed-consumer`, `docs-and-storybook`,
 `visual-regression`) rather than one linear job, so a red check names the specific phase to
 reproduce instead of "build-test". The `lint` family derives the authoritative `contract-policy`
-commands plus the three `lint` type-check suffixes and balances them across three hosted workers; a
-fail-closed aggregate retains the stable check name. Local `pnpm lint` remains the complete
-sequential command. `pnpm lint:parallel` runs the same authoritative three CI shards locally;
-`CI_JOBS` caps its workers at three without omitting checks. Within `build-and-coverage`, four independently hosted coverage shards consume
+commands plus the three `lint` type-check suffixes and runs them as three measured lanes at once in
+one hosted job. Local `pnpm lint` remains the complete sequential command. `pnpm lint:parallel`
+runs the same authoritative three lanes locally; `CI_JOBS` caps its workers at three without
+omitting checks. Within `build-and-coverage`, four independently hosted coverage shards consume
 the shared `dist/` artifact; a fail-closed merge job requires every raw coverage, JUnit, and
 test-manifest artifact before it enforces whole-suite floors and reports to Codecov. Local
 `test:coverage` deliberately retains the complete four-shard sequential run. A separate
-`platform-contracts` matrix job runs the fast `test:platform` subset on Firefox and Safari
-(WebKit), Chromium, Chrome, and Edge under Node 22.
+`platform-contracts` matrix job runs the fast `test:platform` subset on Firefox (two shards) and
+Safari (WebKit), Chromium, Chrome, and Edge (one each) under Node 22.
 `.github/workflows/full-engine.yml` runs the complete non-coverage suite in eight deterministic,
 cost-balanced shards per browser on a weekly schedule and by manual dispatch.
-`.github/workflows/test-all-browsers.yml` manually runs the same complete suite in Chromium,
-Firefox, Chrome, Edge, and Safari (WebKit), with four independently hosted shards per browser. Five
-lightweight browser-named aggregate jobs preserve the stable release checks. Releases require the
-push CI, all five Test All Browsers aggregates, and all sixteen full-engine shards to succeed for
+`.github/workflows/test-all-browsers.yml` manually runs the same complete suite in Chromium, Chrome,
+and Edge by default (Firefox and Safari selectable), with four independently hosted shards per
+browser. Lightweight browser-named aggregate jobs preserve the stable release checks. Releases
+require the push CI, the three Test All Browsers aggregates, and all sixteen full-engine shards to succeed for
 the exact main commit before any release tag is created. `scripts/test.sh` mirrors the full-engine
 split through `TEST_SH_ENGINE_SHARDS` (default `1`), so a failing CI shard reproduces locally as
 the identically-numbered shard.

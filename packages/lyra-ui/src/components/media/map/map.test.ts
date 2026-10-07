@@ -5178,7 +5178,7 @@ describe('incremental GeoJSON updates', () => {
       type: 'FeatureCollection',
       features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [1, 1] }, properties: {} }],
     };
-    const legend = [{ label: 'Low', color: '#000000', value: 'low' }];
+    const legend = [{ label: 'Low', color: '#000000', pattern: 'solid' as const, value: 'low' }];
     const hidden = ['low'];
     const mount = document.createElement('div');
     const view = () => html`

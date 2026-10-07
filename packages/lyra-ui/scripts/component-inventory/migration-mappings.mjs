@@ -505,7 +505,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review.',
+        'Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review. Its lr-hide is cancelable except when disabling the field or making it readonly closes an open popup, which a listener cannot veto; handlers that rely on vetoing every hide need review.',
       expectedDrift: [
         {
           code: 'type-mismatch',
@@ -513,6 +513,13 @@ const DECISION_OVERRIDES = new Map([
           member: 'appearance',
           expected: '\'filled\' | \'outlined\' | \'filled-outlined\'',
           actual: 'LyraAppearance',
+        },
+        {
+          code: 'cancelability-mismatch',
+          section: 'events',
+          member: 'wa-hide',
+          expected: 'always',
+          actual: 'conditional',
         },
       ],
     },

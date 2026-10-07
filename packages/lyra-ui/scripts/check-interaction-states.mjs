@@ -755,7 +755,6 @@ const PRE_TOKEN_TRANSITION_GAPS = new Set([
   'src/components/agent-tools/terminal/terminal.styles.ts:copy-button',
   'src/components/agent-tools/terminal/terminal.styles.ts:download-button',
   'src/components/agent-tools/thinking-panel/thinking-panel.styles.ts:header',
-  'src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.styles.ts:edit-button',
   'src/components/agent-tools/trace-tree/trace-tree.styles.ts:row',
   'src/components/agent-tools/trace-tree/trace-tree.styles.ts:toggle',
   'src/components/charts/chart/box-plot.styles.ts:legend-item',

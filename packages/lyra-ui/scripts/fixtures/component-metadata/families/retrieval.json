@@ -42,5 +42,45 @@
     "compatibility-stable": [],
     "introduced-stable": []
   },
-  "deprecations": []
+  "deprecations": [
+    {
+      "tag": "lr-community-card",
+      "kind": "event",
+      "name": "lr-entity-activate",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-entity-select",
+        "usage": "@lr-entity-select"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-entity-dossier",
+      "kind": "event",
+      "name": "lr-entity-activate",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-entity-select",
+        "usage": "@lr-entity-select"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-path-strip",
+      "kind": "event",
+      "name": "lr-entity-activate",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-entity-select",
+        "usage": "@lr-entity-select"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    }
+  ]
 }

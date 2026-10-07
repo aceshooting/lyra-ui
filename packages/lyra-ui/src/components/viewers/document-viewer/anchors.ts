@@ -57,7 +57,10 @@ export const TEXT_QUOTE_CONTEXT_CHARS = 32;
 
 const foldQuoteContext = (value: string): string => value.replace(/\s+/g, ' ').trim().toLowerCase();
 
-/** How many provided `prefix`/`suffix` sides (0-2) surround `text.slice(start, end)`. */
+/**
+ * How many provided `prefix`/`suffix` sides (0-2) surround `text.slice(start, end)`.
+ * @internal
+ */
 export function textQuoteContextScore(text: string, start: number, end: number, prefix = '', suffix = ''): number {
   const before = foldQuoteContext(prefix).slice(-TEXT_QUOTE_CONTEXT_CHARS).trim();
   const after = foldQuoteContext(suffix).slice(0, TEXT_QUOTE_CONTEXT_CHARS).trim();

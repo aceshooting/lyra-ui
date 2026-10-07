@@ -877,6 +877,10 @@ const REGENERATE_HINT = 'Run `pnpm registrations` and commit the regenerated fil
  */
 const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/forms/phone-input/phone-input.class.ts -> src/components/media/flag/flag.ts',
+  // Only lists above `virtualizeAt` need the virtualizer.
+  'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
 ];
 
 function preview(entries, limit = 12) {

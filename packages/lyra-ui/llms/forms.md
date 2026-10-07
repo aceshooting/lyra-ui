@@ -3222,8 +3222,9 @@ but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` ti
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
 minimum box from `--lr-icon-button-size`.
-The inherited `--lr-input-focus-border-color` and four `--lr-input-action-*` hooks also apply to
-the numeric row and its steppers, so their state paint can be isolated from other form controls.
+The inherited `--lr-input-focus-border-color`, `--lr-input-placeholder-color` and four
+`--lr-input-action-*` hooks also apply to the numeric row and its steppers, so their state paint can
+be isolated from other form controls.
 The exact-320px RTL story keeps long label/hint copy and both fixed-size steppers within the host.
 
 ```html
@@ -3499,8 +3500,8 @@ and `suffix`. Conditional parts appear only when their associated content or act
 `--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
 `--lr-input-border-color`, `--lr-input-control-height`, `--lr-input-control-min-height`,
 `--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-size`, `--lr-input-gap`,
-`--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-radius`,
-`--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
+`--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-placeholder-color`,
+`--lr-input-radius`, `--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
 `--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`, with the same meanings
 and conditional state behavior as on `lr-input`.
 
@@ -5443,8 +5444,8 @@ fills accepted characters from the first cell in one input operation. The public
 that string.
 
 **Slots:** `label`, `hint`, and `error` render after the matching `label`/`hint`/`errorText` text,
-so both show when both are supplied — the rule every sibling field follows. `with-label`
-and `with-hint` are SSR presence hints for slotted label/hint content.
+so both show when both are supplied — the rule every sibling field follows. `withLabel` and
+`withHint` (`with-label`/`with-hint`) are SSR presence hints for slotted label/hint content.
 
 **CSS parts:** `base` / `form-control` (aliases on the outer wrapper), `label` /
 `form-control-label` (aliases on the label), `field` / `segments` (aliases on the segment wrapper),

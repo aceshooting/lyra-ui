@@ -3307,7 +3307,6 @@
         "src/components/layout/menu/menu.styles.ts",
         "src/components/layout/scroller/scroller.class.ts",
         "src/components/layout/scroller/scroller.styles.ts",
-        "src/components/media/image-viewer/image-viewer.styles.ts",
         "src/components/media/pan-zoom/pan-zoom.styles.ts",
         "src/components/media/video/video.styles.ts",
         "src/components/retrieval/grounding-summary/grounding-summary.styles.ts",
@@ -3568,7 +3567,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/browser-frame/browser-frame.styles.ts",
         "src/components/agent-tools/test-results/test-results.styles.ts",
         "src/components/data/flow-canvas/flow-canvas.styles.ts",
         "src/components/data/pagination/pagination.styles.ts",
@@ -3581,7 +3579,6 @@
         "src/components/media/image-comparer/image-comparer.class.ts",
         "src/components/media/image-comparer/image-comparer.styles.ts",
         "src/components/overlays/spinner/spinner.styles.ts",
-        "src/components/retrieval/graph/graph-canvas.ts",
         "src/components/utility/copy-button/copy-button.styles.ts",
         "src/components/utility/export-button/export-button.styles.ts"
       ]
@@ -3899,7 +3896,6 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/browser-frame/browser-frame.styles.ts",
         "src/components/agent-tools/terminal/terminal.class.ts",
         "src/components/charts/chart/lite-chart.styles.ts",
         "src/components/conversation/conversation-item/conversation-item.class.ts",

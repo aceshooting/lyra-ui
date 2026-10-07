@@ -1,6 +1,8 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import './message-feedback.js';
 import type { LyraMessageFeedback } from './message-feedback.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 describe('feedback toolbar ownership', () => {
   it('lets a provider be queried before its first render without creating a focusable action', () => {
@@ -30,6 +32,7 @@ describe('feedback toolbar ownership', () => {
   });
 
   it('drops an uninspectable detail collection without rendering a partial editor', async () => {
+    expectDevWarning(collectionTruncationWarningKey('lr-message-feedback', 'detail'));
     const reasons = new Proxy([], { getOwnPropertyDescriptor() { throw new Error('opaque collection'); } });
     for (const commentable of [false, true]) {
       const element = await fixture<LyraMessageFeedback>(html`<lr-message-feedback

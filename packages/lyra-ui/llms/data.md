@@ -4530,6 +4530,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridColumnResizeDetail {
     readonly columnId: string;
+    readonly columnKey: string;
     readonly width: number;
     readonly finished: boolean;
   }`

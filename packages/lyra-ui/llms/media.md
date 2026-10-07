@@ -3768,6 +3768,7 @@ These named interfaces and helper signatures are available to typed integrations
     on?(type: 'open' | 'close', listener: () => void): this;
     isOpen?(): boolean;
     getElement?(): HTMLElement | undefined;
+    options?: { focusAfterOpen?: boolean };
   }`
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
