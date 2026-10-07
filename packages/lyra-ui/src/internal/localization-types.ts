@@ -1434,7 +1434,14 @@ export type LyraMessageKey =
   | 'moveDown'
   | 'reorderMovePending'
   | 'reorderMoveCancelled'
-  | 'reorderItemMoved';
+  | 'reorderItemMoved'
+  | 'signaturePad'
+  | 'signaturePadLabel'
+  | 'signaturePadInstructions'
+  | 'signaturePadEmpty'
+  | 'signaturePadSigned'
+  | 'signaturePadPenDown'
+  | 'signaturePadPenUp';
 
 /**
  * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible

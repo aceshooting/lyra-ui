@@ -1277,7 +1277,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   ragEvalDashboardAllSlices: 'All',
   ragEvalDashboardSliceUnavailable:
     'No evaluation runs are available for {slice}.',
-  ragEvalDashboardRunsLimit: 'Only the first {count} evaluation runs are shown.',
+  ragEvalDashboardRunsLimit: 'Only the most recent {count} evaluation runs are shown.',
   promptStudioLabel: 'Prompt studio',
   promptStudioMessages: 'Prompt messages',
   promptStudioVariables: 'Variables',

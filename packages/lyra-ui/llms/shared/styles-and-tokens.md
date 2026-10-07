@@ -681,7 +681,7 @@ code. See each control's own reference page for its exact pair.
 
 ### Tokens with a contract attached
 
-- **`--lr-theme-icon-button-size`** (default `2.5rem`) backs `--lr-icon-button-size`, the tappable
+- **`--lr-theme-icon-button-size`** (default `2.25rem`) backs `--lr-icon-button-size`, the tappable
   box of **every** icon-only control in the library — `lr-icon-button` itself, and the
   expand/clear/toggle affordances inside `lr-date-input`, `lr-combobox`, `lr-input`, and
   `lr-select`. It is a _floor_, not a fixed size. Keep the resolved value **at or above 24px**

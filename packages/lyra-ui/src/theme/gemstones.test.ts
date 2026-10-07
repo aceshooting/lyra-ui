@@ -235,7 +235,7 @@ describe('gemstoneSelectedGlyphStyles', () => {
     picker.value = 'sapphire';
     await (picker as unknown as { updateComplete: Promise<unknown> }).updateComplete;
     const pickerIcon = picker.shadowRoot!.querySelector(
-      '[part="swatch"][aria-checked="true"] [part="swatch-icon"]'
+      '[part~="swatch"][aria-checked="true"] [part="swatch-icon"]'
     ) as HTMLElement | null;
     expect(pickerIcon != null, 'expected a checked gemstone swatch icon').to.equal(true);
     expect(

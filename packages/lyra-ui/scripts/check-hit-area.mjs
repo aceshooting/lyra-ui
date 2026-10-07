@@ -1,7 +1,7 @@
 import { isMainModule } from './is-main-module.mjs';
 
 // Static check for the shared minimum icon-button hit-area convention (see
-// src/internal/tokens.styles.ts's `--lr-icon-button-size`, 2.5rem/40px):
+// src/internal/tokens.styles.ts's `--lr-icon-button-size`, 2.25rem/36px):
 // every independently-interactive, icon-sized control (a literal `<button>`,
 // or an element wearing `role="button"`/`tabindex="0"`) must resolve to at
 // least that floor via `min-inline-size`/`min-block-size`, either directly or
@@ -31,7 +31,7 @@ const sourceRoots = [
   path.join(packageDir, 'src', 'internal'),
 ];
 
-const FLOOR_PX = 40; // --lr-icon-button-size == 2.5rem == 40px at the default 16px root.
+const FLOOR_PX = 36; // --lr-icon-button-size == 2.25rem == 36px at the default 16px root.
 const REM_PX = 16;
 const ICON_BUTTON_TOKEN = '--lr-icon-button-size';
 const ESCAPE_HATCH = 'hit-area-exempt';

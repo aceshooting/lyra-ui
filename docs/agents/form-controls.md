@@ -15,8 +15,7 @@ a missing feature.
   JS, since `[part]:empty` never matches a slot-containing part; `aria-describedby` wired to the
   rendered hint/error ids). The one exception is a control whose own doc comment explicitly
   states it's a deliberately bare primitive with no chrome, or whose interaction idiom is
-  genuinely incompatible with a generic label/hint/error frame (e.g. a slider's `label` is an
-  accessible-name override, not visible text; a chat composer is a composite input, not a labeled
+  genuinely incompatible with a generic label/hint/error frame (e.g. a chat composer is a composite input, not a labeled
   field) — silence isn't an exception on its own; a component relying on this carve-out states it
   explicitly in its class doc comment the next time it's touched.
 - **The required marker is one shared sheet, never a re-typed `::after`.** A control that accepts

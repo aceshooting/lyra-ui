@@ -673,7 +673,7 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
   ['lr-input', { change: 'Event', input: 'InputEvent' }],
   ['lr-number-input', { change: 'Event', input: 'InputEvent' }],
   ['lr-otp-input', { change: 'Event', input: 'InputEvent' }],
-  ['lr-radio-group', { change: 'Event', input: 'InputEvent' }],
+  ['lr-radio-group', { change: 'Event', input: 'Event' }],
   ['lr-select', { change: 'Event', input: 'InputEvent' }],
   [
     'lr-slider',
@@ -684,7 +684,7 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
       input: 'InputEvent',
     },
   ],
-  ['lr-switch', { change: 'Event', input: 'InputEvent' }],
+  ['lr-switch', { change: 'Event', input: 'Event' }],
   ['lr-time-input', { change: 'Event', input: 'InputEvent' }],
   ['lr-zoomable-frame', { error: 'Event', load: 'Event' }],
 ]);

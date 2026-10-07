@@ -364,12 +364,22 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return Math.max(this.safeComposerMinRows, finiteCount(this.composerMaxRows, 8));
   }
 
-  private onRetrievalSelect = (event: CustomEvent<RetrievalResultsSelectDetail>): void => {
-    // `<lr-retrieval-results>`'s own `lr-select` bubbles/composes (LyraElement.emit()'s defaults),
-    // so without stopping it here it would keep bubbling straight through this component under the
-    // wrong, undocumented name -- this component's own contract is `lr-retrieval-select` below.
+  private onRetrievalSelect = (
+    event: CustomEvent<{ selectedChunkIds: string[]; chunks: RetrievalResultsSelectDetail['chunks'] }>
+  ): void => {
+    // `<lr-retrieval-results>`'s own selection events bubble/compose (LyraElement.emit()'s defaults),
+    // so without stopping them here they would keep bubbling straight through this component under
+    // the wrong, undocumented name -- this component's own contract is `lr-retrieval-select` below.
     event.stopPropagation();
-    this.emit('lr-retrieval-select', event.detail);
+    this.emit('lr-retrieval-select', {
+      chunkIds: event.detail.selectedChunkIds,
+      chunks: event.detail.chunks,
+    });
+  };
+
+  /** The deprecated `lr-select` alias follows `lr-selection-change`; it only has to stay contained. */
+  private onRetrievalSelectAlias = (event: Event): void => {
+    event.stopPropagation();
   };
 
   private onMessageRetry = (event: CustomEvent<{ messageId?: string }>): void => {
@@ -456,7 +466,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}
                 .errorText=${this.retrievalErrorText}
-                @lr-select=${this.onRetrievalSelect}
+                @lr-selection-change=${this.onRetrievalSelect}
+                @lr-select=${this.onRetrievalSelectAlias}
               ></lr-retrieval-results>
             </section>`
           : nothing}

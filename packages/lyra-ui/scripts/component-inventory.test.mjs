@@ -893,7 +893,7 @@ test('form association comes only from static/mixin truth and follows superclass
   );
 });
 
-test('the live manifest resolves to the exact 37 runtime FACE tags', () => {
+test('the live manifest resolves to the exact 38 runtime FACE tags', () => {
   const associated = normalizeManifest(readJson('custom-elements.json'), {
     ecosystem: 'lyra',
   })
@@ -927,6 +927,7 @@ test('the live manifest resolves to the exact 37 runtime FACE tags', () => {
     'lr-rating',
     'lr-rubric-form',
     'lr-select',
+    'lr-signature-pad',
     'lr-slider',
     'lr-switch',
     'lr-textarea',

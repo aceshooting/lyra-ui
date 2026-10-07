@@ -1828,6 +1828,7 @@ export type { LyraResponsivePanelEventMap } from './components/layout/responsive
 export type { LyraSegmentedEventMap } from './components/layout/segmented/segmented.class.js';
 export type { LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.class.js';
 export type { LyraSelectEventMap } from './components/forms/select/select.class.js';
+export type { LyraSignaturePadEventMap, SignatureStroke } from './components/forms/signature-pad/signature-pad.class.js';
 export type {
   LyraSliderChangeDetail,
   LyraSliderEventMap,

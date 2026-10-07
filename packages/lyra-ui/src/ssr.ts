@@ -472,6 +472,7 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-selection-toolbar',
   'lr-sequence-playback',
   'lr-sequence-strip',
+  'lr-signature-pad',
   'lr-skeleton',
   'lr-slider',
   'lr-source-card',

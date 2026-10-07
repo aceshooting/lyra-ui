@@ -70,6 +70,19 @@
       "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
     },
     {
+      "tag": "lr-memory-panel",
+      "kind": "event",
+      "name": "lr-entity-activate",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-entity-select",
+        "usage": "@lr-entity-select"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
       "tag": "lr-path-strip",
       "kind": "event",
       "name": "lr-entity-activate",
@@ -81,6 +94,84 @@
       },
       "removalNotBefore": "28.0.0",
       "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-provenance-panel",
+      "kind": "event",
+      "name": "lr-entity-activate",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-entity-select",
+        "usage": "@lr-entity-select"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-rag-eval-dashboard",
+      "kind": "event",
+      "name": "lr-metric-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-metric-change-request",
+        "usage": "@lr-metric-change-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-metric-change-request names a request the application decides on; the old event fires right after it for one major."
+    },
+    {
+      "tag": "lr-rag-eval-dashboard",
+      "kind": "event",
+      "name": "lr-run-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-run-activate",
+        "usage": "@lr-run-activate"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-rag-eval-dashboard",
+      "kind": "event",
+      "name": "lr-slice-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-slice-change-request",
+        "usage": "@lr-slice-change-request"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-slice-change-request names a request the application decides on; the old event fires right after it for one major."
+    },
+    {
+      "tag": "lr-retrieval-results",
+      "kind": "event",
+      "name": "lr-select",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-selection-change",
+        "usage": "@lr-selection-change"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major."
+    },
+    {
+      "tag": "lr-source-picker",
+      "kind": "event",
+      "name": "lr-sources-change",
+      "since": "unreleased",
+      "replacement": {
+        "kind": "event",
+        "name": "lr-selection-change",
+        "usage": "@lr-selection-change"
+      },
+      "removalNotBefore": "28.0.0",
+      "rationale": "lr-selection-change is the library's one name for a changed selection; the alias fires right after it for one major."
     }
   ]
 }

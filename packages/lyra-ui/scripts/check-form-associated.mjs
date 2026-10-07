@@ -363,6 +363,7 @@ export const HAND_ROLLED_FORM_VALUE = new Set([
   'src/components/forms/radio/radio.class.ts',
   'src/components/forms/rubric-form/rubric-form.class.ts',
   'src/components/forms/select/select.class.ts',
+  'src/components/forms/signature-pad/signature-pad.class.ts',
   'src/components/forms/slider/slider.class.ts',
   'src/components/forms/switch/switch.class.ts',
   'src/components/forms/token-input/token-input.class.ts',
