@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html } from '@open-wc/testing';
+import { nothing, render } from 'lit';
 import '../flow-canvas/flow-canvas.js';
 import '../flow-minimap/flow-minimap.js';
 import './flow-run-status.js';
@@ -361,6 +362,61 @@ it('announces a step status transition, not the initial mount', async () => {
   await overlay.updateComplete;
   const liveRegion = overlay.shadowRoot!.querySelector('[part="live-region"]')!;
   expect(liveRegion.textContent).to.equal('Fetch data: Success');
+});
+
+it('stays silent when it mounts into a rendered canvas with decorations already bound', async () => {
+  const canvas = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  canvas.nodes = nodes;
+  await canvas.updateComplete;
+  const overlay = document.createElement('lr-flow-run-status') as LyraFlowRunStatus;
+  overlay.slot = 'top-end';
+  overlay.decorations = { fetch: { status: 'running' }, summarize: { status: 'pending' } };
+  canvas.append(overlay);
+  await overlay.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal([]);
+  expect(overlay.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('');
+});
+
+it('names a step like the canvas does and summarizes a large batch of transitions', async () => {
+  const canvas = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  canvas.nodes = [
+    { id: 'fetch', accessibleLabel: 'Fetch customer records', data: { label: 'Fetch' } },
+    ...Array.from({ length: 7 }, (_, i) => ({ id: `s${i}` })),
+  ];
+  const overlay = document.createElement('lr-flow-run-status') as LyraFlowRunStatus;
+  overlay.slot = 'top-end';
+  canvas.append(overlay);
+  await overlay.updateComplete;
+  overlay.decorations = { fetch: { status: 'running' } };
+  await overlay.updateComplete;
+  const region = overlay.shadowRoot!.querySelector('[part="live-region"]')!;
+  expect(region.textContent).to.equal('Fetch customer records: Running');
+  overlay.decorations = Object.fromEntries(canvas.nodes.map((node) => [node.id, { status: 'success' }])) as FlowRunDecorations;
+  await overlay.updateComplete;
+  expect(region.textContent).to.equal('8 of 8 steps complete');
+});
+
+it('keeps its snapshot and the canvas decorations when a parent re-renders the same record', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const decorations: FlowRunDecorations = { fetch: { status: 'running' } };
+  const view = () => html`<lr-flow-canvas .nodes=${nodes}>
+    <lr-flow-run-status slot="top-end" .decorations=${decorations}></lr-flow-run-status>
+  </lr-flow-canvas>`;
+  try {
+    render(view(), host);
+    const canvas = host.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    const overlay = host.querySelector('lr-flow-run-status') as LyraFlowRunStatus;
+    await overlay.updateComplete;
+    await canvas.updateComplete;
+    const before = [overlay.decorations, canvas.decorations];
+    render(view(), host);
+    await overlay.updateComplete;
+    expect([overlay.decorations === before[0], canvas.decorations === before[1]]).to.deep.equal([true, true]);
+  } finally {
+    render(nothing, host);
+    host.remove();
+  }
 });
 
 it('announces every simultaneous step transition in one live-region update', async () => {

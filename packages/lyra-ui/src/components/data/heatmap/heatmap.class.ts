@@ -1,12 +1,14 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type ComplexAttributeConverter, type PropertyDeclaration, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
-import { getScratchCtx } from '../../../internal/canvas.js';
+import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { activeElementIn } from '../../../internal/active-element.js';
@@ -156,11 +158,17 @@ const RING_LINE_WIDTH = 2;
 const FALLBACK_FOCUS_RING_COLOR = '#0969da';
 const FALLBACK_ANNOTATION_COLOR = '#cf222e';
 const FALLBACK_SELECTED_COLOR = '#1a7f37';
+/** Colours a detached canvas would resolve against the wrong scope, so a probe element must. */
+const SCOPED_COLOR = /var\(|currentcolor|light-dark\(/i;
+/** Backing-store ceilings: iOS Safari caps a canvas at 16,777,216 px, Chromium and Firefox a side near 32,767. */
+const MAX_CANVAS_DIMENSION = 16_384;
+const MAX_CANVAS_PIXELS = 16_777_216;
 // policy-allow(rtl-arrow-keys): the canvas grids are deliberately non-mirrored -- drawMatrix()/
 // columnXFor() always place column/week 0 at the physical left and [part='cells'] is pinned
 // `direction: ltr` in heatmap.styles.ts -- so arrow keys stay physical too; see
 // onMatrixKeyDown()/onCalendarKeyDown().
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const GRID_KEYS = new Set([...ARROW_KEYS, 'Home', 'End']);
 const MS_PER_DAY = 86_400_000;
 const CAL_MONTH_LABEL_GAP = 2;
 
@@ -639,8 +647,9 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * Every cell is independently addressable: a `pointermove` hit test over the
  * canvas shows `[part="tooltip"]` with that cell's label + value (hidden on
  * `pointerleave`); the canvas is a named `role="application"`, `tabindex="0"` control with
- * arrow-key roving focus (a stroked ring redrawn over the focused cell on every draw, plus a
- * shared light-DOM polite status announcement — avoids a
+ * arrow-key roving focus (Home/End jump to the first/last interactive cell of the focused row,
+ * Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring redrawn over the focused cell
+ * on every draw, plus a shared light-DOM polite status announcement — avoids a
  * DOM-node-per-cell overlay, which would be hundreds of nodes for a year
  * calendar); and a click, or Enter/Space on the focused cell, fires
  * `lr-cell-activate`. `annotations` additionally strokes a ring around
@@ -723,7 +732,9 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  *
  * Full canvas redraws are suspended while the host is outside the viewport. Data, locale, theme,
  * resize, and DPR invalidations remain pending and coalesce into one redraw when the heatmap
- * intersects again; environments without `IntersectionObserver` retain eager drawing.
+ * intersects again; environments without `IntersectionObserver` retain eager drawing. A grid
+ * whose backing store would exceed the engine's canvas limits (16,384 px per side, 16,777,216
+ * pixels) is painted at a lower resolution instead of blank, and `exportData('png')` follows it.
  * Matrix work is capped at `MAX_HEATMAP_CELLS`; calendar input/span and decoration collections
  * have corresponding exported ceilings. A localized `[part="projection-limit"]` disclosure is
  * attached whenever canonicalization truncates caller input.
@@ -750,7 +761,7 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * `lr-matrix-geometry-change`. Never fired in matrix mode.
  * @event lr-selection-change - Non-cancelable controlled multiple-selection proposal with frozen
  * `HeatmapSelectionChangeDetail { selectedCells, source }`. Click/Enter/Space toggles, Shift+arrows
- * extends a rectangle, Shift+Space toggles a row and Ctrl/Meta+Space toggles a column. Pointer drag
+ * (or Shift+Home/End) extends a rectangle, Shift+Space toggles a row and Ctrl/Meta+Space toggles a column. Pointer drag
  * paints or erases with a transient preview and emits once on release; cancellation discards it.
  * Assign the proposed array to `selectedCells` to accept. Programmatic assignments are silent.
  * @slot legend - Custom legend content rendered inside the built-in legend row. Nothing is
@@ -882,8 +893,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /**
    * Rotation, in degrees, applied to matrix column labels. Unset (or `0`) paints them horizontally
-   * exactly as before. In a dense matrix the per-column width is far narrower than a typical label,
-   * so horizontal labels collide with their neighbours; `45` or `90` is the standard remedy.
+   * exactly as before. A horizontal label is truncated with an ellipsis to its own column (to its
+   * `colLabelInterval` columns, at most to the canvas edge), so in a dense matrix labels shorten or
+   * drop rather than overprint their neighbours; `45` or `90` is the standard remedy.
    *
    * Each label is rotated about an anchor at its own column's centre, with the label's *end* at the
    * anchor, so it leans up and back over the columns to its left and the last column's label cannot
@@ -1054,7 +1066,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   exportData(format: LyraHeatmapExportFormat): string {
     if (format === 'csv') return this.exportCsv();
-    if (format !== 'png' || !this.canvasHasContent || !this.canvas) return '';
+    if (format !== 'png' || !this.canvasHasContent || this.drawDirty || !this.canvas) return '';
     if (this.canvas.width <= 0 || this.canvas.height <= 0) return '';
     try {
       const rowBand = this.frozenBandCanvas('row-labels');
@@ -1161,13 +1173,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (maxWidth <= 0) return '';
     if (ctx.measureText(label).width <= maxWidth) return label;
     const characters = [...label];
-    let kept = characters.length - 1;
-    while (kept > 0) {
-      const candidate = `${characters.slice(0, kept).join('')}…`;
-      if (ctx.measureText(candidate).width <= maxWidth) return candidate;
-      kept -= 1;
+    const shortened = (kept: number): string => `${characters.slice(0, kept).join('')}…`;
+    let fits = 0;
+    let most = characters.length - 1;
+    while (fits < most) {
+      const kept = (fits + most + 1) >> 1;
+      if (ctx.measureText(shortened(kept)).width <= maxWidth) fits = kept;
+      else most = kept - 1;
     }
-    return ctx.measureText('…').width <= maxWidth ? '…' : '';
+    return fits > 0 || ctx.measureText('…').width <= maxWidth ? shortened(fits) : '';
   }
 
   /** Calendar weekday gutter resolved by the last draw. Keeping the measured `'auto'` value as
@@ -1481,6 +1495,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
   private _bucketCount = DEFAULT_BUCKET_COUNT;
 
+  /** Number of colour-ramp buckets, floored and clamped to 2-256 (default 5). Calendar mode only; matrix mode ignores it. */
   @property({ attribute: 'bucket-count', converter: bucketCountConverter })
   get bucketCount(): number {
     return this._bucketCount;
@@ -1598,8 +1613,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  which can't safely reserve an exact value on a skewed dataset (the bucket selectors round by
    *  continuous ratio, with no equality-based reservation). Unset (the default) reproduces today's
    *  exact ramp/no-data behavior for every cell. A returned value containing a CSS custom property
-   *  (e.g. `var(--x)`) or other browser-resolvable color syntax (e.g. `color-mix(...)`) is
-   *  automatically resolved before being used as a canvas fill color. */
+   *  (e.g. `var(--x)`) or other browser-resolvable color syntax (e.g. `color-mix(...)`,
+   *  `currentColor`) is automatically resolved in this element's own theme scope before being used
+   *  as a canvas fill color; one that does not resolve paints the no-data fill. */
   @property({ attribute: false }) cellColor?: (
     pos: MatrixCellPos | CalendarCellPos,
     value: number
@@ -1691,9 +1707,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   constructor() {
     super();
-    // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
-    // controller registers itself with the host via addController().
-    new ThemeWatcher(this, () => this.refreshTheme());
+    // Repaints when prefers-color-scheme flips or an ancestor mutation changes a theme token the
+    // canvas reads. The controller registers itself with the host via addController().
+    new ThemeWatcher(this, () => this.onThemeSignal());
     // Armed only after every field initializer has run, so the declared defaults of
     // cellGapX/cellGapY/cellRadius (which reach requestUpdate() through Lit's accessors) never
     // count as an explicit calendar-mode request. See `explicitCalendarSpacing()`.
@@ -1831,6 +1847,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private canvasVisible = true;
   private drawDirty = false;
 
+  /** Bumped on every update except a hover-only one; keys the accessible-cell overlay. */
+  private overlayRevision = 0;
   /** The cell currently under the pointer (`null` when not hovering one) — drives `[part="tooltip"]`. */
   @state() private hoverCell: CellPos | null = null;
   /** The roving keyboard-focus cell cursor, moved by arrow keys — drives the
@@ -1905,6 +1923,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       observer.observe(this);
     }
     this.cachedRamp = null;
+    this.paintedTheme = undefined;
     this.canvasColorCache.clear();
     this.watchDpr();
     // Theme watching is owned by the ThemeWatcher controller (connect/disconnect lifecycle too).
@@ -1994,6 +2013,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.size !== 1 || !changed.has('hoverCell')) this.overlayRevision++;
     if (changed.has('data') || changed.has('domain') || changed.has('midpoint') || !this.hasUpdated)
       this.rebuildCanonicalMatrixData();
     if (
@@ -2237,8 +2257,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.generatedAriaLabel = generatedAriaLabel;
     this.syncingGeneratedSemantics = true;
     try {
-      if (this.authorRole === null) this.setAttribute('role', 'group');
-      if (this.authorAriaLabel === null)
+      if (this.authorRole === null && this.getAttribute('role') !== 'group')
+        this.setAttribute('role', 'group');
+      if (this.authorAriaLabel === null && this.getAttribute('aria-label') !== generatedAriaLabel)
         this.setAttribute('aria-label', generatedAriaLabel);
     } finally {
       this.syncingGeneratedSemantics = false;
@@ -2559,6 +2580,36 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!changed) this.requestDraw();
   }
 
+  /** The resolved theme tokens a draw reads, joined; unchanged means a theme signal repaints nothing. */
+  private paintedTheme?: string;
+
+  private themeSignature(): string {
+    const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
+    if (!cs) return '';
+    return [
+      ...this.scaleEndpoints(cs),
+      this.noDataFill(cs),
+      this.labelColor(cs),
+      this.labelFont(cs),
+      this.focusRingColor(cs),
+      this.annotationColor(cs),
+      this.selectedColor(cs),
+      this.stickyLabelBg(cs),
+      ...this.cachedColorSteps.map((step) => this.resolveColorStep(step, '')),
+    ].join('\u0000');
+  }
+
+  /** ThemeWatcher callback: repaints only when a token the draw reads changed. */
+  private onThemeSignal(): void {
+    const signature = this.themeSignature();
+    const resized = this.refreshAccessibleTargetSize();
+    // A cellColor callback may return var() colours this signature cannot see.
+    if (signature === this.paintedTheme && !this.cellColor) return;
+    this.paintedTheme = signature;
+    this.cachedRamp = null;
+    if (!resized) this.scheduleDraw();
+  }
+
   private refreshAccessibleTargetSize(): boolean {
     const raw =
       this.ownerDocument.defaultView
@@ -2723,6 +2774,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     this.drawDirty = false;
     this.canvasHasContent = false;
+    this.paintedTheme ??= this.themeSignature();
     if (this.effectiveMode === 'calendar') this.drawCalendar();
     else this.drawMatrix();
   }
@@ -2785,28 +2837,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.drawFrameRequest = undefined;
   }
 
-  /** Resolves a safe caller-supplied color in this element's live token scope before it reaches
-   * canvas. Canvas accepts ordinary colors but not `var()`; a hidden child lets the browser resolve
-   * arbitrary nested `var()`/`color-mix()` expressions without a hand-written CSS parser. */
+  /** Resolves a safe caller-supplied ramp color in this element's live token scope; canvas cannot read `var()`. */
   private resolveColorStep(color: string, fallback: string): string {
     const safe = sanitizeCssColor(color);
-    if (!safe) return fallback;
-
-    const scope = this.ownerDocument.createElement('span');
-    const probe = this.ownerDocument.createElement('span');
-    scope.hidden = true;
-    scope.style.color = fallback;
-    probe.style.color = safe;
-    scope.append(probe);
-    this.renderRoot.append(scope);
-    try {
-      return (
-        this.ownerDocument.defaultView?.getComputedStyle(probe).color.trim() ||
-        fallback
-      );
-    } finally {
-      scope.remove();
-    }
+    return safe ? resolveCanvasColor(this, safe, fallback) : fallback;
   }
 
   private colorRamp(
@@ -3073,49 +3107,56 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return labels;
   }
 
-  /** Paints both calendar axes. Shared by the full draw and focus-cell repaint so the latter cannot
-   * resurrect an untruncated weekday label after clearing a ring near the axis. */
+  /** Paints the calendar axes (`months` above the grid, `weekdays` beside it). Shared by the full draw
+   * and focus-cell repaint so the latter cannot resurrect an untruncated weekday label after clearing
+   * a ring near the axis; the repaint passes only the axes its dirty rectangle touches. */
   private paintCalendarAxisLabels(
     ctx: CanvasRenderingContext2D,
     cellSize: number,
     cs: CSSStyleDeclaration,
     firstWeekStart: Date,
-    monthLabels: readonly { week: number; label: string }[]
+    monthLabels: readonly { week: number; label: string }[],
+    months = true,
+    weekdays = true
   ): void {
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
-    const canvasRight = this.columnXFor(Math.max(1, this.cachedCalendarGrid.weekCount));
-    const placed: { label: string; x: number; end: number; span: number }[] = [];
-    monthLabels.forEach((month, index) => {
-      const label = this.ellipsize(ctx, month.label, canvasRight);
-      if (!label) return;
-      const width = ctx.measureText(label).width;
-      // The canvas ends exactly at the last week column, so a label anchored there is shifted back
-      // inside (never past the start edge). When two labels would touch, the month covering fewer
-      // week columns (a partial month at either edge) yields; on a tie the earlier label stays.
-      const x = Math.max(0, Math.min(this.columnXFor(month.week), canvasRight - width));
-      const nextWeek = monthLabels[index + 1]?.week ?? Math.max(month.week + 1, this.cachedCalendarGrid.weekCount);
-      const entry = { label, x, end: x + width + CAL_MONTH_LABEL_GAP, span: nextWeek - month.week };
-      let previous = placed[placed.length - 1];
-      while (previous && entry.x < previous.end && entry.span > previous.span) {
-        placed.pop();
-        previous = placed[placed.length - 1];
-      }
-      if (previous && entry.x < previous.end) return;
-      placed.push(entry);
-    });
-    for (const { label, x } of placed) ctx.fillText(label, x, CAL_LABEL_H - 4);
-    const available = this.calendarPadLeft - CAL_WEEKDAY_LABEL_INSET * 2;
-    this.weekdayLabels(firstWeekStart).forEach((label, weekday) => {
-      const shown = label ? this.ellipsize(ctx, label, available) : '';
-      if (shown) {
-        ctx.fillText(
-          shown,
-          CAL_WEEKDAY_LABEL_INSET,
-          this.rowYFor(weekday) + cellSize - 1
-        );
-      }
-    });
+    if (months) {
+      const canvasRight = this.columnXFor(Math.max(1, this.cachedCalendarGrid.weekCount));
+      const placed: { label: string; x: number; end: number; span: number }[] = [];
+      monthLabels.forEach((month, index) => {
+        const label = this.ellipsize(ctx, month.label, canvasRight);
+        if (!label) return;
+        const width = ctx.measureText(label).width;
+        // The canvas ends exactly at the last week column, so a label anchored there is shifted back
+        // inside (never past the start edge). When two labels would touch, the month covering fewer
+        // week columns (a partial month at either edge) yields; on a tie the earlier label stays.
+        const x = Math.max(0, Math.min(this.columnXFor(month.week), canvasRight - width));
+        const nextWeek = monthLabels[index + 1]?.week ?? Math.max(month.week + 1, this.cachedCalendarGrid.weekCount);
+        const entry = { label, x, end: x + width + CAL_MONTH_LABEL_GAP, span: nextWeek - month.week };
+        let previous = placed[placed.length - 1];
+        while (previous && entry.x < previous.end && entry.span > previous.span) {
+          placed.pop();
+          previous = placed[placed.length - 1];
+        }
+        if (previous && entry.x < previous.end) return;
+        placed.push(entry);
+      });
+      for (const { label, x } of placed) ctx.fillText(label, x, CAL_LABEL_H - 4);
+    }
+    if (weekdays) {
+      const available = this.calendarPadLeft - CAL_WEEKDAY_LABEL_INSET * 2;
+      this.weekdayLabels(firstWeekStart).forEach((label, weekday) => {
+        const shown = label ? this.ellipsize(ctx, label, available) : '';
+        if (shown) {
+          ctx.fillText(
+            shown,
+            CAL_WEEKDAY_LABEL_INSET,
+            this.rowYFor(weekday) + cellSize - 1
+          );
+        }
+      });
+    }
   }
 
   private drawCalendar(): void {
@@ -3125,13 +3166,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // which feeds cell size, canvas size, hit testing and every focus/overlay coordinate below.
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!cs) return;
-    const previousResolvedWeekdayWidth = this.resolvedCalendarWeekdayLabelWidth;
     if (this.calendarWeekdayLabelWidth === 'auto') {
       this.resolvedCalendarWeekdayLabelWidth =
         this.measureCalendarWeekdayLabelWidth(cs, firstWeekStart);
     }
-    const autoGutterChanged =
-      previousResolvedWeekdayWidth !== this.resolvedCalendarWeekdayLabelWidth;
     const spacing = this.calendarSpacing();
     const cellSize = spacing.cellSize;
     const w = this.columnXFor(Math.max(1, weekCount));
@@ -3140,15 +3178,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // that spaces rows out further than the default formula still gets a
     // canvas tall enough to paint every row, instead of clipping them.
     const h = this.rowYFor(7);
-    const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
-    this.canvas.width = w * dpr;
-    this.canvas.height = h * dpr;
-    this.canvas.style.width = `${w}px`;
-    this.canvas.style.height = `${h}px`;
-
-    const ctx = this.canvas.getContext('2d');
+    const ctx = this.sizeCanvas(this.canvas, w, h);
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
     // Normalize at the allocation boundary as a final guard even though the
@@ -3184,7 +3215,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           value
         );
         if (override != null) {
-          ctx.fillStyle = this.resolveCanvasColor(override, cs);
+          ctx.fillStyle = this.resolveCellColor(override, cs);
         } else if (this.isNoData(value)) {
           ctx.fillStyle = noDataFill;
         } else if (this.scale === 'sqrt') {
@@ -3263,8 +3294,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     this.paintCalendarAxisLabels(ctx, cellSize, cs, firstWeekStart, monthLabels);
     this.canvasHasContent = true;
-    this.recordCalendarGeometry(spacing, weekCount);
-    if (autoGutterChanged && this.accessibleCells) {
+    if (this.recordCalendarGeometry(spacing, weekCount) && this.accessibleCells) {
       this.scheduleAfterUpdate(
         () => this.requestUpdate(),
         'heatmap-calendar-accessible-geometry'
@@ -3360,7 +3390,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
     const override = this.cellColor?.({ row, col }, value);
-    if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
+    if (override != null) ctx.fillStyle = this.resolveCellColor(override, cs);
     else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
     else if (this.scale === 'sqrt') {
       const step = sqrtStep(value, hi, rampData.colors.length);
@@ -3528,9 +3558,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         }
       }
       if (left < this.matrixPadLeft)
-        this.paintMatrixRowLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, rowHeight, cs);
+        this.paintMatrixRowLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, rowHeight, cs, { top, bottom: top + height });
       if (top < this.matrixPadTop)
-        this.paintMatrixColLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, cellSize, cs);
+        this.paintMatrixColLabels(paintCtx, this.matrixPadLeft, this.matrixPadTop, cellSize, cs, { first: firstCol, last: lastCol });
     } finally {
       paintCtx.restore();
     }
@@ -3563,7 +3593,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
     const override = this.cellColor?.(this.calendarPos(week, weekday), value);
-    if (override != null) ctx.fillStyle = this.resolveCanvasColor(override, cs);
+    if (override != null) ctx.fillStyle = this.resolveCellColor(override, cs);
     else if (this.isNoData(value)) ctx.fillStyle = noDataFill;
     else if (this.scale === 'sqrt') {
       const step = sqrtStep(value, hi, ramp.length);
@@ -3603,11 +3633,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Stores the frozen snapshot `calendarGeometry` returns, reusing the previous object while the
    *  painted geometry is unchanged, and fires `lr-calendar-geometry-change` (mirroring
-   *  `drawMatrix()`'s `lr-matrix-geometry-change`) when it isn't. */
+   *  `drawMatrix()`'s `lr-matrix-geometry-change`) when it isn't. Returns whether it changed. */
   private recordCalendarGeometry(
     spacing: ReturnType<LyraHeatmap['calendarSpacing']>,
     weekCount: number
-  ): void {
+  ): boolean {
     const next: LyraHeatmapCalendarGeometry = {
       padLeft: this.calendarPadLeft,
       padTop: CAL_LABEL_H,
@@ -3627,10 +3657,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         (key) => previous[key] === next[key]
       )
     )
-      return;
+      return false;
     const frozen = Object.freeze(next);
     this.lastPaintedCalendarGeometry = frozen;
     this.emit('lr-calendar-geometry-change', frozen);
+    return true;
   }
 
   private paintCalendarFocusOverlays(
@@ -3727,8 +3758,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           }
         }
       }
-      // Restore the month-axis pixels intersected by the first row's dirty rectangle too.
-      this.paintCalendarAxisLabels(ctx, cellSize, cs, firstWeekStart, this.cachedCalendarGrid.monthLabels);
+      // Restore the axis pixels the dirty rectangle intersects: months above the first row, weekdays beside the first week.
+      this.paintCalendarAxisLabels(ctx, cellSize, cs, firstWeekStart, this.cachedCalendarGrid.monthLabels,
+        top < CAL_LABEL_H, left < this.calendarPadLeft);
     } finally {
       ctx.restore();
     }
@@ -3738,16 +3770,17 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!this.canvas) return;
     const rows = this.matrixRowLabels.length;
     const cols = this.matrixColLabels.length;
+    // One computed-style resolution per draw pass, threaded through every
+    // token reader below -- see the token-reader block's rationale comment.
+    const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
+    if (!cs) return;
     // Resolve the gutter before anything reads it: cell size, canvas size, cell geometry and
     // hit-testing all derive from it, so it has to settle first and then stay put for the frame.
-    if (this.rowLabelWidth === 'auto' || this.colLabelHeight === 'auto') {
-      const measureStyle = getComputedStyle(this);
-      if (this.rowLabelWidth === 'auto') {
-        this.resolvedRowLabelWidth = this.measureRowLabelWidth(measureStyle);
-      }
-      if (this.colLabelHeight === 'auto') {
-        this.resolvedColLabelHeight = this.measureColLabelHeight(measureStyle);
-      }
+    if (this.rowLabelWidth === 'auto') {
+      this.resolvedRowLabelWidth = this.measureRowLabelWidth(cs);
+    }
+    if (this.colLabelHeight === 'auto') {
+      this.resolvedColLabelHeight = this.measureColLabelHeight(cs);
     }
     const padLeft = this.matrixPadLeft;
     const padTop = this.matrixPadTop;
@@ -3780,21 +3813,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
     const w = padLeft + cols * cellSize;
     const h = padTop + rows * rowHeight;
-    const dpr = this.ownerDocument.defaultView?.devicePixelRatio || 1;
-    this.canvas.width = w * dpr;
-    this.canvas.height = h * dpr;
-    this.canvas.style.width = `${w}px`;
-    this.canvas.style.height = `${h}px`;
-
-    const ctx = this.canvas.getContext('2d');
+    const ctx = this.sizeCanvas(this.canvas, w, h);
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    // One computed-style resolution per draw pass, threaded through every
-    // token reader below -- see the token-reader block's rationale comment.
-    const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
-    if (!cs) return;
     const bounds = this.cachedValueRange;
     const lo = bounds ? bounds[0] : 0;
     const hi = bounds ? bounds[1] : 1;
@@ -3811,7 +3833,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         const y = padTop + r * rowHeight;
         const override = this.cellColor?.({ row: r, col: c }, v);
         if (override != null) {
-          ctx.fillStyle = this.resolveCanvasColor(override, cs);
+          ctx.fillStyle = this.resolveCellColor(override, cs);
         } else if (this.isNoData(v)) {
           // isNoData() keeps the non-finite half of this guard unconditional, which matters here:
           // `v < 0` alone is false for NaN, which would otherwise fall through to the ramp
@@ -3907,7 +3929,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
     this.paintMatrixRowLabels(ctx, padLeft, padTop, rowHeight, cs);
     this.paintMatrixColLabels(ctx, padLeft, padTop, cellSize, cs);
-    this.paintFrozenLabelBands(padLeft, padTop, cellSize, rowHeight, w, h, dpr, cs);
+    this.paintFrozenLabelBands(padLeft, padTop, cellSize, rowHeight, w, h, ctx.getTransform().a, cs);
     this.canvasHasContent = true;
     // renderAccessibleCells() deliberately used the previous frozen geometry while this draw was
     // pending, so the DOM overlay never jumped ahead of the old bitmap. Move it to this new
@@ -3929,17 +3951,27 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     padLeft: number,
     padTop: number,
     cellSize: number,
-    cs: CSSStyleDeclaration
+    cs: CSSStyleDeclaration,
+    dirty?: { top: number; bottom: number }
   ): void {
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
     const rowLabelSpace = padLeft - ROW_LABEL_INSET * 2;
-    this.matrixRowLabels.forEach((label, r) => {
+    let first = 0;
+    let last = this.matrixRowLabels.length - 1;
+    if (dirty) {
+      // Only the labels whose glyphs (the font's ascent above, descent below the baseline) meet the dirty rectangle.
+      const { fontBoundingBoxAscent, fontBoundingBoxDescent } = ctx.measureText('M');
+      const baseline = padTop + cellSize / 2 + 3;
+      first = Math.max(first, Math.floor((dirty.top - fontBoundingBoxDescent - baseline) / cellSize));
+      last = Math.min(last, Math.ceil((dirty.bottom + fontBoundingBoxAscent - baseline) / cellSize));
+    }
+    for (let r = first; r <= last; r++) {
       // Truncate rather than clip: a label cut mid-glyph by whatever is painted beside it looks
       // like a rendering fault, while an ellipsis reads as "there is more here".
-      const shown = this.ellipsize(ctx, label, rowLabelSpace);
+      const shown = this.ellipsize(ctx, this.matrixRowLabels[r]!, rowLabelSpace);
       if (shown) ctx.fillText(shown, ROW_LABEL_INSET, padTop + r * cellSize + cellSize / 2 + 3);
-    });
+    }
   }
 
   /** The column-label band at `y = 0 .. padTop`, rotation included. The mirror of
@@ -3949,16 +3981,20 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     padLeft: number,
     padTop: number,
     cellSize: number,
-    cs: CSSStyleDeclaration
+    cs: CSSStyleDeclaration,
+    columns?: { first: number; last: number }
   ): void {
     ctx.fillStyle = this.labelColor(cs);
     ctx.font = this.labelFont(cs);
     const colRotation = this.effectiveColLabelRotation;
     const interval = finiteInteger(this.colLabelInterval, 1, 1);
     if (colRotation === 0) {
+      const cols = this.matrixColLabels.length;
       this.matrixColLabels.forEach((label, c) => {
-        if (c % interval !== 0) return;
-        ctx.fillText(label, padLeft + c * cellSize + 2, padTop - COL_LABEL_INSET);
+        // A label owns its `interval` columns, so a repaint redraws only the labels of columns it touches.
+        if (c % interval !== 0 || (columns && (c < columns.first - interval + 1 || c > columns.last))) return;
+        const shown = this.ellipsize(ctx, label, Math.min(interval, cols - c) * cellSize - 2);
+        if (shown) ctx.fillText(shown, padLeft + c * cellSize + 2, padTop - COL_LABEL_INSET);
       });
       return;
     }
@@ -3998,7 +4034,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     rowHeight: number,
     width: number,
     height: number,
-    dpr: number,
+    scale: number,
     cs: CSSStyleDeclaration
   ): void {
     const sticky = this.effectiveStickyLabels;
@@ -4006,13 +4042,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const backdrop = this.stickyLabelBg(cs);
     const rowBand = this.frozenBandCanvas('row-labels');
     if (rowBand) {
-      this.paintFrozenBand(rowBand, padLeft, height, dpr, backdrop, (bandCtx) =>
+      this.paintFrozenBand(rowBand, padLeft, height, scale, backdrop, (bandCtx) =>
         this.paintMatrixRowLabels(bandCtx, padLeft, padTop, rowHeight, cs)
       );
     }
     const colBand = this.frozenBandCanvas('col-labels');
     if (colBand) {
-      this.paintFrozenBand(colBand, width, padTop, dpr, backdrop, (bandCtx) =>
+      this.paintFrozenBand(colBand, width, padTop, scale, backdrop, (bandCtx) =>
         this.paintMatrixColLabels(bandCtx, padLeft, padTop, cellSize, cs)
       );
     }
@@ -4024,24 +4060,42 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     );
   }
 
-  /** Sizes one band's backing store to the same DPR the cell canvas uses, fills the opaque backdrop,
-   *  then hands the caller a context already in CSS-pixel coordinates identical to the cell
-   *  canvas's — so a label lands on the same physical pixel in both. */
+  /** Sizes `canvas` in CSS px at a uniform scale (the DPR, lowered to fit engine limits) and returns its scaled context. */
+  private sizeCanvas(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+    desiredScale = this.ownerDocument.defaultView?.devicePixelRatio
+  ): CanvasRenderingContext2D | null {
+    const { pixelWidth, pixelHeight, scale } = resolveBoundedCanvasAllocation({
+      cssWidth: width,
+      cssHeight: height,
+      desiredScale,
+      maxDimension: MAX_CANVAS_DIMENSION,
+      maxPixels: MAX_CANVAS_PIXELS,
+    });
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    const ctx = canvas.getContext('2d');
+    ctx?.scale(scale, scale);
+    return ctx;
+  }
+
+  /** Sizes one band's backing store at the cell canvas's own `scale`, fills the opaque backdrop, then
+   *  hands the caller a context already in CSS-pixel coordinates identical to the cell canvas's — so
+   *  a label lands on the same physical pixel in both. */
   private paintFrozenBand(
     canvas: HTMLCanvasElement,
     width: number,
     height: number,
-    dpr: number,
+    scale: number,
     backdrop: string,
     paint: (ctx: CanvasRenderingContext2D) => void
   ): void {
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    const ctx = canvas.getContext('2d');
+    const ctx = this.sizeCanvas(canvas, width, height, scale);
     if (!ctx) return;
-    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = backdrop;
     ctx.fillRect(0, 0, width, height);
@@ -4330,14 +4384,11 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private calendarCellText(pos: CalendarCellPos): string {
     const { date, value } = this.calendarCellAt(pos);
-    const label = parseIsoDate(date).toLocaleString(
-      this.effectiveLocale || undefined,
-      {
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'UTC',
-      }
-    );
+    const label = getDateTimeFormat(this.effectiveLocale || undefined, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(parseIsoDate(date));
     // Must track the painted contract exactly: a signed-domain cell that renders on the ramp has
     // to be announced with its value, not as "no data".
     const valueText = this.isNoData(value)
@@ -4582,17 +4633,33 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const to = this.selectionCoordinates(pos);
     // Fill skipped cells when a fast pointer crosses several columns between delivered events.
     const steps = Math.max(Math.abs(to.row - from.row), Math.abs(to.col - from.col), 1);
+    const changed: CellPos[] = [];
     for (let step = 0; step <= steps; step++) {
       const row = Math.round(from.row + (to.row - from.row) * step / steps);
       const col = Math.round(from.col + (to.col - from.col) * step / steps);
       const key = this.effectiveMode === 'calendar' ? `calendar-${col}-${row}` : `matrix-${row}-${col}`;
       const candidate = this.cachedAccessiblePositionsByKey.get(key);
       if (!candidate) continue;
+      if (gesture.cells.has(key) !== gesture.selecting) changed.push(candidate);
       if (gesture.selecting) gesture.cells.set(key, candidate);
       else gesture.cells.delete(key);
     }
     gesture.previous = pos;
-    this.selectionPreview = new Map(gesture.cells);
+    // After the first preview the map is edited in place and only changed cells are repainted.
+    if (this.selectionPreview !== gesture.cells) {
+      this.selectionPreview = gesture.cells;
+      return;
+    }
+    this.requestUpdate();
+    if (changed.length > 16 || !changed.every((cell) => this.repaintCell(cell))) this.requestDraw();
+  }
+
+  /** Repaints one cell's bounded neighbourhood; false when a complete draw is still required. */
+  private repaintCell(pos: CellPos): boolean {
+    if (!this.canvasHasContent || !this.canvas || this.drawDirty) return false;
+    if ('week' in pos) this.repaintCalendarFocusCell(pos);
+    else this.repaintMatrixFocusCell(pos);
+    return true;
   }
 
   private onSelectionPointerMove = (event: PointerEvent): void => {
@@ -4799,19 +4866,32 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.emitCellClick(pos);
   };
 
+  /** Home/End target: first/last interactive cell of the focused row, or of the grid with Ctrl/Meta. */
+  private edgeCell(e: KeyboardEvent): CellPos | null {
+    if (e.key !== 'Home' && e.key !== 'End') return null;
+    const row = this.focusedCell && !(e.ctrlKey || e.metaKey) ? this.selectionCoordinates(this.focusedCell).row : undefined;
+    const cells = this.cachedAccessiblePositions.filter((pos) => row === undefined || this.selectionCoordinates(pos).row === row);
+    return cells[e.key === 'Home' ? 0 : cells.length - 1] ?? null;
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.selectionKeyDown(e, this.focusedCell)) return;
     const previous = this.focusedCell;
-    if (this.effectiveMode === 'calendar') this.onCalendarKeyDown(e);
+    const edge = this.edgeCell(e);
+    if (edge) {
+      e.preventDefault();
+      this.focusedCell = edge;
+      this.scrollCellIntoView(edge);
+    } else if (this.effectiveMode === 'calendar') this.onCalendarKeyDown(e);
     else this.onMatrixKeyDown(e);
-    // The sole announcement for an arrow-key move: onMatrixKeyDown()/onCalendarKeyDown() move focus
+    // The sole announcement for a navigation key: onMatrixKeyDown()/onCalendarKeyDown() move focus
     // but never announce it themselves (see their own comments), specifically so this fires *after*
     // extendSelection() -- announcing from inside them would read isSelectedPos() against the
     // not-yet-extended selection, always confirming the cell just added to a keyboard range
     // selection as unselected. extendSelection() returns the just-proposed key set directly (for a
     // multiple + shift range extension) so the announcement doesn't have to wait for that proposal
     // to round-trip back through the controlled `selectedCells` property.
-    if (ARROW_KEYS.has(e.key) && this.focusedCell) {
+    if ((edge || ARROW_KEYS.has(e.key)) && this.focusedCell) {
       const proposedKeys = this.extendSelection(previous, this.focusedCell, e.shiftKey);
       this.announce(
         this.focusedCell,
@@ -4904,51 +4984,22 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  the very next full redraw, while repeated identical cellColor() outputs
    *  within the same pass resolve only once. */
   private canvasColorCache = new Map<string, string>();
-  private colorProbe?: HTMLSpanElement;
 
-  /** Resolves a cellColor() return value that may contain a CSS custom
-   *  property (or any other CSS color syntax the browser understands, e.g.
-   *  color-mix()) into a literal color canvas's fillStyle can actually use --
-   *  fillStyle silently no-ops on an unparseable string, per the Canvas 2D
-   *  spec, leaving whatever the previous cell painted. Falls back to
-   *  noDataFill() for a genuinely invalid color. */
-  private resolveCanvasColor(value: string, cs: CSSStyleDeclaration): string {
-    const cached = this.canvasColorCache.get(value);
-    if (cached !== undefined) return cached;
-    const fallback = this.noDataFill(cs);
-    let candidate = value;
-    if (value.includes('var(')) {
-      if (!this.colorProbe) {
-        this.colorProbe = this.ownerDocument.createElement('span');
-        this.colorProbe.style.cssText =
-          'position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;pointer-events:none;';
-        this.shadowRoot!.appendChild(this.colorProbe);
+  /** A cellColor() result as a canvas colour (no-data fill if invalid); plain literals skip the DOM probe. */
+  private resolveCellColor(value: string, cs: CSSStyleDeclaration): string {
+    let color = this.canvasColorCache.get(value);
+    if (color === undefined) {
+      const ctx = SCOPED_COLOR.test(value) ? null : getScratchCtx(this.ownerDocument);
+      if (ctx) {
+        ctx.fillStyle = 'rgb(1, 2, 3)';
+        const rejected = ctx.fillStyle;
+        ctx.fillStyle = value;
+        if (ctx.fillStyle !== rejected) color = ctx.fillStyle;
       }
-      this.colorProbe.style.color = '';
-      this.colorProbe.style.color = value;
-      if (!this.colorProbe.style.color) {
-        this.canvasColorCache.set(value, fallback);
-        return fallback;
-      }
-      candidate =
-        this.ownerDocument.defaultView?.getComputedStyle(this.colorProbe)
-          .color || fallback;
+      color ??= resolveCanvasColor(this, value, this.noDataFill(cs));
+      this.canvasColorCache.set(value, color);
     }
-    const ctx = getScratchCtx(this.ownerDocument);
-    if (!ctx) return fallback;
-    ctx.fillStyle = 'rgb(1, 2, 3)';
-    const firstSentinel = ctx.fillStyle;
-    ctx.fillStyle = candidate;
-    let resolved = ctx.fillStyle;
-    if (resolved === firstSentinel) {
-      ctx.fillStyle = 'rgb(4, 5, 6)';
-      const secondSentinel = ctx.fillStyle;
-      ctx.fillStyle = candidate;
-      resolved = ctx.fillStyle;
-      if (resolved === secondSentinel) resolved = fallback;
-    }
-    this.canvasColorCache.set(value, resolved);
-    return resolved;
+    return color;
   }
 
   /** Positions represented by the optional DOM accessibility overlay. The
@@ -5045,7 +5096,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     if (this.selectionKeyDown(e, pos)) return;
-    if (!ARROW_KEYS.has(e.key)) return;
+    if (!GRID_KEYS.has(e.key)) return;
     e.preventDefault();
     this.focusedCell = pos;
     this.onKeyDown(e);
@@ -5085,6 +5136,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.effectiveMode === 'calendar'
         ? this.cachedCalendarGrid.weekCount
         : this.matrixColLabels.length;
+    const calendar = this.effectiveMode === 'calendar' ? this.calendarNavigationGeometry() : undefined;
     return html`
       <div
         part="cells"
@@ -5104,7 +5156,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           ([rowIndex, rowPositions]) => html`
             <div class="cell-row" role="row" aria-rowindex=${rowIndex}>
               ${rowPositions.map((pos) => {
-                const rect = this.accessibleCellRect(pos);
+                const rect = calendar && 'week' in pos
+                  ? calendarCellRect(pos.week, pos.weekday, calendar)
+                  : this.accessibleCellRect(pos);
                 const key = this.accessibleCellKey(pos);
                 const colIndex = 'week' in pos ? pos.week + 1 : pos.col + 1;
                 return html`
@@ -5217,7 +5271,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         @click=${this.onCanvasClick}
         @keydown=${this.onKeyDown}
       ></canvas>
-      ${this.renderAccessibleCells()}
+      ${guard([this.overlayRevision], () => this.renderAccessibleCells())}
       ${this.freezesRowLabels
         ? html`<canvas part="row-labels" aria-hidden="true"></canvas>`
         : nothing}

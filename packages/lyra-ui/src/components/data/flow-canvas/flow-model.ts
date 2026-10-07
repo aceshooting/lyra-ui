@@ -23,6 +23,8 @@ const FLOW_VARIANTS = new Set<LyraVariant>([
   'danger',
 ]);
 export const MAX_FLOW_COLLECTION_ENTRIES = 10_000;
+export const DEFAULT_FLOW_INPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'in' })]);
+export const DEFAULT_FLOW_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'out' })]);
 const MAX_FLOW_COLLECTION_NODES = 50_000;
 const MAX_FLOW_COLLECTION_DEPTH = 16;
 

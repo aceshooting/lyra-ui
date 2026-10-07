@@ -1,6 +1,8 @@
 import { css } from 'lit';
+import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
 
 export const styles = css`
+  ${flowStatusPaint}
   :host {
     display: block;
     inline-size: var(--lr-flow-minimap-inline-size, var(--lr-size-12rem));
@@ -52,26 +54,12 @@ export const styles = css`
     background: transparent;
   }
   [part='node'] {
-    fill: var(--lr-flow-status-color, var(--lr-color-border-strong));
-  }
-  [part='node'][data-status='pending'] {
-    fill: var(--lr-flow-status-pending-color, var(--lr-color-border-strong));
-  }
-  [part='node'][data-status='running'] {
-    fill: var(--lr-flow-status-running-color, var(--lr-color-brand));
-  }
-  [part='node'][data-status='success'] {
-    fill: var(--lr-flow-status-success-color, var(--lr-color-success));
-  }
-  [part='node'][data-status='error'] {
-    fill: var(--lr-flow-status-error-color, var(--lr-color-danger));
-  }
-  [part='node'][data-status='denied'] {
-    fill: var(--lr-flow-status-denied-color, var(--lr-color-warning));
+    fill: var(--_lr-flow-status-paint, var(--lr-flow-status-color, var(--lr-color-border-strong)));
   }
   [part='viewport'] {
-    fill: color-mix(in srgb, var(--lr-flow-minimap-viewport-color, var(--lr-color-brand)) 15%, transparent);
-    stroke: var(--lr-flow-minimap-viewport-color, var(--lr-color-brand));
+    --_lr-flow-minimap-viewport: var(--lr-flow-minimap-viewport-color, var(--lr-color-brand));
+    fill: color-mix(in srgb, var(--_lr-flow-minimap-viewport) 15%, transparent);
+    stroke: var(--_lr-flow-minimap-viewport);
     stroke-width: 2;
     pointer-events: none;
   }
@@ -82,14 +70,14 @@ export const styles = css`
     cursor: grab;
   }
   [data-viewport-control]:hover [part='viewport'] {
-    fill: color-mix(in srgb, var(--lr-color-brand) 25%, transparent);
+    fill: color-mix(in srgb, var(--_lr-flow-minimap-viewport) 25%, transparent);
     stroke-width: 3;
   }
   /* The rect is a grab handle, so its pressed state is also its dragging state and stays applied
      for the whole gesture. Both channels step past the hover values and the cursor flips to
      grabbing, matching the [data-panning] treatment lr-flow-canvas gives its own background. */
   [data-viewport-control]:has([part='viewport-hit-area']:active) [part='viewport'] {
-    fill: color-mix(in srgb, var(--lr-color-brand) 40%, transparent);
+    fill: color-mix(in srgb, var(--_lr-flow-minimap-viewport) 40%, transparent);
     stroke-width: 4;
   }
   [part='viewport-hit-area']:active {
@@ -104,7 +92,7 @@ export const styles = css`
     pointer-events: none;
   }
   [part='base'][data-locked] [data-viewport-control]:hover [part='viewport'] {
-    fill: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);
+    fill: color-mix(in srgb, var(--_lr-flow-minimap-viewport) 15%, transparent);
     stroke-width: 2;
   }
 `;

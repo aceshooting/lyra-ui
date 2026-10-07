@@ -3,7 +3,12 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { FlowHandle } from '../flow-canvas/flow-types.js';
-import { normalizeFlowStatus, snapshotFlowHandles } from '../flow-canvas/flow-model.js';
+import {
+  DEFAULT_FLOW_INPUTS,
+  DEFAULT_FLOW_OUTPUTS,
+  normalizeFlowStatus,
+  snapshotFlowHandles,
+} from '../flow-canvas/flow-model.js';
 import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
@@ -22,9 +27,6 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_flowInputHandle, LYRA_DEFAULT_flowOutputHandle, LYRA_DEFAULT_flowStatusWithDetail, LYRA_DEFAULT_flowStatusWithDuration, LYRA_DEFAULT_progress, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const DEFAULT_INPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'in' })]);
-const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id: 'out' })]);
-
 /**
  * `<lr-flow-node>` — the card a workflow node renders as: header/body/toolbar chrome,
  * tool-lifecycle status tones, and the named connection-handle elements edges anchor to. Used as
@@ -38,8 +40,9 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge. Always visible on coarse-pointer/no-hover
  *   devices; pointer-hover and focus-within reveal it elsewhere, and it stays revealed while an
- *   `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open (that menu sits in the
- *   browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on the node).
+ *   `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (select, combobox, color picker,
+ *   date/time input, export button) opened from it is open (that overlay sits in the browser top
+ *   layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on the node).
  * @csspart base - The row wrapping the input handles, the card, and the output handles. Carries no
  *   card chrome of its own — style the card itself through the `card` part.
  * @csspart card - The bordered, filled node card.
@@ -63,6 +66,7 @@ const DEFAULT_OUTPUTS: readonly FlowHandle[] = Object.freeze([Object.freeze({ id
  *   icon slot and heading at the compact density.
  * @cssprop [--lr-flow-node-selected-outline-color=var(--lr-color-brand)] - Outline color of the
  *   card while `selected`. The outline stays independent from execution-state border and glow.
+ *   Inside `lr-flow-canvas` the canvas's own selection ring replaces it.
  * @cssprop [--lr-flow-node-running-border=var(--lr-color-brand)] - Border color of the card while
  *   `status="running"`. Independent from `--lr-flow-node-selected-outline-color` so a consumer can
  *   retint just one of the two states without the other following along.
@@ -114,6 +118,7 @@ export class LyraFlowNode extends LyraElement {
   /** Consumer taxonomy forwarded by `lr-flow-canvas` as the reachable `data-node-type` attribute. */
   @property({ attribute: 'data-node-type', reflect: true, converter: omittedEmptyStringConverter })
   flowType = '';
+  /** Visible card heading. */
   @property() heading = '';
   /** Semantic level of the visible `heading`. `none` (the default) keeps it plain text, as cards
    *  inside a canvas usually are; `1`-`6` expose it as a heading at that level, for a standalone
@@ -131,9 +136,13 @@ export class LyraFlowNode extends LyraElement {
     this._status = next;
     if (next !== previous || value !== next) this.requestUpdate('status', previous);
   }
+  /** Determinate progress percentage (0-100) shown as `[part="progress"]`; null hides the bar. */
   @property({ type: Number }) progress: number | null = null;
+  /** Text appended to the status line. */
   @property({ attribute: 'status-detail' }) statusDetail = '';
+  /** Elapsed run time in milliseconds, formatted into the status line. */
   @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
+  /** Selected state; paints the card's selected ring outside a canvas. */
   @property({ type: Boolean, reflect: true }) selected = false;
   private _size?: LyraSize;
   /** Density on the library's one size ladder, in either spelling — `2xs`/`xs`/`s`/`m`/`l`/`xl`,
@@ -155,32 +164,38 @@ export class LyraFlowNode extends LyraElement {
     this._size = normalized;
     this.requestUpdate('size', old);
   }
-  private _inputs: readonly FlowHandle[] = DEFAULT_INPUTS;
-  /** Frozen snapshot of at most the first 10,000 input handles. Reassign to update. */
+  private _inputs: readonly FlowHandle[] = DEFAULT_FLOW_INPUTS;
+  private inputsSource?: readonly FlowHandle[];
+  /** Frozen snapshot of at most the first 10,000 input handles. Assign a new array to update. */
   @property({ attribute: false })
   get inputs(): readonly FlowHandle[] {
     return this._inputs;
   }
   set inputs(value: readonly FlowHandle[]) {
+    if (value === this.inputsSource || value === this._inputs) return;
     const previous = this._inputs;
+    this.inputsSource = value;
     this._inputs = snapshotFlowHandles(value) ?? Object.freeze([]);
     this.requestUpdate('inputs', previous);
   }
 
-  private _outputs: readonly FlowHandle[] = DEFAULT_OUTPUTS;
-  /** Frozen snapshot of at most the first 10,000 output handles. Reassign to update. */
+  private _outputs: readonly FlowHandle[] = DEFAULT_FLOW_OUTPUTS;
+  private outputsSource?: readonly FlowHandle[];
+  /** Frozen snapshot of at most the first 10,000 output handles. Assign a new array to update. */
   @property({ attribute: false })
   get outputs(): readonly FlowHandle[] {
     return this._outputs;
   }
   set outputs(value: readonly FlowHandle[]) {
+    if (value === this.outputsSource || value === this._outputs) return;
     const previous = this._outputs;
+    this.outputsSource = value;
     this._outputs = snapshotFlowHandles(value) ?? Object.freeze([]);
     this.requestUpdate('outputs', previous);
   }
+  private _orientation: LyraOrientation = 'horizontal';
   /** Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when
    *  this card is canvas-adopted; a standalone card defaults to `"horizontal"`. */
-  private _orientation: LyraOrientation = 'horizontal';
   @property({ reflect: true })
   get orientation(): LyraOrientation {
     return this._orientation;

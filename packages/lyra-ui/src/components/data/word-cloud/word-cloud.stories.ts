@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Words, palette colors, and explicit legend entries are copied into frozen bounded snapshots (10,000, 64, and 100 outer entries respectively, plus text budgets). Reassign a collection after changing it.',
+          'Words, palette colors, and explicit legend entries are copied into frozen bounded snapshots (10,000, 64, and 100 outer entries respectively, plus text budgets). Assign a new collection after changing it.',
       },
     },
   },

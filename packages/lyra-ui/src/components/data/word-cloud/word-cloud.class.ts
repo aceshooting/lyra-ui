@@ -229,7 +229,7 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * standard word-cloud heuristic: heaviest words placed first, each one
  * spiraling out from the center until it clears every word already placed).
  *
- * Unlike sibling `lr-sparkline`/`lr-heatmap` (one `role="img"` glyph
+ * Unlike sibling `lr-sparkline` (one `role="img"` glyph
  * standing in for an aggregate value), the individual words here are the
  * meaningful interactive content — but with up to `MAX_WORDS` of them, making
  * every single one its own tab stop would be a poor keyboard experience.
@@ -292,16 +292,19 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
   private _words: readonly WordCloudWord[] = [];
+  private lastWordsInput: unknown;
   private inputDroppedCount = 0;
   private inputTruncatedCount = 0;
   private inputWordCount = 0;
 
   /** Normalized frozen word snapshot. At most 10,000 source records and a bounded aggregate text
    * budget are scanned; invalid records are skipped, and every accepted weight is the finite
-   * nonnegative value used by layout/events/announcements. Reassign to update. */
+   * nonnegative value used by layout/events/announcements. Assign a new array to update. */
   @property({ attribute: false })
   get words(): readonly WordCloudWord[] { return this._words; }
   set words(value: readonly WordCloudWord[]) {
+    if (value === this._words || value === this.lastWordsInput) return;
+    this.lastWordsInput = value;
     const previous = this._words;
     const normalized = normalizeWords(value);
     this._words = normalized.items;
@@ -321,7 +324,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
    * scale instead of each deriving it from its own lightest/heaviest word. Reversed endpoints are
    * normalized; a degenerate or non-finite pair falls back to the data-derived range. Scaling
    * stays finite when opposite-sign finite endpoints would overflow on subtraction. */
-  @property({ attribute: false }) domain?: [number, number];
+  @property({
+    attribute: false,
+    hasChanged: (value?: [number, number], previous?: [number, number]) =>
+      value?.[0] !== previous?.[0] || value?.[1] !== previous?.[1],
+  })
+  domain?: [number, number];
 
   private _scale: WordCloudScale = 'linear';
   /** `sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest. */
@@ -338,8 +346,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.requestUpdate('scale', previous);
   }
 
-  /** `mixed` lets some words render rotated 90° for denser packing; `none` keeps text horizontal. */
   private _wordRotation: WordCloudRotation = 'none';
+  /** `mixed` lets some words render rotated 90° for denser packing; `none` keeps text horizontal. */
   @property({ attribute: 'word-rotation', reflect: true })
   get wordRotation(): WordCloudRotation { return this._wordRotation; }
   set wordRotation(value: WordCloudRotation) {
@@ -353,35 +361,44 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.requestUpdate('wordRotation', previous);
   }
 
+  private _palette?: readonly string[];
+  private lastPaletteInput: unknown;
   /** Custom CSS-color palette, cycled by word index (or by `group`, see `words`). Invalid entries
    *  and `url()` paint servers are skipped; an all-invalid palette falls back to the
-   *  `--lr-word-cloud-color-*` tokens. Assignment freezes at most 64 colors; reassign to update. */
-  private _palette?: readonly string[];
+   *  `--lr-word-cloud-color-*` tokens. Assignment freezes at most 64 colors; assign a new array to
+   *  update. */
   @property({ attribute: false })
   get palette(): readonly string[] | undefined { return this._palette; }
   set palette(value: readonly string[] | undefined) {
+    if (value === this._palette || value === this.lastPaletteInput) return;
+    this.lastPaletteInput = value;
     const previous = this._palette;
     this._palette = normalizePalette(value);
+    this.paint = undefined;
     this.requestUpdate('palette', previous);
   }
 
-  /** Named color overrides shown in the optional legend. When omitted, `with-legend` derives
-   *  entries from grouped words and explicitly colored words. This is useful when `words[].color`
-   *  or grouped colors carry semantic meaning that should not be discoverable only by visual
-   *  inspection. Assignment freezes at most 100 entries; reassign to update. */
   private _legend: readonly WordCloudLegendItem[] = [];
+  private lastLegendInput: unknown;
   private legendDroppedCount = 0;
   private legendTruncatedCount = 0;
   private legendInputCount = 0;
+  /** Named color overrides shown in the optional legend. When omitted, `with-legend` derives
+   *  entries from grouped words and explicitly colored words. This is useful when `words[].color`
+   *  or grouped colors carry semantic meaning that should not be discoverable only by visual
+   *  inspection. Assignment freezes at most 100 entries; assign a new array to update. */
   @property({ attribute: false })
   get legend(): readonly WordCloudLegendItem[] { return this._legend; }
   set legend(value: readonly WordCloudLegendItem[]) {
+    if (value === this._legend || value === this.lastLegendInput) return;
+    this.lastLegendInput = value;
     const previous = this._legend;
     const normalized = normalizeLegend(value);
     this._legend = normalized.items;
     this.legendDroppedCount = normalized.dropped;
     this.legendTruncatedCount = normalized.truncated;
     this.legendInputCount = normalized.inputCount;
+    this.paint = undefined;
     this.requestUpdate('legend', previous);
   }
 
@@ -392,8 +409,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
 
   private cachedLayout: WordCloudLayoutResult = { placed: [], skipped: [], skippedCount: 0, width: 0, height: 0 };
+  /** Keyboard tab order: declaration order, independent of the weight-sorted placement order. */
+  private order: PlacedWord[] = [];
+  /** Word fills (parallel to `placed`) and legend entries with resolved swatches; dropped when the layout, palette or legend changes. */
+  private paint?: { fills: string[]; legend: WordCloudLegendItem[] };
 
-  /** Roving-focus cursor -- an index into `navOrder()`, not into `cachedLayout.placed`. */
+  /** Roving-focus cursor -- an index into `order`, not into `cachedLayout.placed`. */
   @state() private focusedIndex: number | null = null;
   /** Text mirrored in `[part="live-region"]`. */
   @state() private liveText = '';
@@ -465,7 +486,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   private fontFamily(): string {
     return (
-      getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif'
+      this.ownerDocument.defaultView?.getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif'
     );
   }
 
@@ -476,7 +497,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
    *  spiral layout's collision boxes) from the actually rendered glyph width. */
   private fontWeight(): string {
     return (
-      getComputedStyle(this).getPropertyValue('--lr-font-weight-semibold').trim() || DEFAULT_WORD_FONT_WEIGHT
+      this.ownerDocument.defaultView?.getComputedStyle(this).getPropertyValue('--lr-font-weight-semibold').trim() ||
+      DEFAULT_WORD_FONT_WEIGHT
     );
   }
 
@@ -485,22 +507,42 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       const colors = this.palette.map(sanitizeCssColor).filter((color): color is string => color !== undefined);
       if (colors.length) return colors;
     }
-    const cs = getComputedStyle(this);
+    const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
     const colors: string[] = [];
     for (let i = 0; i < PALETTE_SIZE; i++) {
       colors.push(
-        cs.getPropertyValue(`--lr-word-cloud-color-${i + 1}`).trim() ||
-          cs.getPropertyValue(`--_lr-word-cloud-color-${i + 1}-default`).trim() ||
+        cs?.getPropertyValue(`--lr-word-cloud-color-${i + 1}`).trim() ||
+          cs?.getPropertyValue(`--_lr-word-cloud-color-${i + 1}-default`).trim() ||
           FALLBACK_PALETTE[i]!
       );
     }
     return colors;
   }
 
-  /** Stable keyboard tab order -- the order words were declared in `words`,
-   *  independent of the weight-sorted placement order. */
-  private navOrder(): PlacedWord[] {
-    return [...this.cachedLayout.placed].sort((a, b) => a.originalIndex - b.originalIndex);
+  private resolvePaint(): { fills: string[]; legend: WordCloudLegendItem[] } {
+    const placed = this.cachedLayout.placed;
+    const colors = this.paletteColors();
+    const groupColor = new Map<string, string>();
+    const fills = placed.map((word) => {
+      const ownColor = sanitizeCssColor(word.color);
+      if (ownColor) return ownColor;
+      if (word.group) {
+        if (!groupColor.has(word.group)) groupColor.set(word.group, colors[groupColor.size % colors.length]!);
+        return groupColor.get(word.group)!;
+      }
+      return colors[word.originalIndex % colors.length]!;
+    });
+    const entries =
+      this.legendInputCount > 0
+        ? this.legend
+        : placed.reduce<WordCloudLegendItem[]>((items, word, index) => {
+            if (!word.group && !word.color) return items;
+            const label = word.group || word.text;
+            const color = fills[index]!;
+            if (!items.some((item) => item.label === label && item.color === color)) items.push({ label, color });
+            return items;
+          }, []);
+    return { fills, legend: entries.map(({ label, color }) => ({ label, color: sanitizeCssColor(color) ?? 'transparent' })) };
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -519,7 +561,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   private relayout(preserveInteraction = false): void {
     const focusedOriginalIndex =
-      preserveInteraction && this.focusedIndex !== null ? this.navOrder()[this.focusedIndex]?.originalIndex : undefined;
+      preserveInteraction && this.focusedIndex !== null ? this.order[this.focusedIndex]?.originalIndex : undefined;
     const priorLiveText = this.liveText;
     // The font family/weight tokens are invariant for the whole layout pass --
     // read them once here rather than inside the per-word `measureText`
@@ -530,7 +572,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const fontWeight = this.fontWeight();
     const fontFamily = this.fontFamily();
     const measureText = (text: string, fontSize: number): number => {
-      const ctx = getScratchCtx();
+      const ctx = getScratchCtx(this.ownerDocument);
       if (!ctx) return text.length * fontSize * 0.6;
       ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
       return ctx.measureText(text).width;
@@ -550,6 +592,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       wordRotation: this.wordRotation,
       measureText,
     });
+    this.order = [...this.cachedLayout.placed].sort((a, b) => a.originalIndex - b.originalIndex);
+    this.paint = undefined;
     const skippedCount = this.inputDroppedCount + this.cachedLayout.skippedCount;
     if (skippedCount > 0) {
       warnSkippedWords(skippedCount, this.warnedSkipCounts);
@@ -557,7 +601,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     // The previous focus cursor may no longer address a real word once the
     // data changes out from under it.
     if (focusedOriginalIndex !== undefined) {
-      const nextIndex = this.navOrder().findIndex((word) => word.originalIndex === focusedOriginalIndex);
+      const nextIndex = this.order.findIndex((word) => word.originalIndex === focusedOriginalIndex);
       this.focusedIndex = nextIndex < 0 ? null : nextIndex;
       this.liveText = nextIndex < 0 ? '' : priorLiveText;
     } else {
@@ -594,6 +638,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     }
     if (palette !== this.paletteThemeSignature) {
       this.paletteThemeSignature = palette;
+      this.paint = undefined;
       this.requestUpdate();
     }
   };
@@ -617,11 +662,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private wordIndex(word: PlacedWord): number {
-    return this.navOrder().findIndex((candidate) => candidate.originalIndex === word.originalIndex);
+    return this.order.findIndex((candidate) => candidate.originalIndex === word.originalIndex);
   }
 
-  /** Resolve the nearest word from the single adequately sized SVG pointer surface. Individual
-   * glyphs are not tiny independent hit targets. */
+  /** Resolve the word whose box holds the pointer, else the one with the nearest box edge, from the
+   * single adequately sized SVG pointer surface. Individual glyphs are not tiny independent hit
+   * targets. */
   private nearestWord(event: MouseEvent | PointerEvent): PlacedWord | undefined {
     const svgElement = this.svgEl;
     if (!svgElement || this.cachedLayout.placed.length === 0) return undefined;
@@ -643,8 +689,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     let nearest: PlacedWord | undefined;
     let distance = Number.POSITIVE_INFINITY;
     for (const word of this.cachedLayout.placed) {
-      const dx = word.x - x;
-      const dy = word.y - y;
+      const box = this.focusRingRect(word);
+      const dx = Math.max(box.x - x, 0, x - box.x - box.width);
+      const dy = Math.max(box.y - y, 0, y - box.y - box.height);
       const candidateDistance = dx * dx + dy * dy;
       if (candidateDistance < distance) {
         distance = candidateDistance;
@@ -687,7 +734,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   };
 
   private onWordClick = (word: PlacedWord): void => {
-    const order = this.navOrder();
+    const order = this.order;
     const idx = order.findIndex((w) => w.originalIndex === word.originalIndex);
     this.focusedIndex = idx === -1 ? null : idx;
     if (idx !== -1) this.announce(order[idx]!);
@@ -696,7 +743,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    const order = this.navOrder();
+    const order = this.order;
     if (order.length === 0) return;
 
     if (e.key === 'Enter' || e.key === ' ') {
@@ -762,7 +809,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
                   <span
                     part="legend-swatch"
                     aria-hidden="true"
-                    style=${styleMap({ backgroundColor: sanitizeCssColor(item.color) ?? 'transparent' })}
+                    style=${styleMap({ backgroundColor: item.color })}
                   ></span>
                   <span part="legend-label">${item.label}</span>
                 </span>
@@ -806,29 +853,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       </div>`;
     }
 
-    const colors = this.paletteColors();
-    const groupColor = new Map<string, string>();
-    const colorFor = (word: PlacedWord): string => {
-      const ownColor = sanitizeCssColor(word.color);
-      if (ownColor) return ownColor;
-      if (word.group) {
-        if (!groupColor.has(word.group)) groupColor.set(word.group, colors[groupColor.size % colors.length]!);
-        return groupColor.get(word.group)!;
-      }
-      return colors[word.originalIndex % colors.length]!;
-    };
-    const explicitLegendInput = this.legendInputCount > 0;
-    const legendItems = explicitLegendInput
-      ? this.legend
-      : layout.placed.reduce<WordCloudLegendItem[]>((items, word) => {
-          if (!word.group && !word.color) return items;
-          const label = word.group || word.text;
-          const color = colorFor(word);
-          if (!items.some((item) => item.label === label && item.color === color)) items.push({ label, color });
-          return items;
-        }, []);
-
-    const order = this.navOrder();
+    const { fills, legend } = (this.paint ??= this.resolvePaint());
+    const order = this.order;
     const focused = this.focusedIndex !== null ? order[this.focusedIndex] : undefined;
     const ring = focused ? this.focusRingRect(focused) : undefined;
     const generatedLabel = this.localize('wordCloud', undefined, {
@@ -858,12 +884,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
           @click=${this.onSvgClick}
         >
           ${layout.placed.map(
-            (w) => svg`<text
+            (w, index) => svg`<text
               part="word"
               x=${w.x}
               y=${w.y}
               font-size=${w.fontSize}
-              fill=${colorFor(w)}
+              fill=${fills[index]}
               ?data-hovered=${w.originalIndex === this.hoveredOriginalIndex}
               transform=${w.rotated ? `rotate(-90, ${w.x}, ${w.y})` : nothing}
             >${w.text}</text>`
@@ -883,7 +909,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
         ${hasWordLimit
           ? html`<div id="word-limit" part="limit">${wordLimitText}</div>`
           : nothing}
-        ${this.renderLegend(legendItems, explicitLegendInput)}
+        ${this.renderLegend(legend, this.legendInputCount > 0)}
       </div>
     `;
   }

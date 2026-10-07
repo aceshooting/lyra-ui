@@ -1893,9 +1893,9 @@ shown when `stages` exceeds the 500-stage render ceiling)
 
 Dependency-free SVG word/tag cloud. First-party invention (no Web Awesome equivalent). Lays words
 out via an outward Archimedean-spiral search — heaviest word placed first, each word spiraling from
-the center until it clears every word already placed. Unlike sibling `lr-sparkline`/`lr-heatmap`
-(one `role="img"` glyph standing in for an aggregate value), the individual words here _are_ the
-meaningful interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
+the center until it clears every word already placed. Unlike sibling `lr-sparkline` (one `role="img"`
+glyph standing in for an aggregate value), the individual words here _are_ the meaningful
+interactive content — but with up to `MAX_WORDS` (150) of them, making every single one
 its own tab stop would be a poor keyboard experience. Instead, like `lr-heatmap`'s cells, the whole
 `[part="svg"]` is **one tab stop with roving arrow-key focus**: `ArrowRight`/`ArrowDown` move the
 focus cursor to the next word in **declaration order** (not weight/placement order),
@@ -1906,8 +1906,9 @@ so immediate Enter/Space always works without requiring a preparatory arrow key.
 shared light-DOM polite sink announces `"${text}, ${weight}"` on every focus move. Mount is silent,
 and repeated edge movements append repeated announcements even when their text is identical.
 `[part="live-region"]` mirrors the latest text for styling/inspection but is `aria-hidden` and has
-no live-region role of its own. Pointer input resolves the nearest word from the adequately-sized
-SVG surface; the potentially tiny text glyphs are not independent hit targets.
+no live-region role of its own. Pointer input resolves the word under the pointer (else the one
+with the nearest edge) from the adequately-sized SVG surface; the potentially tiny text glyphs are
+not independent hit targets.
 
 Pinned opposite-sign finite endpoints such as `[-1e308, 1e308]` produce bounded finite scale
 fractions and SVG geometry, including with reversed endpoints or square-root scaling. Word weights
@@ -1924,7 +1925,8 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   color across every word with the same `group` value. The component scans at most 10,000 input
   records, bounds each string to 256 characters and all retained word strings to 16,384 characters,
   marking shortened strings with an ellipsis and disclosing omitted input through `[part="limit"]`.
-  The returned sequence and records are frozen; reassign `words` after changes.
+  The returned sequence and records are frozen; assign a new array after changes (re-assigning the
+  same array is ignored).
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   a finite value is clamped to `[1, 512]` (so `0`/a negative value floors at `1px`, and an oversized
   value caps at `512px`); a non-finite value (`NaN`/`Infinity`) falls back to the default `12px`
@@ -1945,14 +1947,14 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   most 64), cycled by word index (or by
   `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
   all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens. The returned sequence is
-  frozen; reassign `palette` after changes
+  frozen; assign a new array after changes
 - `legend: readonly WordCloudLegendItem[] = []` (attribute: false) — clone-owned, frozen named
   readonly `{ label, color }` entries for explaining explicit `words[].color`/group color
   overrides; when omitted, the component derives entries from grouped and explicitly colored
   words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
   `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
-  sequence and records are frozen; reassign `legend` after changes.
+  sequence and records are frozen; assign a new array after changes.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection.
@@ -2036,8 +2038,9 @@ property selects `{ kind: "matrix", rowLabels, colLabels, values }` (the default
 is independently addressable despite being
 canvas-drawn (no per-cell DOM node by default): a `pointermove` hit-test over the canvas shows `[part="tooltip"]`
 with that cell's label + value; the canvas is a named `role="application"`, `tabindex="0"` control
-with arrow-key roving focus (a stroked ring is redrawn over the focused cell on every draw, and the
-cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
+with arrow-key roving focus (Home/End jump to the first/last interactive cell of the focused row,
+Ctrl/Meta+Home/End to the first/last of the grid; a stroked ring is redrawn over the focused cell on
+every draw, and the cell text is appended to the document's shared light-DOM polite sink); and a click, or Enter/Space
 on the focused cell, fires `lr-cell-activate`. The first render is silent, repeated identical focus
 movements remain separate announcements, and `[part="live-region"]` is only an `aria-hidden` mirror.
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
@@ -2045,7 +2048,11 @@ calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain 
 previous/next movement instead of swapping for RTL.
 Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
-environments without `IntersectionObserver` retain eager drawing.
+environments without `IntersectionObserver` retain eager drawing. A theme signal (any ancestor
+`style`/`class` write) repaints only when a theme token the canvas reads changed, or while `cellColor`
+is set. A grid whose backing store would exceed the engine's canvas limits (16,384 px per side,
+16,777,216 pixels) is painted at a lower resolution instead of blank, and `exportData('png')`
+follows it.
 
 Focus-only updates repaint a bounded neighborhood around the old and new cells, restoring all
 intersected neighboring fills and overlays while preserving the focus-ring geometry. Calendar axis
@@ -2100,8 +2107,8 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
 - `rowHeight?: number` (attribute `row-height`) — independent matrix vertical row pitch in CSS
   pixels, including its trailing `cellGapY` separator. Unset, removed, `null`, `undefined`, and
   non-finite values restore square rows from the effective `cellSize`; finite values
-  clamp to the `1`–`4096` range. This bounds numeric outliers; browser canvas limits still apply
-  to the complete grid. `fitToWidth`, `minCellSize`, and `maxCellSize` continue to govern column pitch.
+  clamp to the `1`–`4096` range. This bounds numeric outliers; a grid beyond the canvas limits
+  paints at a lower resolution. `fitToWidth`, `minCellSize`, and `maxCellSize` continue to govern column pitch.
   Calendar mode ignores it and preserves its existing square geometry. With `accessibleCells`,
   width and height independently preserve the accessible target floor; dense columns can therefore
   overflow even when fitting is requested.
@@ -2150,9 +2157,10 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   keep their size. Unset keeps the built-in `20`, so no existing chart reflows. A malformed value is
   ignored
 - `colLabelRotation?: number` (attribute `col-label-rotation`, new in 11.0.0) — rotation, in
-  degrees, applied to matrix column labels. Unset or `0` paints them horizontally exactly as before.
-  In a dense matrix the per-column width is far narrower than a typical label, so horizontal labels
-  collide with their neighbours; `45` or `90` is the standard remedy. Each label rotates about an
+  degrees, applied to matrix column labels. Unset or `0` paints them horizontally. A horizontal label
+  is truncated with an ellipsis to its own column (to its `colLabelInterval` columns, at most to the
+  canvas edge), so in a dense matrix labels shorten or drop rather than overprint their neighbours;
+  `45` or `90` is the standard remedy. Each label rotates about an
   anchor at its own column's centre with the label's *end* at that anchor, so it leans back over the
   columns to its left and the last column's label cannot overflow the canvas. Values outside
   `[0, 90]` clamp into that range and non-finite values normalize to `0`. Pair with
@@ -2268,7 +2276,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
   or Enter/Space toggles one cell and retains `lr-cell-activate`. Pointer dragging paints or erases
   according to the starting cell, previews transient selection, and proposes once on release;
   pointer cancellation, Escape, disconnect, data/mode changes discard the gesture. A drag does
-  not emit a cell click. Shift+arrows extends/contracts a rectangle from the anchor while retaining
+  not emit a cell click. Shift+arrows (or Shift+Home/End) extends/contracts a rectangle from the anchor while retaining
   unrelated pre-range selection. Directions remain physical under RTL, matching the canvas.
 
   `toggleRowSelection(row: number): void` and `toggleColumnSelection(col: number): void` propose
@@ -2291,7 +2299,7 @@ row?: number; col?: number; date?: string }`, matched the same way as `annotatio
 - `accessibleCells: boolean = false` (attribute `accessible-cells`) — renders `[part="cells"]` with
   at most 400 `[part="cell"]` native buttons around the active cell. The semantic grid exposes the
   full row/column counts, buttons expose localized `aria-label`s and explicit `aria-selected`, and
-  roving arrow navigation still reaches every canonical cell. The canvas remains the visual and
+  roving arrow and Home/End navigation still reaches every canonical cell. The canvas remains the visual and
   pointer surface but is hidden from the accessibility tree. Controlled refresh focus follows the
   preservation/clamping behavior above.
 - `cellText?: (pos: MatrixCellPos | CalendarCellPos, value: number) => string` (attribute: false) —
@@ -2330,7 +2338,9 @@ weekday * (cellSize + CAL_GAP)`), consulted consistently by drawing, hit-testing
   math unchanged. Lets a consumer designate a value as categorically outside the ramp (e.g. a real
   zero-count day rendered as a neutral hairline, distinct from both "no data" and the ramp's own
   lightest step) without a synthetic ramp color, which can't safely reserve an exact value on a
-  skewed dataset. Unset (the default) reproduces the exact ramp/no-data behavior for every cell.
+  skewed dataset. A `var()`, `color-mix()` or `currentColor` result resolves in the heatmap's own
+  theme scope; one that does not resolve paints the no-data fill. Unset (the default) reproduces the
+  exact ramp/no-data behavior for every cell.
 - `data.weekdayLabelText?: (jsWeekday: number) => string | undefined` (calendar branch only) —
   overrides the weekday-axis label text; receives the real JS weekday index (`0` Sunday ..
   `6` Saturday) for a row that would otherwise render a label and, when it returns a string, uses it
@@ -3210,7 +3220,9 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit.
+  window pointer listeners so a later release cannot commit. The one-shot initial framing still
+  applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
+  closed dialog is framed when it is first shown).
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
   omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
@@ -3240,7 +3252,8 @@ live node/edge/viewport geometry without this canvas ever importing the minimap.
 All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
-edge geometry/status arrays, viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
+edge geometry/status arrays (shared between observers and reused, by identity, across
+viewport-only frames until the structure changes), viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
 effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
 sorted even when public inputs are invalid or reversed.
 
@@ -3339,6 +3352,9 @@ four above. Set it to `transparent` to opt out of the hover treatment.
   host applies back. Selection is hybrid state: `selectedNodeIds`/`selectedEdgeIds` accept external
   replacement, while node/edge activation and clear-selection gestures update them internally and
   emit `lr-selection-change`.
+- Re-assigning the identical array or record to `nodes`, `edges`, `selectedNodeIds`,
+  `selectedEdgeIds` or `decorations` is a no-op, so a parent re-render never cancels a drag or
+  connection, re-runs layout, or resets selection. Assign a new array/record to change it.
 - Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
   missing an explicit `position`; a node the host has already positioned is left exactly where it is
   and, when its resolved center is nonnegative and within the safe-integer range, is used as a fixed
@@ -3361,6 +3377,9 @@ four above. Set it to `transparent` to opt out of the hover treatment.
 - `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-color-brand)`.
 - `--lr-flow-canvas-node-disabled-opacity` — Opacity of a node whose `FlowNode` entry sets
   `disabled`. Default: `var(--lr-opacity-disabled)`.
+- `--lr-flow-canvas-node-fallback-inline-size` / `--lr-flow-canvas-node-fallback-block-size` — card
+  size assumed for layout and fitting before a node is measured. Defaults:
+  `calc(var(--lr-size-10rem) + var(--lr-size-1rem))` / `var(--lr-size-4rem)`.
 
 ---
 
@@ -3409,9 +3428,10 @@ owns none of that.
 **Slots:** default (body content), `icon` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
-while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened from it is open, because that menu
-sits in the browser top layer, where Chromium and WebKit stop matching `:hover`/`:focus-within` on
-the node).
+while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,
+`lr-color-picker`, `lr-date-input`, `lr-time-input`, `lr-export-button`) opened from it is open,
+because that overlay sits in the browser top layer, where Chromium and WebKit stop matching
+`:hover`/`:focus-within` on the node).
 
 **CSS parts:** `base` (the row wrapping the input handles, the card and the output handles — it
 carries no card chrome of its own), `card` (the bordered, filled node card), `header`, `icon`,
@@ -3426,8 +3446,10 @@ carries no card chrome of its own), `card` (the bordered, filled node card), `he
 `--lr-flow-node-selected-outline-color` (default `var(--lr-color-brand)`) — the card's outline color
 while `selected`. Like the other state-scoped custom properties here, it is an inline `var()`
 fallback at its point of use rather than a `:host` declaration, so it can be set on the element _or any
-ancestor_ (a canvas retunes every card at once); overriding the selection color otherwise means
+ancestor_; overriding the selection color otherwise means
 hijacking the library-wide `--lr-color-brand` token and repainting everything else that reads it.
+Inside `lr-flow-canvas` this card ring is off: the canvas draws the one selection ring, colored by
+`--lr-flow-canvas-node-selected-outline-color`.
 `--lr-flow-node-running-border` (default `var(--lr-color-brand)`) — the card's border color while
 `status="running"`, independent of `--lr-flow-node-selected-outline-color` so a consumer can retint
 just one of the two states without the other following along — and `--lr-flow-node-running-glow` (default
@@ -3573,8 +3595,10 @@ otherwise available direction.
   step and the only remaining room is the buttons' `--lr-icon-button-size` hit-area floor. The
   canonical type is `LyraFrame`; the former component-local appearance alias is removed.
 
-**Events:** none dispatched directly — each button calls the resolved canvas's own `zoomIn()`/
-`zoomOut()`/`fit()`, or toggles its `readonly` property.
+**Events:** `lr-readonly-change` (`detail: { readonly }`) after the lock button toggles the canvas's
+`readonly`; it bubbles through a canvas the cluster is slotted into, so a host that binds
+`.readonly` can keep its own state in sync. The zoom/fit buttons call the canvas's own `zoomIn()`/
+`zoomOut()`/`fit()`.
 
 **Slots:** default — extra host buttons appended to the cluster, styled by the same group. A slotted
 `<button>` is matched by a `::slotted(button)` rule that gives it the built-in controls' treatment:
@@ -3650,7 +3674,9 @@ mirror of the last step-transition announcement).
 announcement itself goes to the library's shared **light-DOM** polite region, appended to the
 consumer's `<body>` and marked `data-lr-live-region="polite"`, because a live region inside a
 shadow root is not reliably announced (JAWS with Firefox ignores one outright). Assert against that
-document-level region rather than `::part(live-region)`.
+document-level region rather than `::part(live-region)`. Each step is named like the canvas names
+it (`accessibleLabel`, then `data.label`, then the id); more than five simultaneous step changes are
+announced as the run summary instead of a list.
 
 **Themeable custom properties:** shared `--lr-flow-status-color` and the explicit
 `--lr-flow-status-pending-color`, `--lr-flow-status-running-color`,

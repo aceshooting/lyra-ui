@@ -294,7 +294,7 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // remains the same 400ms median budget. This test polices update complexity, not Istanbul's
   // instrumentation overhead during fixture construction.
   this.timeout(120000);
-  // 2026-09-16: this benchmark (and the flow-canvas one below) reproducibly HANGS -- not merely
+  // 2026-09-16: this benchmark reproducibly HANGS -- not merely
   // slows down -- under plain CPU contention, no coverage instrumentation required: pinned to 2
   // cores (`taskset -c 0,1`, the documented CI-approximation technique), 90-100% single-core CPU
   // and zero test progress for 120s+, well past the `this.timeout(120000)` above, which never
@@ -378,11 +378,6 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
   // plus the initial render (the same cost) need real headroom past that on a loaded CI worker,
   // well past this test's old light-DOM-push-era 20s ceiling.
   this.timeout(60000);
-  // Quarantined alongside the graph benchmark above for the same reproduced hang -- see its
-  // comment for the full signature, bisection evidence, and rationale. Flip this constant once
-  // the underlying hang is root-caused and fixed.
-  const HANG_QUARANTINED = true;
-  if (HANG_QUARANTINED) return this.skip();
   const FLOW_NODE_COUNT = 1_000;
   const COLUMNS = 20;
   const host = (await fixture(

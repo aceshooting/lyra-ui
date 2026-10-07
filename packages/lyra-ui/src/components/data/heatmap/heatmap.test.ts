@@ -1768,7 +1768,7 @@ it("refreshes the canvas when a theme token changes without changing component d
   const before = sample();
 
   el.style.setProperty("--lr-heatmap-scale-hi", "rgb(0, 200, 0)");
-  await aTimeout(0);
+  await waitUntil(() => sample()[1] === 200, "the theme repaint", { timeout: 5000 });
 
   const after = sample();
   expect([after[0], after[1], after[2]]).to.deep.equal([0, 200, 0]);
@@ -3228,9 +3228,7 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
     const el = (await fixture(html`
       <lr-heatmap
         .cellColor=${() =>
-          // Missing the required `--` custom-property prefix, so the browser rejects this
-          // string outright (unlike an *unresolved* var() reference, e.g. var(--undefined-token),
-          // which is still syntactically valid and would silently compute to an inherited color).
+          // Missing the required `--` custom-property prefix, so the browser rejects it outright.
           "var(not-a-custom-prop)"}
         .data=${{
           kind: "matrix",
@@ -3316,6 +3314,26 @@ describe("cellColor resolves CSS custom properties for canvas fillStyle", () => 
     ).data;
     expect(Array.from(first.slice(0, 3))).to.deep.equal([255, 0, 0]);
     expect(Array.from(second.slice(0, 3))).to.deep.equal([128, 128, 128]);
+  });
+
+  it("falls back for a var() naming an undefined property and resolves currentColor against the host", async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        style="color: rgb(200, 10, 10); --lr-heatmap-no-data-fill: rgb(128, 128, 128);"
+        .cellColor=${(_pos: MatrixCellPos, value: number) =>
+          value === 1 ? "var(--undefined-token)" : "currentColor"}
+        .data=${{
+          kind: "matrix",
+          rowLabels: ["a"],
+          colLabels: ["x", "y"],
+          values: [[1, 2]],
+        }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const ctx = (el.shadowRoot!.querySelector("canvas") as HTMLCanvasElement).getContext("2d")!;
+    expect(pixelRgb(ctx, 65, 25)).to.deep.equal([128, 128, 128]);
+    expect(pixelRgb(ctx, 87, 25)).to.deep.equal([200, 10, 10]);
   });
 });
 
@@ -3883,25 +3901,23 @@ describe("coverage: color/theme helper edge cases", () => {
 });
 
 describe("theme watching (via the shared ThemeWatcher controller)", () => {
-  it("redraws when an ancestor theme attribute mutates, without a manual refreshTheme() call", async () => {
-    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
+  it("redraws when an ancestor theme write changes a token the canvas reads, without a manual refreshTheme() call", async () => {
+    const wrapper = (await fixture(html`<div><lr-heatmap></lr-heatmap></div>`)) as HTMLElement;
+    const el = wrapper.querySelector("lr-heatmap") as LyraHeatmap;
     setMatrixData(el, { rowLabels: ["a"] });
     setMatrixData(el, { colLabels: ["x"] });
     setMatrixData(el, { values: [[5]] });
     await el.updateComplete;
 
-    let refreshes = 0;
-    const realRefresh = (
-      el as unknown as { refreshTheme: () => void }
-    ).refreshTheme.bind(el);
-    (el as unknown as { refreshTheme: () => void }).refreshTheme = () => {
-      refreshes++;
-      realRefresh();
+    let draws = 0;
+    const instrumented = el as unknown as { draw(): void };
+    const realDraw = instrumented.draw.bind(el);
+    instrumented.draw = () => {
+      draws++;
+      realDraw();
     };
-    el.setAttribute("data-theme", "dark");
-    await aTimeout(0);
-    expect(refreshes).to.be.greaterThan(0);
-    expect(el.shadowRoot!.querySelector("canvas") != null).to.equal(true);
+    wrapper.style.setProperty("--lr-heatmap-scale-hi", "rgb(200, 0, 0)");
+    await waitUntil(() => draws > 0, "the theme repaint", { timeout: 5000 });
   });
 });
 
@@ -7295,7 +7311,7 @@ describe("coverage: additional edge-path gaps", () => {
     }
   });
 
-  it("resolveCanvasColor(): falls back when the var()-probe computed color cannot be read", async () => {
+  it("resolveCellColor(): falls back when the var()-probe computed color cannot be read", async () => {
     const el = (await fixture(
       html`<lr-heatmap
         .data=${{
@@ -7308,15 +7324,10 @@ describe("coverage: additional edge-path gaps", () => {
     )) as LyraHeatmap;
     el.cellColor = () => "var(--lr-color-brand)";
     await el.updateComplete;
-    const probe = (el as unknown as { colorProbe?: HTMLSpanElement })
-      .colorProbe;
-    expect(
-      probe !== undefined,
-      "the color probe is lazily created on first var() resolution"
-    ).to.equal(true);
     const original = window.getComputedStyle;
     window.getComputedStyle = ((target: Element, pseudo?: string | null) =>
-      target === probe
+      target instanceof HTMLSpanElement &&
+      (target.parentElement as HTMLElement | null)?.hidden
         ? ({ color: "" } as CSSStyleDeclaration)
         : original(target, pseudo)) as typeof window.getComputedStyle;
     try {
@@ -8680,6 +8691,15 @@ describe('bounded heatmap fallback paths', () => {
   });
 
   it('paints signed negative sqrt cells in matrix and calendar modes', async () => {
+    // A negative has no square root, so the cell takes the no-data fill rather than being left unpainted.
+    const expectNoDataFill = async (el: LyraHeatmap, x: number, y: number): Promise<void> => {
+      const ctx = (el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).getContext('2d')!;
+      const dpr = window.devicePixelRatio || 1;
+      const alpha = () => ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data[3]!;
+      await waitUntil(() => alpha() > 0);
+      expectCloseRgb(pixelRgb(ctx, x, y), resolveTokenRgb(el, '--lr-heatmap-no-data-fill'));
+    };
+
     const matrix = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
     matrix.domain = [-1, 1];
     matrix.data = {
@@ -8689,11 +8709,10 @@ describe('bounded heatmap fallback paths', () => {
       values: [[-1]],
     };
     await matrix.updateComplete;
-    await aTimeout(20);
+    await expectNoDataFill(matrix, 62, 22);
     (matrix as unknown as { focusedCell: MatrixCellPos | null }).focusedCell = { row: 0, col: 0 };
     await matrix.updateComplete;
-    await aTimeout(20);
-    expect((matrix as unknown as { isNoData(value: number): boolean }).isNoData(-1)).to.be.false;
+    await expectNoDataFill(matrix, 62, 22);
 
     const calendar = (await fixture(html`<lr-heatmap scale="sqrt"></lr-heatmap>`)) as LyraHeatmap;
     calendar.domain = [-1, 1];
@@ -8702,14 +8721,16 @@ describe('bounded heatmap fallback paths', () => {
       days: [{ date: '2026-08-21', value: -1 }],
     };
     await calendar.updateComplete;
-    await aTimeout(20);
+    const { padLeft, padTop, cellSize, cellGapY } = calendar.calendarGeometry!;
+    // 2026-08-21 is a Friday: weekday row 5 of the Sunday-first week 0.
+    const y = padTop + 5 * (cellSize + cellGapY) + 2;
+    await expectNoDataFill(calendar, padLeft + 2, y);
     const position = (calendar as unknown as {
       cachedCalendarGrid: { cells: CalendarCellPos[] };
     }).cachedCalendarGrid.cells[0]!;
     (calendar as unknown as { focusedCell: CalendarCellPos | null }).focusedCell = position;
     await calendar.updateComplete;
-    await aTimeout(20);
-    expect((calendar as unknown as { isNoData(value: number): boolean }).isNoData(-1)).to.be.false;
+    await expectNoDataFill(calendar, padLeft + 2, y);
   });
 
   it('restores accessible focus when identity disappears or a stored cell leaves the grid', async () => {

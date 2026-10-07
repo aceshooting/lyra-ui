@@ -67,7 +67,7 @@ export interface WordCloudLayoutResult {
   readonly height: number;
 }
 
-/** DOM-node/compute-time safety cap — mirrors lr-sparkline's `MAX_BARS`. */
+/** DOM-node/compute-time safety cap — mirrors lr-sparkline's `MAX_POINTS`. */
 export const MAX_WORDS = 150;
 /** Maximum retained omitted records; diagnostics must never become a second unbounded collection. */
 export const MAX_SKIPPED_DIAGNOSTICS = 32;
@@ -171,6 +171,29 @@ function rectsOverlap(
   return Math.abs(ax - bx) < (aw + bw) / 2 + GAP && Math.abs(ay - by) < (ah + bh) / 2 + GAP;
 }
 
+/** A grid cell is keyed `column * CELL_KEY_STRIDE + row`; the bounded spiral keeps `row` far below it. */
+const CELL_KEY_STRIDE = 2 ** 20;
+
+/** Whether `visit` is truthy for any grid cell overlapped by the `w`x`h` box centred on (`x`, `y`) and grown by `pad`. */
+function someCell(
+  cell: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  pad: number,
+  visit: (key: number) => unknown,
+): boolean {
+  const lastColumn = Math.floor((x + w / 2 + pad) / cell);
+  const lastRow = Math.floor((y + h / 2 + pad) / cell);
+  for (let column = Math.floor((x - w / 2 - pad) / cell); column <= lastColumn; column++) {
+    for (let row = Math.floor((y - h / 2 - pad) / cell); row <= lastRow; row++) {
+      if (visit(column * CELL_KEY_STRIDE + row)) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Places `words` via an Archimedean-spiral search (the standard word-cloud
  * layout heuristic — heaviest words placed first, each one walking an
@@ -232,6 +255,8 @@ export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCl
   // eligible is already weight-descending (a suffix of byWeightDesc), which
   // is also the placement order the algorithm wants (heaviest first).
   const placed: MutablePlacedWord[] = [];
+  // Placed boxes (grown by GAP) bucketed in max-font-size cells: a candidate tests only its cell's words.
+  const grid = new Map<number, MutablePlacedWord[]>();
   let totalArea = 0;
 
   for (const word of eligible) {
@@ -251,21 +276,15 @@ export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCl
     let y = 0;
     let foundSpot = placed.length === 0;
     let iterations = 0;
+    const hits = (other: MutablePlacedWord): boolean =>
+      rectsOverlap(x, y, boxW, boxH, other.x, other.y, other.rotated ? other.height : other.width, other.rotated ? other.width : other.height);
+    const hitsIn = (key: number): boolean | undefined => grid.get(key)?.some(hits);
 
     while (!foundSpot && radius < maxRadius && iterations < MAX_SPIRAL_ITERATIONS) {
       iterations++;
       x = radius * Math.cos(theta);
       y = radius * Math.sin(theta);
-      let collides = false;
-      for (const other of placed) {
-        const otherW = other.rotated ? other.height : other.width;
-        const otherH = other.rotated ? other.width : other.height;
-        if (rectsOverlap(x, y, boxW, boxH, other.x, other.y, otherW, otherH)) {
-          collides = true;
-          break;
-        }
-      }
-      if (!collides) {
+      if (!someCell(maxFontSize, x, y, boxW, boxH, 0, hitsIn)) {
         foundSpot = true;
         break;
       }
@@ -278,7 +297,7 @@ export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCl
       continue;
     }
 
-    placed.push({
+    const entry: MutablePlacedWord = {
       ...word,
       x,
       y,
@@ -286,6 +305,12 @@ export function layoutWordCloud(words: readonly WordCloudWord[], options: WordCl
       rotated,
       width: measuredWidth,
       height: measuredHeight,
+    };
+    placed.push(entry);
+    someCell(maxFontSize, x, y, boxW, boxH, GAP, (key) => {
+      const cellWords = grid.get(key);
+      if (cellWords) cellWords.push(entry);
+      else grid.set(key, [entry]);
     });
   }
 

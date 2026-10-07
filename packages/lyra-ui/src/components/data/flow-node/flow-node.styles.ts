@@ -1,6 +1,8 @@
 import { css } from 'lit';
+import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
 
 export const styles = css`
+  ${flowStatusPaint}
   :host {
     display: inline-block;
     max-inline-size: 100%;
@@ -106,23 +108,8 @@ export const styles = css`
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-flow-status-color, var(--lr-color-border-strong));
+    background: var(--_lr-flow-status-paint, var(--lr-flow-status-color, var(--lr-color-border-strong)));
     flex: 0 0 auto;
-  }
-  [part='status'][data-status='pending'] .status-dot {
-    background: var(--lr-flow-status-pending-color, var(--lr-color-border-strong));
-  }
-  [part='status'][data-status='running'] .status-dot {
-    background: var(--lr-flow-status-running-color, var(--lr-color-brand));
-  }
-  [part='status'][data-status='success'] .status-dot {
-    background: var(--lr-flow-status-success-color, var(--lr-color-success));
-  }
-  [part='status'][data-status='error'] .status-dot {
-    background: var(--lr-flow-status-error-color, var(--lr-color-danger));
-  }
-  [part='status'][data-status='denied'] .status-dot {
-    background: var(--lr-flow-status-denied-color, var(--lr-color-warning));
   }
   [part='progress'] {
     inline-size: 100%;

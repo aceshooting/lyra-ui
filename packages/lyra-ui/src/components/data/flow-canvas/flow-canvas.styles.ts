@@ -79,6 +79,8 @@ export const styles = css`
        content is always clipped: fixed (which escapes into the top layer) is the default. A private
        default tier behind --lr-positioning-strategy, so every authored value still wins. */
     --_lr-positioning-strategy-default: fixed;
+    /* The wrapper ring below is the one selection ring for every card in the canvas. */
+    --lr-flow-node-selected-outline-color: transparent;
     /* WCAG 2.5.8 floor: this element carries the pointer handlers, but its size comes from the
        consumer-authored slotted card, which the component cannot constrain. node-control, the one
        part that already had a floor, is sr-only -- a keyboard proxy no pointer can reach. 24px
@@ -125,7 +127,7 @@ export const styles = css`
   }
   [part='edge'] {
     fill: none;
-    stroke: var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border));
+    stroke: var(--_lr-flow-edge-color, var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border)));
     stroke-width: 1.5;
     pointer-events: stroke;
     cursor: pointer;
@@ -137,32 +139,20 @@ export const styles = css`
     pointer-events: stroke;
     cursor: pointer;
   }
-  [part='edge'][data-tone='brand'] {
-    stroke: var(--lr-flow-canvas-edge-brand-color, var(--lr-color-brand));
+  [data-tone='brand'] {
+    --_lr-flow-edge-color: var(--lr-flow-canvas-edge-brand-color, var(--lr-color-brand));
   }
-  [part='edge'][data-tone='success'] {
-    stroke: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
+  [data-tone='success'] {
+    --_lr-flow-edge-color: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
   }
-  [part='edge'][data-tone='warning'] {
-    stroke: var(--lr-flow-canvas-edge-warning-color, var(--lr-color-warning));
+  [data-tone='warning'] {
+    --_lr-flow-edge-color: var(--lr-flow-canvas-edge-warning-color, var(--lr-color-warning));
   }
-  [part='edge'][data-tone='danger'] {
-    stroke: var(--lr-flow-canvas-edge-danger-color, var(--lr-color-danger));
+  [data-tone='danger'] {
+    --_lr-flow-edge-color: var(--lr-flow-canvas-edge-danger-color, var(--lr-color-danger));
   }
   [part='arrowhead'] {
-    fill: var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border));
-  }
-  [part='arrowhead'][data-tone='brand'] {
-    fill: var(--lr-flow-canvas-edge-brand-color, var(--lr-color-brand));
-  }
-  [part='arrowhead'][data-tone='success'] {
-    fill: var(--lr-flow-canvas-edge-success-color, var(--lr-color-success));
-  }
-  [part='arrowhead'][data-tone='warning'] {
-    fill: var(--lr-flow-canvas-edge-warning-color, var(--lr-color-warning));
-  }
-  [part='arrowhead'][data-tone='danger'] {
-    fill: var(--lr-flow-canvas-edge-danger-color, var(--lr-color-danger));
+    fill: var(--_lr-flow-edge-color, var(--lr-flow-canvas-edge-neutral-color, var(--lr-color-border)));
   }
   [part='stub'] {
     stroke: var(--lr-color-border);

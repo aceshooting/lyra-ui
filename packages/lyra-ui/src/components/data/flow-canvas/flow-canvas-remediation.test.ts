@@ -1,9 +1,19 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { nothing, render } from 'lit';
 import './flow-canvas.js';
 import '../flow-node/flow-node.js';
 import '../flow-run-status/flow-run-status.js';
+import '../flow-minimap/flow-minimap.js';
+import '../flow-controls/flow-controls.js';
 import type { LyraFlowCanvas } from './flow-canvas.js';
-import type { FlowHandle, FlowRunDecoration, FlowRunDecorations } from './flow-types.js';
+import type {
+  FlowEdge,
+  FlowHandle,
+  FlowNode,
+  FlowRunDecoration,
+  FlowRunDecorations,
+  FlowStructureSnapshot,
+} from './flow-types.js';
 import type { LyraFlowNode } from '../flow-node/flow-node.js';
 import type { LyraFlowRunStatus } from '../flow-run-status/flow-run-status.js';
 
@@ -116,3 +126,180 @@ for (const route of ['generated', 'portable', 'authored']) {
     }
   });
 }
+
+it('derives the roving order and keyboard-connect target once per render', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas connectable style="width:600px;height:300px"></lr-flow-canvas>`);
+  el.nodes = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, position: { x: (i % 6) * 200, y: Math.floor(i / 6) * 100 } }));
+  el.edges = Array.from({ length: 29 }, (_, i) => ({ id: `e${i}`, source: `n${i}`, target: `n${i + 1}` }));
+  await el.updateComplete;
+  const control = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="n0"] [part="node-control"]')!;
+  control.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true }));
+  await el.updateComplete;
+  const internal = el as unknown as Record<'resolvedNode' | 'eligibleConnectTargets', (arg: unknown) => unknown>;
+  const counts = { resolvedNode: 0, eligibleConnectTargets: 0 };
+  for (const name of ['resolvedNode', 'eligibleConnectTargets'] as const) {
+    const original = internal[name];
+    internal[name] = function (this: unknown, arg: unknown) {
+      counts[name] += 1;
+      return original.call(this, arg);
+    };
+  }
+  try {
+    el.decorations = { n1: { status: 'running' } };
+    await el.updateComplete;
+  } finally {
+    delete (internal as Partial<typeof internal>).resolvedNode;
+    delete (internal as Partial<typeof internal>).eligibleConnectTargets;
+  }
+  expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(1);
+  expect(counts.resolvedNode).to.be.below(30 * 4);
+  expect(counts.eligibleConnectTargets).to.be.at.most(1);
+});
+
+it('keeps default cards untouched by a canvas render that changes nothing they show', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas></lr-flow-canvas>`);
+  el.nodes = [
+    { id: 'a', position: { x: 0, y: 0 } },
+    { id: 'b', position: { x: 200, y: 0 }, inputs: [{ id: 'x' }] },
+  ];
+  await el.updateComplete;
+  const cards = [...el.shadowRoot!.querySelectorAll<LyraFlowNode>('lr-flow-node')];
+  const handles = cards.map((card) => [card.inputs, card.outputs]);
+  el.decorations = { b: { status: 'running' } };
+  await el.updateComplete;
+  expect(cards.map((card, i) => card.inputs === handles[i]![0] && card.outputs === handles[i]![1])).to.deep.equal([true, true]);
+});
+
+it('keeps a node drag, layout and model identity across a parent re-render with the same inputs', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const nodes: FlowNode[] = [{ id: 'a', position: { x: 0, y: 0 } }, { id: 'b' }];
+  const edges: FlowEdge[] = [{ id: 'a-b', source: 'a', target: 'b' }];
+  const decorations: FlowRunDecorations = { a: { status: 'running' } };
+  const selected = ['a'];
+  let layouts = 0;
+  const view = () => html`<lr-flow-canvas nodes-draggable style="width:600px;height:300px"
+    .nodes=${nodes} .edges=${edges} .decorations=${decorations} .selectedNodeIds=${selected}
+    @lr-layout-change=${() => layouts++}></lr-flow-canvas>`;
+  try {
+    render(view(), host);
+    const el = host.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    await waitUntil(() => layouts === 1, 'the first layout pass', { timeout: 5000 });
+    const before = [el.nodes, el.edges, el.decorations, el.selectedNodeIds];
+    const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="a"]')!;
+    wrapper.setPointerCapture = () => {};
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 7, clientX: 0, clientY: 0, bubbles: true }));
+    render(view(), host);
+    await el.updateComplete;
+    let moved: unknown;
+    el.addEventListener('lr-node-move', (e) => (moved = (e as CustomEvent).detail.position));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 7, clientX: 40, clientY: 0 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, clientX: 40, clientY: 0 }));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    expect([el.nodes, el.edges, el.decorations, el.selectedNodeIds].map((value, i) => value === before[i])).to.deep.equal([true, true, true, true]);
+    expect(moved, 'the drag survives the re-render').to.not.equal(undefined);
+    expect(layouts).to.equal(1);
+  } finally {
+    render(nothing, host);
+    host.remove();
+  }
+});
+
+it('reuses the frozen structure and skips companion work on viewport-only frames', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas style="width:600px;height:300px">
+    <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+  </lr-flow-canvas>`);
+  el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }, { id: 'b', position: { x: 300, y: 0 } }];
+  el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+  const frames: FlowStructureSnapshot[] = [];
+  el.registerCompanion((snapshot) => frames.push(snapshot));
+  const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+  await waitUntil(() => frames.at(-1)?.nodes.length === 2);
+  await frame();
+  await frame();
+  const minimap = el.querySelector('lr-flow-minimap')!;
+  const controls = el.querySelector('lr-flow-controls')! as unknown as { render(): unknown };
+  const getComputedStyle = window.getComputedStyle;
+  const counts = { minimapStyleReads: 0, controlsRenders: 0 };
+  window.getComputedStyle = (element, pseudo) => {
+    if (element === minimap) counts.minimapStyleReads += 1;
+    return getComputedStyle.call(window, element, pseudo);
+  };
+  const render = controls.render;
+  controls.render = function (this: unknown) {
+    counts.controlsRenders += 1;
+    return render.call(this);
+  };
+  const start = frames.length;
+  try {
+    for (const x of [10, 20, 30]) {
+      el.setViewport({ x, y: 0, zoom: 1 });
+      await frame();
+      await minimap.updateComplete;
+    }
+  } finally {
+    window.getComputedStyle = getComputedStyle;
+    delete (controls as Partial<typeof controls>).render;
+  }
+  const base = frames[start - 1]!;
+  expect(frames.slice(start).map((s) => s.nodes === base.nodes && s.edges === base.edges)).to.deep.equal([true, true, true]);
+  expect(counts).to.deep.equal({ minimapStyleReads: 0, controlsRenders: 0 });
+});
+
+it('does not start a node drag from a control inside an authored card', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas nodes-draggable .nodes=${[{ id: 'a', position: { x: 0, y: 0 } }]}>
+    <div node-id="a"><button>Run</button></div>
+  </lr-flow-canvas>`);
+  const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="a"]')!;
+  let captured = false;
+  wrapper.setPointerCapture = () => {
+    captured = true;
+  };
+  const before = wrapper.style.transform;
+  el.querySelector('button')!.dispatchEvent(
+    new PointerEvent('pointerdown', { pointerId: 3, clientX: 0, clientY: 0, bubbles: true, composed: true }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 3, clientX: 40, clientY: 0 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3, clientX: 40, clientY: 0 }));
+  expect([captured, wrapper.style.transform === before]).to.deep.equal([false, true]);
+});
+
+for (const route of ['readonly', 'revealed']) {
+  it(`frames the graph initially when the canvas is ${route}`, async () => {
+    const parent = await fixture<HTMLElement>(html`<div ?hidden=${route === 'revealed'}>
+      <lr-flow-canvas ?readonly=${route === 'readonly'} style="width:600px;height:300px"></lr-flow-canvas>
+    </div>`);
+    const el = parent.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: 1000, y: 500 } }];
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    await frame();
+    await frame();
+    parent.hidden = false;
+    const node = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="a"]')!;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const offset = () => {
+      const a = node.getBoundingClientRect();
+      const b = viewport.getBoundingClientRect();
+      return Math.round(Math.abs(a.left + a.width / 2 - (b.left + b.width / 2)));
+    };
+    await waitUntil(() => offset() <= 1, `node centre is ${offset()}px from the viewport centre`);
+  });
+}
+
+it('paints one selection ring, the canvas one, around a selected card', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas
+    style="--lr-flow-canvas-node-selected-outline-color: rgb(255, 0, 0)"
+    .nodes=${[{ id: 'a', position: { x: 0, y: 0 } }, { id: 'b', position: { x: 300, y: 0 } }]}
+  ><lr-flow-node node-id="b" heading="Authored"></lr-flow-node></lr-flow-canvas>`);
+  el.selectedNodeIds = ['a', 'b'];
+  await el.updateComplete;
+  const cards = [
+    el.shadowRoot!.querySelector<LyraFlowNode>('[data-node-id="a"] lr-flow-node')!,
+    el.querySelector<LyraFlowNode>('lr-flow-node')!,
+  ];
+  await Promise.all(cards.map((card) => card.updateComplete));
+  const rings = cards.map((card) => getComputedStyle(card.shadowRoot!.querySelector('.card')!).outlineColor);
+  const wrapper = getComputedStyle(el.shadowRoot!.querySelector('[data-node-id="a"]')!).outlineColor;
+  expect([...rings, wrapper]).to.deep.equal(['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)', 'rgb(255, 0, 0)']);
+});

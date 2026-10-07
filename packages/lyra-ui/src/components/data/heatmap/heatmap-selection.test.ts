@@ -1,4 +1,6 @@
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
@@ -251,6 +253,7 @@ describe('lr-heatmap selection across modes and input devices', () => {
   });
 
   it('bounds selected entries and the accessible window independently on a 100 by 100 matrix', async () => {
+    expectDevWarning(collectionTruncationWarningKey('lr-heatmap', 'selectedCells'));
     const el = await matrix();
     const labels = Array.from({ length: 100 }, (_, index) => String(index));
     el.data = { kind: 'matrix', rowLabels: labels, colLabels: labels, values: [] };

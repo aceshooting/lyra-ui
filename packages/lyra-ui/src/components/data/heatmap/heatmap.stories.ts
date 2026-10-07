@@ -148,7 +148,7 @@ export const CustomTheme: Story = {
 };
 
 /**
- * Hover a cell for its tooltip, tab to the grid and use the arrow keys to
+ * Hover a cell for its tooltip, tab to the grid and use the arrow keys (or Home/End) to
  * move the focus ring (the shared light-DOM polite sink announces each move),
  * and click or press Enter/Space on a cell to see its `lr-cell-activate`
  * detail logged below.
@@ -495,8 +495,8 @@ export const CalendarAnnotations: Story = {
 };
 
 /**
- * Column labels are horizontal by default, which collides in a dense matrix where every column is
- * far narrower than its label. `col-label-rotation` leans each label back over the columns to its
+ * Column labels are horizontal by default, so in a dense matrix where every column is far narrower
+ * than its label they shorten to an ellipsis or drop. `col-label-rotation` leans each label back over the columns to its
  * left, anchored at its own column, and `col-label-height="auto"` sizes the band to the rotated
  * extent so no magic number is needed.
  */

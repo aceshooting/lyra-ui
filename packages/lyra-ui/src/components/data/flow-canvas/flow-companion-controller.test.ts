@@ -97,3 +97,27 @@ it('waits for late flow-canvas registration in the owner realm and retries capab
     iframe.remove();
   }
 });
+
+it('observes its root only while an explicit for target is set', async () => {
+  const canvas = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+  const host = document.createElement('div') as unknown as HTMLElement & { for: string };
+  host.for = '';
+  canvas.append(host);
+  const observed: Node[] = [];
+  const observe = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function (this: MutationObserver, target: Node, options?: MutationObserverInit) {
+    observed.push(target);
+    return observe.call(this, target, options);
+  };
+  const controller = new FlowCanvasCompanionController(host, isCapable, () => {});
+  try {
+    controller.connect();
+    expect([controller.target === canvas, observed.length]).to.deep.equal([true, 0]);
+    host.for = 'elsewhere';
+    controller.targetIdChanged();
+    expect(observed.filter((node) => node === document).length).to.equal(1);
+  } finally {
+    controller.disconnect();
+    MutationObserver.prototype.observe = observe;
+  }
+});

@@ -1,5 +1,6 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { render, type TemplateResult } from 'lit';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
@@ -67,15 +68,19 @@ function keydown(el: LyraWordCloud, key: string): void {
   svgEl(el).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true }));
 }
 
+function clientPoint(el: LyraWordCloud, x: number, y: number): { clientX: number; clientY: number } {
+  const matrix = svgEl(el).getScreenCTM();
+  if (!matrix) throw new Error('Missing SVG screen transform');
+  const point = new DOMPoint(x, y).matrixTransform(matrix);
+  return { clientX: point.x, clientY: point.y };
+}
+
 function wordClientPoint(el: LyraWordCloud, text: string): { clientX: number; clientY: number } {
   const word = Array.from(el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="word"]')).find(
     (candidate) => candidate.textContent === text,
   );
   if (!word) throw new Error(`Missing rendered word: ${text}`);
-  const matrix = svgEl(el).getScreenCTM();
-  if (!matrix) throw new Error('Missing SVG screen transform');
-  const point = new DOMPoint(Number(word.getAttribute('x')), Number(word.getAttribute('y'))).matrixTransform(matrix);
-  return { clientX: point.x, clientY: point.y };
+  return clientPoint(el, Number(word.getAttribute('x')), Number(word.getAttribute('y')));
 }
 
 function clickWord(el: LyraWordCloud, text: string): void {
@@ -1450,4 +1455,191 @@ describe('lr-word-cloud legend visibility', () => {
     expect(warnings).to.deep.equal([]);
   });
 
+});
+
+describe('lr-word-cloud parent re-render with unchanged bindings', () => {
+  const PALETTE = ['rgb(1, 2, 3)', 'rgb(4, 5, 6)'];
+  const LEGEND = [{ label: 'Key', color: 'rgb(1, 2, 3)' }];
+  const plain = () => html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`;
+
+  async function mount(template: () => TemplateResult): Promise<LyraWordCloud> {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    render(template(), host);
+    const el = host.querySelector('lr-word-cloud') as LyraWordCloud;
+    await el.updateComplete;
+    return el;
+  }
+  function rerender(el: LyraWordCloud, template: () => TemplateResult): void {
+    render(template(), el.parentNode as HTMLElement);
+  }
+
+  for (const [name, template] of [
+    ['words', plain],
+    ['palette', () => html`<lr-word-cloud .palette=${PALETTE}></lr-word-cloud>`],
+    ['legend', () => html`<lr-word-cloud .legend=${LEGEND}></lr-word-cloud>`],
+    ['an inline domain literal', () => html`<lr-word-cloud .domain=${[0, 100]}></lr-word-cloud>`],
+  ] as const) {
+    it(`requests no update when ${name} is rebound unchanged`, async () => {
+      const el = await mount(template);
+      rerender(el, template);
+      expect(el.isUpdatePending).to.equal(false);
+    });
+  }
+
+  it('keeps the keyboard cursor', async () => {
+    const el = await mount(plain);
+    keydown(el, 'ArrowRight');
+    keydown(el, 'ArrowRight');
+    await el.updateComplete;
+    rerender(el, plain);
+    await el.updateComplete;
+
+    const activated: string[] = [];
+    el.addEventListener('lr-word-activate', (event) => activated.push(event.detail.text));
+    keydown(el, 'Enter');
+    expect(activated).to.deep.equal(['beta']);
+  });
+
+  it('keeps the rotations of a mixed cloud', async () => {
+    const originalRandom = Math.random;
+    let draws = 0;
+    Math.random = () => (draws++ % 2 ? 0.99 : 0);
+    try {
+      const mixed = () => html`<lr-word-cloud word-rotation="mixed" .words=${WORDS}></lr-word-cloud>`;
+      const el = await mount(mixed);
+      const rotations = () =>
+        Array.from(el.shadowRoot!.querySelectorAll('[part="word"]'), (node) => node.getAttribute('transform'));
+      const before = rotations();
+      rerender(el, mixed);
+      await el.updateComplete;
+      expect(rotations()).to.deep.equal(before);
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
+});
+
+describe('lr-word-cloud pointer hit-testing', () => {
+  const LONG = 'extraordinarily-long-heavy-word';
+  const words = [
+    { text: LONG, weight: 100 },
+    ...Array.from({ length: 12 }, (_, index) => ({ text: `w${index}`, weight: 40 - index * 3 })),
+  ];
+
+  for (const rotated of [false, true]) {
+    it(`resolves the end of a long ${rotated ? 'rotated ' : ''}word to that word, not to a nearer neighbour centre`, async () => {
+      const originalRandom = Math.random;
+      Math.random = () => (rotated ? 0 : 0.99);
+      try {
+        const el = await fixture<LyraWordCloud>(html`
+          <lr-word-cloud
+            word-rotation="mixed"
+            style="inline-size: 640px; block-size: 360px"
+            .words=${words}
+          ></lr-word-cloud>
+        `);
+        const centres = Array.from(el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="word"]'), (node) => ({
+          text: node.textContent,
+          x: Number(node.getAttribute('x')),
+          y: Number(node.getAttribute('y')),
+          length: node.getBBox().width,
+        }));
+        const long = centres.find((word) => word.text === LONG)!;
+        const probe = {
+          x: long.x + (rotated ? 0 : 0.35 * long.length),
+          y: long.y + (rotated ? 0.35 * long.length : 0),
+        };
+        const distance = (word: { x: number; y: number }): number => Math.hypot(probe.x - word.x, probe.y - word.y);
+        expect(
+          centres.some((word) => word !== long && distance(word) < distance(long)),
+          'a neighbour centre must be nearer than the long word centre',
+        ).to.equal(true);
+
+        const activated: string[] = [];
+        el.addEventListener('lr-word-activate', (event) => activated.push(event.detail.text));
+        const point = clientPoint(el, probe.x, probe.y);
+        svgEl(el).dispatchEvent(new MouseEvent('click', { ...point, bubbles: true, composed: true }));
+        svgEl(el).dispatchEvent(new PointerEvent('pointermove', { ...point, pointerId: 1, bubbles: true, composed: true }));
+        await el.updateComplete;
+        expect(activated).to.deep.equal([LONG]);
+        expect(el.shadowRoot!.querySelector('[part="word"][data-hovered]')?.textContent).to.equal(LONG);
+      } finally {
+        Math.random = originalRandom;
+      }
+    });
+  }
+});
+
+it('reads no styles and parses no colors when only the hovered word changes', async () => {
+  const words = Array.from({ length: 30 }, (_, index) => ({
+    text: `w${index}`,
+    weight: index + 1,
+    ...(index % 2 ? { color: 'rgb(1, 2, 3)' } : { group: `g${index % 3}` }),
+  }));
+  for (const { palette, legend } of [
+    { palette: undefined, legend: [] },
+    { palette: ['rgb(7, 8, 9)'], legend: [{ label: 'Key', color: 'rgb(4, 5, 6)' }] },
+  ]) {
+    const el = await fixture<LyraWordCloud>(html`
+      <lr-word-cloud
+        with-legend
+        style="inline-size: 640px; block-size: 360px"
+        .palette=${palette}
+        .legend=${legend}
+        .words=${words}
+      ></lr-word-cloud>
+    `);
+    const css = CSS as { supports: typeof CSS.supports };
+    const getComputedStyle = window.getComputedStyle;
+    const supports = css.supports;
+    const calls = { styleReads: 0, colorParses: 0 };
+    window.getComputedStyle = ((...args: Parameters<typeof getComputedStyle>) => {
+      calls.styleReads++;
+      return getComputedStyle(...args);
+    }) as typeof window.getComputedStyle;
+    css.supports = ((...args: Parameters<typeof supports>) => {
+      calls.colorParses++;
+      return Reflect.apply(supports, CSS, args) as boolean;
+    }) as typeof supports;
+    try {
+      for (const text of ['w3', 'w8', 'w14']) {
+        svgEl(el).dispatchEvent(
+          new PointerEvent('pointermove', { ...wordClientPoint(el, text), pointerId: 1, bubbles: true, composed: true }),
+        );
+        await el.updateComplete;
+      }
+    } finally {
+      window.getComputedStyle = getComputedStyle;
+      css.supports = supports;
+    }
+    expect(calls).to.deep.equal({ styleReads: 0, colorParses: 0 });
+  }
+});
+
+it('measures text and reads tokens through its owner document after adoption into an iframe', async () => {
+  const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument!;
+  const frameWindow = iframe.contentWindow!;
+  const used = { canvases: 0, styleReads: 0 };
+  const createElement = frameDocument.createElement;
+  frameDocument.createElement = function (this: Document, ...args: Parameters<Document['createElement']>) {
+    if (args[0] === 'canvas') used.canvases++;
+    return Reflect.apply(createElement, this, args);
+  } as Document['createElement'];
+  const getComputedStyle = frameWindow.getComputedStyle;
+  frameWindow.getComputedStyle = ((...args: Parameters<Window['getComputedStyle']>) => {
+    used.styleReads++;
+    return Reflect.apply(getComputedStyle, frameWindow, args);
+  }) as Window['getComputedStyle'];
+  try {
+    frameDocument.body.append(el);
+    el.words = [...WORDS];
+    await el.updateComplete;
+    expect({ canvas: used.canvases > 0, styleReads: used.styleReads > 0 }).to.deep.equal({ canvas: true, styleReads: true });
+  } finally {
+    el.remove();
+    iframe.remove();
+  }
 });

@@ -22,13 +22,18 @@ import { LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStatusLabel, LYRA_
 
 const ALL_STATUSES: readonly LyraToolStatus[] = ['pending', 'running', 'success', 'error', 'denied'];
 const DONE_STATUSES = new Set<LyraToolStatus>(['success', 'error', 'denied']);
+const MAX_LISTED_TRANSITIONS = 5;
 const DECORATIONS_OWNERSHIP_WARNING_KEY = 'lyra-flow-run-status-decoration-ownership-conflict';
 const DECORATIONS_OWNERSHIP_WARNING =
   '<lr-flow-run-status>: direct and companion decorations writes conflict; the companion decorations take precedence.';
 
 interface FlowCanvasLike extends HTMLElement {
   decorations: FlowRunDecorations | null;
-  readonly nodes: readonly { readonly id: string; readonly data?: Readonly<Record<string, unknown>> }[];
+  readonly nodes: readonly {
+    readonly id: string;
+    readonly accessibleLabel?: string;
+    readonly data?: Readonly<Record<string, unknown>>;
+  }[];
 }
 
 function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
@@ -81,16 +86,20 @@ export class LyraFlowRunStatus extends LyraElement {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  /** Id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor canvas. */
   @property() for = '';
   private _decorations: FlowRunDecorations = Object.freeze({});
+  private decorationsSource?: FlowRunDecorations;
   /** Detached, deeply frozen decoration snapshot, bounded to 10,000 keys and a finite nested-data
-   * budget. Invalid status entries are omitted; reassign the record to update. */
+   * budget. Invalid status entries are omitted; assign a new record to update. */
   @property({ attribute: false })
   get decorations(): FlowRunDecorations {
     return this._decorations;
   }
   set decorations(value: FlowRunDecorations) {
+    if (value === this.decorationsSource || value === this._decorations) return;
     const previous = this._decorations;
+    this.decorationsSource = value;
     this._decorations = snapshotFlowDecorations(value);
     this.requestUpdate('decorations', previous);
   }
@@ -98,6 +107,7 @@ export class LyraFlowRunStatus extends LyraElement {
    *  still pushing `decorations` into the canvas and announcing step transitions. */
   @property({ type: Boolean, attribute: 'without-summary' }) withoutSummary = false;
 
+  /** Accessible name of the summary strip; defaults to a localized label. */
   @property() label = '';
   /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the
    *  bordered, filled, shadowed floating strip. `'plain'` removes the border, background, shadow,
@@ -219,24 +229,30 @@ export class LyraFlowRunStatus extends LyraElement {
 
   private announceTransitions(previous: FlowRunDecorations | undefined): void {
     if (!previous) return; // first assignment -- nothing to compare against, no spam on mount
-    const messages: string[] = [];
-    for (const [id, decoration] of Object.entries(this.decorations)) {
-      if (previous[id]?.status === decoration.status) continue;
-      const node = this.canvasEl?.nodes.find((n) => n.id === id);
-      const label = typeof node?.data?.['label'] === 'string' ? node.data['label'] : id;
-      messages.push(
-        this.localize('flowRunStepStatus', undefined, {
-          label,
-          status: this.statusLabel(decoration.status),
-        }),
-      );
-    }
-    if (messages.length > 0) {
+    const changed = Object.entries(this.decorations).filter(
+      ([id, decoration]) => previous[id]?.status !== decoration.status,
+    );
+    if (changed.length === 0) return;
+    if (changed.length > MAX_LISTED_TRANSITIONS) {
+      const { done, total } = this.summary();
+      const number = getNumberFormat(this.effectiveLocale);
       this.announcer.announce(
-        getListFormat(this.effectiveLocale, { type: 'conjunction', style: 'long' }).format(messages),
+        this.localize('flowRunSummary', undefined, { done: number.format(done), total: number.format(total) }),
         { force: true },
       );
+      return;
     }
+    const nodes = new Map(this.canvasEl?.nodes.map((node) => [node.id, node]));
+    const messages = changed.map(([id, decoration]) => {
+      const node = nodes.get(id);
+      const label =
+        node?.accessibleLabel || (typeof node?.data?.['label'] === 'string' ? node.data['label'] : id);
+      return this.localize('flowRunStepStatus', undefined, { label, status: this.statusLabel(decoration.status) });
+    });
+    this.announcer.announce(
+      getListFormat(this.effectiveLocale, { type: 'conjunction', style: 'long' }).format(messages),
+      { force: true },
+    );
   }
 
   // The tally runs directly over `this.decorations` (this element's own pushed-in state, matching

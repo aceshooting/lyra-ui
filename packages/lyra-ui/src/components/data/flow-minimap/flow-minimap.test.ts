@@ -818,7 +818,7 @@ it('reconstructs its canvas watcher against the adopted iframe document on every
   let minimap: LyraFlowMinimap | undefined;
 
   try {
-    minimap = (await fixture(html`<lr-flow-minimap></lr-flow-minimap>`)) as LyraFlowMinimap;
+    minimap = (await fixture(html`<lr-flow-minimap for="wf"></lr-flow-minimap>`)) as LyraFlowMinimap;
     frameDocument.body.append(frameDocument.adoptNode(minimap));
     await minimap.updateComplete;
     expect(documentObservations, 'the canvas watcher observes the iframe document').to.equal(1);
@@ -970,6 +970,22 @@ describe('--lr-flow-minimap-viewport-color', () => {
     const viewport = minimap.shadowRoot!.querySelector<SVGRectElement>('[part="viewport"]')!;
     const computed = getComputedStyle(viewport);
     expect(computed.stroke).to.equal('rgb(9, 8, 7)');
+    const probe = document.createElement('div');
+    probe.style.color = 'color-mix(in srgb, rgb(9, 8, 7) 25%, transparent)';
+    document.body.append(probe);
+    const hoverFill = getComputedStyle(probe).color;
+    probe.remove();
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]')!.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      await waitUntil(() => Number.parseFloat(computed.strokeWidth) === 3, 'hover never applied');
+      expect(computed.fill).to.equal(hoverFill);
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

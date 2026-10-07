@@ -1,5 +1,6 @@
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
@@ -253,7 +254,9 @@ export class LyraFlowMinimap extends LyraElement {
     // Ahead of render(), so the geometry it computes stays pure. Both lengths are live theme
     // values, so they are re-read per update rather than cached once: a theme switch, a token a
     // consumer set on any ancestor, and a root font-size change all have to reach the floor.
-    this.refreshViewportMetrics();
+    // A viewport-only frame (same structure) skips the style read.
+    const previous = changed.get('snapshot') as FlowStructureSnapshot | null | undefined;
+    if (changed.size !== 1 || previous?.nodes !== this.snapshot?.nodes) this.refreshViewportMetrics();
     if (this.hasUpdated && changed.has('for')) {
       this.companionController.targetIdChanged();
     }
@@ -540,7 +543,7 @@ export class LyraFlowMinimap extends LyraElement {
         @click=${this.onMapClick}
         @wheel=${this.onMapWheel}
       >
-        ${this.renderNodes()}
+        ${guard([this.snapshot.nodes], () => this.renderNodes())}
         <g data-viewport-control>
           <rect
             part="viewport"

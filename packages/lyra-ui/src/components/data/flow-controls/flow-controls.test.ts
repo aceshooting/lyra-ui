@@ -140,6 +140,23 @@ it('the lock button toggles the canvas readonly attribute and mirrors aria-press
   expect(lockButton.getAttribute('aria-pressed')).to.equal('false');
 });
 
+it('emits lr-readonly-change through the canvas when the lock button toggles it', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+  await controls.updateComplete;
+  const details: unknown[] = [];
+  wrapper.addEventListener('lr-readonly-change', (event) => details.push((event as CustomEvent).detail));
+  const lock = controls.shadowRoot!.querySelector('[part="lock"]') as HTMLButtonElement;
+  lock.click();
+  lock.click();
+  wrapper.readonly = true;
+  expect(details).to.deep.equal([{ readonly: true }, { readonly: false }]);
+});
+
 describe('--lr-flow-controls-lock-active-color', () => {
   const lockedControls = async (style = ''): Promise<LyraFlowControls> => {
     const wrapper = (await fixture(html`

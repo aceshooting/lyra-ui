@@ -20,6 +20,10 @@ interface FlowCanvasLike extends HTMLElement {
   readonly: boolean;
 }
 
+export interface LyraFlowControlsEventMap {
+  'lr-readonly-change': CustomEvent<Readonly<{ readonly: boolean }>>;
+}
+
 function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
   const candidate = element as Partial<FlowCanvasLike>;
   return (
@@ -92,12 +96,14 @@ const lockOpenGlyph = () =>
  * @csspart zoom-out - Zoom-out button.
  * @csspart fit - Zoom-to-fit button.
  * @csspart lock - Lock/unlock toggle button (omitted when `without-lock` is set).
+ * @event lr-readonly-change - `detail: { readonly }`. The lock button changed the canvas's
+ *   `readonly`; bubbles through a canvas this cluster is slotted into.
  * @cssprop [--lr-flow-controls-lock-active-color=var(--lr-color-brand)] - Pressed lock-button
  *   foreground.
  * @status stable
  * @since 4.0.0
  */
-export class LyraFlowControls extends LyraElement {
+export class LyraFlowControls extends LyraElement<LyraFlowControlsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -116,8 +122,8 @@ export class LyraFlowControls extends LyraElement {
    *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
    *  re-subscribes; a target that mounts later is picked up too. */
   @property() for = '';
-  /** Layout axis of the button cluster. */
   private _orientation: LyraOrientation = 'vertical';
+  /** Layout axis of the button cluster. */
   @property({ reflect: true })
   get orientation(): LyraOrientation {
     return this._orientation;
@@ -139,7 +145,8 @@ export class LyraFlowControls extends LyraElement {
    *  their own hover/focus affordances either way. */
   @property({ reflect: true }) frame: LyraFrame = 'card';
 
-  @state() private snapshot: FlowStructureSnapshot | null = null;
+  @state() private atMinZoom = false;
+  @state() private atMaxZoom = false;
   @state() private canvasReadonly = false;
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
@@ -179,15 +186,17 @@ export class LyraFlowControls extends LyraElement {
   private attachCanvas(canvas: FlowCanvasLike | null): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;
-    this.snapshot = null;
+    this.atMinZoom = this.atMaxZoom = false;
     this.canvasReadonly = false;
     this.canvasEl = canvas ?? undefined;
+    this.requestUpdate();
     if (!canvas) return;
     this.canvasReadonly = canvas.readonly;
-    this.unsubscribe = canvas.registerCompanion((snapshot) => {
+    this.unsubscribe = canvas.registerCompanion(({ viewport, locked }) => {
       if (!this.isConnected || this.canvasEl !== canvas) return;
-      this.snapshot = snapshot;
-      this.canvasReadonly = snapshot.locked;
+      this.atMinZoom = viewport.zoom <= viewport.minZoom;
+      this.atMaxZoom = viewport.zoom >= viewport.maxZoom;
+      this.canvasReadonly = locked;
     });
   }
 
@@ -195,6 +204,7 @@ export class LyraFlowControls extends LyraElement {
     if (!this.canvasEl) return;
     const nextReadonly = !this.canvasEl.readonly;
     this.canvasEl.readonly = nextReadonly;
+    this.emit('lr-readonly-change', Object.freeze({ readonly: nextReadonly }));
     // The authoritative snapshot follows on the canvas's next coalesced frame. Reflect this
     // control's own committed action immediately so aria-pressed never lags a click by a frame.
     this.canvasReadonly = nextReadonly;
@@ -202,9 +212,6 @@ export class LyraFlowControls extends LyraElement {
 
   override render(): TemplateResult {
     const disabled = !this.canvasEl;
-    const viewport = this.snapshot?.viewport;
-    const atMin = viewport ? viewport.zoom <= viewport.minZoom : false;
-    const atMax = viewport ? viewport.zoom >= viewport.maxZoom : false;
     return html`<div
       part="base"
       role="group"
@@ -213,7 +220,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-in"
         type="button"
-        ?disabled=${disabled || this.canvasReadonly || atMax}
+        ?disabled=${disabled || this.canvasReadonly || this.atMaxZoom}
         aria-label=${this.localize('zoomIn')}
         title=${this.localize('zoomIn')}
         @click=${() => this.canvasEl?.zoomIn()}
@@ -221,7 +228,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-out"
         type="button"
-        ?disabled=${disabled || this.canvasReadonly || atMin}
+        ?disabled=${disabled || this.canvasReadonly || this.atMinZoom}
         aria-label=${this.localize('zoomOut')}
         title=${this.localize('zoomOut')}
         @click=${() => this.canvasEl?.zoomOut()}

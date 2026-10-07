@@ -42,7 +42,9 @@ export class FlowCanvasCompanionController<T extends HTMLElement> {
   }
 
   targetIdChanged(): void {
-    if (this.host.isConnected) this.reconcile();
+    if (!this.host.isConnected) return;
+    this.watchRoot();
+    this.reconcile();
   }
 
   private root(): RootWithIds {
@@ -102,7 +104,8 @@ export class FlowCanvasCompanionController<T extends HTMLElement> {
     this.observer = undefined;
     this.observerDocument = undefined;
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-    if (!MutationObserverCtor || !this.host.isConnected) return;
+    // An ancestor target changes only when the host moves, which reconnects it.
+    if (!MutationObserverCtor || !this.host.isConnected || !this.host.for) return;
     const root = this.root();
     const generation = this.generation;
     const observer = new MutationObserverCtor(() => {

@@ -4037,7 +4037,7 @@ describe('controlled ownership and lifecycle invariants', () => {
     second();
     expect(snapshots).to.have.lengthOf(2);
     expect(snapshots[0]).to.not.equal(snapshots[1]);
-    expect(snapshots[0]!.nodes).to.not.equal(snapshots[1]!.nodes);
+    expect(snapshots[0]!.nodes).to.equal(snapshots[1]!.nodes);
     expect(Object.isFrozen(snapshots[0])).to.be.true;
     expect(Object.isFrozen(snapshots[0]!.nodes[0])).to.be.true;
 

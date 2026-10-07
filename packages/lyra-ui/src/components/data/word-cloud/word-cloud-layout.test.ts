@@ -293,3 +293,22 @@ it('scans 200,000 words with bounded top-K storage and bounded skipped diagnosti
   expect(result.skipped.length).to.be.at.most(MAX_SKIPPED_DIAGNOSTICS);
   expect(result.placed.some((word) => word.text === 'w199999')).to.be.true;
 });
+
+it('tests each spiral candidate against few placed words, not all of them', () => {
+  const words = Array.from({ length: MAX_WORDS }, (_, index) => ({ text: `word-${String(index).padStart(3, '0')}`, weight: 1 }));
+  const abs = Math.abs;
+  let calls = 0;
+  // Every overlap test takes Math.abs of one or both axis distances.
+  Math.abs = (value: number) => {
+    calls++;
+    return abs(value);
+  };
+  let placed = 0;
+  try {
+    placed = layoutWordCloud(words, { ...baseOptions, minFontSize: 40, maxFontSize: 40 }).placed.length;
+  } finally {
+    Math.abs = abs;
+  }
+  expect(placed).to.equal(MAX_WORDS);
+  expect(calls).to.be.within(1, 1_500_000);
+});
