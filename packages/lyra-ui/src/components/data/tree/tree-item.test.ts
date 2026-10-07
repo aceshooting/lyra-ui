@@ -89,6 +89,54 @@ it('can clear item back to the declarative model without retaining data-owned st
   expect(renderedLabel(el)).to.equal('Declarative label');
 });
 
+it('observes slotted labels only in declarative mode, including after a data-row reconnect', async () => {
+  const el = document.createElement('lr-tree-item');
+  const assigned = document.createTextNode(' ');
+  el.append(assigned);
+  el.label = 'Fallback';
+  const originalObserve = MutationObserver.prototype.observe;
+  let labelObservations = 0;
+  MutationObserver.prototype.observe = function (this: MutationObserver, target: Node, options?: MutationObserverInit): void {
+    if (target === el && options?.childList && options.characterData && options.subtree &&
+      options.attributeFilter?.includes('slot')) labelObservations += 1;
+    originalObserve.call(this, target, options);
+  };
+  try {
+    el.item = { id: 'data', label: 'Data label' };
+    document.body.append(el);
+    await el.updateComplete;
+    expect(renderedLabel(el)).to.equal('Data label');
+    expect(labelObservations).to.equal(0);
+
+    el.item = { id: 'data', label: 'Refreshed data label' };
+    await el.updateComplete;
+    expect(renderedLabel(el)).to.equal('Refreshed data label');
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    expect(labelObservations).to.equal(0);
+
+    el.item = undefined;
+    await el.updateComplete;
+    expect(labelObservations).to.be.greaterThan(0);
+    expect(renderedLabel(el)).to.equal('Fallback');
+    assigned.data = 'Declarative label';
+    await waitUntil(() => renderedLabel(el) === 'Declarative label');
+
+    el.item = { id: 'data', label: 'Data again' };
+    await el.updateComplete;
+    labelObservations = 0;
+    assigned.data = ' ';
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(renderedLabel(el)).to.equal('Data again');
+    expect(labelObservations).to.equal(0);
+  } finally {
+    el.remove();
+    MutationObserver.prototype.observe = originalObserve;
+  }
+});
+
 describe('ElementInternals availability', () => {
   it('constructs and renders a standalone item when attachInternals is absent', async () => {
     const original = HTMLElement.prototype.attachInternals;
@@ -371,7 +419,7 @@ describe('tree-item declarative child model', () => {
     expect(el.nodeLabel).to.equal('Forwarding fallback');
   });
 
-  it('constructs its child-label observer in the adopted owner realm', async () => {
+  it('constructs its child-label observer in the adopted owner realm when returning to declarative mode', async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
     const frameWindow = frame.contentWindow!;
@@ -400,13 +448,21 @@ describe('tree-item declarative child model', () => {
       <lr-tree-item label="Fallback"><span>Parent label</span></lr-tree-item>
     `)) as LyraTreeItem;
     adoptedTarget = el;
+    el.item = { id: 'data', label: 'Data label' };
+    await el.updateComplete;
     el.remove();
     try {
       frameDocument.body.append(frameDocument.adoptNode(el));
       await el.updateComplete;
-      expect(constructions).to.be.greaterThan(1);
+      expect(renderedLabel(el)).to.equal('Data label');
+      expect(labelHostObservations).to.equal(0);
+      el.item = undefined;
+      await el.updateComplete;
+      expect(constructions).to.be.greaterThan(0);
       expect(labelHostObservations).to.be.greaterThan(0);
       expect(el.nodeLabel).to.equal('Parent label');
+      el.querySelector('span')!.textContent = 'Adopted label';
+      await waitUntil(() => el.nodeLabel === 'Adopted label');
     } finally {
       el.remove();
       if (observerDescriptor) {

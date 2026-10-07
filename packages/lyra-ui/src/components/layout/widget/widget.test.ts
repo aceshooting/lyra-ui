@@ -409,7 +409,6 @@ describe("rich label/sublabel", () => {
       >
     `)) as LyraWidget;
     await el.updateComplete;
-    const label = el.querySelector('[slot="label"]')!;
     el.remove();
     const iframe = document.createElement("iframe");
     document.body.append(iframe);
@@ -425,8 +424,8 @@ describe("rich label/sublabel", () => {
     class OwnerMutationObserver implements MutationObserver {
       private observesLabel = false;
       constructor(_callback: MutationCallback) {}
-      observe(target: Node): void {
-        if (target === label) {
+      observe(target: Node, options?: MutationObserverInit): void {
+        if (target === el && options?.subtree && options.characterData) {
           this.observesLabel = true;
           labelObservations += 1;
         }
@@ -446,7 +445,7 @@ describe("rich label/sublabel", () => {
       await Promise.resolve();
       expect(
         labelObservations,
-        "the destination window observes the assigned label"
+        "the destination window observes the assigned label subtree"
       ).to.be.greaterThan(0);
       document.adoptNode(el);
       expect(

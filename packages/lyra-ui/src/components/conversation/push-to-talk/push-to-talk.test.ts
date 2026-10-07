@@ -674,24 +674,28 @@ describe("owner-window capture runtime", () => {
       const maxDurationTimer = ownedWork.maxDurationTimer!;
       const tickTimer = ownedWork.tickTimer!;
       const initialLevelFrame = ownedWork.levelFrame!;
+      const maxDurationHandle = maxDurationTimer.handle;
+      const tickHandle = tickTimer.handle;
+      const initialLevelHandle = initialLevelFrame.handle;
       expect(maxDurationTimer.owner === frameWindow).to.equal(true);
       expect(tickTimer.owner === frameWindow).to.equal(true);
       expect(initialLevelFrame.owner === frameWindow).to.equal(true);
-      expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.true;
-      expect(intervalHandles.has(tickTimer.handle)).to.be.true;
-      expect(frameHandles.has(initialLevelFrame.handle)).to.be.true;
+      expect(timeoutHandles.has(maxDurationHandle)).to.be.true;
+      expect(intervalHandles.has(tickHandle)).to.be.true;
+      expect(frameHandles.has(initialLevelHandle)).to.be.true;
 
-      const tickCallback = intervalHandles.get(tickTimer.handle)!;
+      const tickCallback = intervalHandles.get(tickHandle)!;
       if (typeof tickCallback === 'function') tickCallback();
       expect((el as unknown as { elapsedMs: number }).elapsedMs).to.be.greaterThan(0);
 
       const nextLevel = oneEvent(el, 'lr-level');
-      const initialLevelCallback = frameHandles.get(initialLevelFrame.handle)!;
-      frameHandles.delete(initialLevelFrame.handle);
+      const initialLevelCallback = frameHandles.get(initialLevelHandle)!;
+      frameHandles.delete(initialLevelHandle);
       initialLevelCallback(0);
       await nextLevel;
       const levelFrame = ownedWork.levelFrame!;
-      const staleLevelCallback = frameHandles.get(levelFrame.handle)!;
+      const levelHandle = levelFrame.handle;
+      const staleLevelCallback = frameHandles.get(levelHandle)!;
       expect(levelFrame.owner === frameWindow).to.equal(true);
 
       const stopped = oneEvent(el, "lr-record-stop");
@@ -699,13 +703,13 @@ describe("owner-window capture runtime", () => {
       const stopEvent = await stopped;
       expect(stopEvent.detail.blob instanceof runtime.Blob).to.be.true;
       expect(stopEvent.detail.durationMs).to.equal(250);
-      expect(clearedTimeouts).to.include(maxDurationTimer.handle);
-      expect(clearedIntervals).to.include(tickTimer.handle);
-      expect(canceledFrames).to.include(levelFrame.handle);
+      expect(clearedTimeouts).to.include(maxDurationHandle);
+      expect(clearedIntervals).to.include(tickHandle);
+      expect(canceledFrames).to.include(levelHandle);
       expect(audioContextCloses).to.equal(1);
-      expect(timeoutHandles.has(maxDurationTimer.handle)).to.be.false;
-      expect(intervalHandles.has(tickTimer.handle)).to.be.false;
-      expect(frameHandles.has(levelFrame.handle)).to.be.false;
+      expect(timeoutHandles.has(maxDurationHandle)).to.be.false;
+      expect(intervalHandles.has(tickHandle)).to.be.false;
+      expect(frameHandles.has(levelHandle)).to.be.false;
       expect(() => {
         if (typeof tickCallback === 'function') tickCallback();
         staleLevelCallback(0);
@@ -2023,18 +2027,18 @@ it("starts and stops the elapsed timer when without-timer changes during recordi
       html`<lr-push-to-talk without-timer></lr-push-to-talk>`
     )) as LyraPushToTalk;
     const runtime = el as unknown as {
-      tickTimer?: { owner: Window; handle: number };
+      tickTimer: { pending: boolean };
     };
     await el.start();
-    expect(runtime.tickTimer === undefined).to.equal(true);
+    expect(runtime.tickTimer.pending).to.equal(false);
 
     el.withoutTimer = false;
     await el.updateComplete;
-    expect(runtime.tickTimer !== undefined).to.equal(true);
+    expect(runtime.tickTimer.pending).to.equal(true);
 
     el.withoutTimer = true;
     await el.updateComplete;
-    expect(runtime.tickTimer === undefined).to.equal(true);
+    expect(runtime.tickTimer.pending).to.equal(false);
     el.cancel();
   } finally {
     restore();
@@ -2049,7 +2053,7 @@ it("starts and stops level sampling when level-events changes during recording",
     )) as LyraPushToTalk;
     const runtime = el as unknown as {
       audioCtx?: AudioContext;
-      levelFrame?: { owner: Window; handle: number };
+      levelFrame: { pending: boolean };
     };
     await el.start();
     expect(runtime.audioCtx === undefined).to.equal(true);
@@ -2057,12 +2061,12 @@ it("starts and stops level sampling when level-events changes during recording",
     el.levelEvents = true;
     await el.updateComplete;
     expect(runtime.audioCtx !== undefined).to.equal(true);
-    expect(runtime.levelFrame !== undefined).to.equal(true);
+    expect(runtime.levelFrame.pending).to.equal(true);
 
     el.levelEvents = false;
     await el.updateComplete;
     expect(runtime.audioCtx === undefined).to.equal(true);
-    expect(runtime.levelFrame === undefined).to.equal(true);
+    expect(runtime.levelFrame.pending).to.equal(false);
     el.cancel();
   } finally {
     restore();
@@ -2081,10 +2085,10 @@ it("starts, reschedules, and disables the recording-start deadline when max-dura
       html`<lr-push-to-talk without-timer></lr-push-to-talk>`
     )) as LyraPushToTalk;
     const runtime = el as unknown as {
-      maxDurationTimer?: { owner: Window; handle: number };
+      maxDurationTimer: { pending: boolean; handle?: number };
     };
     await el.start();
-    expect(runtime.maxDurationTimer === undefined).to.equal(true);
+    expect(runtime.maxDurationTimer.pending).to.equal(false);
     window.setTimeout = ((_handler: TimerHandler, delay?: number) => {
       scheduledDelays.push(delay ?? 0);
       return nextHandle++;
@@ -2103,12 +2107,12 @@ it("starts, reschedules, and disables the recording-start deadline when max-dura
     el.maxDurationMs = 20_000;
     await el.updateComplete;
     expect(clearedHandles).to.include(firstHandle);
-    expect(runtime.maxDurationTimer?.handle).to.equal(501);
+    expect(runtime.maxDurationTimer.handle).to.equal(501);
     expect(scheduledDelays[1]).to.be.greaterThan(scheduledDelays[0] ?? 0);
 
     el.maxDurationMs = 0;
     await el.updateComplete;
-    expect(runtime.maxDurationTimer === undefined).to.equal(true);
+    expect(runtime.maxDurationTimer.pending).to.equal(false);
     expect(clearedHandles).to.include(501);
     el.cancel();
   } finally {

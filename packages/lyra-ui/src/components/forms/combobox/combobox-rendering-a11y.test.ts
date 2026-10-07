@@ -114,9 +114,13 @@ it("emits lr-input and lr-change with the new and previous value alongside nativ
     "change",
     "lr-change",
   ]);
-  for (const s of seen) {
-    expect(s.detail).to.deep.equal({ value: 'b', previousValue: '', data: [undefined] });
-    expect(Object.isFrozen(s.detail)).to.equal(true);
+  for (const event of seen) {
+    if (event.type === 'input' || event.type === 'change') {
+      expect(event.detail, 'native notifications carry no custom detail').to.equal(undefined);
+    } else {
+      expect(event.detail).to.deep.equal({ value: 'b', previousValue: '', data: [undefined] });
+      expect(Object.isFrozen(event.detail)).to.equal(true);
+    }
   }
 });
 

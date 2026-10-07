@@ -315,7 +315,8 @@ it('forwards built-in composer editing, submission, and native textarea options'
   expect(textarea.wrap).to.equal('hard');
   expect(textarea.autocomplete).to.equal('off');
   expect(textarea.inputMode).to.equal('text');
-  expect(textarea.enterKeyHint).to.equal('done');
+  expect(textarea.getAttribute('enterkeyhint')).to.equal('done');
+  if ('enterKeyHint' in textarea) expect(textarea.enterKeyHint).to.equal('done');
   expect(action.disabled).to.be.true;
   expect(textarea.disabled).to.be.false;
 

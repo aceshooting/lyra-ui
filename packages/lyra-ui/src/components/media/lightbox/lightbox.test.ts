@@ -569,16 +569,18 @@ it('leaves Arrow/Home/End with the focused pan-zoom viewport while panel chrome 
 
     const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
     closeButton.focus();
-    const chromeKey = new KeyboardEvent('keydown', {
-      key: forward,
-      bubbles: true,
-      composed: true,
-      cancelable: true,
-    });
-    closeButton.dispatchEvent(chromeKey);
-    await el.updateComplete;
-    expect(el.index, `${direction}: panel chrome keeps gallery shortcuts`).to.equal(1);
-    expect(chromeKey.defaultPrevented).to.be.true;
+    for (const [key, expectedIndex] of [[forward, 1], ['Home', 0], ['End', 1]] as const) {
+      const chromeKey = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      closeButton.dispatchEvent(chromeKey);
+      await el.updateComplete;
+      expect(el.index, `${direction}: panel chrome keeps ${key}`).to.equal(expectedIndex);
+      expect(chromeKey.defaultPrevented).to.be.true;
+    }
 
     el.index = 0;
     await el.updateComplete;

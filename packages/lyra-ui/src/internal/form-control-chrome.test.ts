@@ -47,8 +47,10 @@ for (const name of ['checkbox', 'switch', 'checkbox-group', 'radio-group', 'slid
 
 for (const name of ['select', 'combobox']) {
   it(`${name} preserves shared chrome tokens and hides empty support text`, async () => {
-    const container = await fixture<HTMLDivElement>(html`<div style="--lr-space-xs: 7px; --lr-font-size-sm: 13px"></div>`);
+    const container = await fixture<HTMLDivElement>(html`<div></div>`);
     const control = document.createElement(tag(name)) as LitElement & { label: string; hint: string; errorText: string };
+    control.style.setProperty('--lr-space-xs', '7px');
+    control.style.setProperty('--lr-font-size-sm', '13px');
     control.label = 'Choice';
     control.hint = 'Supporting text';
     control.errorText = 'Review this choice';

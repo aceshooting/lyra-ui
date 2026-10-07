@@ -2,7 +2,6 @@ import { assertNativeFocusBlurPair } from '../../../../test/contracts/native-foc
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './icon-button.js';
 import '../../media/flag/flag.js';
-import { styles } from './icon-button.styles.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraIconButton } from './icon-button.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -344,11 +343,20 @@ it('retunes the corner radius via --lr-icon-button-radius with no element-select
   expect(cs.borderRadius).to.equal('3px');
 });
 
-it('keeps the public radius inheritable and consumes a private host fallback', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.not.match(/:host \{[^}]*--lr-icon-button-radius:/);
-  expect(css).to.include('--_lr-icon-button-radius-default: var(--lr-radius);');
-  expect(css).to.include('border-radius: var(--lr-icon-button-radius, var(--_lr-icon-button-radius-default));');
+it('keeps the public radius inheritable and consumes a private host fallback', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-icon-button-radius: 17px">
+      <lr-icon-button label="Close" style="--_lr-icon-button-radius-default: 11px; --lr-radius: 13px"></lr-icon-button>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraIconButton>('lr-icon-button')!;
+  await el.updateComplete;
+  const button = el.shadowRoot!.querySelector('button')!;
+  expect(getComputedStyle(button).borderTopLeftRadius).to.equal('17px');
+  wrapper.style.removeProperty('--lr-icon-button-radius');
+  expect(getComputedStyle(button).borderTopLeftRadius).to.equal('11px');
+  el.style.removeProperty('--_lr-icon-button-radius-default');
+  expect(getComputedStyle(button).borderTopLeftRadius).to.equal('13px');
 });
 
 it('names the button from aria-label, then label, then the localized fallback', async () => {

@@ -1359,3 +1359,38 @@ it("judges disabled dates with the calendar's own rules, including its 10,000-en
   await el.updateComplete;
   expect(el.checkValidity(), "2040-06-15 is a Friday").to.equal(false);
 });
+
+
+describe('lr-date-input pending typed edits on blur', () => {
+  for (const transition of ['blur-only', 'native-change', 'programmatic-replacement'] as const) {
+    it(`settles ${transition} without duplicate or stale commit notifications`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div><lr-date-input></lr-date-input><button>Next</button></div>`);
+      const el = wrapper.querySelector<LyraDateInput>('lr-date-input')!;
+      await el.updateComplete;
+      const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
+      const commits: string[] = [];
+      const sequence: string[] = [];
+      for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+        el.addEventListener(type, event => {
+          expect(event.composedPath()[0] === el).to.equal(true);
+          sequence.push(type);
+        });
+      }
+      el.addEventListener('lr-change', event => commits.push(event.detail.value));
+      await focusByKeyboard(input);
+      // Programmatically populated text plus an input notification models an edit for which
+      // the platform does not produce its own change event when focus leaves the field.
+      input.value = '2026-07-15';
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText' }));
+      if (transition === 'native-change') input.dispatchEvent(new Event('change', { bubbles: true }));
+      if (transition === 'programmatic-replacement') el.value = '2026-08-01';
+      await el.updateComplete;
+      await focusByKeyboard(wrapper.querySelector('button')!);
+      await el.updateComplete;
+      expect(el.value).to.equal(transition === 'programmatic-replacement' ? '2026-08-01' : '2026-07-15');
+      expect(commits).to.deep.equal(transition === 'programmatic-replacement' ? [] : ['2026-07-15']);
+      expect(sequence).to.deep.equal(transition === 'programmatic-replacement'
+        ? ['input', 'lr-input'] : ['input', 'lr-input', 'change', 'lr-change']);
+    });
+  }
+});

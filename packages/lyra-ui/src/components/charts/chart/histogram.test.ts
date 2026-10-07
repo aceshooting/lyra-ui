@@ -111,6 +111,28 @@ it('visually hides the fallback data table via the sr-only sheet when with-data-
   expect(table.classList.contains('sr-only')).to.be.false;
 });
 
+it('honors authored chart dimensions and styles its accessible legend', async () => {
+  const el = (await fixture(html`
+    <lr-histogram style="width: 22rem" height="16rem" .values=${[1, 2, 3]}></lr-histogram>
+  `)) as LyraHistogram;
+  await waitUntil(() => (el as any).chart != null);
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const plot = el.shadowRoot!.querySelector<HTMLElement>('[part="plot"]')!;
+  const legend = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!;
+  expect(getComputedStyle(el).display).to.equal('block');
+  expect(el.getBoundingClientRect().width).to.be.closeTo(22 * rootFontSize, 1);
+  expect(plot.getBoundingClientRect().height).to.be.closeTo(16 * rootFontSize, 1);
+  // The inline-flex button is blockified as a child of the flex legend container.
+  expect(getComputedStyle(legend.parentElement!).display).to.equal('flex');
+  expect(getComputedStyle(legend).display).to.equal('flex');
+  expect(getComputedStyle(legend).alignItems).to.equal('center');
+  expect(legend.getBoundingClientRect().width).to.be.at.least(24);
+  expect(legend.getBoundingClientRect().height).to.be.at.least(24);
+  expect(getComputedStyle(legend).minInlineSize).to.not.equal('0px');
+  expect(getComputedStyle(legend).minBlockSize).to.not.equal('0px');
+});
+
 it('can shrink to a 320px allocation with a long series label', async () => {
   const wrapper = await fixture(html`
     <div style="display: flex; inline-size: 320px;">
@@ -124,6 +146,9 @@ it('can shrink to a 320px allocation with a long series label', async () => {
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
+  const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
+  expect(legend.scrollWidth).to.be.at.most(320);
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="plot"]')!.getBoundingClientRect().width).to.be.at.most(320);
 });
 
 it('invalidates localized bucket labels when the effective locale changes', async () => {

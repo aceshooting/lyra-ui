@@ -256,6 +256,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     const old = this._item;
     if (old === value) return;
     this._item = value;
+    // Data rows render their label and children from item; only declarative rows consume slots.
+    this.labelTextObserver.setEnabled(!value);
     if (value?.selected !== undefined || old?.id !== value?.id) {
       this.selected = Boolean(value?.selected);
     }

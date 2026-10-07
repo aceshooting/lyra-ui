@@ -501,9 +501,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   formDisabledCallback(disabled: boolean): void {
     if (this.validityController?.reflectingDisabled) return;
     const wasDisabled = this.effectiveDisabled;
-    this._fieldsetDisabled = disabled;
+    this._fieldsetDisabled = this.validityController.fieldsetDisabled(disabled);
     if (wasDisabled === this.effectiveDisabled) return;
-    if (disabled) this.abortActiveGestures();
+    if (this.effectiveDisabled) this.abortActiveGestures();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.reflectValidityStates();
     this.requestUpdate();

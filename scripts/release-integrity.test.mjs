@@ -958,6 +958,14 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   const attwJob = workflow.slice(attwStart, publicApiStart);
   const publicApiJob = workflow.slice(publicApiStart, aggregateStart);
   const aggregateJob = workflow.slice(aggregateStart, docsStart);
+  const archiveGate = 'node packages/lyra-ui/scripts/check-package-size.mjs --tarball "${tarballs[0]}"';
+  assert.ok(tarballJob.includes(archiveGate), 'the already-produced archive must satisfy the download and hygiene budgets');
+  assert.ok(tarballJob.indexOf(archiveGate) > tarballJob.indexOf('pnpm pack --pack-destination'),
+    'the archive gate must check the output of the real pack');
+  assert.ok(tarballJob.indexOf(archiveGate) < tarballJob.indexOf('sha256sum'),
+    'an over-budget archive must fail before checksum recording and upload');
+  assert.equal([...tarballJob.matchAll(/pnpm pack --pack-destination/gu)].length, 1,
+    'actual archive qualification must not repack');
   assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
   assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
   assert.match(contractJob, /- packed_consumer_tarball\b[\s\S]*- packed_consumer_companions\b/u);
@@ -2261,6 +2269,41 @@ test('checkout-free publishing uses the Node version exported by tagged-source v
   assert.doesNotMatch(protectedPublish, /node-version-file:|actions\/checkout@|pnpm\/action-setup|pnpm install/u);
   assert.doesNotMatch(protectedPublish, /node-version: ['"]?v?\d/u,
     'publishing must inherit the verified runtime, not duplicate the repository version pin');
+});
+
+test('release packing gates the selected UI archive before collecting assets and preserves companions', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
+  const pack = workflow.slice(workflow.indexOf('\n  pack:\n'), workflow.indexOf('\n  release:\n'));
+  const gate = /            if \[\[ "\$name" == "@aceshooting\/lyra-ui" \]\]; then\n              node packages\/lyra-ui\/scripts\/check-package-size\.mjs --tarball "\$\{tarballs\[0\]\}"\n            fi/u.exec(pack)?.[0];
+  assert.ok(gate, 'the UI archive gate must be scoped to the actual package identity');
+  assert.ok(pack.indexOf(gate) > pack.indexOf('if [[ "${#tarballs[@]}" -ne 1'),
+    'the gate must consume the uniquely selected archive');
+  assert.ok(pack.indexOf(gate) < pack.indexOf('validate-tarball --tag "$tag"'),
+    'archive budgets must pass before identity confirmation and asset collection');
+  assert.ok(pack.indexOf(gate) < pack.indexOf('Upload release assets'),
+    'rejected archives must never reach upload');
+
+  const script = [
+    'node() { printf \'%s\\n\' "$@"; return "$CHECKER_STATUS"; }',
+    'name="$PACKAGE_NAME"',
+    'tarballs=("archive with spaces.tgz")',
+    gate,
+    'printf \'assets-allowed\\n\'',
+  ].join('\n');
+  for (const packageName of ['@aceshooting/lyra-ui', '@aceshooting/lyra-flags', '@aceshooting/lyra-docs']) {
+    for (const checkerStatus of [0, 1]) {
+      const result = spawnSync('bash', ['-euo', 'pipefail', '-c', script], {
+        env: { ...process.env, PACKAGE_NAME: packageName, CHECKER_STATUS: String(checkerStatus) },
+        encoding: 'utf8',
+      });
+      const isUi = packageName === '@aceshooting/lyra-ui';
+      const expectedStatus = isUi ? checkerStatus : 0;
+      assert.equal(result.status, expectedStatus, `${packageName}: ${result.stderr}`);
+      const checked = isUi ? 'packages/lyra-ui/scripts/check-package-size.mjs\n--tarball\narchive with spaces.tgz\n' : '';
+      assert.equal(result.stdout, checked + (expectedStatus === 0 ? 'assets-allowed\n' : ''),
+        'the exact selected archive must be checked once, and any rejection must stop asset collection');
+    }
+  }
 });
 
 test('release workflow qualifies the exact main commit before tagging, releasing, and publishing', () => {

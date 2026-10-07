@@ -452,8 +452,8 @@ describe('lr-qr-code', () => {
     expect(el.canvas.getAttribute('aria-label')).to.equal(null);
     expect(el.canvas.getAttribute('aria-hidden')).to.equal('true');
     expect(() => (
-      el as unknown as { syncAnnouncementSinks(): void }
-    ).syncAnnouncementSinks()).to.not.throw();
+      el as unknown as { announcements: { adopted(): void } }
+    ).announcements.adopted()).to.not.throw();
   });
 
   it('`label` overrides `value` for the accessible name', async () => {

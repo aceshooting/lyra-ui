@@ -1757,8 +1757,10 @@ consumer-supplied custom error and republishes intrinsic constraints;
 field edit's `inputType`) and native
 bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
 plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
-leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
-exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
+leaves all three fields, not per field-to-field Tab; each field receiving focus produces exactly
+one public `focus`, with the private trusted focus suppressed). A field-to-field focus event uses
+`relatedTarget: null` so shadow retargeting cannot suppress the host notification; external related
+targets are preserved. `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
 `lr-input` and `lr-change` carry the same `{ value, day, month, year, field }` detail after their

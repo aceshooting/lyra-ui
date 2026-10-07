@@ -47,7 +47,7 @@ function resolveBoxPlotModule(value: unknown): BoxPlotModule {
 
 /**
  * Loads and validates the box-plot peer before registering its two constructors.
- * @internal
+ * Its declaration is retained for the box-plot class module's re-export.
  */
 export async function loadBoxPlotAndRegister(
   loadChart: () => Promise<ChartJsModule | null> = loadChartJs,
@@ -68,4 +68,3 @@ export async function loadBoxPlotAndRegister(
     return null;
   }
 }
-

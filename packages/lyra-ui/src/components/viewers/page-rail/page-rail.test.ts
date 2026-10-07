@@ -716,9 +716,9 @@ describe('lr-page-rail', () => {
       callbacks.delete(handle);
     }) as typeof frameWindow.cancelAnimationFrame;
 
-    const internals = el as unknown as { waitForOwnerAnimationFrame(): Promise<boolean> };
+    const internals = el as unknown as { ownerFrames: { wait(): Promise<boolean> } };
     try {
-      const frameWait = internals.waitForOwnerAnimationFrame();
+      const frameWait = internals.ownerFrames.wait();
       await waitUntil(() => callbacks.size > 0, 'focus repair never reached the owner frame queue');
       document.adoptNode(el);
       expect(await frameWait).to.be.false;

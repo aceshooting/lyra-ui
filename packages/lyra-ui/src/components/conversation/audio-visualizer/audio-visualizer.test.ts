@@ -4,12 +4,15 @@ import './audio-visualizer.js';
 import type { LyraAudioVisualizer } from './audio-visualizer.js';
 
 interface TestOwnedAnimationFrame {
-  owner: Window;
-  handle: number;
+  readonly pending: boolean;
+  readonly owner?: Window;
+  readonly handle?: number;
+  cancel(): void;
 }
 
 function frameRequest(el: LyraAudioVisualizer): TestOwnedAnimationFrame | undefined {
-  return (el as unknown as { drawFrameRequest?: TestOwnedAnimationFrame }).drawFrameRequest;
+  const request = (el as unknown as { drawFrameRequest: TestOwnedAnimationFrame }).drawFrameRequest;
+  return request.pending ? request : undefined;
 }
 
 function frameHandle(el: LyraAudioVisualizer): number | undefined {
@@ -17,22 +20,17 @@ function frameHandle(el: LyraAudioVisualizer): number | undefined {
 }
 
 function cancelCurrentFrame(el: LyraAudioVisualizer): void {
-  const priv = el as unknown as { drawFrameRequest?: TestOwnedAnimationFrame };
-  const request = priv.drawFrameRequest;
-  if (request) request.owner.cancelAnimationFrame(request.handle);
-  priv.drawFrameRequest = undefined;
+  (el as unknown as { drawFrameRequest: TestOwnedAnimationFrame }).drawFrameRequest.cancel();
 }
 
 function invokeDrawFrame(el: LyraAudioVisualizer, nowMs: number): void {
-  const owner = el.ownerDocument.defaultView;
-  if (!owner) throw new Error('Expected an owner window for the test fixture');
   const priv = el as unknown as {
-    drawFrameRequest?: TestOwnedAnimationFrame;
-    drawFrame: (request: TestOwnedAnimationFrame, nowMs: number) => void;
+    drawFrameRequest: TestOwnedAnimationFrame;
+    drawFrame: (nowMs: number) => void;
   };
-  const request = { owner, handle: 0 };
-  priv.drawFrameRequest = request;
-  priv.drawFrame(request, nowMs);
+  // A delivered OwnedFrame callback has already cleared its pending handle.
+  priv.drawFrameRequest.cancel();
+  priv.drawFrame(nowMs);
 }
 
 function ambientAmplitudes(el: LyraAudioVisualizer, nowMs: number, reduced: boolean): number[] {

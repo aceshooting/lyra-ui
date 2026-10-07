@@ -1098,7 +1098,7 @@ it("ignores column-move and resize requests for a column id that is no longer kn
   const startEvent = {
     clientX: 0,
     pointerId: 1,
-    currentTarget: { setPointerCapture() {} },
+    currentTarget: element.ownerDocument.createElement('span'),
   } as unknown as PointerEvent;
   internals.onResizeStart(startEvent, "does-not-exist");
   expect(
@@ -1154,7 +1154,7 @@ it("falls back to the estimated width and ignores stray pointer moves without an
   const startEvent = {
     clientX: 0,
     pointerId: 5,
-    currentTarget: { setPointerCapture() {} },
+    currentTarget: element.ownerDocument.createElement('span'),
     preventDefault() {},
   } as unknown as PointerEvent;
   internals.onResizeStart(startEvent, "name");

@@ -1,7 +1,7 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './contact-viewer.js';
 import type { LyraContactViewer } from './contact-viewer.js';
-import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 const CARD = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:John Q. Public', 'ORG:ABC, Inc.', 'TEL;TYPE=work:+1-404', 'EMAIL;TYPE=work:john@example.com', 'ADR;TYPE=work:;;Main Street;Town;CA;123;USA', 'END:VCARD'].join('\r\n');
@@ -330,9 +330,10 @@ describe('lr-contact-viewer', () => {
   });
   it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/vcard')!;
+    const loaded = await loadDocumentRenderer(definition);
     const highlights: LyraHighlight[] = [{ id: 'contact', anchor: { kind: 'text-quote', quote: 'Ada' } }];
     const anchor = { kind: 'fragment' as const, id: 'contact' };
-    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${loaded.render!({
       name: 'team.vcf',
       mimeType: 'text/vcard',
       src: 'https://example.test/team.vcf',
@@ -374,7 +375,8 @@ it('registers a text/vcard renderer whose matches() and render() behave as decla
   expect(def!.matches!({ name: 'card.txt', mimeType: 'text/plain', src: 'https://example.test/f' }), 'card.txt').to.be.false;
   expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
 
-  const host = (await fixture(html`<div>${def!.render!({
+  const loaded = await loadDocumentRenderer(def!);
+  const host = (await fixture(html`<div>${loaded.render!({
     name: 'Card.VCF', mimeType: 'text/vcard', src: 'https://example.test/f',
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-contact-viewer'), 'render() produces the viewer element').to.exist;

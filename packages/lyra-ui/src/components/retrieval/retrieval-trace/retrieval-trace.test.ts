@@ -77,6 +77,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'scoreTierHigh',
   'spanStartedAtOffset',
   'valueInvalid',
+  'valueTruncated',
 ]);
 describe("lr-retrieval-trace", () => {
   it("renders one bar per stage through the internal lr-span-waterfall, sorted by startMs", async () => {

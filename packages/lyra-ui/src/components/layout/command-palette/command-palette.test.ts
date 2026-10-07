@@ -17,7 +17,7 @@ import type { LyraCommandPalette } from "./command-palette.js";
 import { styles } from "./command-palette.styles.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 
-expectLocaleFallback('tr', ['clear', 'commandPaletteLabel', 'commandPalettePlaceholder', 'commandPaletteResults']);
+expectLocaleFallback('tr', ['clear', 'commandPaletteLabel', 'commandPalettePlaceholder', 'commandPaletteResults', 'commandPaletteResultCount']);
 
 it("provides hover feedback for enabled command rows", () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not

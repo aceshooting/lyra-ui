@@ -1867,14 +1867,18 @@ it("forwards field labels, descriptions, errors, and option descriptions to comp
   expect(nativeTextarea.getAttribute("aria-describedby")).to.not.equal(null);
 });
 
-it("consumes nested control aliases and exposes only the documented aggregate input event", async () => {
+it("consumes nested control aliases and exposes the aggregate native and typed input pair", async () => {
   const keys: RubricKey[] = [{ key: "notes", type: "comment", label: "Notes" }];
   const el = (await fixture(
     html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`
   )) as LyraRubricForm;
   const events: string[] = [];
   for (const type of ["input", "change", "lr-change", "lr-input"]) {
-    el.addEventListener(type, () => events.push(type));
+    el.addEventListener(type, event => {
+      expect(event.composedPath()[0] === el, `${type} originates on the aggregate form`).to.equal(true);
+      if (type === 'lr-input') expect((event as CustomEvent).detail).to.deep.equal({ value: { notes: 'Updated' } });
+      events.push(type);
+    });
   }
   const textarea = el.shadowRoot!.querySelector("lr-textarea")!;
   const native = textarea.shadowRoot!.querySelector(
@@ -1885,7 +1889,7 @@ it("consumes nested control aliases and exposes only the documented aggregate in
     new InputEvent("input", { bubbles: true, composed: true })
   );
 
-  expect(events).to.deep.equal(["lr-input"]);
+  expect(events).to.deep.equal(["input", "lr-input"]);
 });
 
 it("keeps each keyed composed control with its logical field across reorder", async () => {
@@ -3131,11 +3135,13 @@ describe("lr-rubric-form contains the composed lr-checkbox-group's toggle propos
 
   function trackLeaks(el: HTMLElement): { leaked: string[]; stop: () => void } {
     const leaked: string[] = [];
+    const isAggregateValueEvent = (event: Event): boolean => event.composedPath()[0] === el &&
+      ['input', 'change', 'lr-change'].includes(event.type);
     const onHost = (event: Event): void => {
-      leaked.push(`host:${event.type}`);
+      if (!isAggregateValueEvent(event)) leaked.push(`host:${event.type}`);
     };
     const onDocument = (event: Event): void => {
-      leaked.push(`document:${event.type}`);
+      if (!isAggregateValueEvent(event)) leaked.push(`document:${event.type}`);
     };
     for (const name of LEAK_EVENTS) {
       el.addEventListener(name, onHost);

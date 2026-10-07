@@ -504,6 +504,13 @@ jobs:
           pnpm pack --pack-destination ../../artifacts/packed-attw
       - name: Verify prepack source freshness
         run: git diff --exit-code
+      - name: Check the actual package archive size and contents
+        run: |
+          set -euo pipefail
+          tarballs=(artifacts/packed-attw/*.tgz)
+          test "${#tarballs[@]}" -eq 1
+          test -f "${tarballs[0]}"
+          node packages/lyra-ui/scripts/check-package-size.mjs --tarball "${tarballs[0]}"
       - name: Record package integrity
         working-directory: artifacts/packed-attw
         run: |
@@ -556,7 +563,7 @@ jobs:
           path: artifacts/packed-companions
           if-no-files-found: error
           retention-days: 7
-      # Tarball budgets need a built dist/ for `npm pack --dry-run`.
+      # Retain the dry-run estimate and source inventory check alongside the actual archive gate.
       - run: pnpm --filter @aceshooting/lyra-ui check:package-size
 
   packed_consumer_contract:

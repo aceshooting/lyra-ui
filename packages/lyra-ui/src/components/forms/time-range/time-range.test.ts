@@ -91,6 +91,7 @@ it("moves the start handle with ArrowRight and emits lr-input then lr-change", a
   expect(nativeInput.event.target === el && nativeChange.event.target === el).to.be.true;
   expect(aliasInput.event instanceof CustomEvent).to.be.true;
   expect((aliasInput.event as CustomEvent).detail).to.deep.equal({
+    value: { start: 25, end: 80 },
     start: 25,
     end: 80,
   });
@@ -257,9 +258,9 @@ it("commits a pending keyboard change exactly once when its handle blurs before 
   const endHandle = el.shadowRoot!.querySelector<HTMLElement>(
     '[part="handle-end"]'
   )!;
-  const changes: Array<{ start: number; end: number }> = [];
+  const changes: Array<{ value: { start: number; end: number }; start: number; end: number }> = [];
   el.addEventListener("lr-change", (event) => {
-    changes.push((event as CustomEvent<{ start: number; end: number }>).detail);
+    changes.push((event as CustomEvent<{ value: { start: number; end: number }; start: number; end: number }>).detail);
   });
 
   startHandle.focus();
@@ -269,7 +270,7 @@ it("commits a pending keyboard change exactly once when its handle blurs before 
   expect(el.start).to.equal(25);
 
   endHandle.focus();
-  expect(changes).to.deep.equal([{ start: 25, end: 80 }]);
+  expect(changes).to.deep.equal([{ value: { start: 25, end: 80 }, start: 25, end: 80 }]);
 
   startHandle.dispatchEvent(
     new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true })
@@ -277,7 +278,7 @@ it("commits a pending keyboard change exactly once when its handle blurs before 
   endHandle.dispatchEvent(
     new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true })
   );
-  expect(changes).to.deep.equal([{ start: 25, end: 80 }]);
+  expect(changes).to.deep.equal([{ value: { start: 25, end: 80 }, start: 25, end: 80 }]);
 });
 
 it("removes the window pointermove/pointerup listeners on disconnect so a detached drag cannot leak", async () => {
@@ -1626,7 +1627,7 @@ it('clicking a preset exposes its identity before the synchronous input and chan
 
   expect(el.start).to.equal(0);
   expect(el.end).to.equal(30);
-  expect(changeDetail).to.deep.equal({ start: 0, end: 30 });
+  expect(changeDetail).to.deep.equal({ value: { start: 0, end: 30 }, start: 0, end: 30 });
   expect(identities).to.deep.equal([
     el.presets[1],
     el.presets[1],
@@ -1861,7 +1862,7 @@ it("emits exactly one lr-input event from a preset click, already holding the fi
   // lr-input would have observed an inconsistent, never-actually-rendered
   // intermediate state.
   expect(inputDetails.length).to.equal(1);
-  expect(inputDetails[0]).to.deep.equal({ start: 60, end: 90 });
+  expect(inputDetails[0]).to.deep.equal({ value: { start: 60, end: 90 }, start: 60, end: 90 });
 });
 
 it("lands exactly on preset values that are not aligned to a coarse step, and still shows data-active", async () => {

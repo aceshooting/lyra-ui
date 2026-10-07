@@ -1373,14 +1373,21 @@ describe('attachment-chip defensive edges', () => {
     expect(secondSrc).to.equal(firstSrc);
   });
 
-  it('does not reacquire the announcement sink on a redundant connectedCallback for the same document', () => {
+  it('does not reacquire an active announcement sink on a redundant connectedCallback for the same document', async () => {
     const el = document.createElement('lr-attachment-chip') as LyraAttachmentChip;
     document.body.append(el);
     try {
-      const sinkBefore = (el as unknown as { sink?: { element: Element } }).sink;
+      await el.updateComplete;
+      el.status = 'error';
+      await el.updateComplete;
+      expect(sinkTexts('assertive')).to.include('Upload failed');
+      const announcements = (el as unknown as {
+        announcements: { current(politeness: 'assertive'): unknown };
+      }).announcements;
+      const sinkBefore = announcements.current('assertive');
       expect(sinkBefore).to.not.equal(undefined);
       (el as unknown as { connectedCallback(): void }).connectedCallback();
-      const sinkAfter = (el as unknown as { sink?: { element: Element } }).sink;
+      const sinkAfter = announcements.current('assertive');
       expect(sinkAfter === sinkBefore, 'a same-document redundant connect must not replace the existing sink').to.equal(
         true,
       );

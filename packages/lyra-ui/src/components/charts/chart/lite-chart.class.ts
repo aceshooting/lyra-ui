@@ -907,6 +907,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Rejoin the document's synchronization group even when a surviving SVG keeps the same size.
+    this.requestUpdate();
     this.armResizeObserver();
     this.armForcedColorsWatcher();
   }
@@ -1040,6 +1042,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Native SVG titles depend on subscription state. Prepare transitions before rendering so
+    // the controller's synchronous notification joins this update; geometry refresh stays below
+    // in updated(), after the current mark positions have been rendered.
+    const shouldSync = this.isConnected && typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '';
+    if (this.chartSync.enabled !== shouldSync) this.chartSync.update(this.syncGroup, true);
     // A browser-only mount can wait for ResizeObserver before drawing coordinate-based geometry.
     // A hydrated mount must first reproduce the SSR fallback, then switch to measured geometry on
     // its following update or Lit rejects the server-rendered iterable during hydration.

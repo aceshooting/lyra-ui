@@ -33,6 +33,7 @@ expectLocaleFallback('ar-u-nu-arab', [
   'scoreTierMedium',
   'showMore',
   'valueInvalid',
+  'valueTruncated',
 ]);
 
 function sinkOf(politeness: AnnouncementPoliteness): HTMLElement {

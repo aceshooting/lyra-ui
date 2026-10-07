@@ -260,11 +260,12 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey) return;
     const found = this.eventItem(event); if (!found) return;
     const { item, inMenu } = found;
-    if (keyEventOwnedByInnerControl(event, { container: item })) return;
     if (inMenu) {
       if (!isHtmlElement(event.target) || ![tag('menu-item'), tag('dropdown-item')].includes(event.target.localName)) return;
+      // The focused menu leaf owns this navigation surface; only controls inside it own the key.
+      if (keyEventOwnedByInnerControl(event, { container: event.target })) return;
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    } else if (event.target !== item) return;
+    } else if (event.target !== item || keyEventOwnedByInnerControl(event, { container: item })) return;
     const navigable = this.items.filter(candidate => this.isNavigable(candidate));
     if (!navigable.length) return;
     const index = navigable.indexOf(item);

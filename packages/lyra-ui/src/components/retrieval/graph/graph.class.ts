@@ -3919,12 +3919,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             style=${`--lr-skeleton-w:${this.safeWidth}px;--lr-skeleton-h:${this.safeHeight}px`}
           ></lr-skeleton>
           <span class="sr-only loading-label">${this.localize('loading')}</span>
+          ${limitNotices}
         </div>
       `;
     }
     if (this.loadFailed) {
       return html`<div part="base">
         <div part="error">${this.localize('graphMissingLibrary')}</div>
+        ${limitNotices}
       </div>`;
     }
     if (!this.graphModel.nodes.length) {

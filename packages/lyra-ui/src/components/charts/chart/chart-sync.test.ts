@@ -108,6 +108,30 @@ describe('chart synchronization', () => {
     await waitUntil(() => !crosshair(peer!));
   });
 
+  it('notifies the renderer when synchronization enables, disables or reconnects', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    let updates = 0;
+    const controller = new LazyChartSyncController(host, () => undefined, undefined,
+      undefined, () => { updates += 1; });
+    try {
+      controller.update('render', true);
+      await waitUntil(() => controller.enabled);
+      expect(updates).to.equal(1);
+      controller.update('render', true);
+      expect(updates).to.equal(1);
+      controller.update('', true);
+      expect(controller.enabled).to.equal(false);
+      expect(updates).to.equal(2);
+      controller.disconnect();
+      expect(updates).to.equal(2);
+      controller.update('render', true);
+      expect(controller.enabled).to.equal(true);
+      expect(updates).to.equal(3);
+    } finally {
+      controller.disconnect();
+    }
+  });
+
   it('renders inherited histogram synchronization with a styled crosshair inside its plot', async () => {
     const host = await fixture<HTMLDivElement>(html`<div style="width:600px">
       <lr-histogram height="8rem" bins="2" sync-group="histogram" without-animation
@@ -343,6 +367,8 @@ describe('chart synchronization', () => {
     const runtime = peer.chart as unknown as { tooltip: { getActiveElements(): unknown[] } };
     expect(crosshair(peer)).to.equal(false); expect(runtime.tooltip.getActiveElements().length).to.equal(0);
     owner.removeAttribute('sync-group'); await owner.updateComplete;
+    await waitUntil(() => owner.shadowRoot!.querySelectorAll('[part="bar"] title').length === 1,
+      'native SVG titles return after leaving synchronization');
     expect(crosshair(owner)).to.equal(false); expect(owner.shadowRoot!.querySelectorAll('[part="bar"] title').length).to.equal(1);
   });
 

@@ -17718,6 +17718,82 @@
         "name": "utils-docx-zip-admission-contracts",
         "declaration": "validDocxZipName"
       }
+    },
+    {
+      "module": "src/components/charts/chart/box-plot-loader.ts",
+      "exportName": "loadBoxPlotAndRegister",
+      "kind": "function",
+      "fingerprint": "ec4df0281cc99eb83890",
+      "routes": [
+        "src/components/charts/chart/box-plot.class.ts",
+        "src/components/charts/chart/box-plot.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-box-plot.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-box-plot",
+        "declaration": "loadBoxPlotAndRegister"
+      }
+    },
+    {
+      "module": "src/components/forms/date-picker/date-picker-disabled-dates.ts",
+      "exportName": "inclusiveDayCount",
+      "kind": "function",
+      "fingerprint": "303a067f1e3e7a2ced0e",
+      "routes": [
+        "src/components/forms/date-picker/date-picker.class.ts",
+        "src/components/forms/date-picker/date-picker.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-date-picker.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-date-picker",
+        "declaration": "inclusiveDayCount"
+      }
+    },
+    {
+      "module": "src/components/forms/date-picker/date-picker-disabled-dates.ts",
+      "exportName": "parseDisabledWeekdays",
+      "kind": "function",
+      "fingerprint": "49154430e5287fe1c95b",
+      "routes": [
+        "src/components/forms/date-picker/date-picker.class.ts",
+        "src/components/forms/date-picker/date-picker.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-date-picker.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-date-picker",
+        "declaration": "parseDisabledWeekdays"
+      }
+    },
+    {
+      "module": "src/components/forms/date-picker/date-picker-disabled-dates.ts",
+      "exportName": "projectDisabledDateKeys",
+      "kind": "function",
+      "fingerprint": "f9a4d2d5e783f5071ff4",
+      "routes": [
+        "src/components/forms/date-picker/date-picker.class.ts",
+        "src/components/forms/date-picker/date-picker.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-date-picker.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-date-picker",
+        "declaration": "projectDisabledDateKeys"
+      }
     }
   ],
   "legacy": []

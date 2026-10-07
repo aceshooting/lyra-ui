@@ -250,19 +250,28 @@ describe('lr-browser-frame', () => {
     expect(toolbar.scrollWidth).to.be.at.most(toolbar.clientWidth);
   });
 
-  it('makes the url part go full-width once the host itself is narrow, via a container query', async () => {
-    // The @container rule can only ever fire if :host establishes a query container -- pin the
-    // host's own allocation (not the viewport) to <=20rem and assert the container query, not a
-    // viewport media query, is what's driving the layout.
-    const wrap = await fixture(html`
-      <div style="inline-size: 20rem">
-        <lr-browser-frame url="https://example.com/path"></lr-browser-frame>
-      </div>
-    `);
-    const el = wrap.querySelector('lr-browser-frame') as LyraBrowserFrame;
-    await el.updateComplete;
-    const urlEl = el.shadowRoot!.querySelector('[part="url"]') as HTMLElement;
-    expect(getComputedStyle(urlEl).flexBasis).to.equal('100%');
+  it('makes the url full-width strictly below the root-relative compact container boundary', async () => {
+    const originalRootSize = document.documentElement.style.fontSize;
+    try {
+      for (const rootSize of [16, 20]) {
+        document.documentElement.style.fontSize = `${rootSize}px`;
+        for (const delta of [-1, 0]) {
+          const wrap = await fixture(html`
+            <div style=${`inline-size: ${rootSize * 20 + delta}px`}>
+              <lr-browser-frame url="https://example.com/path"></lr-browser-frame>
+            </div>
+          `);
+          const el = wrap.querySelector('lr-browser-frame') as LyraBrowserFrame;
+          await el.updateComplete;
+          const urlEl = el.shadowRoot!.querySelector('[part="url"]') as HTMLElement;
+          expect(getComputedStyle(urlEl).flexBasis, `${rootSize}px root, ${delta}px from boundary`).to.equal(
+            delta < 0 ? '100%' : 'auto',
+          );
+        }
+      }
+    } finally {
+      document.documentElement.style.fontSize = originalRootSize;
+    }
   });
 
   it('take-over button emits lr-take-over with controller "user", and hand-back with "agent"', async () => {

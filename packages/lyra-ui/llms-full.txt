@@ -7402,6 +7402,17 @@ Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Bo
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
 
+The date-picker class module also exports three helpers from
+`@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`:
+
+- `projectDisabledDateKeys(value: unknown): readonly string[]` returns frozen ISO date keys from
+  a comma/whitespace-separated string or an array of strings and `Date` values. Invalid dates
+  are omitted; array input inspects at most its first 10,000 entries without invoking getters.
+- `parseDisabledWeekdays(value: unknown): Set<number>` parses comma/whitespace-separated English
+  weekday names or digits `0`–`6` (`0` is Sunday), ignoring unrecognized tokens.
+- `inclusiveDayCount(from: Date, to: Date): number` counts calendar days between valid dates in
+  either order, including both endpoints and avoiding daylight-saving-hour differences.
+
 For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
 native combobox input through element references, before its existing error and hint descriptions.
 Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those
@@ -30624,8 +30635,10 @@ consumer-supplied custom error and republishes intrinsic constraints;
 field edit's `inputType`) and native
 bubbling/composed `Event` `change` (a field blur where the composite value newly transitioned),
 plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
-leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
-exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
+leaves all three fields, not per field-to-field Tab; each field receiving focus produces exactly
+one public `focus`, with the private trusted focus suppressed). A field-to-field focus event uses
+`relatedTarget: null` so shadow retargeting cannot suppress the host notification; external related
+targets are preserved. `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
 `lr-input` and `lr-change` carry the same `{ value, day, month, year, field }` detail after their
@@ -36441,6 +36454,15 @@ decision. An off-screen box plot stays unconstructed until visible. Without the 
 starts when the peers and canvas are ready; an empty delivered callback retains the visible
 fallback. Peer loading and accessible DOM can settle while visibility is pending. These rules also
 apply when the component reconnects.
+
+The class module also exports
+`loadBoxPlotAndRegister(loadChart?: () => Promise<ChartJsModule | null>, importBoxPlot?: () => Promise<unknown>): Promise<BoxPlotModule | null>`.
+Import it from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js` to load and
+validate the optional Chart.js box-plot peer and register its `BoxPlotController` and
+`BoxAndWiskers` constructors. With no arguments it uses Lyra's Chart.js loader and the installed
+`@sgratzl/chartjs-chart-boxplot` package. It returns the validated constructor pair, or `null`
+when loading, validation, or registration fails. The optional callbacks replace those two loaders;
+their structural parameter and result types are available through the function's declaration.
 
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
@@ -43183,7 +43205,7 @@ lr-thread-list::part(row-actions) {
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
 `--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-color` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-color` (default `currentColor`, inheriting the excerpt text color),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style
@@ -43799,7 +43821,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   `var(--lr-color-surface)`.
 - `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
   it, or while it is pressed, independent of the resting border above. Default:
-  `var(--lr-color-brand)`.
+  `var(--lr-voice-picker-trigger-border-color)` (the resting border).
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   trigger or combobox is focused. One name for every field-shaped control in the library, so a halo
@@ -46873,7 +46895,8 @@ the same bounded runtime projection: provider records are normalized with determ
 identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
 reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
-least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
+least their start, unknown kinds become `other`, and explicit unknown statuses become `unknown`;
+an absent status defaults to `pending`. A localized
 `[part="limit"]` note exposes truncation.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.

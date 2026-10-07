@@ -184,7 +184,8 @@ describe('lr-agent-trace', () => {
     expect(root.querySelectorAll('[part="row"]').length).to.be.at.most(500);
     expect(root.querySelectorAll('[data-id="span-0"]')).to.have.length(1);
     expect(root.querySelector('[data-id="span-1"]')!.getAttribute('aria-label')).to.contain('Other');
-    expect(root.querySelector('[data-id="span-2"] [part="status-text"]')!.textContent).to.equal('Pending');
+    expect(root.querySelector('[data-id="span-2"] [part="status-text"]')!.textContent).to.equal('Unknown');
+    expect(root.querySelector('[data-id="span-2"] [part="status-text"]')!.getAttribute('data-status')).to.equal('unknown');
     expect(root.querySelector('[data-id="not-finite"]') === null).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('[part="handoff"]')).to.have.length(1);
   });

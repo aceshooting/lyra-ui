@@ -76,7 +76,7 @@ export function isFileValue(value: unknown): value is File {
  * `classify`-shaped decisions stay owned by the component using this controller. This controller
  * only tracks the session and harvests raw dropped files/folder entries.
  *
- * @internal
+ * Its declaration is retained because file-intake helpers accept this controller.
  */
 export class DropSessionController implements ReactiveController {
   private counter = 0;

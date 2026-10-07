@@ -1284,6 +1284,15 @@ starts when the peers and canvas are ready; an empty delivered callback retains 
 fallback. Peer loading and accessible DOM can settle while visibility is pending. These rules also
 apply when the component reconnects.
 
+The class module also exports
+`loadBoxPlotAndRegister(loadChart?: () => Promise<ChartJsModule | null>, importBoxPlot?: () => Promise<unknown>): Promise<BoxPlotModule | null>`.
+Import it from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js` to load and
+validate the optional Chart.js box-plot peer and register its `BoxPlotController` and
+`BoxAndWiskers` constructors. With no arguments it uses Lyra's Chart.js loader and the installed
+`@sgratzl/chartjs-chart-boxplot` package. It returns the validated constructor pair, or `null`
+when loading, validation, or registration fails. The optional callbacks replace those two loaders;
+their structural parameter and result types are available through the function's declaration.
+
 **Properties:**
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraBoxPlotSeries[] = []` (attribute: false) — each series contains readonly

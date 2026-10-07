@@ -786,7 +786,7 @@ describe('lr-condition-builder v9 contract', () => {
     expect(qb.shadowRoot!.querySelector('[part="combinator"]')).to.exist;
   });
 
-  it('stacks a condition row into a column layout at a narrow (<=320px) allocation', async () => {
+  it('stacks a condition row into a column layout below the compact allocation boundary', async () => {
     const value: ConditionBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }] };
     const el = (await fixture(
       html`<lr-condition-builder style="inline-size: 260px" .fields=${FIELDS} .value=${value}></lr-condition-builder>`,
@@ -796,7 +796,7 @@ describe('lr-condition-builder v9 contract', () => {
     expect(getComputedStyle(row).flexDirection).to.equal('column');
   });
 
-  it('contains long field and localized operator labels at exactly 320px in LTR and RTL', async () => {
+  it('contains long field and localized operator labels on both sides of the compact boundary in LTR and RTL', async () => {
     const longFieldLabel = `Field-${'unbroken'.repeat(60)}`;
     const longOperatorLabel = `Operator-${'localized'.repeat(60)}`;
     const fields: ConditionBuilderField[] = [
@@ -807,29 +807,37 @@ describe('lr-condition-builder v9 contract', () => {
       conditions: [{ id: 'c1', field: 'long-field', operator: 'contains', value: 'needle' }],
     };
 
-    for (const direction of ['ltr', 'rtl'] as const) {
-      const wrapper = (await fixture(html`
-        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
-          <lr-condition-builder
-            style="inline-size: 100%"
-            .fields=${fields}
-            .value=${value}
-            .strings=${{ queryBuilderOperatorContains: longOperatorLabel }}
-          ></lr-condition-builder>
-        </div>
-      `)) as HTMLElement;
-      const el = wrapper.querySelector('lr-condition-builder') as LyraConditionBuilder;
-      await el.updateComplete;
-      const row = conditionRow(el, 0);
+    const originalRootSize = document.documentElement.style.fontSize;
+    document.documentElement.style.fontSize = '16px';
+    try {
+      for (const { direction, width } of (['ltr', 'rtl'] as const).flatMap((direction) =>
+        [319, 320].map((width) => ({ direction, width })),
+      )) {
+        const wrapper = (await fixture(html`
+          <div dir=${direction} style=${`inline-size: ${width}px; max-inline-size: 100%`}>
+            <lr-condition-builder
+              style="inline-size: 100%"
+              .fields=${fields}
+              .value=${value}
+              .strings=${{ queryBuilderOperatorContains: longOperatorLabel }}
+            ></lr-condition-builder>
+          </div>
+        `)) as HTMLElement;
+        const el = wrapper.querySelector('lr-condition-builder') as LyraConditionBuilder;
+        await el.updateComplete;
+        const row = conditionRow(el, 0);
 
-      expect(getComputedStyle(row).flexDirection, direction).to.equal('column');
-      expect(wrapper.scrollWidth, `${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
-      expect(el.scrollWidth, `${direction} host`).to.be.at.most(el.clientWidth + 1);
-      expect(row.scrollWidth, `${direction} condition`).to.be.at.most(row.clientWidth + 1);
-      for (const part of ['field-select', 'operator-select', 'value'] as const) {
-        const control = row.querySelector(`[part="${part}"]`) as HTMLElement;
-        expect(control.scrollWidth, `${direction} ${part}`).to.be.at.most(control.clientWidth + 1);
+        expect(getComputedStyle(row).flexDirection, `${direction} ${width}px`).to.equal(width < 320 ? 'column' : 'row');
+        expect(wrapper.scrollWidth, `${direction} wrapper`).to.be.at.most(wrapper.clientWidth + 1);
+        expect(el.scrollWidth, `${direction} host`).to.be.at.most(el.clientWidth + 1);
+        expect(row.scrollWidth, `${direction} condition`).to.be.at.most(row.clientWidth + 1);
+        for (const part of ['field-select', 'operator-select', 'value'] as const) {
+          const control = row.querySelector(`[part="${part}"]`) as HTMLElement;
+          expect(control.scrollWidth, `${direction} ${part}`).to.be.at.most(control.clientWidth + 1);
+        }
       }
+    } finally {
+      document.documentElement.style.fontSize = originalRootSize;
     }
   });
 

@@ -1095,8 +1095,9 @@ it('submits its owning form exactly once on Enter, leaving the keystroke uncance
 });
 
 it('flushes a pending segment change once before a deferred Enter submission', async () => {
+  // A partial code is invalid; bypass validation here to isolate commit/submission ordering.
   const form = await fixture<HTMLFormElement>(html`
-    <form><lr-otp-input name="code" label="Code" length="4"></lr-otp-input><button type="submit">Go</button></form>
+    <form novalidate><lr-otp-input name="code" label="Code" length="4"></lr-otp-input><button type="submit">Go</button></form>
   `);
   const el = form.querySelector('lr-otp-input') as LyraOtpInput;
   const order: string[] = [];

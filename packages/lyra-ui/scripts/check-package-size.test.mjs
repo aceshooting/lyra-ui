@@ -1,26 +1,26 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import test from 'node:test';
 import {
   formatPackageSummary,
   metricsFromPackResult,
+  parsePackageSizeArguments,
   packageBudgetFindings,
+  readTarballMetrics,
   validatePackageBudgets,
 } from './check-package-size.mjs';
 
 const budgets = {
   baseline: { packedBytes: 1_000, unpackedBytes: 4_000, fileCount: 40 },
-  minimumPackedByteReductionPercent: 25,
   minimumUnpackedByteReductionPercent: 25,
   packedBudgetPolicy: {
-    strategy: 'measured-required-artifact-exception',
-    exceptionReason: 'required-public-artifacts-exceed-25-percent-target',
-    reviewedMeasurementBytes: 880,
-    headroomBytes: 4,
-    targetAt25PercentBytes: 750,
-    favorableIncompletePackageProbeBytes: 800,
+    strategy: 'absolute-download-ceiling',
+    exclusiveMaximumBytes: 10_000_000,
   },
-  maximum: { packedBytes: 884, unpackedBytes: 3_000, fileCount: 26 },
+  maximum: { packedBytes: 9_999_999, unpackedBytes: 3_000, fileCount: 26 },
   fileCountBudget: {
     baseArtifactCeiling: 15,
     stableTagAliasCount: 4,
@@ -42,6 +42,41 @@ const requiredTarballFiles = [
   'llms/components/lr-table.md',
 ];
 
+const expectedPackage = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+
+function archiveFixture(manifest = expectedPackage, extraFiles = {}) {
+  const entries = {
+    ...Object.fromEntries(requiredTarballFiles.map((path) => [path, 'public documentation'])),
+    'package.json': JSON.stringify(manifest),
+    ...extraFiles,
+  };
+  const blocks = [];
+  for (const [path, content] of Object.entries(entries)) {
+    if (content === null) continue;
+    const bytes = Buffer.from(content);
+    const header = Buffer.alloc(512);
+    header.write(`package/${path}`);
+    for (const [offset, width, value] of [[100, 8, 0o644], [108, 8, 0], [116, 8, 0], [124, 12, bytes.length], [136, 12, 0]]) {
+      header.write(value.toString(8).padStart(width - 1, '0'), offset);
+    }
+    header.fill(0x20, 148, 156);
+    header[156] = 0x30;
+    header.write('ustar\0', 257);
+    header.write('00', 263);
+    const checksum = header.reduce((total, byte) => total + byte, 0);
+    header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148);
+    blocks.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512));
+  }
+  return gzipSync(Buffer.concat([...blocks, Buffer.alloc(1024)]));
+}
+
+function withDownloadSize(archive, size) {
+  // A valid gzip comment changes downloaded bytes without changing the contained tar inventory.
+  const header = Buffer.from(archive.subarray(0, 10));
+  header[3] |= 0x10;
+  return Buffer.concat([header, Buffer.alloc(size - archive.length - 1, 0x61), Buffer.from([0]), archive.subarray(10)]);
+}
+
 function tarballFiles(...files) {
   return [
     ...requiredTarballFiles.map((path) => ({ path })),
@@ -49,12 +84,8 @@ function tarballFiles(...files) {
   ];
 }
 
-test('enforces 25% unpacked reduction and an honest measured packed ceiling', () => {
+test('enforces the absolute packed download limit while retaining unpacked and file-count policies', () => {
   assert.doesNotThrow(() => validatePackageBudgets(budgets));
-  assert.throws(
-    () => validatePackageBudgets({ ...budgets, minimumPackedByteReductionPercent: 24 }),
-    /must retain the approved 25% target/,
-  );
   assert.throws(
     () => validatePackageBudgets({ ...budgets, minimumUnpackedByteReductionPercent: 24 }),
     /must remain the approved 25%/,
@@ -64,32 +95,22 @@ test('enforces 25% unpacked reduction and an honest measured packed ceiling', ()
       ...budgets,
       packedBudgetPolicy: { ...budgets.packedBudgetPolicy, strategy: 'ordinary-ceiling' },
     }),
-    /must name the reviewed required-artifact exception/,
+    /must enforce the absolute compressed download ceiling/,
   );
   assert.throws(
     () => validatePackageBudgets({
       ...budgets,
-      packedBudgetPolicy: { ...budgets.packedBudgetPolicy, exceptionReason: 'unspecified' },
+      packedBudgetPolicy: { ...budgets.packedBudgetPolicy, exclusiveMaximumBytes: 10_000_001 },
     }),
-    /must retain its measured infeasibility reason/,
+    /must remain strictly below 10,000,000 bytes/,
   );
   assert.throws(
     () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, unpackedBytes: 3_001 } }),
     /must enforce at least a 25% reduction/,
   );
   assert.throws(
-    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 885 } }),
-    /must equal the reviewed measurement plus tight headroom/,
-  );
-  assert.throws(
-    () => validatePackageBudgets({
-      ...budgets,
-      packedBudgetPolicy: {
-        ...budgets.packedBudgetPolicy,
-        favorableIncompletePackageProbeBytes: 750,
-      },
-    }),
-    /must record why 25% is not achievable/,
+    () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, packedBytes: 10_000_000 } }),
+    /must enforce the exclusive download limit/,
   );
   assert.throws(
     () => validatePackageBudgets({ ...budgets, maximum: { ...budgets.maximum, fileCount: 27 } }),
@@ -104,7 +125,89 @@ test('enforces 25% unpacked reduction and an honest measured packed ceiling', ()
   );
 });
 
-test('accepts only an honest measured unpacked exception that mirrors the packed policy', () => {
+test('accepts 9,999,999 compressed bytes and rejects exactly 10,000,000 bytes', () => {
+  const actualBudgets = JSON.parse(
+    readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'),
+  );
+  for (const packedBytes of [9_999_999, 10_000_000]) {
+    assert.deepEqual(
+      packageBudgetFindings({
+        packedBytes,
+        unpackedBytes: 34_095_803,
+        fileCount: requiredTarballFiles.length,
+        files: tarballFiles(),
+      }, actualBudgets),
+      packedBytes === 9_999_999 ? [] : ['packedBytes 10,000,000 exceeds hard budget 9,999,999'],
+    );
+  }
+});
+
+test('gates actual archive bytes even when the dry-run estimate is below the download limit', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+  const archive = archiveFixture();
+  const tarball = join(directory, 'package.tgz');
+  try {
+    const estimate = metricsFromPackResult({ size: archive.length, unpackedSize: 1_000, files: tarballFiles() });
+    assert.deepEqual(packageBudgetFindings(estimate, actualBudgets), []);
+    assert.match(formatPackageSummary(estimate, actualBudgets), /packed estimate/);
+
+    writeFileSync(tarball, withDownloadSize(archive, 9_999_999));
+    const actual = await readTarballMetrics(tarball);
+    assert.equal(actual.packedBytes, 9_999_999);
+    assert.equal(actual.fileCount, requiredTarballFiles.length + 1);
+    assert.ok(actual.unpackedBytes > 0);
+    assert.match(actual.sha256, /^[a-f0-9]{64}$/u);
+    assert.match(formatPackageSummary(actual, actualBudgets), /packed archive/);
+    assert.deepEqual(packageBudgetFindings(actual, actualBudgets), []);
+
+    writeFileSync(tarball, withDownloadSize(archive, 10_000_000));
+    await assert.rejects(readTarballMetrics(tarball), /packedBytes 10,000,000 exceeds hard budget 9,999,999/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('rejects malformed tarball inputs and mismatched package identity without repacking', async () => {
+  assert.deepEqual(parsePackageSizeArguments([]), {});
+  assert.deepEqual(parsePackageSizeArguments(['--tarball', 'archive.tgz']), { tarball: 'archive.tgz' });
+  for (const args of [['--tarball'], ['--tarball', ''], ['--tarball', '--unknown'], ['--unknown', 'archive.tgz'],
+    ['--tarball', 'archive.tgz', 'other.tgz'], ['--tarball', 'bad\0path']]) {
+    assert.throws(() => parsePackageSizeArguments(args), /Usage:/u);
+  }
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const tarball = join(directory, 'package.tgz');
+  try {
+    await assert.rejects(readTarballMetrics(join(directory, 'missing.tgz')), /ENOENT/u);
+    await assert.rejects(readTarballMetrics(directory), /must be a regular file/u);
+    writeFileSync(tarball, 'not a gzip archive');
+    await assert.rejects(readTarballMetrics(tarball), /Invalid or oversized peer tarball/u);
+    writeFileSync(tarball, archiveFixture({ ...expectedPackage, name: '@example/other' }));
+    await assert.rejects(readTarballMetrics(tarball), /Tarball package name/u);
+    writeFileSync(tarball, archiveFixture({ ...expectedPackage, version: '0.0.0' }));
+    await assert.rejects(readTarballMetrics(tarball), /Tarball package version/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('uses the actual archive inventory for required-file and hygiene checks', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const tarball = join(directory, 'package.tgz');
+  try {
+    const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+    writeFileSync(tarball, archiveFixture(expectedPackage, { 'llms/tokens.md': null, 'dist/input.test.js': 'export {};' }));
+    const metrics = await readTarballMetrics(tarball);
+    assert.deepEqual(packageBudgetFindings(metrics, actualBudgets), [
+      'published tarball is missing required file: llms/tokens.md',
+      'published tarball contains 1 test path(s)',
+    ]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('accepts only an honest measured unpacked exception with tight headroom', () => {
   const withException = {
     ...budgets,
     unpackedBudgetPolicy: {
@@ -177,7 +280,7 @@ test('reports byte, file-count, and dangling-map regressions', () => {
   assert.deepEqual(
     packageBudgetFindings(
       {
-        packedBytes: 885,
+        packedBytes: 10_000_000,
         unpackedBytes: 3_001,
         fileCount: 27,
         files: tarballFiles(
@@ -189,7 +292,7 @@ test('reports byte, file-count, and dangling-map regressions', () => {
       budgets,
     ),
     [
-      'packedBytes 885 exceeds hard budget 884',
+      'packedBytes 10,000,000 exceeds hard budget 9,999,999',
       'unpackedBytes 3,001 exceeds hard budget 3,000',
       'fileCount 27 exceeds hard budget 26',
       'published tarball contains 1 dangling JavaScript/declaration map(s)',
@@ -266,12 +369,12 @@ test('requires focused public docs in the tarball inventory and rejects reposito
   );
 });
 
-test('labels the measured packed exception instead of implying the 25% target passed', () => {
+test('reports the download limit and labels historical packed reduction as informational', () => {
   const summary = formatPackageSummary(
     { packedBytes: 884, unpackedBytes: 3_000, fileCount: 26, files: [] },
     budgets,
   );
-  assert.match(summary, /packed \(11\.6% reduction; reviewed exception to the 25% target\)/);
+  assert.match(summary, /packed estimate \(11\.6% reduction from historical baseline; download limit <10 MB decimal\)/);
   assert.match(summary, /unpacked \(25\.0% reduction\)/);
 });
 
@@ -284,6 +387,7 @@ test('derives metrics from npm pack JSON without trusting its entryCount alias',
       files: [{ path: 'dist/a.js' }, { path: 'dist/a.d.ts' }],
     }),
     {
+      measurement: 'estimate',
       packedBytes: 10,
       unpackedBytes: 20,
       fileCount: 2,
@@ -321,8 +425,8 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [7_724_169, 35_069_948],
-    'passing byte ceilings must remain unchanged',
+    [9_999_999, 35_069_948],
+    'only the packed download ceiling changes; the unpacked hard ceiling remains unchanged',
   );
 
   const requiredAdditions = [

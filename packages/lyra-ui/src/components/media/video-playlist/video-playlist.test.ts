@@ -576,7 +576,13 @@ describe('lr-video-playlist public contract', () => {
     });
 
     el.goTo(1);
-    expect(order.slice(0, 3)).to.deep.equal(['outgoing-pause', 'outgoing-unload', 'incoming-load']);
+    expect(order[0]).to.equal('outgoing-pause');
+    const unloadedAt = order.indexOf('outgoing-unload');
+    const activatedAt = order.indexOf('incoming-load');
+    expect(unloadedAt, 'the outgoing resources are synchronously released').to.be.greaterThan(0);
+    expect(activatedAt, 'incoming activation follows outgoing release').to.be.greaterThan(unloadedAt);
+    expect(order.slice(0, unloadedAt).every((step) => step === 'outgoing-pause')).to.be.true;
+    expect(order.slice(activatedAt + 1), 'no outgoing cleanup follows incoming activation').to.deep.equal([]);
     expect(outgoing.paused).to.be.true;
     expect(first!.hidden).to.be.true;
     expect(second!.hidden).to.be.false;

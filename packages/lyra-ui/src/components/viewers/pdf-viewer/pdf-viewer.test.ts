@@ -2420,7 +2420,7 @@ describe("anchor-target adoption", () => {
     }
   });
 
-  it("bindTextSelection tears down any prior binding and no-ops for a content root whose owner document has no browsing context (defaultView null)", async () => {
+  it("bindTextSelection rebinds to a content root whose owner document has no browsing context", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
     )) as LyraPdfViewer;
@@ -2430,11 +2430,12 @@ describe("anchor-target adoption", () => {
     };
     // firstUpdated() already bound a real selection listener against this element's own document.
     expect(internals.textSelectionCleanup).to.exist;
-    const detachedRoot = {
-      ownerDocument: { defaultView: null },
-    } as unknown as Element;
+    const ownerlessDocument = document.implementation.createHTMLDocument("ownerless PDF selection");
+    const detachedRoot = ownerlessDocument.createElement("div");
+    expect(ownerlessDocument.defaultView).to.equal(null);
     internals.bindTextSelection(detachedRoot);
-    expect(internals.textSelectionCleanup).to.be.undefined;
+    expect(internals.textSelectionCleanup).to.exist;
+    internals.textSelectionCleanup?.();
   });
 
   it("resolveSelectionRange falls back to shadow-root/global Selection when getComposedRanges is unavailable", async () => {

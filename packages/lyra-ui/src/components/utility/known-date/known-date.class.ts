@@ -155,7 +155,8 @@ function addCompatibilityDetail<T extends Event>(
  *   and the composite value has newly transitioned to a different complete date, or from complete
  *   back to incomplete/blank. Programmatic `value`/`valueAsDate` assignment stays silent.
  * @event {FocusEvent} focus - Re-dispatched, bubbling and composed, when any of the three internal fields
- *   receives focus (native `focus` doesn't bubble or cross a shadow boundary).
+ *   receives focus. Internal field-to-field moves use a null `relatedTarget`; external targets
+ *   are preserved.
  * @event {FocusEvent} blur - Re-dispatched, bubbling and composed, once when focus leaves all three internal
  *   fields for something outside the control -- not once per internal field-to-field Tab.
  * @event lr-invalid - The composite date failed a validity check; cancelable. Calling
@@ -901,7 +902,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     // Trusted composed focus can be retargeted to the host even though it does not bubble.
     // Suppress that private event before emitting the one documented public bridge.
     e.stopPropagation();
-    relayNativeEvent(this, e);
+    // An internal relatedTarget retargets to this same host and suppresses native dispatch.
+    // Publish the documented per-field focus without exposing a private shadow field.
+    relayNativeEvent(this, e, {
+      relatedTarget: this.isRenderedFieldTarget(e.relatedTarget) ? null : e.relatedTarget,
+    });
   };
 
   private onFieldBlur = (e: FocusEvent): void => {

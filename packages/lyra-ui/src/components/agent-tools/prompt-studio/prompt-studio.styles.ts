@@ -65,12 +65,12 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  [part='version']:hover:where(:not(:disabled)) {
+  [part='version']:where(:hover:not(:disabled)) {
     background: var(--lr-color-surface-raised);
   }
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour -- a distinctly deeper step in both light and dark themes. */
-  [part='version']:active:where(:not(:disabled)) {
+  [part='version']:where(:active:not(:disabled)) {
     background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='move-message-up'] { transform: rotate(-90deg); }

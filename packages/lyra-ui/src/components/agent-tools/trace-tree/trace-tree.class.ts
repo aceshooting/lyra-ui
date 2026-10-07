@@ -210,7 +210,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * its nearest ancestor path reserve positions before ordinary input-order rows, so a controlled
    * selection remains current and revealable across the ceiling. Malformed parent cycles are
    * broken into roots so hostile trace data cannot recurse indefinitely. Foreign runtime
-   * `kind`/`status` values normalize to `'other'`/`'pending'` before rendering; `status: 'incomplete'`
+   * `kind`/`status` values normalize to `'other'`/`'unknown'` before rendering; an absent status
+   * defaults to `'pending'`. `status: 'incomplete'`
    * marks a span that ended without a result.
    */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];

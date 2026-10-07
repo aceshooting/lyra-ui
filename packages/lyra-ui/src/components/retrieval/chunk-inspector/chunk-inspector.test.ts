@@ -240,6 +240,7 @@ it('routes every localized string through this.localize(), provable via a .strin
       .chunks=${[{ id: 'c1', text: 'texte', score: 0.92, sourceId: 's1' }]}
       .strings=${{
         chunkInspectorLabel: 'Extraits récupérés',
+        chunkInspectorOpenOrdinal: 'Extrait {index} sur {total}',
         chunkScore: 'Pertinence {percent}%',
         scoreTierHigh: 'Pertinence élevée',
         showMore: 'Voir plus',
@@ -255,6 +256,7 @@ it('routes every localized string through this.localize(), provable via a .strin
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Source sans titre');
   expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
     new Intl.ListFormat('fr', { style: 'short', type: 'conjunction' }).format([
+      'Extrait 1 sur 1',
       'Source sans titre',
       'Pertinence élevée',
     ]),

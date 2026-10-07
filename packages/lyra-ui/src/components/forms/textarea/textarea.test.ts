@@ -1130,16 +1130,23 @@ describe('switching resize away from "auto"', () => {
       requestAnimationFrame(() => resolve())
     );
 
-    // Seeds a fake pending raf id so the next real width-change delivery finds `resizeRaf`
-    // already set -- the ResizeObserver's own per-frame coalescing (only the latest width is
+    // Seeds a pending controller request so the next real width-change delivery finds `resizeRaf`
+    // already armed -- the ResizeObserver's own per-frame coalescing (only the latest width is
     // ever reported per rendering opportunity) combined with the spec-guaranteed
     // requestAnimationFrame-before-ResizeObserver delivery ordering within a frame make it
     // impractical to force two genuinely overlapping deliveries through real timing alone.
+    const resizeRaf = (el as unknown as {
+      resizeRaf: { pending: boolean; schedule(callback: () => void): void };
+    }).resizeRaf;
     const fakeRafId = requestAnimationFrame(() => {});
-    (
-      el as unknown as { resizeRaf?: number; resizeRafOwner?: Window }
-    ).resizeRaf = fakeRafId;
-    (el as unknown as { resizeRafOwner?: Window }).resizeRafOwner = window;
+    const originalRequest = window.requestAnimationFrame;
+    window.requestAnimationFrame = (() => fakeRafId) as typeof window.requestAnimationFrame;
+    try {
+      resizeRaf.schedule(() => {});
+    } finally {
+      window.requestAnimationFrame = originalRequest;
+    }
+    expect(resizeRaf.pending).to.equal(true);
 
     const originalCancel = window.cancelAnimationFrame;
     let canceledId: number | undefined;

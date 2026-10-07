@@ -80,6 +80,8 @@ interface RelationshipOwnershipState {
   baseline: RelationshipBaseline;
   lastApplied: RelationshipSnapshot;
   lastAppliedDocument: Document;
+  /** Roots of projected endpoints, including those referenced without a serializable ID. */
+  lastAppliedEndpointRoots: ReadonlyMap<Element, Node>;
   /** Projected endpoints that were resolvable when the last relationship was written. */
   lastAppliedResolvability: ReadonlyMap<Element, boolean>;
   lastAppliedRoot: Node;
@@ -162,6 +164,9 @@ function setLastApplied(
 ): void {
   state.lastApplied = relationshipSnapshot(state.target, definition);
   state.lastAppliedDocument = state.target.ownerDocument;
+  state.lastAppliedEndpointRoots = new Map(
+    projectedRelationshipElements(state).map((element) => [element, element.getRootNode()]),
+  );
   state.lastAppliedResolvability = new Map(
     projectedRelationshipElements(state)
       .map((element) => [element, isIdResolvableFromTarget(state.target, element)]),
@@ -412,6 +417,10 @@ function adoptExternalRelationshipBaseline(
         // serialized baseline.
         return false;
       }
+      for (const [element, root] of state.lastAppliedEndpointRoots) {
+        // An ID-less reflected endpoint can disappear from the native list when detached too.
+        if (element.getRootNode() !== root) return false;
+      }
       for (const [element, wasResolvable] of state.lastAppliedResolvability) {
         if (wasResolvable && !isIdResolvableFromTarget(state.target, element)) {
           // Native element-reference reflection can drop a projected endpoint when it moves out
@@ -576,6 +585,9 @@ function isRelationshipCurrent(
     if (!sameRelationshipSnapshot(relationshipSnapshot(state.target, definition), state.lastApplied)) {
       return false;
     }
+    for (const [element, root] of state.lastAppliedEndpointRoots) {
+      if (element.getRootNode() !== root) return false;
+    }
     for (const [element, wasResolvable] of state.lastAppliedResolvability) {
       if (isIdResolvableFromTarget(state.target, element) !== wasResolvable) return false;
     }
@@ -605,6 +617,7 @@ function acquireFixedRelationship(
       baseline: baselineFromSnapshot(initial),
       lastApplied: initial,
       lastAppliedDocument: target.ownerDocument,
+      lastAppliedEndpointRoots: new Map(),
       lastAppliedResolvability: new Map(),
       lastAppliedRoot: target.getRootNode(),
       lastAppliedUnresolvedBaselineIds: [],

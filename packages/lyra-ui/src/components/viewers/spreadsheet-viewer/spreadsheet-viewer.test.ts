@@ -118,6 +118,7 @@ async function assertScrollFrameFollowsAdoption(
   };
   const row = { querySelectorAll: () => [target, target] };
   const list = {
+    get isConnected(): boolean { return el.isConnected; },
     updateComplete: Promise.resolve(),
     shadowRoot: { querySelector: () => row },
   };

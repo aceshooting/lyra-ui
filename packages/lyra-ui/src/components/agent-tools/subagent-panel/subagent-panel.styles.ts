@@ -7,7 +7,9 @@ export const styles = css`
   /* Run-row chrome behind inline var() fallbacks, same convention as the dense size tier below:
      each fallback is the pre-existing token, so an unset panel paints exactly as before while a
      transcript can retune every nested run row without a ::part(run) override. */
-  [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-l)); border: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); border-radius: var(--lr-subagent-panel-radius, var(--lr-radius)); overflow: hidden; }
+  /* Reserve room for the row even when its logical nesting outgrows the panel. Descendant
+     controls query the remaining row allocation rather than the unindented panel width. */
+  [part~='run'] { margin-inline-start: min(calc(var(--lr-subagent-depth, 0) * var(--lr-space-l)), max(0px, calc(100% - var(--lr-size-12rem)))); container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-12rem); border: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); border-radius: var(--lr-subagent-panel-radius, var(--lr-radius)); overflow: hidden; }
   [part~='run-selected'] {
     border-color: var(--lr-subagent-panel-selected-border, var(--lr-color-brand));
   }
@@ -82,7 +84,7 @@ export const styles = css`
      every instance re-declares and so shadows an ancestor value, so a transcript can retune every
      embedded panel at once. */
   @container ${compactContainerQuery} {
-    [part~='run'] { margin-inline-start: calc(var(--lr-subagent-depth, 0) * var(--lr-space-s)); }
+    [part~='run'] { margin-inline-start: min(calc(var(--lr-subagent-depth, 0) * var(--lr-space-s)), max(0px, calc(100% - var(--lr-size-12rem)))); }
     [part='run-trigger'] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     [part='status'] { min-inline-size: 0; max-inline-size: 100%; }
     [part='run-row'] { grid-template-columns: 1fr; }

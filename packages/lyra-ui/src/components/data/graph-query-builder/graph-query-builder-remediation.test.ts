@@ -29,14 +29,20 @@ for (const part of ['min-hops', 'max-hops']) {
     await hidden;
     await el.updateComplete;
 
-    expect(events.map((event) => event.type)).to.deep.equal(['lr-input']);
-    expect(events[0]!.hostOwned).to.equal(true);
-    expect(events[0]!.detail).to.deep.equal({ value: el.value });
-    expect(Object.isFrozen(events[0]!.detail)).to.equal(true);
+    expect(events.map((event) => event.type)).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    for (const event of events) {
+      expect(event.hostOwned, `${event.type} originates on the aggregate host`).to.equal(true);
+      if (event.type.startsWith('lr-')) {
+        expect(event.detail).to.deep.equal({ value: el.value });
+        expect(Object.isFrozen(event.detail)).to.equal(true);
+      } else {
+        expect(event.detail).to.equal(undefined);
+      }
+    }
     expect(el.value[part === 'min-hops' ? 'minHops' : 'maxHops']).to.equal(6);
     el.value = query();
     await el.updateComplete;
-    expect(events.length, 'programmatic assignments stay silent').to.equal(1);
+    expect(events.length, 'programmatic assignments stay silent').to.equal(4);
   });
 }
 

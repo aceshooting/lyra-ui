@@ -76,6 +76,7 @@ export function isAriaTrue(value: string | null): boolean {
 function accessibilityElementState(
   element: Element,
   imageMapImage: HTMLImageElement | null = imageMapImageFor(element),
+  ignoreSemanticExclusion = false,
 ): AccessibilityElementState {
   let rendered: CSSStyleDeclaration | undefined;
   try {
@@ -88,8 +89,8 @@ function accessibilityElementState(
     display: rendered?.display,
     subtreeExcluded:
       element.hasAttribute('hidden') ||
-      element.hasAttribute('inert') ||
-      isAriaTrue(element.getAttribute('aria-hidden')) ||
+      (!ignoreSemanticExclusion && (element.hasAttribute('inert') ||
+        isAriaTrue(element.getAttribute('aria-hidden')))) ||
       (!imageMapImage && (rendered?.display === 'none' || rendered?.contentVisibility === 'hidden')),
     visibilityHidden: visibility === 'hidden' || visibility === 'collapse',
   };
@@ -152,18 +153,30 @@ function observeAccessibleTextNode(
 
 /** Observers whose callbacks filter their batches through {@link accessibleTextRecordsMatter}. */
 const filteringObservers = new WeakSet<MutationObserver>();
-/** Each filtering observer's composed ancestors and their visibility state as of its last bind. */
-const ancestorVisibilityBaselines = new WeakMap<MutationObserver, Map<Element, string>>();
+interface AncestorVisibilityBaseline { visibility: string; presentation: string; }
+/** Composed-ancestor state and bounded content visibility as of the last bind. */
+const ancestorVisibilityBaselines = new WeakMap<MutationObserver, Map<Element, AncestorVisibilityBaseline>>();
+interface ContentVisibilityBaseline {
+  elements: Map<Element, string>;
+  incomplete: boolean;
+}
+const contentVisibilityBaselines = new WeakMap<MutationObserver, ContentVisibilityBaseline>();
 
-/** The parts of an ancestor's state that can hide or reveal the text beneath it. */
-function ancestorVisibilityKey(element: Element): string {
-  const state = accessibilityElementState(element);
-  return [
-    state.subtreeExcluded ? 'excluded' : '',
-    state.visibilityHidden ? 'invisible' : '',
-    state.display ?? '',
-    element.hasAttribute('open') ? 'open' : '',
-  ].join('|');
+function visibilityKey(element: Element, state = accessibilityElementState(element)): string {
+  return [state.subtreeExcluded, state.visibilityHidden, state.display, element.hasAttribute('open')].join('|');
+}
+
+function ancestorPresentationKey(element: Element): string {
+  const style = (element as HTMLElement).style;
+  const customProperties = style
+    ? Array.from(style).filter((name) => name.startsWith('--')).sort()
+      .map((name) => `${name}:${style.getPropertyValue(name)}!${style.getPropertyPriority(name)}`)
+    : [];
+  return [element.getAttribute('class') ?? '', ...customProperties].join('|');
+}
+
+function ancestorVisibilityBaseline(element: Element): AncestorVisibilityBaseline {
+  return { visibility: visibilityKey(element), presentation: ancestorPresentationKey(element) };
 }
 
 /**
@@ -186,7 +199,21 @@ export function accessibleTextRecordsMatter(
   for (const record of records) {
     const target = record.target as Element;
     if (record.type !== 'attributes' || !baseline.has(target)) return true;
-    if (ancestorVisibilityKey(target) !== baseline.get(target)) return true;
+    const previous = baseline.get(target)!;
+    if (visibilityKey(target) !== previous.visibility) return true;
+    const presentation = ancestorPresentationKey(target);
+    if (presentation !== previous.presentation) {
+      // Selectors and inherited variables can affect a forwarded descendant without changing its
+      // ancestor. A complete snapshot can rule out changes to the bounded content's visibility.
+      const content = contentVisibilityBaselines.get(observer);
+      // A derived hidden wrapper can prevent both traversal and reliable computed styles for its
+      // descendants. A presentation change must get a fresh semantic probe in that case.
+      if (content?.incomplete) return true;
+      for (const [element, visibility] of content?.elements ?? []) {
+        if (visibilityKey(element) !== visibility) return true;
+      }
+      previous.presentation = presentation;
+    }
   }
   return false;
 }
@@ -211,11 +238,11 @@ export function bindAccessibleTextObserver(
   if (!observer) return;
   observer.disconnect();
   observeAccessibleTextNode(observer, host, extraAttributes);
-  const baseline = filteringObservers.has(observer) ? new Map<Element, string>() : undefined;
+  const baseline = filteringObservers.has(observer) ? new Map<Element, AncestorVisibilityBaseline>() : undefined;
   let ancestor = composedParentElement(host);
   while (ancestor) {
     observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
-    baseline?.set(ancestor, ancestorVisibilityKey(ancestor));
+    baseline?.set(ancestor, ancestorVisibilityBaseline(ancestor));
     ancestor = composedParentElement(ancestor);
   }
   if (baseline) ancestorVisibilityBaselines.set(observer, baseline);
@@ -230,7 +257,7 @@ export function bindAccessibleTextObserver(
       while (ancestor) {
         if (ancestor !== host && !host.contains(ancestor) && ancestor.getRootNode() !== host.shadowRoot) {
           observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
-          baseline?.set(ancestor, ancestorVisibilityKey(ancestor));
+          baseline?.set(ancestor, ancestorVisibilityBaseline(ancestor));
         }
         ancestor = composedParentElement(ancestor);
       }
@@ -238,13 +265,39 @@ export function bindAccessibleTextObserver(
   }
   // Walk only consumer content. Entering the owner's own shadow root would observe its rendered
   // labels and feed their updates back into the callback that produced them.
+  const contentBaseline: ContentVisibilityBaseline | undefined = baseline
+    ? { elements: new Map(), incomplete: false }
+    : undefined;
+  const observationExclusions = new Map<Element, boolean>();
   const result = composedAccessibilityTextResult(host.childNodes, {
     requireRendered: false,
+    isSubtreeExcluded: (element) => observationExclusions.get(element) ?? isAccessibilitySubtreeExcluded(element),
+    onElementState: (element, state) => {
+      const ownedWrapper = element.getRootNode() === host.shadowRoot;
+      // An owner may suppress duplicate accessibility exposure with an inert/ARIA-hidden wrapper
+      // while still deriving its name from these visible descendants. Observe through that fence;
+      // consumer-authored fences and actual rendering exclusions keep their normal meaning.
+      const excluded = ownedWrapper && state.subtreeExcluded
+        ? accessibilityElementState(element, undefined, true).subtreeExcluded
+        : state.subtreeExcluded;
+      observationExclusions.set(element, excluded);
+      if (!contentBaseline) return;
+      contentBaseline.elements.set(element, visibilityKey(element, state));
+      // Ancestor validation can encounter the owner's own hidden presentation wrapper even though
+      // the walk starts at consumer roots. Do not treat its pruned descendants as fully observed.
+      if (excluded && ownedWrapper) {
+        contentBaseline.incomplete = true;
+      }
+    },
     shouldPrune: (element) => {
       upgrades?.observeElement(element);
       return false;
     },
   });
+  if (contentBaseline) {
+    contentBaseline.incomplete ||= result.truncated;
+    contentVisibilityBaselines.set(observer, contentBaseline);
+  }
   for (const root of result.traversedShadowRoots) {
     if (root !== host.shadowRoot) observeAccessibleTextNode(observer, root, extraAttributes);
   }

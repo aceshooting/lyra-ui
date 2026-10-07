@@ -491,13 +491,13 @@ it('uses a visibly distinct selected-version hover fallback in light and dark th
     <div>
       <lr-prompt-studio
         data-lr-theme="light"
-        style="inline-size: 24rem;"
+        style="inline-size: 24rem; --lr-transition-fast: 0s;"
         selected-version-id="v1"
         .versions=${versions}
       ></lr-prompt-studio>
       <lr-prompt-studio
         data-lr-theme="dark"
-        style="inline-size: 24rem;"
+        style="inline-size: 24rem; --lr-transition-fast: 0s;"
         selected-version-id="v1"
         .versions=${versions}
       ></lr-prompt-studio>
@@ -510,11 +510,11 @@ it('uses a visibly distinct selected-version hover fallback in light and dark th
     for (const studio of studios) {
       const version = studio.shadowRoot!.querySelector<HTMLElement>('[part="version"]')!;
       const rest = getComputedStyle(version).backgroundColor;
-      const rect = version.getBoundingClientRect();
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
+      await hoverUntilMatched(version, 'selected version never received the pointer hover state');
+      await waitUntil(
+        () => getComputedStyle(version).backgroundColor !== rest,
+        `${studio.dataset['lrTheme']} selected version hover never changed the resting fill`,
+      );
       expect(getComputedStyle(version).backgroundColor, `${studio.dataset['lrTheme']} selected version hover`).not.to.equal(rest);
       await resetMouse();
     }

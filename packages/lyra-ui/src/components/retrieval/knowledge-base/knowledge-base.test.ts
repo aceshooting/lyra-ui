@@ -679,6 +679,7 @@ it('forwards every documented table part and renders the actual nested action tr
       --lr-color-text-quiet: rgb(4, 5, 6);
       --lr-color-mix-partner: rgb(7, 8, 9);
       --lr-color-mix-active: 100%;
+      --lr-transition-fast: 0s;
       --lr-focus-ring-width: 3px;
       --lr-focus-ring-color: rgb(10, 11, 12);
       --lr-focus-ring-offset: 2px;
@@ -759,6 +760,12 @@ it('forwards every documented table part and renders the actual nested action tr
       );
 
       const hoverBackground = getComputedStyle(trigger).backgroundColor;
+      const activeProbe = document.createElement('span');
+      activeProbe.style.backgroundColor = 'color-mix(in oklab, rgb(1, 2, 3), rgb(7, 8, 9) 100%)';
+      trigger.append(activeProbe);
+      const activeBackground = getComputedStyle(activeProbe).backgroundColor;
+      activeProbe.remove();
+      expect(activeBackground).not.to.equal('rgba(0, 0, 0, 0)');
       await sendMouse({ type: 'down' });
       pointerDown = true;
       await waitUntil(
@@ -767,6 +774,7 @@ it('forwards every documented table part and renders the actual nested action tr
           return (
             trigger.matches(':active') &&
             active.color === 'rgb(1, 2, 3)' &&
+            active.backgroundColor === activeBackground &&
             active.backgroundColor !== hoverBackground
           );
         },

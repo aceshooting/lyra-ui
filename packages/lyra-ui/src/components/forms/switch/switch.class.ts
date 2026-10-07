@@ -253,7 +253,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private get hasHelpTextSlot(): boolean { return this.slotPresence.has('help-text'); }
   private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly labelTextObserver = new AccessibleTextController(
-    this, [], () => this.recomputeHasLabelSlot(), ['slot'],
+    this, [''], () => this.recomputeHasLabelSlot(), ['slot'],
   );
   /** Whether the user has acted on this control yet, which gates `user-valid`/`user-invalid` and
    *  intrinsic `aria-invalid`: a toggle is an interaction the instant it happens, and so is
@@ -725,10 +725,11 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private handleLabelSlotChange(event: Event): void {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
-    if (
-      target.getRootNode() !== this.renderRoot &&
-      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
-    ) return;
+    if (target.getRootNode() === this.renderRoot) {
+      if ((target.getAttribute('name') ?? '') !== '') return;
+    } else if (!this.labelForwardingSlots().includes(target as HTMLSlotElement)) {
+      return;
+    }
     this.labelTextObserver.bind();
     this.recomputeHasLabelSlot();
   }
@@ -767,7 +768,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
               <span part="thumb"></span>
             </span>
           </span>
-          <span id="switch-label" part="label" ?hidden=${!this.hasLabelSlot}>
+          <span id="switch-label" part="label" ?hidden=${!this.renderSlotPresence(this.hasLabelSlot)}>
             <slot @slotchange=${this.onSlotChange}></slot>
           </span>
         </span>

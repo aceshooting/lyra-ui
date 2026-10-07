@@ -214,7 +214,7 @@ describe('lr-artifact-panel', () => {
     expect(getComputedStyle(next).minBlockSize).to.equal('36px');
   });
 
-  it('gives the view/restore/copy/download header buttons the WCAG 24px minimum hit area', async () => {
+  it('gives the view/restore/copy/download header buttons their minimum hit area', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel
         .versions=${[{ id: 'v1' }, { id: 'v2' }]}
@@ -229,7 +229,8 @@ describe('lr-artifact-panel', () => {
     for (const part of ['view-button', 'restore-button', 'copy-button', 'download-button']) {
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
       expect(button !== null, `${part} should render`).to.be.true;
-      expect(getComputedStyle(button).minBlockSize, `${part} minBlockSize`).to.equal('24px');
+      const expectedMinBlockSize = part === 'view-button' ? '24px' : '36px';
+      expect(getComputedStyle(button).minBlockSize, `${part} minBlockSize`).to.equal(expectedMinBlockSize);
       expect(button.getBoundingClientRect().height, `${part} rendered height`).to.be.at.least(24);
     }
   });
@@ -515,23 +516,25 @@ describe('lr-artifact-panel', () => {
         active-version-id="v1"
         copy-text="copy me"
         download-src="https://example.com/artifact.txt"
-        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-button-hover-base: rgb(1, 2, 3); --lr-transition-fast: 0s; --lr-transition-interactive: none"
         .versions=${[{ id: 'v1', createdAt: new Date(0) }, { id: 'v2', createdAt: new Date(1) }]}
       >
         preview
         <pre slot="code">code</pre>
       </lr-artifact-panel>
     `);
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'color-mix(in oklab, rgb(1, 2, 3), var(--lr-color-mix-partner) var(--lr-color-mix-hover))';
+    el.shadowRoot!.append(probe);
+    const actionHover = getComputedStyle(probe).backgroundColor;
+    probe.remove();
     try {
       for (const part of ['restore-button', 'copy-button', 'download-button', 'view-button']) {
         const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
-        const rect = button.getBoundingClientRect();
-        await sendMouse({
-          type: 'move',
-          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-        });
-        await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)');
-        expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal('rgb(1, 2, 3)');
+        const expected = part === 'view-button' ? 'rgb(1, 2, 3)' : actionHover;
+        await hoverUntilMatched(button, `${part} never received the pointer hover state`);
+        await waitUntil(() => getComputedStyle(button).backgroundColor === expected, `${part} hover paint never settled`);
+        expect(getComputedStyle(button).backgroundColor, `${part} hover`).to.equal(expected);
         button.focus();
         expect(getComputedStyle(button).outlineStyle, `${part} focus`).to.equal('solid');
       }

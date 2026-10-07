@@ -13,8 +13,11 @@ type D3SimulationNodeDatum = graphSupport.D3SimulationNodeDatum;
 const typeWitness: [GraphSimulationNode, GraphSimulationLink, LyraGraph, LyraGraphEdge, LyraGraphNode, LyraGraphNodeLabelsMode, D3SimulationLinkDatum<GraphSimulationNode>, D3SimulationNodeDatum] | null = null;
 void typeWitness;
 
-it('discloses both public graph collection limits with source and retained counts', async () => {
-  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+it('discloses both collection limits while the peer loads and after a load failure', async () => {
+  const el = document.createElement('lr-graph') as unknown as LyraGraph;
+  let finishLoading!: (value: null) => void;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
+    new Promise<null>((resolve) => { finishLoading = resolve; });
   const previousWarn = console.warn;
   console.warn = () => undefined;
   try {
@@ -23,13 +26,22 @@ it('discloses both public graph collection limits with source and retained count
   } finally {
     console.warn = previousWarn;
   }
-  await el.updateComplete;
-  const notices = [...el.shadowRoot!.querySelectorAll('[part="limit"]')].map((notice) => notice.textContent);
-  expect(notices).to.deep.equal(['Showing 10,000 of 10,001 nodes.', 'Showing 10,000 of 10,002 links.']);
-  el.nodes = [];
-  el.edges = [];
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const notices = () => [...el.shadowRoot!.querySelectorAll('[part="limit"]')].map((notice) => notice.textContent);
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    expect(notices()).to.deep.equal(['Showing 10,000 of 10,001 nodes.', 'Showing 10,000 of 10,002 links.']);
+    finishLoading(null);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(notices()).to.deep.equal(['Showing 10,000 of 10,001 nodes.', 'Showing 10,000 of 10,002 links.']);
+    el.nodes = [];
+    el.edges = [];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+  } finally {
+    el.remove();
+  }
 });
 
 it('uses the same canvas-height token as the pre-upgrade reservation', async () => {
@@ -117,39 +129,50 @@ it('edgeLabelWidth falls back to a character-count heuristic when its owner-real
 });
 
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
-  const el = (await fixture(
-    html`<lr-graph .strings=${{ loading: 'Loading graph data' }}></lr-graph>`
-  )) as LyraGraph;
-  expect(el.getAttribute('aria-busy')).to.equal('true');
-  const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
-  expect(skeleton !== null).to.be.true;
-  await (skeleton as HTMLElement & { updateComplete: Promise<unknown> })
-    .updateComplete;
-  expect(el.shadowRoot!.querySelector('.loading-label')!.textContent).to.equal(
-    'Loading graph data'
-  );
-  expect(
-    el.shadowRoot!.querySelector(
-      '[role="alert"], [role="status"], [aria-live]'
-    ) === null,
-    'the controller-owned loading state must not create a second shadow live region'
-  ).to.be.true;
-  expect(el.shadowRoot!.querySelector('svg') == null).to.equal(true);
+  const el = document.createElement('lr-graph') as unknown as LyraGraph;
+  const internals = el as unknown as { loadLibrary: () => Promise<unknown> };
+  const loadLibrary = internals.loadLibrary;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  internals.loadLibrary = () => pending.then(loadLibrary);
+  el.strings = { loading: 'Loading graph data' };
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    const skeleton = el.shadowRoot!.querySelector('lr-skeleton')!;
+    expect(skeleton !== null).to.be.true;
+    await (skeleton as HTMLElement & { updateComplete: Promise<unknown> })
+      .updateComplete;
+    expect(el.shadowRoot!.querySelector('.loading-label')!.textContent).to.equal(
+      'Loading graph data'
+    );
+    expect(
+      el.shadowRoot!.querySelector(
+        '[role="alert"], [role="status"], [aria-live]'
+      ) === null,
+      'the controller-owned loading state must not create a second shadow live region'
+    ).to.be.true;
+    expect(el.shadowRoot!.querySelector('svg') == null).to.equal(true);
 
-  el.nodes = nodes;
-  el.edges = links;
-  await el.updateComplete;
-  await waitUntil(
-    () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
-    undefined,
-    {
-      timeout: NODE_COUNT_TIMEOUT,
-    }
-  );
+    el.nodes = nodes;
+    el.edges = links;
+    release();
+    await el.updateComplete;
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2,
+      undefined,
+      {
+        timeout: NODE_COUNT_TIMEOUT,
+      }
+    );
 
-  expect(el.getAttribute('aria-busy')).to.equal('false');
-  expect(el.shadowRoot!.querySelector('lr-skeleton') == null).to.be.true;
-  expect(el.shadowRoot!.querySelector('svg') != null).to.equal(true);
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(el.shadowRoot!.querySelector('lr-skeleton') == null).to.be.true;
+    expect(el.shadowRoot!.querySelector('svg') != null).to.equal(true);
+  } finally {
+    el.remove();
+  }
 });
 
 it('announces graph navigation through one light-DOM sink without speaking the initial item', async () => {

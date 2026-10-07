@@ -403,7 +403,7 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  *   Row actions and the search clear button otherwise read the shared `--lr-icon-button-*` tokens.
  * @cssprop [--lr-thread-list-excerpt-highlight-bg=var(--lr-color-warning-quiet)] -
  *   Background of `<mark>` descendants returned by `renderExcerpt`.
- * @cssprop [--lr-thread-list-excerpt-highlight-color=inherit] - Foreground of `<mark>`
+ * @cssprop [--lr-thread-list-excerpt-highlight-color=currentColor] - Foreground of `<mark>`
  *   descendants returned by `renderExcerpt`.
  * @cssprop [--lr-thread-list-excerpt-highlight-radius=var(--lr-radius-xs)] - Corner radius of
  *   `<mark>` descendants returned by `renderExcerpt`.

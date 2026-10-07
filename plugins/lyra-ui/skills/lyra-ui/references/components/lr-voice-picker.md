@@ -224,7 +224,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   `var(--lr-color-surface)`.
 - `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
   it, or while it is pressed, independent of the resting border above. Default:
-  `var(--lr-color-brand)`.
+  `var(--lr-voice-picker-trigger-border-color)` (the resting border).
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   trigger or combobox is focused. One name for every field-shaped control in the library, so a halo

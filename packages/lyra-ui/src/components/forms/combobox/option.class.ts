@@ -242,7 +242,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   private readonly labelTextObserver = new AccessibleTextController(
-    this, [], (records) => this.handleLabelRecords([...records]), ['slot'],
+    this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title'],
   );
   private observedDefaultLabel = '';
   private cachedDefaultLabel?: string;

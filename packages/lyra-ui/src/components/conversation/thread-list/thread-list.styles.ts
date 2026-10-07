@@ -148,7 +148,7 @@ export const styles = css`
      shrinks below 24rem in a short one, and falls back to 24rem in an auto-height container. */
   lr-virtual-list {
     --lr-virtual-list-row-mark-bg: var(--lr-thread-list-excerpt-highlight-bg, var(--lr-color-warning-quiet));
-    --lr-virtual-list-row-mark-color: var(--lr-thread-list-excerpt-highlight-color, inherit);
+    --lr-virtual-list-row-mark-color: var(--lr-thread-list-excerpt-highlight-color, currentColor);
     --lr-virtual-list-row-mark-radius: var(--lr-thread-list-excerpt-highlight-radius, var(--lr-radius-xs));
     --lr-virtual-list-row-mark-padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
     flex: 1 1 auto;

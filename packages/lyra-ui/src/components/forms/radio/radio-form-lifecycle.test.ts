@@ -552,9 +552,7 @@ describe("lifecycle: attachInternals guard", () => {
 
 // -- Degraded-DOM form-association fallback ---------------------------------
 describe("inert ElementInternals fallback", () => {
-  /** `<lr-radio>` guards on the *global* `ElementInternals` being defined at all, then on
-   *  `attachInternals()` throwing -- a browser without form-association support, or a polyfill
-   *  substitute. Both paths must yield inert internals rather than throwing at construction. */
+  // Form-association support is determined by attachInternals(), not the global constructor.
   const withGlobalRemoved = async (
     assertion: (el: LyraRadio) => void
   ): Promise<void> => {
@@ -572,17 +570,16 @@ describe("inert ElementInternals fallback", () => {
     }
   };
 
-  it("falls back when the ElementInternals global is absent entirely", async () => {
+  it("retains native form support when only the ElementInternals global is absent", async () => {
     await withGlobalRemoved((el) => {
-      const internals = (el as unknown as { internals: ElementInternals })
-        .internals;
-      expect(internals.form === null).to.equal(true);
-      expect(internals.willValidate).to.be.false;
-      expect(internals.validationMessage).to.equal("");
-      expect(internals.checkValidity()).to.be.true;
-      expect(internals.reportValidity()).to.be.true;
-      expect(() => internals.setFormValue("a")).to.not.throw();
-      expect(() => internals.setValidity({}, "")).to.not.throw();
+      expect(el.willValidate).to.be.true;
+      expect(el.checkValidity()).to.be.true;
+      el.setCustomValidity("Choose another option");
+      expect(el.validity.customError).to.be.true;
+      expect(el.validationMessage).to.equal("Choose another option");
+      expect(el.checkValidity()).to.be.false;
+      el.setCustomValidity("");
+      expect(el.checkValidity()).to.be.true;
     });
   });
 

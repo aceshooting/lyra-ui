@@ -1,6 +1,6 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, nextFrame, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import './progress-bar.js';
 import './progress-ring.js';
 import type { LyraProgressBar, LyraProgressVariant } from './progress-bar.js';
@@ -34,6 +34,35 @@ class ProgressRingLabelForwardWrapper extends HTMLElement {
 }
 customElements.define('progress-ring-label-forward-wrapper', ProgressRingLabelForwardWrapper);
 
+for (const forwarded of [false, true]) {
+  it(`repeatedly reveals ${forwarded ? 'forwarded' : 'nested'} progress labels after ancestor presentation changes`, async () => {
+    const content = html`<span><b style="display: var(--progress-test-label-display, inline)">Upload</b><i hidden>Hidden</i><i aria-hidden="true">Decorative</i></span>`;
+    const ancestor = await fixture<HTMLElement>(html`
+      <div>
+        ${forwarded
+          ? html`<progress-bar-label-forward-wrapper>${content}</progress-bar-label-forward-wrapper>`
+          : html`<lr-progress-bar>${content}</lr-progress-bar>`}
+      </div>
+    `);
+    const bar = (forwarded
+      ? ancestor.querySelector('progress-bar-label-forward-wrapper')!.shadowRoot!.querySelector('lr-progress-bar')
+      : ancestor.querySelector('lr-progress-bar')) as LyraProgressBar;
+    const role = bar.shadowRoot!.querySelector('[role="progressbar"]')!;
+    const label = bar.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+    await waitUntil(() => role.getAttribute('aria-label') === 'Upload');
+    for (let round = 0; round < 2; round += 1) {
+      ancestor.style.setProperty('--progress-test-label-display', 'none');
+      await waitUntil(() => label.hidden && role.getAttribute('aria-label') === 'Progress');
+      // Drain the post-cascade refresh before revealing, so it cannot mask a missed mutation.
+      await nextFrame();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await bar.updateComplete;
+      ancestor.style.removeProperty('--progress-test-label-display');
+      await waitUntil(() => !label.hidden && role.getAttribute('aria-label') === 'Upload');
+    }
+  });
+}
+
 const SERVER_SHADOW = '<template shadowrootmode="open"></template>';
 
 async function mountServerRenderedProgressRing(markup: string): Promise<LyraProgressRing> {
@@ -66,12 +95,20 @@ it('tears down label observation safely after adoption into an ownerless documen
   ownerless.adoptNode(bar);
   ownerless.adoptNode(ring);
 
-  expect(() => {
-    (bar as unknown as { rebuildLabelObserver(): void }).rebuildLabelObserver();
-    (ring as unknown as { rebuildLabelObserver(): void }).rebuildLabelObserver();
-  }).to.not.throw();
-  expect((bar as unknown as { labelObserver?: MutationObserver }).labelObserver).to.equal(undefined);
-  expect((ring as unknown as { labelObserver?: MutationObserver }).labelObserver).to.equal(undefined);
+  expect(() => ownerless.body.append(bar, ring)).to.not.throw();
+  await Promise.all([bar.updateComplete, ring.updateComplete]);
+  expect(bar.ownerDocument.defaultView).to.equal(null);
+  expect(ring.ownerDocument.defaultView).to.equal(null);
+  document.body.append(bar, ring);
+  try {
+    bar.textContent = 'Reconnected upload';
+    ring.textContent = 'Reconnected sync';
+    await waitUntil(() => bar.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label') === 'Reconnected upload');
+    await waitUntil(() => ring.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label') === 'Reconnected sync');
+  } finally {
+    bar.remove();
+    ring.remove();
+  }
 });
 
 it('keeps visible-label extraction safe when the style engine rejects a visibility probe', async () => {
@@ -589,10 +626,15 @@ it('constructs progress label observers in the adopted owner realm', async () =>
   const observerDescriptor = Object.getOwnPropertyDescriptor(frameWindow, 'MutationObserver');
   const NativeMutationObserver = frameWindow.MutationObserver;
   let constructions = 0;
+  const observedLabels = new Set<Node>();
   class TrackingMutationObserver extends NativeMutationObserver {
     constructor(callback: MutationCallback) {
       super(callback);
       constructions += 1;
+    }
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if ((target === bar || target === ring) && options?.characterData && options.subtree) observedLabels.add(target);
+      super.observe(target, options);
     }
   }
   Object.defineProperty(frameWindow, 'MutationObserver', {
@@ -609,8 +651,13 @@ it('constructs progress label observers in the adopted owner realm', async () =>
     await Promise.all([bar.updateComplete, ring.updateComplete]);
     expect(
       constructions,
-      'each component constructs its base and label observers in the adopted realm',
-    ).to.be.greaterThan(3);
+      'both components construct label observers in the adopted realm',
+    ).to.be.at.least(2);
+    expect(observedLabels.size, 'both adopted label subtrees are observed').to.equal(2);
+    bar.textContent = 'Adopted upload';
+    ring.textContent = 'Adopted sync';
+    await waitUntil(() => bar.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label') === 'Adopted upload');
+    await waitUntil(() => ring.shadowRoot?.querySelector('[role="progressbar"]')?.getAttribute('aria-label') === 'Adopted sync');
   } finally {
     bar.remove();
     ring.remove();

@@ -1375,21 +1375,28 @@ describe('coverage: canvas surface setup edge cases', () => {
 });
 
 describe('coverage: announcement-sink re-sync and camera/color-resolution edge cases', () => {
-  it('syncAnnouncementSinks is a no-op when the sinks are already held in the current owner document (idempotent re-sync)', async () => {
+  it('announcement controller keeps active sinks in the current owner document (idempotent re-sync)', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     type Internals = {
-      syncAnnouncementSinks: () => void;
-      politeAnnouncementSink?: { element: HTMLElement };
-      assertiveAnnouncementSink?: { element: HTMLElement };
+      announcements: {
+        announcePolite(message: string): void;
+        announceAssertive(message: string): void;
+        current(politeness: 'polite' | 'assertive'): unknown;
+        adopted(): void;
+      };
     };
-    const internal = el as unknown as Internals;
-    const politeBefore = internal.politeAnnouncementSink;
-    const assertiveBefore = internal.assertiveAnnouncementSink;
+    const { announcements } = el as unknown as Internals;
+    announcements.announcePolite('Graph status probe');
+    announcements.announceAssertive('Graph error probe');
+    expect(announcementTexts(document, 'polite')).to.include('Graph status probe');
+    expect(announcementTexts(document, 'assertive')).to.include('Graph error probe');
+    const politeBefore = announcements.current('polite');
+    const assertiveBefore = announcements.current('assertive');
     expect(politeBefore != null).to.equal(true);
     expect(assertiveBefore != null).to.equal(true);
-    internal.syncAnnouncementSinks(); // called again with no intervening release -- same document already
-    expect(internal.politeAnnouncementSink === politeBefore).to.equal(true); // untouched, not reacquired
-    expect(internal.assertiveAnnouncementSink === assertiveBefore).to.equal(
+    announcements.adopted(); // same document, with no intervening release
+    expect(announcements.current('polite') === politeBefore).to.equal(true);
+    expect(announcements.current('assertive') === assertiveBefore).to.equal(
       true
     );
   });

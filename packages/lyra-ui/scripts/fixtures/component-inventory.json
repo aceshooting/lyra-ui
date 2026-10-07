@@ -13636,7 +13636,34 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [],
+        "moduleExports": [
+          {
+            "module": "src/components/charts/chart/box-plot.class.ts",
+            "name": "loadBoxPlotAndRegister",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "loadChart",
+                    "type": "() => Promise<ChartJsModule | null>",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "loadChartJs"
+                  },
+                  {
+                    "name": "importBoxPlot",
+                    "type": "() => Promise<unknown>",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "() => import('@sgratzl/chartjs-chart-boxplot')"
+                  }
+                ],
+                "returnType": "Promise<BoxPlotModule | null>"
+              }
+            ]
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [
@@ -43776,7 +43803,68 @@
         ],
         "staticProperties": [],
         "staticMethods": [],
-        "moduleExports": [],
+        "moduleExports": [
+          {
+            "module": "src/components/forms/date-picker/date-picker.class.ts",
+            "name": "inclusiveDayCount",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "from",
+                    "type": "Date",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "to",
+                    "type": "Date",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "number"
+              }
+            ]
+          },
+          {
+            "module": "src/components/forms/date-picker/date-picker.class.ts",
+            "name": "parseDisabledWeekdays",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "value",
+                    "type": "unknown",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Set<number>"
+              }
+            ]
+          },
+          {
+            "module": "src/components/forms/date-picker/date-picker.class.ts",
+            "name": "projectDisabledDateKeys",
+            "kind": "function",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "value",
+                    "type": "unknown",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "readonly string[]"
+              }
+            ]
+          }
+        ],
         "form": {
           "associated": false,
           "properties": [
@@ -75128,7 +75216,7 @@
             "type": "FocusEvent",
             "cancelable": "never",
             "constructor": "FocusEvent",
-            "bubbles": false,
+            "bubbles": true,
             "composed": true
           },
           {
@@ -136718,7 +136806,7 @@
             "name": "--lr-thread-list-excerpt-highlight-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "inherit"
+            "default": "currentColor"
           },
           {
             "name": "--lr-thread-list-excerpt-highlight-padding",
@@ -152649,7 +152737,7 @@
             "name": "--lr-voice-picker-trigger-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand)"
+            "default": "var(--lr-voice-picker-trigger-border-color)"
           },
           {
             "name": "--lr-voice-picker-trigger-min-height",

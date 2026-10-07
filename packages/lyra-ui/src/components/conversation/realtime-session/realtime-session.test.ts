@@ -225,16 +225,17 @@ it('announces connection transitions after mount without announcing the initial 
 it('keeps repeated sink synchronization idempotent in the same owner document', async () => {
   const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
   const internals = el as unknown as {
-    statusAnnouncementSink: unknown;
-    errorAnnouncementSink: unknown;
-    syncAnnouncementSinks(): void;
+    announcements: {
+      current(politeness: 'polite' | 'assertive'): unknown;
+      adopted(): void;
+    };
   };
-  const status = internals.statusAnnouncementSink;
-  const error = internals.errorAnnouncementSink;
+  const status = internals.announcements.current('polite');
+  const error = internals.announcements.current('assertive');
 
-  internals.syncAnnouncementSinks();
-  expect(internals.statusAnnouncementSink === status).to.equal(true);
-  expect(internals.errorAnnouncementSink === error).to.equal(true);
+  internals.announcements.adopted();
+  expect(internals.announcements.current('polite') === status).to.equal(true);
+  expect(internals.announcements.current('assertive') === error).to.equal(true);
 });
 
 it('moves focus to the replacement connection action when state changes', async () => {

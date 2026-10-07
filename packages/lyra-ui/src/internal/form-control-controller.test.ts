@@ -48,10 +48,14 @@ for (const name of controls) {
     const form = await fixture<HTMLFormElement>(html`<form><fieldset></fieldset></form>`);
     const fieldset = form.querySelector('fieldset')!;
     const control = document.createElement(tag(name)) as unknown as Control;
+    if (name === 'locale-picker') control.setAttribute('without-flags', '');
     fieldset.append(control);
     await control.updateComplete;
-    control.name = 'entry';
-    expect(control.getAttribute('name')).to.equal('entry');
+    // The bare range participates in validation but intentionally has no named form value.
+    if (name !== 'time-range') {
+      control.name = 'entry';
+      expect(control.getAttribute('name')).to.equal('entry');
+    }
     expect(control.form === form).to.equal(true);
     let aliases = 0;
     control.addEventListener('lr-invalid', (event) => { aliases++; event.preventDefault(); });
@@ -78,8 +82,10 @@ for (const name of controls) {
     expect(control.effectiveDisabled).to.equal(false);
     control.setCustomValidity('');
     expect(control.validity.customError).to.equal(false);
-    control.name = '';
-    expect(control.hasAttribute('name')).to.equal(false);
+    if (name !== 'time-range') {
+      control.name = '';
+      expect(control.hasAttribute('name')).to.equal(false);
+    }
   });
 }
 

@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   HostDescriptionController,
+  acquireAriaControls,
   acquireAriaDescription,
   acquireResolvedAriaRelationship,
   describeElement,
@@ -97,12 +98,12 @@ it('retargets host descriptions and releases them with the controller lifecycle'
     expect(first.ariaDescribedByElements?.includes(help)).to.equal(true);
     target = second;
     controller?.hostUpdated?.();
-    expect(first.ariaDescribedByElements?.includes(help)).to.equal(false);
+    expect(first.ariaDescribedByElements?.includes(help) ?? false).to.equal(false);
     expect(second.ariaDescribedByElements?.includes(help)).to.equal(true);
     description.adopted();
     expect(second.ariaDescribedByElements?.includes(help)).to.equal(true);
     controller?.hostDisconnected?.();
-    expect(second.ariaDescribedByElements?.includes(help)).to.equal(false);
+    expect(second.ariaDescribedByElements?.includes(help) ?? false).to.equal(false);
   } finally {
     controller?.hostDisconnected?.();
     host.remove();
@@ -125,7 +126,7 @@ it('projects a host description added after the first render', async function ()
     host.setAttribute('aria-describedby', help.id);
     await waitUntil(() => target.ariaDescribedByElements?.includes(help) === true);
     host.removeAttribute('aria-describedby');
-    await waitUntil(() => target.ariaDescribedByElements?.includes(help) === false);
+    await waitUntil(() => !(target.ariaDescribedByElements?.includes(help) ?? false));
   } finally {
     controller?.hostDisconnected?.();
     host.remove();
@@ -271,6 +272,41 @@ it('does not promote a detached owned source into the author baseline', async fu
   lease.release();
 
   expect(target.hasAttribute('aria-describedby')).to.equal(false);
+});
+
+for (const baseline of [null, 'author-control']) {
+  it(`restores the ${baseline === null ? 'absent' : 'serialized'} controls baseline after an ID-less endpoint detaches`, async function () {
+    if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+    const root = await fixture<HTMLElement>(html`
+      <div><button></button><section></section><section id="author-control"></section></div>
+    `);
+    const target = root.querySelector<HTMLButtonElement>('button')!;
+    const owned = root.querySelector<HTMLElement>('section')!;
+    if (baseline !== null) target.setAttribute('aria-controls', baseline);
+    const lease = acquireAriaControls(target, [owned]);
+    expect(target.getAttribute('aria-controls')).to.equal('');
+    expect(target.ariaControlsElements?.includes(owned)).to.equal(true);
+
+    owned.remove();
+    await mutationComplete();
+    lease.release();
+
+    expect(target.getAttribute('aria-controls')).to.equal(baseline);
+    expect(target.hasAttribute('aria-controls')).to.equal(baseline !== null);
+  });
+}
+
+it('preserves an explicit empty author controls write after an ID-less endpoint detaches', async function () {
+  if (!('ariaControlsElements' in HTMLElement.prototype)) this.skip();
+  const root = await fixture<HTMLElement>(html`<div><button></button><section></section></div>`);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const owned = root.querySelector<HTMLElement>('section')!;
+  const lease = acquireAriaControls(target, [owned]);
+  owned.remove();
+  target.setAttribute('aria-controls', '');
+  lease.release();
+
+  expect(target.getAttribute('aria-controls')).to.equal('');
 });
 
 it('preserves a serialized baseline when its resolved source detaches', async function () {

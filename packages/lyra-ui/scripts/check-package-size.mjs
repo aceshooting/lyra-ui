@@ -1,9 +1,9 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -41,11 +41,6 @@ function normalizedPackagePath(file) {
 
 export function validatePackageBudgets(budgets) {
   assert.equal(
-    budgets?.minimumPackedByteReductionPercent,
-    25,
-    'package budget minimumPackedByteReductionPercent must retain the approved 25% target',
-  );
-  assert.equal(
     budgets?.minimumUnpackedByteReductionPercent,
     25,
     'package budget minimumUnpackedByteReductionPercent must remain the approved 25%',
@@ -65,9 +60,8 @@ export function validatePackageBudgets(budgets) {
       'package budget maximum.unpackedBytes must enforce at least a 25% reduction from its baseline',
     );
   } else {
-    // The same measured exception the packed budget carries: allowed only while the complete
-    // required package genuinely exceeds the target, bound to an exact reviewed measurement with
-    // tight headroom, and never anywhere near the pre-8 baseline.
+    // The unpacked exception applies only while the complete required package exceeds its
+    // reduction target, bound to an exact reviewed measurement with tight headroom.
     assert.equal(
       unpackedBudget.strategy,
       'measured-required-artifact-exception',
@@ -102,7 +96,7 @@ export function validatePackageBudgets(budgets) {
       unpackedBudget.reviewedMeasurementBytes + unpackedBudget.headroomBytes,
       'package budget maximum.unpackedBytes must equal the reviewed measurement plus tight headroom',
     );
-    // Like the packed ceiling, the unpacked one may pass the pre-8 baseline only through a named
+    // The unpacked ceiling may pass the pre-8 baseline only through a named
     // maintainer review bound to its own byte ceiling (21.2.0: deprecated-alias metadata that
     // 23.0.0 removes).
     if (budgets.maximum.unpackedBytes >= budgets.baseline.unpackedBytes) {
@@ -127,72 +121,19 @@ export function validatePackageBudgets(budgets) {
   const packedBudget = budgets.packedBudgetPolicy;
   assert.equal(
     packedBudget?.strategy,
-    'measured-required-artifact-exception',
-    'package budget packed strategy must name the reviewed required-artifact exception',
+    'absolute-download-ceiling',
+    'package budget packed strategy must enforce the absolute compressed download ceiling',
   );
   assert.equal(
-    packedBudget?.exceptionReason,
-    'required-public-artifacts-exceed-25-percent-target',
-    'package budget packed exception must retain its measured infeasibility reason',
-  );
-  for (const field of [
-    'reviewedMeasurementBytes',
-    'headroomBytes',
-    'targetAt25PercentBytes',
-    'favorableIncompletePackageProbeBytes',
-  ]) {
-    assert.ok(
-      Number.isInteger(packedBudget?.[field]) && packedBudget[field] > 0,
-      `package budget packedBudgetPolicy.${field} must be a positive integer`,
-    );
-  }
-  const packedTarget = Math.floor(
-    budgets.baseline.packedBytes * (1 - budgets.minimumPackedByteReductionPercent / 100),
-  );
-  assert.equal(
-    packedBudget.targetAt25PercentBytes,
-    packedTarget,
-    'package budget packedBudgetPolicy.targetAt25PercentBytes must match the baseline calculation',
-  );
-  assert.ok(
-    packedBudget.favorableIncompletePackageProbeBytes > packedTarget,
-    'package budget packed probe must record why 25% is not achievable before restoring omitted public artifacts',
-  );
-  assert.ok(
-    packedBudget.reviewedMeasurementBytes > packedBudget.favorableIncompletePackageProbeBytes,
-    'package budget reviewed packed measurement must exceed the favorable incomplete-package probe',
-  );
-  assert.ok(
-    packedBudget.headroomBytes <= Math.ceil(packedBudget.reviewedMeasurementBytes * 0.005),
-    'package budget packed headroom must remain at or below 0.5% of the reviewed measurement',
+    packedBudget?.exclusiveMaximumBytes,
+    10_000_000,
+    'package budget packed limit must remain strictly below 10,000,000 bytes (10 MB decimal)',
   );
   assert.equal(
     budgets.maximum.packedBytes,
-    packedBudget.reviewedMeasurementBytes + packedBudget.headroomBytes,
-    'package budget maximum.packedBytes must equal the reviewed measurement plus tight headroom',
+    packedBudget.exclusiveMaximumBytes - 1,
+    'package budget maximum.packedBytes must enforce the exclusive download limit',
   );
-  // The packed ceiling stayed under the pre-8.0.0 baseline for eight majors. 16.0.0 is the first
-  // release whose required public artifacts push past it, so the rule is no longer "always below"
-  // -- it is "below, unless a named maintainer reviewed this exact ceiling and said otherwise".
-  // Accidental growth still fails closed: an exception has to carry an approver, a date, a reason
-  // and its own byte ceiling, and the budget may not drift above the number that was approved.
-  if (budgets.maximum.packedBytes >= budgets.baseline.packedBytes) {
-    const review = packedBudget.baselineExceptionReview;
-    assert.ok(
-      typeof review?.approvedBy === 'string' &&
-        review.approvedBy.length > 0 &&
-        typeof review?.approvedOn === 'string' &&
-        /^\d{4}-\d{2}-\d{2}$/.test(review.approvedOn) &&
-        typeof review?.reason === 'string' &&
-        review.reason.length >= 40 &&
-        Number.isInteger(review?.approvedMaximumPackedBytes),
-      'package budget maximum.packedBytes at or above the pre-8 baseline requires packedBudgetPolicy.baselineExceptionReview with approvedBy, approvedOn, a substantive reason and an approvedMaximumPackedBytes ceiling',
-    );
-    assert.ok(
-      budgets.maximum.packedBytes <= review.approvedMaximumPackedBytes,
-      'package budget maximum.packedBytes must stay at or below the approved baseline-exception ceiling',
-    );
-  }
   const fileBudget = budgets.fileCountBudget;
   for (const field of [
     'baseArtifactCeiling',
@@ -281,6 +222,7 @@ export function metricsFromPackResult(result) {
   assert.equal(typeof result?.unpackedSize, 'number', 'npm pack result must report unpacked size');
   assert.ok(Array.isArray(result.files), 'npm pack result must report its file inventory');
   return {
+    measurement: 'estimate',
     packedBytes: result.size,
     unpackedBytes: result.unpackedSize,
     fileCount: result.files.length,
@@ -292,8 +234,8 @@ export function formatPackageSummary(metrics, budgets) {
   const packedReduction = percentReduction(budgets.baseline.packedBytes, metrics.packedBytes);
   const unpackedReduction = percentReduction(budgets.baseline.unpackedBytes, metrics.unpackedBytes);
   return (
-    `package: ${formatBytes(metrics.packedBytes)} packed ` +
-    `(${packedReduction.toFixed(1)}% reduction; reviewed exception to the 25% target), ` +
+    `package: ${formatBytes(metrics.packedBytes)} packed ${metrics.measurement === 'archive' ? 'archive' : 'estimate'} ` +
+    `(${packedReduction.toFixed(1)}% reduction from historical baseline; download limit <10 MB decimal), ` +
     `${formatBytes(metrics.unpackedBytes)} unpacked (${unpackedReduction.toFixed(1)}% reduction` +
     `${budgets.unpackedBudgetPolicy ? '; reviewed exception to the 25% target' : ''}), ` +
     `${metrics.fileCount.toLocaleString('en')} files`
@@ -320,9 +262,43 @@ function readPackedMetrics() {
   return metricsFromPackResult(packedMetrics[0]);
 }
 
-function main() {
+export function parsePackageSizeArguments(args) {
+  if (args.length === 0) return {};
+  if (args.length !== 2 || args[0] !== '--tarball' ||
+      typeof args[1] !== 'string' || !args[1].trim() || args[1].startsWith('--') ||
+      /[\u0000\r\n]/u.test(args[1])) {
+    throw new TypeError('Usage: check-package-size.mjs [--tarball <archive.tgz>]');
+  }
+  return { tarball: args[1] };
+}
+
+/** Inspect the already-produced archive; its download size is never inferred from a dry run. */
+export async function readTarballMetrics(tarball, expectedPackage = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'))) {
+  const file = resolve(tarball);
+  const metadata = lstatSync(file);
+  if (!metadata.isFile()) throw new TypeError('Package tarball must be a regular file.');
+  if (metadata.size >= 10_000_000) {
+    throw new Error(`packedBytes ${metadata.size.toLocaleString('en')} exceeds hard budget 9,999,999`);
+  }
+  const bytes = readFileSync(file);
+  assert.equal(bytes.length, metadata.size, 'Package tarball changed while being measured.');
+  const { inspectPeerTarballArchive } = await import('../../../scripts/check-peer-compatibility.mjs');
+  const archive = inspectPeerTarballArchive(bytes, { expectedPackage });
+  return {
+    measurement: 'archive',
+    packedBytes: metadata.size,
+    unpackedBytes: archive.files.reduce((total, entry) => total + entry.size, 0),
+    fileCount: archive.files.length,
+    files: archive.files,
+    sha256: archive.sha256,
+  };
+}
+
+async function main() {
+  const options = parsePackageSizeArguments(process.argv.slice(2));
   const budgets = validatePackageBudgets(JSON.parse(readFileSync(budgetsPath, 'utf8')));
-  const metrics = readPackedMetrics();
+  const metrics = options.tarball ? await readTarballMetrics(options.tarball) : readPackedMetrics();
+  if (metrics.sha256) console.log(`Package archive SHA-256: ${metrics.sha256}`);
   const findings = packageBudgetFindings(metrics, budgets);
   const summary = formatPackageSummary(metrics, budgets);
   if (findings.length > 0) {
@@ -333,4 +309,7 @@ function main() {
   console.log(`${summary} — within hard package budgets`);
 }
 
-if (isMainModule(import.meta.url)) main();
+if (isMainModule(import.meta.url)) main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

@@ -64,6 +64,27 @@ describe('relayNativeEvent', () => {
     related.remove();
   });
 
+  it('allows a composite to clear an internal related target without suppressing host focus', () => {
+    const host = document.createElement('div');
+    const first = document.createElement('input');
+    const second = document.createElement('input');
+    host.attachShadow({ mode: 'open' }).append(first, second);
+    document.body.append(host);
+    try {
+      const events: FocusEvent[] = [];
+      host.addEventListener('focus', (event) => events.push(event as FocusEvent));
+      second.addEventListener('focus', (event) => relayNativeEvent(host, event, { relatedTarget: null }));
+      second.dispatchEvent(new FocusEvent('focus', { relatedTarget: first }));
+      expect(events.length).to.equal(1);
+      expect(events[0] instanceof FocusEvent).to.be.true;
+      expect(events[0]!.target === host).to.be.true;
+      expect(events[0]!.relatedTarget).to.equal(null);
+      expect(events[0]!.bubbles && events[0]!.composed).to.be.true;
+    } finally {
+      host.remove();
+    }
+  });
+
   it('dispatches native form events rather than CustomEvents for source-less interactions', () => {
     const target = document.createElement('div');
     const input = dispatchNativeInputEvent(target, { data: '7', inputType: 'insertText' });

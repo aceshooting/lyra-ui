@@ -1403,14 +1403,19 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     )) as LyraDateInput;
     await el.updateComplete;
     const priv = el as unknown as {
-      pointerListener?: (e: PointerEvent) => void;
+      pointer: { listener?: (e: PointerEvent) => void };
     };
-    expect(priv.pointerListener).to.be.a("function");
-    priv.pointerListener = () => {};
-    document.body.dispatchEvent(
-      new PointerEvent("pointerdown", { bubbles: true, composed: true })
-    );
-    expect(el.open, "the stale listener no-ops instead of hiding").to.be.true;
+    expect(priv.pointer.listener).to.be.a("function");
+    const boundListener = priv.pointer.listener;
+    priv.pointer.listener = () => {};
+    try {
+      document.body.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, composed: true })
+      );
+      expect(el.open, "the stale listener no-ops instead of hiding").to.be.true;
+    } finally {
+      priv.pointer.listener = boundListener;
+    }
   });
 
   it("a reconnect that finds the popup already open repositions it and reactivates the overlay", async () => {
@@ -1569,7 +1574,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       cleanupFn?: () => void;
       overlayHandle?: { deactivate: (opts: { restoreFocus: boolean }) => void };
       visibilityListenerDocument?: Document;
-      pointerListenerDocument?: Document;
+      pointer: { document?: Document };
       adoptedCallback(): void;
     };
     expect(priv.cleanupFn, "positioned while open").to.be.a("function");
@@ -1579,7 +1584,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       "visibility listener bound"
     ).to.equal(true);
     expect(
-      priv.pointerListenerDocument != null,
+      priv.pointer.document != null,
       "pointer listener bound"
     ).to.equal(true);
 
@@ -1598,7 +1603,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       "visibility listener unbound"
     ).to.equal(true);
     expect(
-      priv.pointerListenerDocument === undefined,
+      priv.pointer.document === undefined,
       "pointer listener unbound"
     ).to.equal(true);
   });

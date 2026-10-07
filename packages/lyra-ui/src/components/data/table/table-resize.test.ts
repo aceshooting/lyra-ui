@@ -141,8 +141,11 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
         clientX: 100,
       })
     );
+    const pointerSession = (el as unknown as {
+      resizePointer: { active?: { owner: Window } };
+    }).resizePointer;
     expect(
-      (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === frameWindow,
+      pointerSession.active?.owner === frameWindow,
       'the drag retains the iframe window that owns the handle'
     ).to.be.true;
     frameWindow.dispatchEvent(
@@ -162,7 +165,7 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
         clientX: -10000,
       })
     );
-    expect((el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined).to.be.true;
+    expect(pointerSession.active === undefined).to.be.true;
 
     frameResizeObserverCallback!([], {} as ResizeObserver);
     expect(frameCallbacks.size, 'layout sync uses the iframe animation clock').to.equal(1);
@@ -177,7 +180,7 @@ it('keeps an adopted iframe resize drag in its owner window and releases that wi
     );
     el.remove();
     expect(
-      (el as unknown as { resizeEventWindow?: Window }).resizeEventWindow === undefined,
+      pointerSession.active === undefined,
       'disconnect releases the exact retained window'
     ).to.be.true;
     expect(frameResizeObserverDisconnects, 'disconnect tears down the iframe observer').to.equal(1);

@@ -1063,7 +1063,7 @@ it("shows the label part for plain slotted text (a text node, not an element)", 
   expect(label.hidden).to.be.false;
 });
 
-it("reproduces server-first slot state before adopting browser-only light DOM after hydration", async () => {
+it("keeps server-first slot content visible through hydration", async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   const el = container.ownerDocument.createElement("lr-switch") as LyraSwitch;
   el.setAttribute("aria-label", "Notification preference");
@@ -1086,12 +1086,13 @@ it("reproduces server-first slot state before adopting browser-only light DOM af
   await el.updateComplete;
   const firstBase = el.shadowRoot!.querySelector('[part~="base"]');
   expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden)
-    .to.be.true;
+    .to.be.false;
   expect((el.shadowRoot!.querySelector('[part~="hint"]') as HTMLElement).hidden)
-    .to.be.true;
+    .to.be.false;
   expect((el.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden)
-    .to.be.true;
+    .to.be.false;
 
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
   expect((el.shadowRoot!.querySelector('[part="label"]') as HTMLElement).hidden)
     .to.be.false;
@@ -2286,9 +2287,15 @@ describe('reactive-accessor hardening', () => {
   it('ignores a slotchange bubbling from a forwarding slot outside the default label section', async () => {
     const NativeMutationObserver = window.MutationObserver;
     let disconnects = 0;
+    let labelHost: LyraSwitch | undefined;
     class TrackingMutationObserver extends NativeMutationObserver {
+      private watchesLabel = false;
+      override observe(target: Node, options?: MutationObserverInit): void {
+        if (target === labelHost && options?.characterData && options.subtree) this.watchesLabel = true;
+        super.observe(target, options);
+      }
       override disconnect(): void {
-        disconnects += 1;
+        if (this.watchesLabel) disconnects += 1;
         super.disconnect();
       }
     }
@@ -2301,6 +2308,9 @@ describe('reactive-accessor hardening', () => {
       const root = wrapper.attachShadow({ mode: 'open' });
       root.innerHTML = `<lr-switch><span slot="hint"><slot></slot></span></lr-switch>`;
       const el = root.querySelector('lr-switch') as LyraSwitch;
+      labelHost = el;
+      await waitUntil(() => el.shadowRoot?.querySelector<HTMLElement>('[part~="hint"]')?.hidden === false);
+      await new Promise((resolve) => setTimeout(resolve, 0));
       await el.updateComplete;
       disconnects = 0;
       assigned.data = 'Updated hint text';
@@ -2310,6 +2320,9 @@ describe('reactive-accessor hardening', () => {
         disconnects,
         'a slotchange from a non-default (hint) forwarding slot must not rebind label observer targets',
       ).to.equal(0);
+      el.append(document.createTextNode('Visible label'));
+      await waitUntil(() => disconnects > 0);
+      expect(el.shadowRoot?.querySelector<HTMLElement>('[part="label"]')?.hidden).to.equal(false);
     } finally {
       if (descriptor) Object.defineProperty(window, 'MutationObserver', descriptor);
     }

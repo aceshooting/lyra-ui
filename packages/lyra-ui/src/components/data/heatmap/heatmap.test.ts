@@ -6423,29 +6423,27 @@ async function withNoOwnerWindow(el: Node, run: () => void): Promise<void> {
 }
 
 describe("coverage: additional edge-path gaps", () => {
-  it("syncAnnouncementSink(): releases the sink instead of throwing when called while disconnected", () => {
+  it("announcement controller releases its sink instead of throwing when checked while disconnected", () => {
     const el = document.createElement("lr-heatmap") as unknown as {
-      syncAnnouncementSink(): void;
-      announcementSink?: unknown;
+      announcements: { current(politeness: "polite"): unknown; adopted(): void };
     };
-    expect(() => el.syncAnnouncementSink()).to.not.throw();
-    expect(el.announcementSink).to.equal(undefined);
+    expect(() => el.announcements.adopted()).to.not.throw();
+    expect(el.announcements.current("polite")).to.equal(undefined);
   });
 
-  it("syncAnnouncementSink(): is idempotent when called again while already connected with a same-document sink", async () => {
+  it("announcement controller retains its same-document sink across another sync", async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     const instrumented = el as unknown as {
-      syncAnnouncementSink(): void;
-      announcementSink?: unknown;
+      announcements: { current(politeness: "polite"): unknown; adopted(): void };
     };
-    const before = instrumented.announcementSink;
+    const before = instrumented.announcements.current("polite");
     expect(
       before,
       "the initial connectedCallback acquires a sink"
     ).to.not.equal(undefined);
-    instrumented.syncAnnouncementSink();
+    instrumented.announcements.adopted();
     expect(
-      instrumented.announcementSink,
+      instrumented.announcements.current("polite"),
       "a same-document re-sync must not reacquire"
     ).to.equal(before);
   });

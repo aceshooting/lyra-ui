@@ -5,7 +5,15 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
+import { emptyRenameProjection } from '../packages/lyra-ui/scripts/lyra-rename-ledger.mjs';
 import { assertInstalledMigrationBanner, assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
+
+function currentContractFromHistoricalCapture(publishedMigration) {
+  const inventory = structuredClone(publishedMigration);
+  assert.deepEqual(inventory.lyraRenames.profiles.map((profile) => profile.origin), ['lyra-v21', 'lyra-v22']);
+  inventory.lyraRenames.profiles.push(emptyRenameProjection().profiles[2]);
+  return inventory;
+}
 
 function context() {
   const records = Object.fromEntries(X_CASES.map(item => [compatibilityKey(item.key), {
@@ -296,7 +304,7 @@ test('authored X syntax and report locations match both real published scanner p
   const { buildMigrationContract, migrateText } = await import('../packages/lyra-ui/scripts/migrate-wa.mjs');
   const { captures } = await checkPublishedCompatibility();
   const published = captures.find(capture => capture.facts.sourceVersion === '22.0.0');
-  const inventory = structuredClone(published.publishedMigration);
+  const inventory = currentContractFromHistoricalCapture(published.publishedMigration);
   const source = context();
   for (const item of [...X_CASES, RETAINED_ROOT]) {
     source.records[compatibilityKey(item.key)].policy = published.facts.records.find(record => compatibilityKey(record.key) === compatibilityKey(item.key)).policy;
@@ -370,7 +378,7 @@ test('all390 member inputs have exact action witnesses in both scanner profiles 
   const published = captures.find(capture => capture.facts.sourceVersion === '22.0.0');
   const records = Object.fromEntries(published.facts.records.map(record => [compatibilityKey(record.key), { ...record, state: 'retired', removedIn: '23.0.0' }]));
   const cases = createMemberMigrationCases({ records, sourceComponents: Object.fromEntries(published.facts.components.map(component => [component.tag, component])) }, published.facts.renameLedger);
-  const inventory = structuredClone(published.publishedMigration);
+  const inventory = currentContractFromHistoricalCapture(published.publishedMigration);
   for (const entry of inventory.lyraRenames.profiles[0].reviews) entry.removedIn = '23.0.0';
   const contract = buildMigrationContract(inventory, { lyraVersion: '23.0.0' });
   for (const item of cases) for (const origin of ['lyra-v21', 'lyra-v22']) {

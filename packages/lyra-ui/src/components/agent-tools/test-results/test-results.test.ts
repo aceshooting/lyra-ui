@@ -43,12 +43,12 @@ describe('lr-test-results', () => {
       tests: [{ id: 'test', name: 'Before', status: 'passed' }],
     }];
     const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${source}></lr-test-results>`);
-    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent).to.equal('Before');
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent?.trim()).to.equal('Before');
 
     source[0]!.tests[0]!.name = 'After';
     el.suites = source;
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent).to.equal('After');
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent?.trim()).to.equal('After');
   });
 
   it('rebinds its bounded-result announcement sink after adoption', async () => {

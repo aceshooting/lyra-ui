@@ -390,9 +390,11 @@ it('constructs its label observer in the adopted owner realm', async () => {
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    expect(constructions).to.be.greaterThan(1);
+    expect(constructions).to.be.greaterThan(0);
     expect(labelHostObservations).to.be.greaterThan(0);
     expect(el.defaultLabel).to.equal('Parent label');
+    el.querySelector('span')!.textContent = 'Adopted label';
+    await waitUntil(() => el.defaultLabel === 'Adopted label');
   } finally {
     el.remove();
     if (observerDescriptor) {

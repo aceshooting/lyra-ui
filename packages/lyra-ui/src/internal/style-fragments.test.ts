@@ -6,7 +6,7 @@ import type { LyraEvalDataset } from '../components/agent-tools/eval-dataset/eva
 import type { LyraResearchProgress } from '../components/retrieval/research-progress/research-progress.class.js';
 
 it('keeps a native dataset field surface and shared target floor themeable', async () => {
-  const dataset = await fixture<LyraEvalDataset>(html`<lr-eval-dataset style="--lr-icon-button-size: 47px; --lr-color-surface: rgb(12, 23, 34); --lr-color-border: rgb(34, 45, 56)"></lr-eval-dataset>`);
+  const dataset = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable style="--lr-icon-button-size: 47px; --lr-color-surface: rgb(12, 23, 34); --lr-color-border: rgb(34, 45, 56)"></lr-eval-dataset>`);
   const input = dataset.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
   expect(getComputedStyle(input).backgroundColor).to.equal('rgb(12, 23, 34)');
   expect(getComputedStyle(input).borderTopColor).to.equal('rgb(34, 45, 56)');

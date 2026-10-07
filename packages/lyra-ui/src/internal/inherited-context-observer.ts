@@ -227,7 +227,9 @@ function createRootObservation(
         }
       },
     });
-    if (!releaseObserver) return undefined;
+    // A live target and observer constructor were already validated above. A failed subscription
+    // must abort the entire acquisition so earlier roots cannot remain partially bound.
+    if (!releaseObserver) throw new Error('Unable to subscribe to inherited attributes.');
     if (root.nodeType === 11) {
       slotchange = () => {
         for (const subscription of [...directionSubscriptions]) {

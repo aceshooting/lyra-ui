@@ -1122,11 +1122,11 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
   it('runs the previous entry-selection cleanup when the archive reloads to an empty listing', async () => {
     const { el, restore } = await listing();
     const originalCleanup = (
-      el as unknown as { archiveSelectionCleanup?: () => void }
-    ).archiveSelectionCleanup;
+      el as unknown as { selectionCleanup?: () => void }
+    ).selectionCleanup;
     expect(originalCleanup).to.be.a('function');
     let cleanupCalls = 0;
-    (el as unknown as { archiveSelectionCleanup?: () => void }).archiveSelectionCleanup = () => {
+    (el as unknown as { selectionCleanup?: () => void }).selectionCleanup = () => {
       cleanupCalls++;
       originalCleanup!();
     };

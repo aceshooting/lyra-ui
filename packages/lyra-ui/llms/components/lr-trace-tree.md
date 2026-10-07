@@ -42,7 +42,8 @@ the same bounded runtime projection: provider records are normalized with determ
 identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
 reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
-least their start, unknown kinds become `other`, and unknown statuses become `pending`. A localized
+least their start, unknown kinds become `other`, and explicit unknown statuses become `unknown`;
+an absent status defaults to `pending`. A localized
 `[part="limit"]` note exposes truncation.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.

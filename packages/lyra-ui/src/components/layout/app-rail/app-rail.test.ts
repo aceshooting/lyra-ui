@@ -3486,10 +3486,14 @@ it('releases the external trigger ARIA when the rail disconnects', async () => {
   await el.updateComplete;
   expect(external.getAttribute('aria-expanded')).to.equal('false');
 
+  el.open = true;
   el.remove();
+  expect(external.hasAttribute('aria-expanded')).to.equal(false);
+  expect(external.hasAttribute('aria-controls')).to.equal(false);
   await el.updateComplete;
   expect(external.hasAttribute('aria-expanded')).to.equal(false);
   expect(external.hasAttribute('aria-controls')).to.equal(false);
+  expect(external.ariaControlsElements?.length ?? 0).to.equal(0);
   external.remove();
 });
 

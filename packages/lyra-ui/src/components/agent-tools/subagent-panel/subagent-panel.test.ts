@@ -270,11 +270,15 @@ it('still renders a controlled selection outside the render cap as selected (reg
   );
 });
 
-it('keeps depth-12 status actions reachable at the inclusive 320px compact boundary in LTR and RTL', async () => {
+it('keeps depth-12 status actions reachable on both sides of the compact boundary in LTR and RTL', async () => {
   const originalRootSize = document.documentElement.style.fontSize;
-  document.documentElement.style.fontSize = '16px';
   try {
-    for (const direction of ['ltr', 'rtl'] as const) {
+    for (const { rootSize, width, direction } of [16, 20].flatMap((rootSize) =>
+      (['ltr', 'rtl'] as const).flatMap((direction) =>
+        [-1, 0].map((delta) => ({ rootSize, width: rootSize * 20 + delta, direction })),
+      ),
+    )) {
+      document.documentElement.style.fontSize = `${rootSize}px`;
       for (const { status, actionPart } of [
         { status: 'waiting-approval', actionPart: 'cancel' },
         { status: 'error', actionPart: 'retry' },
@@ -288,7 +292,7 @@ it('keeps depth-12 status actions reachable at the inclusive 320px compact bound
           model: 'Longest model identifier',
         }));
         const wrapper = await fixture<HTMLElement>(html`
-          <div dir=${direction} style="inline-size: 320px">
+          <div dir=${direction} style=${`inline-size: ${width}px`}>
             <lr-subagent-panel
               style="inline-size: 100%; --lr-space-s: 8px; --lr-space-l: 24px"
               .runs=${deepRuns}
@@ -310,9 +314,14 @@ it('keeps depth-12 status actions reachable at the inclusive 320px compact bound
         const statusRect = statusElement.getBoundingClientRect();
         const actionRect = action.getBoundingClientRect();
 
-        expect(getComputedStyle(deepest).marginInlineStart).to.equal('96px');
+        expect(getComputedStyle(deepest).marginInlineStart).to.equal(
+          `${width < rootSize * 20 ? 96 : width - rootSize * 12}px`,
+        );
+        expect(getComputedStyle(deepest.querySelector('[part="run-row"]')!).gridTemplateColumns.split(' ')).to.have.lengthOf(1);
+        expect(deepest.querySelector<HTMLElement>('[part="label"]')!.getBoundingClientRect().width).to.be.greaterThan(0);
         expect(statusRect.width).to.be.greaterThan(0);
-        expect(actionRect.width).to.be.greaterThan(0);
+        expect(actionRect.width).to.be.at.least(parseFloat(getComputedStyle(action).minInlineSize));
+        expect(actionRect.height).to.be.at.least(parseFloat(getComputedStyle(action).minBlockSize));
         expect(deepestRect.left).to.be.at.least(hostRect.left);
         expect(deepestRect.right).to.be.at.most(hostRect.right);
         for (const rect of [statusRect, actionRect]) {

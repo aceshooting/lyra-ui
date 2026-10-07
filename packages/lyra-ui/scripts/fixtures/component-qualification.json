@@ -3656,7 +3656,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.test.ts",
-              "line": 401,
+              "line": 399,
               "kind": "320px allocation test signal"
             }
           ]
@@ -11863,6 +11863,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -11918,14 +11919,9 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/data/condition-builder/condition-builder.test.ts",
-              "test": "stacks a condition row into a column layout at a narrow (<=320px) allocation",
-              "kind": "320px allocation test signal"
-            }
-          ]
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local 320px allocation assertion is recorded."
         },
         "engines": {
           "applicability": "applicable",
@@ -12003,6 +11999,7 @@
       },
       "knownLimitations": [
         "No component-owned motion declaration or programmatic animation was detected.",
+        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -27394,7 +27391,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 378,
+              "line": 379,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35026,7 +35023,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4901,
+              "line": 4902,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -46600,7 +46597,9 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "rtl",
           "reducedMotion",
+          "narrowAllocation",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -46632,14 +46631,9 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/subagent-panel/subagent-panel.test.ts",
-              "test": "keeps depth-12 status actions reachable at the inclusive 320px compact boundary in LTR and RTL",
-              "kind": "rendered RTL test signal"
-            }
-          ]
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local rendered RTL assertion is recorded."
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -46649,14 +46643,9 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "source-evidence",
-          "evidence": [
-            {
-              "file": "src/components/agent-tools/subagent-panel/subagent-panel.test.ts",
-              "test": "keeps depth-12 status actions reachable at the inclusive 320px compact boundary in LTR and RTL",
-              "kind": "320px allocation test signal"
-            }
-          ]
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "No component-local 320px allocation assertion is recorded."
         },
         "engines": {
           "applicability": "applicable",
@@ -46742,7 +46731,9 @@
         }
       },
       "knownLimitations": [
+        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -53835,7 +53826,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 655,
+              "line": 657,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54052,7 +54043,7 @@
           "evidence": [
             {
               "file": "src/components/data/tree/tree-item.class.ts",
-              "line": 655,
+              "line": 657,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

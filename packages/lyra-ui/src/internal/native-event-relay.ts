@@ -82,7 +82,7 @@ function isNativeEventKind(
 export function relayNativeEvent<T extends Event>(
   target: EventTarget,
   source: T,
-  options: EventInit = {},
+  options: EventInit & Pick<FocusEventInit, 'relatedTarget'> = {},
 ): T {
   // `stopPropagation()`, deliberately not `stopImmediatePropagation()`: Firefox skips the
   // submit-driven interactive-validation focus of a form-associated custom element whose inner
@@ -132,7 +132,7 @@ export function relayNativeEvent<T extends Event>(
     const focusSource = source as unknown as FocusEvent;
     relayed = new FocusEventConstructor(source.type, {
       ...init,
-      relatedTarget: focusSource.relatedTarget,
+      relatedTarget: options.relatedTarget === undefined ? focusSource.relatedTarget : options.relatedTarget,
       view: focusSource.view,
       detail: focusSource.detail,
     });

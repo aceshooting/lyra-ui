@@ -936,17 +936,16 @@ describe('announcement sink lifecycle', () => {
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
-    expect((el as unknown as { announcementSink?: unknown }).announcementSink).to.exist;
+    const announcements = (el as unknown as {
+      announcements: { current(politeness: 'polite'): unknown; adopted(): void };
+    }).announcements;
+    expect(announcements.current('polite')).to.exist;
 
     el.remove();
-    expect((el as unknown as { announcementSink?: unknown }).announcementSink, 'disconnect already released it').to.be
-      .undefined;
-    // syncAnnouncementSink is only ever invoked from connectedCallback in normal operation; calling
-    // it directly here exercises its own "not connected" guard without re-entering the full public
-    // lifecycle (which would also re-subscribe locale/ResizeObserver machinery with no matching
-    // teardown, since the element is never reconnected).
-    (el as unknown as { syncAnnouncementSink(): void }).syncAnnouncementSink();
-    expect((el as unknown as { announcementSink?: unknown }).announcementSink).to.be.undefined;
+    expect(announcements.current('polite'), 'disconnect already released it').to.be.undefined;
+    // Adoption rechecks the controller's document guard without reconnecting the host.
+    announcements.adopted();
+    expect(announcements.current('polite')).to.be.undefined;
   });
 
   it('does not release/reacquire the announcement sink when synced again while still connected to the same document', async () => {
@@ -954,16 +953,17 @@ describe('announcement sink lifecycle', () => {
     el.columns = columns;
     el.rows = rows;
     await el.updateComplete;
-    const before = (el as unknown as { announcementSink?: unknown }).announcementSink;
+    const announcements = (el as unknown as {
+      announcements: { current(politeness: 'polite'): unknown; adopted(): void };
+    }).announcements;
+    const before = announcements.current('polite');
     expect(before).to.exist;
 
-    // Same rationale as above: calling the private sync method directly (instead of re-entering
-    // connectedCallback) exercises its own "already have a sink for this document" shortcut in
-    // isolation.
-    (el as unknown as { syncAnnouncementSink(): void }).syncAnnouncementSink();
+    // Adoption rechecks the same-document sink without re-entering connectedCallback.
+    announcements.adopted();
     // Compared as a boolean, not passed to chai directly: the sink object carries a DOM element
     // reference, and a failing node/object identity assertion can hang chai's diff output.
-    expect((el as unknown as { announcementSink?: unknown }).announcementSink === before).to.be.true;
+    expect(announcements.current('polite') === before).to.be.true;
   });
 });
 

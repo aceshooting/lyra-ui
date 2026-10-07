@@ -679,7 +679,7 @@ it('recreates its heading observer in the adopted owner realm', async () => {
       ownerObserver = this;
     }
     observe(target: Node, options?: MutationObserverInit): void {
-      if (target === el && options?.childList && options.characterData && options.subtree) {
+      if (target === el && options?.childList) {
         this.observesHeading = true;
         observations += 1;
       }

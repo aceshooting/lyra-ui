@@ -903,7 +903,7 @@ it("tracks rich error-slot content and removes its description when unset", asyn
   );
 
   el.querySelector('[slot="error"]')!.remove();
-  await elementUpdated(el);
+  await waitUntil(() => error.hasAttribute("hidden"));
   expect(error.hasAttribute("hidden")).to.equal(true);
   expect(handles(el)[0]!.hasAttribute("aria-describedby")).to.equal(false);
 });

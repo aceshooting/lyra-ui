@@ -383,7 +383,7 @@ describe('TextViewerTarget mixin', () => {
       el.bodyText = 'First match and second match';
       await el.updateComplete;
       const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
-      const textNode = body.querySelector('p')!.firstChild!;
+      const textNode = [...body.querySelector('p')!.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)!;
       const range = document.createRange();
       range.setStart(textNode, 23);
       range.setEnd(textNode, 28);

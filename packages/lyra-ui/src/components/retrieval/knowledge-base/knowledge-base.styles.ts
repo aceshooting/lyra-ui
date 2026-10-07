@@ -75,6 +75,7 @@ export const styles = css`
     ${iconAction}
     --_lr-icon-button-color-default: var(--lr-color-text-quiet);
     --_lr-icon-button-color-hover-default: var(--lr-color-text);
+    --_lr-icon-button-color-active-default: var(--lr-color-text);
   }
   [part='table']::part(actions-trigger):hover {
     ${iconActionHover}

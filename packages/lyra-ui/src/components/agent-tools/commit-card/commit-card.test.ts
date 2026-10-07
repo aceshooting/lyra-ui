@@ -2,7 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './commit-card.js';
 import type { CommitFileChange, LyraCommitCard } from './commit-card.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 async function settleClipboard(el: LyraCommitCard): Promise<void> {
   await Promise.resolve();
@@ -593,21 +593,26 @@ describe('lr-commit-card', () => {
       <lr-commit-card
         hash="abcdef1"
         files-expanded="true"
-        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
+        style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-transition-fast: 0s; --lr-transition-interactive: none"
         .files=${[{ path: 'a.ts', additions: 1, deletions: 0 }]}
       ></lr-commit-card>
     `);
-    for (const part of ['files-toggle', 'file', 'copy-button']) {
-      const control = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      const rect = control.getBoundingClientRect();
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
-      });
-      await waitUntil(() => getComputedStyle(control).backgroundColor === 'rgb(1, 2, 3)');
-      expect(getComputedStyle(control).backgroundColor, part).to.equal('rgb(1, 2, 3)');
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'color-mix(in oklab, rgb(1, 2, 3), var(--lr-color-mix-partner) var(--lr-color-mix-hover))';
+    el.shadowRoot!.append(probe);
+    const actionHover = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    try {
+      for (const part of ['files-toggle', 'file', 'copy-button']) {
+        const control = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+        const expected = part === 'copy-button' ? actionHover : 'rgb(1, 2, 3)';
+        await hoverUntilMatched(control, `${part} never received the pointer hover state`);
+        await waitUntil(() => getComputedStyle(control).backgroundColor === expected, `${part} hover paint never settled`);
+        expect(getComputedStyle(control).backgroundColor, part).to.equal(expected);
+      }
+    } finally {
+      await resetMouse();
     }
-    await resetMouse();
   });
 
   it('renders a real :focus-visible outline on the files-toggle, file row, and copy-button using the shared focus-ring tokens', async () => {

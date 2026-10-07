@@ -2,7 +2,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import './html-viewer.js';
 import type { LyraHtmlViewer } from './html-viewer.js';
 import { __setHtmlSanitizerForTesting } from './dompurify-loader.js';
-import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response; }
@@ -223,9 +223,10 @@ it('validates maxHeight before assigning the base custom property', async () => 
 describe('HTML registry', () => {
   it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/html')!;
+    const loaded = await loadDocumentRenderer(definition);
     const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];
     const anchor = { kind: 'fragment' as const, id: 'section-one' };
-    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${loaded.render!({
       name: 'report.html',
       mimeType: 'text/html',
       src: 'https://example.test/report.html',
@@ -247,7 +248,7 @@ describe('HTML registry', () => {
 
 // -- Document-renderer registry entry ---------------------------------------
 
-it('registers a text/html renderer whose matches() and render() behave as declared', async () => {
+it('registers a text/html renderer whose matches() and lazy render() behave as declared', async () => {
   const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
   const def = getDefaultDocumentRendererRegistry().get('text/html');
   expect(def, 'importing the module registers the renderer').to.exist;
@@ -256,7 +257,8 @@ it('registers a text/html renderer whose matches() and render() behave as declar
   expect(def!.matches!({ name: 'page.md', mimeType: 'text/markdown', src: 'https://example.test/f' }), 'page.md').to.be.false;
   expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
 
-  const host = (await fixture(html`<div>${def!.render!({
+  const loaded = await loadDocumentRenderer(def!);
+  const host = (await fixture(html`<div>${loaded.render!({
     name: 'page.HTML', mimeType: 'text/html', src: 'https://example.test/f',
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-html-viewer'), 'render() produces the viewer element').to.exist;

@@ -3,7 +3,7 @@ import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
 import { __setEmailDepsForTesting } from "./email-loader.js";
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
-import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
+import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -416,11 +416,12 @@ describe("lr-email-viewer", () => {
   it("forwards document anchors/highlights and advertises its text contracts", async () => {
     const definition =
       getDefaultDocumentRendererRegistry().get("message/rfc822")!;
+    const loaded = await loadDocumentRenderer(definition);
     const highlights: LyraHighlight[] = [
       { id: "subject", anchor: { kind: "text-quote", quote: "Quarterly" } },
     ];
     const anchor = { kind: "fragment" as const, id: "subject" };
-    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${loaded.render!({
       name: "message.eml",
       mimeType: "message/rfc822",
       src: "https://example.test/message.eml",

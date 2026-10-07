@@ -687,7 +687,6 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       keyEventOwnedByInnerControl(event, {
         container: this,
         ownerTag: 'lr-pan-zoom',
-        ownsButtons: true,
       })
     ) return;
     const rtl = this.effectiveDirection === 'rtl';

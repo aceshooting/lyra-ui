@@ -18,14 +18,17 @@ translation contracts, and every associated tooling self-test. When adding, remo
 gate, edit that package script first; local `pnpm lint` and the CI lint sharder both derive their
 inventory from it automatically.
 
-**Toolchain constraint: `typescript@7` is the native Go port and exposes no JS compiler API.**
-`ts.version` works, but `ts.SyntaxKind` and `ts.createProgram` are `undefined` — any tool that
-imports `typescript` and drives the compiler API crashes on load (confirmed for `type-coverage`;
-the same failure is certain for `typescript-eslint` type-aware rules, `ts-morph` codemods, and
-`@stryker-mutator/typescript-checker`). When proposing a new lint/coverage tool here, reach for
-TS-API-free options instead: `tsc`'s own strict flags, bespoke `check-*.mjs` AST-free scanners,
-`secretlint`, `knip`, `cspell`. `tsc --noEmit` itself is unaffected — that's the native compiler
-doing its own job, not a caller walking its AST.
+**Toolchain constraint: the pinned `typescript@7` root export does not provide the legacy JavaScript
+compiler surface.** `ts.version` works, but `ts.SyntaxKind` and `ts.createProgram` are `undefined`;
+do not assume tools built around those APIs will load or work with this package. This repository's
+declaration-link checker instead imports TypeScript 7's explicitly unstable
+`typescript/unstable/sync`, `/fs`, and `/ast` interfaces for this narrow check, and tests that
+specific usage. Those interfaces are version-sensitive; their use here does not establish
+compatibility for `type-coverage`, `typescript-eslint` type-aware rules, `ts-morph` codemods,
+`@stryker-mutator/typescript-checker`, or other compiler-API tools. When proposing a new lint or
+coverage tool, verify it against the pinned package or use options that do not need compiler APIs:
+`tsc`'s own strict flags, bespoke `check-*.mjs` scanners, `secretlint`, `knip`, or `cspell`.
+`tsc --noEmit` itself is unaffected because the compiler runs its own type checking.
 
 `check:component-dependencies` (`scripts/check-component-dependencies.mjs`, with a colocated
 `check-component-dependencies.test.mjs` chained beside it) covers a failure mode that is otherwise
@@ -289,7 +292,8 @@ the PR checks list tells you which of these to reproduce locally:
    and round-robin partitioned across four jobs, each running four single-threaded `attw` processes
    (`--workers 4`, one per vCPU). The inventory is derived from the current exports map, excluding
    CSS and the classic-script bootstrap asset. One producer runs real `pnpm pack`, verifies
-   tracked-source freshness, and uploads the tarball with its SHA-256 checksum. Every worker verifies
+   tracked-source freshness, checks that archive's actual compressed size and contents against the
+   package budgets, and uploads the tarball with its SHA-256 checksum. Every worker verifies
    those same bytes and checks the packed name, version, and ordered exports against its checkout
    before selecting its partition. In parallel, the public-API lane consumes the shared dist
    artifact from `build_and_coverage_build` and runs the networked public-API semver gate. The
@@ -677,8 +681,8 @@ and function floors continue to use their measured margins unless already higher
 - **The mirror-image failure is a threshold set _tighter_ than measurement from day one** — an
   "aspirational" budget that's red the moment it lands, which trains everyone to ignore that gate
   entirely rather than fix it. This has recurred independently in the package-size budget
-  (`check:package-size`'s minimum-reduction figure) and the qualification axe scanner's evidence
-  requirements. The package gate's reviewed exception and hard ceilings are detailed in
+  (`check:package-size`'s historical minimum-reduction figure) and the qualification axe scanner's evidence
+  requirements. The package gate's absolute download ceiling and reviewed unpacked exception are detailed in
   "Package-delivery budget" below; qualification thresholds are measurement-derived, matching the
   floors approach above. Any new budget/threshold should start from a measured baseline, not a
   target number picked in advance.
@@ -688,20 +692,31 @@ and function floors continue to use their measured margins unless already higher
 
 ## Package-delivery budget
 
-`pnpm --filter @aceshooting/lyra-ui check:package-size` measures `npm pack --dry-run --json
---ignore-scripts` after a build and fails closed against `scripts/package-budgets.json`. The fixed
-pre-8.0.0 baseline is 7,829,794 packed bytes, 38,510,084 unpacked bytes, and 4,441 files. The 25%
-targets remain 5,872,345 packed bytes and 28,882,563 unpacked bytes. Both byte budgets currently
-use explicit measured required-public-artifact exceptions; the gate reports those exceptions
-instead of claiming either mathematical target was met. Without the unpacked exception, its
-ceiling must satisfy the 25% target. Source, map, fixture, test, and story rejection remains
-independent of every size ceiling.
+`pnpm --filter @aceshooting/lyra-ui check:package-size` reports the `npm pack --dry-run --json
+--ignore-scripts` estimate after a build and checks its inventory against `scripts/package-budgets.json`.
+Use `node packages/lyra-ui/scripts/check-package-size.mjs --tarball <archive.tgz>` from the repository
+root to check an already-produced archive without repacking. CI runs that form immediately after
+the ATTW producer's real `pnpm pack`, before recording its checksum and uploading it. It reads the
+actual compressed file size and validates the archive's exact package name/version, unpacked file
+sizes, file count, required files, and artifact hygiene. Its output labels the input as a packed
+archive; the default form explicitly labels packed size as an estimate. Different package-manager
+compression can make the actual archive size differ from the dry-run estimate.
 
-The packed exception retains its favorable lower-bound probe: all required consumer docs, editor
-data, and custom-elements metadata plus fully identifier-minified runtime JavaScript still packed
-to 6,088,928 bytes, already 216,583 bytes above its mathematical target before restoring omitted
-declarations, CSS, and other required runtime artifacts. Deleting those public artifacts or
-weakening their content is not an acceptable package-size fix.
+The compressed download ceiling is strictly below **10 MB decimal (10,000,000 bytes)**: a tarball
+of 9,999,999 bytes passes, while 10,000,000 bytes fails. `packedBudgetPolicy` names this absolute
+ceiling, and validation binds `maximum.packedBytes` to its exclusive limit minus one byte. Packed
+size has no percentage-reduction target or exception.
+
+The historical pre-8.0.0 baseline of 7,829,794 packed bytes, 38,510,084 unpacked bytes, and 4,441
+files remains available for informational comparisons. The unpacked policy is unchanged: its 25%
+target is 28,882,563 bytes, with an explicit measured required-public-artifact exception retaining
+the 35,069,948-byte hard ceiling. Without that exception, the unpacked ceiling must satisfy its
+25% target. The 10 MB download limit does not apply to installed or unpacked size.
+
+Required consumer docs, editor data, custom-elements metadata, declarations, CSS, and runtime
+artifacts remain required. Deleting or weakening those public artifacts is not an acceptable
+package-size fix. Source, map, fixture, test, and story rejection remains independent of every
+size ceiling.
 
 The complete 22.0.0 package produced by normal `pnpm pack` with Node 22.23.2 contains
 7,653,029 packed bytes, 34,854,812 unpacked bytes, and 4,072 files. Published 21.2.0 contains
@@ -737,15 +752,14 @@ The expanded style system has a separate cost: theme.css grows from 2,902 to 6,9
 the standalone theme bootstrap grows from 3,980 to 6,088 gzip bytes with versioned sparse and nested
 ownership. These increases are reported separately from the package reduction. All figures describe production artifacts, not source-line counts.
 
-The byte ceilings are the exact reviewed measurements of 7,690,209 packed and 34,930,235
-unpacked bytes plus 33,960 packed and 139,713 unpacked headroom bytes: 7,724,169 and
-35,069,948 bytes respectively. Both ceilings are below
-the historical baseline, so the former baseline-overage approvals are no longer needed. The separate
-25%-target required-artifact exceptions remain explicit. `validatePackageBudgets()` rejects a missing
-or renamed exception, an unpacked reviewed measurement that no longer exceeds its target, a packed
-measurement at or below the recorded favorable probe, headroom above 0.5%, and a ceiling differing
-from measurement plus headroom. A ceiling at or above the historical baseline requires a separate
-named review; no such approval is active. Raising a ceiling merely to clear a failure is insufficient.
+The unpacked ceiling retains the exact reviewed measurement of 34,930,235 bytes plus 139,713
+headroom bytes, totaling 35,069,948. It remains below the historical unpacked baseline, so no
+baseline-overage approval is active. `validatePackageBudgets()` rejects a missing or renamed
+unpacked exception, a reviewed unpacked measurement that no longer exceeds its reduction target,
+headroom above 0.5%, and an unpacked ceiling differing from measurement plus headroom. An unpacked
+ceiling at or above the historical baseline requires a separate named review. The compressed
+ceiling is independently fixed at 9,999,999 bytes; historical packed baseline comparisons do not
+restrict or waive the approved download limit.
 
 The file ceiling is 4,201: 2,500 base artifacts, one emitted JavaScript file for each of the 308
 stable registration aliases, a measured 1,386-file remainder, and the unchanged seven-file reserve
@@ -906,6 +920,13 @@ to 132,680 gzip bytes, the complete CDN/autoloader entries to 1,336,559/1,336,39
 component maximum to 251,462 bytes. Only those four failing direct/aggregate ceilings advance to
 their next 64-byte boundary. Type-only dependency relocations preserve public routes; every other
 passing ceiling and all 16 peer-inclusive exclusion claims remain unchanged.
+
+Visibility and forwarded-slot observation, lifecycle rollback, date blur, menu and layout repairs,
+native focus forwarding, ARIA endpoint tracking and composed-slot ownership have a reviewed
+aggregate bundle cost. The complete CDN entry measures 1,337,619 gzip bytes, component P95 measures 124,980 bytes and the
+component maximum measures 252,171 bytes. Only the 17 failing direct/aggregate ceilings advance to
+their next 64-byte boundary, with paired exact reviewed measurements. All passing canaries,
+route/marginal and CSS budgets, peer exclusions and measurement settings remain unchanged.
 
 Absolute loader routes retain their callable exports while excluding deferred chunks. Their
 reviewed initial gzip measurements are 13,059 bytes for the CDN entry, 12,878 for the autoloader,

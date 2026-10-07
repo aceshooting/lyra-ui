@@ -136,10 +136,17 @@ export class LyraProgressBar extends LyraElement {
     // The shadow label wrapper is hidden when this semantic probe is empty. Starting the bounded
     // owned traversal at the assigned roots avoids letting that derived presentation state form a
     // false-empty cycle; each authored root's own hidden/inert/ARIA/CSS state is still enforced.
-    return joinAccessibleVisibleText(nodes, {
-      requireRendered: false,
-      skipRootAncestorValidation: true,
-    });
+    const label = renderRoot?.querySelector<HTMLElement>('[part="label"]');
+    const hidden = label?.hidden ?? false;
+    if (label && hidden) label.hidden = false;
+    try {
+      return joinAccessibleVisibleText(nodes, {
+        requireRendered: false,
+        skipRootAncestorValidation: true,
+      });
+    } finally {
+      if (label && hidden) label.hidden = true;
+    }
   }
 
   private recomputeVisibleLabelText(): void {

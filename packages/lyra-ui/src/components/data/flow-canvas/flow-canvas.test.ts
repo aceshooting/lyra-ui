@@ -58,7 +58,9 @@ it('preserves flow fit centering for zero and sub-unit extents', () => {
     zoomBounds,
     { minimumAvailableSize: 0, invalidZoomFallback: 1, centerWithMinimumExtent: true },
   );
-  expect(subUnitExtent).to.deep.equal({ x: 25, y: 15, zoom: 10 });
+  expect(subUnitExtent).to.deep.equal({ x: 75, y: 15, zoom: 10 });
+  expect(subUnitExtent.x + (2 + 0.5) * subUnitExtent.zoom).to.equal(view.width / 2);
+  expect(subUnitExtent.y + (3 + 0.5) * subUnitExtent.zoom).to.equal(view.height / 2);
 });
 
 it('defaults to empty nodes/edges, horizontal orientation, and default zoom/grid bounds', async () => {
@@ -118,7 +120,9 @@ it('keeps the first unique nonempty node and edge ids before render, focus, coun
     detail = event.detail;
   });
   (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(detail).to.deep.equal({ edgeId: 'connection', source: 'source', target: 'target' });
+  expect(detail).to.deep.equal({
+    edgeId: 'connection', sourceNodeId: 'source', targetNodeId: 'target', source: 'source', target: 'target',
+  });
 });
 
 it('clears stale controlled selection when non-array ids are assigned', async () => {
@@ -1778,7 +1782,7 @@ describe('selection & roving focus', () => {
     let detail: { edgeId: string; source: string; target: string } | undefined;
     el.addEventListener('lr-edge-activate', (e) => (detail = (e as CustomEvent).detail));
     (el.shadowRoot!.querySelector('[part="edge"]') as SVGElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    expect(detail).to.deep.equal({ edgeId: 'a-b', source: 'a', target: 'b' });
+    expect(detail).to.deep.equal({ edgeId: 'a-b', sourceNodeId: 'a', targetNodeId: 'b', source: 'a', target: 'b' });
     expect(el.selectedEdgeIds).to.deep.equal(['a-b']);
     expect(el.selectedNodeIds).to.deep.equal([]);
   });

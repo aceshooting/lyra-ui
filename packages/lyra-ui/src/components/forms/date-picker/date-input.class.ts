@@ -949,8 +949,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Ends the Enter commit window and shows a value that did not come from the typed text. */
   private valueReplaced(): void {
     this.enterCommittedText = null;
-    if (!this.committingTypedText && this.inputElement) {
-      this.inputElement.value = this.displayText;
+    if (!this.committingTypedText) {
+      this.inputRelayedSinceCommit = false;
+      if (this.inputElement) this.inputElement.value = this.displayText;
     }
   }
 
@@ -1826,7 +1827,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // one host-originating equivalent below only when the raw text commits successfully.
     e.stopPropagation();
     if (this.liveDisabled) return;
-    const raw = (e.target as HTMLInputElement).value;
+    this.commitInputChange((e.target as HTMLInputElement).value, e);
+  };
+
+  private commitInputChange(raw: string, source?: Event): void {
     // The Enter key already committed this text (see `onInputKey`), and the browser fires its own
     // `change` for that same keystroke -- and again on the following blur, by which point the
     // re-render has replaced the typed text with the formatted `displayText`. Both are the same
@@ -1849,16 +1853,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         this.emit('lr-input', { value });
       }
       this.inputRelayedSinceCommit = false;
-      relayNativeEvent(this, e);
+      if (source) relayNativeEvent(this, source);
+      else dispatchNativeEvent(this, 'change');
       this.emit('lr-change', { value });
     } else {
       this.inputRelayedSinceCommit = false;
     }
-  };
+  }
 
   private onInput = (event: InputEvent): void => {
     event.stopPropagation();
     if (this.liveDisabled) return;
+    this.enterCommittedText = null;
     this.inputRelayedSinceCommit = true;
     const value = this.value;
     relayNativeEvent(this, event);
@@ -2008,6 +2014,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   };
 
   private onInputBlur = (event: FocusEvent): void => {
+    // A reset can leave the browser's last native-change baseline equal to retyped text.
+    // Flush the pending edit even when that browser therefore omits change on blur.
+    // A preceding native change already cleared the flag, so ordinary blur stays silent.
+    if (!this.liveDisabled && this.inputRelayedSinceCommit && this.inputElement) {
+      this.commitInputChange(this.inputElement.value);
+    }
     // A blur the platform itself forces when a focused native control becomes `disabled` is not a
     // real user interaction -- marking `touched` for it could reenter an in-flight Lit update and
     // trip Lit's dev-mode "scheduled an update after an update completed" warning; this is the

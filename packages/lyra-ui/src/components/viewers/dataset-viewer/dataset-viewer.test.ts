@@ -1467,7 +1467,7 @@ describe('styling', () => {
 // -- Document-renderer registry entry ---------------------------------------
 
 it('registers a lyra:dataset renderer whose matches() and render() behave as declared', async () => {
-  const { getDefaultDocumentRendererRegistry } = await import(
+  const { getDefaultDocumentRendererRegistry, loadDocumentRenderer } = await import(
     '../document-viewer/registry.js'
   );
   const def = getDefaultDocumentRendererRegistry().get('lyra:dataset');
@@ -1509,9 +1509,10 @@ it('registers a lyra:dataset renderer whose matches() and render() behave as dec
     'capabilities are declared for host feature-detection'
   ).to.exist;
 
+  const loaded = await loadDocumentRenderer(def!);
   const host = (await fixture(
     html`<div>
-      ${def!.render!({
+      ${loaded.render!({
         name: 'data.TSV',
         mimeType: 'text/tab-separated-values',
         src: 'https://example.test/f',

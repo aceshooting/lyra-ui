@@ -74,7 +74,7 @@ describe('menu type-ahead reset debounce', () => {
       <lr-menu-item>Export</lr-menu-item>
     </lr-menu>`);
   const bufferOf = (el: LyraMenu): string =>
-    (el as unknown as { typeAheadBuffer: string }).typeAheadBuffer;
+    (el as unknown as { typeBuffer: { text: string } }).typeBuffer.text;
   const typeAhead = (el: LyraMenu, char: string): void => {
     (el as unknown as { typeAhead(char: string): void }).typeAhead(char);
   };
@@ -176,7 +176,7 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
   });
 
   it('ignores ancestor writes that cannot change an item name but follows an ancestor that hides and shows it', async () => {
-    const wrap = await fixture<HTMLElement>(html`<div><lr-menu><lr-menu-item id="item"><span>Beta</span></lr-menu-item></lr-menu></div>`);
+    const wrap = await fixture<HTMLElement>(html`<div><lr-menu><lr-menu-item id="item"><span><b style="display: var(--menu-test-label-display, inline)">Beta</b></span></lr-menu-item></lr-menu></div>`);
     const item = wrap.querySelector<LyraMenuItem>('#item')!;
     await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
     wrap.style.width = '10px';
@@ -193,6 +193,10 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     wrap.className = 'moved';
     await aTimeout(50);
     expect(reads).to.equal(0);
+    wrap.style.setProperty('--menu-test-label-display', 'none');
+    await waitUntil(() => !item.hasAttribute('aria-label'));
+    wrap.style.removeProperty('--menu-test-label-display');
+    await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
     wrap.style.display = 'none';
     await waitUntil(() => !item.hasAttribute('aria-label'));
     wrap.style.display = '';

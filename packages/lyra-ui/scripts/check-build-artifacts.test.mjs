@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { findBuildArtifactFindings } from './check-build-artifacts.mjs';
 
 test('reports emitted maps and source map references', () => {
@@ -75,14 +81,15 @@ test('rejects a stripped code-block base required by public subclass declaration
   const lean = '/workspace/dist/components/conversation/code-block/code-block-core.class.d.ts';
   const declarations = new Map([
     [base, 'export interface LyraCodeBlockBaseEventMap {}\n'],
-    [regular, 'export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n'],
-    [lean, 'export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n'],
+    [regular, "import { LyraCodeBlockBase } from './code-block-base.class.js'; export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n"],
+    [lean, "import { LyraCodeBlockBase } from './code-block-base.class.js'; export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n"],
   ]);
 
   assert.deepEqual(
     findBuildArtifactFindings([base, regular, lean], (file) => declarations.get(file) ?? ''),
     [
-      `${base}: missing exported LyraCodeBlockBase required by published subclass declarations`,
+      `${regular}: declaration ./code-block-base.class.js does not export LyraCodeBlockBase`,
+      `${lean}: declaration ./code-block-base.class.js does not export LyraCodeBlockBase`,
     ],
   );
 });
@@ -93,14 +100,91 @@ test('accepts the emitted code-block base required by public subclass declaratio
   const lean = '/workspace/dist/components/conversation/code-block/code-block-core.class.d.ts';
   const declarations = new Map([
     [base, 'export declare abstract class LyraCodeBlockBase {}\n'],
-    [regular, 'export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n'],
-    [lean, 'export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n'],
+    [regular, "import { LyraCodeBlockBase } from './code-block-base.class.js'; export declare class LyraCodeBlock extends LyraCodeBlockBase {}\n"],
+    [lean, "import { LyraCodeBlockBase } from './code-block-base.class.js'; export declare class LyraCodeBlockCore extends LyraCodeBlockBase {}\n"],
   ]);
 
   assert.deepEqual(
     findBuildArtifactFindings([base, regular, lean], (file) => declarations.get(file) ?? ''),
     [],
   );
+});
+
+test('rejects stripped named imports, re-exports and inline import types', () => {
+  const entry = '/workspace/dist/entry.d.ts';
+  const declarations = new Map([
+    [entry, `
+      import type { Controller as Session } from './controller.js';
+      export { load as preload } from './loader.js';
+      export type Result = import('./loader.js').Result;
+      export declare function run(session: Session): Result;
+    `],
+    ['/workspace/dist/controller.d.ts', 'export {};'],
+    ['/workspace/dist/loader.d.ts', 'export {};'],
+  ]);
+  assert.deepEqual(findBuildArtifactFindings([...declarations.keys()], (file) => declarations.get(file)), [
+    `${entry}: declaration ./controller.js does not export Controller`,
+    `${entry}: declaration ./loader.js does not export load`,
+    `${entry}: declaration ./loader.js does not export Result`,
+  ]);
+});
+
+test('resolves named and default exports through aliases and export-star cycles', () => {
+  const declarations = new Map([
+    ['/workspace/dist/entry.d.ts', `
+      import Loader, { Alias, Model } from './bridge.js';
+      export type Result = import('./bridge.js').Model;
+      export declare const value: Model;
+      export { Loader, Alias };
+    `],
+    ['/workspace/dist/bridge.d.ts', `
+      export { default, Original as Alias } from './model.js';
+      export * from './cycle.js';
+    `],
+    ['/workspace/dist/cycle.d.ts', "export * from './bridge.js'; export * from './model.js';"],
+    ['/workspace/dist/model.d.ts', `
+      export interface Model { value: string; }
+      export declare class Original {}
+      export default function load(): Model;
+    `],
+  ]);
+  assert.deepEqual(findBuildArtifactFindings([...declarations.keys()], (file) => declarations.get(file)), []);
+});
+
+test('declaration emit retains helpers referenced by the public component graph', (t) => {
+  const declarations = new Map();
+  const helpers = [
+    ['loader', '../src/components/charts/chart/box-plot-loader.ts'],
+    ['dates', '../src/components/forms/date-picker/date-picker-disabled-dates.ts'],
+    ['controller', '../src/internal/drop-session-controller.ts'],
+  ].map(([name, source]) => [name, fileURLToPath(new URL(source, import.meta.url))]);
+  const root = mkdtempSync(join(tmpdir(), 'lyra-declaration-emit-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const [name, source] of helpers) {
+    writeFileSync(join(root, `${name}.ts`), readFileSync(source, 'utf8'));
+  }
+  writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({
+    compilerOptions: {
+      declaration: true, emitDeclarationOnly: true, stripInternal: true,
+      noCheck: true, noResolve: true, types: [], target: 'ESNext',
+    },
+    files: helpers.map(([name]) => `${name}.ts`),
+  }));
+  const require = createRequire(import.meta.url);
+  const compiler = resolve(dirname(require.resolve('typescript/package.json')), require('typescript/package.json').bin.tsc);
+  const result = spawnSync(process.execPath, [compiler, '-p', join(root, 'tsconfig.json')], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  for (const [name] of helpers) {
+    const declaration = readFileSync(join(root, `${name}.d.ts`), 'utf8');
+    declarations.set(`/workspace/dist/${name}.d.ts`, declaration);
+  }
+  declarations.set('/workspace/dist/entry.d.ts', `
+    export { loadBoxPlotAndRegister } from './loader.js';
+    export { projectDisabledDateKeys, parseDisabledWeekdays, inclusiveDayCount } from './dates.js';
+    import type { DropSessionController } from './controller.js';
+    export declare function consume(controller: DropSessionController): void;
+  `);
+  assert.deepEqual(findBuildArtifactFindings([...declarations.keys()], (file) => declarations.get(file)), []);
 });
 
 test('requires exact exported stylesheets to exist in the emitted package', () => {

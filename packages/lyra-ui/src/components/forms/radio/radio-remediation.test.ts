@@ -144,9 +144,10 @@ it('exposes a standalone required radio as aria-invalid only after interaction',
 
 for (const [tag, part] of [['lr-radio', 'circle'], ['lr-radio-button', 'button']] as const) {
   it(`${tag} paints its invalid state through --lr-radio-invalid-border-color`, async () => {
-    const el = await fixture<LyraRadio>(`<${tag} required style="--lr-radio-invalid-border-color: rgb(1, 2, 3)">A</${tag}>`);
+    const el = await fixture<LyraRadio>(`<${tag} required style="--lr-radio-invalid-border-color: rgb(1, 2, 3); --lr-transition-fast: 0ms">A</${tag}>`);
     el.reportValidity();
     await el.updateComplete;
+    expect(el.matches(':state(user-invalid)')).to.equal(true);
     expect(getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!).borderTopColor).to.equal('rgb(1, 2, 3)');
   });
 }

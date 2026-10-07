@@ -263,8 +263,8 @@ or a rename onto a name another component already uses, lands in v22.
     old names, compact their entries in `custom-elements.json`, and slim the migration CLI's
     `migration-contract.json`. Published v22 returned the unpacked size below the pre-8 baseline
     and removed 21.2.0's above-baseline exception ahead of its v23 deadline. Preserve that reduction
-    as eligible aliases are removed. The separate required-artifact exceptions to the 25% targets
-    remain explicit in the package budget.
+    as eligible aliases are removed. The unpacked required-artifact exception remains explicit in
+    the package budget; compressed downloads have a separate strict ceiling below 10 MB decimal.
 37. Make `LyraElement`'s collection-snapshot support opt-in, and move development-only diagnostics
     behind a `development` export condition.
 38. Also: a shared decorator helper, a faster parallel lint chain, test-title-keyed quality evidence,

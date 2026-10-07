@@ -2,7 +2,7 @@ import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar-viewer.js';
 import type { LyraCalendarViewer } from './calendar-viewer.js';
-import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { loadIcal } from './calendar-loader.js';
 
@@ -358,9 +358,10 @@ describe('lr-calendar-viewer', () => {
   it('supports a .strings override for the calendarViewerLabel fallback', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer .strings=${{ calendarViewerLabel: 'Visionneuse de calendrier' }}></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Visionneuse de calendrier'); });
   it('forwards document anchors/highlights and advertises its text contracts', async () => {
     const definition = getDefaultDocumentRendererRegistry().get('text/calendar')!;
+    const loaded = await loadDocumentRenderer(definition);
     const highlights: LyraHighlight[] = [{ id: 'event', anchor: { kind: 'text-quote', quote: 'planning' } }];
     const anchor = { kind: 'fragment' as const, id: 'event' };
-    const host = await fixture<HTMLElement>(html`<div>${definition.render!({
+    const host = await fixture<HTMLElement>(html`<div>${loaded.render!({
       name: 'team.ics',
       mimeType: 'text/calendar',
       src: 'https://example.test/team.ics',
@@ -402,7 +403,8 @@ it('registers a text/calendar renderer whose matches() and render() behave as de
   expect(def!.matches!({ name: 'sprint.txt', mimeType: 'text/plain', src: 'https://example.test/f' }), 'sprint.txt').to.be.false;
   expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
 
-  const host = (await fixture(html`<div>${def!.render!({
+  const loaded = await loadDocumentRenderer(def!);
+  const host = (await fixture(html`<div>${loaded.render!({
     name: 'Sprint.ICS', mimeType: 'text/calendar', src: 'https://example.test/f',
   })}</div>`)) as HTMLElement;
   expect(host.querySelector('lr-calendar-viewer'), 'render() produces the viewer element').to.exist;

@@ -594,7 +594,8 @@ describe('original component collection ownership contracts', () => {
     expect(Object.isFrozen(snapshot[0])).to.equal(true);
 
     element.catalog = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index));
-    expect(element.catalog!.length).to.equal(COLLECTION_LIMIT);
+    expect(element.catalog!.length).to.equal(1_024);
+    expect(element.catalog!.at(-1)).to.equal('1023');
   });
 
   it('detaches and recursively freezes schema records and arrays in emitted details', async () => {

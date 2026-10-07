@@ -517,12 +517,16 @@ it("does not mark a pristine invalid range as user-invalid when disablement forc
   // Model the observed Chromium ordering explicitly: the selector is already live while the
   // callback-backed cache can still report its previous value when forced focusout arrives.
   el.formDisabledCallback(false);
+  expect(el.effectiveDisabled).to.be.true;
   handle.dispatchEvent(
     new FocusEvent("focusout", { bubbles: true, composed: true })
   );
   fieldset.disabled = false;
   await el.updateComplete;
 
+  expect(el.effectiveDisabled).to.be.false;
+  expect(el.validity.customError).to.be.true;
+  expect(el.validationMessage).to.equal("That range is unavailable");
   expect(el.matches(":state(user-invalid)")).to.be.false;
   expect(
     el.matches(":state(invalid)"),

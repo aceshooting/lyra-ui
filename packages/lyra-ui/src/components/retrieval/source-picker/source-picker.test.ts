@@ -48,6 +48,7 @@ expectLocaleFallback('tr', [
   'sourcePickerSelection',
   'fieldRequired',
   'fileTypeFile',
+  'sourcePickerMatches',
 ]);
 expectLocaleFallback('ar-u-nu-arab', [
   'sourceListDefaultLabel',
@@ -1343,6 +1344,7 @@ it('announces post-mount no-match transitions only through the light-DOM sink', 
   await el.updateComplete;
   await waitUntil(() => sink.children.length > before);
   expect(sink.lastElementChild?.textContent).to.equal('No matches');
+  expect(el.shadowRoot!.querySelector('[part="empty"]')?.getAttribute('role')).to.equal(null);
   search.dispatchEvent(
     new CustomEvent('lr-input', {
       detail: { value: 'curie' },
@@ -1353,9 +1355,7 @@ it('announces post-mount no-match transitions only through the light-DOM sink', 
   await el.updateComplete;
   await waitUntil(() => (sink.lastElementChild?.textContent ?? '').startsWith('Found '));
   expect(sink.lastElementChild?.textContent).to.match(/^Found \d+ matching source(?:s)?$/);
-  expect(
-    el.shadowRoot!.querySelector('[part="empty"]')!.getAttribute('role')
-  ).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="empty"]') === null).to.equal(true);
 
   search.dispatchEvent(
     new CustomEvent('lr-input', {

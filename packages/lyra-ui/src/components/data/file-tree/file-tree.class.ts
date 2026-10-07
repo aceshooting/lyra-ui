@@ -74,8 +74,8 @@ function normalizeFileTreeSnapshot(value: unknown): {
   readonly limitReached: boolean;
 } {
   let truncated = false;
-  let limitReached = false;
   const rootShape = boundedArrayShape(value);
+  let limitReached = rootShape.isArray && rootShape.truncated;
   const roots = rootShape.isArray ? (value as readonly unknown[]) : [];
   const drafts: FileTreeDraft[] = [];
   const rootDrafts: FileTreeDraft[] = [];
@@ -100,7 +100,7 @@ function normalizeFileTreeSnapshot(value: unknown): {
     }
     if (drafts.length >= MAX_FILE_TREE_NODES || inspected >= MAX_FILE_TREE_NODES) {
       truncated = true;
-      limitReached = drafts.length >= MAX_FILE_TREE_NODES;
+      limitReached = true;
       break;
     }
     const sourceIndex = frame.index++;
@@ -155,7 +155,10 @@ function normalizeFileTreeSnapshot(value: unknown): {
       seenPaths.add(path);
       frame.output.push(draft);
       drafts.push(draft);
-      if (childShape.truncated) truncated = true;
+      if (childShape.truncated) {
+        truncated = true;
+        limitReached ||= childShape.isArray;
+      }
       if (childrenProvided && frame.depth < MAX_FILE_TREE_DEPTH) {
         stack.push({
           input: rawChildren as readonly unknown[],

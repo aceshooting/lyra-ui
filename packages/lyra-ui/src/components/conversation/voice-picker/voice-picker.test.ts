@@ -584,17 +584,19 @@ describe('resting border and fill theme cssprops', () => {
 });
 
 describe('hover border theme cssprop', () => {
-  it('resolves the hovered trigger border to the shared brand token when the hover hook is unset', async () => {
+  it('retains the resting border and changes the fill when the hover border hook is unset', async () => {
     const el = (await fixture(
       html`<lr-voice-picker .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-voice-picker>`,
     )) as LyraVoicePicker;
     const restingBorder = getComputedStyle(trigger(el)).borderTopColor;
+    const restingFill = getComputedStyle(trigger(el)).backgroundColor;
     try {
       await hoverUntilMatched(trigger(el), 'the trigger never took the pointer hover state');
       await waitUntil(
-        () => getComputedStyle(trigger(el)).borderTopColor !== restingBorder,
-        'the trigger border never moved under the pointer',
+        () => getComputedStyle(trigger(el)).backgroundColor !== restingFill,
+        'the trigger fill never changed under the pointer',
       );
+      expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(restingBorder);
     } finally {
       await resetMouse();
     }
@@ -1351,7 +1353,7 @@ it('retires a row preview when free-text filtering removes it with no active des
   }
 });
 
-it('retires a row preview when a live mode switch restores a filter that hides it', async () => {
+it('retires a row preview when a live mode switch rebases the filter to the committed value', async () => {
   const restore = stubMediaPlay(() => Promise.resolve());
   try {
     const el = (await fixture(
@@ -1386,7 +1388,9 @@ it('retires a row preview when a live mode switch restores a filter that hides i
     await el.updateComplete;
     await el.updateComplete;
 
-    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal(['nova']);
+    expect(Array.from(rows(el), (row) => row.dataset['value'])).to.deep.equal(['sage']);
+    expect(el.value).to.equal('sage');
+    expect(input(el).value).to.equal('Sage');
     expect(changes).to.deep.equal(['aria', null]);
     expect((el as unknown as { audioEl?: HTMLAudioElement }).audioEl === undefined).to.be.true;
   } finally {
@@ -2574,7 +2578,7 @@ it('renders hover treatment on the trigger and standalone preview button', async
   const el = await fixture<LyraVoicePicker>(html`
     <lr-voice-picker
       value="aria"
-      style="--lr-color-brand: rgb(1, 2, 3); --lr-voice-picker-preview-hover-bg: rgb(4, 5, 6); --lr-voice-picker-preview-hover-color: rgb(7, 8, 9)"
+      style="--lr-voice-picker-trigger-hover-border-color: rgb(1, 2, 3); --lr-voice-picker-preview-hover-bg: rgb(4, 5, 6); --lr-voice-picker-preview-hover-color: rgb(7, 8, 9)"
       .catalog=${OBJECT_CATALOG}
     ></lr-voice-picker>
   `);

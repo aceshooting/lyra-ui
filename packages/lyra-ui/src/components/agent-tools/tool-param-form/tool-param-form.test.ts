@@ -904,7 +904,7 @@ it('emits lr-input on a select field change, driven by the selected option value
   expect(el.value).to.deep.equal({ units: 'fahrenheit' });
 });
 
-it('contains nested control input/change aliases and emits only the form-level lr-input contract', async () => {
+it('contains nested control aliases and emits the aggregate value-event quartet', async () => {
   const schema: FlatToolParamSchema = {
     type: 'object',
     properties: {
@@ -915,13 +915,27 @@ it('contains nested control input/change aliases and emits only the form-level l
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const leaked = { input: 0, change: 0, lrChange: 0, lrShow: 0, lrHide: 0, lrOptionChange: 0 };
   let formInputs = 0;
-  el.addEventListener('input', () => leaked.input++);
-  el.addEventListener('change', () => leaked.change++);
-  el.addEventListener('lr-change', () => leaked.lrChange++);
+  const aggregateEvents: string[] = [];
+  const aggregateDetails: unknown[] = [];
+  for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
+    el.addEventListener(type, event => {
+      if (event.composedPath()[0] === el) {
+        aggregateEvents.push(type);
+        if (type.startsWith('lr-')) aggregateDetails.push((event as CustomEvent).detail);
+        else expect((event as CustomEvent).detail).to.equal(undefined);
+      }
+    });
+  }
+  el.addEventListener('input', event => { if (event.composedPath()[0] !== el) leaked.input++; });
+  el.addEventListener('change', event => { if (event.composedPath()[0] !== el) leaked.change++; });
+  el.addEventListener('lr-change', event => { if (event.composedPath()[0] !== el) leaked.lrChange++; });
   el.addEventListener('lr-show', () => leaked.lrShow++);
   el.addEventListener('lr-hide', () => leaked.lrHide++);
   el.addEventListener('lr-option-change', () => leaked.lrOptionChange++);
-  el.addEventListener('lr-input', () => formInputs++);
+  el.addEventListener('lr-input', event => {
+    expect(event.composedPath()[0] === el, 'aggregate input originates on the form').to.equal(true);
+    formInputs++;
+  });
 
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { value: string };
   select.value = 'safe';
@@ -954,6 +968,11 @@ it('contains nested control input/change aliases and emits only the form-level l
     lrOptionChange: 0,
   });
   expect(formInputs).to.equal(2);
+  expect(aggregateEvents).to.deep.equal(['input', 'lr-input', 'change', 'lr-change', 'input', 'lr-input', 'change', 'lr-change']);
+  expect(aggregateDetails).to.deep.equal([
+    { value: { mode: 'safe' } }, { value: { mode: 'safe' } },
+    { value: { mode: 'safe', confirm: true } }, { value: { mode: 'safe', confirm: true } },
+  ]);
   expect(el.value).to.deep.equal({ mode: 'safe', confirm: true });
 });
 
@@ -1648,12 +1667,17 @@ it('forwards schema-defined native editing hints to generated text inputs', asyn
   expect(input.getAttribute('enterkeyhint')).to.equal('send');
 });
 
-it('suppresses raw composed enum/boolean select changes and emits only aggregate lr-input', async () => {
+it('suppresses raw composed select changes while emitting aggregate input and commit events', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   let rawChanges = 0;
+  let aggregateChanges = 0;
   let aggregate = 0;
-  el.addEventListener('change', () => rawChanges++);
-  el.addEventListener('lr-change', () => rawChanges++);
+  for (const type of ['change', 'lr-change']) {
+    el.addEventListener(type, event => {
+      if (event.composedPath()[0] === el) aggregateChanges++;
+      else rawChanges++;
+    });
+  }
   el.addEventListener('lr-input', () => aggregate++);
   field(el, 'units').querySelector('lr-select')!.dispatchEvent(
     new Event('change', { bubbles: true, composed: true }),
@@ -1662,6 +1686,7 @@ it('suppresses raw composed enum/boolean select changes and emits only aggregate
   booleanSelect.value = 'true';
   booleanSelect.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   expect(rawChanges).to.equal(0);
+  expect(aggregateChanges).to.equal(4);
   expect(aggregate).to.equal(2);
 });
 

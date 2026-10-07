@@ -233,7 +233,7 @@ lr-thread-list::part(row-actions) {
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
 `--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-color` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-color` (default `currentColor`, inheriting the excerpt text color),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style

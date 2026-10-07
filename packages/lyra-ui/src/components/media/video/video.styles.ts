@@ -1,6 +1,6 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -368,7 +368,9 @@ export const styles = css`
     pointer-events: none;
   }
 
-  @container ${compactContainerQuery} {
+  /* The full toolbar can wrap well before the compact threshold. Put those controls below the
+     media at the medium allocation so wrapped rows never cover active captions. */
+  @container ${mediumContainerQuery} {
     :host(:not([controls='none'])) [part~='video-wrapper'] {
       aspect-ratio: auto;
       display: grid;

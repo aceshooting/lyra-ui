@@ -257,12 +257,7 @@ it('resolves Persian and Hebrew locale subpaths and executes their registration 
 
   const packageManifestPath = '/package.json';
   const manifest = (await import(packageManifestPath)) as unknown as { sideEffects: string[] };
-  for (const entry of [
-    './dist/translations/fa.js',
-    './dist/translations/he.js',
-    './src/translations/fa.ts',
-    './src/translations/he.ts',
-  ]) {
+  for (const entry of ['./dist/translations/**/*.js', './src/translations/**/*.ts']) {
     expect(manifest.sideEffects, entry).to.include(entry);
   }
 });

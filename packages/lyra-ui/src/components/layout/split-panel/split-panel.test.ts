@@ -1,4 +1,4 @@
-import { elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './split-panel.js';
 import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -775,10 +775,13 @@ it('ends an in-flight drag when inherited direction changes', async () => {
   const before = element.position;
   pointer(handle, 'pointerdown', 44, x);
   wrapper.dir = 'rtl';
-  await Promise.resolve();
+  // Native input arrives in another task, after inherited-context observation has settled.
+  await aTimeout(0);
+  await element.updateComplete;
   pointer(window, 'pointermove', 44, x + 40);
   pointer(window, 'pointerup', 44, x + 40);
   expect(element.position).to.equal(before);
+  expect(handle.hasAttribute('data-dragging')).to.be.false;
 });
 
 it('renders the separator range from the last observer measurement', async () => {

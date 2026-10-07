@@ -141,8 +141,22 @@ describe('lr-menubar', () => {
       expect(key(bar.querySelector<HTMLElement>('#email')!, previous).defaultPrevented).to.equal(true);
       expect(file.menuOpen).to.equal(true); expect(active()).to.equal('share');
       await share.openSubmenu('first');
-      key(bar.querySelector<HTMLElement>('#email')!, next); await opened(item(bar, 'edit'));
+      expect(key(bar.querySelector<HTMLElement>('#email')!, next).defaultPrevented).to.equal(true);
+      await opened(item(bar, 'edit'));
       expect(share.submenuOpen).to.equal(false); expect(active()).to.equal('edit');
+    });
+    it(`carries action, checkbox and radio leaves with native arrow keys in ${direction}`, async () => {
+      const bar = await sample(direction); const file = item(bar, 'file'); const edit = item(bar, 'edit');
+      const next = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+      for (const id of ['new', 'check', 'last']) {
+        file.click(); await opened(file);
+        const row = bar.querySelector<LyraMenuItem>(`#${id}`)!; row.focus();
+        expect(active()).to.equal(id);
+        await sendKeys({ press: next });
+        await opened(edit);
+        expect(active()).to.equal('edit'); expect(file.menuOpen).to.equal(false);
+        expect(bar.querySelectorAll('[aria-expanded="true"]').length).to.equal(1);
+      }
     });
   }
 

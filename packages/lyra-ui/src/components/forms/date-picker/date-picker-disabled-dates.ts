@@ -29,7 +29,6 @@ const MAX_DISABLED_DATE_ENTRIES = 10_000;
 
 /**
  * ISO keys of a `disabledDates` value, capped at 10,000 entries.
- * @internal
  */
 export function projectDisabledDateKeys(value: unknown): readonly string[] {
   if (typeof value === 'string') {
@@ -84,7 +83,6 @@ const WEEKDAY_NAMES: Readonly<Record<string, number>> = {
 
 /**
  * Weekday numbers (0 = Sunday) named by a `disabledDaysOfWeek` value.
- * @internal
  */
 export function parseDisabledWeekdays(value: unknown): Set<number> {
   return new Set(
@@ -99,11 +97,9 @@ export function parseDisabledWeekdays(value: unknown): Set<number> {
 
 /**
  * Calendar days from `from` to `to`, both included, DST-safe.
- * @internal
  */
 export function inclusiveDayCount(from: Date, to: Date): number {
   const fromUtc = utcDate(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
   const toUtc = utcDate(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
   return Math.round(Math.abs(toUtc - fromUtc) / 86_400_000) + 1;
 }
-

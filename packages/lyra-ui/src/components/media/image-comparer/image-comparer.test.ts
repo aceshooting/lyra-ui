@@ -103,12 +103,13 @@ it('relays exactly one native change after synchronously committing position', a
   const input = el.shadowRoot!.querySelector('input[type="range"]') as HTMLInputElement;
   const events: Event[] = [];
   const positionsAtDispatch: number[] = [];
-  let legacyChanges = 0;
+  const typedChanges: CustomEvent[] = [];
   el.addEventListener('change', (event) => {
     events.push(event);
     positionsAtDispatch.push(el.position);
+    el.position = 75;
   });
-  el.addEventListener('lr-change', () => legacyChanges++);
+  el.addEventListener('lr-change', (event) => typedChanges.push(event));
 
   input.value = '64';
   input.dispatchEvent(new Event('change', { bubbles: true, composed: false }));
@@ -119,8 +120,9 @@ it('relays exactly one native change after synchronously committing position', a
   expect(events[0]!.bubbles).to.be.true;
   expect(events[0]!.composed).to.be.true;
   expect(positionsAtDispatch).to.deep.equal([64]);
-  expect(legacyChanges).to.equal(0);
-  expect(el.position).to.equal(64);
+  expect(typedChanges).to.have.length(1);
+  expect(typedChanges[0]!.detail).to.deep.equal({ value: 64 });
+  expect(el.position).to.equal(75);
 });
 
 it('normalizes every keyboard direction and commit in LTR and RTL', async () => {

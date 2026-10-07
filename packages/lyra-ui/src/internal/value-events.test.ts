@@ -60,7 +60,7 @@ it('separates aggregate live edits from commits while keeping schema defaults', 
 });
 
 it('publishes canonical and legacy grid requests with the same live abort signal', async () => {
-  const grid = await fixture<LyraDataGrid>(html`<lr-data-grid .dataSource=${async () => ({ rows: [], total: 0 })}></lr-data-grid>`);
+  const grid = await fixture<LyraDataGrid>(html`<lr-data-grid label="Results" .dataSource=${async () => ({ rows: [], total: 0 })}></lr-data-grid>`);
   const events: CustomEvent[] = [];
   grid.addEventListener('lr-request', (event) => events.push(event));
   grid.addEventListener('request', (event) => events.push(event));
@@ -93,11 +93,12 @@ it('keeps one checkbox selection snapshot across native listener writes', async 
 
 it('keeps a discrete range preset snapshot across native listener writes', async () => {
   const control = await fixture<HTMLElement & { start: number; end: number }>(html`
-    <lr-time-range .presets=${[{ label: 'Morning', start: 60, end: 120 }]}></lr-time-range>
+    <lr-time-range max="360" .presets=${[{ label: 'Morning', start: 60, end: 120 }]}></lr-time-range>
   `);
   const events = collect(control);
   control.addEventListener('input', () => { control.start = 240; control.end = 300; });
   control.shadowRoot!.querySelector<HTMLButtonElement>('[part="preset-button"]')!.click();
   expect((events[1] as CustomEvent).detail.value).to.deep.equal({ start: 60, end: 120 });
   expect((events[3] as CustomEvent).detail.value).to.deep.equal({ start: 60, end: 120 });
+  expect({ start: control.start, end: control.end }).to.deep.equal({ start: 240, end: 300 });
 });

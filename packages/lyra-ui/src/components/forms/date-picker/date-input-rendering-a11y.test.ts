@@ -648,8 +648,7 @@ describe("start/end adornment slots", () => {
     glyph.slot = "end";
     glyph.textContent = "UTC";
     el.append(glyph);
-    await el.updateComplete;
-    await el.updateComplete;
+    await waitUntil(() => !part(el, "end").hasAttribute("hidden"));
     expect(part(el, "end").hasAttribute("hidden")).to.be.false;
   });
 

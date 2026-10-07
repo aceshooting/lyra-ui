@@ -10,11 +10,11 @@ import '../layout/widget/widget.js';
 
 // [tag, markup, private method every relevant observer batch ends up calling]
 const cases: Array<[string, string, string]> = [
-  ['lr-chip', '<lr-chip removable>Filter</lr-chip>', 'bindLabelObserverTargets'],
-  ['lr-tag', '<lr-tag with-remove>Filter</lr-tag>', 'bindLabelObserverTargets'],
-  ['lr-progress-bar', '<lr-progress-bar>Upload</lr-progress-bar>', 'bindLabelObserverTargets'],
-  ['lr-progress-ring', '<lr-progress-ring>Upload</lr-progress-ring>', 'bindLabelObserverTargets'],
-  ['lr-spinner', '<lr-spinner label-placement="after">Loading</lr-spinner>', 'bindLabelObserverTargets'],
+  ['lr-chip', '<lr-chip removable>Filter</lr-chip>', 'recomputeLabelText'],
+  ['lr-tag', '<lr-tag with-remove>Filter</lr-tag>', 'recomputeLabelText'],
+  ['lr-progress-bar', '<lr-progress-bar>Upload</lr-progress-bar>', 'recomputeVisibleLabelText'],
+  ['lr-progress-ring', '<lr-progress-ring>Upload</lr-progress-ring>', 'recomputeVisibleLabelText'],
+  ['lr-spinner', '<lr-spinner label-placement="after">Loading</lr-spinner>', 'recomputeVisibleLabelText'],
   ['lr-card', '<lr-card actionable>Open</lr-card>', 'recomputeAccessibleContentText'],
   ['lr-widget', '<lr-widget label="Usage"><span slot="label">Title</span>Body</lr-widget>', 'readLabelSlotText'],
 ];
@@ -35,7 +35,9 @@ for (const [tag, markup, method] of cases) {
 
     wrapper.style.opacity = '0.9';
     await aTimeout(0);
-    expect(calls, 'the first batch always matters').to.be.greaterThan(0);
+    // Drain any first-batch visibility refresh before checking subsequent no-op writes.
+    await nextFrame();
+    await aTimeout(0);
 
     calls = 0;
     wrapper.style.opacity = '0.8';

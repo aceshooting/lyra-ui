@@ -1581,7 +1581,32 @@ describe('lr-video public contract', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('keeps a two-line caption clear of every full control at a 320px allocation', async () => {
+  it('places controls below the media strictly below the root-relative medium boundary', async () => {
+    const originalRootSize = document.documentElement.style.fontSize;
+    try {
+      for (const rootSize of [16, 20]) {
+        document.documentElement.style.fontSize = `${rootSize}px`;
+        for (const delta of [-1, 0]) {
+          const el = await fixture<LyraVideo>(html`
+            <lr-video controls="full" style=${`inline-size: ${rootSize * 30 + delta}px`}></lr-video>
+          `);
+          const overlay = el.shadowRoot!.querySelector<HTMLElement>('[part="controls-overlay"]')!;
+          expect(getComputedStyle(overlay).position, `${rootSize}px root, ${delta}px from boundary`).to.equal(
+            delta < 0 ? 'relative' : 'absolute',
+          );
+          if (delta < 0) {
+            const video = nativeVideo(el);
+            expect(overlay.getBoundingClientRect().top).to.be.at.least(video.getBoundingClientRect().bottom);
+          }
+        }
+      }
+    } finally {
+      document.documentElement.style.fontSize = originalRootSize;
+    }
+  });
+
+  it('keeps a two-line caption clear of every full control around the compact allocation boundary', async () => {
+    const originalRootSize = document.documentElement.style.fontSize;
     const fullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled');
     const pipEnabled = Object.getOwnPropertyDescriptor(document, 'pictureInPictureEnabled');
     const requestFullscreen = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'requestFullscreen');
@@ -1600,51 +1625,57 @@ describe('lr-video public contract', () => {
         configurable: true,
         value: () => Promise.resolve(),
       });
-      const wrapper = await fixture<HTMLElement>(html`
-        <div style="inline-size: 320px"><lr-video controls="full"></lr-video></div>
-      `);
-      const el = wrapper.querySelector('lr-video') as LyraVideo;
-      const media = nativeVideo(el);
-      const track = new EventTarget() as EventTarget & {
-        kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
-      };
-      Object.assign(track, {
-        kind: 'captions',
-        label: 'English',
-        language: 'en',
-        mode: 'showing',
-        activeCues: [{ text: 'A deliberately long first caption line\nand a second caption line' }],
-      });
-      Object.defineProperty(media, 'textTracks', {
-        configurable: true,
-        value: { 0: track, length: 1 },
-      });
-      media.dispatchEvent(new Event('loadedmetadata'));
-      track.dispatchEvent(new Event('cuechange'));
-      await el.updateComplete;
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      for (const { rootSize, width } of [16, 20].flatMap((rootSize) =>
+        [-1, 0].map((delta) => ({ rootSize, width: rootSize * 20 + delta })),
+      )) {
+        document.documentElement.style.fontSize = `${rootSize}px`;
+        const wrapper = await fixture<HTMLElement>(html`
+          <div style=${`inline-size: ${width}px`}><lr-video controls="full"></lr-video></div>
+        `);
+        const el = wrapper.querySelector('lr-video') as LyraVideo;
+        const media = nativeVideo(el);
+        const track = new EventTarget() as EventTarget & {
+          kind: string; label: string; language: string; mode: TextTrackMode; activeCues: Array<{ text: string }>;
+        };
+        Object.assign(track, {
+          kind: 'captions',
+          label: 'English',
+          language: 'en',
+          mode: 'showing',
+          activeCues: [{ text: 'A deliberately long first caption line\nand a second caption line' }],
+        });
+        Object.defineProperty(media, 'textTracks', {
+          configurable: true,
+          value: { 0: track, length: 1 },
+        });
+        media.dispatchEvent(new Event('loadedmetadata'));
+        track.dispatchEvent(new Event('cuechange'));
+        await el.updateComplete;
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-      const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
-      const video = el.shadowRoot!.querySelector<HTMLElement>('[part="video"]')!;
-      const captionRect = caption.getBoundingClientRect();
-      const videoRect = video.getBoundingClientRect();
-      const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
-        '[part="controls"] button, [part="controls"] select, [part="controls"] input',
-      )];
-      expect(controls.length).to.equal(8);
-      expect(captionRect.top >= videoRect.top).to.equal(true);
-      expect(captionRect.bottom <= videoRect.bottom).to.equal(true);
-      for (const control of controls) {
-        const controlRect = control.getBoundingClientRect();
-        expect(controlRect.width > 0 && controlRect.height > 0, `${control.localName} is visible`).to.equal(true);
-        const overlaps =
-          captionRect.left < controlRect.right &&
-          captionRect.right > controlRect.left &&
-          captionRect.top < controlRect.bottom &&
-          captionRect.bottom > controlRect.top;
-        expect(overlaps, `caption must clear ${control.localName}`).to.equal(false);
+        const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
+        const video = el.shadowRoot!.querySelector<HTMLElement>('[part="video"]')!;
+        const captionRect = caption.getBoundingClientRect();
+        const videoRect = video.getBoundingClientRect();
+        const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
+          '[part="controls"] button, [part="controls"] select, [part="controls"] input',
+        )];
+        expect(controls.length).to.equal(8);
+        expect(captionRect.top >= videoRect.top).to.equal(true);
+        expect(captionRect.bottom <= videoRect.bottom).to.equal(true);
+        for (const control of controls) {
+          const controlRect = control.getBoundingClientRect();
+          expect(controlRect.width > 0 && controlRect.height > 0, `${control.localName} is visible`).to.equal(true);
+          const overlaps =
+            captionRect.left < controlRect.right &&
+            captionRect.right > controlRect.left &&
+            captionRect.top < controlRect.bottom &&
+            captionRect.bottom > controlRect.top;
+          expect(overlaps, `${width}px caption must clear ${control.localName}`).to.equal(false);
+        }
       }
     } finally {
+      document.documentElement.style.fontSize = originalRootSize;
       restoreOwnProperty(document, 'fullscreenEnabled', fullscreenEnabled);
       restoreOwnProperty(document, 'pictureInPictureEnabled', pipEnabled);
       restoreOwnProperty(HTMLElement.prototype, 'requestFullscreen', requestFullscreen);

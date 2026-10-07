@@ -362,7 +362,7 @@ describe('tree declarative child model', () => {
       private observesTree = false;
       constructor(callback: MutationCallback) { this.callback = callback; }
       observe(target: Node, options?: MutationObserverInit): void {
-        if (target !== el || !options?.attributeFilter?.includes('inert')) return;
+        if (target !== el || options?.attributeFilter?.join(',') !== 'selected,disabled,inert,lazy') return;
         this.observesTree = true;
         treeObservations += 1;
         treeCallback = this.callback;

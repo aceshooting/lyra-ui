@@ -21,6 +21,17 @@ Mirrors the `<wa-date-picker>`/`<wa-date-input>` 3.11 public API under `lr-`. Bo
 components are **experimental since 3.8**. Values use ISO 8601: `YYYY-MM-DD` (single) or
 `YYYY-MM-DD/YYYY-MM-DD` (range).
 
+The date-picker class module also exports three helpers from
+`@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`:
+
+- `projectDisabledDateKeys(value: unknown): readonly string[]` returns frozen ISO date keys from
+  a comma/whitespace-separated string or an array of strings and `Date` values. Invalid dates
+  are omitted; array input inspects at most its first 10,000 entries without invoking getters.
+- `parseDisabledWeekdays(value: unknown): Set<number>` parses comma/whitespace-separated English
+  weekday names or digits `0`–`6` (`0` is Sunday), ignoring unrecognized tokens.
+- `inclusiveDayCount(from: Date, to: Date): number` counts calendar days between valid dates in
+  either order, including both endpoints and avoiding daylight-saving-hour differences.
+
 For `lr-date-input`, host `aria-describedby` targets resolve in the host's root and describe the
 native combobox input through element references, before its existing error and hint descriptions.
 Replacement, removal, reinsertion, newly resolved IDs, reconnect, and adoption update those

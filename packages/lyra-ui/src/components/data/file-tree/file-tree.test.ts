@@ -340,6 +340,25 @@ describe('lr-file-tree', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
       'Showing 10,000 items only.',
     );
+    el.nodes = nodes;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
+    expect(el.dataTruncated).to.equal(false);
+  });
+
+  it('reports the inspected-position ceiling even when sparse child entries are omitted', async () => {
+    const children: FileTreeNode[] = [];
+    children.length = 10_001;
+    children[0] = { path: 'folder/retained.ts' };
+    children[10_000] = { path: 'folder/omitted.ts' };
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree
+      .nodes=${[{ path: 'folder', kind: 'directory', children }]}
+    ></lr-file-tree>`);
+    expect(el.nodes[0]!.children!.map((node) => node.path)).to.deep.equal(['folder/retained.ts']);
+    expect(el.dataTruncated).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent?.trim()).to.equal(
+      'Only the first 10,000 items are shown.',
+    );
   });
 
   it('keeps the inner tree events inside the component', async () => {

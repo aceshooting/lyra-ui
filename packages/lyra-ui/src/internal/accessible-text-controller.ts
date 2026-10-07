@@ -5,16 +5,23 @@ import {
   composedAccessibilityText,
 } from './accessibility-visibility.js';
 import { CustomElementUpgradeObserver } from './custom-element-upgrade-observer.js';
+import { OwnedFrame, OwnedTimeout } from './owned-timer.js';
 
 /** Owns label observation in the host's current realm; the first bind is silent. */
 export class AccessibleTextController implements ReactiveController {
   private observer?: MutationObserver;
   private readonly upgrades = new CustomElementUpgradeObserver(() => this.changed());
+  private readonly visibilityFrame: OwnedFrame;
+  private readonly visibilityTimer: OwnedTimeout;
   private active = false;
   private slotRoot?: ShadowRoot;
   private readonly onSlotChange = (event: Event): void => {
-    const slot = event.target as Element | null;
-    if (slot?.localName !== 'slot' || !this.slots.includes(slot.getAttribute('name') ?? '')) return;
+    // Forwarded slotchange events retain the forwarding slot as their target. Its name
+    // belongs to the outer host; the slot in our own root determines which content changed.
+    const slot = event.composedPath().find((target): target is HTMLSlotElement =>
+      (target as Element).localName === 'slot' && (target as Element).getRootNode() === this.slotRoot,
+    );
+    if (!slot || !this.slots.includes(slot.name)) return;
     this.changed();
   };
 
@@ -25,6 +32,8 @@ export class AccessibleTextController implements ReactiveController {
     private readonly extraAttributes: readonly string[] = [],
     private enabled = true,
   ) {
+    this.visibilityFrame = new OwnedFrame(host);
+    this.visibilityTimer = new OwnedTimeout(host);
     host.addController(this);
   }
 
@@ -40,18 +49,20 @@ export class AccessibleTextController implements ReactiveController {
     if (this.active && this.enabled) {
       const observer = this.observer;
       const pending = observer?.takeRecords() ?? [];
-      const relevant = observer && pending.length > 0 && accessibleTextRecordsMatter(observer, pending);
+      const relevant = observer && pending.length > 0 && this.recordsMatter(pending) &&
+        accessibleTextRecordsMatter(observer, pending);
       this.bindSlotRoot();
       this.bind();
       if (relevant) queueMicrotask(() => {
         if (this.active && this.enabled && this.observer === observer && this.host.isConnected)
-          this.onChange(pending);
+          this.notify(pending);
       });
     }
   }
 
   hostDisconnected(): void {
     this.active = false;
+    this.cancelVisibilityRefresh();
     this.slotRoot?.removeEventListener('slotchange', this.onSlotChange);
     this.slotRoot = undefined;
     this.observer?.disconnect();
@@ -72,6 +83,7 @@ export class AccessibleTextController implements ReactiveController {
       this.bindSlotRoot();
       this.rebuild();
     } else {
+      this.cancelVisibilityRefresh();
       this.slotRoot?.removeEventListener('slotchange', this.onSlotChange);
       this.slotRoot = undefined;
       this.observer?.disconnect();
@@ -105,12 +117,14 @@ export class AccessibleTextController implements ReactiveController {
   hasContent(): boolean { return this.text().trim().length > 0; }
 
   private rebuild(): void {
+    this.cancelVisibilityRefresh();
     this.observer?.disconnect();
     this.upgrades.disconnect();
     const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
     this.observer = Observer
       ? new Observer((records, observer) => {
-        if (accessibleTextRecordsMatter(observer, records)) this.changed(records);
+        if (this.observer !== observer) return;
+        if (this.recordsMatter(records) && accessibleTextRecordsMatter(observer, records)) this.changed(records);
       })
       : undefined;
     this.bind();
@@ -124,9 +138,56 @@ export class AccessibleTextController implements ReactiveController {
     root?.addEventListener('slotchange', this.onSlotChange);
   }
 
+  private recordsMatter(records: readonly MutationRecord[]): boolean {
+    if (this.slots.length === 0) return true;
+    const feedsSlot = (start: Node): boolean => {
+      const visited = new Set<Node>();
+      let node: Node | null = start;
+      while (node && node !== this.host && !visited.has(node)) {
+        visited.add(node);
+        if (node.parentNode === this.host) {
+          const name = node.nodeType === 1 ? (node as Element).getAttribute('slot') ?? '' : '';
+          return this.slots.includes(name);
+        }
+        node = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot ??
+          node.parentNode ?? (node as ShadowRoot).host ?? null;
+      }
+      // Ancestor visibility changes and detached removed content still invalidate the label.
+      return true;
+    };
+    return records.some((record) => {
+      if (record.type === 'attributes' && record.attributeName === 'slot') return true;
+      if (record.target === this.host && record.type === 'childList') {
+        return [...record.addedNodes, ...record.removedNodes].some((node) =>
+          node.nodeType !== 1 ? this.slots.includes('') : this.slots.includes((node as Element).getAttribute('slot') ?? ''),
+        );
+      }
+      return feedsSlot(record.target);
+    });
+  }
+
   private changed(records: MutationRecord[] = []): void {
     if (!this.active || !this.enabled || !this.host.isConnected) return;
     this.bind();
+    this.notify(records);
+  }
+
+  private notify(records: readonly MutationRecord[]): void {
     this.onChange(records);
+    if (!records.some((record) => record.type === 'attributes' &&
+      ['class', 'style', 'hidden'].includes(record.attributeName ?? ''))) return;
+    // Slot inheritance can settle after mutation delivery, particularly when a visible descendant
+    // overrides a newly hidden parent. Recheck once after the owner realm has applied its cascade.
+    if (this.visibilityFrame.pending || this.visibilityTimer.pending) return;
+    this.visibilityFrame.schedule(() => {
+      this.visibilityTimer.schedule(0, () => {
+        if (this.active && this.enabled) this.onChange([]);
+      });
+    });
+  }
+
+  private cancelVisibilityRefresh(): void {
+    this.visibilityFrame.cancel();
+    this.visibilityTimer.cancel();
   }
 }

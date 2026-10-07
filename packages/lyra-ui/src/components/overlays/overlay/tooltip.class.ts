@@ -18,6 +18,7 @@ import {
   type AriaOwnershipLease,
 } from '../../../internal/aria-ownership.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
+import { imageMapImageFor } from '../../../internal/dom-guards.js';
 import {
   deferredPlaceReady as place,
   syncTopLayerRelease,
@@ -1305,10 +1306,16 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         }
       }
       for (const element of visitedContentElements) {
+        const imageMapElement = element.localName === 'map' || element.localName === 'area';
+        if (imageMapElement) {
+          // Image-map visibility belongs to an image that can live outside the tooltip. Keep it
+          // observed even while hidden, so revealing the image restores the projected label.
+          const image = imageMapImageFor(element);
+          if (image) snapshot.externalRoots.add(image);
+        }
         if (!isActionableElement(element)) continue;
         // Image maps historically resolve actionability independently of the text walk's shared
         // lookup budget. Keep that verdict when the text projection exhausts its smaller budget.
-        const imageMapElement = element.localName === 'map' || element.localName === 'area';
         const state = imageMapElement ? undefined : elementStates.get(element);
         // Text-omitted nodes can still be authored focus stops, such as a displayed stylesheet.
         // Preserve their actionability even though the text walk never needed their visibility.
@@ -1356,11 +1363,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         'hidden',
         'href',
         'inert',
+        'name',
         'open',
         'role',
         'slot',
         'style',
         'tabindex',
+        'usemap',
       ],
       childList: true,
       characterData: true,

@@ -3296,7 +3296,7 @@ lr-thread-list::part(row-actions) {
 
 **Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
 `--lr-thread-list-excerpt-highlight-bg` (default `var(--lr-color-warning-quiet)`),
-`--lr-thread-list-excerpt-highlight-color` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-color` (default `currentColor`, inheriting the excerpt text color),
 `--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
 `--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
 internal virtual-list's generic mark hook, so set them on `lr-thread-list` or any ancestor. They do not style
@@ -3912,7 +3912,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   `var(--lr-color-surface)`.
 - `--lr-voice-picker-trigger-hover-border-color` — Trigger border color while the pointer is over
   it, or while it is pressed, independent of the resting border above. Default:
-  `var(--lr-color-brand)`.
+  `var(--lr-voice-picker-trigger-border-color)` (the resting border).
 - `--lr-voice-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the
   trigger or combobox is focused. One name for every field-shaped control in the library, so a halo

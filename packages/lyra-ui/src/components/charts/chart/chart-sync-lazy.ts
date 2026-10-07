@@ -37,7 +37,9 @@ export class LazyChartSyncController {
     }
     this.pending = { name: normalized, compatible, invalidateOwner };
     if (this.controller) {
+      const wasEnabled = this.enabled;
       this.controller.update(normalized, compatible, invalidateOwner);
+      if (wasEnabled !== this.enabled) this.onReady?.();
       return;
     }
     this.startLoading();
@@ -66,9 +68,11 @@ export class LazyChartSyncController {
   clear(): void { this.controller?.clear(); }
 
   disconnect(): void {
+    const wasEnabled = this.enabled;
     this.generation += 1;
     this.pending = undefined;
     this.loading = false;
     this.controller?.disconnect();
+    if (wasEnabled !== this.enabled) this.onReady?.();
   }
 }

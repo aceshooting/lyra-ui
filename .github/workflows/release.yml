@@ -162,6 +162,9 @@ jobs:
               echo "::error::Expected exactly one tarball for $tag."
               exit 1
             fi
+            if [[ "$name" == "@aceshooting/lyra-ui" ]]; then
+              node packages/lyra-ui/scripts/check-package-size.mjs --tarball "${tarballs[0]}"
+            fi
             node scripts/release-integrity.mjs validate-tarball --tag "$tag" --file "${tarballs[0]}"
             files=("$dir/CHANGELOG.md")
             if [[ "$(node -p "!!(require('./$dir/package.json').scripts || {}).manifest")" == "true" ]]; then

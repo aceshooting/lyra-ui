@@ -1600,6 +1600,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  once, when the overlay opens), this tracks live: reassigning `trigger` moves the state to the
    *  new element and clears it from the old one on the next update. */
   private syncExternalTriggerA11y(): void {
+    if (!this.isConnected) {
+      this.releaseExternalTriggerA11y();
+      return;
+    }
     const mobile = this._mode === 'mobile';
     const trigger = mobile || this.triggerCollapses ? this.resolveExternalTrigger() : null;
     if (!trigger) {

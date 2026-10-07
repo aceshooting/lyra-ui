@@ -23,6 +23,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
+import { findDeclarationLinkFindings } from './check-declaration-links.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -60,27 +61,7 @@ export function findBuildArtifactFindings(files, read, { packageDirectory, expor
       }
     }
   }
-  const codeBlockClassDeclarations = files.filter((file) =>
-    /[\\/]components[\\/]conversation[\\/]code-block[\\/]code-block(?:-core)?\.class\.d\.ts$/u.test(file),
-  );
-  const codeBlockBaseDeclaration = files.find((file) =>
-    /[\\/]components[\\/]conversation[\\/]code-block[\\/]code-block-base\.class\.d\.ts$/u.test(file),
-  );
-  const codeBlockClassesUsingBase = codeBlockClassDeclarations.filter((file) =>
-    /\bextends\s+LyraCodeBlockBase\b/u.test(read(file)),
-  );
-  if (codeBlockClassesUsingBase.length > 0) {
-    const baseIsExported =
-      codeBlockBaseDeclaration !== undefined &&
-      /\bexport\s+declare\s+abstract\s+class\s+LyraCodeBlockBase\b/u.test(
-        read(codeBlockBaseDeclaration),
-      );
-    if (!baseIsExported) {
-      findings.push(
-        `${codeBlockBaseDeclaration ?? 'dist/components/conversation/code-block/code-block-base.class.d.ts'}: missing exported LyraCodeBlockBase required by published subclass declarations`,
-      );
-    }
-  }
+  findings.push(...findDeclarationLinkFindings(files, read));
 
   for (const file of files.slice().sort()) {
     if (FIXTURE_DIRECTORY.test(file)) {

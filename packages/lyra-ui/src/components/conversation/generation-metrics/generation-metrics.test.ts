@@ -43,7 +43,7 @@ function parseElapsedSeconds(text: string): number {
 // These locale-formatting fixtures intentionally retain English messages.
 expectLocaleFallback('de-DE', [
   'generationStatusElapsedSeconds',
-  'generationStatusTokensCount',
+  'generationStatusTokens',
   'generationStatusThroughput',
   'stopGenerating',
 ]);
