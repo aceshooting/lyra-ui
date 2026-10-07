@@ -294,32 +294,10 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // remains the same 400ms median budget. This test polices update complexity, not Istanbul's
   // instrumentation overhead during fixture construction.
   this.timeout(120000);
-  // 2026-09-16: this benchmark reproducibly HANGS -- not merely
-  // slows down -- under plain CPU contention, no coverage instrumentation required: pinned to 2
-  // cores (`taskset -c 0,1`, the documented CI-approximation technique), 90-100% single-core CPU
-  // and zero test progress for 120s+, well past the `this.timeout(120000)` above, which never
-  // fires. A timeout callback needs the event loop to be free to run, so this is consistent with
-  // the main thread being synchronously blocked rather than just slow. Bisected with `it.only()`
-  // under the same 2-core pin: `virtual-list` passes alone (2.7s) -- ruling out this file's
-  // original coverage-lane incident's virtual-list/ResizeObserver suspicion (see the file-level
-  // `before()` above) as the cause of THIS hang; `lite-chart`+`heatmap`+`table` together pass
-  // (3.9s); `graph`+`flow-canvas` together reproduce it. Not narrowed further between these two
-  // within a bounded investigation. One concrete, unconfirmed lead for this test specifically:
-  // rebuildSimulation()'s per-unpositioned-node `resolvedLinks.find(...)` neighbor-jitter-spawn
-  // loop is O(nodes x links) and runs up to 5,000 x 10,000 = 50M comparisons on this benchmark's
-  // coldest (all-unpositioned) build. This is the same "cascades into browser disconnected for
-  // whatever runs next" signature that moved this file from full-engine shard 2/8 to 3/8 when
-  // this batch added 18 test files elsewhere -- a shard reassignment changed which OTHER files
-  // run alongside this one, changing its CPU-contention profile without this file's own logic
-  // changing at all. Quarantined rather than fixed: a real fix needs the underlying synchronous
-  // work chunked or reduced (a graph.class.ts/flow-canvas.class.ts change), which is beyond this
-  // investigation's bounded scope, and raising either test's `this.timeout()` further only delays
-  // the same cascade instead of preventing it. These are performance-budget benchmarks, not
-  // behavioral contracts -- the other 9 benchmarks in this file are unaffected and still run,
-  // under every non-coverage engine lane, everywhere. Flip this constant once the underlying
-  // hang is root-caused and fixed.
-  const HANG_QUARANTINED = true;
-  if (HANG_QUARANTINED) return this.skip();
+  // The cold seeded build used to scan every link for each unpositioned node (nodes x links, up to
+  // 50M comparisons here), which blocked the main thread long enough under CPU contention that the
+  // renderer stopped responding. `rebuildSimulation()` now indexes each node's incident links and
+  // skips that search while nothing is positioned, so the benchmark runs with the rest of the file.
   const GRAPH_NODE_COUNT = 5_000;
   const GRAPH_LINK_COUNT = 10_000;
   const host = (await fixture(
