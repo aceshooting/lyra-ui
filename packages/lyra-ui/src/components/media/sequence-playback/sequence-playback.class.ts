@@ -71,9 +71,8 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   static override styles = [LyraElement.styles, styles];
 
-  static override properties = {
-    playing: { type: Boolean, reflect: true, noAccessor: true },
-  };
+  /** `playing` is reflected output, not input. */
+  protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
 
   /** Total number of sequence items; the current-index range is `[0, itemCount)`. */
   @property({ type: Number, attribute: 'item-count' }) itemCount = 0;
@@ -82,10 +81,6 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   /** Delay between ticks, in milliseconds, while playing. Clamped to the timer-safe range in
    *  `scheduleTick()`. */
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
-  // `playing` is declared via `static properties` above (noAccessor) with a
-  // hand-written accessor below, so a direct `el.playing = true/false`
-  // assignment always drives the real timer — not just calls through
-  // play()/pause().
 
   /** Stops playback on the last item instead of wrapping back to the first. Read on every tick,
    *  so a live change takes effect at the next step. */
@@ -103,52 +98,25 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   private timer?: number;
   private timerWindow?: Window;
   private _playing = false;
-  /** Whether a requested playing state has crossed the valid-count boundary and owns a timer. */
-  private running = false;
   @query('[part="play-button"]') private playButton?: HTMLButtonElement;
 
+  /** Whether playback is running. Read-only state, reflected as the `playing` attribute; use `play()`, `pause()` and `toggle()`. */
   get playing(): boolean {
     return this._playing;
   }
-  set playing(next: boolean) {
-    // During initial attribute upgrade, defer the count decision until `willUpdate()` has seen
-    // every attribute; otherwise `<... playing item-count="3">` could depend on attribute order.
-    // Once mounted, reject an impossible request synchronously so IDL and reflected presence can
-    // never disagree during the gap before Lit's next update.
-    if (Boolean(next) && this.hasUpdated && finiteCount(this.itemCount) <= 1) {
-      if (this.hasAttribute('playing')) this.removeAttribute('playing');
-      return;
+
+  private setPlaying(next: boolean): void {
+    if (next === this._playing || (next && finiteCount(this.itemCount) <= 1)) return;
+    this._playing = next;
+    this.toggleAttribute('playing', next);
+    this.requestUpdate();
+    if (next) {
+      this.emit('lr-play');
+      if (this._playing) this.scheduleTick();
+    } else {
+      this.clearTimer();
+      this.emit('lr-pause');
     }
-    const old = this._playing;
-    const requested = Boolean(next);
-    if (requested === old) return;
-    this._playing = requested;
-    this.requestUpdate('playing', old);
-    if (requested) this.startIfPossible();
-    else this.stopRunning();
-  }
-
-  /** Starts a requested playback only after all initial attributes have had a chance to upgrade. */
-  private startIfPossible(): void {
-    if (this.running || !this._playing || finiteCount(this.itemCount) <= 1) return;
-    this.running = true;
-    this.emit('lr-play');
-    if (this.running && this._playing) this.scheduleTick();
-  }
-
-  private stopRunning(): void {
-    this.clearTimer();
-    if (!this.running) return;
-    this.running = false;
-    this.emit('lr-pause');
-  }
-
-  private rejectInvalidPlayingRequest(): void {
-    if (!this._playing) return;
-    const old = this._playing;
-    this._playing = false;
-    this.stopRunning();
-    this.requestUpdate('playing', old);
   }
 
   /** Largest index reachable at the current `itemCount` (never negative, and
@@ -178,13 +146,15 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     const currentIndex = finiteCount(this.currentIndex);
     if (itemCount !== this.itemCount) this.itemCount = itemCount;
     if (currentIndex !== this.currentIndex) this.currentIndex = currentIndex;
-    if (changed.has('itemCount') || changed.has('playing')) {
+    if (changed.has('currentIndex') && !changed.has('itemCount') && currentIndex > this.maxIndex) {
+      this.currentIndex = this.maxIndex;
+    }
+    if (changed.has('itemCount')) {
       // If itemCount is externally reduced to <= 1 while playing, the timer
       // would otherwise keep firing forever — and the play button (the only
       // control that could stop it) becomes ?disabled at that point, leaving
       // no way to stop it from the rendered UI.
-      if (this.itemCount <= 1) this.rejectInvalidPlayingRequest();
-      else this.startIfPossible();
+      if (this.itemCount <= 1) this.pause();
       // Re-clamp `currentIndex` into the new `[0, itemCount)` range on any shrink, not
       // just the <= 1 case above, so it never lingers out of bounds. Goes through
       // `setIndex()` (not a raw assignment) so a consumer synced via `lr-sequence-step`
@@ -196,19 +166,17 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   /** Start playback; no-op if there's nothing to advance through. */
   play(): void {
-    if (this.playing || finiteCount(this.itemCount) <= 1) return;
-    this.playing = true;
+    this.setPlaying(true);
   }
 
   /** Stop playback. */
   pause(): void {
-    if (!this.playing) return;
-    this.playing = false;
+    this.setPlaying(false);
   }
 
   /** Toggle between playing and paused. */
   toggle(): void {
-    this.playing = !this.playing;
+    this.setPlaying(!this._playing);
   }
 
   // A self-rescheduling `setTimeout` (rather than one long-lived
@@ -232,7 +200,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     const id = timerWindow.setTimeout(() => {
       if (this.timer !== id || this.timerWindow !== timerWindow) return;
       this.tick();
-      if (this.running && this.playing && this.timer === id && this.timerWindow === timerWindow) {
+      if (this.playing && this.timer === id && this.timerWindow === timerWindow) {
         this.scheduleTick();
       }
     }, delay);

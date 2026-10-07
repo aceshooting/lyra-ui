@@ -25,7 +25,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
+import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from './file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -93,6 +93,11 @@ function statusText(
   if (status === 'error') return uploadFailedLabel;
   if (status === 'uploading') return uploadingText;
   return '';
+}
+
+/** Fills the `{label}`/`{percent}` placeholders of a caller-supplied message. */
+function fillMessage(message: string, values: Record<string, string>): string {
+  return message.replace(/\{(label|percent)\}/g, (match, key: string) => values[key] ?? match);
 }
 
 export interface LyraAttachmentChipEventMap {
@@ -315,17 +320,17 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   @property({ type: Boolean, reflect: true, attribute: 'thumbnail-only' })
   thumbnailOnly = false;
 
-  /** Verb used in the remove button's accessible name. For complete control over translated
-   *  word order and punctuation, override the `removeWithContext` message instead. */
+  /** Accessible name of the remove button; `{label}` is replaced by the file name. Blank falls back
+   *  to the localized `removeWithContext` message. */
   @property({ attribute: 'remove-label' }) removeLabel?: string;
 
-  /** Verb used in the retry button's accessible name. For complete control over translated word
-   *  order and punctuation, override the `attachmentRetryWithContext` message instead. */
+  /** Accessible name of the retry button; `{label}` is replaced by the file name. Blank falls back
+   *  to the localized `attachmentRetryWithContext` message. */
   @property({ attribute: 'retry-label' }) retryLabel?: string;
 
-  /** Verb used in uploading messages. For complete control over translated word order and
-   *  punctuation, override the `attachmentUploadingWithContext`,
-   *  `attachmentUploadingProgress`, and `attachmentUploadingIndeterminate` messages instead. */
+  /** Visible uploading status and the progress bar's accessible name; `{label}` is replaced by the
+   *  file name and `{percent}` by the progress. An explicit empty value hides the visible status
+   *  and falls back to the localized `attachmentUploadingWithContext` name. */
   @property({ attribute: 'uploading-label' }) uploadingLabel?: string;
 
   /** Visible status text shown for `status="error"`. Override for
@@ -557,11 +562,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
         ? formatFileSize(
             this.effectiveSize,
             (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-            (value, fractionDigits) =>
-              getNumberFormat(this.effectiveLocale, {
-                minimumFractionDigits: fractionDigits,
-                maximumFractionDigits: fractionDigits,
-              }).format(value)
+            localizedNumberLabel(this.effectiveLocale)
           )
         : '';
     // Same override-wins-verbatim rule as `untitledLabel` above.
@@ -571,25 +572,21 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     }).format(Math.round(this.clampedProgress));
     const uploadingText =
       this.uploadingLabel !== undefined
-        ? this.uploadingLabel
+        ? fillMessage(this.uploadingLabel, { label: displayName, percent: progressPercent })
         : this.hasNumericProgress
         ? this.localize('attachmentUploadingProgress', undefined, {
             percent: progressPercent,
           })
         : this.localize('attachmentUploadingIndeterminate');
-    const uploadingWithContext =
-      this.uploadingLabel ??
-      this.localize('attachmentUploadingWithContext', undefined, {
-        label: displayName,
-      });
-    const retryWithContext =
-      this.retryLabel ??
-      this.localize('attachmentRetryWithContext', undefined, {
-        label: displayName,
-      });
-    const removeWithContext =
-      this.removeLabel ??
-      this.localize('removeWithContext', undefined, { label: displayName });
+    const uploadingWithContext = this.uploadingLabel
+      ? uploadingText
+      : this.localize('attachmentUploadingWithContext', undefined, { label: displayName });
+    const retryWithContext = this.retryLabel
+      ? fillMessage(this.retryLabel, { label: displayName })
+      : this.localize('attachmentRetryWithContext', undefined, { label: displayName });
+    const removeWithContext = this.removeLabel
+      ? fillMessage(this.removeLabel, { label: displayName })
+      : this.localize('removeWithContext', undefined, { label: displayName });
     const status = this.effectiveStatus;
     const text = statusText(status, uploadingText, uploadFailedLabel);
     const uploading = status === 'uploading';

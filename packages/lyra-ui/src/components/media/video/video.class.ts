@@ -23,7 +23,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
@@ -140,16 +140,6 @@ function parseThumbnailVtt(source: string, sourceUrl: string, URLCtor: typeof UR
   return cues;
 }
 
-function textTracks(media: HTMLVideoElement | undefined): TextTrack[] {
-  const result: TextTrack[] = [];
-  if (!media) return result;
-  for (let index = 0; index < media.textTracks.length; index += 1) {
-    const track = media.textTracks[index];
-    if (track) result.push(track);
-  }
-  return result;
-}
-
 function unsupportedPromise(host: Element, message: string): Promise<never> {
   const DOMExceptionConstructor = host.ownerDocument.defaultView?.DOMException ?? DOMException;
   return Promise.reject(new DOMExceptionConstructor(message, 'NotSupportedError'));
@@ -231,6 +221,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
+    avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     pause: LYRA_DEFAULT_pause,
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
@@ -249,6 +240,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  /** `playing` is reflected output, not input. */
+  protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
 
   static override get observedAttributes(): string[] {
     // The pinned public manifest spells this attribute `currentTime`. HTML normalizes authored
@@ -275,8 +269,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @property({ type: Boolean }) loop = false;
   /** Current authored mute state; reflected for state styling. */
   @property({ type: Boolean, reflect: true }) muted = false;
-  /** Current playing state. Read-only in normal use. */
-  @property({ type: Boolean, reflect: true }) playing = false;
+  @state() private isPlaying = false;
+  /** Whether the media is playing. Read-only state, reflected as the `playing` attribute; use `play()` and `pause()`. */
+  get playing(): boolean {
+    return this.isPlaying;
+  }
   /** Poster URL. Executable schemes fail closed. */
   @property() poster = '';
   /** Native preload policy. */
@@ -325,6 +322,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private visibilityPaused = false;
   private captionListeners: Array<{ track: TextTrack; listener: EventListener }> = [];
   private lastSourceSignature?: string;
+  private listenerDocument?: Document;
+  private selectedCaption?: TextTrack;
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (name === 'currenttime' || name === 'current-time') {
@@ -373,9 +372,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.mediaController.reconnect();
-    this.ownerDocument.addEventListener('fullscreenchange', this.onFullscreenChange);
-    this.ownerDocument.addEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
-    this.ownerDocument.addEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
+    const doc = (this.listenerDocument = this.ownerDocument);
+    doc.addEventListener('fullscreenchange', this.onFullscreenChange);
+    doc.addEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
+    doc.addEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
     if (this.hasUpdated) {
       this.scheduleAfterUpdate(() => this.bindCaptionTracks(), 'video-caption-reconnect');
       this.scheduleAfterUpdate(() => this.configureVisibilityObserver(), 'video-visibility-reconnect');
@@ -403,12 +403,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
     if (this.activeThumbnail) this.activeThumbnail = undefined;
-    if (this.playing) this.playing = false;
+    if (this.isPlaying) this.isPlaying = false;
     if (this.fullscreen) this.fullscreen = false;
     if (this.pictureInPicture) this.pictureInPicture = false;
-    this.ownerDocument.removeEventListener('fullscreenchange', this.onFullscreenChange);
-    this.ownerDocument.removeEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
-    this.ownerDocument.removeEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
+    const doc = this.listenerDocument;
+    doc?.removeEventListener('fullscreenchange', this.onFullscreenChange);
+    doc?.removeEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
+    doc?.removeEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
     super.disconnectedCallback();
   }
 
@@ -423,6 +424,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       this.mediaController.volume = next;
     }
 
+    if (changed.has('isPlaying')) this.toggleAttribute('playing', this.isPlaying);
     if (changed.has('muted')) this.mediaController.muted = this.muted;
     if (changed.has('autoplayMuted') && this.autoplayMuted) this.forceAutoplayMuted();
 
@@ -432,7 +434,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         : Number.POSITIVE_INFINITY;
       const next = finiteRange(this.currentTime, 0, 0, max);
       if (!Object.is(next, this.currentTime)) this.currentTime = next;
-      this.mediaController.currentTime = next;
+      if (next !== this.mediaController.currentTime) this.mediaController.currentTime = next;
     }
 
     if (changed.has('duration')) {
@@ -444,7 +446,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       this.visibilityPaused = false;
       this.posterVisible = true;
       if (this.hasUpdated) {
-        this.playing = false;
+        this.isPlaying = false;
         this.duration = 0;
         this.currentTime = 0;
         this.scheduleAfterUpdate(() => this.syncSources(), 'video-sources');
@@ -499,6 +501,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (!force && signature === this.lastSourceSignature) return;
     this.lastSourceSignature = signature;
     this.visibilityPaused = false;
+    this.selectedCaption = undefined;
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
@@ -584,6 +587,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     return rates.includes(this.playbackRate) ? rates : [...rates, this.playbackRate].sort((a, b) => a - b);
   }
 
+  private renderRateOptions(): TemplateResult[] {
+    const format = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
+    return this.rateSelectOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${
+      this.localize('avPlayerRateOption', undefined, { rate: format.format(rate) })
+    }</option>`);
+  }
+
   /** Sets finite volume in the inclusive zero-to-one range. */
   setVolume(volume: number): void {
     const next = finiteRange(volume, this.mediaController.volume, 0, 1);
@@ -631,15 +641,15 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         this.bindCaptionTracks();
         break;
       case 'play':
-        this.playing = true;
+        this.isPlaying = true;
         this.posterVisible = false;
         break;
       case 'pause':
       case 'ended':
-        this.playing = false;
+        this.isPlaying = false;
         break;
       case 'error':
-        this.playing = false;
+        this.isPlaying = false;
         this.duration = 0;
         this.currentTime = 0;
         break;
@@ -790,11 +800,15 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   private bindCaptionTracks(): void {
     this.unbindCaptionTracks();
-    const selectable = textTracks(this.videoEl).filter(
+    const selectable = Array.from(this.videoEl?.textTracks ?? []).filter(
       (track) => track.kind === 'captions' || track.kind === 'subtitles',
     );
     for (const track of selectable) {
       if (track.mode === 'showing') track.mode = 'hidden';
+    }
+    // A reconnect re-applies the shared controller's preference, which only recognizes `showing`.
+    if (this.selectedCaption && selectable.every((track) => track.mode === 'disabled')) {
+      this.selectedCaption.mode = 'hidden';
     }
     this.captionTracks = selectable.map((track) => ({
       track,
@@ -823,6 +837,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   private onCaptionChange = (event: Event): void => {
     const selected = Number((event.currentTarget as HTMLSelectElement).value);
+    this.selectedCaption = this.captionTracks[selected]?.track;
     this.captionTracks.forEach(({ track }, index) => {
       // `hidden` keeps cue activity available to the custom overlay without asking the user agent
       // to paint the same captions a second time.
@@ -1059,11 +1074,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
                   aria-label=${this.localize('videoPlaybackSpeed')}
                   @change=${this.onRateChange}
                 >
-                  ${this.rateSelectOptions().map((rate) => html`
-                    <option value=${String(rate)} ?selected=${rate === this.playbackRate}>
-                      ${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}×
-                    </option>
-                  `)}
+                  ${this.renderRateOptions()}
                 </select>
                 <lr-icon class="select-control-icon" library=${this.iconLibrary} name="chevron-down" aria-hidden="true">
                   <path d="m7 10 5 5 5-5"></path>

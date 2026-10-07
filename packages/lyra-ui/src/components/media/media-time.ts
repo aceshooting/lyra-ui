@@ -1,10 +1,9 @@
 import { getNumberFormat } from '../../internal/intl-cache.js';
 import { finiteRange } from '../../internal/numbers.js';
 
-/** Formats a media position or duration with the caller's whole-second rounding rule. */
-export function formatMediaTime(seconds: number, locale: string, rounding: 'floor' | 'round' = 'floor'): string {
-  const safeSeconds = finiteRange(seconds, 0, 0);
-  const total = rounding === 'round' ? Math.round(safeSeconds) : Math.floor(safeSeconds);
+/** Formats a media position or duration in whole seconds, rounded down. */
+export function formatMediaTime(seconds: number, locale: string): string {
+  const total = Math.floor(finiteRange(seconds, 0, 0));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const remaining = total % 60;

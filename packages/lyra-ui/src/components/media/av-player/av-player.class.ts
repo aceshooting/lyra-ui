@@ -20,7 +20,8 @@ import {
 } from '../../../internal/media-controller.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../media-time.js';
@@ -40,7 +41,7 @@ import {
 } from './av-metadata.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
@@ -321,7 +322,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     avPlayerTimeline: LYRA_DEFAULT_avPlayerTimeline,
     avPlayerTranscript: LYRA_DEFAULT_avPlayerTranscript,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     viewerHighlightLabel: LYRA_DEFAULT_viewerHighlightLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -385,11 +385,14 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ attribute: 'controls-surface', reflect: true, converter: CONTROLS_SURFACE })
   controlsSurface: LyraAvControlsSurface = 'regular';
 
+  private readonly inputs: { rates?: unknown; cues?: unknown; peaks?: unknown; tracks?: unknown } = {};
   private _rates: readonly number[] = DEFAULT_RATES;
   /** Selectable rates offered by `[part="rate-select"]`; snapshotted, deduplicated, bounded to 32. */
   @property({ attribute: false })
   get rates(): readonly number[] { return this._rates; }
   set rates(value: readonly number[]) {
+    if (value === this.inputs.rates) return;
+    this.inputs.rates = value;
     const previous = this._rates;
     this._rates = normalizeRates(value);
     this.requestUpdate('rates', previous);
@@ -402,6 +405,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ attribute: false })
   get cues(): readonly LyraAvCue[] { return this._cues; }
   set cues(value: readonly LyraAvCue[]) {
+    if (value === this.inputs.cues) return;
+    this.inputs.cues = value;
     const previous = this._cues;
     this._cues = snapshotLyraAvCues(value);
     if (this._cues !== previous) {
@@ -419,6 +424,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ attribute: false })
   get peaks(): readonly number[] { return this._peaks; }
   set peaks(value: readonly number[]) {
+    if (value === this.inputs.peaks) return;
+    this.inputs.peaks = value;
     const previous = this._peaks;
     this._peaks = normalizePeaks(value);
     this.requestUpdate('peaks', previous);
@@ -428,6 +435,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ attribute: false })
   get tracks(): readonly LyraAvTrack[] { return this._tracks; }
   set tracks(value: readonly LyraAvTrack[]) {
+    if (value === this.inputs.tracks) return;
+    this.inputs.tracks = value;
     const previous = this._tracks;
     this._tracks = snapshotLyraAvTracks(value);
     this.requestUpdate('tracks', previous);
@@ -1134,10 +1143,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const scaleY = allocation.scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const computed = ownerWindow.getComputedStyle(this);
-    const tokenColor = computed.getPropertyValue('--lr-color-brand').trim();
-    const color = ownerWindow.CSS.supports('color', tokenColor) ? tokenColor : computed.color;
-    ctx.fillStyle = color;
+    ctx.fillStyle = resolveCanvasColor(this, 'var(--lr-color-brand)', ownerWindow.getComputedStyle(this).color);
     const peaks = waveformPaintPeaks(this.peaks, canvas.width);
     const barWidth = width / peaks.length;
     const physicalPixel = Math.min(barWidth, finiteNumber(1 / scaleX, barWidth));
@@ -1248,19 +1254,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
    *  option whenever no `<option>` carries `selected` at all, so a `playbackRate` set outside the
    *  offered `rates` list (a caller-driven value, or a rate offered by an earlier `rates` array that
    *  has since been narrowed) would otherwise display a rate that doesn't match `playbackRate`. */
-  private rateOptions(): number[] {
-    const validRates = [
-      ...new Set(
-        (Array.isArray(this.rates) ? this.rates : []).filter(
-          (rate) =>
-            Number.isFinite(rate) &&
-            rate >= MIN_PLAYBACK_RATE &&
-            rate <= MAX_PLAYBACK_RATE,
-        ),
-      ),
-    ];
-    if (validRates.includes(this.playbackRate)) return validRates;
-    return [...validRates, this.playbackRate].sort((a, b) => a - b);
+  private rateOptions(): readonly number[] {
+    return this.rates.includes(this.playbackRate)
+      ? this.rates
+      : [...this.rates, this.playbackRate].sort((a, b) => a - b);
   }
 
   private safeCueStart(cue: LyraAvCue): number {
@@ -1302,7 +1299,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ?data-active-match=${isActiveMatch}
       @click=${() => this.seek(start)}
     >
-      <span part="cue-time">${formatMediaTime(start, this.effectiveLocale, 'round')}</span>
+      <span part="cue-time">${formatMediaTime(start, this.effectiveLocale)}</span>
       ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
       <span part="cue-text">${c.text}</span>
     </button>`;
@@ -1334,7 +1331,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     const safePoster = this.poster ? safeMediaSrc(this.poster) : null;
     const kind = this.detectedKind();
     const baseOwnsAggregate = explicitHostLabel === null && Boolean(this.name || (!safeSrc && this.src));
-    const mediaLabel = explicitHostLabel === '' ? '' : this.localize('avPlayerLabel');
+    const rateFormat = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 });
     if (!safeSrc && this.src) {
       return html`<div
         part="base"
@@ -1354,7 +1351,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         ? keyed(`${kind}:${safeSrc ?? ''}`, html`<audio
             part="media"
             controls
-            aria-label=${mediaLabel}
+            aria-label=${this.localize('avPlayerLabel')}
             src=${safeSrc ?? nothing}
             ?loop=${this.loop}
             .muted=${this.muted}
@@ -1368,7 +1365,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         : keyed(`${kind}:${safeSrc ?? ''}`, html`<video
             part="media"
             controls
-            aria-label=${mediaLabel}
+            aria-label=${this.localize('avPlayerLabel')}
             src=${safeSrc ?? nothing}
             poster=${safePoster ?? nothing}
             ?loop=${this.loop}
@@ -1390,14 +1387,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             aria-label=${this.localize('avPlayerPlaybackRate')}
             @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
           >
-            ${this.rateOptions().map((rate) => {
-              const formattedRate = getNumberFormat(this.effectiveLocale, {
-                maximumFractionDigits: 2,
-              }).format(rate);
-              return html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
-                >${this.localize('avPlayerRateOption', undefined, { rate: formattedRate })}</option
-              >`;
-            })}
+            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
+                >${this.localize('avPlayerRateOption', undefined, { rate: rateFormat.format(rate) })}</option
+              >`)}
           </select>
           <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>
         </span>
@@ -1411,7 +1403,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           aria-valuemin="0"
           aria-valuemax=${String(this.duration)}
           aria-valuenow=${String(this.currentTimeState)}
-          aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatMediaTime(this.currentTimeState, this.effectiveLocale, 'round'), duration: formatMediaTime(this.duration, this.effectiveLocale, 'round') })}
+          aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatMediaTime(this.currentTimeState, this.effectiveLocale), duration: formatMediaTime(this.duration, this.effectiveLocale) })}
           aria-label=${this.localize('avPlayerTimeline')}
           @click=${this.onTimelineClick}
           @keydown=${this.onTimelineKeyDown}

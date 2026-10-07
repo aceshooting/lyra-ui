@@ -169,16 +169,16 @@ it('uses the native host aria-label on the active single or menu semantic owners
   );
 });
 
-it('preserves an explicitly empty host aria-label', async () => {
+it('keeps the localized name when the host aria-label is explicitly empty', async () => {
   const el = (await fixture(html`
     <lr-attachment-trigger aria-label=""></lr-attachment-trigger>
   `)) as LyraAttachmentTrigger;
-  expect(trigger(el).getAttribute('aria-label')).to.equal('');
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Attach files');
 
   el.capabilities = ['files', 'camera'];
   await el.updateComplete;
-  expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('');
-  expect(menuEl(el).getAttribute('label')).to.equal('');
+  expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('Add attachment');
+  expect(menuEl(el).getAttribute('label')).to.equal('Add attachment');
 });
 
 describe('retired accessible-label attribute', () => {
@@ -197,10 +197,10 @@ describe('retired accessible-label attribute', () => {
       expect(name()).not.to.equal('Changed retired');
       el.setAttribute('aria-label', '');
       await el.updateComplete;
-      expect(name()).to.equal('');
+      expect(name()).to.equal(capabilities.length > 1 ? 'Add attachment' : 'Attach files');
       el.removeAttribute('accessible-label');
       await el.updateComplete;
-      expect(name()).to.equal('');
+      expect(name()).to.equal(capabilities.length > 1 ? 'Add attachment' : 'Attach files');
       el.removeAttribute('aria-label');
       await el.updateComplete;
       expect(name()).to.not.equal('Changed retired');
@@ -289,6 +289,18 @@ it('emits lr-files with the capability and an immutable array snapshot that surv
   // The input resets after reading the selection so re-picking the same
   // file still fires another 'change' event next time.
   expect(input.value).to.equal('');
+});
+
+it('moves a picked file that does not match accept to rejected, like lr-file-input does', async () => {
+  const el = (await fixture(html`<lr-attachment-trigger accept="image/*"></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+  trigger(el).click();
+  setTimeout(() => selectFiles(hiddenInput(el)!, [makeFile('a.png', 'image/png'), makeFile('b.pdf', 'application/pdf')]));
+  const detail = (await oneEvent(el, 'lr-files')).detail as LyraAttachmentFilesDetail;
+  expect(detail.capability).to.equal('files');
+  expect(detail.files.map((file) => file.name)).to.deep.equal(['a.png']);
+  expect(detail.rejected.map((entry) => [entry.file.name, entry.reason])).to.deep.equal([['b.pdf', 'type']]);
+  expect(detail.remainingFiles).to.equal(null);
+  expect(detail.remainingTotalSize).to.equal(null);
 });
 
 it('does not emit lr-files for an empty selection (e.g. the native picker was cancelled)', async () => {

@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -7,8 +7,6 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 installFormControlLabelSupport();
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
@@ -25,6 +23,7 @@ import {
   installInvalidEventAlias,
   withStaticValidityCheck,
 } from '../../../internal/invalid-event-alias.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DropSessionController, type DropSessionState } from '../../../internal/drop-session-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -32,8 +31,8 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import type { LyraSize } from '../../../internal/variants.js';
 import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
-import { matchesAccept } from './accept.js';
-import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../attachment-chip/file-size.js';
+import { classifyFiles, freezeDetail, handleDrop, type FileIntakeResult } from './file-intake.js';
+import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
@@ -87,13 +86,11 @@ function isValidityFlagKey(value: unknown): value is keyof ValidityStateFlags {
   return typeof value === 'string' && VALIDITY_FLAG_KEYS.has(value as keyof ValidityStateFlags);
 }
 
-export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-/** Fallback used by `effectiveMaxFiles` for an invalid (negative/`NaN`) `maxFiles` override,
- *  mirroring `DEFAULT_MAX_FILE_SIZE_BYTES`'s fail-safe role for `maxFileSize`. */
-export const DEFAULT_MAX_FILES = 100;
-/** Fallback used by `effectiveMaxTotalSize` for an invalid (negative/`NaN`) `maxTotalSize`
- *  override, mirroring `DEFAULT_MAX_FILE_SIZE_BYTES`'s fail-safe role for `maxFileSize`. */
-export const DEFAULT_MAX_TOTAL_SIZE_BYTES = 250 * 1024 * 1024;
+export {
+  DEFAULT_MAX_FILE_SIZE_BYTES,
+  DEFAULT_MAX_FILES,
+  DEFAULT_MAX_TOTAL_SIZE_BYTES,
+} from './file-intake.js';
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 const MAX_MIME_TYPES = 10_000;
 const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
@@ -344,7 +341,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
@@ -365,6 +362,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   @property() accept = '';
   /** Mobile capture hint forwarded to the native file picker. */
   @property() capture: LyraFileInputCapture = '';
+  private readonly inputs: { files?: unknown; allowed?: unknown; forbidden?: unknown } = {};
   private _allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
   /** Exact MIME allowlist. Assignment takes a bounded immutable snapshot. */
   @property({ attribute: false })
@@ -372,6 +370,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return this._allowedMimeTypes;
   }
   set allowedMimeTypes(next: readonly string[]) {
+    if (next === this.inputs.allowed) return;
+    this.inputs.allowed = next;
     const old = this._allowedMimeTypes;
     this._allowedMimeTypes = snapshotMimeTypes(next);
     this.requestUpdate('allowedMimeTypes', old);
@@ -385,24 +385,29 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return this._forbiddenMimeTypes;
   }
   set forbiddenMimeTypes(next: readonly string[]) {
+    if (next === this.inputs.forbidden) return;
+    this.inputs.forbidden = next;
     const old = this._forbiddenMimeTypes;
     this._forbiddenMimeTypes = snapshotMimeTypes(next);
     this.requestUpdate('forbiddenMimeTypes', old);
   }
-  /** Largest accepted file size in bytes. `0` (the default) disables the size check entirely --
-   *  see `effectiveMaxFileSize` for how an invalid override is handled. */
+  /** Largest accepted file size in bytes. `0` (the default) or `Infinity` disables the check; an
+   *  invalid override (negative, `NaN`) falls back to 25 MiB instead of accepting any size. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
-  /** Largest total number of files accepted, counting retained files (unless `nonRetaining`) plus
-   *  `heldFileCount` plus the current batch. `0` (the default) disables the check. Same
-   *  rejection-UI shape as `maxFileSize`: an excess file in the batch is rejected with reason
-   *  `'maxFiles'` and appears in `[part="rejection"]` alongside any other rejection, rather than
-   *  failing the whole selection. An invalid override (negative, `NaN`) falls back to a sane cap
-   *  rather than silently accepting an unlimited count -- see `effectiveMaxFiles`. */
+  /** Largest total number of files accepted, counting retained files (unless `nonRetaining`; a
+   *  single-file input replaces its file, so it retains none) plus `heldFileCount` plus the
+   *  current batch. `0` (the default) disables the check. Same rejection-UI shape as
+   *  `maxFileSize`: an excess file in the batch is rejected with reason `'maxFiles'` and appears
+   *  in `[part="rejection"]` alongside any other rejection, rather than failing the whole
+   *  selection. An invalid override (negative, `NaN`) falls back to 100 files. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
-  /** Largest combined byte size accepted, summing retained files (unless `nonRetaining`) plus
-   *  `heldTotalSize` plus the current batch. `0` (the default) disables the check. Same
-   *  rejection-UI shape and invalid-override fallback as `maxFileSize` -- see
-   *  `effectiveMaxTotalSize`. */
+  /** Largest combined byte size accepted, summing retained files (unless `nonRetaining` or a
+   *  single-file input) plus `heldTotalSize` plus the current batch. `0` (the default) disables
+   *  the check. Same rejection-UI shape as `maxFileSize`; an invalid override falls back to
+   *  250 MiB. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
   /** Externally held file count added to the running count `maxFiles` evaluates against, in both
    *  retaining and `nonRetaining` modes -- the numeric counterpart of `valuePresent`, for a
@@ -411,10 +416,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    *  reproduces prior behavior exactly. A negative, `NaN`, or `Infinity` value is normalized to `0`
    *  via `finiteCount` -- an invalid baseline degrades to "nothing held" rather than corrupting
    *  every later comparison or permanently blocking every future file. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
   /** Externally held byte total added to the running size `maxTotalSize` evaluates against, in
    *  both retaining and `nonRetaining` modes. Same contract, default, and invalid-input
    *  normalization as `heldFileCount`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Opt-in mode where an accepted selection still fires `lr-files`/`input`/`change` but is never
    *  written to `files` or rendered as a built-in `[part="file"]` row -- for a host that persists
@@ -458,8 +465,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
    * localized message. Barred (own or fieldset-cascaded `disabled`) exactly like the intrinsic
    * constraint. */
   @property({ attribute: false }) validators: LyraFileInputValidator[] = [];
-  /** The host `aria-label`: names the dropzone ahead of every other source, by presence, so an
-   *  explicitly empty value stays empty. */
+  /** The host `aria-label`: names the dropzone ahead of every other source. An empty value is
+   *  ignored, so the dropzone is never left unnamed. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
   /** Message announced after an accepted selection; `{count}` is replaced by the number of
    * accepted files. `undefined` uses the localized singular/plural default; every supplied
@@ -579,6 +586,8 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return [...this._files];
   }
   set files(next: readonly File[]) {
+    if (next === this.inputs.files) return;
+    this.inputs.files = next;
     const old = this._files;
     const valid = Array.isArray(next) ? next.filter(isFileValue) : [];
     // Truncation to a single file when `!effectiveMultiple` is NOT applied here: `multiple`/
@@ -1079,102 +1088,20 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     if (changed) this.requestUpdate();
   }
 
-  /** `maxFileSize` normalized: `0` (explicitly set, or left at the default) or `Infinity`
-   *  (explicitly set) both mean "no limit" verbatim -- `null` here signals that. Anything else
-   *  that isn't a positive, finite override -- a `NaN` from an invalid `max-file-size` attribute,
-   *  or a negative value -- falls back to a sane cap instead. This matters because the size check
-   *  below used to gate directly on `this.maxFileSize > 0`: `NaN > 0` and `-1 > 0` are both
-   *  `false`, so an invalid override silently disabled the entire size limit (accepting files of
-   *  any size) rather than failing safe. */
-  private get effectiveMaxFileSize(): number | null {
-    const maxFileSize = this.maxFileSize;
-    if (maxFileSize === 0 || maxFileSize === Infinity) return null;
-    return finiteRange(maxFileSize > 0 ? maxFileSize : NaN, DEFAULT_MAX_FILE_SIZE_BYTES, 1);
-  }
-
-  /** `maxFiles` normalized exactly like `effectiveMaxFileSize` normalizes `maxFileSize`: `0`/
-   *  `Infinity` both mean "no limit" (`null`); any other invalid override falls back to
-   *  `DEFAULT_MAX_FILES` rather than silently disabling the check. */
-  private get effectiveMaxFiles(): number | null {
-    const maxFiles = this.maxFiles;
-    if (maxFiles === 0 || maxFiles === Infinity) return null;
-    return finiteRange(maxFiles > 0 ? maxFiles : NaN, DEFAULT_MAX_FILES, 1);
-  }
-
-  /** `maxTotalSize` normalized exactly like `effectiveMaxFileSize` normalizes `maxFileSize`. */
-  private get effectiveMaxTotalSize(): number | null {
-    const maxTotalSize = this.maxTotalSize;
-    if (maxTotalSize === 0 || maxTotalSize === Infinity) return null;
-    return finiteRange(maxTotalSize > 0 ? maxTotalSize : NaN, DEFAULT_MAX_TOTAL_SIZE_BYTES, 1);
-  }
-
-  private isAllowed(file: File, isPreview = false): 'ok' | 'type' | 'size' {
-    if (this.forbiddenMimeTypes.includes(file.type)) return 'type';
-    if (this.allowedMimeTypes.length > 0 && !this.allowedMimeTypes.includes(file.type)) return 'type';
-    // During dragenter preview, `accept` extension patterns can't be evaluated (no
-    // `.name` yet) — treat them as a possible match rather than a guaranteed reject,
-    // so the preview doesn't flag a file that will in fact be accepted on drop.
-    if (this.accept && !matchesAccept(file, this.accept, isPreview)) return 'type';
-    // `file.size` is `undefined` on the synthetic `DataTransferItem`-cast objects
-    // used during dragenter preview (real sizes aren't available until drop),
-    // so this naturally only takes effect for the real `classify()` call at drop time.
-    const maxFileSize = this.effectiveMaxFileSize;
-    if (maxFileSize !== null && file.size > maxFileSize) return 'size';
-    return 'ok';
-  }
-
-  /** Sum of `.size` across `files`, tolerating a hostile/undefined getter (a synthetic dragenter-
-   *  preview item has none) by treating anything non-finite as `0`. */
-  private totalFileSize(files: readonly File[]): number {
-    let total = 0;
-    for (const file of files) {
-      const size = file.size;
-      if (Number.isFinite(size)) total += size;
-    }
-    return total;
-  }
-
-  private classify(
-    fileList: File[],
-    isPreview = false,
-  ): {
-    files: File[];
-    rejected: LyraFileInputRejectedFile[];
-    remainingFiles: number | null;
-    remainingTotalSize: number | null;
-  } {
-    const limits = { maxFiles: this.effectiveMaxFiles, maxTotalSize: this.effectiveMaxTotalSize };
-    // `maxFiles`/`maxTotalSize` count against retained files too, except while `nonRetaining` is
-    // set, in which case the control's own retained count/total is 0 -- but `heldFileCount`/
-    // `heldTotalSize` (an externally held baseline) still apply in both modes, since that's their
-    // entire purpose: a cumulative cap spanning separate picker sessions.
-    const tracker = new AggregateFileLimitTracker(
-      (this.nonRetaining ? 0 : this._files.length) + finiteCount(this.heldFileCount, 0),
-      (this.nonRetaining ? 0 : this.totalFileSize(this._files)) + finiteCount(this.heldTotalSize, 0),
+  /** A single-file input replaces its file with the next accepted one, so only `heldFileCount` and
+   *  `heldTotalSize` count there; a retaining multiple input also counts its current files. */
+  private classify(fileList: File[], isPreview = false): FileIntakeResult {
+    const multiple = this.effectiveMultiple;
+    return classifyFiles(
+      this,
+      fileList,
+      multiple,
+      this.nonRetaining || !multiple ? [] : this._files,
+      isPreview,
+      ({ type }) =>
+        !this.forbiddenMimeTypes.includes(type) &&
+        (this.allowedMimeTypes.length === 0 || this.allowedMimeTypes.includes(type)),
     );
-    if (!this.effectiveMultiple && fileList.length > 1) {
-      return {
-        files: [],
-        rejected: fileList.map((file) => ({ file, reason: 'count' as const })),
-        ...tracker.allowance(limits),
-      };
-    }
-    const files: File[] = [];
-    const rejected: LyraFileInputRejectedFile[] = [];
-    for (const f of fileList) {
-      const reason = this.isAllowed(f, isPreview);
-      if (reason !== 'ok') {
-        rejected.push({ file: f, reason });
-        continue;
-      }
-      const limitReason = tracker.evaluate(f, limits);
-      if (limitReason) {
-        rejected.push({ file: f, reason: limitReason });
-        continue;
-      }
-      files.push(f);
-    }
-    return { files, rejected, ...tracker.allowance(limits) };
   }
 
   /** Per-reason, per-file message for the visible `[part="rejection"]` alert. The filename is
@@ -1215,11 +1142,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraFileInputRejectedFile[] = []): void {
-    const { files, rejected, remainingFiles, remainingTotalSize } = this.classify(fileList);
-    rejected.push(...additionalRejected);
-    const rejectedSnapshot = Object.freeze(rejected.map((item) => Object.freeze({ ...item })));
-    const filesSnapshot = Object.freeze([...files]);
-    this.rejectedFiles = rejectedSnapshot;
+    const detail = freezeDetail(this.classify(fileList), additionalRejected);
+    const { files, rejected } = detail;
+    this.rejectedFiles = rejected;
     const messages: string[] = [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
     if (files.length) {
@@ -1254,10 +1179,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       dispatchNativeEvent(this, 'input');
       dispatchNativeEvent(this, 'change');
     }
-    this.emit(
-      'lr-files',
-      Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot, remainingFiles, remainingTotalSize }),
-    );
+    this.emit('lr-files', detail);
   }
 
   /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
@@ -1295,37 +1217,9 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private onDragOver = (e: DragEvent): void => this.dropSession.onDragOver(e);
   private onDragLeave = (e: DragEvent): void => this.dropSession.onDragLeave(e);
 
-  private onDrop = (e: DragEvent): void => {
-    const drop = this.dropSession.beginDrop(e);
-    if (!drop) return;
-    const { token, files, folders, overLimit } = drop;
-    if (overLimit && this.effectiveMultiple) {
-      this.emitFiles([], [this.folderFailure(folders[0]?.name ?? '', 'limit')]);
-      return;
-    }
-    if (folders.length && this.effectiveMultiple) {
-      void this.dropSession.readFolders(folders, token).then((result) => {
-        if (!this.dropSession.isCurrent(token) || result.status === 'cancelled') return;
-        if (result.status === 'error' || result.status === 'limit') {
-          this.emitFiles([], [this.folderFailure(result.name, result.status === 'limit' ? 'limit' : 'read')]);
-          return;
-        }
-        const allFiles = [...files, ...result.files];
-        if (allFiles.length) this.emitFiles(allFiles);
-      });
-      return;
-    }
-    const rejectedFolders = folders.map((folder) => this.folderFailure(folder.name, 'directory'));
-    if (files.length || rejectedFolders.length) this.emitFiles(files, rejectedFolders);
-  };
-
-  private folderFailure(
-    name: string,
-    reason: 'directory' | 'read' | 'limit',
-  ): LyraFileInputRejectedFile {
-    const FileCtor = this.ownerDocument.defaultView?.File ?? globalThis.File;
-    return Object.freeze({ file: new FileCtor([], name), reason });
-  }
+  private onDrop = (e: DragEvent): void =>
+    handleDrop(this, this.dropSession, e, this.effectiveMultiple, (files, rejected) =>
+      this.emitFiles(files, rejected));
 
   private onPaste = (e: ClipboardEvent): void => {
     if (this.withoutPaste || this.liveDisabled) return;
@@ -1429,20 +1323,22 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private removeFile(index: number): void {
     if (this.liveDisabled || index < 0 || index >= this._files.length) return;
     this.touched = true;
+    const hadFocus = activeElementIn(this.shadowRoot)?.matches('[part="remove-button"]');
     this.files = this._files.filter((_, candidate) => candidate !== index);
     dispatchNativeEvent(this, 'input');
     dispatchNativeEvent(this, 'change');
+    if (!hadFocus) return;
+    void this.updateComplete.then(() => {
+      const buttons = this.renderRoot.querySelectorAll<HTMLElement>('[part="remove-button"]');
+      (buttons[Math.min(index, buttons.length - 1)] ?? this.baseEl)?.focus();
+    });
   }
 
   private fileSize(file: File): string {
     return formatFileSize(
       file.size,
       (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-      (value, fractionDigits) =>
-        getNumberFormat(this.effectiveLocale, {
-          minimumFractionDigits: fractionDigits,
-          maximumFractionDigits: fractionDigits,
-        }).format(value),
+      localizedNumberLabel(this.effectiveLocale),
     );
   }
 
@@ -1471,7 +1367,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   override render(): TemplateResult {
     const instruction = this.dropzoneInstruction;
     const hasLabel = this.withLabel || this.slotPresence.has('label') || (this.label ?? '').trim().length > 0;
-    const accessibleLabel = this.hostAccessibleLabel;
+    const accessibleLabel = this.hostAccessibleLabel || null;
     const labelledBy = accessibleLabel == null && hasLabel ? 'file-input-label' : undefined;
     const fallbackAriaLabel = accessibleLabel ?? (hasLabel ? undefined : instruction);
     const hasHint = this.withHint || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;

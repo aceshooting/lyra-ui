@@ -120,13 +120,6 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part="play-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
-  }
-  [part="play-button"]:disabled ~ .icon {
-    opacity: var(--lr-opacity-disabled);
-  }
   [part="play-button"]:focus-visible {
     outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);

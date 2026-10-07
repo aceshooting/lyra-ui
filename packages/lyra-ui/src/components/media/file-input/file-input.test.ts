@@ -10,6 +10,8 @@ import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
 import { setForcedColors } from "../../../../test/wtr-media.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { sendKeys } from "@web/test-runner-commands";
+import { focusByKeyboard } from "../../../../test/wtr-focus.js";
 
 
 function sinkElement(politeness: "polite" | "assertive"): HTMLElement | null {
@@ -166,10 +168,10 @@ describe('retired accessible-label attribute', () => {
     expect(name()).not.to.equal('Programmatic');
     el.setAttribute('aria-label', '');
     await el.updateComplete;
-    expect(name()).to.equal('');
+    expect(name()).to.equal('Drop files here or click to browse');
     el.removeAttribute('accessible-label');
     await el.updateComplete;
-    expect(name()).to.equal('');
+    expect(name()).to.equal('Drop files here or click to browse');
     el.removeAttribute('aria-label');
     await el.updateComplete;
     expect(name()).not.to.equal('Programmatic');
@@ -894,7 +896,7 @@ it("keeps the accessible name sourced from `label` even when slot content overri
   expect(label.textContent).to.contain("Upload files");
 });
 
-it("preserves an explicitly empty host aria-label instead of replacing it with visible label text", async () => {
+it("names the dropzone from the visible label when the host aria-label is explicitly empty", async () => {
   const el = await fixture<LyraFileInput>(html`
     <lr-file-input aria-label="" label="Visible instructions"></lr-file-input>
   `);
@@ -902,9 +904,9 @@ it("preserves an explicitly empty host aria-label instead of replacing it with v
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
-  expect(base.getAttribute("aria-label")).to.equal("");
-  expect(base.getAttribute("aria-labelledby")).to.equal(null);
-  expect(input.getAttribute("aria-label")).to.equal("");
+  expect(base.getAttribute("aria-label")).to.equal(null);
+  expect(base.getAttribute("aria-labelledby")).to.equal("file-input-label");
+  expect(input.getAttribute("aria-labelledby")).to.equal("file-input-label");
 });
 
 it("adds a :focus-visible outline to the dropzone base using the shared focus-ring tokens", async () => {
@@ -4507,3 +4509,97 @@ it('ignores retired compact inputs and isolates small-size overrides from other 
 });
 
 expectStaleAttribute('lr-file-input', 'accessible-label');
+
+function dropRealFolderWith(el: HTMLElement, name: string, children: File[] = []): void {
+  let read = false;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name,
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        if (read) success([]);
+        else {
+          read = true;
+          success(children.map((child) => ({
+            isDirectory: false,
+            isFile: true,
+            name: child.name,
+            file: (ok: (file: File) => void) => ok(child),
+          })));
+        }
+      },
+    }),
+  };
+  const transfer = {
+    files: [new File([], name)] as unknown as FileList,
+    items: [{ kind: "file", webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent("drop", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: transfer });
+  el.dispatchEvent(event);
+}
+
+describe("review remediation", () => {
+  const dropzoneOf = (el: LyraFileInput): HTMLElement =>
+    el.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+
+  it("does not list the pseudo-file a real folder drop puts in dataTransfer.files", async () => {
+    const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+    const result = oneEvent(el, "lr-files");
+    dropRealFolderWith(dropzoneOf(el), "folder", [makeFile("nested.csv", "text/csv")]);
+    const detail = (await result).detail as { files: File[]; rejected: unknown[] };
+    expect(detail.files.map((file) => file.name)).to.deep.equal(["nested.csv"]);
+    expect(detail.rejected).to.deep.equal([]);
+    expect(el.files.map((file) => file.name)).to.deep.equal(["nested.csv"]);
+  });
+
+  it("reports a dropped folder only as a rejection while not multiple", async () => {
+    const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+    const result = oneEvent(el, "lr-files");
+    dropRealFolderWith(dropzoneOf(el), "My Folder");
+    const detail = (await result).detail as { files: File[]; rejected: Array<{ reason: string }> };
+    expect(detail.files).to.deep.equal([]);
+    expect(detail.rejected.map((entry) => entry.reason)).to.deep.equal(["directory"]);
+    expect(el.files).to.deep.equal([]);
+  });
+
+  it("moves keyboard focus to a neighbouring remove button, then the dropzone, when a file is removed", async () => {
+    const el = (await fixture(html`
+      <lr-file-input multiple .files=${[makeFile("a.csv", "text/csv"), makeFile("b.csv", "text/csv")]}></lr-file-input>
+    `)) as LyraFileInput;
+    const removeButtons = (): HTMLButtonElement[] =>
+      [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove-button"]')];
+    await focusByKeyboard(removeButtons()[1]!);
+    await sendKeys({ press: "Enter" });
+    await waitUntil(() => el.shadowRoot!.activeElement === removeButtons()[0]);
+    await sendKeys({ press: "Enter" });
+    await waitUntil(() => el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part~="base"]'));
+    expect(el.files).to.deep.equal([]);
+  });
+
+  it("re-runs validators and form data only when a different value is assigned", async () => {
+    let runs = 0;
+    const el = (await fixture(html`<lr-file-input multiple></lr-file-input>`)) as LyraFileInput;
+    el.validators = [() => { runs += 1; }];
+    const files = [makeFile("a.txt", "text/plain")];
+    const mimeTypes = ["text/plain"];
+    el.files = files;
+    el.allowedMimeTypes = mimeTypes;
+    el.forbiddenMimeTypes = mimeTypes;
+    await el.updateComplete;
+    const before = runs;
+    el.files = files;
+    el.allowedMimeTypes = mimeTypes;
+    el.forbiddenMimeTypes = mimeTypes;
+    expect(el.isUpdatePending).to.equal(false);
+    expect(runs).to.equal(before);
+  });
+
+  it("keeps the dropzone named when the host aria-label is explicitly empty", async () => {
+    const el = (await fixture(html`<lr-file-input aria-label=""></lr-file-input>`)) as LyraFileInput;
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")).to.equal(
+      "Drop files here or click to browse",
+    );
+  });
+});

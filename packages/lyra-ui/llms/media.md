@@ -298,7 +298,9 @@ feedback.
 - `itemCount: number = 0` (attribute `item-count`)
 - `currentIndex: number = 0` (attribute `current-index`)
 - `intervalMs: number = 900` (attribute `interval-ms`)
-- `playing: boolean = false` (reflected)
+- `readonly playing: boolean` (reflected as the `playing` attribute) — whether playback is running.
+  Start and stop it with `play()`, `pause()` or `toggle()`; assigning it throws in strict-mode code
+  and an authored `playing` attribute starts nothing.
 - `withoutLoop: boolean = false` (attribute `without-loop`) — stops playback on the last item
   instead of wrapping back to the first; read on every tick.
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
@@ -369,9 +371,6 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
   values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling.
-- Initial `playing` and `item-count` attributes are resolved together on the first update, so
-  playback starts consistently regardless of their source order; an invalid final `itemCount <= 1`
-  clears the reflected `playing` state.
 - No _visible_ "N of M" position label beside the range input; the native one-based range still
   exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
   enhancement where the platform honors it.
@@ -1273,7 +1272,10 @@ element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 ```
 
 Composing `lr-file-input` inside the wrapped region gives that region both a click-to-browse picker
-and a drop target covering the whole surrounding panel:
+and a drop target covering the whole surrounding panel. A drop on the nested input is handled by the
+input alone (the zone only ends its own drag session), so one drop fires one `lr-files`; the nested
+input's and `lr-attachment-trigger`'s `lr-files` still bubble through the zone with the same detail
+shape, so check `event.target` when a zone-level listener must react to the zone's own drops only:
 
 ```html
 <lr-drop-zone>
@@ -1287,7 +1289,7 @@ and a drop target covering the whole surrounding panel:
 
 - No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
   `without-paste` is set) — this component is drag/drop only.
-- Dragged folders are traversed recursively while `multiple` (the default), with the same
+- Dragged folders are traversed recursively while `multiple` (not the default here), with the same
   10,000-entry budget and `'read'`/`'limit'` failure reasons as `lr-file-input`. While not
   `multiple`, a dropped folder is rejected outright with reason `'directory'`.
 
@@ -1308,7 +1310,8 @@ enabled buttons retain pointer feedback.
 
 **Properties:**
 
-- `multiple: boolean = false` (reflected)
+- `multiple: boolean = false` (reflected) — a plain HTML boolean like `wa-file-input`'s, so
+  `multiple="false"` is still true here; `lr-drop-zone` and `lr-attachment-trigger` read it as false
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
@@ -1332,12 +1335,12 @@ enabled buttons retain pointer feedback.
   update them by assigning a new collection.
 - `maxFileSize: number = 0` (attribute `max-file-size` — bytes; `0` disables the check)
 - `maxFiles: number = 0` (attribute `max-files`) — largest total file count accepted, counting
-  retained files (unless `nonRetaining`) plus `heldFileCount` plus the current batch; `0` disables
-  the check. An excess file in the batch is rejected with reason `'maxFiles'`, in the same
+  retained files (unless `nonRetaining`; a single-file input replaces its file, so it retains
+  none) plus `heldFileCount` plus the current batch; `0` disables the check. An excess file in the batch is rejected with reason `'maxFiles'`, in the same
   `[part="rejection"]` shape as `maxFileSize`.
 - `maxTotalSize: number = 0` (attribute `max-total-size`) — largest combined byte size accepted,
-  summing retained files (unless `nonRetaining`) plus `heldTotalSize` plus the current batch; `0`
-  disables the check. Same rejection-UI shape and fail-safe invalid-override behavior as
+  summing retained files (unless `nonRetaining` or a single-file input) plus `heldTotalSize` plus
+  the current batch; `0` disables the check. Same rejection-UI shape and fail-safe invalid-override behavior as
   `maxFileSize` (see gotchas).
 - `heldFileCount: number = 0` (attribute `held-file-count`) — externally held file count added to
   the running count `maxFiles` evaluates against, in both retaining and `nonRetaining` modes — the
@@ -1459,8 +1462,8 @@ the region is cleared (and unrendered) as soon as a subsequent selection rejects
 
 **Slots:** `dropzone` (with the default slot retained as its fallback) supplies custom dropzone
 content; `label`, `hint`, and `error` supply form chrome. Slotted dropzone content does not name the
-control: the semantic button's accessible name comes from a host `aria-label` (or `accessibleLabel`),
-then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
+control: the semantic button's accessible name comes from a non-empty host `aria-label` (or
+`accessibleLabel`), then the form label (`label` or the `label` slot), then the localized instruction, so icon-only slot
 content still announces correctly. Slotted content is a sibling of
 the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
 controls keep their own activation and do not also open the picker; clicking non-interactive custom
@@ -1900,15 +1903,17 @@ coalesce into one update.
   `[part='meta']`, `[part='base']` also switches to a reduced, symmetric padding sized for a lone
   thumbnail instead of the compact text row's padding — see
   `--lr-attachment-chip-compact-thumbnail-only-padding` below.
-- `removeLabel?: string` (attribute `remove-label`) — verb used in the remove button's accessible
-  name; omitting it reads back `undefined` and routes through the complete localized
+- `removeLabel?: string` (attribute `remove-label`) — the remove button's accessible name, with
+  `{label}` replaced by the file name; omitted or blank, it routes through the complete localized
   `removeWithContext` template
-- `retryLabel?: string` (attribute `retry-label`) — verb used in the retry button's accessible
-  name; omitting it reads back `undefined` and routes through the complete localized
+- `retryLabel?: string` (attribute `retry-label`) — the retry button's accessible name, with
+  `{label}` replaced by the file name; omitted or blank, it routes through the complete localized
   `attachmentRetryWithContext` template
-- `uploadingLabel?: string` (attribute `uploading-label`) — verb used in the visible uploading
-  status; omitting it reads back `undefined` and uses complete localized messages for progress,
-  indeterminate state, and filename context so translators can reorder every value
+- `uploadingLabel?: string` (attribute `uploading-label`) — the visible uploading status and the
+  progress bar's accessible name, with `{label}` replaced by the file name and `{percent}` by the
+  progress; omitted, it uses complete localized messages for progress, indeterminate state, and
+  filename context so translators can reorder every value. An explicit empty value hides the
+  visible status, and the progress bar keeps its localized name
 - `uploadFailedLabel?: string` (attribute `upload-failed-label`) — visible status text shown for
   `status="error"`; override for i18n/locale. Omitting it reads back `undefined` and uses the
   localized default (`'Upload failed'` in English)
@@ -1996,7 +2001,9 @@ selected unit abbreviation; `numberLabel` formats the scaled value and receives 
 as `0` for bytes or `1` for larger units. Their defaults preserve the built-in output: `512` →
 `"512 B"` (whole bytes never get a decimal), `2415919` → `"2.3 MB"` (every unit past bytes gets
 exactly one decimal place), and a negative or non-finite input (`NaN`, `Infinity`) returns `""` so
-an unknown size renders nothing instead of `"NaN B"`.
+an unknown size renders nothing instead of `"NaN B"`. The same module's
+`localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string` is the
+ready-made `numberLabel` for `locale`, rendering exactly the requested fraction digits.
 
 ```html
 <lr-attachment-chip
@@ -2303,7 +2310,8 @@ capability as a row.
   defaults it to `'image/*'` unless this prop overrides it; `files` always uses it as-is (empty
   means "any file type").
 - Host `aria-label` attribute (default absent) — overrides the localized accessible name on the
-  single-capability button or multi-capability menu trigger. An explicitly empty value stays empty.
+  single-capability button or multi-capability menu trigger. An explicitly empty value is ignored,
+  so the control keeps its localized name.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
@@ -2317,9 +2325,12 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
-**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files: readonly File[] }`) — fired
-once a file-backed capability's hidden input produces a real selection. `files` is a fresh frozen
-owner-realm array snapshot, not a live reference to the input's own `.files`. `lr-camera-request`
+**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files, rejected, remainingFiles,
+remainingTotalSize }`, the same shape as `lr-file-input`'s) — fired once a file-backed capability's
+hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
+owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
+"All files" filter let through that do not match `accept` are listed in `rejected` with reason
+`'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
 default) — fired when the `camera` / `audio` capability is activated; this component implements no
@@ -2537,15 +2548,16 @@ automatically under `prefers-reduced-motion: reduce`.
   independent play/pause action still uses localized context when no nonempty `alt` is available.
 - `play: boolean = false` — the caller's _intent_ (reflected).
 - `playing: boolean` (readonly getter, reflected as a `playing` host attribute) — the _effective_
-  state after reduced-motion arbitration: `play && (ignoreReducedMotion || !<OS prefers reduce>)`.
+  state after reduced-motion arbitration:
+  `play && (ignoreReducedMotion || a play-button press || !<OS prefers reduce>)`.
   It is a genuine getter-only property, so assigning to it from a strict JavaScript module throws a
   `TypeError`; drive playback via `play`.
 - `ignoreReducedMotion: boolean = false` (reflected, attribute `ignore-reduced-motion`) — a
   deliberate page-author override that lets `play` take effect even when the OS reports
-  `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen and
-  `[part="play-button"]` `disabled` regardless of `play`.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present,
-  including explicitly empty, it overrides `[part="play-button"]`'s computed Play/Pause label
+  `prefers-reduced-motion: reduce`. Unset, that preference keeps playback frozen regardless of
+  `play`, until the user presses `[part="play-button"]` (an explicit press always plays).
+- `accessibleLabel: string = ''` (attribute `aria-label`) — when the host attribute is present
+  and nonempty, it overrides `[part="play-button"]`'s computed Play/Pause label
   verbatim in _both_ states (it does not itself vary by state). Never
   touches the image's `alt`/the canvas's `aria-label`. For state-sensitive custom wording, override
   the `playWithContext`/`pauseWithContext`/`animatedImageDefaultAlt` strings instead.
@@ -2580,7 +2592,7 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 **Known gotchas:**
 
 - the freeze frame is captured once per successful `src` load, in the `<img>`'s own `load` handler
-  (a DPR-aware `drawImage()`), not re-captured on each pause — pausing always reverts to that first
+  (at the image's natural size, not scaled by the device pixel ratio), not re-captured on each pause — pausing always reverts to that first
   frame, never to the frame that was on screen.
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
@@ -2632,7 +2644,9 @@ start/finish lifecycle, including reduced motion.
   `threshold: number | readonly number[] = 0` (both attribute: false) plus
   `rootMargin: string = '0px'` (attribute `root-margin`) configure that observer. Threshold arrays
   are frozen snapshots, retain only finite values from 0 through 1, and inspect at most 1,000
-  candidates per assignment; invalid scalar thresholds normalize to `0`.
+  candidates per assignment; invalid scalar thresholds normalize to `0`. Assigning the same array
+  again is a no-op, and `keyframes` is compared by reference: bind stable arrays (hoist them or use
+  Lit's `guard()`), because an inline literal restarts a running animation on every parent render.
 - `currentTime: CSSNumberish` — the underlying `Animation.currentTime` (`0` when no animation
   exists); writable and forwarded when one exists. Non-finite numeric assignments are ignored.
 
@@ -3254,9 +3268,10 @@ its token-driven hover and press feedback.
 `controls: 'none' | 'standard' | 'full' = 'standard'`, `currentTime: number = 0` (attribute
 `currentTime`; HTML exposes it as lowercase `currenttime`, with legacy `current-time` also
 accepted), `duration: number = 0` (live/read-only in normal use), `iconLibrary: string =
-'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`, `playing:
-boolean = false` (live/read-only in normal use), `poster: string = ''`, `preload: 'auto' |
-'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
+'system'` (attribute `icon-library`), `loop: boolean = false`, `muted: boolean = false`,
+`readonly playing: boolean` (live state reflected as the `playing` attribute; drive it with `play()`
+and `pause()`, since assigning it throws in strict-mode code), `poster: string = ''`, `preload: 'auto'
+| 'metadata' | 'none' = 'metadata'`, `src: string = ''`, `thumbnails: string = ''`, `title: string =
 ''`, and `volume: number = 1`. The private native `<video>` always carries `playsinline`; native
 browser controls stay disabled because the selected Lyra preset owns the control surface.
 `autoplayOnVisible` does not start a video merely because it is visible: it pauses a currently
@@ -3497,6 +3512,9 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraAttachmentFilesDetail {
     capability: LyraFileBackedCapability;
     files: readonly File[];
+    rejected: readonly LyraFileInputRejectedFile[];
+    remainingFiles: number | null;
+    remainingTotalSize: number | null;
   }`
 
 - **`components-media-av-player-av-metadata-contracts`** — Supporting data types and helpers for this component family.

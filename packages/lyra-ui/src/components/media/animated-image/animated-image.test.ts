@@ -62,16 +62,12 @@ function stubReducedMotion(initialMatches: boolean, ownerWindow: Window = window
   };
 }
 
-it('rebinds reduced-motion and DPR work to the adopted owner window and cleans up symmetrically', async () => {
+it('rebinds reduced-motion work to the adopted owner window and cleans up symmetrically', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const frameDocument = frame.contentDocument!;
   const frameWindow = frame.contentWindow!;
   const parentMotion = stubReducedMotion(false);
   const frameMotion = stubReducedMotion(true, frameWindow);
-  const parentDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
-  const frameDpr = Object.getOwnPropertyDescriptor(frameWindow, 'devicePixelRatio');
-  Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
-  Object.defineProperty(frameWindow, 'devicePixelRatio', { value: 3, configurable: true });
   const el = document.createElement('lr-animated-image') as LyraAnimatedImage;
   el.alt = 'Adopted image';
   el.play = true;
@@ -90,21 +86,12 @@ it('rebinds reduced-motion and DPR work to the adopted owner window and cleans u
     expect(frameMotion.listenerCount()).to.equal(1);
     expect(el.playing).to.be.false;
 
-    await loaded(el);
-    const canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
-    expect(canvas.width).to.equal(3);
-    expect(canvas.height).to.equal(3);
-
     el.remove();
     expect(frameMotion.listenerCount()).to.equal(0);
   } finally {
     el.remove();
     parentMotion.restore();
     frameMotion.restore();
-    if (parentDpr) Object.defineProperty(window, 'devicePixelRatio', parentDpr);
-    else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
-    if (frameDpr) Object.defineProperty(frameWindow, 'devicePixelRatio', frameDpr);
-    else delete (frameWindow as unknown as { devicePixelRatio?: number }).devicePixelRatio;
     frame.remove();
   }
 });
@@ -269,17 +256,23 @@ it('suppresses a detached write whose pending update first flushes after reconne
   }
 });
 
-describe('lr-load / DPR-aware frame capture', () => {
-  it('fires lr-load and captures a DPR-aware frozen frame matching the loaded image', async () => {
-    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
-    await loaded(el);
+describe('lr-load / frozen frame capture', () => {
+  it('fires lr-load and captures the frozen frame at the natural image size whatever the device pixel ratio', async () => {
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    Object.defineProperty(window, 'devicePixelRatio', { value: 3, configurable: true });
+    try {
+      const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+      await loaded(el);
 
-    const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
-    const canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
-    const dpr = window.devicePixelRatio || 1;
-    expect(img.naturalWidth).to.be.greaterThan(0);
-    expect(canvas.width).to.equal(img.naturalWidth * dpr);
-    expect(canvas.height).to.equal(img.naturalHeight * dpr);
+      const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+      const canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
+      expect(img.naturalWidth).to.be.greaterThan(0);
+      expect(canvas.width).to.equal(img.naturalWidth);
+      expect(canvas.height).to.equal(img.naturalHeight);
+    } finally {
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
   });
 });
 
@@ -346,14 +339,14 @@ describe('play / playing / reduced-motion arbitration', () => {
     }
   });
 
-  it('stays frozen and disables the play button under OS reduced motion (ignoreReducedMotion defaults to false)', async () => {
+  it('stays frozen under OS reduced motion until the play button is pressed (ignoreReducedMotion defaults to false)', async () => {
     const stub = stubReducedMotion(true);
     try {
       const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       expect(el.ignoreReducedMotion).to.be.false;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
-      expect(button.disabled).to.be.true;
+      expect(button.disabled).to.be.false;
 
       let playFired = false;
       el.addEventListener('lr-play', () => {
@@ -364,6 +357,22 @@ describe('play / playing / reduced-motion arbitration', () => {
 
       expect(el.playing).to.be.false;
       expect(playFired).to.be.false;
+
+      el.play = false;
+      await el.updateComplete;
+      const played = oneEvent(el, 'lr-play');
+      button.click();
+      await played;
+      expect(el.playing).to.be.true;
+
+      const paused = oneEvent(el, 'lr-pause');
+      button.click();
+      await paused;
+      expect(el.playing).to.be.false;
+
+      el.play = true;
+      await el.updateComplete;
+      expect(el.playing, 'a programmatic play after a pause follows the preference again').to.be.false;
     } finally {
       stub.restore();
     }
@@ -487,13 +496,13 @@ describe('accessible name on the play button', () => {
     }
   });
 
-  it('preserves an explicitly empty host aria-label instead of replacing it with computed copy', async () => {
+  it('names the play button from computed copy when the host aria-label is explicitly empty', async () => {
     const el = (await fixture(html`
       <lr-animated-image alt="Site tour" aria-label=""></lr-animated-image>
     `)) as LyraAnimatedImage;
     await loaded(el);
     const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
-    expect(button.getAttribute('aria-label')).to.equal('');
+    expect(button.getAttribute('aria-label')).to.equal('Play Site tour');
 
     el.removeAttribute('aria-label');
     el.accessibleLabel = 'Property-authored control name';
@@ -501,16 +510,16 @@ describe('accessible name on the play button', () => {
     expect(button.getAttribute('aria-label')).to.equal('Property-authored control name');
   });
 
-  it('keeps a non-empty accessible name on the play button while disabled by reduced motion', async () => {
+  it('keeps a non-empty accessible name on the play button under reduced motion', async () => {
     const stub = stubReducedMotion(true);
     try {
       const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
       await loaded(el);
       const button = el.shadowRoot!.querySelector('[part="play-button"]') as HTMLButtonElement;
       const icon = el.shadowRoot!.querySelector<HTMLElement>('.icon:not([hidden])')!;
-      expect(button.disabled).to.be.true;
+      expect(button.disabled).to.be.false;
       expect(button.getAttribute('aria-label')).to.equal('Play Pixel');
-      expect(getComputedStyle(icon).opacity).to.equal(getComputedStyle(button).opacity);
+      expect(getComputedStyle(icon).opacity).to.equal('1');
     } finally {
       stub.restore();
     }

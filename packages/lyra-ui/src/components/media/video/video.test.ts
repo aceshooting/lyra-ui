@@ -5,6 +5,7 @@ import './video.js';
 import '../video-playlist/video-playlist.js';
 import type { LyraVideo } from './video.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 const VIDEO_SRC = 'https://example.test/video.mp4';
 
@@ -221,6 +222,52 @@ describe('lr-video public contract', () => {
     }
   });
 
+  it('releases its document listeners from the document they were added to when moved to another document', async () => {
+    const iframe = document.createElement('iframe');
+    const loaded = new Promise<void>((resolve) =>
+      iframe.addEventListener('load', () => resolve(), { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+    const frameDocument = iframe.contentDocument!;
+    const watched = new Set(['fullscreenchange', 'enterpictureinpicture', 'leavepictureinpicture']);
+    const live = new Map<Document, number>([[document, 0], [frameDocument, 0]]);
+    const restore: Array<() => void> = [];
+    for (const doc of live.keys()) {
+      const add = doc.addEventListener;
+      const remove = doc.removeEventListener;
+      Object.defineProperty(doc, 'addEventListener', {
+        configurable: true,
+        value(this: Document, type: string, ...rest: unknown[]) {
+          if (watched.has(type)) live.set(doc, live.get(doc)! + 1);
+          return (add as (...args: unknown[]) => void).call(this, type, ...rest);
+        },
+      });
+      Object.defineProperty(doc, 'removeEventListener', {
+        configurable: true,
+        value(this: Document, type: string, ...rest: unknown[]) {
+          if (watched.has(type)) live.set(doc, live.get(doc)! - 1);
+          return (remove as (...args: unknown[]) => void).call(this, type, ...rest);
+        },
+      });
+      restore.push(() => {
+        delete (doc as unknown as Record<string, unknown>)['addEventListener'];
+        delete (doc as unknown as Record<string, unknown>)['removeEventListener'];
+      });
+    }
+    try {
+      const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      expect(live.get(document)).to.equal(0);
+      expect(live.get(frameDocument)).to.equal(3);
+      el.remove();
+    } finally {
+      for (const undo of restore) undo();
+      iframe.remove();
+    }
+  });
+
   it('uses owner-realm fullscreen/PiP probes and owner-branded unsupported errors across adoption', async () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
@@ -325,12 +372,12 @@ describe('lr-video public contract', () => {
     expect(el.getAttribute('currenttime'), 'the public attribute is not reflected from IDL writes').to.equal('3');
 
     el.muted = true;
-    el.playing = true;
+    nativeVideo(el).dispatchEvent(new Event('play'));
     await el.updateComplete;
     expect(el.hasAttribute('muted')).to.be.true;
     expect(el.hasAttribute('playing')).to.be.true;
     el.muted = false;
-    el.playing = false;
+    nativeVideo(el).dispatchEvent(new Event('pause'));
     await el.updateComplete;
     expect(el.hasAttribute('muted')).to.be.false;
     expect(el.hasAttribute('playing')).to.be.false;
@@ -506,6 +553,42 @@ describe('lr-video public contract', () => {
     await Promise.all([nativeTimeupdate, seeked]);
 
     expect(received.length, 'seek() must not double-fire host timeupdate via the native relay').to.equal(1);
+  });
+
+  it('mirrors native playback into currentTime without seeking the media element', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    let position = 0;
+    let writes = 0;
+    Object.defineProperty(media, 'currentTime', {
+      configurable: true,
+      get: () => position,
+      set: (value: number) => { writes += 1; position = value; },
+    });
+    for (const type of ['timeupdate', 'seeked', 'durationchange']) {
+      position += 1;
+      media.dispatchEvent(new Event(type));
+      await el.updateComplete;
+    }
+    expect(el.currentTime).to.equal(3);
+    expect(writes).to.equal(0);
+    el.currentTime = 9;
+    await el.updateComplete;
+    expect(position).to.equal(9);
+    expect(writes).to.equal(1);
+  });
+
+  it('keeps playing read-only: the media drives it, a write throws and an authored attribute starts nothing', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video playing></lr-video>`);
+    expect(el.playing).to.be.false;
+    expect(() => {
+      (el as unknown as { playing: boolean }).playing = true;
+    }).to.throw(TypeError);
+    expect(el.playing).to.be.false;
+    nativeVideo(el).dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    expect(el.hasAttribute('playing')).to.be.true;
   });
 
   it('renders exact base/video-wrapper aliases and the documented public parts', async () => {
@@ -765,7 +848,7 @@ describe('lr-video public contract', () => {
       }
       await expect(el).to.be.accessible();
 
-      el.playing = true;
+      nativeVideo(el).dispatchEvent(new Event('play'));
       el.muted = true;
       Object.defineProperty(document, 'fullscreenElement', {
         configurable: true,
@@ -1197,6 +1280,42 @@ describe('lr-video public contract', () => {
     expect(second.mode).to.equal('hidden');
   });
 
+  it('keeps the chosen caption track after the element is moved', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    const first = new EventTarget() as EventTarget & {
+      kind: string; label: string; language: string; mode: TextTrackMode; activeCues: null;
+    };
+    const second = new EventTarget() as typeof first;
+    Object.assign(first, { kind: 'captions', label: 'English', language: 'en', mode: 'showing', activeCues: null });
+    Object.assign(second, { kind: 'subtitles', label: 'Français', language: 'fr', mode: 'disabled', activeCues: null });
+    Object.defineProperty(media, 'textTracks', { configurable: true, value: { 0: first, 1: second, length: 2 } });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const select = el.shadowRoot!.querySelector('[data-control="captions"]') as HTMLSelectElement;
+    select.value = '1';
+    select.dispatchEvent(new Event('change'));
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="captions"]') !== null);
+
+    expect(first.mode).to.equal('disabled');
+    expect(second.mode).to.equal('hidden');
+    expect(el.shadowRoot!.querySelector<HTMLSelectElement>('[data-control="captions"]')!.value).to.equal('1');
+  });
+
+  it('formats the playback-rate options through the localized rate message', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video controls="full" .strings=${{ avPlayerRateOption: '{rate}-fach' }}></lr-video>
+    `);
+    const labels = [...el.shadowRoot!.querySelectorAll('[data-control="rate"] option')]
+      .map((option) => option.textContent!.trim());
+    expect(labels).to.deep.equal(['0.5-fach', '0.75-fach', '1-fach', '1.25-fach', '1.5-fach', '2-fach']);
+  });
+
   it('renders caption and rate selects with themed decorative chevrons', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video
@@ -1533,7 +1652,7 @@ describe('lr-video public contract', () => {
     }
   });
 
-  it('inherits RTL while keeping elapsed-time progression physical and uses no nonessential motion', async () => {
+  it('inherits RTL while keeping elapsed-time progression physical and animating only pointer feedback', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video dir="rtl"></lr-video>`);
     const controls = el.shadowRoot!.querySelector('[part="controls"]') as HTMLElement;
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
@@ -1541,7 +1660,19 @@ describe('lr-video public contract', () => {
     expect(getComputedStyle(controls).direction).to.equal('rtl');
     expect(getComputedStyle(timeline).direction).to.equal('ltr');
     expect(getComputedStyle(play).animationName).to.equal('none');
-    expect(getComputedStyle(play).transitionDuration).to.equal('0s');
+    expect(getComputedStyle(play).transitionProperty).to.equal('background-color, color, border-color');
+  });
+
+  it('eases control hover feedback and stops under reduced motion', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="full"></lr-video>`);
+    const controls = [button(el, 'play')!, button(el, 'mute')!, button(el, 'volume')!, button(el, 'rate')!];
+    expect(controls.every((control) => getComputedStyle(control).transitionDuration !== '0s')).to.equal(true);
+    await setReducedMotion('reduce');
+    try {
+      expect(controls.every((control) => getComputedStyle(control).transitionDuration === '0s')).to.equal(true);
+    } finally {
+      await setReducedMotion('no-preference');
+    }
   });
 
   it('uses native range ArrowRight/ArrowLeft behavior on the physical RTL timeline axis', async () => {

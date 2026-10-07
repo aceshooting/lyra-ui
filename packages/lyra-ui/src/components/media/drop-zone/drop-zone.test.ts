@@ -1,5 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './drop-zone.js';
+import '../file-input/file-input.js';
+import type { LyraFileInput } from '../file-input/file-input.js';
 import type { LyraDropZone, LyraDropZoneFilesDetail, LyraDropZoneFilesEvent } from './drop-zone.js';
 
 function makeFile(name: string, type = 'text/plain'): File {
@@ -376,4 +378,75 @@ it('defaults to one file and preserves explicit multiple opt-in and false spelli
   el.removeAttribute('multiple');
   await el.updateComplete;
   expect(el.multiple).to.equal(false);
+});
+
+it('does not list the pseudo-file a real folder drop puts in dataTransfer.files', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple><div>region</div></lr-drop-zone>`);
+  const nested = makeFile('nested.csv', 'text/csv');
+  let read = false;
+  const directory = {
+    isDirectory: true,
+    isFile: false,
+    name: 'folder',
+    createReader: () => ({
+      readEntries: (success: (entries: unknown[]) => void) => {
+        if (read) success([]);
+        else {
+          read = true;
+          success([{ isDirectory: false, isFile: true, name: nested.name, file: (ok: (file: File) => void) => ok(nested) }]);
+        }
+      },
+    }),
+  };
+  const transfer = {
+    files: [new File([], 'folder')] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => directory }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  const result = oneEvent(el, 'lr-files');
+  base(el).dispatchEvent(event);
+  const detail = (await result).detail as LyraDropZoneFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['nested.csv']);
+  expect(detail.rejected).to.deep.equal([]);
+});
+
+it('reports a dropped folder only as a rejection while not multiple', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone><div>region</div></lr-drop-zone>`);
+  const transfer = {
+    files: [new File([], 'My Folder')] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => ({ isDirectory: true, name: 'My Folder' }) }],
+  };
+  const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: transfer });
+  const result = oneEvent(el, 'lr-files');
+  base(el).dispatchEvent(event);
+  const detail = (await result).detail as LyraDropZoneFilesDetail;
+  expect(detail.files).to.deep.equal([]);
+  expect(detail.rejected.map((entry) => entry.reason)).to.deep.equal(['directory']);
+});
+
+it('leaves a drop on a nested lr-file-input to that input and still ends its own drag session', async () => {
+  const zone = await fixture<LyraDropZone>(html`
+    <lr-drop-zone multiple><lr-file-input multiple></lr-file-input></lr-drop-zone>
+  `);
+  const input = zone.querySelector('lr-file-input') as LyraFileInput;
+  const inner = input.shadowRoot!.querySelector('[part~="dropzone"]') as HTMLElement;
+  const sources: string[] = [];
+  zone.addEventListener('lr-files', (event) => sources.push((event.target as Element).localName));
+  const dispatchComposed = (type: string): void => {
+    const dt = new DataTransfer();
+    dt.items.add(makeFile('a.txt'));
+    const event = new DragEvent(type, { bubbles: true, cancelable: true, composed: true });
+    Object.defineProperty(event, 'dataTransfer', { value: dt });
+    inner.dispatchEvent(event);
+  };
+  dispatchComposed('dragenter');
+  await zone.updateComplete;
+  expect(zone.dragging).to.equal(true);
+  dispatchComposed('drop');
+  await zone.updateComplete;
+  expect(sources).to.deep.equal(['lr-file-input']);
+  expect(zone.dragging).to.equal(false);
+  expect(input.files.map((file) => file.name)).to.deep.equal(['a.txt']);
 });

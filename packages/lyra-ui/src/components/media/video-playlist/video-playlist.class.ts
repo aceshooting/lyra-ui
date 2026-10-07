@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -96,16 +96,6 @@ function sameVideos(left: readonly LyraVideo[], right: readonly LyraVideo[]): bo
   return left.length === right.length && left.every((video, index) => video === right[index]);
 }
 
-function textTracks(media: HTMLVideoElement | undefined): TextTrack[] {
-  const result: TextTrack[] = [];
-  if (!media) return result;
-  for (let index = 0; index < media.textTracks.length; index += 1) {
-    const track = media.textTracks[index];
-    if (track) result.push(track);
-  }
-  return result;
-}
-
 function isSelectableTrack(track: TextTrack): boolean {
   return track.kind === 'subtitles' || track.kind === 'captions' || track.kind === 'descriptions';
 }
@@ -193,7 +183,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     videoPlaylistUntitled: LYRA_DEFAULT_videoPlaylistUntitled,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-video-change',
@@ -582,7 +572,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     if (typeof state.muted === 'boolean') preferences.muted = state.muted;
     if (validPlaybackRate(state.playbackRate)) preferences.playbackRate = state.playbackRate;
 
-    const tracks = textTracks(native);
+    const tracks = Array.from(native?.textTracks ?? []);
     const showingIndex = tracks.findIndex((track) =>
       isSelectableTrack(track) && track.mode !== 'disabled');
     if (showingIndex < 0) {
@@ -613,7 +603,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     preference: NativeTextTrackPreference | null | undefined,
   ): void {
     if (!native || preference === undefined) return;
-    const tracks = textTracks(native);
+    const tracks = Array.from(native?.textTracks ?? []);
     if (preference === null) {
       for (const track of tracks) {
         if (isSelectableTrack(track)) track.mode = 'disabled';

@@ -824,8 +824,49 @@ describe('label overrides (i18n)', () => {
     el.removeLabel = '';
     el.retryLabel = '';
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal('');
-    expect(el.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal(
+      'Localized remove invoice.pdf',
+    );
+    expect(el.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal(
+      'Localized retry invoice.pdf',
+    );
+  });
+
+  it('fills {label} and {percent} in the button and progress overrides', async () => {
+    const uploading = (await fixture(html`
+      <lr-attachment-chip
+        name="report.pdf"
+        status="uploading"
+        progress="30"
+        uploading-label="Envoi de {label} ({percent} %)"
+        remove-label="Supprimer {label}"
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(uploading.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal(
+      'Envoi de report.pdf (30 %)',
+    );
+    expect(uploading.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal(
+      'Envoi de report.pdf (30 %)',
+    );
+    expect(uploading.shadowRoot!.querySelector('[part="remove-button"]')!.getAttribute('aria-label')).to.equal(
+      'Supprimer report.pdf',
+    );
+    const failed = (await fixture(html`
+      <lr-attachment-chip name="report.pdf" status="error" retry-label="Réessayer {label}"></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(failed.shadowRoot!.querySelector('[part="retry-button"]')!.getAttribute('aria-label')).to.equal(
+      'Réessayer report.pdf',
+    );
+  });
+
+  it('keeps the progress bar named when uploading-label is explicitly empty', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip name="report.pdf" status="uploading" progress="30" uploading-label=""></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('');
+    expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal(
+      'Uploading report.pdf',
+    );
   });
 
   it('uses contextual message templates so translations control word order and punctuation', async () => {

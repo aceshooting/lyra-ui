@@ -13,6 +13,8 @@ import { styles } from './attachment-trigger.styles.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
+import { matchesAccept } from '../file-input/accept.js';
+import type { LyraFileInputRejectedFile } from '../file-input/file-input.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
@@ -27,6 +29,9 @@ export type LyraFileBackedCapability = Exclude<LyraAttachmentCapability, 'camera
 export interface LyraAttachmentFilesDetail {
   capability: LyraFileBackedCapability;
   files: readonly File[];
+  rejected: readonly LyraFileInputRejectedFile[];
+  remainingFiles: number | null;
+  remainingTotalSize: number | null;
 }
 
 // Mirrors the shared icon set's viewBox/stroke conventions
@@ -196,8 +201,11 @@ export interface LyraAttachmentTriggerEventMap {
  *
  * @customElement lr-attachment-trigger
  * @event lr-files - A file-backed capability's hidden file input produced a real selection.
- * `detail: { capability: 'files' | 'image', files }`; `files` is a fresh readonly owner-realm
- * `File[]` snapshot rather than the native input's live `FileList`.
+ * `detail: { capability: 'files' | 'image', files, rejected, remainingFiles, remainingTotalSize }`,
+ * the same shape as `lr-file-input`'s. `files` are the picks matching `accept` (a fresh readonly
+ * owner-realm `File[]` snapshot rather than the native input's live `FileList`); the rest, which
+ * the OS dialog's "All files" filter can let through, are listed in `rejected`. No size or count
+ * limits apply here, so both `remaining*` fields are `null`.
  * @event lr-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
  * actual capture flow.
@@ -223,7 +231,8 @@ export interface LyraAttachmentTriggerEventMap {
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
  *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
- * The host `aria-label` names either trigger shape; an explicit empty value is kept as-is.
+ * The host `aria-label` names either trigger shape; an empty value is ignored, so the control keeps
+ * its localized name.
  * @status stable
  * @since 4.0.0
  */
@@ -273,8 +282,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  /** The host `aria-label`: names either trigger shape, by presence, so an explicitly empty value
-   *  stays empty. */
+  /** The host `aria-label`: names either trigger shape. An empty value is ignored. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
@@ -426,11 +434,15 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       && selected
       && selected.length > 0
     ) {
-      const OwnerArray = this.ownerDocument.defaultView?.Array ?? Array;
-      const files = Object.freeze(OwnerArray.from(selected)) as readonly File[];
+      const accept = this.effectiveAccept(this.pendingCapability);
+      const files = Array.from(selected);
+      const matching = files.filter((file) => matchesAccept(file, accept));
       this.emit('lr-files', {
         capability: this.pendingCapability,
-        files,
+        files: matching,
+        rejected: files.filter((file) => !matching.includes(file)).map((file) => ({ file, reason: 'type' as const })),
+        remainingFiles: null,
+        remainingTotalSize: null,
       });
     }
     // Clearing `.value` (not just leaving the stale selection in place)
@@ -487,7 +499,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: LyraAttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
-    const label = this.hostAccessibleLabel ?? this.localize(meta.triggerKey);
+    const label = this.hostAccessibleLabel || this.localize(meta.triggerKey);
     return html`
       <lr-icon-button
         part="trigger"
@@ -507,7 +519,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
-    const accessibleLabel = this.hostAccessibleLabel ?? addLabel;
+    const accessibleLabel = this.hostAccessibleLabel || addLabel;
     return html`
       <lr-dropdown without-arrow
         part="menu"

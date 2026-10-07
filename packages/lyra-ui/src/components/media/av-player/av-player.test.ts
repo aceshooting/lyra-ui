@@ -716,6 +716,35 @@ it('skips renormalization when an already-owned normalized collection is reassig
   expect(el.peaks).to.equal(normalizedPeaks);
 });
 
+it('shows cue times rounded down like the other players', async () => {
+  const el = (await fixture(html`
+    <lr-av-player src=${MP3_SRC} .cues=${[{ cueId: 'a', start: 59.6, text: 'Late' }]}></lr-av-player>
+  `)) as LyraAvPlayer;
+  await waitUntil(() => cueRows(el).length === 1);
+  expect(cueRows(el)[0]!.querySelector('[part="cue-time"]')!.textContent).to.equal('0:59');
+});
+
+it('keeps its snapshots and requests no update when a parent re-assigns the same collections', async () => {
+  const el = (await fixture(html`<lr-av-player></lr-av-player>`)) as LyraAvPlayer;
+  const cues = [{ cueId: 'a', start: 0, text: 'Hello' }];
+  const peaks = [0.25, 0.5];
+  const rates = [1, 2];
+  const tracks = [{ src: 'https://example.test/en.vtt', kind: 'captions' as const, srclang: 'en', label: 'English' }];
+  const assign = (): void => {
+    el.cues = cues;
+    el.peaks = peaks;
+    el.rates = rates;
+    el.tracks = tracks;
+  };
+  assign();
+  await el.updateComplete;
+  const snapshots = [el.cues, el.peaks, el.rates, el.tracks];
+  assign();
+  expect(el.isUpdatePending).to.equal(false);
+  expect([el.cues === snapshots[0], el.peaks === snapshots[1], el.rates === snapshots[2], el.tracks === snapshots[3]])
+    .to.deep.equal([true, true, true, true]);
+});
+
 describe('playback controls', () => {
   it('play()/pause()/toggle() proxy the native media element and emit lr-play/lr-pause', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
@@ -2361,6 +2390,24 @@ describe('waveform', () => {
     expect(ctx.fillStyle).to.equal(probe.fillStyle);
   });
 
+  it('hands the canvas a concrete color resolved from a themed token', async () => {
+    const el = (await fixture(html`
+      <lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>
+    `)) as LyraAvPlayer;
+    enableWaveformPainting(el);
+    const ctx = (el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).getContext('2d')!;
+    const accessor = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'fillStyle')!;
+    const assigned: unknown[] = [];
+    Object.defineProperty(ctx, 'fillStyle', {
+      configurable: true,
+      get() { return accessor.get!.call(this); },
+      set(value: unknown) { assigned.push(value); accessor.set!.call(this, value); },
+    });
+    el.style.setProperty('--lr-color-brand', 'color-mix(in srgb, rgb(0, 200, 0) 50%, rgb(0, 0, 200))');
+    window.dispatchEvent(new Event('resize'));
+    expect(assigned.at(-1)).to.be.a('string').and.not.include('color-mix');
+  });
+
   it('resolves an invalid waveform token to a valid color instead of reusing the prior fill', async () => {
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>
@@ -2435,12 +2482,12 @@ describe('accessibility', () => {
     expect(mediaEl(el).getAttribute('aria-label')).to.equal('Audio/video player');
   });
 
-  it('preserves an explicitly empty host aria-label on the native media control', async () => {
+  it('keeps an explicitly empty host aria-label but names the native media control', async () => {
     const el = (await fixture(html`
       <lr-av-player src=${MP3_SRC} aria-label=""></lr-av-player>
     `)) as LyraAvPlayer;
     expect(el.getAttribute('aria-label')).to.equal('');
-    expect(mediaEl(el).getAttribute('aria-label')).to.equal('');
+    expect(mediaEl(el).getAttribute('aria-label')).to.equal('Audio/video player');
   });
 });
 

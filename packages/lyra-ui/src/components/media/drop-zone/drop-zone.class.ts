@@ -1,13 +1,11 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { attachInternalsSafely } from '../../../internal/form-associated.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -15,22 +13,13 @@ import {
   DropSessionController,
   type DropSessionState,
 } from '../../../internal/drop-session-controller.js';
-import { matchesAccept } from '../file-input/accept.js';
+import { classifyFiles, freezeDetail, handleDrop, type FileIntakeResult } from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-// Deliberately not imported from `lr-file-input.class.ts` -- keeping this component's own
-// numeric fallbacks decouples it from that class module's export surface, so a future change
-// there can't accidentally ripple into this unrelated component. Values are numerically identical
-// to `lr-file-input`'s own `DEFAULT_MAX_FILE_SIZE_BYTES`/`DEFAULT_MAX_FILES`/
-// `DEFAULT_MAX_TOTAL_SIZE_BYTES` by design -- keep both in sync if either changes.
-const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-const DEFAULT_MAX_FILES = 100;
-const DEFAULT_MAX_TOTAL_SIZE_BYTES = 250 * 1024 * 1024;
 
 export interface LyraDropZoneRejectedFile {
   readonly file: File;
@@ -127,7 +116,6 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     ...super.defaultStrings,
     dropzoneRejectedType: LYRA_DEFAULT_dropzoneRejectedType,
     dropzoneReleaseToAdd: LYRA_DEFAULT_dropzoneReleaseToAdd,
-    fieldRequired: LYRA_DEFAULT_fieldRequired,
     fileInputAcceptedMany: LYRA_DEFAULT_fileInputAcceptedMany,
     fileInputAcceptedOne: LYRA_DEFAULT_fileInputAcceptedOne,
     fileInputFolderRejected: LYRA_DEFAULT_fileInputFolderRejected,
@@ -142,7 +130,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
   };
   // GENERATED DEFAULT-STRING SLICE: END
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-files',
@@ -160,25 +148,30 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   @property() accept = '';
   /** Largest accepted file size in bytes. `0` (the default) disables the check -- identical
    *  contract to `lr-file-input`'s `maxFileSize`, including its invalid-override fallback. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
   /** Largest number of files accepted per drop, counting `heldFileCount` plus the current drop's
    *  files. `0` (the default) disables the check -- identical contract to `lr-file-input`'s
    *  `maxFiles`. Since this component retains nothing of its own between drops, the count would
    *  otherwise always cover only the current drop -- `heldFileCount` is what lets a cumulative cap
    *  span separate drops. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
   /** Largest combined byte size accepted per drop, summing `heldTotalSize` plus the current
    *  drop's files. `0` (the default) disables the check -- identical contract to
    *  `lr-file-input`'s `maxTotalSize`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
   /** Externally held file count added to the running count `maxFiles` evaluates against --
    *  identical contract to `lr-file-input`'s `heldFileCount`, letting a cumulative, server-backed
    *  cap span separate drops onto this region. `0` (the default) means "nothing held" and
    *  reproduces prior behavior exactly. A negative, `NaN`, or `Infinity` value is normalized to
    *  `0` via `finiteCount`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
   /** Externally held byte total added to the running size `maxTotalSize` evaluates against --
    *  identical contract to `lr-file-input`'s `heldTotalSize`. */
+  // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
   @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Density tier for the overlay's padding, icon and instructional text -- identical contract and
    *  scale to `lr-file-input`'s own `size`, so a small-tier drop-zone can match a neighboring
@@ -264,77 +257,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     this.announcementsArmed = true;
   }
 
-  /** `maxFileSize` normalized exactly like `lr-file-input`'s `effectiveMaxFileSize`. */
-  private get effectiveMaxFileSize(): number | null {
-    const maxFileSize = this.maxFileSize;
-    if (maxFileSize === 0 || maxFileSize === Infinity) return null;
-    return finiteRange(maxFileSize > 0 ? maxFileSize : NaN, DEFAULT_MAX_FILE_SIZE_BYTES, 1);
-  }
-
-  /** `maxFiles` normalized exactly like `lr-file-input`'s `effectiveMaxFiles`. */
-  private get effectiveMaxFiles(): number | null {
-    const maxFiles = this.maxFiles;
-    if (maxFiles === 0 || maxFiles === Infinity) return null;
-    return finiteRange(maxFiles > 0 ? maxFiles : NaN, DEFAULT_MAX_FILES, 1);
-  }
-
-  /** `maxTotalSize` normalized exactly like `lr-file-input`'s `effectiveMaxTotalSize`. */
-  private get effectiveMaxTotalSize(): number | null {
-    const maxTotalSize = this.maxTotalSize;
-    if (maxTotalSize === 0 || maxTotalSize === Infinity) return null;
-    return finiteRange(maxTotalSize > 0 ? maxTotalSize : NaN, DEFAULT_MAX_TOTAL_SIZE_BYTES, 1);
-  }
-
-  private isAllowed(file: File, isPreview = false): 'ok' | 'type' | 'size' {
-    // Same preview caveats as `lr-file-input`'s `isAllowed()`: during dragenter preview, `.name`
-    // and `.size` aren't available on the synthetic `DataTransferItem`-cast objects, so an
-    // extension-only `accept` pattern is treated as a possible match rather than a guaranteed
-    // reject, and the size check naturally never fires (`undefined > number` is always `false`).
-    if (this.accept && !matchesAccept(file, this.accept, isPreview)) return 'type';
-    const maxFileSize = this.effectiveMaxFileSize;
-    if (maxFileSize !== null && file.size > maxFileSize) return 'size';
-    return 'ok';
-  }
-
-  private classify(
-    fileList: File[],
-    isPreview = false,
-  ): {
-    files: File[];
-    rejected: LyraDropZoneRejectedFile[];
-    remainingFiles: number | null;
-    remainingTotalSize: number | null;
-  } {
-    const limits = { maxFiles: this.effectiveMaxFiles, maxTotalSize: this.effectiveMaxTotalSize };
-    // This component retains nothing of its own between drops -- the running total always starts
-    // from `heldFileCount`/`heldTotalSize` alone, the externally held baseline the host reports.
-    const tracker = new AggregateFileLimitTracker(
-      finiteCount(this.heldFileCount, 0),
-      finiteCount(this.heldTotalSize, 0),
-    );
-    if (!this.multiple && fileList.length > 1) {
-      return {
-        files: [],
-        rejected: fileList.map((file) => ({ file, reason: 'count' as const })),
-        ...tracker.allowance(limits),
-      };
-    }
-    const files: File[] = [];
-    const rejected: LyraDropZoneRejectedFile[] = [];
-    for (const f of fileList) {
-      const reason = this.isAllowed(f, isPreview);
-      if (reason !== 'ok') {
-        rejected.push({ file: f, reason });
-        continue;
-      }
-      const limitReason = tracker.evaluate(f, limits);
-      if (limitReason) {
-        rejected.push({ file: f, reason: limitReason });
-        continue;
-      }
-      files.push(f);
-    }
-    return { files, rejected, ...tracker.allowance(limits) };
+  private classify(fileList: File[], isPreview = false): FileIntakeResult {
+    return classifyFiles(this, fileList, this.multiple, [], isPreview);
   }
 
   private rejectionMessage(rejected: LyraDropZoneRejectedFile): string {
@@ -360,11 +284,9 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   }
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraDropZoneRejectedFile[] = []): void {
-    const { files, rejected, remainingFiles, remainingTotalSize } = this.classify(fileList);
-    rejected.push(...additionalRejected);
-    const rejectedSnapshot = Object.freeze(rejected.map((item) => Object.freeze({ ...item })));
-    const filesSnapshot = Object.freeze([...files]);
-    this.rejectedFiles = rejectedSnapshot;
+    const detail = freezeDetail(this.classify(fileList), additionalRejected);
+    const { files, rejected } = detail;
+    this.rejectedFiles = rejected;
     const messages: string[] = [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
     if (files.length) {
@@ -386,47 +308,15 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
       );
     }
     this.resultStatus = messages.filter((message) => message.length > 0).join(' ');
-    this.emit(
-      'lr-files',
-      Object.freeze({ files: filesSnapshot, rejected: rejectedSnapshot, remainingFiles, remainingTotalSize }),
-    );
-  }
-
-  private folderFailure(
-    name: string,
-    reason: 'directory' | 'read' | 'limit',
-  ): LyraDropZoneRejectedFile {
-    const FileCtor = this.ownerDocument.defaultView?.File ?? globalThis.File;
-    return Object.freeze({ file: new FileCtor([], name), reason });
+    this.emit('lr-files', detail);
   }
 
   private onDragEnter = (e: DragEvent): void => this.dropSession.onDragEnter(e);
   private onDragOver = (e: DragEvent): void => this.dropSession.onDragOver(e);
   private onDragLeave = (e: DragEvent): void => this.dropSession.onDragLeave(e);
 
-  private onDrop = (e: DragEvent): void => {
-    const drop = this.dropSession.beginDrop(e);
-    if (!drop) return;
-    const { token, files, folders, overLimit } = drop;
-    if (overLimit && this.multiple) {
-      this.emitFiles([], [this.folderFailure(folders[0]?.name ?? '', 'limit')]);
-      return;
-    }
-    if (folders.length && this.multiple) {
-      void this.dropSession.readFolders(folders, token).then((result) => {
-        if (!this.dropSession.isCurrent(token) || result.status === 'cancelled') return;
-        if (result.status === 'error' || result.status === 'limit') {
-          this.emitFiles([], [this.folderFailure(result.name, result.status === 'limit' ? 'limit' : 'read')]);
-          return;
-        }
-        const allFiles = [...files, ...result.files];
-        if (allFiles.length) this.emitFiles(allFiles);
-      });
-      return;
-    }
-    const rejectedFolders = folders.map((folder) => this.folderFailure(folder.name, 'directory'));
-    if (files.length || rejectedFolders.length) this.emitFiles(files, rejectedFolders);
-  };
+  private onDrop = (e: DragEvent): void =>
+    handleDrop(this, this.dropSession, e, this.multiple, (files, rejected) => this.emitFiles(files, rejected));
 
   private overlayText(): string {
     if (this.dragState === 'accept') return this.localize('dropzoneReleaseToAdd');

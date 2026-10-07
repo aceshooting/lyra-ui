@@ -570,6 +570,32 @@ it("owns a bounded readonly threshold snapshot and retains only finite values fr
   expect(el.threshold).to.equal(0);
 });
 
+it('keeps its visibility observer when the same threshold array is assigned again', async () => {
+  const io = stubIntersectionObserver();
+  try {
+    const el = document.createElement('lr-animation') as LyraAnimation;
+    el.name = 'fade-in';
+    el.playOnVisible = true;
+    const threshold = [0, 0.5];
+    el.threshold = threshold;
+    el.append(document.createElement('p'));
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      await aTimeout(0);
+      const created = io.instances.length;
+      el.threshold = threshold;
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(io.instances.length).to.equal(created);
+    } finally {
+      el.remove();
+    }
+  } finally {
+    io.restore();
+  }
+});
+
 it('normalizes scalar and hostile threshold containers at the public assignment boundary', () => {
   const el = document.createElement('lr-animation') as LyraAnimation;
   el.threshold = 0.5;

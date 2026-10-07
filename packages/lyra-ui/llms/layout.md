@@ -769,10 +769,11 @@ slide itself; they do not change the active slide or move focus away from it.
 - `autoplay: boolean = false` (attribute `autoplay`, reflected) and
   `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — optional timed advance.
   Autoplay pauses while the page is hidden or the user is hovering, focusing, or dragging the
-  carousel or while a dropdown, popover or context menu inside a slide is open, and remains off
+  carousel or while a dropdown, popover, context menu or picker panel (`lr-select`, `lr-combobox`,
+  `lr-color-picker`, `lr-date-input`, `lr-time-input`) inside a slide is open, and remains off
   under `prefers-reduced-motion: reduce`.
 - `navigation: boolean = false` (attribute `navigation`, reflected) — renders previous and next
-  buttons
+  buttons; a focused one that disables itself at the first or last page hands focus to the other
 - `pagination: boolean = false` (attribute `pagination`, reflected) — renders page indicators.
 - `slidesPerPage: number = 1` (attribute `slides-per-page`) — number of simultaneously operable
   slides. Values used for layout are finite integers clamped to at least one and at most the live
@@ -789,7 +790,8 @@ slide itself; they do not change the active slide or move focus away from it.
 - `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
   including an explicitly empty value; when absent, the component uses the localized
-  `carouselLabel` default.
+  `carouselLabel` default. The focusable scroll container always keeps a name: an empty host value
+  falls back to that default there.
 
 **9.0 cleanup:** the redundant Lyra-only `index`, `showIndicators`, and `goTo()` aliases were
 removed. Use mapped `currentSlide`, `pagination`, and `goToSlide()`. The writable/reflected

@@ -354,12 +354,15 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   playOnVisibleRepeat = false;
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
   private _threshold: number | readonly number[] = 0;
+  private thresholdInput?: unknown;
   /** Intersection thresholds for `playOnVisible`; arrays are bounded, filtered, and frozen. */
   @property({ attribute: false })
   get threshold(): number | readonly number[] {
     return this._threshold;
   }
   set threshold(next: number | readonly number[]) {
+    if (next === this.thresholdInput) return;
+    this.thresholdInput = next;
     const old = this._threshold;
     this._threshold = snapshotVisibilityThreshold(next);
     this.requestUpdate('threshold', old);

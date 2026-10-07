@@ -2,10 +2,9 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { fileIcon } from '../../../internal/icons.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
-import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/file-size.js';
+import { formatFileSize, FILE_SIZE_UNIT_KEYS, localizedNumberLabel } from '../attachment-chip/file-size.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import {
@@ -200,7 +199,7 @@ export class LyraFileIcon extends LyraElement {
         ? formatFileSize(
             bytes,
             (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
-            (value) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(value),
+            localizedNumberLabel(this.effectiveLocale),
           )
         : '';
     // An explicit empty `label` is preserved for the VISIBLE text above (`renderedLabel`), but

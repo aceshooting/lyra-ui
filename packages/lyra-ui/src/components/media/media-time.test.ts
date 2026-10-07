@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { formatMediaTime } from './media-time.js';
 
-it('formats whole media seconds with each player rounding rule', () => {
+it('formats whole media seconds, rounded down', () => {
   for (const [seconds, expected] of [
     [0, '0:00'],
     [9, '0:09'],
@@ -15,9 +15,8 @@ it('formats whole media seconds with each player rounding rule', () => {
   ] as const) {
     expect(formatMediaTime(seconds, 'en-US')).to.equal(expected);
   }
-  expect(formatMediaTime(59.6, 'en-US', 'floor')).to.equal('0:59');
-  expect(formatMediaTime(59.6, 'en-US', 'round')).to.equal('1:00');
-  expect(formatMediaTime(3599.6, 'en-US', 'round')).to.equal('1:00:00');
+  expect(formatMediaTime(59.6, 'en-US')).to.equal('0:59');
+  expect(formatMediaTime(3599.6, 'en-US')).to.equal('59:59');
 });
 
 it('keeps locale digits and minute padding for hour-bearing media time', () => {

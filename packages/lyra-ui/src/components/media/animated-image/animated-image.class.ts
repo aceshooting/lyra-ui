@@ -34,9 +34,9 @@ export interface LyraAnimatedImageEventMap {
  * motion is never forced on a user who asked for less of it.
  *
  * **Freeze-frame mechanism.** The live `<img>`'s `load` event handler
- * synchronously draws the just-loaded image to `[part="canvas"]` (a
- * DPR-aware `drawImage()`, the same pattern `<lr-heatmap>` uses for its own
- * canvas sizing) before any animation frames have had a chance to advance.
+ * synchronously draws the just-loaded image to `[part="canvas"]` at its natural size
+ * (never scaled up by the device pixel ratio, which a raster image cannot use) before any
+ * animation frames have had a chance to advance.
  * That captured frame is what pausing always reverts to -- it is not
  * re-captured on every pause, only once per successful `src` load. Both
  * `[part="image"]` and `[part="canvas"]` stay mounted at all times (never
@@ -46,11 +46,12 @@ export interface LyraAnimatedImageEventMap {
  *
  * **`play` vs. `playing`.** `play` is the caller's intent (settable and
  * reflected). `playing` is the read-only, reflected effect
- * after reduced-motion arbitration: `play && (ignoreReducedMotion ||
+ * after reduced-motion arbitration: `play && (ignoreReducedMotion || a play-button press ||
  * !<OS prefers-reduced-motion: reduce>)`. A page can set `.play = true` while
  * reduced motion still keeps the visual frozen -- `lr-play`/`lr-pause`
  * only fire on a real transition of the resolved `playing` value, never on a
- * `play` assignment that reduced motion blocks from taking visible effect.
+ * `play` assignment that reduced motion blocks from taking visible effect. The user's own
+ * press of the play button always plays, even under reduced motion.
  *
  * **Safety.** `src` is re-validated through `safeMediaSrc()` (the same
  * allowlist `<lr-media-card>` uses) before it is ever assigned to the real
@@ -128,7 +129,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   /** Lets `play` take effect even when the platform reports `prefers-reduced-motion: reduce` -- a
    *  deliberate, page-author-level override. Unset (the default), a reduced-motion preference
-   *  keeps playback frozen and disables `[part="play-button"]` regardless of `play`. */
+   *  keeps playback frozen regardless of `play` until the user presses `[part="play-button"]`. */
   @property({ type: Boolean, reflect: true, attribute: 'ignore-reduced-motion' })
   ignoreReducedMotion = false;
 
@@ -147,6 +148,8 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   @state() private hasError = false;
 
   private _playing = false;
+  /** An explicit press of the play button overrides a reduced-motion freeze until it is paused. */
+  private userPlay = false;
   private stopMotionWatch?: () => void;
   /**
    * Each connection starts from state, not from an observable transition. Keep this armed until
@@ -159,11 +162,6 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   @query('[part="image"]') private imageEl?: HTMLImageElement;
   @query('[part="canvas"]') private canvasEl?: HTMLCanvasElement;
   @query('[part="play-button"]') private playButtonEl?: HTMLButtonElement;
-
-  /** Lit's server renderer constructs the element without a browser-owned document. */
-  private get ownerWindow(): Window | null {
-    return (this.ownerDocument as Document | undefined)?.defaultView ?? null;
-  }
 
   /** The effective playing state after reduced-motion arbitration -- also
    *  reflected as a `playing` host attribute. Read-only; control playback
@@ -212,8 +210,9 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       }
     }
 
-    const nextPlaying = this.play && !(
-      !this.ignoreReducedMotion && prefersReducedMotion(this)
+    if (!this.play) this.userPlay = false;
+    const nextPlaying = this.play && (
+      this.ignoreReducedMotion || this.userPlay || !prefersReducedMotion(this)
     );
     if (nextPlaying !== this._playing) {
       this._playing = nextPlaying;
@@ -237,7 +236,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   private get toggleLabel(): string {
     const authoredLabel = hostAriaLabel(this);
-    if (authoredLabel !== null) return authoredLabel;
+    if (authoredLabel) return authoredLabel;
     if (this.accessibleLabel) return this.accessibleLabel;
     const name = this.effectiveAlt || this.localize('animatedImageDefaultAlt');
     return this.playing
@@ -254,11 +253,10 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     if (img && canvas) {
       const width = img.naturalWidth;
       const height = img.naturalHeight;
-      const dpr = this.ownerWindow?.devicePixelRatio || 1;
       const allocation = resolveBoundedCanvasAllocation({
         cssWidth: width,
         cssHeight: height,
-        desiredScale: dpr,
+        desiredScale: 1,
         maxDimension: MAX_FROZEN_FRAME_DIMENSION,
         maxPixels: MAX_FROZEN_FRAME_PIXELS,
       });
@@ -284,7 +282,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   };
 
   private onToggleClick = (): void => {
-    this.play = !this.play;
+    this.userPlay = this.play = !this.play;
   };
 
   /** Focus the play/pause control. */
@@ -318,7 +316,6 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     // local so the two never drift out of sync with each other.
     const frozen = this.hasLoaded && !this.playing;
     const showControls = this.hasLoaded && !this.hasError;
-    const disabled = !this.ignoreReducedMotion && prefersReducedMotion(this);
 
     return html`
       <div part="base">
@@ -344,7 +341,6 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
                   part="play-button"
                   type="button"
                   aria-label=${this.toggleLabel}
-                  ?disabled=${disabled}
                   @click=${this.onToggleClick}
                   @focus=${this.onControlFocus}
                   @blur=${this.onControlBlur}

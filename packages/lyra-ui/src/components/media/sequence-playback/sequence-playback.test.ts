@@ -51,6 +51,16 @@ it('emits lr-sequence-step when a shrinking itemCount re-clamps currentIndex', a
   expect(el.currentIndex).to.equal(1);
 });
 
+it('clamps an out-of-range currentIndex assignment silently', async () => {
+  const el = await fixture<LyraSequencePlayback>(html`<lr-sequence-playback item-count="5"></lr-sequence-playback>`);
+  let steps = 0;
+  el.addEventListener('lr-sequence-step', () => { steps += 1; });
+  el.currentIndex = 99;
+  await el.updateComplete;
+  expect(el.currentIndex).to.equal(4);
+  expect(steps).to.equal(0);
+});
+
 it('does not leak an untracked duplicate timer chain when play() is called synchronously from a lr-sequence-step listener during tick()', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="1000" interval-ms="20"></lr-sequence-playback>`,
@@ -152,45 +162,39 @@ it('no-ops play() when length <= 1', async () => {
   expect(el.playing).to.be.false;
 });
 
-it('resolves reflected playing after all initial attributes regardless of source order', async () => {
-  const playingFirst = (await fixture(
-    html`<lr-sequence-playback playing item-count="3" interval-ms="1000"></lr-sequence-playback>`,
+it('keeps playing read-only: a write throws, an authored attribute starts nothing and play() reflects it', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-playback playing item-count="3" interval-ms="20"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
-  const lengthFirst = (await fixture(
-    html`<lr-sequence-playback item-count="3" playing interval-ms="1000"></lr-sequence-playback>`,
-  )) as LyraSequencePlayback;
+  expect(el.playing).to.be.false;
+  expect(() => {
+    (el as unknown as { playing: boolean }).playing = true;
+  }).to.throw(TypeError);
+  await aTimeout(60);
+  expect(el.playing).to.be.false;
+  expect(el.currentIndex).to.equal(0);
 
-  expect(playingFirst.playing).to.be.true;
-  expect(playingFirst.hasAttribute('playing')).to.be.true;
-  expect(lengthFirst.playing).to.be.true;
-  expect(lengthFirst.hasAttribute('playing')).to.be.true;
-
-  playingFirst.pause();
-  lengthFirst.pause();
-
-  const invalid = (await fixture(html`<lr-sequence-playback playing item-count="1"></lr-sequence-playback>`)) as LyraSequencePlayback;
-  await invalid.updateComplete;
-  expect(invalid.playing).to.be.false;
-  expect(invalid.hasAttribute('playing')).to.be.false;
+  el.play();
+  expect(el.playing).to.be.true;
+  expect(el.hasAttribute('playing')).to.be.true;
+  el.pause();
+  expect(el.playing).to.be.false;
+  expect(el.hasAttribute('playing')).to.be.false;
 });
 
-it('atomically rejects impossible post-mount playing writes in both IDL and attribute form', async () => {
+it('starts nothing for an impossible request or when itemCount later grows', async () => {
   const el = (await fixture(
     html`<lr-sequence-playback item-count="1"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
 
-  el.playing = true;
-  expect(el.playing).to.be.false;
-  expect(el.hasAttribute('playing')).to.be.false;
-
-  el.setAttribute('playing', '');
+  el.play();
+  el.toggle();
   expect(el.playing).to.be.false;
   expect(el.hasAttribute('playing')).to.be.false;
 
   el.itemCount = 3;
   await el.updateComplete;
   expect(el.playing).to.be.false;
-  expect(el.hasAttribute('playing')).to.be.false;
 });
 
 it('next()/previous()/goTo() emit lr-sequence-step without starting playback', async () => {
@@ -458,7 +462,7 @@ it('renders the play/pause button content as an SVG icon, not a literal glyph, a
   expect(button().textContent).to.not.include('❚❚');
   const playMarkup = button().innerHTML;
 
-  el.playing = true;
+  el.play();
   await el.updateComplete;
 
   expect((button().querySelector('svg')) != null).to.equal(true);
@@ -649,18 +653,11 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
   expect(style.outlineOffset).to.equal('0px');
 });
 
-it('starts the real timer when `playing` is set directly, not just via play()', async () => {
-  const el = (await fixture(html`<lr-sequence-playback item-count="3" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
-  el.playing = true;
-  await aTimeout(35);
-  expect(el.currentIndex).to.be.greaterThan(0);
-});
-
-it('stops the real timer when `playing` is set to false directly, not just via pause()', async () => {
+it('stops the real timer when pause() is called', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="5" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
   el.play();
   await aTimeout(15);
-  el.playing = false;
+  el.pause();
   const indexAfterStop = el.currentIndex;
   await aTimeout(60);
   expect(el.currentIndex).to.equal(indexAfterStop);

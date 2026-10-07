@@ -204,6 +204,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
 
   [part='controls'] button {
@@ -240,6 +241,7 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
     accent-color: var(--lr-color-brand);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
 
   [part='controls'] button:hover,
@@ -420,6 +422,7 @@ export const styles = css`
     [part='poster-play-button'],
     [part='controls'] button,
     [part='controls'] select,
+    [data-control='volume'],
     [part='timeline-thumb'] {
       transition: none;
     }

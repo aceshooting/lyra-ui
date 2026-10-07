@@ -299,6 +299,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private observerDocument?: Document;
   private observerGeneration = 0;
   private lastFocusedSlide?: HTMLElement;
+  private focusedNavButton?: HTMLButtonElement;
+  private readonly passiveTakeOver = { handleEvent: () => this.takeOverViewport(), passive: true };
 
   constructor() {
     super();
@@ -405,14 +407,12 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         return;
       }
       const snapshotChanged = records.some((record) => {
-        if (record.type !== 'attributes') return true;
-        if (record.target === this) return false;
+        if (record.target === this) return record.type !== 'attributes';
         if (
-          !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(
-            record.attributeName ?? ''
-          )
+          record.type !== 'attributes' ||
+          !CAROUSEL_MANAGED_SLIDE_ATTRIBUTES.has(record.attributeName ?? '')
         ) {
-          return true;
+          return this.loop;
         }
         const slide = record.target as HTMLElement;
         const snapshot = this.snapshots.get(slide);
@@ -444,6 +444,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const active = activeElementIn(this.shadowRoot);
+    this.focusedNavButton = active?.matches('[part~="navigation-button"]')
+      ? (active as HTMLButtonElement)
+      : undefined;
     if (
       (changed.has('currentSlide') ||
         changed.has('slidesPerPage')) &&
@@ -497,6 +501,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     if (this.slideOverlay.open !== this.slideOverlayWasOpen) {
       this.slideOverlayWasOpen = this.slideOverlay.open;
       this.restartAutoplay();
+    }
+    if (this.focusedNavButton?.disabled) {
+      const enabled = this.focusedNavButton.parentElement!.querySelector<HTMLElement>('button:not(:disabled)');
+      (enabled ?? this.viewport)?.focus();
     }
     this.syncSlides();
     if (
@@ -1470,13 +1478,13 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       <div
         part="scroll-container"
         role="group"
-        aria-label=${label}
+        aria-label=${label || this.localize('carouselLabel')}
         tabindex="0"
         @keydown=${this.onViewportKeyDown}
         @scroll=${this.onViewportScroll}
         @scrollend=${this.onViewportScrollEnd}
-        @wheel=${this.takeOverViewport}
-        @touchstart=${this.takeOverViewport}
+        @wheel=${this.passiveTakeOver}
+        @touchstart=${this.passiveTakeOver}
         @pointerdown=${this.onViewportPointerDown}
         @pointermove=${this.onViewportPointerMove}
         @pointerup=${this.onViewportPointerUp}

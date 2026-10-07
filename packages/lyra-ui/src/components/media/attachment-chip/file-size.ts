@@ -1,3 +1,5 @@
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+
 const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 
 /** Maps each byte-unit abbreviation to its localization key. */
@@ -29,4 +31,13 @@ export function formatFileSize(
     unitIndex += 1;
   }
   return `${numberLabel(value, 1)} ${unitLabel(BYTE_UNITS[unitIndex]!)}`;
+}
+
+/** `formatFileSize`'s number label: exactly the fraction digits it asks for, in `locale`. */
+export function localizedNumberLabel(locale: string): (value: number, fractionDigits: number) => string {
+  return (value, fractionDigits) =>
+    getNumberFormat(locale, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(value);
 }

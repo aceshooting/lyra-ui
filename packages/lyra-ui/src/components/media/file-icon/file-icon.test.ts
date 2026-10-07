@@ -211,6 +211,11 @@ describe('lr-file-icon', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
 
+  it('formats a whole-unit size with one decimal, like the other file displays', async () => {
+    const el = await fixture(html`<lr-file-icon mime-type="application/pdf" mode="label" bytes="2097152"></lr-file-icon>`);
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 MB');
+  });
+
   it('lets a host aria-label win on the image owner without replacing the visible label', async () => {
     const el = await fixture<LyraFileIcon>(html`
       <lr-file-icon

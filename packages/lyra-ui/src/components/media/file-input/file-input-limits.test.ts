@@ -202,3 +202,29 @@ it('an Infinity held-file-count normalizes to 0 instead of permanently blocking 
   expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt']);
   expect(detail.rejected).to.deep.equal([]);
 });
+
+it('lets a single-file input replace its file without counting the replaced file against max-files or max-total-size', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input max-files="1" max-total-size="100"></lr-file-input>`);
+  dropWith(dropzone(el), [makeSizedFile('a.bin', 80)]);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeSizedFile('b.bin', 80)]);
+  const detail = (await result).detail as LyraFileInputFilesDetail;
+  expect(detail.rejected).to.deep.equal([]);
+  expect(el.files.map((f) => f.name)).to.deep.equal(['b.bin']);
+});
+
+it('keeps counting held files against a single-file input', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input max-files="5" held-file-count="4"></lr-file-input>`);
+  dropWith(dropzone(el), [makeFile('a.txt')]);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('b.txt')]);
+  const detail = (await result).detail as LyraFileInputFilesDetail;
+  expect(detail.rejected).to.deep.equal([]);
+  expect(detail.remainingFiles).to.equal(0);
+  expect(el.files.map((f) => f.name)).to.deep.equal(['b.txt']);
+  el.heldFileCount = 5;
+  const rejected = oneEvent(el, 'lr-files');
+  dropWith(dropzone(el), [makeFile('c.txt')]);
+  expect(((await rejected).detail as LyraFileInputFilesDetail).rejected.map((r) => r.reason)).to.deep.equal(['maxFiles']);
+  expect(el.files.map((f) => f.name)).to.deep.equal(['b.txt']);
+});

@@ -1,5 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import "./carousel.js";
 import "./carousel-item.js";
 import type { LyraCarousel } from "./carousel.js";
@@ -2179,7 +2181,7 @@ describe('lr-carousel: host aria-label and the deprecated accessible-label attri
 
 });
 
-it("preserves an explicitly empty host aria-label on both carousel landmarks", async () => {
+it("keeps an explicitly empty host aria-label on the region but never leaves the focusable viewport unnamed", async () => {
   const el = await carousel(html`
     <lr-carousel aria-label="" accessible-label="Fallback name">
       <div>One</div>
@@ -2191,7 +2193,7 @@ it("preserves an explicitly empty host aria-label on both carousel landmarks", a
     '[part~="scroll-container"]'
   ) as HTMLElement;
   expect(base.getAttribute("aria-label")).to.equal("");
-  expect(viewport.getAttribute("aria-label")).to.equal("");
+  expect(viewport.getAttribute("aria-label")).to.equal("Carousel");
 });
 
 it('names the focusable viewport with role="group", following the same label arbitration as the region', async () => {
@@ -3922,5 +3924,81 @@ describe('collecting already-slotted slides without relying on the initial slotc
     } finally {
       el.remove();
     }
+  });
+});
+
+describe('lr-carousel: focus, observation and listeners', () => {
+  const navButton = (el: LyraCarousel, side: 'next' | 'previous'): HTMLButtonElement =>
+    el.shadowRoot!.querySelector<HTMLButtonElement>(`[part~="navigation-button-${side}"]`)!;
+
+  it('keeps keyboard focus on an enabled control when the focused button reaches an end', async () => {
+    const el = await carousel(html`
+      <lr-carousel navigation>
+        <lr-carousel-item>One</lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    await focusByKeyboard(navButton(el, 'next'));
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+    expect(navButton(el, 'next').disabled).to.equal(true);
+    expect(el.shadowRoot!.activeElement === navButton(el, 'previous')).to.equal(true);
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+    expect(navButton(el, 'previous').disabled).to.equal(true);
+    expect(el.shadowRoot!.activeElement === navButton(el, 'next')).to.equal(true);
+  });
+
+  it('does not rewrite slide semantics when content inside a slide changes without loop', async () => {
+    const el = await carousel(html`
+      <lr-carousel>
+        <lr-carousel-item><span id="clock">0</span></lr-carousel-item>
+        <lr-carousel-item>Two</lr-carousel-item>
+      </lr-carousel>
+    `);
+    const slide = el.querySelector('lr-carousel-item')!;
+    const clock = el.querySelector('#clock')!;
+    let writes = 0;
+    const observer = new MutationObserver((records) => { writes += records.length; });
+    observer.observe(slide, { attributes: true });
+    clock.setAttribute('data-tick', '1');
+    clock.textContent = '1';
+    await aTimeout(50);
+    observer.disconnect();
+    expect(writes).to.equal(0);
+  });
+
+  it('still refreshes loop clones when slide content changes', async () => {
+    const el = await carousel(html`
+      <lr-carousel loop>
+        <div><span class="clock">0</span></div>
+        <div>Two</div>
+      </lr-carousel>
+    `);
+    el.querySelector('.clock')!.textContent = '1';
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-carousel-clone] .clock')?.textContent === '1');
+  });
+
+  it('listens for wheel and touchstart without blocking scrolling', async () => {
+    const original = EventTarget.prototype.addEventListener;
+    const seen: Array<{ type: string; passive: unknown }> = [];
+    EventTarget.prototype.addEventListener = function (
+      this: EventTarget,
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions,
+    ): void {
+      if ((type === 'wheel' || type === 'touchstart') && (this as Element).getAttribute?.('part') === 'scroll-container') {
+        seen.push({ type, passive: typeof options === 'object' ? options.passive : undefined });
+      }
+      original.call(this, type, listener, options);
+    } as typeof original;
+    try {
+      await carousel();
+    } finally {
+      EventTarget.prototype.addEventListener = original;
+    }
+    expect(seen.map((entry) => entry.type).sort()).to.deep.equal(['touchstart', 'wheel']);
+    expect(seen.every((entry) => entry.passive === true)).to.equal(true);
   });
 });
