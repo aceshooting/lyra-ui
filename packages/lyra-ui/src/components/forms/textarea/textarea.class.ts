@@ -822,6 +822,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
           <textarea
             id="textarea"
             part="textarea"
+            name=${this.name || nothing}
             rows=${this.rows}
             placeholder=${this.placeholder}
             title=${this.title || nothing}

@@ -55,7 +55,7 @@ for (const forwarded of [false, true]) {
       await waitUntil(() => label.hidden && role.getAttribute('aria-label') === 'Progress');
       // Drain the post-cascade refresh before revealing, so it cannot mask a missed mutation.
       await nextFrame();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await nextFrame();
       await bar.updateComplete;
       ancestor.style.removeProperty('--progress-test-label-display');
       await waitUntil(() => !label.hidden && role.getAttribute('aria-label') === 'Upload');
@@ -580,7 +580,7 @@ it('tracks accessible label mutations and reassignment through forwarding slots'
   // Let the observer enqueue its owner-realm post-cascade refresh, then drain that frame and timer.
   await Promise.resolve();
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
   await Promise.all([bar.updateComplete, ring.updateComplete]);
   expect(barRole.getAttribute('aria-label')).to.equal('Exposed upload label');
   expect(ringRole.getAttribute('aria-label')).to.equal('Exposed sync label');
@@ -1247,3 +1247,17 @@ for (const tag of ['lr-progress-bar', 'lr-progress-ring'] as const) {
 
   });
 }
+
+describe('shared progress surface', () => {
+  it('exposes indicator and indicatorOffset on both the bar and the ring', async () => {
+    const bar = await fixture<LyraProgressBar>(html`<lr-progress-bar value="25"></lr-progress-bar>`);
+    expect(bar.indicator?.getAttribute('part')).to.equal('indicator');
+    expect(bar.indicatorOffset).to.equal(75);
+    bar.indeterminate = true;
+    await bar.updateComplete;
+    expect(bar.indicatorOffset).to.equal(65);
+    const ring = await fixture<LyraProgressRing>(html`<lr-progress-ring value="25"></lr-progress-ring>`);
+    expect(ring.indicator?.getAttribute('part')).to.equal('indicator');
+    expect(ring.indicatorOffset).to.be.closeTo(2 * Math.PI * 42 * 0.75, 1e-9);
+  });
+});

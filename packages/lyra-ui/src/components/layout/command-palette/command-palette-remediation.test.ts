@@ -71,3 +71,38 @@ it('opens and closes through the shared show()/hide() overlay surface', async ()
   el.hide();
   expect((await closed).detail.reason).to.equal('api');
 });
+
+describe('dialog-vocabulary lifecycle events', () => {
+  it('emits lr-show, lr-after-show, lr-hide, lr-close and lr-after-hide in order, the after events once rendered', async () => {
+    const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+    const order: string[] = [];
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-close-request', 'lr-close', 'lr-after-hide']) {
+      el.addEventListener(name, (event) => {
+        order.push(name);
+        if (name === 'lr-hide') expect((event as CustomEvent<{ reason: string }>).detail.reason).to.equal('escape');
+        if (name === 'lr-hide') expect(event.cancelable).to.equal(false);
+      });
+    }
+    el.openPalette();
+    expect(order).to.deep.equal(['lr-show']);
+    await el.updateComplete;
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show']);
+    el.close('escape');
+    expect(order.slice(2)).to.deep.equal(['lr-close-request', 'lr-hide', 'lr-close']);
+    await el.updateComplete;
+    expect(order.slice(5)).to.deep.equal(['lr-after-hide']);
+  });
+
+  it('emits neither lr-hide nor lr-after-hide when the close is vetoed, and no lr-after-hide before ever opening', async () => {
+    const el = await fixture<LyraCommandPalette>(html`<lr-command-palette></lr-command-palette>`);
+    const seen: string[] = [];
+    el.addEventListener('lr-hide', () => seen.push('hide'));
+    el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
+    el.addEventListener('lr-close-request', (event) => event.preventDefault());
+    el.openPalette();
+    await el.updateComplete;
+    el.close();
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+  });
+});

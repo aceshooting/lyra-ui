@@ -55,7 +55,7 @@ const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 const sourceRoot = path.join(packageDir, 'src');
 
 /** Calls that mark a method as restore logic. */
-const PERSISTED_READ_CALLEES = new Set(['readPersistedState', 'restoreFromStorage']);
+const PERSISTED_READ_CALLEES = new Set(['readPersistedState']);
 /** The flag reader whose argument must name a property installed by `definePersistedProperty`. */
 const EXPLICITLY_SET_CALLEE = 'isPersistedPropertyExplicitlySet';
 /** The installer that makes a property eligible for that flag reader. */

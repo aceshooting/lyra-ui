@@ -23,6 +23,21 @@ describe('lr-agent-eval-dashboard', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.include('most recent 2 evaluation runs');
     expect(el.shadowRoot!.querySelector('[part="run"]')?.textContent).to.include('Run 0');
   });
+  it('reuses the chart labels and datasets across renders until runs or the active metric change', async () => {
+    const metrics = [{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' as const }];
+    const runs = [{ id: 'r1', label: 'Run 1', status: 'done' as const, metrics: { pass: 0.9 } }];
+    const el = (await fixture(html`<lr-agent-eval-dashboard .metrics=${metrics} .runs=${runs}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard;
+    const chart = el.shadowRoot!.querySelector('lr-lite-chart') as LyraLiteChart;
+    const { labels, datasets } = chart;
+    el.chartHeight = '240px';
+    await el.updateComplete;
+    expect(chart.labels).to.equal(labels);
+    expect(chart.datasets).to.equal(datasets);
+    el.runs = [...runs, { id: 'r2', label: 'Run 2', status: 'done' as const, metrics: { pass: 0.8 } }];
+    await el.updateComplete;
+    expect(chart.labels).to.not.equal(labels);
+  });
+
   it('renders metrics, trend, and runs', async () => { const el = (await fixture(html`<lr-agent-eval-dashboard .strings=${{ evaluationDashboardLabel: 'Evaluation overview' }} .metrics=${[{ id: 'pass', label: 'Pass rate', value: 0.9, format: 'percent' }]} .runs=${[{ id: 'r1', label: 'Run 1', status: 'done', metrics: { pass: 0.9 } }]}></lr-agent-eval-dashboard>`)) as LyraAgentEvalDashboard; await el.updateComplete; expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.exist; expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1); });
 
   it('keeps a run row and a metric card on their own entry when the host prepends one', async () => {

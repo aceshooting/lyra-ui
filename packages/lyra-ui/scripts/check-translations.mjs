@@ -25,7 +25,7 @@ import { isMainModule } from './is-main-module.mjs';
 // the same order as `DEFAULT_STRINGS`, and a review that cannot diff two catalogs side by side is
 // a review that will not spot 1 and 2 either.
 // Finally, a catalog is a side-effect-only module -- a consumer writes a bare
-// `import '@aceshooting/lyra-ui/translations/de';` and reads nothing from it -- so an undeclared
+// `import '@aceshooting/lyra-translations/de.js';` and reads nothing from it -- so an undeclared
 // one is dropped outright by any bundler honoring `package.json#sideEffects`, exactly as
 // `flag-peer.js` was through 7.8.0. `scripts/check-side-effects.mjs` only walks
 // `src/components/`, so the declaration for `src/translations/` is verified here instead. It
@@ -699,7 +699,7 @@ export async function runTranslationCatalogCheck() {
 
   const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'));
   const declaredSideEffects = new Set(pkg.sideEffects ?? []);
-  const anyCatalogDeclared = [...declaredSideEffects].some((entry) => entry.includes('/translations/'));
+  const anyCatalogDeclared = [...declaredSideEffects].some((entry) => entry.startsWith('./src/translations/'));
   const requiredSideEffects = [];
 
   const summaries = [];
@@ -745,11 +745,9 @@ export async function runTranslationCatalogCheck() {
       validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories, errors });
 
       const srcEntry = `./src/translations/${name}`;
-      const distEntry = `./dist/translations/${base}.js`;
-      requiredSideEffects.push(srcEntry, distEntry);
-      if (anyCatalogDeclared) {
-        if (!sideEffectsCover(declaredSideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-        if (!sideEffectsCover(declaredSideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+      requiredSideEffects.push(srcEntry);
+      if (anyCatalogDeclared && !sideEffectsCover(declaredSideEffects, srcEntry)) {
+        errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
       }
       summaries.push(`${tag} (${entries.length} keys, plural categories: ${categories.join('/')})`);
       continue;
@@ -825,11 +823,9 @@ export async function runTranslationCatalogCheck() {
       });
 
       const srcEntry = `./src/translations/${base}/${sliceFileName}`;
-      const distEntry = `./dist/translations/${base}/${sliceName}.js`;
-      requiredSideEffects.push(srcEntry, distEntry);
-      if (anyCatalogDeclared) {
-        if (!sideEffectsCover(declaredSideEffects, srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
-        if (!sideEffectsCover(declaredSideEffects, distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+      requiredSideEffects.push(srcEntry);
+      if (anyCatalogDeclared && !sideEffectsCover(declaredSideEffects, srcEntry)) {
+        errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
       }
     }
     if (!tag) continue; // every slice already reported its own error above
@@ -856,15 +852,9 @@ export async function runTranslationCatalogCheck() {
     validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories: pluralCategoriesFor(tag, pluralCategoryPin), errors });
 
     const srcAggregateEntry = `./src/translations/${name}`;
-    const distAggregateEntry = `./dist/translations/${base}.js`;
-    requiredSideEffects.push(srcAggregateEntry, distAggregateEntry);
-    if (anyCatalogDeclared) {
-      if (!sideEffectsCover(declaredSideEffects, srcAggregateEntry)) {
-        errors.push(`package.json#sideEffects is missing "${srcAggregateEntry}"`);
-      }
-      if (!sideEffectsCover(declaredSideEffects, distAggregateEntry)) {
-        errors.push(`package.json#sideEffects is missing "${distAggregateEntry}"`);
-      }
+    requiredSideEffects.push(srcAggregateEntry);
+    if (anyCatalogDeclared && !sideEffectsCover(declaredSideEffects, srcAggregateEntry)) {
+      errors.push(`package.json#sideEffects is missing "${srcAggregateEntry}"`);
     }
     summaries.push(`${tag} (${unionMap.size} keys across ${onDiskSlices.length} slices)`);
   }

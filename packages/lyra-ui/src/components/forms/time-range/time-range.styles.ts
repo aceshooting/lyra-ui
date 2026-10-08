@@ -1,5 +1,6 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlPresetButton } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -24,6 +25,17 @@ export const styles = css`
       var(--lr-size-1-5rem) *
         var(--lr-time-range-size-scale, var(--_lr-time-range-size-scale))
     );
+    --_lr-preset-hover-bg: var(--lr-time-range-preset-hover-bg, var(--lr-color-surface));
+    --_lr-preset-pressed-base: var(--lr-color-surface);
+    --_lr-preset-hover-border-color: var(--lr-time-range-preset-hover-border-color);
+    --_lr-preset-pressed-bg: var(--lr-time-range-preset-pressed-bg);
+    --_lr-preset-pressed-border-color: var(--lr-time-range-preset-pressed-border-color);
+    --_lr-preset-selected-bg: var(--lr-time-range-preset-selected-bg, var(--lr-time-range-preset-active-bg));
+    --_lr-preset-selected-border-color: var(
+      --lr-time-range-preset-selected-border-color,
+      var(--lr-time-range-preset-active-border-color)
+    );
+    --_lr-preset-selected-color: var(--lr-time-range-preset-selected-color, var(--lr-time-range-preset-active-color));
     --_lr-time-range-preset-gap: var(--lr-space-xs);
     --_lr-time-range-preset-radius: var(--lr-radius);
     --_lr-time-range-preset-padding: calc(
@@ -69,6 +81,7 @@ export const styles = css`
     gap: var(--lr-time-range-preset-gap, var(--_lr-time-range-preset-gap));
     margin-block-end: var(--lr-space-s);
   }
+  ${formControlPresetButton}
   [part="preset-button"] {
     display: inline-flex;
     align-items: center;
@@ -82,101 +95,14 @@ export const styles = css`
       --lr-time-range-preset-padding,
       var(--_lr-time-range-preset-padding)
     );
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(
       --lr-time-range-preset-radius,
       var(--_lr-time-range-preset-radius)
     );
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
     font-size: var(
       --lr-time-range-preset-font-size,
       var(--_lr-time-range-preset-font-size)
     );
-    cursor: pointer;
-    transition: var(--lr-transition-interactive);
-  }
-  /* :where() zeroes the wrapped selectors so only :hover counts -- same match as
-     [part='preset-button']:hover:not(:disabled), but it no longer out-specifies a consumer's
-     ::part(preset-button):hover. Mirrors lr-attachment-trigger's fix for this shape. */
-  :where([part="preset-button"]):hover:where(:not(:disabled)) {
-    border-color: var(
-      --lr-time-range-preset-hover-border-color,
-      var(--lr-color-brand)
-    );
-  }
-  /* Pressed goes past the hover's edge change: the fill mixes toward --lr-color-mix-partner (which
-     follows the text colour), darkening on light and lightening on dark. Same :where() wrapping and
-     :not(:disabled) gate as the hover above. */
-  :where([part="preset-button"]):active:where(:not(:disabled)) {
-    border-color: var(
-      --lr-time-range-preset-pressed-border-color,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-    background: var(
-      --lr-time-range-preset-pressed-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-surface),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
-    );
-  }
-  [part="preset-button"]:focus-visible {
-    ${focusRing}
-  }
-  /* Inline var() fallbacks rather than :host declarations, so a consumer can set them on any
-     ancestor without a :host declaration shadowing it. ::part(preset-button)[data-active] is
-     invalid CSS, so recoloring the active preset otherwise means hijacking --lr-color-brand and
-     --lr-color-on-brand. Unset, each falls back to the token the rule used before. */
-  [part="preset-button"][data-active] {
-    background: var(
-      --lr-time-range-preset-selected-bg,
-      var(--lr-time-range-preset-active-bg, var(--lr-color-brand))
-    );
-    border-color: var(
-      --lr-time-range-preset-selected-border-color,
-      var(--lr-time-range-preset-active-border-color, var(--lr-color-brand))
-    );
-    color: var(
-      --lr-time-range-preset-selected-color,
-      var(--lr-time-range-preset-active-color, var(--lr-color-on-brand))
-    );
-  }
-  /* The active preset's own held state needs its own rule: the [data-active] rule above is (0,2,0)
-     and declares the same background and border-color as the generic :active arm, which sits
-     :where()-zeroed at (0,1,0) -- so the applied preset was the one button in the row acknowledging
-     nothing when clicked. Losing the hover tint there is deliberate; losing the press is not. Mixes
-     from --lr-time-range-preset-active-bg, so a retinted selected fill keeps a pressed step that is
-     a deeper tier of itself. */
-  [part="preset-button"][data-active]:active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-time-range-preset-selected-bg,
-        var(--lr-time-range-preset-active-bg, var(--lr-color-brand))
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    border-color: color-mix(
-      in oklab,
-      var(
-        --lr-time-range-preset-selected-border-color,
-        var(--lr-time-range-preset-active-border-color, var(--lr-color-brand))
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part="preset-button"]:disabled {
-    /* :host(:disabled)'s opacity below already covers the presets row; a second opacity here would
-       compound multiplicatively and over-dim relative to the handles, which restate only the
-       cursor. */
-    cursor: not-allowed;
   }
   [part="base"] {
     position: relative;

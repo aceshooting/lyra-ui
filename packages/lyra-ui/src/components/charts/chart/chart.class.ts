@@ -9,7 +9,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { observeReducedMotion } from '../../../internal/motion-observer.js';
+import { createReducedMotionWatch } from './chart-surface-shared.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
@@ -80,11 +80,14 @@ import {
   type ChartTextDirection,
   bidiStyles,
   isolateHtml,
-} from './chart-bidi.js';
+} from './chart-bidi.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+const DIRECT_PIXEL_NUMBER = new RegExp(`^(${CSS_NUMBER_SOURCE})(?:px)?$`, 'i');
 
 export { seriesPalette } from './chart-colors.js';
 
@@ -2470,7 +2473,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @state() private visible = true;
   private intersectionObserver?: IntersectionObserver;
   private intersectionGeneration = 0;
-  private stopReducedMotionWatch?: () => void;
+  private readonly reducedMotionWatch = createReducedMotionWatch(this, () => this.drawIfVisible());
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   // The unnamed `config-slot` carrying an optional `<script type="application/json">` raw
@@ -2686,23 +2689,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.armReducedMotionWatcher();
   }
 
-  private readonly onReducedMotionChange = (): void => {
-    if (!this.isConnected) return;
-    // Rebuild the effective options immediately. `draw()` updates an existing instance with
-    // mode `none`, which also stops an in-flight construction animation; a later type/plugin
-    // reconstruction reads the current preference again from `buildConfig()`.
-    this.drawIfVisible();
-  };
-
   private armReducedMotionWatcher(): void {
-    if (this.stopReducedMotionWatch) return;
-    this.disarmReducedMotionWatcher();
-    this.stopReducedMotionWatch = observeReducedMotion(this, this.onReducedMotionChange);
+    this.reducedMotionWatch.arm();
   }
 
   private disarmReducedMotionWatcher(): void {
-    this.stopReducedMotionWatch?.();
-    this.stopReducedMotionWatch = undefined;
+    this.reducedMotionWatch.disarm();
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
@@ -3324,7 +3316,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const computed = this.computedStyle();
     const value =
       computed.getPropertyValue(name).trim() || computed.getPropertyValue(fallbackToken).trim();
-    const direct = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:px)?$/i.exec(value);
+    const direct = DIRECT_PIXEL_NUMBER.exec(value);
     if (direct) {
       const resolved = Number.parseFloat(direct[1]!);
       if (Number.isFinite(resolved) && resolved >= 0) return resolved;

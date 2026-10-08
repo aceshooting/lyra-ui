@@ -87,3 +87,20 @@ it('counts search matches without sorting and sorts names through the cached col
   }
   expect(localeCompares).to.equal(0);
 });
+
+it('reuses the selection set and tag list across renders until their inputs are replaced', async () => {
+  const element = await fixture<LyraDocumentLibrary>(
+    html`<lr-document-library .documents=${[{ id: 'a', name: 'A', tags: ['x'] }]} .selectedDocumentIds=${['a']}></lr-document-library>`,
+  );
+  const selected = Reflect.get(element, 'selectedIdSet');
+  const tags = Reflect.get(element, 'allTags');
+  element.searchTerm = 'a';
+  await element.updateComplete;
+  expect(Reflect.get(element, 'selectedIdSet') === selected).to.equal(true);
+  expect(Reflect.get(element, 'allTags') === tags).to.equal(true);
+  element.selectedDocumentIds = ['a', 'b'];
+  element.documents = [{ id: 'a', name: 'A', tags: ['y'] }];
+  await element.updateComplete;
+  expect(Reflect.get(element, 'selectedIdSet') === selected).to.equal(false);
+  expect(Reflect.get(element, 'allTags')).to.deep.equal(['y']);
+});

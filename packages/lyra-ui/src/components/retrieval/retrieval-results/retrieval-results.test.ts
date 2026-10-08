@@ -1,6 +1,6 @@
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
-import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './retrieval-results.js';
 import type {
   LyraRetrievalResults,
@@ -139,6 +139,19 @@ it('defaults to empty chunks/selectedChunkIds, withoutSelection=false, withoutDe
   expect(el.loading).to.be.false;
   expect(el.hasMore).to.be.false;
   expect(el.errorText).to.equal('');
+});
+
+it('renders each row without a nested one-item group, list or listitem', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  await el.updateComplete;
+  const inspectors = [...el.shadowRoot!.querySelectorAll<LyraChunkInspector>('lr-chunk-inspector')];
+  expect(inspectors.length).to.be.greaterThan(0);
+  for (const inspector of inspectors) {
+    await inspector.updateComplete;
+    expect(inspector.shadowRoot!.querySelectorAll('[role="group"], [role="list"], [role="listitem"]').length).to.equal(0);
+  }
 });
 
 it('shows chunkInspectorEmpty when chunks is empty and not loading', async () => {
@@ -673,7 +686,10 @@ it('refreshes virtual result rows without offset rebuilds for controlled state u
   const list = vlist(el);
   list.rowHeight = 24;
   await list.updateComplete;
-  await aTimeout(100);
+  await waitUntil(
+    () => list.shadowRoot!.querySelector('lr-checkbox[data-chunk-id="c1"]') != null,
+    'virtual rows rendered'
+  );
   const items = list.items;
   const rebuilds = recordVirtualListOffsetRebuilds(list);
   try {
@@ -2130,7 +2146,7 @@ describe('review fixes', () => {
   it('keeps a row\'s expansion toggle and the virtual list events inside', async () => {
     const many = Array.from({ length: 12 }, (_, index) => ({ id: `m${index}`, text: 'text', score: 0.9 - index / 100, source: { id: 's', name: 'doc.pdf' } }));
     const leaked: string[] = [];
-    const names = ['lr-chunk-toggle', 'lr-virtual-scroll', 'lr-visible-range-change'];
+    const names = ['lr-chunk-toggle', 'lr-toggle', 'lr-virtual-scroll', 'lr-visible-range-change'];
     const onLeak = (event: Event): void => {
       leaked.push(event.type);
     };

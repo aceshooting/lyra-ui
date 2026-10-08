@@ -7,6 +7,7 @@ import { glassIndependentRootStyles } from '../../../internal/glass-independent-
 import {
   formControlTextWrap,
   formControlChrome,
+  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -24,8 +25,8 @@ export const styles = css`
        :host([appearance='…']) [part='input-wrapper']: at (0,3,0) that out-ranks the (0,2,0)
        :focus-within rule, so appearance="filled" killed the focus indicator (WCAG 2.4.7 -- the row
        has no outline, [part='input'] sets outline: none). No [part] rule out-ranks another. */
-    --_lr-date-input-fill: var(--lr-color-surface);
-    --_lr-date-input-border-color: var(--lr-color-border);
+    --_lr-date-input-fill: var(--_lr-form-control-fill);
+    --_lr-date-input-border-color: var(--_lr-form-control-border-color);
     /* Same re-pointing pattern for the text color: only the accent tier below overrides it, so
        every other appearance keeps the ambient inherited color exactly as before. */
     --_lr-date-input-text-color: inherit;
@@ -54,25 +55,7 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  :host([appearance="filled"]) {
-    --_lr-date-input-border-color: transparent;
-    --_lr-date-input-fill: var(--lr-color-surface-raised);
-  }
-  :host([appearance="filled-outlined"]) {
-    --_lr-date-input-fill: var(--lr-color-surface-raised);
-  }
-  /* Ported from lr-select's own [appearance='plain']/[appearance='accent'] trigger rules
-     (select.styles.ts), adapted to this component's private-custom-property-on-:host pattern
-     rather than a [part='input-wrapper'] rule -- see the comment above for why that form is
-     required here. */
-  :host([appearance="plain"]) {
-    --_lr-date-input-border-color: transparent;
-    --_lr-date-input-fill: transparent;
-  }
-  :host([appearance="accent"]) {
-    --_lr-date-input-border-color: var(--lr-color-brand);
-    --_lr-date-input-fill: var(--lr-color-brand-quiet);
-  }
+  ${formControlAppearance}
   ${formControlChrome}
 
   ${formControlRequiredMarker}

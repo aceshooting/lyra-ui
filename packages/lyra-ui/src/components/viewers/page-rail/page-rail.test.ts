@@ -485,6 +485,7 @@ describe('lr-page-rail', () => {
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.page, 'a reconnected rail still navigates').to.equal(1);
+    // wait-reason: the real 500 ms digit-buffer timeout must elapse before the next digit.
     await aTimeout(650);
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, composed: true }));
     await el.updateComplete;
@@ -498,7 +499,7 @@ describe('lr-page-rail', () => {
     await el.updateComplete;
     expect(el.page).to.equal(1);
 
-    // DIGIT_BUFFER_MS is 500 -- give the real timer a comfortable margin before typing again, so a
+    // wait-reason: DIGIT_BUFFER_MS is 500 -- give the real timer a comfortable margin before typing again, so a
     // buffer that failed to reset would combine into '12' (out of range) rather than plain '2'.
     await aTimeout(650);
 

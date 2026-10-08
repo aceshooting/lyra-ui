@@ -75,6 +75,7 @@ import {
   type PendingHighlight,
   type ResolvedHighlightRange,
 } from './markdown-shared.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_markdownTableRegion } from '../../../internal/default-strings.generated.js';
@@ -337,7 +338,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.seedFirstRenderState(() => this.refreshTheme());
-    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     const selector = '[part~="code-block"], [part~="code-block-copy"], [part~="table-wrapper"]';
     if (active?.matches(selector)) {
       this.rememberedFocus = { node: active, index: [...this.renderRoot.querySelectorAll(selector)].indexOf(active), selector };

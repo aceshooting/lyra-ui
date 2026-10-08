@@ -13,7 +13,7 @@ import '../push-to-talk/push-to-talk.class.js';
 import '../transcript-feed/transcript-feed.class.js';
 import '../../overlays/badge/badge.class.js';
 import { styles } from './realtime-session.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -188,7 +188,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
       changed.has('withoutCapture') && changed.get('withoutCapture') === false && this.withoutCapture;
     const captureDisabled = changed.has('muted') && changed.get('muted') === false && this.muted;
     if (!stateChanged && !captureHidden && !captureDisabled) return;
-    const focused = activeElementIn(this.shadowRoot ?? this.ownerDocument);
+    const focused = (this.shadowRoot ? shadowFocusTarget(this) : activeElementIn(this.ownerDocument));
     const focusedPart = focused?.getAttribute('part') ?? null;
     if (!focused) return;
     if (captureDisabled && !stateChanged && !captureHidden && focusedPart === 'capture') {
@@ -223,7 +223,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     const pending = this.transferActionFocus;
     if ((stateChanged || changed.has('withoutCapture') || changed.has('muted')) && pending) {
       this.transferActionFocus = undefined;
-      const internalActive = activeElementIn(this.shadowRoot);
+      const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       const mayRestore =
         (internalActive === null || internalActive === pending.origin) &&

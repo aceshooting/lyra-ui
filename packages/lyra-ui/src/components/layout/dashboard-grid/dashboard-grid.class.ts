@@ -44,7 +44,7 @@ import {
   createWidgetDocument,
   type LyraWidgetDocument,
 } from '../../conversation/widget-renderer/resolve.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dashboardCellCollisionRejected, LYRA_DEFAULT_dashboardCellMoved, LYRA_DEFAULT_dashboardCellResized, LYRA_DEFAULT_dashboardGridLabel, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
@@ -497,7 +497,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     }
     if (changed.has('layout') || changed.has('columns')) {
       this.rehomeCellFocus =
-        activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
+        shadowFocusTarget(this)?.getAttribute('part') ===
         'cell';
       // Server rendering has neither an owner document nor observable light-DOM children. The
       // model-driven cell wrappers/slots remain complete without synthesizing default light-DOM

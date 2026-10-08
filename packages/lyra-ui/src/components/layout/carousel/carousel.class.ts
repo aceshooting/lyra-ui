@@ -11,7 +11,7 @@ import {
   isAccessibilityVisible,
   isAccessibilityVisibilityHidden,
 } from '../../../internal/accessibility-visibility.js';
-import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { composedAccessibilityText } from '../../../internal/announcement-text.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -445,7 +445,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     this.focusedNavButton = active?.matches('[part~="navigation-button"]')
       ? (active as HTMLButtonElement)
       : undefined;
@@ -818,7 +818,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private handleSlidesChanged(): void {
     const count = this.slideElements().length;
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active?.matches('[part~="pagination-item"]')) {
       const children = active.parentElement!.children;
       const pages = this.pageTargets(count).length;

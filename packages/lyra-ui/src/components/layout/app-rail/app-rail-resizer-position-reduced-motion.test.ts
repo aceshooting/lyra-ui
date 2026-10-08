@@ -1,9 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { twoFrames as nextPaint } from '../../../../test/frames.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import './app-rail.js';
 import type { LyraAppRail } from './app-rail.js';
 
-const nextPaint = () => new Promise<void>(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 const base = (el: LyraAppRail) => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 const handle = (el: LyraAppRail) => el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
 const edgeError = (el: LyraAppRail, direction: 'ltr' | 'rtl') => {

@@ -1,6 +1,7 @@
 import { isMainModule } from './is-main-module.mjs';
 import { isSuppressed, stripJsComments } from './lib/source-text.mjs';
 import { maskHtmlComments } from './html-comments.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 // Part-reachability checker: three static rules over src/components that catch `::part()`-related
 // CSS which parses fine, ships fine, and never matches anything. All three bug classes are invisible
@@ -178,14 +179,7 @@ const lineOf = (source, index) => source.slice(0, index).split('\n').length;
 
 const rel = (file) => path.relative(packageDir, file).replaceAll('\\', '/');
 
-function walk(directory) {
-  if (!fs.existsSync(directory)) return [];
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return walk(fullPath);
-    return [fullPath];
-  });
-}
+const walkIfPresent = (directory) => (fs.existsSync(directory) ? walk(directory) : []);
 
 /**
  * True when the flagged line, or the contiguous comment block right above it, carries a
@@ -530,8 +524,8 @@ export function checkPartCompounds(file, styleSource) {
 // ---------------------------------------------------------------------------
 
 function run() {
-  const files = walk(componentsRoot);
-  const styleFiles = [...files, ...walk(internalRoot)].filter((file) => file.endsWith('.styles.ts')).sort();
+  const files = walkIfPresent(componentsRoot);
+  const styleFiles = [...files, ...walkIfPresent(internalRoot)].filter((file) => file.endsWith('.styles.ts')).sort();
   const classFiles = files.filter((file) => file.endsWith('.class.ts')).sort();
 
   const findings = [];

@@ -641,6 +641,7 @@ for (const direction of ['ltr', 'rtl']) {
             expect(doc.activeElement === parent, 'pointer opening must leave focus outside the submenu').to.equal(true);
             await sendMouse({ type: 'move', position: point(portuguese) });
             await waitUntil(() => portuguese.matches(':hover'), 'the pointer did not reach the submenu choice');
+            // wait-reason: negative assertion; the submenu must stay open past the pointer-leave close delay
             await aTimeout(400);
             expect(parent.submenuOpen, 'transferring the pointer into the vertical submenu must keep it open').to.equal(true);
           } finally {

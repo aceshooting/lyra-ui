@@ -122,6 +122,35 @@ test('real TypeScript project classifies DOM payloads, selector any fallback, po
   );
 });
 
+test('primitive literal payloads skip checker round trips', () => {
+  withProject(
+    `
+      declare function expect(value: unknown): any;
+      expect('a').to.equal('b');
+      expect(1).to.not.equal(2);
+      expect(true).to.equal(false);
+      expect(\`x\`).to.equal('x');
+    `,
+    (_result, project) => {
+      let typeLookups = 0;
+      const checker = new Proxy(project.checker, {
+        get(target, key) {
+          const value = target[key];
+          if (key !== 'getTypeAtLocation') return typeof value === 'function' ? value.bind(target) : value;
+          return (...args) => {
+            typeLookups += 1;
+            return value.apply(target, args);
+          };
+        },
+      });
+      const result = collectUnsafeAssertions({ program: project.program, checker });
+      assert.equal(result.candidateCount, 4);
+      assert.equal(typeLookups, 0);
+      assert.deepEqual(result.findings, []);
+    }
+  );
+});
+
 test('accounting fails closed on classifier errors, vacuous classification, and enrollment drift', () => {
   assert.deepEqual(
     policyAccountingFailures(

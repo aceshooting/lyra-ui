@@ -212,7 +212,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   @property({ type: Number }) total = 0;
 
   /** Accessible group name, and the embedded `<lr-context-meter>`'s own visible caption, e.g. "128K context window". */
-  @property() label = '';
+  @property() label?: string;
 
   /** Export format(s) offered by the embedded `<lr-export-button>` — a single id renders a plain button, more than one a format-choice menu. */
   @property({ attribute: false }) exportFormats: readonly LyraExportFormatOption[] = ['json'];
@@ -235,32 +235,36 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     return this.normalizedCache;
   }
 
-  private get meterSegments(): ContextMeterSegment[] {
-    return this.normalizedSegments.map((s) => ({ label: s.label, value: s.tokens, ...(s.tone ? { tone: s.tone } : {}) }));
+  /** Meter segments, copy text and export rows, rebuilt only when the normalized segments change. */
+  private derived?: { source: ContextInspectorSegment[]; meter: ContextMeterSegment[]; text: string; rows: Record<string, unknown>[] };
+
+  private get derivedViews(): NonNullable<typeof this.derived> {
+    const source = this.normalizedSegments;
+    if (this.derived?.source !== source) {
+      this.derived = {
+        source,
+        meter: source.map((s) => ({ label: s.label, value: s.tokens, ...(s.tone ? { tone: s.tone } : {}) })),
+        // Every segment's `label` + `text`, in order -- the `<lr-copy-button>`'s `value`.
+        text: source.map((s) => `${s.label}\n${s.text}`).join('\n\n'),
+        // One flat row per segment for `<lr-export-button>`; `redactions` is summarized as a count
+        // so every export format (including CSV) stays well-formed.
+        rows: source.map((s) => ({
+          id: s.id,
+          label: s.label,
+          tokens: s.tokens,
+          truncated: !!s.truncated,
+          omittedTokens: s.omittedTokens ?? null,
+          sourceId: s.citation?.sourceId ?? null,
+          redactionCount: s.redactions?.length ?? 0,
+          text: s.text,
+        })),
+      };
+    }
+    return this.derived;
   }
 
   private get safeTotal(): number {
     return finiteCount(this.total);
-  }
-
-  /** Every segment's `label` + `text`, in order — the `<lr-copy-button>`'s `value`. */
-  private get assembledText(): string {
-    return this.normalizedSegments.map((s) => `${s.label}\n${s.text}`).join('\n\n');
-  }
-
-  /** One flat row per segment for `<lr-export-button>` — `redactions` is summarized as a count
-   *  rather than carried in full, keeping every export format (including CSV) well-formed. */
-  private get exportRows(): Record<string, unknown>[] {
-    return this.normalizedSegments.map((s) => ({
-      id: s.id,
-      label: s.label,
-      tokens: s.tokens,
-      truncated: !!s.truncated,
-      omittedTokens: s.omittedTokens ?? null,
-      sourceId: s.citation?.sourceId ?? null,
-      redactionCount: s.redactions?.length ?? 0,
-      text: s.text,
-    }));
   }
 
   private renderSegmentText(segment: ContextInspectorSegment): TemplateResult {
@@ -317,7 +321,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   override render(): TemplateResult {
     const groupLabel = overallSemanticLabel(
       this,
-      this.label || this.localize('contextInspectorLabel'),
+      this.label ?? this.localize('contextInspectorLabel'),
     );
     const groupRole = overallSemanticRole(this, 'group');
 
@@ -334,16 +338,16 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
     const truncated = segments.length > MAX_RENDERED_SEGMENTS;
     return html`
       <div part="base" role=${groupRole ?? nothing} aria-label=${groupLabel ?? nothing}>
-        <lr-context-meter part="meter" .segments=${this.meterSegments} .total=${this.safeTotal} label=${this.label}></lr-context-meter>
+        <lr-context-meter part="meter" .segments=${this.derivedViews.meter} .total=${this.safeTotal} label=${this.label ?? ''}></lr-context-meter>
         <div part="toolbar">
           <lr-copy-button
             part="copy-button"
-            .value=${this.assembledText}
+            .value=${this.derivedViews.text}
             aria-label=${this.localize('contextInspectorCopyLabel')}
           ></lr-copy-button>
           <lr-export-button
             part="export-button"
-            .rows=${this.exportRows}
+            .rows=${this.derivedViews.rows}
             .formats=${this.exportFormats}
             filename=${this.exportFilename}
           ></lr-export-button>

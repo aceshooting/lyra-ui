@@ -1,5 +1,8 @@
 packages:
   - 'packages/*'
+# lyra-ui and lyra-translations peer on each other (the loader imports the catalogs; the catalogs register
+# through lyra-ui). Neither build needs the other's install, and lyra-translations assembles from lyra-ui's dist.
+ignoreWorkspaceCycles: true
 patchedDependencies:
   '@web/test-runner-coverage-v8@1.0.0': patches/@web__test-runner-coverage-v8@1.0.0.patch
 overrides:

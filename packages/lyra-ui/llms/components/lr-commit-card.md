@@ -32,9 +32,7 @@ number` (attribute: false, epoch milliseconds), `files: CommitFileChange[] = []`
 `deletions` across `files`. Counts are normalized to finite non-negative integers before per-file
 display, total arithmetic, localization, and accessible summaries. `path` is the file identity;
 empty/blank paths and later duplicates are omitted before both diffstat arithmetic and row events. `filesExpanded:
-boolean = false` (attribute `files-expanded`, reflected — renamed from `filesCollapsed` in 9.0.0,
-default inverted so the rendered starting state is unchanged: `el.filesCollapsed = true` becomes
-`el.filesExpanded = false`), and `withoutCopyButton: boolean = false` (attribute
+boolean = false` (attribute `files-expanded`, reflected), and `withoutCopyButton: boolean = false` (attribute
 `without-copy-button`, reflected) — hides the hash copy button.
 `size: LyraSize = 'm'` (reflected) — density on the shared size scale: `s` (and the smaller
 `xs`/`2xs`) tightens `[part="base"]` padding for a commit rendered as a row in a list or PR

@@ -129,7 +129,7 @@ describe('lr-permission-grant', () => {
 
   it('themes its decision buttons through the shared button tokens', async () => {
     const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant style="--lr-button-radius: 7px" .requestId=${request.requestId}></lr-permission-grant>`);
-    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="decision"]')!).borderTopLeftRadius).to.equal('7px');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="decision"]')!.shadowRoot!.querySelector('[part~="base"]')!).borderTopLeftRadius).to.equal('7px');
   });
 
   it('restores the localized visible label when the label attribute is removed', async () => {

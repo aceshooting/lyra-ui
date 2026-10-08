@@ -2069,3 +2069,22 @@ describe('under a re-rendering parent', () => {
     }
   });
 });
+
+it('reuses the per-locale field order and digit map until the locale changes', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
+  const internals = el as unknown as {
+    fieldOrder: string[];
+    normalizeFieldDigits(value: string): string;
+    digitMapCache?: { locale: string; map: ReadonlyMap<string, string> };
+  };
+  const order = internals.fieldOrder;
+  expect(internals.fieldOrder === order, 'same order array for the same locale').to.be.true;
+  expect(internals.normalizeFieldDigits('12')).to.equal('12');
+  const map = internals.digitMapCache!.map;
+  expect(internals.normalizeFieldDigits('34')).to.equal('34');
+  expect(internals.digitMapCache!.map === map, 'same digit map for the same locale').to.be.true;
+  el.locale = 'ja-JP';
+  await el.updateComplete;
+  expect(internals.fieldOrder === order).to.be.false;
+  expect(internals.fieldOrder[0]).to.equal('year');
+});

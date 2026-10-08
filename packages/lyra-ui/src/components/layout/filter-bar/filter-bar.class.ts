@@ -7,7 +7,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   collectFocusableElements,
   deepActiveElement,
@@ -2385,7 +2385,7 @@ export class LyraFilterBar<
                       this.clearFilter(
                         def.filterId,
                         (() => {
-                          const active = activeElementIn(chip.shadowRoot);
+                          const active = shadowFocusTarget(chip);
                           return (active as Partial<Node> | null)?.nodeType === 1;
                         })()
                       );

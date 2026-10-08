@@ -1,5 +1,4 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 
 const QR_CODE_PEER_WARNING_KEY = 'lyra-qr-code-peer-unavailable';
 const QR_CODE_PEER_WARNING = '<lr-qr-code> could not load its optional qrcode peer.';
@@ -19,32 +18,27 @@ function isQrCodeApi(value: unknown): value is QrCodeApi {
   );
 }
 
-let cached: Promise<QrCodeApi | null> | undefined;
+const qrCode = /* @__PURE__ */ createOptionalPeerLoader<QrCodeApi>({
+  load: () => import('qrcode'),
+  // A hostile interop wrapper can throw from the capability getter; that fails closed too.
+  isCapability: (candidate): candidate is QrCodeApi => {
+    try { return isQrCodeApi(candidate); } catch { return false; }
+  },
+  warningKey: QR_CODE_PEER_WARNING_KEY,
+  warning: QR_CODE_PEER_WARNING,
+});
 
-/** Uncached worker -- `importQrCode` is injectable for tests. Tolerates either a `{ default }`
- *  ESM interop shape or the module itself already being the API, matching `papaparse`'s own
- *  dual-shape tolerance (`qrcode`, like `papaparse`, is a CJS package resolved differently by
- *  different bundlers/test harnesses). */
-export async function loadQrCode(
-  importQrCode: () => Promise<unknown> = () => import('qrcode'),
-): Promise<QrCodeApi | null> {
-  try {
-    const module = await importQrCode();
-    return resolveOptionalPeerCapability(module, isQrCodeApi);
-  } catch {
-    devWarnOnce(QR_CODE_PEER_WARNING_KEY, QR_CODE_PEER_WARNING);
-    return null;
-  }
+/** Uncached worker -- `importQrCode` is injectable for tests. */
+export function loadQrCode(importQrCode?: () => Promise<unknown>): Promise<QrCodeApi | null> {
+  return qrCode.loadWith(importQrCode);
 }
 
-/** Cached accessor -- the actual dynamic `import('qrcode')` and its resolved API are shared
- *  across every caller instead of each instance maintaining its own independent cache. */
+/** Cached accessor -- one `import('qrcode')` shared across every caller. */
 export function loadQrCodeCached(): Promise<QrCodeApi | null> {
-  if (!cached) cached = loadQrCode();
-  return cached;
+  return qrCode.get();
 }
 
 /** @internal Test-only cache reset. */
 export function clearQrCodeCache(): void {
-  cached = undefined;
+  qrCode.clear();
 }

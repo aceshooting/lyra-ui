@@ -338,3 +338,19 @@ describe('focusMoveButton()', () => {
     expect(el.focusMoveButton('down')).to.equal(false);
   });
 });
+
+describe('<lr-reorder-item> role maintenance', () => {
+  it('does not rewrite an already-correct role on update and restores a removed one', async () => {
+    const el = await fixture<LyraReorderItem>(html`<lr-reorder-item value="a">Row</lr-reorder-item>`);
+    const observer = new MutationObserver(() => undefined);
+    observer.observe(el, { attributes: true, attributeFilter: ['role'] });
+    el.value = 'b';
+    await el.updateComplete;
+    expect(observer.takeRecords().length).to.equal(0);
+    el.removeAttribute('role');
+    el.value = 'c';
+    await el.updateComplete;
+    observer.disconnect();
+    expect(el.getAttribute('role')).to.equal('listitem');
+  });
+});

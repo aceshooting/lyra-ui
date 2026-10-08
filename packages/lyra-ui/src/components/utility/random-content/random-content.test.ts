@@ -505,6 +505,29 @@ it('immediately reapplies one configured selection on reconnect without enabling
   expect(el.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-live')).to.be.false;
 });
 
+it('keeps the same selection and emits no lr-content-change on a pure reconnect', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.setAttribute('mode', 'sequence');
+  el.innerHTML = '<div id="keep-0">0</div><div id="keep-1">1</div><div id="keep-2">2</div>';
+  container.append(el);
+  await el.updateComplete;
+  el.randomize();
+  await el.updateComplete;
+  const before = shownIds(el);
+  expect(before.length).to.equal(1);
+  expect(before[0]).to.not.equal('keep-0');
+
+  let changes = 0;
+  el.addEventListener('lr-content-change', () => (changes += 1));
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(shownIds(el)).to.deep.equal(before);
+  expect(changes).to.equal(0);
+});
+
 it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async () => {
   const el = (await fixture(html`
     <lr-random-content autoplay autoplay-interval="10" mode="sequence">
@@ -519,6 +542,7 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
 
   // autoplay-interval="10" is clamped up to the 1000ms floor -- confirm no
   // tick has happened well before that floor.
+  // wait-reason: negative assertion, no tick may happen before the clamped 1000ms autoplay floor
   await new Promise((resolve) => setTimeout(resolve, 300));
   expect(shownChild(el).id).to.equal('a0');
 
@@ -531,6 +555,7 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
   let firedAfterDisconnect = false;
   el.addEventListener('lr-content-change', () => (firedAfterDisconnect = true));
   el.remove();
+  // wait-reason: negative assertion, no timer-driven selection may fire after disconnect (longer than the 1000ms autoplay floor)
   await new Promise((resolve) => setTimeout(resolve, 1200));
   expect(firedAfterDisconnect).to.be.false;
   expect(

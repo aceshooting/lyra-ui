@@ -126,7 +126,7 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 `lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
-and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
+and `lr-widget-state-change`.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
@@ -175,8 +175,7 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-activate` event — Passthrough from rendered Markdown.
-- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
-  `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
+- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
   tool-call block (`callId` included).
@@ -184,8 +183,7 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
-- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
-  `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
 

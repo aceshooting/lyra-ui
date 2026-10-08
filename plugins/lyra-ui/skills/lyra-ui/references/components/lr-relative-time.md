@@ -6,7 +6,7 @@
 - **Class** `LyraRelativeTime`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/relative-time.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
@@ -24,8 +24,7 @@ are as described under `lr-format-number` above.
 
 - `date: string | number | Date = new Date()` — the target instant; unset means now. Numeric HTML
   attributes are epoch milliseconds, matching numeric property assignment (including zero and
-  negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in 8.0.0:** the
-  former empty-string default rendered no content
+  negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)

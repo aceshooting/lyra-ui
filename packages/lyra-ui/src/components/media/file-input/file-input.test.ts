@@ -455,6 +455,7 @@ it("does not accept drops while disabled", async () => {
   let fired = false;
   el.addEventListener("lr-files", () => (fired = true));
   dropWith(base, [makeFile("a.csv", "text/csv")]);
+  // wait-reason: asserting a disabled drop never emits lr-files
   await new Promise((r) => setTimeout(r, 10));
   expect(fired).to.be.false;
 });
@@ -3551,6 +3552,7 @@ it("tolerates a drop event with no dataTransfer at all", async () => {
       new DragEvent("drop", { bubbles: true, cancelable: true })
     )
   ).not.to.throw();
+  // wait-reason: asserting a bare drop never emits lr-files
   await new Promise((resolve) => setTimeout(resolve, 10));
   expect(fired).to.be.false;
 });
@@ -3600,6 +3602,7 @@ it("discards a dropped-folder resolution that arrives after the host became disa
   el.addEventListener("lr-files", () => (fired = true));
   dropzone.dispatchEvent(event);
   el.disabled = true;
+  // wait-reason: asserting a late folder resolution is discarded after disable
   await new Promise((resolve) => setTimeout(resolve, 20));
   expect(fired).to.be.false;
   expect(readCalls).to.equal(1);

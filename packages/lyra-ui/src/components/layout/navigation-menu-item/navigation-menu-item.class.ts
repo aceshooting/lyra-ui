@@ -2,7 +2,7 @@ import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady,
   loadAnchoredOverlayRuntime,
@@ -333,7 +333,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
       const previous = this.baseElement;
       const nextKind = this.isLink ? 'a' : 'button';
       this.semanticFocusOrigin =
-        previous && previous.localName !== nextKind && activeElementIn(this.shadowRoot) === previous
+        previous && previous.localName !== nextKind && shadowFocusTarget(this) === previous
           ? previous
           : undefined;
     }
@@ -351,7 +351,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     const focusOrigin = this.semanticFocusOrigin;
     this.semanticFocusOrigin = undefined;
     if (focusOrigin) {
-      const internalActive = activeElementIn(this.shadowRoot);
+      const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       if (
         (internalActive === null || internalActive === focusOrigin) &&

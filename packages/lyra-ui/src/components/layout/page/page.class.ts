@@ -15,7 +15,7 @@ import {
 } from '../../../internal/aria-ownership.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -252,7 +252,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   /** Whatever held focus outside the drawer when it opened -- the return target of a drawer opened
    *  from script, and the deferred return's candidate when no toggle owns the open. */
   private navigationOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private customToggle?: HTMLElement;
   private customToggles: HTMLElement[] = [];
   private readonly customToggleOwnership = new Map<
@@ -289,7 +288,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     this.releaseCustomToggleA11y();
     super.disconnectedCallback();
   }
@@ -407,7 +406,6 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
         }
         return;
       }
-      this.deferredFocusReturn.cancel();
       const active = deepActiveElement(this.ownerDocument);
       this.navigationOpener =
         active &&
@@ -426,6 +424,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
           : {}),
         lockScroll: true,
         suspendWhenUnrendered: true,
+        deferredReturn: this.navigationDeferredReturn,
       });
       this.overlayHandle.focusInitial();
       return;
@@ -437,22 +436,20 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       // already take focus; the deferred pass covers one the host only re-shows afterward.
       this.overlayHandle.deactivate({ restoreFocus });
       this.overlayHandle = undefined;
-      if (restoreFocus) this.scheduleDeferredNavigationReturn();
     }
     if (!this.navOpen) {
       this.navigationTriggerOwner = undefined;
     }
   }
 
-  /** Retries the drawer's focus return once the host has reacted to the close -- see the class
+  /** The drawer's deferred focus return: retries it once the host has reacted to the close -- see the class
    *  doc. Candidates are resolved when the pass runs, in the synchronous return's own order. */
-  private scheduleDeferredNavigationReturn(): void {
+  private readonly navigationDeferredReturn = (): DeferredFocusReturnPass | undefined => {
     const owner = this.navigationTriggerOwner;
     const opener = owner ? null : this.navigationOpener;
     this.navigationOpener = null;
-    if (!owner && !opener) return;
-    this.deferredFocusReturn.schedule({
-      host: this,
+    if (!owner && !opener) return undefined;
+    return {
       candidates: () => [
         owner?.isConnected ? resolveAccessibleTrigger(owner) : null,
         opener,
@@ -466,8 +463,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
       stranded: (active) =>
         !!this.drawerElement && composedContains(this.drawerElement, active),
       isCurrent: () => !this.navOpen,
-    });
-  }
+    };
+  };
 
   /** Resolves only after overlay cleanup has released Page-owned inerting. A disappearing opening
    * owner falls back deterministically without changing the captured-focus behavior of a drawer

@@ -112,6 +112,7 @@ async function hold(target: Element, init: PointerEventInit = {}, eventName: 'lr
   const observed = eventName ? oneEvent(menu, eventName) : null;
   const down = touch('pointerdown', target, x, y, init);
   if (observed) await observed;
+  // wait-reason: the long-press delay must elapse with no show event to observe
   else await aTimeout(HOLD_MS);
   return down;
 }
@@ -385,6 +386,7 @@ describe('<lr-context-menu>', () => {
       await openByRightClick(el, x, y);
       const hit = document.elementFromPoint(x, y);
       expect(hit?.id).to.equal('area');
+      // wait-reason: asserting no row gains hover while the menu stays idle
       await aTimeout(250);
       const rows = [...el.querySelectorAll('lr-menu-item')];
       expect(rows.some((row) => row.matches(':hover'))).to.equal(false);
@@ -826,6 +828,7 @@ describe('<lr-context-menu>', () => {
         expect(scrollEvent.isTrusted).to.equal(true);
         expect(scroller.scrollTop).to.equal(40);
         expect(events.count('lr-show'), 'native scroll settled before the hold opened').to.equal(0);
+        // wait-reason: the long-press timer must expire to prove a scroll cancelled it
         await aTimeout(HOLD_MS);
         expect(events.count('lr-show'), 'scroll cancels the pending hold').to.equal(0);
         expect(el.open).to.equal(false);
@@ -850,6 +853,7 @@ describe('<lr-context-menu>', () => {
 
       touch('pointerdown', plain, x, y);
       touch('pointermove', plain, x + 20, y);
+      // wait-reason: the long-press timer must expire to prove movement cancelled it
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x + 20, y);
       expect(events.count('lr-show')).to.equal(0);
@@ -864,6 +868,7 @@ describe('<lr-context-menu>', () => {
 
       touch('pointerdown', plain, x, y);
       touch('pointercancel', plain, x, y);
+      // wait-reason: the long-press timer must expire to prove pointercancel cancelled it
       await aTimeout(HOLD_MS);
       expect(events.count('lr-show')).to.equal(0);
       expect(el.open).to.equal(false);
@@ -876,8 +881,10 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
+      // wait-reason: real press duration shorter than the long-press delay
       await aTimeout(40);
       touch('pointerup', plain, x, y);
+      // wait-reason: remainder of the long-press delay must elapse after an early release
       await aTimeout(HOLD_MS - 40);
       expect(events.count('lr-show')).to.equal(0);
       expect(el.open).to.equal(false);
@@ -891,6 +898,7 @@ describe('<lr-context-menu>', () => {
 
       touch('pointerdown', plain, x, y);
       touch('pointerdown', plain, x + 30, y, { pointerId: 8, isPrimary: false });
+      // wait-reason: the long-press timer must expire to prove a second pointer cancelled it
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y);
       touch('pointerup', plain, x + 30, y, { pointerId: 8, isPrimary: false });
@@ -905,6 +913,7 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y, { pointerType: 'mouse' });
+      // wait-reason: the long-press timer must expire to prove a mouse pointer never long-presses
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y, { pointerType: 'mouse' });
       expect(events.count('lr-show')).to.equal(0);
@@ -918,6 +927,7 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y, { pointerType: 'pen', button: 2 });
+      // wait-reason: the long-press timer must expire to prove a non-touch secondary button never long-presses
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y, { pointerType: 'pen' });
       expect(events.count('lr-show')).to.equal(0);
@@ -931,8 +941,10 @@ describe('<lr-context-menu>', () => {
       const [x, y] = center(plain);
 
       touch('pointerdown', plain, x, y);
+      // wait-reason: real elapsed time before disabling mid-press
       await aTimeout(40);
       el.disabled = true;
+      // wait-reason: the long-press timer must expire to prove disabling cancelled it
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y);
 
@@ -999,6 +1011,7 @@ describe('<lr-context-menu>', () => {
       touch('pointerdown', plain, x, y);
       expect(platform()).to.equal(false);
       await shown;
+      // wait-reason: keep the press held across the long-press delay before release
       await aTimeout(HOLD_MS);
       release(plain);
       expect(events.count('lr-show')).to.equal(3);
@@ -1035,6 +1048,7 @@ describe('<lr-context-menu>', () => {
       range.selectNodeContents(text);
       selection.addRange(range);
       if (selection.rangeCount === 0) this.skip();
+      // wait-reason: hold the press across the long-press delay with the selection live
       await aTimeout(HOLD_MS);
       await shown;
       release(text);
@@ -1066,6 +1080,7 @@ describe('<lr-context-menu>', () => {
       const fieldRange = document.createRange();
       fieldRange.selectNodeContents(text);
       selection.addRange(fieldRange);
+      // wait-reason: hold the press across the long-press delay with the selection live
       await aTimeout(HOLD_MS);
       await shown;
       release(field);
@@ -1224,6 +1239,7 @@ describe('<lr-context-menu>', () => {
       const row = byId(inner, 'inner-row');
       expect(syntheticContextMenu(row, ...center(row))).to.equal(false);
       touch('pointerdown', row, ...center(row));
+      // wait-reason: hold the press across the long-press delay on a fading row
       await aTimeout(HOLD_MS);
       release(row);
       await hidden;
@@ -1418,6 +1434,7 @@ describe('<lr-context-menu>', () => {
       await frames();
       byId(wrapper, 'other').scrollTop = 200;
       await frames();
+      // wait-reason: asserting that no hide fires after an unrelated scroll
       await aTimeout(50);
       expect(events.count('lr-hide')).to.equal(0);
       expect(el.open).to.equal(true);
@@ -1584,6 +1601,7 @@ describe('<lr-context-menu>', () => {
       touch('pointerdown', plain, x, y);
       el.remove();
       parent.append(el);
+      // wait-reason: the long-press timer must survive a reconnect for the full delay
       await aTimeout(HOLD_MS);
       touch('pointerup', plain, x, y);
       expect(events.count('lr-show')).to.equal(1);

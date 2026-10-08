@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Ses düzeyi',
   videoCaptions: 'Altyazılar',
   videoCaptionsOff: 'Kapalı',
-  videoPlaybackSpeed: 'Oynatma hızı',
   videoPictureInPicture: 'Resim içinde resim moduna geç',
   videoExitPictureInPicture: 'Resim içinde resim modundan çık',
   videoEnterFullscreen: 'Tam ekrana geç',

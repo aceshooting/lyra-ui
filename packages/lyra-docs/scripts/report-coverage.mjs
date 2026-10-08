@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import v8ToIstanbul from 'v8-to-istanbul';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
+import { filesUnder } from './lib/static-files.mjs';
 
 export const DOCX_LINE_COVERAGE_FLOOR = 99.6;
 
@@ -22,15 +23,6 @@ export function assertCoverageTarget(metadata) {
     assert.ok(percentage >= DOCX_LINE_COVERAGE_FLOOR,
       `${metric} coverage ${percentage.toFixed(3)}% is below ${DOCX_LINE_COVERAGE_FLOOR}%`);
   }
-}
-
-async function filesUnder(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  const nested = await Promise.all(entries.map(entry => {
-    const file = resolve(directory, entry.name);
-    return entry.isDirectory() ? filesUnder(file) : [file];
-  }));
-  return nested.flat().sort();
 }
 
 /** Count every emitted runtime module; the compiler decides which source is type-only. */

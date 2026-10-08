@@ -16,9 +16,11 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Package README](../packages/lyra-ui/README.md)** — install instructions, quick start,
   theming/i18n/RTL, framework integration (React/Vue/Angular/Svelte), SSR & Declarative Shadow DOM,
   and browser/Node support matrix.
-- **[Root README](../README.md)** — monorepo overview and links to both companion packages:
-  [optional flag assets](../packages/lyra-flags/README.md) and the
-  [experimental DOCX editor](../packages/lyra-docs/README.md).
+- **[Root README](../README.md)** — monorepo overview and the companion packages:
+  [flag assets](../packages/lyra-flags/README.md),
+  [experimental DOCX editor](../packages/lyra-docs/README.md),
+  [editor data (`@aceshooting/lyra-ide`)](../packages/lyra-ide/README.md) and
+  [locale catalogs (`@aceshooting/lyra-translations`)](../packages/lyra-translations/README.md).
 - **[llms.txt](../packages/lyra-ui/llms.txt)** — the entry index for AI coding assistants, pointing
   into `packages/lyra-ui/llms/`: one reference file per component (`llms/components/<tag>.md`), plus
   the library-wide contracts, design tokens, optional peers, and `wa-*`/`sl-*` migration tables.
@@ -27,10 +29,8 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Component integration cards](component-integration.md)** — per-tag imports, optional peers,
   direct/transitive component dependencies, and bundle measurements when available.
 
-- **[Roadmap](roadmap.md)** — the current v24 library contract and release gates. Its focused pages
-  retain the [v21/v22 foundations](roadmap/v21-v22-foundations.md),
-  [styling foundations](roadmap/styling-foundations.md), and
-  [post-v24 website and consumer rollout](roadmap/post-v24-rollout.md).
+- **[Roadmap](roadmap.md)** — shipped releases, standing contracts, release gates and open work;
+  [native document editing](roadmap/document-editing.md) has its own delivery sequence.
 
 ## Contributing & policies
 
@@ -48,6 +48,22 @@ This file is a short index. The primary documentation lives on the sites linked 
   cross-component changes; start from the [proposal template](rfcs/template.md).
 - **[Executable framework recipes](../examples/frameworks/)** — React 19, Vue, and Svelte Vite
   applications checked against the packed package.
+
+## Contributor reference map
+
+Each topic lives in exactly one file under [`agents/`](agents/); [AGENTS.md](../AGENTS.md) holds only
+digests and links.
+
+- [coding-conventions](agents/coding-conventions.md), [component-scaffold](agents/component-scaffold.md),
+  [component-qualification](agents/component-qualification.md)
+- [form-controls](agents/form-controls.md), [i18n-rtl-theming](agents/i18n-rtl-theming.md),
+  [a11y-responsive-motion](agents/a11y-responsive-motion.md),
+  [peers-and-remote-content](agents/peers-and-remote-content.md),
+  [upstream-parity](agents/upstream-parity.md)
+- [testing](agents/testing.md), [ci-and-gates](agents/ci-and-gates.md) (gates, release integrity,
+  first-publication bootstrap)
+- Policy pages: [support-policy](support-policy.md), [accessibility](accessibility.md),
+  [design-token-system](design-token-system.md)
 
 ## This directory
 

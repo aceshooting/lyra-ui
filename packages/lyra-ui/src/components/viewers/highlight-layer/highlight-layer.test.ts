@@ -573,9 +573,7 @@ describe('lr-highlight-layer', () => {
     el.flash('a');
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-flash]') !== null).to.be.true;
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-flash]') === null, 'the flash state was never cleaned up');
   });
 
   it('clears flash state for a zero-duration reduced-motion equivalent', async () => {

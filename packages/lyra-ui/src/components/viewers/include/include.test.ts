@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './include.js';
@@ -66,11 +67,11 @@ describe('lr-include', () => {
     try {
       const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
       await el.updateComplete;
-      await aTimeout(10);
+      await twoFrames();
       expect(called).to.equal(false);
       expect(el.getAttribute('aria-busy')).to.equal('false');
       el.src = '   ';
-      await aTimeout(10);
+      await twoFrames();
       expect(called, 'whitespace-only src is also empty').to.equal(false);
       expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
@@ -208,6 +209,22 @@ describe('lr-include', () => {
     }
   });
 
+  it('strips name attributes from fetched content so it cannot clobber window properties', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response('<p>kept</p><img name="lrIncludeClobber" alt="x"><form name="lrIncludeForm"></form>'))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/named.html';
+      await loaded;
+      expect(el.textContent).to.contain('kept');
+      expect(el.querySelectorAll('[name]').length).to.equal(0);
+      expect((window as unknown as Record<string, unknown>)['lrIncludeClobber']).to.equal(undefined);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('invalidates an active search after fetched light-DOM content is replaced', async () => {
     const original = window.fetch;
     let body = '<p>needle</p>';
@@ -268,7 +285,7 @@ describe('lr-include', () => {
     try {
       const el = await fixture<LyraInclude>(html`<lr-include src="javascript:alert(1)">Fallback</lr-include>`);
       await el.updateComplete;
-      await aTimeout(10);
+      await twoFrames();
       expect(called).to.equal(false);
       expect(el.textContent).to.equal('Fallback');
     } finally { window.fetch = original; }
@@ -328,7 +345,7 @@ describe('lr-include', () => {
       const loaded = oneEvent(el, 'lr-load');
       el.src = 'https://example.test/ok.html';
       await loaded;
-      await aTimeout(10);
+      await twoFrames();
       expect(aliasCount).to.equal(0);
     } finally { window.fetch = original; }
   });
@@ -453,7 +470,7 @@ describe('lr-include', () => {
       await waitUntil(() => el.querySelector('p') !== null);
       expect(callCount).to.equal(1);
       el.src = '';
-      await aTimeout(20);
+      await twoFrames();
       expect(callCount).to.equal(1);
       expect((el.querySelector('p')) != null).to.equal(true);
     } finally { window.fetch = original; }
@@ -468,7 +485,7 @@ describe('lr-include', () => {
       await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       el.remove();
       resolveFetch(response('<h1>Late</h1>'));
-      await aTimeout(20);
+      await twoFrames();
       expect((el.querySelector('h1')) == null).to.equal(true);
       expect(el.textContent).to.equal('Fallback');
     } finally { window.fetch = original; }
@@ -484,7 +501,7 @@ describe('lr-include', () => {
       let loads = 0;
       el.addEventListener('lr-load', () => { loads++; });
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(loads).to.equal(0);
       expect(el.querySelector('h1') !== null).to.be.true;
@@ -525,7 +542,7 @@ describe('lr-include', () => {
     try {
       const el = document.createElement('lr-include') as LyraInclude;
       el.src = 'https://example.test/detached.html';
-      await aTimeout(10);
+      await twoFrames();
       expect((el.querySelector('h1')) == null, 'nothing should load while detached').to.equal(true);
       document.body.append(el);
       await waitUntil(() => el.querySelector('h1') !== null);

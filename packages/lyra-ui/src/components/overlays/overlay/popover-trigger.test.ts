@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, nextFrame, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
@@ -184,6 +184,7 @@ describe('lr-popover trigger modes', () => {
     leave(triggerOf(el));
     enter(triggerOf(el));
     await settlePointer();
+    // wait-reason: hide-delay (150ms) must elapse to prove the cancelled close never ran
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(el.open).to.equal(true, 'the cancelled close never ran');
   });
@@ -426,6 +427,7 @@ describe('lr-popover trigger modes', () => {
     }, 'focus moves into the popup content');
     leave(triggerOf(el));
     await settlePointer();
+    // wait-reason: asserting the popup stays open after the pointer leaves
     await aTimeout(30);
     expect(el.open).to.equal(true, 'focus inside the popup retains it after the pointer leaves');
     link.blur();
@@ -443,6 +445,7 @@ describe('lr-popover trigger modes', () => {
     }, 'focus moves into the popup content');
     leave(triggerOf(el));
     await settlePointer();
+    // wait-reason: asserting the popup stays open after the pointer leaves
     await aTimeout(30);
     expect(el.open).to.equal(true, 'focus inside the popup retains it after the pointer leaves');
     link.blur();
@@ -500,7 +503,8 @@ describe('collecting an already-slotted trigger without relying on the initial s
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial trigger slotchange arrived');
+      await nextFrame();
       expect(
         intercepted,
         "a real browser does fire the trigger slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -541,7 +545,7 @@ describe('collecting an already-slotted trigger without relying on the initial s
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realTriggerSlotchangeCount > 0, 'the initial trigger slotchange arrived');
       expect(
         realTriggerSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -635,6 +639,7 @@ describe('lr-popover focus keyword follows keyboard focus', () => {
     await sendKeys({ press: 'Escape' });
     await waitUntil(() => !el.open, 'Escape closes it');
     await settlePointer();
+    // wait-reason: asserting focus restore does not reopen the popover
     await aTimeout(30);
     expect(document.activeElement === triggerOf(el)).to.equal(true, 'focus stays on the trigger');
     expect(el.open).to.equal(false, 'the restore does not reopen it');
@@ -675,7 +680,7 @@ describe('lr-popover focus keyword follows keyboard focus', () => {
     leave(triggerOf(el));
     recordPointerPress();
     triggerOf(el).focus();
-    await aTimeout(250);
+    await waitUntil(() => !el.open, 'the pending close still ran', { timeout: 2000 });
     expect(el.open).to.equal(false, 'the pending close still ran');
   });
 });
@@ -733,6 +738,7 @@ describe('mixed transient and click popover triggers', () => {
     await waitUntil(() => el.open, 'hover opens it');
     leave(triggerOf(el));
     triggerOf(el).click();
+    // wait-reason: hide-delay (100ms) must elapse to prove the pin canceled the hide
     await aTimeout(180);
     expect(el.open).to.equal(true, 'the delayed hide was canceled by the explicit pin');
   });

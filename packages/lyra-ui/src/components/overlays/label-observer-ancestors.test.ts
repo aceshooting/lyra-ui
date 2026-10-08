@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, nextFrame } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import './chip/chip.js';
 import './badge/tag.js';
@@ -34,18 +34,17 @@ for (const [tag, markup, method] of cases) {
     };
 
     wrapper.style.opacity = '0.9';
-    await aTimeout(0);
+    await nextFrame();
     // Drain any first-batch visibility refresh before checking subsequent no-op writes.
     await nextFrame();
-    await aTimeout(0);
 
     calls = 0;
     wrapper.style.opacity = '0.8';
-    await aTimeout(0);
+    await nextFrame();
     expect(calls, 'an unrelated ancestor style write').to.equal(0);
 
     wrapper.hidden = true;
-    await aTimeout(0);
+    await nextFrame();
     expect(calls, 'a visibility change').to.be.greaterThan(0);
   });
 }

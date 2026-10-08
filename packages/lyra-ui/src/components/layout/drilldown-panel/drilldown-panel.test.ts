@@ -1062,7 +1062,10 @@ it("shows the Agent runs tab only once content is projected into the runs slot, 
   runContent.textContent = "Run #42 — success";
   el.appendChild(runContent);
   // hasRunsSlot is recomputed by a MutationObserver, which fires asynchronously.
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector("lr-tab-group") != null,
+    "the runs tab group renders"
+  );
   await el.updateComplete;
 
   const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
@@ -1084,12 +1087,16 @@ it('detects a slot="runs" attribute toggled on an already-connected child, not j
   const runContent = document.createElement("div");
   runContent.textContent = "Run #99 — success";
   el.appendChild(runContent); // connected, but not slotted into "runs" yet
+  // wait-reason: negative assertion: an unslotted child must not produce a tab group
   await new Promise((resolve) => setTimeout(resolve, 0));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector("lr-tab-group") == null).to.be.true;
 
   runContent.setAttribute("slot", "runs"); // toggled on an already-connected child
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector("lr-tab-group") != null,
+    "the runs tab group renders"
+  );
   await el.updateComplete;
 
   const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
@@ -1187,7 +1194,10 @@ it("survives disconnect + reconnect and keeps tracking the runs slot afterward",
   runContent.setAttribute("slot", "runs");
   runContent.textContent = "Run #7";
   el.appendChild(runContent);
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await waitUntil(
+    () => el.shadowRoot!.querySelector("lr-tab-group") != null,
+    "the runs tab group renders"
+  );
   await el.updateComplete;
   const tabs = el.shadowRoot!.querySelector("lr-tab-group") as LyraTabGroup;
   await waitForTabCount(tabs, 2);

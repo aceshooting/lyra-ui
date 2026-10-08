@@ -1792,6 +1792,7 @@ it("never fires lr-load-more when has-more is false", async () => {
 
   base.scrollTop = base.scrollHeight;
   base.dispatchEvent(new Event("scroll"));
+  // wait-reason: negative assertion; no load-more event may fire within the window
   await aTimeout(100);
   expect(fired).to.be.false;
 });
@@ -2486,7 +2487,7 @@ describe("itemRole / rowIndexOffset", () => {
     el.items = ["a", "b"];
     el.renderItem = (item: unknown) => html`<span>${item}</span>`;
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
     ).to.equal("list");
@@ -2506,7 +2507,7 @@ describe("itemRole / rowIndexOffset", () => {
     el.items = ["a", "b"];
     el.renderItem = (item: unknown) => html`<span>${item}</span>`;
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("role")
     ).to.equal("rowgroup");
@@ -2530,7 +2531,7 @@ describe("itemRole / rowIndexOffset", () => {
     el.items = ["a"];
     el.renderItem = (item: unknown) => html`<span>${item}</span>`;
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("tabindex")
     ).to.equal("0");
@@ -2547,7 +2548,7 @@ describe("itemRole / rowIndexOffset", () => {
     el.items = ["a", "b", "c"];
     el.renderItem = (item: unknown) => html`<span>${item}</span>`;
     await el.updateComplete;
-    await aTimeout(50); // allow ResizeObserver to report real row heights and trigger a re-render
+    await nextFrame(); // allow ResizeObserver to report real row heights and trigger a re-render
     expect(
       el.shadowRoot!.querySelectorAll('[part="row"]').length
     ).to.be.greaterThan(0);
@@ -2571,7 +2572,7 @@ describe("itemRole / rowIndexOffset", () => {
       el.items = ["a"];
       el.renderItem = (item: unknown) => html`<span>${item}</span>`;
       await el.updateComplete;
-      await aTimeout(0);
+      await nextFrame();
       const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
       expect(firstRow.getAttribute("aria-rowindex"), value).to.equal(
         String(1 + expected)
@@ -2590,7 +2591,7 @@ describe("itemRole / rowIndexOffset", () => {
     el.renderItem = (item: unknown) => html`<span>${item}</span>`;
     el.rowIndexOffset = NaN;
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     const firstRow = el.shadowRoot!.querySelector('[part="row"]')!;
     expect(firstRow.getAttribute("aria-rowindex")).to.equal("1");
 
@@ -3402,7 +3403,7 @@ describe("sticky group overlay", () => {
         </div>`,
     });
     await scrollTo(el, 10 * ROW);
-    await aTimeout(0);
+    await nextFrame();
 
     const customControl = overlay(el)!.querySelector<HTMLElement>(
       tagName
@@ -3412,7 +3413,7 @@ describe("sticky group overlay", () => {
     expect(firstButton.tabIndex).to.equal(0);
 
     customControl.renderAction("Replacement action");
-    await aTimeout(0);
+    await nextFrame();
     const replacementButton =
       customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
     expect(replacementButton !== firstButton).to.equal(true);
@@ -5367,7 +5368,6 @@ describe('light-DOM projection -- SSR and hydration', () => {
     ).to.be.true;
     expect(el.shadowRoot!.querySelectorAll('slot').length, 'and no slots yet').to.equal(0);
 
-    await aTimeout(0);
     await el.updateComplete;
     await nextFrame();
     await el.updateComplete;
@@ -5419,7 +5419,7 @@ describe('light-DOM projection -- SSR and hydration', () => {
         'projection is not deferred forever by a failed first update'
       ).to.be.greaterThan(0);
       // Let the re-fired rejection land while the capture is still installed.
-      await aTimeout(50);
+      await nextFrame();
     } finally {
       console.error = originalError;
       window.removeEventListener('unhandledrejection', suppress);

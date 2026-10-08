@@ -1,3 +1,4 @@
+import { nextFrame } from '../../../../test/frames.js';
 import * as graphSupport from '../../../../test/graph-test-support.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
@@ -29,7 +30,8 @@ describe('canvas renderer — static draw', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50); // let the draw rAF fire
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
+    await nextFrame(); // let the draw rAF paint
     return el;
   }
 
@@ -493,7 +495,7 @@ describe('canvas renderer — interaction and a11y', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50); // let the draw rAF fire so the backing store is sized for hit-testing
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement); // the draw rAF sizes the backing store for hit-testing
     return el;
   }
 
@@ -554,7 +556,7 @@ describe('canvas renderer — interaction and a11y', () => {
     `)) as HTMLElement;
     const el = asTestGraph(container.querySelector('lr-graph')!);
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -1145,6 +1147,7 @@ it('orders inverted zoom bounds before configuring d3 and imperative camera oper
 
   expect(await el.focusNode('a', { zoom: Number.NaN })).to.equal(true);
   el.fit({ padding: Number.POSITIVE_INFINITY });
+  // wait-reason: real fit() tween duration; the final transform is only meaningful after the tween ends and exposes no completion signal
   await new Promise((resolve) => setTimeout(resolve, 350));
   const transform = el
     .shadowRoot!.querySelector('g')!
@@ -1289,7 +1292,12 @@ it('does not reassign simNodes/simLinks references on tick, only positions (avoi
   ).getAttribute('cx');
 
   // Let the simulation tick for a while.
-  await aTimeout(300);
+  await waitUntil(
+    () =>
+      (el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement).getAttribute('cx') !== initialCx,
+    'simulation ticks moved node a',
+    { timeout: NODE_COUNT_TIMEOUT }
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   expect((el as any).simNodes).to.equal(simNodesRef);
@@ -1629,6 +1637,7 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   // ticks — a still-running simulation would keep animating a detached
   // instance indefinitely.
   const alphaAfterDisconnect = simulation.alpha();
+  // wait-reason: negative assertion, a stopped simulation must not decay alpha after disconnect
   await aTimeout(200);
   expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
 });
@@ -1666,6 +1675,7 @@ it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and
     // `loadD3()` promise's `.then()` — that callback lands on a later
     // microtask/task, not synchronously within this reparent — so give it a
     // moment to run before asserting nothing changed.
+    // wait-reason: negative assertion, a reparent must not rebuild the simulation on a later task
     await aTimeout(50);
 
     // A from-scratch rebuild would swap in a brand-new forceSimulation() instance. The seed makes
@@ -1691,7 +1701,13 @@ it('renders a dangling-target link as a stub off the source instead of dropping 
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  await aTimeout(200);
+  await waitUntil(
+    () =>
+      el.shadowRoot!.querySelectorAll('[part="link"]').length === 2 &&
+      el.shadowRoot!.querySelector('[part="link"][data-dangling]') != null,
+    'real link plus dangling stub rendered',
+    { timeout: NODE_COUNT_TIMEOUT }
+  );
 
   const linkEls = [...el.shadowRoot!.querySelectorAll('[part="link"]')];
   expect(linkEls).to.have.length(2); // the real a-b link, plus a dangling stub off 'a'
@@ -1759,7 +1775,11 @@ it('silently drops a link whose source id has no matching node, without throwing
       timeout: NODE_COUNT_TIMEOUT,
     }
   );
-  await aTimeout(200);
+  await waitUntil(
+    () => el.shadowRoot!.querySelectorAll('[part="link"]').length === 1,
+    'link rendered',
+    { timeout: NODE_COUNT_TIMEOUT }
+  );
 
   const linkEls = el.shadowRoot!.querySelectorAll('[part="link"]');
   expect(linkEls.length).to.equal(1);

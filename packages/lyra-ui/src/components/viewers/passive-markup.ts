@@ -94,6 +94,33 @@ const LOCAL_FRAGMENT = /^#[A-Za-z_][\w:.-]*$/;
 const LOCAL_FRAGMENT_URL = /^\s*url\(\s*(['"]?)#([A-Za-z_][\w:.-]*)\1\s*\)\s*$/i;
 const INLINE_RASTER_DATA = /^data:image\/(?:gif|jpeg|png|webp);base64,[a-z\d+/=\s]+$/i;
 
+/** Elements that rendering may clone through `<use>` references before the SVG is refused. */
+const MAX_USE_CLONES = 100_000;
+
+/** Elements cloned by the `<use>` references within `scope` (itself included); Infinity for a
+ *  reference cycle or past the ceiling. */
+function useClones(root: DocumentFragment, scope: Element | DocumentFragment, memo: Map<Element, number>): number {
+  let uses: Element[] = [...scope.querySelectorAll('use')];
+  // Definitions render only when referenced, and a reference is counted through its target below,
+  // so a `<use>` merely sitting in the document's own `<defs>`/`<symbol>` adds nothing by itself.
+  if (scope === root) uses = uses.filter((use) => use.closest('defs, symbol') === null);
+  if ('localName' in scope && scope.localName === 'use') uses.push(scope);
+  let total = 0;
+  for (const use of uses) {
+    const target = root.getElementById((use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').trim().slice(1));
+    if (!target) continue;
+    let clones = memo.get(target);
+    if (clones === undefined) {
+      memo.set(target, Infinity);
+      clones = 1 + target.querySelectorAll('*').length + useClones(root, target, memo);
+      memo.set(target, clones);
+    }
+    total += clones;
+    if (total > MAX_USE_CLONES) return Infinity;
+  }
+  return total;
+}
+
 function replaceWithContents(element: Element): void {
   const parent = element.parentNode;
   if (!parent) return;
@@ -217,6 +244,10 @@ export function sanitizePassiveMarkupFragment(
     }
   }
 
+  // Nested `<use>` fan-out multiplies rendering work exponentially in every engine.
+  if (profile === 'passive-svg' && useClones(template.content, template.content, new Map()) > MAX_USE_CLONES) {
+    throw new LyraResourceLimitError('The SVG expands too many <use> references.');
+  }
   return template.content;
 }
 
@@ -232,3 +263,4 @@ export function sanitizePassiveMarkup(
   return template.innerHTML;
 }
 import { isSvgElement } from '../../internal/dom-guards.js';
+import { LyraResourceLimitError } from '../../internal/resource-loader.js';

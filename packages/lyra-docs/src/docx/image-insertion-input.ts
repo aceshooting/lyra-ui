@@ -67,20 +67,20 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
     const raw = checkedOptions.value;
     const normalized: { expectedRevision?: { documentId: string; value: number }; selection?: DocxInsertImageOptions['selection']; signal?: AbortSignal } = {};
     if (Object.hasOwn(raw, 'expectedRevision')) {
-      const revision = data(raw.expectedRevision, ['documentId', 'value']);
+      const revision = data(raw['expectedRevision'], ['documentId', 'value']);
       if (!revision.ok) return revision;
       const value = revision.value;
-      if (typeof value.documentId !== 'string' || !value.documentId.length || value.documentId.length > 128 ||
-          typeof value.value !== 'number' || !Number.isSafeInteger(value.value) || value.value < 0) return invalid();
-      normalized.expectedRevision = Object.freeze({ documentId: value.documentId, value: value.value });
+      if (typeof value['documentId'] !== 'string' || !value['documentId'].length || value['documentId'].length > 128 ||
+          typeof value['value'] !== 'number' || !Number.isSafeInteger(value['value']) || value['value'] < 0) return invalid();
+      normalized.expectedRevision = Object.freeze({ documentId: value['documentId'], value: value['value'] });
     }
     if (Object.hasOwn(raw, 'selection')) {
-      if (!raw.selection || typeof raw.selection !== 'object') return invalid();
-      normalized.selection = raw.selection as NonNullable<DocxInsertImageOptions['selection']>;
+      if (!raw['selection'] || typeof raw['selection'] !== 'object') return invalid();
+      normalized.selection = raw['selection'] as NonNullable<DocxInsertImageOptions['selection']>;
     }
     if (Object.hasOwn(raw, 'signal')) {
-      if (apply(aborted, raw.signal, [])) return { ok: false, code: 'aborted' };
-      normalized.signal = raw.signal as AbortSignal;
+      if (apply(aborted, raw['signal'], [])) return { ok: false, code: 'aborted' };
+      normalized.signal = raw['signal'] as AbortSignal;
     }
     const copiedOptions = Object.freeze(normalized), authorized = acceptOptions(copiedOptions);
     if (!authorized.ok) return authorized;
@@ -96,8 +96,8 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
       const value = input[key];
       if (typeof value !== 'string' || value.length > maximum || value.includes('\r') || !isDocxXmlText(value)) return invalid();
     }
-    if (apply(byteKind, input.bytes, []) !== 'Uint8Array') return invalid();
-    const buffer = apply(byteBuffer, input.bytes, []), offset = apply(byteOffset, input.bytes, []), length = apply(byteLength, input.bytes, []);
+    if (apply(byteKind, input['bytes'], []) !== 'Uint8Array') return invalid();
+    const buffer = apply(byteBuffer, input['bytes'], []), offset = apply(byteOffset, input['bytes'], []), length = apply(byteLength, input['bytes'], []);
     apply(bufferLength, buffer, []);
     if (bufferResizable && apply(bufferResizable, buffer, [])) return invalid();
     const view = new NativeBytes(buffer, offset, length);
@@ -109,8 +109,8 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
     const final = validate(); if (!final.ok) return final;
     if (normalized.signal && imageInsertionAborted(normalized.signal)) return { ok: false, code: 'aborted' };
     return { ok: true, value: Object.freeze({ options: copiedOptions, source: Object.freeze({ bytes,
-      widthPoints: input.widthPoints as number, heightPoints: input.heightPoints as number,
-      title: input.title as string, description: input.description as string, metadata: Object.freeze({ ...metadata }) }) }) };
+      widthPoints: input['widthPoints'] as number, heightPoints: input['heightPoints'] as number,
+      title: input['title'] as string, description: input['description'] as string, metadata: Object.freeze({ ...metadata }) }) }) };
   } catch {
     const authority = validate();
     return authority.ok ? invalid() : authority;

@@ -1123,6 +1123,7 @@ it('resets the type-ahead buffer once the debounce window elapses', async () => 
   let active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
   expect(active.dataset['value']).to.equal('it');
 
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(600); // let the debounce timer clear the buffer
 
   btn.dispatchEvent(new KeyboardEvent('keydown', { key: deFirstLetter, bubbles: true, cancelable: true }));

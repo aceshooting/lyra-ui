@@ -8,7 +8,7 @@ test('copies own data without invoking accessors', () => {
   assert.equal(ownDataRecord(input), null);
   assert.equal(reads, 0);
   const copied = ownDataRecord(Object.assign(Object.create(null), { type: 'bold' }));
-  assert.equal(copied?.type, 'bold');
+  assert.equal(copied?.['type'], 'bold');
   assert.equal(Object.getPrototypeOf(copied), null);
 });
 

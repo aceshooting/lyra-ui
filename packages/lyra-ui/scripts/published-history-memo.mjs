@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readdirSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
+import { walk } from './lib/fs-walk.mjs';
 import { readSourceSnapshot } from './source-fixture-io.mjs';
 
 // Per-process reuse of an immutable-history verification, keyed on every file's bytes; failures are never stored.
@@ -8,14 +8,7 @@ const verified = new Map();
 
 function historyKey(kind, directory) {
   const root = resolve(directory);
-  const files = [];
-  const walk = (current) => {
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
-      if (entry.isDirectory()) walk(join(current, entry.name));
-      else files.push(join(current, entry.name));
-    }
-  };
-  walk(root);
+  const files = walk(root);
   const digest = createHash('sha256');
   for (const file of files.sort()) {
     const name = relative(root, file);

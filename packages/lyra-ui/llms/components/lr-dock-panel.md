@@ -6,7 +6,7 @@
 - **Class** `LyraDockPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated event** `lr-collapse-change` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event carries the same expanded detail; the older name remains emitted during migration.
 - **Deprecated event** `lr-collapse-request` since `26.0.0`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration.
 - **Optional peers** none

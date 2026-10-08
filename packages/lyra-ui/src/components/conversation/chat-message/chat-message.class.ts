@@ -363,7 +363,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
    *  shadow root; the owner document alone would report only the outermost consumer host. */
   private isFocusWithinFailureSlot(): boolean {
     const root = this.getRootNode() as Document | ShadowRoot;
-    const active = activeElementIn(root.nodeType === Node.ELEMENT_NODE ? null : root);
+    const active = activeElementIn(!this.isConnected || root.nodeType === Node.ELEMENT_NODE ? null : root);
     try {
       if (!active || active.nodeType !== Node.ELEMENT_NODE) return false;
       return Array.from(this.children).some((el) => el.getAttribute('slot') === 'failure' && el.contains(active));

@@ -1,4 +1,5 @@
-import { assertHighlightedCellActivation, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
+import { twoFrames } from '../../../../test/frames.js';
+import { assertHighlightedCellActivation, describeCellHighlightStyling, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
 import { assertScrollFrameFollowsAdoption, shrinkAnchorRetry } from '../../../../test/viewer-scroll-test-support.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -14,8 +15,6 @@ import './csv-viewer.js';
 import '../../../translations/fr/viewers.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
-import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-csv-viewer', 'has-header-row');
@@ -110,7 +109,7 @@ describe('lr-csv-viewer', () => {
    * search keystroke, active-row change, locale change), not just on data changes -- forcing its
    * O(n) recomputeOffsets() and clearing measured row heights.
    */
-  it('keeps items/renderItem/keyFunction referentially stable across an unrelated re-render', async () => {
+  it('keeps items and keyFunction referentially stable across an unrelated re-render', async () => {
     const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     const restore = fetchText(CSV);
     try {
@@ -143,7 +142,10 @@ describe('lr-csv-viewer', () => {
           .virtualListInputsCache?.body,
         'the memoized body must stay the same array across an unrelated re-render'
       ).to.equal(cachedBody);
-      expect(list.renderItem).to.equal(renderItem);
+      // `renderItem` is fresh per render on purpose (a highlight or search-state change must
+      // repaint the visible rows); only the items array and the key function stay stable.
+      expect(typeof list.renderItem).to.equal('function');
+      expect(typeof renderItem).to.equal('function');
       expect(list.keyFunction).to.equal(keyFunction);
     } finally {
       restore();
@@ -352,7 +354,7 @@ describe('lr-csv-viewer', () => {
       const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer src="https://example.test/people.csv"></lr-csv-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="header-row"]') !== null).to.be.true;
     } finally {
@@ -458,6 +460,21 @@ describe('lr-csv-viewer', () => {
   it('is accessible', async () => {
     const el = await fixture(html`<lr-csv-viewer></lr-csv-viewer>`);
     await expect(el).to.be.accessible();
+  });
+  it('is accessible once a table has loaded', async () => {
+    const el = (await fixture(
+      html`<lr-csv-viewer></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="sheet"]') !== null
+      );
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
   });
   it('uses name as the accessible name, falling back to a localized default', async () => {
     const named = (await fixture(
@@ -843,6 +860,23 @@ describe('lr-csv-viewer', () => {
       }
     });
 
+    it('repaints visible rows when the highlights change after the rows were rendered', async () => {
+      const el = (await fixture(
+        html`<lr-csv-viewer></lr-csv-viewer>`
+      )) as LyraCsvViewer;
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First' }];
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null);
+        el.highlights = [];
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part~="cell-highlight"]') === null);
+      } finally {
+        restore();
+      }
+    });
+
     it('localizes the complete highlighted-cell name with independently ordered value and label placeholders', async () => {
       const el = (await fixture(
         html`<lr-csv-viewer></lr-csv-viewer>`
@@ -958,7 +992,7 @@ describe('lr-csv-viewer', () => {
         await el.updateComplete;
         await aTimeout(0);
         expect(
-          (el as unknown as { searchMatches: unknown[] }).searchMatches
+          (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
         ).to.have.lengthOf(2);
       } finally {
         restore();
@@ -1078,7 +1112,7 @@ describe('lr-csv-viewer', () => {
       });
       expect(await el.search('hit')).to.equal(1_000);
       expect(
-        (el as unknown as { searchMatches: unknown[] }).searchMatches
+        (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
       ).to.have.lengthOf(1_000);
       expect(detail).to.deep.include({
         matchCount: 1_000,
@@ -1151,182 +1185,10 @@ describe('lr-csv-viewer', () => {
     }
   });
 
-  describe('cell-highlight styling', () => {
-    const injected: HTMLStyleElement[] = [];
-    function injectStyle(cssText: string): void {
-      const style = document.createElement('style');
-      style.textContent = cssText;
-      document.head.append(style);
-      injected.push(style);
-    }
-    afterEach(() => {
-      for (const style of injected.splice(0)) style.remove();
-    });
-
-    /** Loads GRID_CSV, highlights A2, and resolves the highlighted cell alongside a plain one --
-     *  both live inside <lr-virtual-list>'s own shadow root, one hop in from this component's. */
-    async function mountHighlighted(
-      el: LyraCsvViewer,
-      activeId: string | null = null
-    ): Promise<{
-      highlighted: HTMLElement;
-      plain: HTMLElement;
-      dataRow: HTMLElement;
-    }> {
-      el.src = 'https://example.test/people.csv';
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
-      );
-      el.highlights = [
-        {
-          id: 'h1',
-          anchor: { kind: 'cell-range', range: 'A2' },
-          label: 'First result',
-        },
-      ];
-      el.activeHighlightId = activeId;
-      await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-      await waitUntil(
-        () =>
-          list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
-      );
-      return {
-        highlighted: list.shadowRoot!.querySelector(
-          '[part~="cell-highlight"]'
-        ) as HTMLElement,
-        plain: list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement,
-        dataRow: list.shadowRoot!.querySelector(
-          '[part="data-row"]'
-        ) as HTMLElement,
-      };
-    }
-
-    it('paints a highlighted cell with an outline no plain cell has', async () => {
-      injectStyle(
-        'lr-csv-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); }'
-      );
-      const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted, plain } = await mountHighlighted(el);
-        const style = getComputedStyle(highlighted);
-        expect(style.outlineStyle).to.equal('solid');
-        expect(style.outlineWidth).to.not.equal('0px');
-        expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
-        expect(style.cursor).to.equal('pointer');
-        expect(getComputedStyle(plain).outlineStyle).to.equal('none');
-      } finally {
-        restore();
-      }
-    });
-
-    it('tints the active highlight apart from an inactive one', async () => {
-      injectStyle(
-        'lr-csv-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
-      );
-      const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(4, 5, 6)'
-        );
-      } finally {
-        restore();
-      }
-    });
-
-    it('keeps inherited and direct highlight-color inputs authoritative for the active cell', async () => {
-      const wrapper = await fixture<HTMLElement>(html`
-        <div style="--lr-csv-viewer-highlight-color: rgb(7, 8, 9)">
-          <lr-csv-viewer></lr-csv-viewer>
-        </div>
-      `);
-      const el = wrapper.querySelector('lr-csv-viewer') as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(7, 8, 9)'
-        );
-        el.style.setProperty(
-          '--lr-csv-viewer-highlight-color',
-          'rgb(10, 11, 12)'
-        );
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(10, 11, 12)'
-        );
-      } finally {
-        restore();
-      }
-    });
-
-    it('shows the shared focus ring on the nested highlight action', async () => {
-      // The highlight outline is unconditional, so without an explicit :focus-visible rule it would
-      // simply swallow the focus ring on this focusable cell -- indistinguishable from an unfocused
-      // highlight. Probing the active (warning-tinted) highlight makes the swap unambiguous.
-      injectStyle(
-        'lr-csv-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
-      );
-      const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(4, 5, 6)'
-        );
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLElement;
-        await focusByKeyboard(action);
-        expect(getComputedStyle(action).outlineStyle).to.equal('solid');
-        expect(getComputedStyle(action).outlineWidth).to.equal('3px');
-        expect(getComputedStyle(action).outlineColor).to.equal('rgb(1, 2, 3)');
-      } finally {
-        restore();
-      }
-    });
-
-    it('exports data-row, cell, and cell-highlight to a consumer stylesheet', async () => {
-      injectStyle(`
-        lr-csv-viewer::part(data-row) { opacity: 0.75; }
-        lr-csv-viewer::part(cell) { padding-block-start: 3px; }
-        lr-csv-viewer::part(cell-highlight) { padding-block-start: 5px; }
-      `);
-      const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted, plain, dataRow } = await mountHighlighted(el);
-        expect(getComputedStyle(dataRow).opacity).to.equal('0.75');
-        expect(getComputedStyle(plain).paddingBlockStart).to.equal('3px');
-        expect(getComputedStyle(highlighted).paddingBlockStart).to.equal('5px');
-      } finally {
-        restore();
-      }
-    });
-
-    it('is accessible with a highlighted cell rendered', async () => {
-      const el = (await fixture(
-        html`<lr-csv-viewer></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        const { highlighted } = await mountHighlighted(el);
-        expect(highlighted.getAttribute('role')).to.equal('cell');
-        await expect(el).to.be.accessible();
-      } finally {
-        restore();
-      }
-    });
+  describeCellHighlightStyling({
+    tag: 'lr-csv-viewer',
+    src: 'https://example.test/people.csv',
+    install: () => fetchText(GRID_CSV),
   });
 
   describe('overflow', () => {
@@ -1355,53 +1217,6 @@ describe('lr-csv-viewer', () => {
     });
   });
 
-  describe('cell-highlight hover state', () => {
-    it('changes the rendered highlight action background under real pointer hover', async () => {
-      const el = (await fixture(
-        html`<lr-csv-viewer
-          style="--lr-color-brand-quiet: rgb(1, 2, 3)"
-        ></lr-csv-viewer>`
-      )) as LyraCsvViewer;
-      const restore = fetchText(GRID_CSV);
-      try {
-        el.highlights = [
-          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
-        ];
-        el.src = 'https://example.test/people.csv';
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
-        );
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        await waitUntil(
-          () =>
-            list.shadowRoot!.querySelector('[part="cell-highlight-action"]') !==
-            null
-        );
-        const action = list.shadowRoot!.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLElement;
-        const resting = getComputedStyle(action).backgroundColor;
-        const box = action.getBoundingClientRect();
-
-        await resetMouse();
-        await sendMouse({
-          type: 'move',
-          position: [
-            Math.round(box.left + box.width / 2),
-            Math.round(box.top + box.height / 2),
-          ],
-        });
-        await waitUntil(
-          () => getComputedStyle(action).backgroundColor !== resting,
-          'the highlighted-cell action never entered its rendered hover state'
-        );
-        expect(getComputedStyle(action).backgroundColor).to.not.equal(resting);
-      } finally {
-        await resetMouse();
-        restore();
-      }
-    });
-  });
 
   describe('back-compat', () => {
     it('rendering is unchanged with highlights empty and no search active', async () => {
@@ -1540,7 +1355,7 @@ it('re-applies an active search when a reconnect reloads the source', async () =
     parent.append(el);
     await waitUntil(
       () =>
-        (el as unknown as { searchMatches: unknown[] }).searchMatches
+        (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
           .length === 3,
       'the active search was not re-applied to the reloaded source'
     );

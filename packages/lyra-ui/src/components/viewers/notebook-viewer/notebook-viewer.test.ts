@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { glyphRect } from '../../../../test/geometry.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -746,7 +747,7 @@ describe('loading a notebook from src', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
       el.remove();
       resolveFetch({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(JSON.stringify(NOTEBOOK)) } as Response);
-      await aTimeout(20);
+      await twoFrames();
       expect((el.shadowRoot!.querySelector('[part~="cell"]')) == null).to.be.true;
       expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally { window.fetch = original; }
@@ -956,6 +957,23 @@ describe('rendering non-text outputs', () => {
     expect((output.querySelector('circle')) != null).to.equal(true);
     expect(output.getAttribute('role')).to.equal('img');
     expect(output.getAttribute('aria-label')).to.equal('Code cell 1');
+  });
+
+  it('refuses an image/svg+xml output whose nested use references fan out exponentially', async () => {
+    let defs = '<g id="g0"><rect width="1" height="1"/></g>';
+    for (let level = 1; level <= 5; level++) defs += `<g id="g${level}">${`<use href="#g${level - 1}"/>`.repeat(10)}</g>`;
+    const bomb = `<svg xmlns="http://www.w3.org/2000/svg"><defs>${defs}</defs><use href="#g5"/></svg>`;
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x', execution_count: 1,
+        outputs: [{ output_type: 'display_data', data: { 'image/svg+xml': bomb } }],
+      }],
+    };
+    let refused = false;
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook} @lr-render-error=${() => { refused = true; }}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => refused);
+    expect(rowRoot(el).querySelectorAll('use').length).to.equal(0);
   });
 
   it('lazily sanitizes and renders a text/html output, stripping unsafe markup', async () => {
@@ -1462,9 +1480,9 @@ describe('search', () => {
     };
     list.scrollToIndex = (index) => { calls.push(index); };
     await el.search('needle');
-    await aTimeout(10);
+    await twoFrames();
     el.searchNext();
-    await aTimeout(10);
+    await twoFrames();
     expect(calls).to.deep.equal([0, 2]);
     expect(rowRoot(el).querySelector('[part~="cell-active"]')?.getAttribute('data-cell-type')).to.equal('raw');
   });
@@ -2301,7 +2319,7 @@ describe('DOM moves', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null && fetches === 1);
       await el.updateComplete;
       host.append(el); // a move: disconnect and reconnect within one task
-      await aTimeout(30);
+      await twoFrames();
       expect(fetches).to.equal(1);
       expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.equal(true);
       el.remove();

@@ -15,7 +15,7 @@ on:
         type: boolean
         default: false
       first_package_bootstrap:
-        description: 'Use the protected npm token for the first lyra-docs publication only'
+        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide or lyra-translations only'
         required: false
         type: boolean
         default: false
@@ -137,7 +137,7 @@ jobs:
           ln -s "$npm_cli_dir/bin/npm-cli.js" "$npm_bin_dir/npm"
           echo "$npm_bin_dir" >> "$GITHUB_PATH"
 
-      - name: Require an unpublished Docs package for bootstrap after approval
+      - name: Require an unpublished first-publication package for bootstrap after approval
         env:
           BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -146,15 +146,15 @@ jobs:
           set -euo pipefail
           if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
           if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$DRY_RUN" == true ||
-                ! "$TAG" =~ ^lyra-docs@[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo '::error::First-package bootstrap requires a real, manually dispatched stable lyra-docs release.'
+                ! "$TAG" =~ ^lyra-(docs|ide|translations)@[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::First-package bootstrap requires a real, manually dispatched stable lyra-docs, lyra-ide or lyra-translations release.'
             exit 1
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
             --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-            'https://registry.npmjs.org/%40aceshooting%2Flyra-docs')"
+            "https://registry.npmjs.org/%40aceshooting%2F${TAG%@*}")"
           if [[ "$status" != 404 ]]; then
-            echo "::error::Expected npm registry absence (HTTP 404) before Docs bootstrap; received HTTP $status."
+            echo "::error::Expected npm registry absence (HTTP 404) before ${TAG%@*} bootstrap; received HTTP $status."
             exit 1
           fi
 
@@ -213,7 +213,7 @@ jobs:
             npm publish "$TARBALL" --access public
           fi
 
-      - name: Bootstrap first Docs package with npm provenance
+      - name: Bootstrap first package publication with npm provenance
         if: ${{ inputs.first_package_bootstrap == true }}
         env:
           EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
@@ -245,9 +245,9 @@ jobs:
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
             --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-            'https://registry.npmjs.org/%40aceshooting%2Flyra-docs')"
+            "https://registry.npmjs.org/%40aceshooting%2F${TAG%@*}")"
           if [[ "$status" != 404 ]]; then
-            echo "::error::Expected npm registry absence (HTTP 404) before Docs bootstrap; received HTTP $status."
+            echo "::error::Expected npm registry absence (HTTP 404) before ${TAG%@*} bootstrap; received HTTP $status."
             exit 1
           fi
           npm publish "$TARBALL" --access public --provenance

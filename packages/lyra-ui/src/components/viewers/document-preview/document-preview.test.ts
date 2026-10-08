@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./document-preview.js";
@@ -382,7 +383,7 @@ describe("text/* and application/json dispatch", () => {
       const el = (await fixture(
         html`<lr-document-preview mime-type="text/plain"></lr-document-preview>`
       )) as LyraDocumentPreview;
-      await aTimeout(10);
+      await twoFrames();
       expect(el.shadowRoot!.querySelector('[part="spinner"]') == null).to.be
         .true;
       expect(el.shadowRoot!.querySelector('[part="body"] pre') == null).to.be
@@ -413,11 +414,11 @@ describe("text/* and application/json dispatch", () => {
           status="converting"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
+      await twoFrames();
       expect(callCount).to.equal(0);
 
       el.status = "ready";
-      await aTimeout(20);
+      await twoFrames();
       await el.updateComplete;
 
       expect(callCount).to.equal(1);
@@ -444,7 +445,7 @@ describe("text/* and application/json dispatch", () => {
           filename="payload.txt"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
+      await twoFrames();
       await el.updateComplete;
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be
@@ -483,12 +484,12 @@ describe("text/* and application/json dispatch", () => {
           mime-type="text/plain"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
+      await twoFrames();
       const parent = el.parentElement!;
       el.remove();
       await aTimeout(0); // a genuine disconnect (a same-task move keeps the fetched text)
       parent.append(el);
-      await aTimeout(20);
+      await twoFrames();
       expect(fetchCount).to.equal(2);
       expect(el.shadowRoot!.querySelector("pre")!.textContent).to.equal(
         "load 2"
@@ -511,7 +512,7 @@ describe("text/* and application/json dispatch", () => {
           mime-type="text/plain"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
+      await twoFrames();
       await el.updateComplete;
       expect(urls).to.deep.equal(["data:text/plain,inline%20data"]);
       expect(el.shadowRoot!.querySelector("pre")?.textContent).to.equal(
@@ -536,7 +537,7 @@ describe("text/* and application/json dispatch", () => {
           status="converting"
         ></lr-document-preview>
       `);
-      await aTimeout(20);
+      await twoFrames();
       expect(called).to.be.false;
     } finally {
       unstub();
@@ -595,7 +596,7 @@ describe("image/* dispatch", () => {
           mime-type="image/png"
         ></lr-document-preview>
       `);
-      await aTimeout(20);
+      await twoFrames();
       expect(called).to.be.false;
     } finally {
       unstub();
@@ -899,7 +900,7 @@ describe("unsupported slot escape hatch", () => {
     await el.updateComplete;
     el.querySelector("#custom-viewer")!.remove();
     // slotchange is async relative to the mutation.
-    await aTimeout(20);
+    await twoFrames();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.exist;
   });
@@ -1183,7 +1184,7 @@ describe("accessibility", () => {
           filename="a.txt"
         ></lr-document-preview>
       `)) as LyraDocumentPreview;
-      await aTimeout(20);
+      await twoFrames();
       await el.updateComplete;
       await expect(el).to.be.accessible();
     } finally {
@@ -1965,7 +1966,7 @@ describe("DOM moves", () => {
       )) as LyraDocumentPreview;
       await waitUntil(() => el.shadowRoot!.textContent!.includes("hello world"));
       host.append(el); // a move: disconnect and reconnect within one task
-      await aTimeout(30);
+      await twoFrames();
       expect(fetches).to.equal(1);
       expect(el.shadowRoot!.textContent).to.include("hello world");
       el.remove();

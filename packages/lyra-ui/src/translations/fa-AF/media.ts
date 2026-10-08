@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'بلندی صدا',
   videoCaptions: 'زیرنویس‌ها',
   videoCaptionsOff: 'خاموش',
-  videoPlaybackSpeed: 'سرعت پخش',
   videoPictureInPicture: 'رفتن به تصویر در تصویر',
   videoExitPictureInPicture: 'خروج از تصویر در تصویر',
   videoEnterFullscreen: 'رفتن به حالت تمام‌صفحه',

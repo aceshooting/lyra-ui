@@ -114,6 +114,9 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
    *  never set) -- never read, validated or rendered by the tag itself. */
   @property() value?: string;
 
+  /** Disables the remove button and suppresses `lr-remove`; a plain tag has no action to gate. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
+
   private removeEnabled = false;
   private changingRemoveAliasAttribute = false;
 
@@ -268,7 +271,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   }
 
   private onRemoveClick = (): void => {
-    if (!this.withRemove) return;
+    if (!this.withRemove || this.disabled) return;
     const repair = captureComposedFocusRepair(this, () => nearestExternalFocusTarget(this));
     this.emit('lr-remove', { value: this.value });
     if (repair && (!this.isConnected || !this.withRemove)) applyComposedFocusRepair(repair);
@@ -335,6 +338,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
     return html`<button
       part="remove-button remove-button__base"
       type="button"
+      ?disabled=${this.disabled}
       aria-label=${this.accessibleRemoveLabel}
       @click=${this.onRemoveClick}
     >

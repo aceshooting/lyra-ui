@@ -12,6 +12,7 @@ import {
   resolveOwnerFetchTarget,
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
@@ -644,6 +645,11 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // reaches DocumentAnchorTarget's own cleanup/live-region wiring
+    // Both chapter buttons disable together, so focus moves to the book mount instead of dropping to the body.
+    if (this.chapterButtonFocused && this.ebookState.kind !== 'ready') {
+      this.shadowRoot?.querySelector<HTMLElement>('[part="mount"]')?.focus();
+    }
+    this.chapterButtonFocused = false;
     this.announcements.transition(
       'load',
       this.ebookState.kind,
@@ -674,8 +680,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
   }
 
+  /** Whether an enabled chapter button had focus when the current update started. */
+  private chapterButtonFocused = false;
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const active = shadowFocusTarget(this);
+    this.chapterButtonFocused = active?.localName === 'button' && !(active as HTMLButtonElement).disabled
+      && active.getAttribute('part')?.endsWith('-button') === true;
     if (changed.has('src')) {
       this.pendingSearchResetEvent ||= this.hasSearchState();
       this.resetSearchState();
@@ -1532,6 +1544,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         </div>
         <div
           part="mount"
+          tabindex="-1"
           role=${viewerSemanticRole(this, 'region') ?? nothing}
           aria-label=${viewerSemanticLabel(this, this.name || this.localize('ebookViewerRegionLabel')) ?? nothing}
           ${ref(this.mountRef)}

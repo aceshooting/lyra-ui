@@ -119,6 +119,7 @@ describe('default render / freeze-frame state', () => {
     });
     el.src = '';
     await el.updateComplete;
+    // wait-reason: asserting lr-error is NOT emitted for an empty src
     await aTimeout(20);
     expect(errorFired).to.be.false;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;

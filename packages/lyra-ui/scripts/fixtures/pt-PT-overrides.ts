@@ -269,8 +269,6 @@ const strings: LyraLocaleStrings = {
   graphQuerySavedQueriesLabel: 'Consultas guardadas',
   graphQuerySaveButton: 'Guardar a consulta',
   filterBarReset: 'Repor os filtros',
-  evaluationRunStatusWaitingInput: 'A aguardar entrada',
-  evaluationRunStatusWaitingApproval: 'A aguardar aprovação',
   evaluationRunToolTraceHeading: 'Rastreio de ferramentas',
   agentRunStatusAnnounce: 'Estado: {status}.',
   graphQueryDeleteWithContext: 'Eliminar {name}',

@@ -76,8 +76,7 @@ host ARIA never creates a competing second slider.
 Assigning `null` to `name` is accepted for mapped source compatibility; it removes the attribute and
 clears to the canonical `''` read value rather than creating a nullable state.
 
-`getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — **new in
-8.0.0.** Renders a consumer-supplied symbol per position instead of the built-in star. It is called
+`getSymbol?: (value: number, selected: boolean) => unknown` (property only, no attribute) — Renders a consumer-supplied symbol per position instead of the built-in star. It is called
 _twice per position_: once for the empty backdrop (`selected` false) and once for the overlay
 clipped to that position's filled fraction (`selected` true), which is what keeps a fractional
 `precision` rendering a partial fill. Return any Lit-renderable value; a plain string renders as
@@ -106,7 +105,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
   no click at all. When the commit _does_ move the value, `change` and `lr-change` are emitted
   first, so a listener reading `value` from any of the three sees the settled rating. A
   non-interactive (`readonly`/`disabled`) rating fires none of them.
-- `lr-hover` — **new in 8.0.0.** `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
+- `lr-hover` — `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
   is the rating that committing the current pointer position _would_ produce — enough to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating
   is settable (neither `disabled`, fieldset-disabled, nor `readonly`). `start` also covers a pointer

@@ -125,10 +125,9 @@ component and a release blocker for a new one.
 
 - **Hover mirrors focus-visible.** Any part with a `:focus-visible` rule, or `cursor: pointer`,
   needs a matching `:hover` rule for the same part — mouse users otherwise get no "this is
-  interactive" signal at all while keyboard users get a focus ring. The single most-repeated
-  defect in this library's history — four separate remediation commits
-  (`git log --oneline --grep 'missing :hover'`) and it still recurs, because new components copy
-  an existing `:focus-visible` block and never add the hover companion. Before shipping any
+  interactive" signal at all while keyboard users get a focus ring. The most-repeated defect
+  in this library: new components copy an existing `:focus-visible` block and never add the hover
+  companion. Before shipping any
   interactive part, run
   `for f in $(grep -l ':focus-visible' src/components/*/*/*.styles.ts); do grep -q ':hover' "$f" || echo "$f"; done`
   and treat a hit on your own component as a blocker.
@@ -197,7 +196,7 @@ component and a release blocker for a new one.
   `cursor: pointer` and changes its background, text or border colour under `:hover`/`:active`
   writes `transition: var(--lr-transition-interactive);` on its *resting* rule — one token
   (`internal/tokens.styles.ts`, next to `--lr-transition-fast`) holding the three-property list
-  that ninety-odd rules used to re-type one at a time. A component that wants it on every part it
+  every rule would otherwise re-type. A component that wants it on every part it
   renders can declare the token on `:where([part])`; its zero specificity lets each part override it.
   Never hand-roll the property list again, and never reach for a duration/easing pair here —
   deriving from `--lr-transition-fast` is what makes the central reduced-motion collapse reach it
@@ -230,9 +229,7 @@ component and a release blocker for a new one.
   `pnpm --filter @aceshooting/lyra-ui exec node scripts/llms-gap-report.mjs <family>` lists
   exactly which names are still undocumented, and CI fails on any that remain. **That gate only
   checks a member's name appears somewhere in its doc section — not that any stated default,
-  number, or "matches sibling X" claim is true.** Those have drifted silently before (a
-  documented 10% quiet-tint that shipped as 8%; a size-tier height parity a floor token made
-  untrue) — verify every numeric default and cross-component parity claim you write into
+  number, or "matches sibling X" claim is true.** Those drift silently — verify every numeric default and cross-component parity claim you write into
   `llms/<family>.md` or a `@cssprop` against the real source or a `getComputedStyle` check.
   Update the package/root component catalog when the component count or summary changes, and
   update exports for new public types/helpers.
@@ -240,17 +237,13 @@ component and a release blocker for a new one.
   TypeScript build does not catch stale stories, prose, CSS-part lists, or a missing manifest
   entry.
 - **A standalone helper function's usage example in `llms/<family>.md` imports from its own
-  granular subpath, never the bare `@aceshooting/lyra-ui` root.** Since 8.0.0 the root registers
-  nothing (the 268 registration side effects live in `src/all.ts`, reached as
-  `@aceshooting/lyra-ui/all.js`), so the rule's original justification — an eager side-effect chain
-  — no longer applies. The rule still holds for a different reason: the root re-exports the whole
-  library's public classes and types (274 component class modules), so importing it just to call
-  one helper (e.g. `confirm()`/`toast()`) puts that entire named-export graph in front of the
-  consumer's bundler and leans the
-  example's correctness entirely on tree-shaking that a consumer's build may not perform (a
-  `sideEffects: false` misconfiguration, a CommonJS interop step, a `dev` build). That mistake
-  measured +79 KB gzip for `confirm()` alone in a real prior incident, back when the root was still
-  side-effectful — a granular subpath cannot regress that way at all. When fixing one helper, check
+  granular subpath, never the bare `@aceshooting/lyra-ui` root.** The root registers nothing
+  (registration side effects live in `src/all.ts`, reached as `@aceshooting/lyra-ui/all.js`), but it
+  re-exports the whole library's public classes and types, so importing it just to call one helper
+  (e.g. `confirm()`/`toast()`) puts that entire named-export graph in front of the consumer's
+  bundler and leans the example's correctness on tree-shaking a consumer's build may not perform
+  (a `sideEffects: false` misconfiguration, a CommonJS interop step, a `dev` build). A granular
+  subpath cannot regress that way. When fixing one helper, check
   every sibling helper in the same file; the fix does not automatically propagate to neighbors.
 - **A new event or a changed event detail needs two more generators** that nothing else reminds
   you about: `pnpm run events` (regenerates `src/events.ts`) and `pnpm run framework-types`

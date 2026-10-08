@@ -220,7 +220,7 @@ it('uses themeable running motion and lets footer actions wrap', async () => {
     </lr-tool-result-dialog>
   `)) as LyraToolResultDialog;
   const glyph = el.shadowRoot!.querySelector('[part="status"] svg')!;
-  expect(getComputedStyle(glyph).animationName).to.equal('lr-tool-result-dialog-spin');
+  expect(getComputedStyle(glyph).animationName).to.equal('lr-tool-status-spin');
   expect(getComputedStyle(glyph).animationDuration).to.equal('2.5s');
   const footer = el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!;
   expect(footer.hidden).to.be.false;

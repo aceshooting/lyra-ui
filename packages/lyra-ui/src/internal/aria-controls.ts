@@ -1,3 +1,4 @@
+import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   asciiWhitespaceTokens,
@@ -749,6 +750,7 @@ interface ResolvedRelationshipState {
   observerGeneration: number;
   observerRoot?: Node;
   observerWatchesRoot: boolean;
+  stopRootObservation?: () => void;
   relationship: ResolvedAriaRelationship;
   target: HTMLElement | null;
 }
@@ -760,6 +762,8 @@ function clearResolvedRelationshipObserver(state: ResolvedRelationshipState): vo
   state.observerDocument = undefined;
   state.observerRoot = undefined;
   state.observerWatchesRoot = false;
+  state.stopRootObservation?.();
+  state.stopRootObservation = undefined;
   try {
     observer?.disconnect();
   } catch {
@@ -805,6 +809,8 @@ function observeResolvedRelationship(state: ResolvedRelationshipState): void {
   state.observerDocument = undefined;
   state.observerRoot = undefined;
   state.observerWatchesRoot = false;
+  state.stopRootObservation?.();
+  state.stopRootObservation = undefined;
   try {
     previousObserver?.disconnect();
   } catch {
@@ -847,11 +853,14 @@ function observeResolvedRelationship(state: ResolvedRelationshipState): void {
       attributeFilter: [state.relationship],
     });
     if (watchesRoot) {
-      observer.observe(root, {
-        attributes: true,
-        attributeFilter: ['id'],
+      state.stopRootObservation = subscribeInheritedAttributes(root, Observer, {
+        attributes: ['id'],
         childList: true,
-        subtree: true,
+        changed: () => {
+          if (!state.active || state.observer !== observer || state.observerGeneration !== generation) return;
+          refreshResolvedRelationship(state);
+          observeResolvedRelationship(state);
+        },
       });
     }
   } catch {

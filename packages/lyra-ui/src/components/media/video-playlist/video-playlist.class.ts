@@ -5,7 +5,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { NativeMediaPreferences } from '../../../internal/media-controller.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
@@ -324,7 +324,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     // platform has already blurred it, and there is no way left to tell "the user was on this row"
     // apart from "focus was never in the playlist at all".
     const navigationHadFocus =
-      activeElementIn(this.shadowRoot)?.getAttribute('part') === 'playlist-item';
+      shadowFocusTarget(this)?.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
     // Once any live child has been observed, it remains the source of truth even if all children
     // are later removed. This prevents stale first-render metadata from reappearing after removal.

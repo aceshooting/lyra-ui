@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
 import { supportsCustomHighlights, acquireHighlightHandle, wrapTextRangeInMarks, unwrapTextMark } from './text-highlights.js';
 import type { LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 
@@ -210,11 +210,11 @@ describe('acquireHighlightHandle', () => {
       if (supportsCustomHighlights()) {
         const registry = (globalThis as unknown as { CSS: { highlights: Map<string, { has(r: Range): boolean }> } }).CSS.highlights;
         expect(registry.get('lr-highlight-flash')!.has(range)).to.be.true;
-        await new Promise((resolve) => setTimeout(resolve, 60));
+        await waitUntil(() => !registry.get('lr-highlight-flash')!.has(range), 'flash cleared');
         expect(registry.get('lr-highlight-flash')!.has(range)).to.be.false;
       } else {
         expect(root.querySelector('mark')).to.exist;
-        await new Promise((resolve) => setTimeout(resolve, 60));
+        await waitUntil(() => !root.querySelector('mark'), 'flash cleared');
         expect(root.querySelector('mark')).to.not.exist;
       }
       handle.release();
@@ -240,6 +240,7 @@ describe('acquireHighlightHandle', () => {
       expect(() => handle.flash(range, NaN)).to.not.throw();
       expect(isPainted(root, range)).to.be.true;
       // Well short of the 1800ms default -- proves NaN didn't collapse to an immediate/zero timeout.
+      // wait-reason: asserting the highlight is still painted well before its (huge/default) duration
       await new Promise((resolve) => setTimeout(resolve, 60));
       expect(isPainted(root, range)).to.be.true;
       handle.release();
@@ -259,7 +260,7 @@ describe('acquireHighlightHandle', () => {
       // Still painted immediately after the call -- a clamped-to-0 duration must still schedule
       // an async timer, never an inline/synchronous clear (mirrors internal/announcer.ts).
       expect(isPainted(root, range)).to.be.true;
-      await new Promise((resolve) => setTimeout(resolve, 40));
+      await waitUntil(() => !isPainted(root, range), 'clamped flash cleared');
       expect(isPainted(root, range)).to.be.false;
     } finally {
       root.remove();
@@ -274,6 +275,7 @@ describe('acquireHighlightHandle', () => {
       const range = rangeOverText(root, 'target');
       expect(() => handle.flash(range, Infinity)).to.not.throw();
       expect(isPainted(root, range)).to.be.true;
+      // wait-reason: asserting the highlight is still painted well before its (huge/default) duration
       await new Promise((resolve) => setTimeout(resolve, 60));
       expect(isPainted(root, range)).to.be.true;
       handle.release();
@@ -535,7 +537,7 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
       const range = rangeOverText(root, 'cancel');
       handle.flash(range, 20);
       expect(root.querySelector('mark[data-lr-highlight-name="lr-highlight-flash"]')).to.exist;
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await waitUntil(() => !root.querySelector('mark'), 'flash cleared');
       expect(root.querySelector('mark')).to.not.exist;
 
       // second flash, released before its timer would naturally fire.

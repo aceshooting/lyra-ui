@@ -1,14 +1,3 @@
-## Breaking changes in 9.0.0
-
-TypeScript-only rename (no attribute/property/default change): `lr-divider`'s exported
-`DividerOrientation` type is now `LyraDividerOrientation`.
-
-TypeScript-only renames (no attribute/property/default change) across the `lr-format-number`/
-`lr-format-date`/`lr-format-bytes`/`lr-relative-time` family: `FormatNumberType`,
-`FormatNumberNotation`, `FormatCurrencyDisplay`, `FormatBytesUnit`, `FormatDisplay`, `FormatDateHour`,
-`FormatDateStyle`, `FormatDateText`, `FormatDateNumeric`, `FormatDateMonth`, `FormatDateTimeZoneName`,
-`RelativeTimeNumeric`, and `RelativeTimeUnit` are now `Lyra*`-prefixed equivalents.
-
 ## `lr-export-button`
 
 CSV/JSON download button with extensible event-driven formats — either single-format (click exports
@@ -112,13 +101,13 @@ corner radius without a `::part(trigger)` rule. Plus shared
 tokens, including `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-viewport ceiling the `menu`'s max-inline-size is `min()`ed
 against, alongside its own `20rem` cap and the positioner's available space. See `lr-tour` for the
 shared-clamp note.
-The menu popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The menu popup is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
-`--lr-positioning-strategy` (16.0.0) — the format menu reads this same cascading `absolute`/`fixed`
+`--lr-positioning-strategy` — the format menu reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
 default when nothing is set. There is no per-instance `positioning-strategy` property on
 `<lr-export-button>`; set the custom property on `:root`, a theme, or one clipping ancestor to
@@ -255,9 +244,9 @@ buttons.
   icon-only trigger always remains named; remove the attribute or assign `null` for the same
   fallback.
 - `disabled: boolean = false` (reflected)
-- `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
+- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
   confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
-  `1000` rather than leaving the state stuck; a negative one clamps to `0`.
+  `1500` rather than leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
@@ -291,7 +280,7 @@ the built-in button. Exactly one named icon is rendered at a time.
 
 **CSS parts:**
 
-- `base` / `button` — the built-in trigger, a composed `<lr-icon-button>` as of 16.0.0. It owns the
+- `base` / `button` — the built-in trigger, a composed `<lr-icon-button>`. It owns the
   accessible name, the activation and every state part below; its background, radius, hover/press
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
 - `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
@@ -370,12 +359,10 @@ import type {
 
 **Known gotchas:**
 
-- **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
-  not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
-  rejection renders the failure glyph instead, announces the localized failure text through the
-  shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
-  `lr-copy` is now the success-only fulfilled outcome; code that tracked activation attempts from
-  that event should instead track the initiating click separately.
+- The button enters "Copied" only after `navigator.clipboard.writeText()` resolves. A rejection
+  renders the failure glyph, announces the localized failure text through the shared polite region
+  mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`. `lr-copy` is the
+  success-only outcome; track activation attempts from the initiating click.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
   write is attempted. `from` always wins over `value`, including when it is invalid.
 - `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw
@@ -478,7 +465,7 @@ malformed or accessor-backed entries are skipped, a valid prefix remains active,
 unusable value falls back to an empty filter. A new array with the same names does not rebuild the
 observer.
 
-**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
+**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen. Changing the observed options delivers any records already queued under the old options first.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
 `MutationRecord` retains identity.
 
@@ -1024,7 +1011,7 @@ row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-v
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
 available space. See `lr-tour` for the shared-clamp note.
 
-The popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The popup is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
@@ -1033,7 +1020,7 @@ The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather t
 decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
 value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
 
-`--lr-positioning-strategy` (16.0.0) — the popup reads this same cascading `absolute`/`fixed`
+`--lr-positioning-strategy` — the popup reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
 default when nothing is set. There is no per-instance `positioning-strategy` property on
 `<lr-mention-popover>`; set the custom property on `:root`, a theme, or one clipping ancestor to
@@ -1603,8 +1590,7 @@ resolution and `Intl`-instance caching are as described in
 
 - `date: string | number | Date = new Date()` — unset means the construction-time current instant.
   Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
-  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in
-  8.0.0:** the former empty-string default rendered fallback content
+  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set
@@ -1636,8 +1622,7 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and
 - `value: number = 0`
 - `unit: 'byte' | 'bit' = 'byte'`
 - `display: 'long' | 'short' | 'narrow' = 'short'` — forwarded as `unitDisplay`
-- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. **Changed in 8.0.0:**
-  the former Lyra default was `1024`; it remains an opt-in extension
+- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. `1024` is the opt-in binary extension
 - `decimals: number = 1` — maximum fraction digits on the scaled amount
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.
@@ -1658,8 +1643,7 @@ are as described under `lr-format-number` above.
 
 - `date: string | number | Date = new Date()` — the target instant; unset means now. Numeric HTML
   attributes are epoch milliseconds, matching numeric property assignment (including zero and
-  negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in 8.0.0:** the
-  former empty-string default rendered no content
+  negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
 - `unit: 'second'|'minute'|'hour'|'day'|'week'|'month'|'quarter'|'year'|'auto' = 'auto'` — `'auto'`
   picks the largest unit whose own length fits inside the elapsed time, then rounds; naming a unit
   forces it (so a 90-minute delta with `unit="day"` rounds to "today"/0 days)
@@ -2089,7 +2073,7 @@ shared ceiling that keeps any floating surface inside a narrow viewport. `lr-tou
 retuning `--lr-theme-popover-viewport-clamp` once at `:root` narrows or widens all three together
 rather than per component.
 
-`--lr-positioning-strategy` (16.0.0) — the step popover reads this same cascading `absolute`/`fixed`
+`--lr-positioning-strategy` — the step popover reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when a step is (re)positioned, falling back to its own `fixed`
 default when nothing is set. There is no per-instance `positioning-strategy` property on `<lr-tour>`;
 set the custom property on `:root`, a theme, or one clipping ancestor to change every unset tour

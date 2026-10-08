@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
@@ -784,7 +785,7 @@ describe("lr-email-viewer", () => {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="body"]') !== null).to.be.true;
     } finally {

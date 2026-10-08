@@ -1,7 +1,10 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import {
+  observeOverlayAnchorIdentity,
   observeOverlayAnchorRoots,
+  OverlayAnchorIdentity,
   OverlayDelayTimer,
+  resolveOverlayInteractionTrigger,
   OverlayTransitionGate,
   resolveOverlayTriggerById,
   settleOverlayTransition,
@@ -123,4 +126,70 @@ it('rejects synchronous transition failures and allows a later request in the sa
   let closed = false;
   await gate.request(false, () => { closed = true; });
   expect(closed).to.equal(true);
+});
+
+it('reports a removed direct anchor once and the lost anchor property', async () => {
+  const host = document.createElement('div');
+  const anchor = document.createElement('button');
+  document.body.append(host, anchor);
+  const identity = new OverlayAnchorIdentity();
+  const removals: boolean[] = [];
+  identity.observe(host, anchor, '', () => anchor, (removed) => removals.push(removed));
+  try {
+    anchor.remove();
+    await waitUntil(() => removals.length > 0);
+    expect(removals[0]).to.equal(true);
+    expect(identity.lostAnchorProperty(new Map([['anchor', anchor]]), null)).to.equal(false);
+  } finally {
+    identity.stop();
+    host.remove();
+  }
+});
+
+it('resolves the interaction trigger as virtual none, slotted, then for target', () => {
+  const host = document.createElement('div');
+  const target = document.createElement('button');
+  const slotted = document.createElement('span');
+  target.id = 'for-target';
+  document.body.append(host, target);
+  try {
+    expect(resolveOverlayInteractionTrigger(host, {}, slotted, 'for-target') === undefined).to.equal(true);
+    expect(resolveOverlayInteractionTrigger(host, undefined, slotted, 'for-target') === slotted).to.equal(true);
+    expect(resolveOverlayInteractionTrigger(host, undefined, undefined, 'for-target') === target).to.equal(true);
+  } finally {
+    host.remove();
+    target.remove();
+  }
+});
+
+it('shares one MutationObserver across every anchor-identity watcher of a root', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = host.attachShadow({ mode: 'open' });
+  const inner = document.createElement('span');
+  root.append(inner);
+  const Native = window.MutationObserver;
+  let constructed = 0;
+  window.MutationObserver = class extends Native {
+    constructor(callback: MutationCallback) {
+      super(callback);
+      constructed += 1;
+    }
+  };
+  let first = 0;
+  let second = 0;
+  let stopFirst: () => void;
+  let stopSecond: () => void;
+  try {
+    stopFirst = observeOverlayAnchorIdentity(inner, () => { first += 1; });
+    stopSecond = observeOverlayAnchorIdentity(inner, () => { second += 1; });
+  } finally {
+    window.MutationObserver = Native;
+  }
+  expect(constructed).to.equal(1);
+  inner.id = 'changed';
+  await waitUntil(() => first > 0 && second > 0);
+  stopFirst();
+  stopSecond();
+  host.remove();
 });

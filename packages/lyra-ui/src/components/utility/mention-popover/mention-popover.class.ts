@@ -18,7 +18,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './mention-popover.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -1014,7 +1014,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (!active?.isConnected || !this.callFocusOwner(ownsFocus)) return false;
     this.captureAnchorCaret();
     active.focus({ preventScroll: true });
-    if (activeElementIn(this.shadowRoot) !== active) return false;
+    if (shadowFocusTarget(this) !== active) return false;
     this._focusOwnerPredicate = ownsFocus;
     this._ownsFocus = true;
     return true;
@@ -1055,7 +1055,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private fallbackFocusIsStillOwned(): boolean {
-    return this.callFocusOwner(this._focusOwnerPredicate) && activeElementIn(this.shadowRoot) !== null;
+    return this.callFocusOwner(this._focusOwnerPredicate) && shadowFocusTarget(this) !== null;
   }
 
   /** The internal `id` of the `role="listbox"` popup. Like

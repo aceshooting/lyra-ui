@@ -1520,6 +1520,7 @@ describe("lr-textarea with-count live announcement", () => {
     (el as unknown as { countAnnounceDelay: number }).countAnnounceDelay = 40;
     textarea.value = "abc";
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    // wait-reason: asserting no count announcement fires after a fast-path edit (negative assertion)
     await new Promise((resolve) => setTimeout(resolve, 160));
 
     expect(sink.childElementCount).to.equal(0);
@@ -1708,7 +1709,7 @@ describe("lr-textarea debounce", () => {
     expect(rawInputs).to.deep.equal(["a", "ab", "abc"]);
     expect(settled).to.have.length(0);
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await waitUntil(() => settled.length === 1, 'the debounced settle fires once');
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: "abc" });
     expect(settled[0]!.cancelable).to.be.false;
@@ -1737,6 +1738,7 @@ describe("lr-textarea debounce", () => {
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: "zz" });
 
+    // wait-reason: asserting no stray settle follows the blur flush (negative assertion)
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(settled).to.have.length(1);
   });
@@ -1797,7 +1799,7 @@ describe("lr-textarea debounce", () => {
     await el.updateComplete;
 
     expect(settled, "a same-value rebind must not cancel the pending settle").to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await waitUntil(() => settled.length === 1, 'the same-value rebind settle fires');
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: "typed" });
   });
@@ -1822,7 +1824,7 @@ describe("lr-textarea debounce", () => {
     await el.updateComplete;
 
     expect(settled, "a null write matching an already-empty pending value must not cancel").to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await waitUntil(() => settled.length === 1, 'the empty-value settle fires');
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: "" });
   });
@@ -1846,6 +1848,7 @@ describe("lr-textarea debounce", () => {
     el.value = "x";
     await el.updateComplete;
 
+    // wait-reason: asserting the cancelled debounce never settles (negative assertion)
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(settled).to.have.length(0);
     expect(el.value).to.equal("x");
@@ -1868,6 +1871,7 @@ describe("lr-textarea debounce", () => {
     await el.updateComplete;
     el.remove();
 
+    // wait-reason: asserting a disconnected textarea never settles (negative assertion)
     await new Promise((resolve) => setTimeout(resolve, 250));
     expect(settled).to.have.length(0);
   });
@@ -1893,6 +1897,7 @@ describe("lr-textarea debounce", () => {
       await el.updateComplete;
       expect(rawInputs).to.deep.equal(["abc"]);
 
+      // wait-reason: asserting no settle fires with debounce unset or 0 (negative assertion)
       await new Promise((resolve) => setTimeout(resolve, 250));
       expect(settled).to.have.length(0);
     }

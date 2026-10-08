@@ -82,3 +82,20 @@ it('retains native fieldset-disabled remove paint while preserving enabled point
     expect(read()).to.not.deep.equal(enabledRest);
   } finally { await resetMouse(); }
 });
+
+it('does no work when the same MIME list or files array is re-assigned', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input></lr-file-input>`);
+  const allowed = ['text/plain'];
+  const forbidden = ['image/png'];
+  const files = [new File(['x'], 'a.txt', { type: 'text/plain' })];
+  el.allowedMimeTypes = allowed;
+  el.forbiddenMimeTypes = forbidden;
+  el.files = files;
+  await el.updateComplete;
+  const snapshot = el.allowedMimeTypes;
+  el.allowedMimeTypes = allowed;
+  el.forbiddenMimeTypes = forbidden;
+  el.files = files;
+  expect(el.isUpdatePending).to.equal(false);
+  expect(el.allowedMimeTypes).to.equal(snapshot);
+});

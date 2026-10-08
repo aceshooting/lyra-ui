@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const componentsRoot = path.join(packageDir, 'src', 'components');
@@ -37,18 +38,11 @@ const EXEMPT_RE = /^\s*\/\/\s*numeric-guard-exempt:\s*(.+?)\s*$/;
 const LOOKBACK_LINES = 6;
 const LOOKAHEAD_LINES = 6;
 
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return walk(fullPath);
-    return entry.name.endsWith('.ts') &&
-      !entry.name.endsWith('.test.ts') &&
-      !entry.name.endsWith('.stories.ts') &&
-      !entry.name.endsWith('.d.ts')
-      ? [fullPath]
-      : [];
+const walkSources = (directory) =>
+  walk(directory).filter((file) => {
+    const name = path.basename(file);
+    return name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.stories.ts') && !name.endsWith('.d.ts');
   });
-}
 
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -192,7 +186,7 @@ function exemptionReason(lines, siteLine) {
   return null;
 }
 
-const sourceFiles = [...walk(componentsRoot), ...walk(internalRoot)].sort();
+const sourceFiles = [...walkSources(componentsRoot), ...walkSources(internalRoot)].sort();
 
 const flagged = [];
 const exempted = [];

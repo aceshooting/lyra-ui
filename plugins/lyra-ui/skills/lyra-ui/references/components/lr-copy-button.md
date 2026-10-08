@@ -6,7 +6,7 @@
 - **Class** `LyraCopyButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -53,9 +53,9 @@ buttons.
   icon-only trigger always remains named; remove the attribute or assign `null` for the same
   fallback.
 - `disabled: boolean = false` (reflected)
-- `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
+- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
   confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
-  `1000` rather than leaving the state stuck; a negative one clamps to `0`.
+  `1500` rather than leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
@@ -89,7 +89,7 @@ the built-in button. Exactly one named icon is rendered at a time.
 
 **CSS parts:**
 
-- `base` / `button` — the built-in trigger, a composed `<lr-icon-button>` as of 16.0.0. It owns the
+- `base` / `button` — the built-in trigger, a composed `<lr-icon-button>`. It owns the
   accessible name, the activation and every state part below; its background, radius, hover/press
   mixes, focus ring and hit-area floor come from `--lr-icon-button-*`.
 - `base-control` — the composed `<lr-icon-button>`'s own native `<button>`. A rule that set
@@ -168,12 +168,10 @@ import type {
 
 **Known gotchas:**
 
-- **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
-  not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
-  rejection renders the failure glyph instead, announces the localized failure text through the
-  shared polite region mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`.
-  `lr-copy` is now the success-only fulfilled outcome; code that tracked activation attempts from
-  that event should instead track the initiating click separately.
+- The button enters "Copied" only after `navigator.clipboard.writeText()` resolves. A rejection
+  renders the failure glyph, announces the localized failure text through the shared polite region
+  mirrored by `[part="feedback"]`, and emits `lr-error` plus `lr-copy-error`. `lr-copy` is the
+  success-only outcome; track activation attempts from the initiating click.
 - An empty `value`, missing `from` target/member, or empty resolved source is an error; no clipboard
   write is attempted. `from` always wins over `value`, including when it is invalid.
 - `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw

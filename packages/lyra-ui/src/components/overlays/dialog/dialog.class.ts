@@ -14,7 +14,11 @@ import {
   type OverlayDeactivateOptions,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
+import {
+  cancelDeferredFocusReturn,
+  captureFocusReturnOpener,
+  scheduleDeferredFocusReturn,
+} from '../../../internal/deferred-focus-return.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
   composedAccessibilityText,
@@ -372,7 +376,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private focusReturnOpener: HTMLElement | null = null;
   /** The pending close's `lr-after-hide` settle, awaited by the deferred focus return. */
   private hideSettled?: Promise<void>;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: (event) => this.onNativeCancel(event),
     onUnexpectedClose: (carrier) => {
@@ -438,7 +441,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (changed.has('open')) {
       this.flushPendingScrollLockRelease();
       if (this.open) {
-        this.deferredFocusReturn.cancel();
+        cancelDeferredFocusReturn(this);
         this.focusReturnOpener = captureFocusReturnOpener(this);
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
@@ -451,7 +454,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         const opener = this.focusReturnOpener;
         this.focusReturnOpener = null;
         if (returnsFocus && opener && this.isConnected) {
-          this.deferredFocusReturn.schedule({
+          scheduleDeferredFocusReturn({
             host: this,
             candidates: () => [opener],
             settled: this.hideSettled,
@@ -513,7 +516,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     super.disconnectedCallback();
     this.overlay?.suspend();
     this.nativeModal.hide();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
     // element is no longer part of. A scroll lock held past `willUpdate` to survive that

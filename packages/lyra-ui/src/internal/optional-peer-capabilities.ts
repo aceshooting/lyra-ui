@@ -62,6 +62,8 @@ export interface OptionalPeerLoader<Capability> {
   get(): Promise<Capability | null>;
   /** Forgets the shared load. */
   clear(): void;
+  /** Replaces the shared import (tests simulating a missing peer); `undefined` restores `load`. */
+  override(importer?: () => Promise<unknown>): void;
 }
 
 /**
@@ -73,7 +75,8 @@ export function createOptionalPeerLoader<Capability>(
   options: OptionalPeerLoaderOptions<Capability>,
 ): OptionalPeerLoader<Capability> {
   let shared: Promise<Capability | null> | undefined;
-  const loadWith = async (importer = options.load): Promise<Capability | null> => {
+  let importerOverride: (() => Promise<unknown>) | undefined;
+  const loadWith = async (importer = importerOverride ?? options.load): Promise<Capability | null> => {
     let module: unknown;
     try {
       module = await importer();
@@ -98,6 +101,10 @@ export function createOptionalPeerLoader<Capability>(
       return shared;
     },
     clear() {
+      shared = undefined;
+    },
+    override(importer) {
+      importerOverride = importer;
       shared = undefined;
     },
   };

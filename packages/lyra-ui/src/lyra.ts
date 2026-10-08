@@ -719,8 +719,8 @@ export type {
   TypingIndicatorShape,
   TypingIndicatorSize,
 } from './components/conversation/typing-indicator/typing-indicator.class.js';
+export type { ToolStatus } from './components/agent-tools/tool-status.js';
 export type {
-  ToolCallStatus,
   ToolChipSelectDetail,
   LyraToolCallChipEventMap,
 } from './components/agent-tools/tool-call-chip/tool-call-chip.class.js';
@@ -744,7 +744,6 @@ export type {
   ToolRenderContext,
 } from './components/agent-tools/tool-result-view/registry.js';
 export type {
-  ToolResultStatus,
   ToolResultDialogCloseReason,
   LyraToolResultDialogEventMap,
   LyraToolResultDialogCloseDetail,
@@ -769,6 +768,8 @@ export type {
   StreamStatusPhase,
 } from './components/conversation/stream-status/stream-status.class.js';
 export type { LyraStreamPhase } from './internal/stream-phase.js';
+export type { SemanticVariant } from './internal/semantic-variant.js';
+export type { ApprovalWaitUntil } from './internal/approval-wait-until.js';
 export {
   VIRTUAL_LIST_ROW_ATTRIBUTE,
   VIRTUAL_LIST_STICKY_ATTRIBUTE,
@@ -869,6 +870,7 @@ export type {
   ToolApprovalDialogWrap,
   ToolApprovalDialogCloseReason,
   ToolApprovalDialogPending,
+  ToolApprovalDialogWaitUntil,
   LyraToolApprovalDialogCloseDetail,
 } from './components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.js';
 export type {

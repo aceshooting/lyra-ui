@@ -83,11 +83,11 @@ renders at the start of the action row, before Deny/Edit/Approve.
 void` and `close(reason = 'api'): void` close through the same reasoned lifecycle, emit `lr-close`,
 and return focus to whatever had it before opening; all are no-ops when already in the target state.
 
-**Events:** `lr-approve-request` (`detail: { args: unknown }` — the current, already-parsed arguments: the
+**Events:** `lr-approve-request` (`detail: { args: unknown, waitUntil }` — the current, already-parsed arguments: the
 original `args` prop, or the user's edited-and-validated version if an edit was in progress.
 Cancelable: a listener calling `preventDefault()` sets `pendingAction` to `'approve'` instead of
 closing; otherwise followed by `lr-close` with reason `'approve'`), `lr-deny-request`
-(`detail: null`, cancelable, with the same `pendingAction` mechanism,
+(`detail: { waitUntil }`, cancelable, with the same `pendingAction` mechanism,
 setting `pendingAction` to `'deny'`; otherwise followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: { reason: ToolApprovalDialogCloseReason }` — fired exactly once per dismissal, via Escape, an opted-in
 backdrop click, the Approve/Deny buttons, or a `close()` call; not dialog-scoped — nesting this
@@ -95,14 +95,16 @@ dialog inside a consumer's own `<lr-dialog>` means that dialog's `lr-close` list
 this event, see `<lr-dialog>`'s `lr-close` section in `overlays.md` for the full list of emitters
 and the target-filtering guard), and no-detail `focus`/`blur` events
 re-dispatched when the raw-JSON editor gains or loses focus.
-`lr-close` remains the non-cancelable dismissal notification.
+`lr-close` remains the non-cancelable dismissal notification. Non-cancelable `lr-decision-settled`
+(`detail: { decision: 'approved' | 'denied' }`) follows the `lr-close` whose reason is `'approve'` or
+`'deny'` on every path that reaches a decision.
 
-`waitUntil()` is `<lr-confirm-bar>`-only and this dialog does not carry it. The two components share
-the `lr-approve-request`/`lr-deny-request` event *names*, so the generated `HTMLElementEventMap['lr-approve-request']` is the
-union of both details and only the confirm bar's arm has the field: a listener bound to the shared
-name (`document.addEventListener('lr-approve-request', ...)`) must narrow on `event.target` before reaching
-for it, while one bound through `LyraConfirmBarEventMap`/`LyraToolApprovalDialogEventMap` already
-sees the right detail. Hold a decision open here with `preventDefault()` + `pendingAction`, then
+`waitUntil(promise: Promise<unknown>) => void` is ExtendableEvent-style and has the same contract as
+`<lr-confirm-bar>`'s (see that section): call it synchronously from an `lr-approve-request`/
+`lr-deny-request` listener to hold the decision pending (`pendingAction`) until every passed promise
+settles; a rejection restores the undecided state, a later call warns and does nothing. The event names
+are shared with the confirm bar, so a listener bound to the shared name should still narrow on
+`event.target`. Alternatively hold a decision open with `preventDefault()` + `pendingAction`, then
 finalize with `close('approve'|'deny')` or bounce back by clearing `.pendingAction`.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),

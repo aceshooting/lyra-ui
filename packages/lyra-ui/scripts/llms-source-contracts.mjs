@@ -95,7 +95,7 @@ function publicPattern(node, isInternal = () => false) {
     return { type: 'RestElement', argument: publicPattern(node.argument, isInternal) };
   }
   if (node.type === 'ObjectPattern') {
-    const properties = (node.properties ?? [])
+    const unsortedProperties = (node.properties ?? [])
       .filter((property) => !isInternal(property))
       .map((property) => {
         if (property.type === 'RestElement') return { type: 'RestElement' };
@@ -119,8 +119,8 @@ function publicPattern(node, isInternal = () => false) {
                 }
               : null;
         return { type: 'Property', key, nested };
-      })
-      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+      });
+    const properties = sortBySerialization(unsortedProperties);
     return {
       type: 'ObjectPattern',
       optional: node.optional === true,
@@ -1426,11 +1426,9 @@ export function sourceContractCensus(
         });
       }
     }
-    const uniqueDependencyEdges = [...new Map(
+    const uniqueDependencyEdges = sortBySerialization([...new Map(
       dependencyEdges.map((edge) => [JSON.stringify(edge), edge]),
-    ).values()].sort((left, right) =>
-      JSON.stringify(left).localeCompare(JSON.stringify(right)),
-    );
+    ).values()]);
     const fingerprint = createHash('sha256')
       .update(JSON.stringify({
         signature: canonicalSignatures(contract.declarations, contract.isInternal),

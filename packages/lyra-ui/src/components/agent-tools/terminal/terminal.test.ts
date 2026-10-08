@@ -1,6 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { glyphRect } from '../../../../test/geometry.js';
-import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { nextFrame } from '../../../../test/frames.js';
 import './terminal.js';
 import type { LyraTerminal } from './terminal.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
@@ -88,6 +89,17 @@ async function assertTokenizedPointerBackground(
   }
 }
 
+
+/** Lets <lr-virtual-list>'s asynchronous row measurement / range events settle after a write():
+ *  waits for a rendered row, then a few frames for the per-row ResizeObserver batches. */
+async function settleVirtualList(el: LyraTerminal): Promise<void> {
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+  await list.updateComplete;
+  await waitUntil(() => list.shadowRoot!.querySelector('[data-line-number]') !== null, 'virtual list rendered a row', { timeout: 3000 });
+  for (let i = 0; i < 6; i++) await nextFrame();
+}
+
 describe('lr-terminal', () => {
   it('defaults to follow=true, withoutWrap=false, withoutCopyButton=false, maxScrollback=5000', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
@@ -128,6 +140,22 @@ describe('lr-terminal', () => {
     expect(el.getPlainText()).to.equal('reset');
   });
 
+  it('a burst of writes snapshots the line list once per render, not once per write', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    const priv = el as unknown as { lines: unknown[]; linesSnapshot: unknown[] | null };
+    await el.updateComplete;
+    el.write('a\n');
+    expect(priv.linesSnapshot).to.equal(null);
+    el.write('b\n');
+    el.write('c');
+    expect(priv.linesSnapshot).to.equal(null);
+    await el.updateComplete;
+    const snapshot = priv.linesSnapshot;
+    expect(snapshot).to.not.equal(null);
+    expect(priv.lines).to.equal(snapshot);
+    expect(snapshot!.length).to.equal(3);
+  });
+
   it('keeps the terminal virtual-list key callback stable while its per-render item callback stays fresh', async () => {
     const el = await fixture<LyraTerminal>(html`<lr-terminal without-wrap></lr-terminal>`);
     el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
@@ -151,7 +179,7 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
     await list.updateComplete;
-    await aTimeout(100);
+    await settleVirtualList(el);
     const items = list.items;
     const rebuilds = recordVirtualListOffsetRebuilds(list);
     try {
@@ -481,7 +509,7 @@ describe('lr-terminal', () => {
     // range below, avoids a late genuine event racing the mocked one (this component reacts to
     // virtual-list's real range exactly the same way it reacts to a mocked one, so whichever lands
     // last wins the assertion).
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await settleVirtualList(term);
     const listener = oneEvent(term, 'lr-follow-change');
     list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail: { start: 0, end: 3 }, bubbles: true, composed: true }));
     const event = (await listener) as CustomEvent<{ following: boolean }>;
@@ -787,7 +815,7 @@ describe('lr-terminal', () => {
     const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
     el.write('build started');
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
+    await waitUntil(() => sinkTexts('polite').length > 0, 'announcement reached the sink');
     expect(sinkTexts('polite')).to.deep.equal(['build started']);
     const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
     // The retained part is a styling/inspection mirror only -- it must not be a second live region,
@@ -801,9 +829,9 @@ describe('lr-terminal', () => {
   it('announces a repeated identical chunk twice instead of silently rewriting one text node', async () => {
     const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
     el.write('same line');
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await waitUntil(() => sinkTexts('polite').length === 1, 'first chunk announced');
     el.write('same line');
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await waitUntil(() => sinkTexts('polite').length === 2, 'second chunk announced');
     expect(sinkTexts('polite')).to.deep.equal(['same line', 'same line']);
   });
 
@@ -821,6 +849,7 @@ describe('lr-terminal', () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('quiet output');
     await el.updateComplete;
+    // wait-reason: asserting nothing is announced; the announcer throttle is a real timer
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('');
   });
@@ -835,6 +864,7 @@ describe('lr-terminal', () => {
     expect((el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).textContent!.trim()).to.equal(
       'Copy',
     );
+    // wait-reason: asserting nothing is announced; the announcer throttle is a real timer
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('');
   });
@@ -1061,6 +1091,7 @@ describe('lr-terminal', () => {
     let fired = false;
     el.addEventListener('lr-text-select', () => (fired = true));
     el.shadowRoot!.querySelector('[part="viewport"]')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    // wait-reason: asserting no lr-text-select fires; drain one macrotask
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fired).to.be.false;
   });
@@ -1261,8 +1292,7 @@ describe('lr-terminal', () => {
       button.click();
       await settleClipboard(el);
       expect(button.textContent!.trim()).to.equal('Copied!');
-      await new Promise((resolve) => setTimeout(resolve, 1600));
-      await el.updateComplete;
+      await waitUntil(() => button.textContent!.trim() === 'Copy', 'copied feedback reverted', { timeout: 5000 });
       expect(button.textContent!.trim()).to.equal('Copy');
     } finally {
       if (original) Object.defineProperty(navigator, 'clipboard', original);
@@ -1275,8 +1305,8 @@ describe('lr-terminal', () => {
     el.write('first chunk');
     el.write('second chunk');
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
     const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
+    await waitUntil(() => region.textContent !== '', 'announcement rendered');
     expect(region.textContent).to.equal('first chunk\nsecond chunk');
   });
 
@@ -1284,8 +1314,11 @@ describe('lr-terminal', () => {
     const el = await fixture<LyraTerminal>(html`<lr-terminal announce-output></lr-terminal>`);
     el.write('\x1b[31mabc\rX\tY\bZ\x1b[0m');
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 20));
     const visible = 'Xbc     Z';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="announcer"]')!.textContent === visible,
+      'announcement rendered',
+    );
     expect(el.getPlainText()).to.equal(visible);
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal(visible);
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).not.to.match(/[\u001b\r\t\b]/);
@@ -1297,19 +1330,21 @@ describe('lr-terminal', () => {
 
     el.write('cleared before speech');
     el.clear();
+    // wait-reason: asserting nothing is announced; the announcer throttle is a real timer
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(region.textContent).to.equal('');
 
     el.write('stale before replacement');
     el.content = 'replacement output';
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await waitUntil(() => region.textContent === 'replacement output', 'replacement announced');
     expect(region.textContent).to.equal('replacement output');
 
     region.textContent = '';
     el.write('disabled before speech');
     el.announceOutput = false;
     await el.updateComplete;
+    // wait-reason: asserting nothing is announced; the announcer throttle is a real timer
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(region.textContent).to.equal('');
   });
@@ -1487,7 +1522,7 @@ describe('lr-terminal', () => {
       // hover/press test below for why `follow` is set only after this settling delay.
       el.write('a\nb\nc');
       await el.updateComplete;
-      await aTimeout(100);
+      await settleVirtualList(el);
       el.follow = false;
       await el.updateComplete;
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
@@ -1555,7 +1590,7 @@ describe('lr-terminal', () => {
       // silently undone a few milliseconds later and the pill disappears mid-test.
       el.write('a\nb\nc');
       await el.updateComplete;
-      await aTimeout(100);
+      await settleVirtualList(el);
       el.follow = false;
       await el.updateComplete;
       // Re-queried on every read rather than captured once: this component re-renders while the
@@ -1612,7 +1647,7 @@ describe('lr-terminal', () => {
     // initial visible-range/row-measurement events are still settling right after write(), and
     // an early getBoundingClientRect() races that settling -- the row can shift under the
     // pointer between this capture and sendMouse's round trip, landing the hover on nothing.
-    await aTimeout(100);
+    await settleVirtualList(el);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = (): HTMLElement => list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
     const rest = getComputedStyle(line()).backgroundColor;
@@ -1639,7 +1674,7 @@ describe('lr-terminal', () => {
     el.write('danger line');
     el.highlights = [{ id: 'danger', anchor: { kind: 'line-range', start: 1 }, tone: 'danger' }];
     await el.updateComplete;
-    await aTimeout(100);
+    await settleVirtualList(el);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     const line = list.shadowRoot!.querySelector<HTMLElement>('[data-line-number="1"]')!;
     expect(line.getAttribute('part')).to.contain('line-highlight-danger');
@@ -1713,7 +1748,7 @@ describe('size / frame escape hatches', () => {
    *  `line` csspart note), and the list's initial range/row measurement is still settling right
    *  after a write -- the same wait idiom the hover tests above use. */
   async function firstLine(el: LyraTerminal): Promise<HTMLElement> {
-    await aTimeout(100);
+    await settleVirtualList(el);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
     return list.shadowRoot!.querySelector('[data-line-number="1"]') as HTMLElement;
   }

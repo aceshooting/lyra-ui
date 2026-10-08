@@ -6,6 +6,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -17,15 +18,19 @@ import {
   setFormOwner,
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DropSessionController, isFileValue, readFileList, type DropSessionState } from '../../../internal/drop-session-controller.js';
+import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
-import { classifyFiles, freezeDetail, handleDrop, type FileIntakeResult } from './file-intake.js';
+import {
+  classifyFiles, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, outcomeText, snapshotMimeTypes,
+  type FileIntakeResult,
+} from './file-intake.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize, localizedNumberLabel } from '../attachment-chip/file-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -88,28 +93,6 @@ export {
   DEFAULT_MAX_TOTAL_SIZE_BYTES,
 } from './file-intake.js';
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
-const MAX_MIME_TYPES = 10_000;
-const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
-
-function snapshotMimeTypes(value: unknown): readonly string[] {
-  try {
-    if (!Array.isArray(value)) return EMPTY_MIME_TYPES;
-    const count = Math.min(value.length, MAX_MIME_TYPES);
-    const values: string[] = [];
-    for (let index = 0; index < count; index++) {
-      try {
-        const candidate = value[index];
-        if (typeof candidate === 'string') values.push(candidate);
-      } catch {
-        // A hostile indexed getter invalidates only its own entry.
-      }
-    }
-    return values.length ? Object.freeze(values) : EMPTY_MIME_TYPES;
-  } catch {
-    return EMPTY_MIME_TYPES;
-  }
-}
-
 const INTERACTIVE_CONTENT_SELECTOR =
   'a[href], area[href], button, input, select, textarea, summary, ' +
   '[contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], ' +
@@ -287,7 +270,7 @@ export interface LyraFileInputEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
+export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -351,7 +334,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     required: { type: Boolean, reflect: true, noAccessor: true },
   };
 
-  @property({ type: Boolean, reflect: true }) multiple = false;
+  @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
   @property() accept = '';
   /** Mobile capture hint forwarded to the native file picker. */
   @property() capture: LyraFileInputCapture = '';
@@ -538,21 +521,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** Submitted field name.
@@ -1088,9 +1056,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       multiple,
       this.nonRetaining || !multiple ? [] : this._files,
       isPreview,
-      ({ type }) =>
-        !this.forbiddenMimeTypes.includes(type) &&
-        (this.allowedMimeTypes.length === 0 || this.allowedMimeTypes.includes(type)),
+      mimeTypeFilter(this.allowedMimeTypes, this.forbiddenMimeTypes),
     );
   }
 
@@ -1127,8 +1093,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     override: string | undefined,
     count: string,
   ): string {
-    if (override == null) return this.localize(key, undefined, { count });
-    return override.replace(/\{count\}/g, count);
+    return outcomeText(override, () => this.localize(key, undefined, { count }), count);
   }
 
   private emitFiles(fileList: File[], additionalRejected: readonly LyraFileInputRejectedFile[] = []): void {
@@ -1314,7 +1279,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   private removeFile(index: number): void {
     if (this.liveDisabled || index < 0 || index >= this._files.length) return;
     this.touched = true;
-    const hadFocus = activeElementIn(this.shadowRoot)?.matches('[part="remove-button"]');
+    const hadFocus = shadowFocusTarget(this)?.matches('[part="remove-button"]');
     this.files = this._files.filter((_, candidate) => candidate !== index);
     const value = Object.freeze([...this._files]);
     emitValueEvents(this, 'input', { value }, detail => this.emit('lr-input', detail));

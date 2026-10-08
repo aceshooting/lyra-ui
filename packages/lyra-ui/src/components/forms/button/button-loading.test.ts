@@ -123,4 +123,20 @@ describe('lr-button loading geometry', () => {
       await setReducedMotion('no-preference');
     }
   });
+
+  it('survives a queued loading update on a host removed before the update runs', async () => {
+    const button = await fixture<LyraButton>(html`<lr-button>Save</lr-button>`);
+    button.focus();
+    const parent = button.parentNode!;
+    button.loading = true;
+    button.remove();
+    let failure: unknown;
+    await button.updateComplete.catch((error: unknown) => {
+      failure = error;
+    });
+    expect(failure).to.equal(undefined);
+    expect(document.activeElement === button).to.equal(false);
+    expect(button.hasAttribute('tabindex')).to.equal(false);
+    parent.append(button);
+  });
 });

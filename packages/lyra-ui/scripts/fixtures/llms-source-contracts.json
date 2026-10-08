@@ -118,7 +118,7 @@
       "module": "src/ai/adapters/ai-sdk.ts",
       "exportName": "adaptAiSdkMessage",
       "kind": "function",
-      "fingerprint": "c63c7de51de49519803a",
+      "fingerprint": "f4a4c85d3ea780705f42",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -182,7 +182,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "AgentStreamState",
       "kind": "interface",
-      "fingerprint": "f66b4c047bd825684193",
+      "fingerprint": "e0cb6af631820b50653e",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -214,7 +214,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "createAgentStreamState",
       "kind": "function",
-      "fingerprint": "5a3dabf6bef63f3e0c83",
+      "fingerprint": "2907735f066213c70fc3",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -246,7 +246,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStream",
       "kind": "function",
-      "fingerprint": "41c9943809016b73e905",
+      "fingerprint": "ee4581bd347ef80f5454",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -262,7 +262,7 @@
       "module": "src/ai/runtime.ts",
       "exportName": "reduceAgentStreamEvents",
       "kind": "function",
-      "fingerprint": "f8e9fa6601962f58339e",
+      "fingerprint": "014c144b52d48f057ee4",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -472,7 +472,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ChatMessage",
       "kind": "interface",
-      "fingerprint": "7c6662f949ea1cc8d86a",
+      "fingerprint": "4692a19b51eeeaa67483",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -852,7 +852,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolCallMessagePart",
       "kind": "interface",
-      "fingerprint": "b9a52307b0ea26278cbe",
+      "fingerprint": "f8944db2e9b8063994ef",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -871,7 +871,7 @@
       "module": "src/ai/types.ts",
       "exportName": "ToolInvocation",
       "kind": "interface",
-      "fingerprint": "59f4364a123c63286586",
+      "fingerprint": "e98fea127b792185c2a8",
       "routes": [
         "src/ai/index.ts",
         "src/all.ts",
@@ -1125,7 +1125,7 @@
       "module": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.ts",
       "exportName": "AgentEvaluationDashboardRun",
       "kind": "interface",
-      "fingerprint": "0265ab123380adf3f35b",
+      "fingerprint": "34b261990228fe8fe3e9",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.ts",
@@ -1191,7 +1191,7 @@
       "module": "src/components/agent-tools/agent-run/agent-run.class.ts",
       "exportName": "AgentRunMetric",
       "kind": "interface",
-      "fingerprint": "aee083c8377a38384499",
+      "fingerprint": "fa503263b513bde4d20c",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-run/agent-run.class.ts",
@@ -1240,7 +1240,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "agentStatusKind",
       "kind": "function",
-      "fingerprint": "06a1983039e403e92042",
+      "fingerprint": "b3ee06c326f5ad39f7a2",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1259,7 +1259,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "agentStatusLabel",
       "kind": "function",
-      "fingerprint": "9ddb85c11f0ac64e20e9",
+      "fingerprint": "17cc7b11fb1bb02f99ae",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1278,7 +1278,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "agentStatusMessage",
       "kind": "function",
-      "fingerprint": "d23a6cdb9d903e02526e",
+      "fingerprint": "9fbe7ddf3042a769c5ac",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1297,7 +1297,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "AgentStatusPresentation",
       "kind": "interface",
-      "fingerprint": "44f4ae2158ede5e087de",
+      "fingerprint": "6561ba612d784dd21776",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1316,7 +1316,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "agentStatusVariant",
       "kind": "function",
-      "fingerprint": "647e039594445f8ee9bc",
+      "fingerprint": "dbe3a01b31844a8d7990",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1335,7 +1335,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "isAgentStatusActive",
       "kind": "function",
-      "fingerprint": "43fe644ebed2f2d0b115",
+      "fingerprint": "14a21a4fb616d54151e2",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1354,7 +1354,7 @@
       "module": "src/components/agent-tools/agent-status-presentation.ts",
       "exportName": "isAgentStatusTerminal",
       "kind": "function",
-      "fingerprint": "cdb9c5e7cbc8fd980389",
+      "fingerprint": "3dac2916fc424c4a2523",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-status-presentation.ts",
@@ -1659,7 +1659,7 @@
       "module": "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
       "exportName": "EvalExampleResult",
       "kind": "interface",
-      "fingerprint": "43e134b05a9dbd3e1215",
+      "fingerprint": "0e5dca6f964a7e514c04",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/evaluation-run/evaluation-run.class.ts",
@@ -2403,7 +2403,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "DirectToolRendererDefinition",
       "kind": "interface",
-      "fingerprint": "d44fffa12fb969c44b5e",
+      "fingerprint": "289c8c9e2b455ab49d5c",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2422,7 +2422,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "findToolRenderer",
       "kind": "function",
-      "fingerprint": "f91ce90123c146e02ee6",
+      "fingerprint": "29ccb343b5776b96734e",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2441,7 +2441,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "getDefaultToolRendererRegistry",
       "kind": "function",
-      "fingerprint": "3352366d7318da79e4ca",
+      "fingerprint": "b5c7e9b02b2d3b84665c",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2460,7 +2460,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "LazyToolRendererDefinition",
       "kind": "interface",
-      "fingerprint": "604e31a6f6ffd0b2d40c",
+      "fingerprint": "82140756e3144eba9c04",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2479,7 +2479,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "loadToolRenderer",
       "kind": "function",
-      "fingerprint": "bb11a64e6e700728b2f3",
+      "fingerprint": "83cc2abc8c24b05698cc",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2498,7 +2498,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "registerToolRenderer",
       "kind": "function",
-      "fingerprint": "050d78b1936facf7da48",
+      "fingerprint": "45d1215fa845e60e2de5",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2517,7 +2517,7 @@
       "module": "src/components/agent-tools/tool-result-view/registry.ts",
       "exportName": "ToolRenderContext",
       "kind": "interface",
-      "fingerprint": "74a1bb3332df62bbe951",
+      "fingerprint": "472459e48e23213d4a6e",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/tool-result-view/registry.ts",
@@ -2624,7 +2624,7 @@
       "module": "src/components/agent-tools/tool-timeline/tool-timeline.class.ts",
       "exportName": "ToolTimelineEntry",
       "kind": "interface",
-      "fingerprint": "34606f6dd0c183aa305a",
+      "fingerprint": "142e6bb54cad1905671e",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -5975,7 +5975,7 @@
       "module": "src/components/data/gauge/gauge.class.ts",
       "exportName": "LyraGaugeThreshold",
       "kind": "interface",
-      "fingerprint": "50127cea77df20d24b3c",
+      "fingerprint": "91b59b46722d3e9ef968",
       "routes": [
         "src/all.ts",
         "src/components/data/gauge/gauge.class.ts",
@@ -11354,7 +11354,7 @@
       }
     },
     {
-      "module": "src/components/retrieval/graph/graph.class.ts",
+      "module": "src/internal/score-tiers.ts",
       "exportName": "LyraScoreThresholds",
       "kind": "interface",
       "fingerprint": "38e326acc0d6e26343b1",
@@ -13301,7 +13301,7 @@
       "module": "src/components/viewers/docx-viewer/docx-loader.ts",
       "exportName": "loadMammothAndSanitizer",
       "kind": "function",
-      "fingerprint": "102d40f545438285e46b",
+      "fingerprint": "4cfd962665f48a4c31b4",
       "routes": [
         "src/all.ts",
         "src/components/lr-docx-viewer.ts",
@@ -13828,7 +13828,7 @@
       "module": "src/components/viewers/pptx-viewer/pptx-loader.ts",
       "exportName": "loadPptxRenderer",
       "kind": "function",
-      "fingerprint": "d154a0f30516f233f42a",
+      "fingerprint": "cac7b40474aebb1771a6",
       "routes": [
         "src/components/viewers/pptx-viewer/pptx-loader.ts"
       ],
@@ -14123,7 +14123,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "bc11b255cf9c9f724163",
+      "fingerprint": "dbca2aff2355f5377de5",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15030,7 +15030,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "78946f66869de45f0cd4",
+      "fingerprint": "475a1b2265fd192409b3",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15164,7 +15164,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "b19ccf36b194945f3d8f",
+      "fingerprint": "9b1a94ba669f22a1ce62",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15251,7 +15251,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "activateOverlay",
       "kind": "function",
-      "fingerprint": "ad95b064a272cee0d1b0",
+      "fingerprint": "d6fd352fb56182770030",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"
@@ -15268,7 +15268,7 @@
       "module": "src/internal/overlay-manager.ts",
       "exportName": "OverlayActivationOptions",
       "kind": "interface",
-      "fingerprint": "322a6888ddb29e5ee4a8",
+      "fingerprint": "e84faacb132d31446549",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/overlay-manager.ts"
@@ -15748,7 +15748,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "09e2f247a41a3fd32f72",
+      "fingerprint": "a9e4b1e825bea1b3789c",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15764,7 +15764,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "48656666c116a21f6aa3",
+      "fingerprint": "98ff09c85b106449e6ae",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15780,7 +15780,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "6cd81218b3422d643e67",
+      "fingerprint": "d5dc43a109279bbe3d12",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16307,7 +16307,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "d7853c73b2e1af620e66",
+      "fingerprint": "6fb2f2d27f2bea6da2fe",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16324,7 +16324,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "173489889054f40de50e",
+      "fingerprint": "70de3c42ca8545793d4f",
       "routes": [
         "src/vue.ts"
       ],
@@ -16733,7 +16733,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "681f55ba37dae59472b5",
+      "fingerprint": "83baf61d62026f47990e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16758,7 +16758,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "7cb021143f8f4c0a2076",
+      "fingerprint": "3a6b066b654d270148e4",
       "routes": [
         "src/localization.ts"
       ],
@@ -17793,6 +17793,54 @@
         "kind": "component",
         "tag": "lr-date-picker",
         "declaration": "projectDisabledDateKeys"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "installHappyDomShadowFocusShim",
+      "kind": "function",
+      "fingerprint": "5e51896e439fbf51e67a",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "installHappyDomShadowFocusShim"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "installHappyDomAriaControlsShim",
+      "kind": "function",
+      "fingerprint": "0ec81ddb760602e4be37",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "installHappyDomAriaControlsShim"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "installHappyDomShims",
+      "kind": "function",
+      "fingerprint": "45c97f877eefaf3d0f61",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "installHappyDomShims"
       }
     }
   ],

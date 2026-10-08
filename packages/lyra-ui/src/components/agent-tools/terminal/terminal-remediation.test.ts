@@ -35,7 +35,8 @@ it('clears removed content while retaining normal null and explicit-empty readba
 
 async function settleAnnouncement(el: LyraTerminal): Promise<void> {
   await el.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve, 30)); // the announcer throttle uses real timers
+  // wait-reason: callers also assert exact post-throttle region text (incl. unchanged text); the announcer throttle is a real timer
+  await new Promise((resolve) => setTimeout(resolve, 30));
 }
 
 it('announces only the rewritten line on a carriage-return progress update, not the whole scrollback', async () => {

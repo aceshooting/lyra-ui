@@ -269,6 +269,11 @@ it('parses literal spellcheck="false" for every native editor while retaining pr
   expect(controls.every((control) => !control.spellcheck)).to.be.true;
 });
 
+it('honors label="" instead of falling back to the heading', async () => {
+  const el = (await fixture(html`<lr-prompt-studio heading="Studio" label=""></lr-prompt-studio>`)) as LyraPromptStudio;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+});
+
 it('applies per-instance localized strings', async () => {
   const el = (await fixture(html`<lr-prompt-studio
     .strings=${{ promptStudioLabel: 'Localized prompt workshop' }}
@@ -833,10 +838,10 @@ describe('lr-prompt-studio retired lr-message-reorder event', () => {
 describe('lr-prompt-studio heading-level', () => {
   const heading = (el: LyraPromptStudio): Element => el.shadowRoot!.querySelector('[part="toolbar"]')!.firstElementChild!;
 
-  it('keeps the level-two toolbar heading by default', async () => {
+  it('renders the toolbar title without heading semantics by default', async () => {
     const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Studio"></lr-prompt-studio>`);
-    expect(el.headingLevel).to.equal('2');
-    expect(heading(el).localName).to.equal('h2');
+    expect(el.headingLevel).to.equal('none');
+    expect(heading(el).localName).to.equal('span');
     expect(heading(el).textContent).to.equal('Studio');
   });
 
@@ -854,12 +859,12 @@ describe('lr-prompt-studio heading-level', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('returns to the level-two heading when the heading-level attribute is removed', async () => {
+  it('returns to the non-heading default when the heading-level attribute is removed', async () => {
     const el = await fixture<LyraPromptStudio>(html`<lr-prompt-studio heading="Studio" heading-level="4"></lr-prompt-studio>`);
     expect(heading(el).localName).to.equal('h4');
     el.removeAttribute('heading-level');
     await el.updateComplete;
-    expect(heading(el).localName).to.equal('h2');
+    expect(heading(el).localName).to.equal('span');
   });
 });
 

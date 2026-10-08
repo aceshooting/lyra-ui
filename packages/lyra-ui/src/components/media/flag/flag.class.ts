@@ -245,7 +245,7 @@ export class LyraFlag extends LyraElement {
   });
   @state() private resolverGeneration = getFlagResolverGeneration();
   private stopFlagResolverSubscription?: () => void;
-  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
+  private readonly announcements = new AnnouncementSinkController(this);
   private sourceRestartPending = true;
   private activeSourceRequest = 0;
 
@@ -395,6 +395,8 @@ export class LyraFlag extends LyraElement {
     const request = ++this.activeSourceRequest;
     const URLCtor = this.ownerDocument?.defaultView?.URL ?? globalThis.URL;
     const directValue = typeof this.src === 'string' ? this.src.trim() : '';
+    // Only a flag that starts a load can fail; mount the region before any failure text.
+    if (directValue || this.code) this.announcements.current('assertive');
     if (directValue) {
       const identity = `direct:${directValue}`;
       const url = safeMediaSrc(directValue, URLCtor);

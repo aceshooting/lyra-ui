@@ -56,35 +56,7 @@ import '@aceshooting/lyra-ui/components/lr-lite-chart.js';
 
 Assign each chart's own `.labels` and `.datasets` through property bindings as usual.
 
-## Breaking changes in 9.0.0
-
-Breaking changes in this release (v9): `<lr-chart>` and `<lr-box-plot>` drop the deprecated
-`accessible-label`/`accessible-description` attributes and `accessibleLabel`/`accessibleDescription`
-properties — use the mirrored `label`/`description` instead (identical semantics, just renamed).
-`<lr-box-plot>` drops the deprecated `boxes` property — use `datasets`. `<lr-lite-chart>` drops three
-deprecated aliases: `pad-left`/`padLeft` (use `value-axis-gutter`/`valueAxisGutter`), `hide-axis`/
-`hideAxis` (use `without-value-axis`/`withoutValueAxis`), and `selectedIndex` (use the grammatically
-plural `selectedIndices`, which was already the canonical property). `<lr-chart>` drops its redundant
-positive-polarity `legend` property/attribute, which duplicated `withoutLegend`/`without-legend` — the
-legend now shows by default and is hidden only with `without-legend`; remove any `legend` attribute
-from markup (it is now a no-op host attribute) and any `el.legend = true` from code (`<lr-box-plot>`
-and `<lr-lite-chart>` were unaffected by that v9 change; their legend controls later became
-`with-legend`). The deprecated type aliases `ChartPoint`, `Series` (superseded by
-`LyraChartPoint`/`LyraChartSeries`), `BoxPlotPoint`, `BoxPlotSeries` (superseded by
-`LyraBoxPlotSummary`/`LyraBoxPlotSeries`), and `LiteSeries` (superseded by `LyraLiteChartSeries`) are
-removed — update TypeScript imports to the canonical `Lyra*`-prefixed names. The internal
-`lockChartType` helper is no longer exported from the public `chart.ts` entry point; it is now used
-solely by `<lr-histogram>` to keep its `type` fixed to `'bar'` — every other `lr-*-chart` subclass
-keeps its `type` writable, matching its mirrored WA counterpart. `chart-core-loader.ts`'s v8 compatibility
-facade is removed; `./components/charts/chart/chart-core-loader.js` and
-`./components/charts/chart/chart-feature-loader.js` are now the real public entry points.
-
-Non-breaking: `<lr-histogram>`'s `appendData()` is no longer marked deprecated; prefer the
-histogram-specific `appendSamples(values, maxSamples?)` for new code. `<lr-lite-chart>`'s legend is
-documented as a static color key with no interactive dataset-visibility toggle, matching its scope as
-the lightweight chart variant.
-
-## Migrating removed chart aliases
+## Breaking changes in 23.0.0: removed chart aliases
 
 The aliases removed in 23.0.0 no longer affect rendering: use `size="s"` instead of `compact`,
 `zoomable` instead of `zoom`, and `with-data-table` instead of `show-data-table`. Replace
@@ -137,7 +109,7 @@ structured points retain their y-value formatting.
   controls angle lines and `y` controls concentric grid lines
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
-  The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
+  Use `index-axis="y"` for a horizontal bar
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
   by presence, including an explicit empty string
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
@@ -176,9 +148,7 @@ structured points retain their y-value formatting.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
-  LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`. The
-  deprecated `Series` and `ChartPoint` names were removed in 9.0.0 — import
-  `LyraChartSeries`/`LyraChartPoint` instead.
+  LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`.
   - `stack` is a Chart.js dataset `stack` group id: series sharing one `stack` value on the same
     (stacked) axis accumulate into one stack; a different id starts an independent stack Chart.js
     draws side by side with the first on that axis. Omitted series share one implicit group, so
@@ -368,7 +338,7 @@ structured points retain their y-value formatting.
   displaces the caller's options.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
@@ -516,8 +486,8 @@ optional overlay content positioned at the chart area's center, useful for dough
 **Bounded rendering and data alternative:** simplified `labels`/`datasets` canvas rendering, the
 DOM legend, generated table, keyboard-operable datum model, generated point-details in the summary,
 and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
-the selected category and series indexes are distributed
-deterministically and retain their first and last endpoints; a localized `data-truncation` notice
+every series stays plotted and listed in the legend; only categories are thinned to the first,
+last and evenly spaced entries (series are thinned only beyond 500); a localized `data-truncation` notice
 is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
 between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
 bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and
@@ -732,8 +702,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
-  readonly color?: string }`. The legacy `LiteSeries` name was removed in 9.0.0 — import
-  `LyraLiteChartSeries` instead.
+  readonly color?: string }`.
   `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings
@@ -776,7 +745,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the generated accessible
   table visible rather than screen-reader-only. Same meaning as `lr-chart`'s property of the same
   name.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
   `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
   `withDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
@@ -982,7 +951,7 @@ mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra pe
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
 points — single-series only), `data-table` (the generated/slotted alternative container),
-`data-table-toggle` (the `dataTableToggle` disclosure button — new in 11.1.0), `table`
+`data-table-toggle` (the `dataTableToggle` disclosure button), `table`
 (the generated semantic category×series table rendered when there is more than one dataset), and
 `data-truncation` (the
 visible/announced sampling notice).
@@ -1333,7 +1302,7 @@ their structural parameter and result types are available through the function's
   `max`) plus the hovered box's source `datasetIndex`, `index`, `label` and `seriesLabel`.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
   table.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,

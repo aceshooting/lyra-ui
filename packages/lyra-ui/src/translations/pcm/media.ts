@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'How loud e be',
   videoCaptions: 'Words for wetin dem talk',
   videoCaptionsOff: 'Dem don turn am off',
-  videoPlaybackSpeed: 'How fast playback dey go',
   videoPictureInPicture: 'Put video in small window',
   videoExitPictureInPicture: 'Comot picture in picture',
   videoEnterFullscreen: 'Make am fill di screen',

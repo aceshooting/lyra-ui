@@ -19,7 +19,7 @@
 
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { svg, type SVGTemplateResult } from 'lit';
@@ -46,6 +46,7 @@ import type {
   LyraHighlight,
   TextSelectRect,
 } from '../../viewers/document-viewer/anchors.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { resolveIsDarkTheme } from './shiki-dark-theme.js';
 
 const INVALID_HIGHLIGHT_LINES_WARNING_KEY = 'lyra-code-block-invalid-highlight-lines';
@@ -116,7 +117,7 @@ function addBoundedLineRange(
 }
 
 /** How long the copy button's confirmation state lasts before reverting. */
-const CODE_BLOCK_COPY_CONFIRM_MS = 1500;
+const CODE_BLOCK_COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 
 /** One-based line count of `code`, the upper bound every line-addressing helper below clamps to.
  *  A trailing newline still yields the (empty) line after it, matching the rendered line count. */
@@ -140,7 +141,7 @@ export interface CodeBlockLineFocusHost extends HTMLElement {
 /** Whether real focus currently sits on one of the rendered roving line controls. */
 export function codeBlockLineHasFocus(host: CodeBlockLineFocusHost): boolean {
   return (
-    activeElementIn(host.shadowRoot)?.matches(
+    shadowFocusTarget(host)?.matches(
       '[data-line][part~="line-button"]'
     ) ?? false
   );
@@ -152,7 +153,7 @@ export function restoreCodeBlockLineFocus(
   host: CodeBlockLineFocusHost,
   line: number
 ): boolean {
-  const shadowActive = activeElementIn(host.shadowRoot);
+  const shadowActive = shadowFocusTarget(host);
   if (shadowActive)
     return shadowActive.matches('[data-line][part~="line-button"]');
 
@@ -168,7 +169,7 @@ export function restoreCodeBlockLineFocus(
     `[data-line="${line}"][part~="line-button"]`
   );
   target?.focus();
-  return activeElementIn(host.shadowRoot) === target;
+  return shadowFocusTarget(host) === target;
 }
 
 /** The merged set of one-based line numbers to emphasize: the `highlight-lines` spec plus the

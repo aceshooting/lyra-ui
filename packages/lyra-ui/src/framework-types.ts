@@ -2446,6 +2446,7 @@ export interface LyraComponentTypeMap {
       | 'toggleable'
       | 'value'
       | 'variant'
+      | 'withRemove'
       | 'wrap',
       {}
     >;
@@ -2467,7 +2468,9 @@ export interface LyraComponentTypeMap {
       | '--lr-chip-pressed-border'
       | '--lr-chip-radius'
       | '--lr-chip-remove-hover-bg';
-    attributeAliases: {};
+    attributeAliases: {
+      'with-remove'?: LyraChip['withRemove'];
+    };
   };
   'lr-chip-group': {
     element: LyraChipGroup;
@@ -3004,8 +3007,11 @@ export interface LyraComponentTypeMap {
     events: LyraCommandPaletteEventMap;
     eventNames:       | 'blur'
       | 'focus'
+      | 'lr-after-hide'
+      | 'lr-after-show'
       | 'lr-close'
       | 'lr-close-request'
+      | 'lr-hide'
       | 'lr-select'
       | 'lr-show';
     cssNames:       | '--lr-command-palette-active-bg'
@@ -3738,7 +3744,7 @@ export interface LyraComponentTypeMap {
       | 'assumeInteractionOn'
       | 'autocapitalize'
       | 'autocomplete'
-      | 'autoCorrect'
+      | 'autocorrect'
       | 'clearable'
       | 'clearLabel'
       | 'customError'
@@ -3751,11 +3757,13 @@ export interface LyraComponentTypeMap {
       | 'disableFuture'
       | 'disablePast'
       | 'distance'
+      | 'enterkeyhint'
       | 'enterKeyHint'
       | 'errorText'
       | 'firstDayOfWeek'
       | 'form'
       | 'hint'
+      | 'inputmode'
       | 'inputMode'
       | 'isDateDisabled'
       | 'label'
@@ -3843,7 +3851,6 @@ export interface LyraComponentTypeMap {
       | '--show-duration';
     attributeAliases: {
       'aria-label'?: LyraDateInput['accessibleLabel'];
-      'autocorrect'?: LyraDateInput['autoCorrect'];
       'clear-label'?: LyraDateInput['clearLabel'];
       'custom-error'?: LyraDateInput['customError'];
       'dialog-label'?: LyraDateInput['dialogLabel'];
@@ -3928,9 +3935,12 @@ export interface LyraComponentTypeMap {
       | '--lr-date-picker-nav-hover-bg'
       | '--lr-date-picker-preset-active-bg'
       | '--lr-date-picker-preset-hover-bg'
+      | '--lr-date-picker-preset-hover-border-color'
       | '--lr-date-picker-preset-pressed-bg'
+      | '--lr-date-picker-preset-pressed-border-color'
       | '--lr-date-picker-preset-selected-bg'
       | '--lr-date-picker-preset-selected-border'
+      | '--lr-date-picker-preset-selected-border-color'
       | '--lr-date-picker-preset-selected-color'
       | '--lr-date-picker-radius'
       | '--lr-date-picker-range-bg'
@@ -4586,7 +4596,10 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraDropZone,
       | 'accept'
+      | 'acceptedMessage'
+      | 'allowedMimeTypes'
       | 'disabled'
+      | 'forbiddenMimeTypes'
       | 'heldFileCount'
       | 'heldTotalSize'
       | 'locale'
@@ -4594,6 +4607,7 @@ export interface LyraComponentTypeMap {
       | 'maxFileSize'
       | 'maxTotalSize'
       | 'multiple'
+      | 'rejectedMessage'
       | 'size'
       | 'strings',
       {}
@@ -4612,11 +4626,13 @@ export interface LyraComponentTypeMap {
       | '--lr-drop-zone-reject-bg'
       | '--lr-drop-zone-reject-border-color';
     attributeAliases: {
+      'accepted-message'?: LyraDropZone['acceptedMessage'];
       'held-file-count'?: LyraDropZone['heldFileCount'];
       'held-total-size'?: LyraDropZone['heldTotalSize'];
       'max-file-size'?: LyraDropZone['maxFileSize'];
       'max-files'?: LyraDropZone['maxFiles'];
       'max-total-size'?: LyraDropZone['maxTotalSize'];
+      'rejected-message'?: LyraDropZone['rejectedMessage'];
     };
   };
   'lr-dropdown': {
@@ -5053,27 +5069,7 @@ export interface LyraComponentTypeMap {
       | 'lr-export-request'
       | 'lr-import-request'
       | 'lr-sort';
-    cssNames:       | '--lr-eval-dataset-search-font-size'
-      | '--lr-eval-dataset-search-min-height'
-      | '--lr-eval-dataset-search-padding-block'
-      | '--lr-eval-dataset-search-padding-inline'
-      | '--lr-eval-dataset-search-radius'
-      | '--lr-icon-button-bg'
-      | '--lr-icon-button-bg-active'
-      | '--lr-icon-button-bg-hover'
-      | '--lr-icon-button-border'
-      | '--lr-icon-button-border-active'
-      | '--lr-icon-button-border-hover'
-      | '--lr-icon-button-color'
-      | '--lr-icon-button-color-active'
-      | '--lr-icon-button-color-hover'
-      | '--lr-icon-button-radius'
-      | '--lr-input-action-color'
-      | '--lr-input-action-hover-color'
-      | '--lr-input-border-color'
-      | '--lr-input-fill'
-      | '--lr-input-focus-border-color'
-      | '--lr-input-placeholder-color';
+    cssNames: never;
     attributeAliases: {
       'autocorrect'?: LyraEvalDataset['autoCorrect'];
       'enterkeyhint'?: LyraEvalDataset['enterKeyHint'];
@@ -7436,11 +7432,13 @@ export interface LyraComponentTypeMap {
     element: LyraMemoryPanel;
     properties: LyraElementProperties<
       LyraMemoryPanel,
+      | 'frame'
       | 'headingLevel'
       | 'label'
       | 'locale'
       | 'longTerm'
       | 'shortTerm'
+      | 'size'
       | 'strings'
       | 'thresholds'
       | 'types',
@@ -7747,7 +7745,7 @@ export interface LyraComponentTypeMap {
       | 'allowCustom'
       | 'autocapitalize'
       | 'autocomplete'
-      | 'autoCorrect'
+      | 'autocorrect'
       | 'catalog'
       | 'customError'
       | 'defaultValue'
@@ -7816,7 +7814,6 @@ export interface LyraComponentTypeMap {
       | '--lr-positioning-strategy';
     attributeAliases: {
       'allow-custom'?: LyraModelSelect['allowCustom'];
-      'autocorrect'?: LyraModelSelect['autoCorrect'];
       'custom-error'?: LyraModelSelect['customError'];
       'enterkeyhint'?: LyraModelSelect['enterKeyHint'];
       'error-text'?: LyraModelSelect['errorText'];
@@ -8741,7 +8738,7 @@ export interface LyraComponentTypeMap {
       | 'appearance'
       | 'autocapitalize'
       | 'autocomplete'
-      | 'autoCorrect'
+      | 'autocorrect'
       | 'autofocus'
       | 'countries'
       | 'country'
@@ -8751,12 +8748,14 @@ export interface LyraComponentTypeMap {
       | 'defaultValue'
       | 'disabled'
       | 'enterkeyhint'
+      | 'enterKeyHint'
       | 'errorText'
       | 'flags'
       | 'form'
       | 'hint'
       | 'incompleteText'
       | 'inputmode'
+      | 'inputMode'
       | 'invalidText'
       | 'label'
       | 'locale'
@@ -8806,12 +8805,13 @@ export interface LyraComponentTypeMap {
       | '--lr-phone-input-radius';
     attributeAliases: {
       'aria-label'?: LyraPhoneInput['accessibleLabel'];
-      'autocorrect'?: LyraPhoneInput['autoCorrect'];
       'country-label'?: LyraPhoneInput['countryLabel'];
       'custom-error'?: LyraPhoneInput['customError'];
       'default-country'?: LyraPhoneInput['defaultCountry'];
+      'enterkeyhint'?: LyraPhoneInput['enterKeyHint'];
       'error-text'?: LyraPhoneInput['errorText'];
       'incomplete-text'?: LyraPhoneInput['incompleteText'];
+      'inputmode'?: LyraPhoneInput['inputMode'];
       'invalid-text'?: LyraPhoneInput['invalidText'];
       'phone-label'?: LyraPhoneInput['phoneLabel'];
       'value'?: LyraPhoneInput['defaultValue'];
@@ -9316,6 +9316,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraPromptInput,
       | 'accessibleLabel'
+      | 'actionsLayout'
       | 'attachmentCapabilities'
       | 'attachments'
       | 'autocapitalize'
@@ -9324,6 +9325,7 @@ export interface LyraComponentTypeMap {
       | 'commandItems'
       | 'disabled'
       | 'enterKeyHint'
+      | 'frame'
       | 'inputMode'
       | 'label'
       | 'locale'
@@ -9377,6 +9379,7 @@ export interface LyraComponentTypeMap {
       | 'lr-voice-change';
     cssNames:       | '--lr-prompt-input-control-width';
     attributeAliases: {
+      'actions-layout'?: LyraPromptInput['actionsLayout'];
       'aria-label'?: LyraPromptInput['accessibleLabel'];
       'enterkeyhint'?: LyraPromptInput['enterKeyHint'];
       'inputmode'?: LyraPromptInput['inputMode'];
@@ -10064,9 +10067,11 @@ export interface LyraComponentTypeMap {
     element: LyraResearchProgress;
     properties: LyraElementProperties<
       LyraResearchProgress,
+      | 'frame'
       | 'headingLevel'
       | 'label'
       | 'locale'
+      | 'size'
       | 'steps'
       | 'strings',
       {}
@@ -10169,11 +10174,13 @@ export interface LyraComponentTypeMap {
     element: LyraRetrievalCompare;
     properties: LyraElementProperties<
       LyraRetrievalCompare,
+      | 'frame'
       | 'headingLevel'
       | 'label'
       | 'locale'
       | 'selectedChunkId'
       | 'sets'
+      | 'size'
       | 'strings'
       | 'topK',
       {}
@@ -10265,8 +10272,10 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraRetrievalTrace,
       | 'activeStageId'
+      | 'frame'
       | 'label'
       | 'locale'
+      | 'size'
       | 'stages'
       | 'strings',
       {}
@@ -11706,6 +11715,7 @@ export interface LyraComponentTypeMap {
       | '--lr-table-heat-tint-hi'
       | '--lr-table-heat-tint-lo'
       | '--lr-table-max-height'
+      | '--lr-table-radius'
       | '--lr-table-resize-handle-active-bg'
       | '--lr-table-resize-handle-active-opacity'
       | '--lr-table-resize-handle-hover-bg'
@@ -11717,6 +11727,7 @@ export interface LyraComponentTypeMap {
       | '--lr-table-row-selected-bg'
       | '--lr-table-row-stripe-bg'
       | '--lr-table-sticky-offset'
+      | '--lr-table-surface'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
@@ -11765,6 +11776,7 @@ export interface LyraComponentTypeMap {
       LyraTag,
       | 'appearance'
       | 'attention'
+      | 'disabled'
       | 'locale'
       | 'pill'
       | 'pulse'
@@ -12276,6 +12288,7 @@ export interface LyraComponentTypeMap {
       | '--lr-time-range-preset-active-color'
       | '--lr-time-range-preset-font-size'
       | '--lr-time-range-preset-gap'
+      | '--lr-time-range-preset-hover-bg'
       | '--lr-time-range-preset-hover-border-color'
       | '--lr-time-range-preset-padding'
       | '--lr-time-range-preset-pressed-bg'
@@ -12627,6 +12640,7 @@ export interface LyraComponentTypeMap {
       | 'focus'
       | 'lr-approve-request'
       | 'lr-close'
+      | 'lr-decision-settled'
       | 'lr-deny-request';
     cssNames:       | '--lr-tool-approval-dialog-hover-border-color'
       | '--lr-tool-approval-dialog-invalid-border-color'
@@ -13377,7 +13391,7 @@ export interface LyraComponentTypeMap {
       | 'allowCustom'
       | 'autocapitalize'
       | 'autocomplete'
-      | 'autoCorrect'
+      | 'autocorrect'
       | 'catalog'
       | 'customError'
       | 'defaultValue'
@@ -13453,7 +13467,6 @@ export interface LyraComponentTypeMap {
       | '--lr-voice-picker-trigger-padding';
     attributeAliases: {
       'allow-custom'?: LyraVoicePicker['allowCustom'];
-      'autocorrect'?: LyraVoicePicker['autoCorrect'];
       'custom-error'?: LyraVoicePicker['customError'];
       'enterkeyhint'?: LyraVoicePicker['enterKeyHint'];
       'error-text'?: LyraVoicePicker['errorText'];

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,28 +61,13 @@ loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 All three built-in columns are sortable; activating one of their headers produces that commit for
 the host to apply to its controlled `examples` array.
 
-**CSS parts:** `base`, `toolbar`, `search`, `search-input`, `search-clear` (replaces the native
-search-cancel glyph the component resets; rendered only while the field has text), `tag-filter`,
+**CSS parts:** `base`, `toolbar`, `search`, `search-input` (the composed `lr-input type="search"`),
+`search-input-field` (its native `<input>`), `search-clear` (its clear button, rendered only while the field has text), `tag-filter`,
 `grid`, `add-button`, `remove-button`, `limit` (shown when the source examples exceed the snapshot
 cap), `import` (the internal `compact` `lr-file-input`; its
 dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
-**Themeable custom properties:** `--lr-eval-dataset-search-min-height` (default `auto`),
-`--lr-eval-dataset-search-font-size` (default `inherit`),
-`--lr-eval-dataset-search-padding-inline` (default `var(--lr-space-s)`),
-`--lr-eval-dataset-search-padding-block` (default `var(--lr-space-xs)`) and
-`--lr-eval-dataset-search-radius` (default `var(--lr-radius)`) size the built-in search field; point
-the height at a `--lr-form-control-height-*` tier to match it to a themed search field. The trailing
-inline gutter is reserved for the overlaid `search-clear` button and is not a knob. When a
-component-specific geometry hook is unset, the field also honors matching `--lr-input-*` and
-`--lr-form-control-*` hooks. Its clear action honors the shared `--lr-icon-button-*` paint hooks.
-The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
-`--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
-`--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
-`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
-`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
-`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
-`--lr-icon-button-radius` for its resting, hover, and pressed paint.
+**Themeable custom properties:** the built-in search field is a composed `lr-input`, so it is themed through the shared `--lr-input-*` and `--lr-form-control-*` tokens (the former `--lr-eval-dataset-search-*` hooks are removed).
 The search field remains a filter toolbar, with the native editing hints listed above.
 
 **Known gotchas:**

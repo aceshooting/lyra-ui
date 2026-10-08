@@ -1325,6 +1325,7 @@ describe('findable closed-content gate', () => {
       const showing = el.show();
       staging.append(el);
       await showing;
+      // wait-reason: negative assertion: lr-after-show must not leak after the 120ms show duration elapses
       await new Promise<void>((resolve) => setTimeout(resolve, 180));
 
       expect(el.open).to.equal(true);

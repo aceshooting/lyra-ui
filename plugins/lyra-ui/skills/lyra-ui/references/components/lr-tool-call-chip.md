@@ -49,9 +49,7 @@ its content.
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
 **Events:** `lr-tool-call-chip-select` (`detail: { name: string; callId: string }`) — fired on
-click or Enter/Space activation of the pill, exactly once per activation. The `lr-tool-chip-select`
-alias (deprecated since 4.0.0) was removed in 9.0.0; listen for `lr-tool-call-chip-select` instead —
-the detail is identical.
+click or Enter/Space activation of the pill, exactly once per activation.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` delegate to the internal native chip
 button, so programmatic focus/activation reaches the same semantic owner as pointer and keyboard

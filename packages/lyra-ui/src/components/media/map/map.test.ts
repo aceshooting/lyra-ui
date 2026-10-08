@@ -9256,6 +9256,7 @@ describe('fitBounds and lr-map-view-change', () => {
       expect(map.getCenter().lng).to.be.closeTo(-40, 1e-6);
       expect(map.getCenter().lat).to.be.closeTo(-20, 1e-6);
       expect(map.getZoom(), 'the unassigned zoom is not left mid-flight').to.equal(el.zoom);
+      // wait-reason: asserting the interrupted fit is never reported (no event to await)
       await aTimeout(50);
       expect(views, 'the interrupted fit is never reported').to.deep.equal([]);
     });

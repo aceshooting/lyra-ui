@@ -28,8 +28,7 @@ view files continue to install and import Lyra UI as before.
 A later breaking migration is planned to consolidate all document editors and viewers in
 `@aceshooting/lyra-docs`. That package will continue to depend on `@aceshooting/lyra-ui` for shared
 controls and utilities. The migration must move viewer entry points and guide consumers to the new
-imports without adding a Lyra UI dependency on Docs or a re-export cycle. No viewer moves in this
-release.
+imports without adding a Lyra UI dependency on Docs or a re-export cycle. No viewer has moved.
 
 DOCX is the first editing format under investigation. The package name leaves room for other
 formats through separate entry points and separately qualified engines. Spreadsheet, presentation
@@ -44,7 +43,7 @@ Use the public framework-independent core behind original Lyra controls, without
 React/Vue application or complete feature set. The runtime peer is
 `@docx-editor.dev/core@2.27.0`, dynamically loaded when a document opens. The
 [public core implementation](https://github.com/eigenpal/docx-editor/tree/42c6c267) is reference
-material; the runtime is the published 2.25.0 package. Lyra owns the
+material; the runtime is the published package at the exact peer version. Lyra owns the
 public component, Lit interface, supported commands, lifecycle, accessibility, theming and
 integration contract.
 Copying isolated parser/layout files is not automatically a smaller solution: those modules share

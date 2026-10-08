@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { tableCellHighlightStyles } from '../table-viewer-shared.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -79,61 +79,10 @@ export const styles = css`
     white-space: nowrap;
     color: var(--lr-color-text);
   }
-  /* The cell's padding moves onto the nested action button so its hit area covers the whole cell
-     with the rendered text position unchanged. The active/warning outline color cannot be a
-     [data-active] attribute selector chained onto ::part(), which is unsupported, so renderCell()
-     sets a private active default inline; the public hook stays an inheritable input and wins over
-     that default. */
-  /* no-hover-state: pointer feedback belongs to the nested [part='cell-highlight-action'], sized
-     below to cover this cell edge to edge, so a pointer anywhere on the highlighted cell already
-     hovers that button; a second treatment on the structural cell would double-tint one gesture. */
-  [part~='cell-highlight'],
-  lr-virtual-list::part(cell-highlight) {
-    outline: var(--lr-border-width-medium) solid
-      var(
-        --lr-dataset-viewer-highlight-color,
-        var(--_lr-dataset-viewer-highlight-color, var(--lr-color-brand))
-      );
-    outline-offset: calc(-1 * var(--lr-border-width-medium));
-    cursor: pointer;
-    padding: 0;
-  }
-  /* A real action button, not a plain grid cell like [part='header-cell']/::part(cell) above, so a
-     min-block-size gives it the shared minimum tappable floor on top of the all: unset reset.
-     inline-size: 100% already spans the full cell, so min-inline-size is not strictly needed to
-     reach the floor there, but it is set anyway so the part is self-describing independent of its
-     container. */
-  [part='cell-highlight-action'],
-  lr-virtual-list::part(cell-highlight-action) {
-    all: unset;
-    box-sizing: border-box;
-    display: block;
-    inline-size: 100%;
-    ${iconHitTarget}
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
-  }
-  [part='cell-highlight-action']:hover,
-  lr-virtual-list::part(cell-highlight-action):hover {
-    background: var(--lr-color-brand-quiet);
-  }
-  [part='cell-highlight-action']:active,
-  lr-virtual-list::part(cell-highlight-action):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-  }
-  [part='cell-highlight-action']:focus-visible,
-  lr-virtual-list::part(cell-highlight-action):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
-  }
+  ${tableCellHighlightStyles({
+    color: css`var(--lr-dataset-viewer-highlight-color, var(--_lr-dataset-viewer-highlight-color, var(--lr-color-brand)))`,
+    padding: css`var(--lr-space-xs) var(--lr-space-s)`,
+  })}
   lr-virtual-list {
     --lr-virtual-list-height: var(--lr-size-20rem);
     min-inline-size: max-content;

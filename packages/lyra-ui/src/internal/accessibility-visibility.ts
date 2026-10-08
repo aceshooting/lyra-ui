@@ -1,7 +1,9 @@
 import type { CustomElementUpgradeObserver } from './custom-element-upgrade-observer.js';
 import { composedParentElement } from './active-element.js';
+import { assignedSlotOf } from './composed-tree.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { imageMapImageFor } from './dom-guards.js';
+import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 export { composedParentElement } from './active-element.js';
 
@@ -218,6 +220,44 @@ export function accessibleTextRecordsMatter(
   return false;
 }
 
+/** Opt-in tracking of `aria-labelledby` targets: their releases and the change callback. */
+export interface AccessibleTextReferences {
+  readonly releases: Array<() => void>;
+  readonly changed: () => void;
+}
+
+export function releaseAccessibleTextReferences(references: AccessibleTextReferences): void {
+  for (const release of references.releases.splice(0)) release();
+}
+
+export function labelReferenceRecordsMatter(
+  records: readonly MutationRecord[],
+  ids: ReadonlySet<string>,
+  referenced: ReadonlySet<Element>,
+): boolean {
+  const affects = (node: Node): boolean => {
+    if (node.nodeType !== 1) return false;
+    const element = node as Element;
+    if (referenced.has(element) || ids.has(element.id)) return true;
+    for (const reference of referenced) if (element.contains(reference)) return true;
+    const pending: Element[] = [element];
+    let visited = 0;
+    while (pending.length) {
+      if (++visited > 4096) return true;
+      const descendant = pending.pop()!;
+      if (ids.has(descendant.id)) return true;
+      for (const child of descendant.children) {
+        if (pending.length > 4096) return true;
+        pending.push(child);
+      }
+    }
+    return false;
+  };
+  return records.some((record) => record.type === 'attributes'
+    ? referenced.has(record.target as Element) || ids.has((record.target as Element).id)
+    : [...record.addedNodes, ...record.removedNodes].some(affects));
+}
+
 /**
  * Observes a host's label content, assigned nodes, and composed ancestors for accessible text.
  *
@@ -234,9 +274,11 @@ export function bindAccessibleTextObserver(
   host: Element,
   extraAttributes: readonly string[] = [],
   upgrades?: CustomElementUpgradeObserver,
+  references?: AccessibleTextReferences,
 ): void {
   if (!observer) return;
   observer.disconnect();
+  if (references) releaseAccessibleTextReferences(references);
   observeAccessibleTextNode(observer, host, extraAttributes);
   const baseline = filteringObservers.has(observer) ? new Map<Element, AncestorVisibilityBaseline>() : undefined;
   let ancestor = composedParentElement(host);
@@ -300,6 +342,20 @@ export function bindAccessibleTextObserver(
   }
   for (const root of result.traversedShadowRoots) {
     if (root !== host.shadowRoot) observeAccessibleTextNode(observer, root, extraAttributes);
+  }
+  if (!references) return;
+  for (const reference of result.referencedElements) observeAccessibleTextNode(observer, reference, extraAttributes);
+  if (!result.labelReferenceIds.size) return;
+  const Observer = host.ownerDocument.defaultView?.MutationObserver;
+  for (const root of result.labelReferenceRoots) {
+    const release = subscribeInheritedAttributes(root, Observer, {
+      attributes: ['id'],
+      childList: true,
+      changed: (records) => {
+        if (labelReferenceRecordsMatter(records, result.labelReferenceIds, result.referencedElements)) references.changed();
+      },
+    });
+    if (release) references.releases.push(release);
   }
 }
 
@@ -463,14 +519,13 @@ function composedAncestorState(
   context: AccessibilityTextContext,
   node: Node,
 ): ComposedAncestorState {
-  const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
   let branch: Element | null = node.nodeType === 1
     ? node as Element
-    : slottable.assignedSlot ?? node.parentElement;
+    : assignedSlotOf(node) ?? node.parentElement;
   let ancestor =
     node.nodeType === 1
       ? composedParentElement(node as Element)
-      : slottable.assignedSlot ?? node.parentElement;
+      : assignedSlotOf(node) ?? node.parentElement;
   let depth = 0;
   let inheritedTextVisible = true;
   let firstAncestor = true;
@@ -506,11 +561,10 @@ function inheritedVisibilityHidden(
   context: AccessibilityTextContext,
   node: Node,
 ): boolean {
-  const slottable = node as Node & { assignedSlot?: HTMLSlotElement | null };
   const ancestor =
     node.nodeType === 1
       ? composedParentElement(node as Element)
-      : slottable.assignedSlot ?? node.parentElement;
+      : assignedSlotOf(node) ?? node.parentElement;
   if (!ancestor) return false;
   return cachedElementState(context, ancestor).visibilityHidden;
 }
@@ -818,7 +872,7 @@ function processAccessibilityTextWork(context: AccessibilityTextContext): void {
         break;
       }
       const node = work.candidates[work.index];
-      const assigned = Boolean(node && (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot === work.slot);
+      const assigned = Boolean(node && assignedSlotOf(node) === work.slot);
       context.stack.push({
         ...work,
         foundAssigned: work.foundAssigned || assigned,

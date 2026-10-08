@@ -49,3 +49,60 @@ export function sameViewerSearchDetail(first: LyraSearchChangeDetail, second: Ly
     && first.matchCountExact === second.matchCountExact
     && first.activeIndex === second.activeIndex;
 }
+
+/** The query, match set, exactness flag and active index shared by every non-text viewer's search. */
+export class ViewerSearchState<C extends { readonly length: number }> {
+  query = '';
+  matches: C;
+  exact = true;
+  activeIndex = -1;
+
+  constructor(
+    private readonly empty: () => C,
+    private readonly emitDetail: (detail: LyraSearchChangeDetail) => void,
+    private readonly changed: () => void = () => {},
+  ) {
+    this.matches = empty();
+  }
+
+  /** True once anything differs from a cleared search (source resets emit only then). */
+  get dirty(): boolean {
+    return this.query !== '' || this.matches.length > 0 || !this.exact || this.activeIndex !== -1;
+  }
+
+  emit(): void {
+    this.emitDetail(viewerSearchDetail(this.query, this.matches.length, this.exact, this.activeIndex));
+  }
+
+  /** Stores a result (the first match becomes active) and emits; `exact=false` marks a lower bound. */
+  publish(matches: C = this.empty(), exact = true): void {
+    this.matches = matches;
+    this.exact = exact;
+    this.activeIndex = matches.length > 0 ? 0 : -1;
+    this.changed();
+    this.emit();
+  }
+
+  /** Clears the query and results without emitting. */
+  reset(): void {
+    this.query = '';
+    this.matches = this.empty();
+    this.exact = true;
+    this.activeIndex = -1;
+    this.changed();
+  }
+
+  clear(): void {
+    this.reset();
+    this.emit();
+  }
+
+  /** Moves the active match with wrap-around and emits; false when nothing matches. */
+  step(direction: 1 | -1): boolean {
+    if (!this.matches.length) return false;
+    this.activeIndex = advanceViewerSearchIndex(this.activeIndex, this.matches.length, direction);
+    this.changed();
+    this.emit();
+    return true;
+  }
+}

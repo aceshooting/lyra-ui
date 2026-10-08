@@ -1,3 +1,4 @@
+import { nextFrame, twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import * as graphSupport from '../../../../test/graph-test-support.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
@@ -214,6 +215,7 @@ describe('coverage: canvas renderer internals', () => {
         clientY: 10,
       })
     );
+    // wait-reason: negative assertion, a wheel event over the canvas must not rebuild the canvas scene
     await aTimeout(300);
     expect((el as unknown as Internals).canvasScene).to.equal(sceneBefore);
   });
@@ -544,7 +546,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -564,7 +566,7 @@ describe('coverage: canvas renderer internals', () => {
       '[part="tooltip"]'
     ) as HTMLElement;
     expect(tooltip.hasAttribute('hidden')).to.be.true;
-    await aTimeout(50); // the canceled frame must never fire and re-show it
+    await twoFrames(); // the canceled frame must never fire and re-show it
     expect(tooltip.hasAttribute('hidden')).to.be.true;
   });
 
@@ -579,7 +581,7 @@ describe('coverage: canvas renderer internals', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -968,6 +970,7 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
+    // wait-reason: negative assertion, an unlabeled edge must not produce a link-label after real ticks have run onTick()
     await aTimeout(100); // let at least one real tick run onTick()'s edge-label loop
     expect(el.shadowRoot!.querySelector('[part="link-label"]') == null).to.be
       .true;
@@ -998,7 +1001,11 @@ describe('coverage: drawn edge label declutter gate (onTick, real ticks)', () =>
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    await aTimeout(300);
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="link-label"]')?.getAttribute('visibility') === 'hidden',
+      'link label rendered hidden',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
     const label = el.shadowRoot!.querySelector(
       '[part="link-label"]'
     ) as SVGTextElement;
@@ -1045,7 +1052,10 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     // pending from ordinary mount activity would otherwise make each call below return via that
     // "already scheduled" short-circuit before ever reaching the ownerWindow check this test targets.
     internal.simulation?.stop();
-    await aTimeout(100);
+    await waitUntil(
+      () => internal.viewportChangeRafId === undefined && internal.canvasDrawRafId === undefined,
+      'in-flight canvas frames drained'
+    );
     expect(
       internal.viewportChangeRafId,
       'precondition: no frame already pending'
@@ -1164,7 +1174,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     };
     const internal = el as unknown as Internals;
     internal.simulation?.stop();
-    await aTimeout(100); // flush any real frame already in flight from ordinary mount activity
+    await twoFrames(); // flush any real frame already in flight from ordinary mount activity
 
     // scheduleViewportChange(): schedule with a REAL ownerWindow, then swap it out before the frame
     // fires -- the callback's own `this.ownerWindow !== frameOwner` guard must bail instead of
@@ -1177,7 +1187,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     internal.scheduleViewportChange();
     let restore = stubNoOwnerWindow(el);
     try {
-      await aTimeout(100);
+      await twoFrames();
       expect(viewportChangeFired).to.equal(false);
     } finally {
       restore();
@@ -1187,7 +1197,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     internal.markCanvasDirty();
     restore = stubNoOwnerWindow(el);
     try {
-      await aTimeout(100); // must not throw resolving the frame against the now-unavailable owner
+      await twoFrames(); // must not throw resolving the frame against the now-unavailable owner
     } finally {
       restore();
     }
@@ -1196,7 +1206,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
     // then the realm changes mid-flight -- the step() callback's own guard must abort and resolve
     // false instead of continuing to animate against a stale frameOwner.
     const call = el.focusNode('a', { zoom: 2 });
-    await aTimeout(30); // let at least one real frame elapse so the tween is genuinely mid-flight
+    await nextFrame(); // let at least one real frame elapse so the tween is genuinely mid-flight
     restore = stubNoOwnerWindow(el);
     try {
       expect(await call).to.equal(false);
@@ -1215,7 +1225,7 @@ describe('coverage: ownerWindow-unavailable fallbacks', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -1303,7 +1313,11 @@ describe('coverage: canvas surface setup edge cases', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(300); // let a real tick call edgeLabelWidth() at least once, creating edgeLabelMeasureCanvas
+    await waitUntil(
+      () => (el as unknown as { edgeLabelMeasureCanvas?: HTMLCanvasElement }).edgeLabelMeasureCanvas != null,
+      'a real tick called edgeLabelWidth() and created edgeLabelMeasureCanvas',
+      { timeout: NODE_COUNT_TIMEOUT }
+    );
 
     type Internals = {
       ensureCanvasOwnerRealm: () => void;
@@ -1662,7 +1676,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     const a = el.simNodes.find((n) => n.id === 'a')!;
     const b = el.simNodes.find((n) => n.id === 'b')!;
@@ -1744,7 +1758,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -1786,7 +1800,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -1799,7 +1813,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
       })
     );
     (el as unknown as { pendingHover?: unknown }).pendingHover = undefined; // cleared without canceling the raf
-    await aTimeout(100);
+    await twoFrames();
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
@@ -1826,7 +1840,7 @@ describe('coverage: canvas pointer and hover edge cases', () => {
         pointerId: 77,
       })
     );
-    await aTimeout(20); // one coalesced frame -- well within the settle window
+    await nextFrame(); // one coalesced frame
     const tooltip = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
     ) as HTMLElement;
@@ -2218,7 +2232,7 @@ describe('coverage: remaining branch gaps', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -2233,7 +2247,7 @@ describe('coverage: remaining branch gaps', () => {
     expect((el as unknown as { hoverRafId?: number }).hoverRafId).to.exist; // a real frame is now pending
     const restore = stubNoOwnerWindow(el);
     try {
-      await aTimeout(100);
+      await twoFrames();
       const tooltip = el.shadowRoot!.querySelector(
         '[part="tooltip"]'
       ) as HTMLElement;
@@ -2259,7 +2273,7 @@ describe('coverage: remaining branch gaps', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50);
+    await waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
     const target = el.simNodes.find((n) => n.id === 'a')!;
     target.x = 100;

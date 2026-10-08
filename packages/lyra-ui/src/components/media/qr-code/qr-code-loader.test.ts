@@ -1,6 +1,10 @@
 import { assertOptionalPeerSilent } from '../../../../test/contracts/optional-peer-loader.js';
 import { expect } from '@open-wc/testing';
 import { clearQrCodeCache, loadQrCode, loadQrCodeCached } from './qr-code-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+// Tests below deliberately make the optional peer unavailable or malformed; the loader's one-time diagnostic is expected.
+expectDevWarning('lyra-qr-code-peer-unavailable');
 
 afterEach(() => clearQrCodeCache());
 

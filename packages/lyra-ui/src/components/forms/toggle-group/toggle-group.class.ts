@@ -24,7 +24,8 @@ import {
   collectComposedFocusTargets,
   type ComposedFocusRepairSnapshot,
 } from '../../../internal/focus-navigation.js';
-import { measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
+import { AdjacentRunScheduler, measureAdjacentRuns, type AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
@@ -178,9 +179,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   private lastPressed?: LyraToggle;
   private trackedFocus?: TrackedFocus;
   private membershipObserver?: MutationObserver;
-  private resizeObserver?: ResizeObserver;
-  private sizedToggles: readonly LyraToggle[] = [];
-  private runFrame?: number;
+  private readonly runs = new AdjacentRunScheduler(this, () => this.measureRuns());
   private generation = 0;
   private definitionSyncQueued = false;
   // Shared with every other veto point: a listener that answers the group request by assigning
@@ -322,11 +321,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     this.generation += 1;
     this.membershipObserver?.disconnect();
     this.membershipObserver = undefined;
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.sizedToggles = [];
-    if (this.runFrame !== undefined) this.ownerDocument?.defaultView?.cancelAnimationFrame(this.runFrame);
-    this.runFrame = undefined;
+    this.runs.dispose();
     this.definitionSyncQueued = false;
     this.pendingValue = undefined;
     this.trackedFocus = undefined;
@@ -343,7 +338,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     // Orientation, direction and language changes move toggles without resizing any of them.
-    this.scheduleRunProjection();
+    this.runs.schedule();
   }
 
   /** Moves focus to the current tab-stop toggle. */
@@ -446,7 +441,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     this.warnOnAmbiguousValues(toggles);
     this.observeSizes(toggles);
     this.project(toggles);
-    this.scheduleRunProjection();
+    this.runs.schedule();
   }
 
   private keepOnePressed(toggles: readonly LyraToggle[]): void {
@@ -587,38 +582,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
   }
 
   private observeSizes(toggles: readonly LyraToggle[]): void {
-    const ResizeObserverCtor = this.ownerDocument?.defaultView?.ResizeObserver;
-    if (!ResizeObserverCtor) return;
-    // Re-arm only when membership changed: a fresh observer reports every target once, which
-    // would schedule a redundant measurement on each pressed-state sync.
-    if (
-      this.resizeObserver &&
-      toggles.length === this.sizedToggles.length &&
-      toggles.every((toggle, index) => this.sizedToggles[index] === toggle)
-    ) {
-      return;
-    }
-    this.sizedToggles = [...toggles];
-    this.resizeObserver?.disconnect();
-    const generation = this.generation;
-    const observer = new ResizeObserverCtor(() => {
-      if (this.resizeObserver !== observer || this.generation !== generation) return;
-      this.scheduleRunProjection();
-    });
-    this.resizeObserver = observer;
-    observer.observe(this);
-    for (const toggle of toggles) observer.observe(toggle);
-  }
-
-  private scheduleRunProjection(): void {
-    const ownerWindow = this.ownerDocument?.defaultView;
-    if (!ownerWindow || !this.isConnected || this.runFrame !== undefined) return;
-    const generation = this.generation;
-    this.runFrame = ownerWindow.requestAnimationFrame(() => {
-      this.runFrame = undefined;
-      if (this.generation !== generation || !this.isConnected) return;
-      this.measureRuns();
-    });
+    this.runs.observe(toggles);
   }
 
   /**
@@ -696,25 +660,14 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     const current = this.firstToggleInPath(event);
     if (!current || !this.isOwnedToggle(current)) return;
-    const horizontal = this.orientation === 'horizontal';
-    const rtl = this.effectiveDirection === 'rtl';
-    let move: 'next' | 'previous' | 'first' | 'last' | undefined;
-    if (event.key === 'Home') move = 'first';
-    else if (event.key === 'End') move = 'last';
-    else if (horizontal && event.key === 'ArrowRight') move = rtl ? 'previous' : 'next';
-    else if (horizontal && event.key === 'ArrowLeft') move = rtl ? 'next' : 'previous';
-    else if (!horizontal && event.key === 'ArrowDown') move = 'next';
-    else if (!horizontal && event.key === 'ArrowUp') move = 'previous';
-    if (!move) return;
     const available = this.toggles().filter((toggle) => this.isAvailable(toggle));
-    if (available.length === 0) return;
-    const index = available.indexOf(current);
-    const count = available.length;
-    let nextIndex: number;
-    if (move === 'first') nextIndex = 0;
-    else if (move === 'last') nextIndex = count - 1;
-    else if (index < 0) nextIndex = move === 'next' ? 0 : count - 1;
-    else nextIndex = move === 'next' ? (index + 1) % count : (index - 1 + count) % count;
+    const nextIndex = resolveListMove(event, {
+      count: available.length,
+      current: available.indexOf(current),
+      orientation: this.orientation === 'horizontal' ? 'horizontal' : 'vertical',
+      direction: this.effectiveDirection,
+    });
+    if (nextIndex === null) return;
     event.preventDefault();
     // Manual activation: arrows only move focus, so a toggle never flips while being navigated.
     const next = available[nextIndex]!;

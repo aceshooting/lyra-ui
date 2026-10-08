@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -20,7 +20,7 @@ import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -253,7 +253,7 @@ function immutableAttachmentBlob(content: Uint8Array, mimeType: string): Blob {
 }
 
 class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {
-  protected static override collectionSupport = collectionSupport;
+  protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-attachment-open',
     'lr-text-select',
@@ -464,12 +464,13 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         createTextQuoteIndex(scopeFromElement(block), this.effectiveLocale).search(query, budget).length > 0;
       const { bodyHtml, bodyText } = this.fetchState.email;
       if (bodyHtml !== null) {
-        const doc = parseHtmlDocument(bodyHtml, this.ownerDocument);
+        // The parsed body is only read here, so one parse serves every search of this message.
+        if (this.searchDocument?.html !== bodyHtml) {
+          this.searchDocument = { html: bodyHtml, doc: parseHtmlDocument(bodyHtml, this.ownerDocument) };
+        }
         const next = new Set(this.expandedHtmlQuoteIndices);
-        doc?.body.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
-          if (matchesQuote(block)) {
-            next.add(index);
-          }
+        this.searchDocument.doc?.body.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
+          if (!next.has(index) && matchesQuote(block)) next.add(index);
         });
         const expanded = [...next];
         if (
@@ -494,6 +495,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   override async searchNext(): Promise<boolean> { return super.searchNext(); }
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
+  private searchDocument?: { html: string; doc: Document | null };
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
   @state() private textQuoteExpanded = false;
   @state() private expandedHtmlQuoteIndices: number[] = [];
@@ -742,7 +744,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     const block = this.renderRoot.querySelector<HTMLElement>(`[data-quote-index="${index}"]`);
     const numericIndex = Number(index);
     if (!block || !Number.isInteger(numericIndex) || numericIndex < 0) return;
-    const restoreFocus = activeElementIn(this.shadowRoot) === target;
+    const restoreFocus = shadowFocusTarget(this) === target;
     this.expandedHtmlQuoteIndices = this.expandedHtmlQuoteIndices.includes(numericIndex)
       ? this.expandedHtmlQuoteIndices.filter((value) => value !== numericIndex)
       : [...this.expandedHtmlQuoteIndices, numericIndex];

@@ -79,15 +79,8 @@ and later MIME values restore detection.
   'date' | 'time' | 'true' | 'false'` and reaches every kind, anchor included. Anything outside
   those sets is dropped rather than passed through.
 
-**Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
-"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
-this property was always the second. There is no alias — `appearance` on `<lr-media-card>` is simply
-an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
-chrome again.
-
 **Authoring types:** `LyraMediaCardKind` and `LyraMediaCardOpenDetail`; `frame` uses the shared
-`LyraFrame` directly. The former `MediaCardKind`, `MediaCardOpenDetail`, and `MediaCardFrame`
-names are removed in v9 rather than retained as aliases. URL validators are implementation details,
+`LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
@@ -98,8 +91,6 @@ cancelable only for a safe file anchor immediately before its native download/op
 `preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
-The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
-truthful names.
 Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
 composed `FocusEvent`s whose target is the `lr-media-card` host.
 

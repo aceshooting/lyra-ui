@@ -1,3 +1,4 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -221,6 +222,10 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
    *  and an explicit empty string clears it. A host `aria-label` independently names the trace as
    *  a whole. */
   @property() label?: string;
+  /** Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens evidence toggle and body padding; `m` (the default) and larger keep the full padding. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each evidence row's bordered box. `'plain'` removes the border and corner radius from every `[part="evidence-row"]`, for use inside an already-bordered container. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
   @state() private expandedStageIds = new Set<string>();

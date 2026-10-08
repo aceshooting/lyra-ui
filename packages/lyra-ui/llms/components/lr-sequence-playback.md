@@ -47,8 +47,7 @@ internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEve
 composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
-`LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
-`index`, and `lr-step` names are removed in v9 rather than retained as ambiguous aliases.
+`LyraSequencePlaybackStepDetail`.
 
 **Slots:** `play-icon`, `pause-icon` — decorative glyphs for the paused and playing states; an empty
 slot keeps the built-in glyph. Assigned content renders in an inert, `aria-hidden` layer inside the

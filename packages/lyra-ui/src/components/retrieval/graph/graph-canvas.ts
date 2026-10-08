@@ -17,6 +17,8 @@ interface CanvasHull {
   d: string;
   fill: string;
 }
+const NO_DASH: readonly number[] = [];
+
 interface CanvasLink {
   x1: number;
   y1: number;
@@ -130,21 +132,22 @@ export function shapeHalfSide(r: number): number {
   return (r * Math.sqrt(Math.PI)) / 2;
 }
 
-function pathForShape(
+/** Traces a node outline onto a fresh `Path2D` or straight onto the context's current path. */
+function traceShape(
+  path: Path2D | CanvasRenderingContext2D,
   x: number,
   y: number,
   r: number,
   shape: CanvasNode['shape']
-): Path2D {
-  const path = new Path2D();
+): void {
   if (shape === 'circle') {
     path.arc(x, y, r, 0, Math.PI * 2);
-    return path;
+    return;
   }
   const s = shapeHalfSide(r);
   if (shape === 'square') {
     path.rect(x - s, y - s, s * 2, s * 2);
-    return path;
+    return;
   }
   const d = s * Math.SQRT2;
   path.moveTo(x, y - d);
@@ -152,7 +155,6 @@ function pathForShape(
   path.lineTo(x, y + d);
   path.lineTo(x - d, y);
   path.closePath();
-  return path;
 }
 
 function drawArrowhead(ctx: CanvasRenderingContext2D, link: CanvasLink): void {
@@ -245,7 +247,7 @@ export function drawGraphScene(
   const styleLink = (link: CanvasLink): void => {
     ctx.strokeStyle = link.selected ? scene.selectedColor : link.color;
     ctx.lineWidth = link.selected ? thick : link.width;
-    ctx.setLineDash(link.dash ? [...link.dash] : []);
+    ctx.setLineDash((link.dash ?? NO_DASH) as number[]);
     ctx.globalAlpha = link.dimmed ? dimmedOpacity : 1;
   };
   // Same-style runs share one stroke; skip width 0, which canvas ignores (keeping the last width).
@@ -286,14 +288,15 @@ export function drawGraphScene(
   }
 
   for (const node of scene.nodes) {
-    const path = pathForShape(node.x, node.y, node.r, node.shape);
     ctx.globalAlpha = node.dimmed ? dimmedOpacity : 1;
     ctx.fillStyle = node.fill;
-    ctx.fill(path);
+    ctx.beginPath();
+    traceShape(ctx, node.x, node.y, node.r, node.shape);
+    ctx.fill();
     if (node.selected) {
       ctx.strokeStyle = scene.selectedColor;
       ctx.lineWidth = medium;
-      ctx.stroke(path);
+      ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
@@ -414,14 +417,9 @@ export function drawPickingScene(
   }
   for (const node of scene.nodes) {
     ctx.fillStyle = indexToPickColor(idx++);
-    ctx.fill(
-      pathForShape(
-        node.x,
-        node.y,
-        Math.max(node.r, minimumWorldStroke / 2),
-        node.shape
-      )
-    );
+    ctx.beginPath();
+    traceShape(ctx, node.x, node.y, Math.max(node.r, minimumWorldStroke / 2), node.shape);
+    ctx.fill();
   }
   ctx.restore();
 }

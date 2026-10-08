@@ -38,7 +38,7 @@ Deprecated **package entry points**, **stylesheets**, **exported types/functions
 **global events/root attributes** are listed under "Deprecated package exports" at the end of
 `llms/index.md`. Deprecated named exports also carry `@deprecated` in their declarations for editor
 feedback. Each component's own deprecations
-are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (the declaration's
+are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (from `@aceshooting/lyra-ide`; the declaration's
 `deprecations`, with a member's `deprecationRef` identifying its record as `kind:name`).
 The standard `deprecated` field remains available to generic CEM readers. These records are the complete
 list of deprecated APIs; audit an upgrade against them, not against console output.
@@ -195,7 +195,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the sixty-six shipped message catalogs),
+  `@aceshooting/lyra-translations/<locale>.js` (the sixty-six message catalogs, in the companion package),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -430,7 +430,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   import type {} from "@aceshooting/lyra-ui/vue";
   import type {} from "@aceshooting/lyra-ui/svelte";
   ```
-  All three are generated from `custom-elements.json` and type the documented properties,
+  All three are generated from the Custom Elements Manifest and type the documented properties,
   attribute aliases, events, element refs, and CSS custom properties. Their emitted JavaScript is
   empty: they are declaration merging, not runtime wrappers, and they do not register any tag.
 - **Delegated, `document` and `window` listeners: `@aceshooting/lyra-ui/events`.** Component events
@@ -1574,7 +1574,7 @@ code. See each control's own reference page for its exact pair.
   formula from the `--lr-theme-*` inputs you control:
   ```css
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+    min(var(--lr-theme-icon-button-size, 2.25rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
   );
   ```
 
@@ -2298,26 +2298,26 @@ English-resolved locale, since falling through to `defaults` is simply how Engli
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
 
-### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
+### Ready-made catalogs: `@aceshooting/lyra-translations/<locale>.js`
 
-Sixty-six full catalogs ship with the package, each covering every key in `LYRA_DEFAULT_STRINGS`.
+Sixty-six full catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
 The public `@aceshooting/lyra-ui/locales.json` manifest lists their canonical identities, authored
 source spellings, import paths, and structural coverage. It also distinguishes translation
 coverage from linguistic review tier. The catalogs are **side-effect-only modules**: import one
 bare, read nothing from it, and it calls `registerLyraLocale()` for you.
 
 ```ts
-import "@aceshooting/lyra-ui/translations/de.js";
-import "@aceshooting/lyra-ui/translations/de-CH.js"; // Swiss Standard German
-import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
-import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
-import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
-import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
-import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
-import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
-import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
+import "@aceshooting/lyra-translations/de.js";
+import "@aceshooting/lyra-translations/de-CH.js"; // Swiss Standard German
+import "@aceshooting/lyra-translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
+import "@aceshooting/lyra-translations/fa.js"; // fa-IR falls back to this base catalog
+import "@aceshooting/lyra-translations/he.js"; // he-IL falls back to this base catalog
+import "@aceshooting/lyra-translations/it.js"; // Italian
+import "@aceshooting/lyra-translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
+import "@aceshooting/lyra-translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
+import "@aceshooting/lyra-translations/ro.js"; // Romanian
+import "@aceshooting/lyra-translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
+import "@aceshooting/lyra-translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2343,7 +2343,7 @@ ones cost nothing. A catalog registered this way is merged like any other, so a 
 in `getRegisteredLyraLocales()`, and therefore in `<lr-locale-picker>`, so the set you import is the
 set a user can switch between.
 
-### Smaller catalogs: `@aceshooting/lyra-ui/translations/<locale>/<family>.js`
+### Smaller catalogs: `@aceshooting/lyra-translations/<locale>/<family>.js`
 
 Each locale above is also published as twelve smaller, side-effect-only **family slices** — one per
 component family (`agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
@@ -2352,12 +2352,12 @@ one family reaches (roving-focus/overlay/a11y strings like `collapse`, `open`, `
 the families the application actually renders instead of the whole-locale aggregate above:
 
 ```ts
-import "@aceshooting/lyra-ui/translations/fr/forms.js"; // lr-input, lr-select, lr-combobox, ...
-import "@aceshooting/lyra-ui/translations/fr/data.js"; // lr-table, lr-tree, lr-data-grid, ...
-import "@aceshooting/lyra-ui/translations/fr/shared.js"; // cross-cutting strings both families reach
+import "@aceshooting/lyra-translations/fr/forms.js"; // lr-input, lr-select, lr-combobox, ...
+import "@aceshooting/lyra-translations/fr/data.js"; // lr-table, lr-tree, lr-data-grid, ...
+import "@aceshooting/lyra-translations/fr/shared.js"; // cross-cutting strings both families reach
 ```
 
-`@aceshooting/lyra-ui/translations/fr.js` is unchanged: it is now a thin aggregate that imports every
+`@aceshooting/lyra-translations/fr.js` is unchanged: it is now a thin aggregate that imports every
 slice above, so the plain whole-locale import from the previous section keeps working exactly as
 before — this is a purely additive, opt-in way to shrink a non-English bundle, mirroring the
 per-component tree-shaking English defaults already get for free. A component's family is the
@@ -2486,7 +2486,7 @@ import {
   validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
   a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
   the event as `invalid_stream_event`.
-- **Tool display name and incomplete calls** (21.1.0) — `ToolInvocation.displayName` is the
+- **Tool display name and incomplete calls** — `ToolInvocation.displayName` is the
   application's own, already-translated tool label; `<lr-message-parts>` (both `tool-display`
   modes) and `<lr-tool-timeline>` show it in place of `name`, which still selects the result
   renderer. `status: 'incomplete'` marks a call that ended without a result (an interrupted stream,
@@ -2558,7 +2558,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 29 peers are optional, in two groups. The 26 component-facing peers remain outside the default
+All 30 peers are optional, in two groups. The 27 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty
@@ -2688,6 +2688,16 @@ that need form-value or validity behavior: it supplies
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
 
+`installHappyDomShims()` installs that shim plus two more Happy DOM gap fixes, each a no-op where
+the engine already behaves (feature-detected, so safe in a shared setup file and never part of a
+production bundle): `installHappyDomShadowFocusShim()` makes `ShadowRoot.activeElement` return
+`null` for a sibling or detached shadow root instead of throwing a `TypeError` (own-root and
+nested-root focus are unchanged; it returns a function that restores the original descriptor), and `installHappyDomAriaControlsShim()` adds `Element.ariaControlsElements` only
+when absent. Setting it stores the references and writes an empty `aria-controls`; reading returns
+only targets in the element's own or an ancestor shadow scope (sibling and descendant shadow
+targets are dropped); `null` clears it and removes the attribute; a changed `aria-controls`
+attribute resolves ids in the element's own root instead.
+
 ## Constructing a validated test event: `createLyraEvent()`
 
 `@aceshooting/lyra-ui/testing` also exports
@@ -2814,38 +2824,18 @@ a local island around the call site.
 
 ## happy-dom's custom-property resolver and host-to-part token forwarding
 
-In 16.0.0, seven built-in controls that each compose a real
-`<lr-icon-button>` for their icon-only action — `<lr-copy-button>`, `<lr-dialog>` (whose close
-button is inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`,
-`<lr-attachment-trigger>`, `<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`
-— captured the composed control's public `--lr-icon-button-*` tokens on their own `:host` and
-forwarded that private token back onto the SAME public token name on the `[part]` rendering the
-composed control, so that an ancestor theme override still reached the composed child instead of
-being shadowed by the component's own default. That was legal under the CSS Custom Properties spec
-— `:host` and `[part]` resolve on different elements, so a real browser resolves the host
-declaration to a concrete value first and the part substitutes that, and per-element cycle detection
-never fired — but **happy-dom does not model that element boundary**. Its `CSSComputedStyle` merges
-ancestor and own-element custom properties into a single flat map with no notion of which element
-declared what, and (at least through 20.14.5, the newest release at time of writing)
-`CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no visited set
-and no depth cap — so the capture-and-forward pair resolved into each other forever, throwing an
-unhandled `RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`
-on every render of any of the seven components. Every test still reported as passing — there was no
-failing assertion to point at — but the runner counted the unhandled errors and exited non-zero
-anyway, which read as unrelated flakiness rather than a CSS issue.
+happy-dom merges ancestor and own-element custom properties into one flat map and resolves
+`var()` recursively with no visited set or depth cap, so a `:host` token captured from a public
+token and forwarded back onto that same public name on a `[part]` recurses forever
+(`RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`).
+Real browsers resolve host and part on separate elements and never cycle. Tests can pass while
+the unhandled errors still make the runner exit non-zero.
 
-**Current versions are unaffected.** `<lr-icon-button>` now carries a private
-`--_lr-icon-button-<token>-default` fallback tier for every paint token (background, color, border,
-and their hover/active variants — the same shape its corner radius already used via
-`--_lr-icon-button-radius-default`), and each composing component sets its own default directly on
-that private tier rather than re-declaring the public token name. `<lr-icon-button>`'s own
-stylesheet still checks the public token first, so an ancestor override reaches a composed control
-exactly as before, but no descendant declares a public `--lr-icon-button-*` token from a private
-token that was itself derived from that same public token — so no resolver, scoped or flattened,
-ever sees a cycle. A project still hitting the `RangeError` above should upgrade
-`@aceshooting/lyra-ui`; the workarounds that version range needed (patching or upgrading the DOM
-implementation to cycle-aware/depth-limited custom-property resolution, or running the affected
-suites against a real browser engine) are no longer necessary once it does.
+Current versions are unaffected: composing components set their defaults on
+`<lr-icon-button>`'s private `--_lr-icon-button-<token>-default` tier, and `<lr-icon-button>` still
+checks the public token first, so an ancestor override reaches a composed control. A project
+still hitting the `RangeError` should upgrade `@aceshooting/lyra-ui`; no resolver patch or
+real-browser fallback is needed.
 
 ## Accessibility contract
 
@@ -2884,12 +2874,13 @@ documented accessibility scope and how to report an accessibility issue, see
 
 ## Editor and tooling integration
 
-The published package ships machine-readable metadata for editors:
-`custom-elements.json` (Custom Elements Manifest), `web-types.json` (JetBrains, zero-config), and
-`vscode-html-data.json` / `vscode-css-data.json` (point `html.customData` / `css.customData` at them
-in `.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
+The companion package `@aceshooting/lyra-ide` (not `@aceshooting/lyra-ui`) ships machine-readable
+metadata for editors: `custom-elements.json` (Custom Elements Manifest), `web-types.json`
+(JetBrains, zero-config), and `vscode-html-data.json` / `vscode-css-data.json` (point
+`html.customData` / `css.customData` at `./node_modules/@aceshooting/lyra-ide/...` in
+`.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
 files matter when scaffolding a project's editor configuration. Build tools can import the manifest
-through the explicit `@aceshooting/lyra-ui/custom-elements.json` package export; native Node ESM
+through the explicit `@aceshooting/lyra-ide/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
 
 **Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
@@ -3338,7 +3329,10 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   `lockScroll`.
   `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `auxiliaryRoots`, `modal`, `lockScroll`,
   `suspendWhenUnrendered`, `onEscape`, `onBackdrop`, `preferredInitialFocus`,
-  `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, and `onTab`. `OverlayHandle` exposes
+  `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, `onTab`, and `deferredReturn` (resolved after
+  the synchronous focus return of a restoring close: a deferred pass for a target the host only
+  re-shows afterward, or `undefined` to skip it; every activation and deactivation abandons a pass
+  still pending for the host). `OverlayHandle` exposes
   `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`,
   `deactivate({ restoreFocus?, deferScrollLockRelease? }?)`, `suspend()`, `resume()`, `isTopmost()`,
   `isActive()`, and `dismissBackdrop()`; the deactivate argument is the exported
@@ -3353,7 +3347,8 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
 null; modalRoot?: () => HTMLElement | null; auxiliaryRoots?: () => readonly HTMLElement[]; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
 restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
-void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
+void; suspendWhenUnrendered?: boolean; lockScroll?: boolean; deferredReturn?: () =>
+DeferredFocusReturnPass | undefined }`, `OverlayDeactivateOptions {
 restoreFocus?: boolean; deferScrollLockRelease?: boolean }`, and `OverlayHandle { focusInitial():
 void; focusAutofocus(): boolean; updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void;
 deactivate(options?: OverlayDeactivateOptions): (() => void) | undefined; suspend(): void;
@@ -3421,7 +3416,7 @@ number; clearTimeout(handle: number): void }`.
 
   ```ts
   import { bridgeLyraLocale, setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
-  import "@aceshooting/lyra-ui/translations/ar.js";
+  import "@aceshooting/lyra-translations/ar.js";
 
   const stop = bridgeLyraLocale(); // mirrors onto <html>
   setLyraLocale("ar"); // <html lang="ar" dir="rtl">
@@ -4978,6 +4973,9 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
+  `installHappyDomShadowFocusShim(): unknown`
+  `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
+  `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.

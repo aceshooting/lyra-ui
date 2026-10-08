@@ -143,3 +143,41 @@ it('strokes consecutive same-style canvas links as one path', () => {
   });
   expect(strokes).to.be.below(5);
 });
+
+it('hands each link its own dash array to the canvas and draws nodes without Path2D', () => {
+  const context = document.createElement('canvas').getContext('2d')!;
+  const dashes: unknown[] = [];
+  const nativeDash = context.setLineDash;
+  context.setLineDash = function (this: CanvasRenderingContext2D, segments: number[]) {
+    dashes.push(segments);
+    return nativeDash.call(this, segments);
+  };
+  const OriginalPath2D = window.Path2D;
+  let paths = 0;
+  window.Path2D = class extends OriginalPath2D {
+    constructor(...args: ConstructorParameters<typeof Path2D>) {
+      super(...args);
+      paths += 1;
+    }
+  } as typeof Path2D;
+  const dash = [4, 2];
+  try {
+    drawGraphScene(context, { k: 1, x: 0, y: 0 }, {
+      hulls: [],
+      links: [{ x1: 0, y1: 0, x2: 5, y2: 5, width: 1, color: 'black', dash }],
+      nodes: Array.from({ length: 50 }, (_, index) => ({ x: index, y: 0, r: 4, fill: 'red', shape: 'circle' as const })),
+      edgeLabels: [],
+      nodeLabels: [],
+      showNodeLabels: false,
+      haloColor: 'black',
+      selectedColor: 'black',
+      labelColor: 'black',
+      labelHaloColor: 'white',
+      font: '10px sans-serif',
+    });
+  } finally {
+    window.Path2D = OriginalPath2D;
+  }
+  expect(paths).to.equal(0);
+  expect(dashes.includes(dash)).to.equal(true);
+});

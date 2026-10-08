@@ -683,6 +683,14 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // <lr-pan-zoom>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
+    // A slotted button/link (actions slot) owns Arrow keys; the lightbox's own shadow controls do not.
+    for (const target of event.composedPath()) {
+      if (target === this) break;
+      if (
+        target instanceof Element && target.getRootNode() !== this.shadowRoot &&
+        target.matches('a[href], button, [role="button"], [role="link"]')
+      ) return;
+    }
     if (
       keyEventOwnedByInnerControl(event, {
         container: this,

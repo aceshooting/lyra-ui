@@ -955,7 +955,7 @@ it("updates the dialog name when text inside an assigned header mutates", async 
 
   (el.querySelector('[slot="header"]') as HTMLElement).textContent =
     "Updated heading";
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
   await el.updateComplete;
   expect(panel.getAttribute("aria-label")).to.equal("Updated heading");
 });
@@ -971,11 +971,11 @@ it("restores header text observation after reconnect", async () => {
   ) as LyraResponsivePanel;
   el.remove();
   container.append(el);
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
 
   (el.querySelector('[slot="header"]') as HTMLElement).textContent =
     "After reconnect";
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
   await el.updateComplete;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(panel.getAttribute("aria-label")).to.equal("After reconnect");

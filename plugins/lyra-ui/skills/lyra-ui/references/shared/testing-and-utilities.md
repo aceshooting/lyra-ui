@@ -10,6 +10,16 @@ that need form-value or validity behavior: it supplies
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
 
+`installHappyDomShims()` installs that shim plus two more Happy DOM gap fixes, each a no-op where
+the engine already behaves (feature-detected, so safe in a shared setup file and never part of a
+production bundle): `installHappyDomShadowFocusShim()` makes `ShadowRoot.activeElement` return
+`null` for a sibling or detached shadow root instead of throwing a `TypeError` (own-root and
+nested-root focus are unchanged; it returns a function that restores the original descriptor), and `installHappyDomAriaControlsShim()` adds `Element.ariaControlsElements` only
+when absent. Setting it stores the references and writes an empty `aria-controls`; reading returns
+only targets in the element's own or an ancestor shadow scope (sibling and descendant shadow
+targets are dropped); `null` clears it and removes the attribute; a changed `aria-controls`
+attribute resolves ids in the element's own root instead.
+
 ## Constructing a validated test event: `createLyraEvent()`
 
 `@aceshooting/lyra-ui/testing` also exports
@@ -136,47 +146,28 @@ a local island around the call site.
 
 ## happy-dom's custom-property resolver and host-to-part token forwarding
 
-In 16.0.0, seven built-in controls that each compose a real
-`<lr-icon-button>` for their icon-only action — `<lr-copy-button>`, `<lr-dialog>` (whose close
-button is inherited by `<lr-drawer>`), `<lr-reorder-item>`, `<lr-message-actions>`,
-`<lr-attachment-trigger>`, `<lr-code-block>` (shared by `<lr-code-block-core>`), and `<lr-callout>`
-— captured the composed control's public `--lr-icon-button-*` tokens on their own `:host` and
-forwarded that private token back onto the SAME public token name on the `[part]` rendering the
-composed control, so that an ancestor theme override still reached the composed child instead of
-being shadowed by the component's own default. That was legal under the CSS Custom Properties spec
-— `:host` and `[part]` resolve on different elements, so a real browser resolves the host
-declaration to a concrete value first and the part substitutes that, and per-element cycle detection
-never fired — but **happy-dom does not model that element boundary**. Its `CSSComputedStyle` merges
-ancestor and own-element custom properties into a single flat map with no notion of which element
-declared what, and (at least through 20.14.5, the newest release at time of writing)
-`CSSVariableFormatter.resolveVariables` substitutes into that map recursively with no visited set
-and no depth cap — so the capture-and-forward pair resolved into each other forever, throwing an
-unhandled `RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`
-on every render of any of the seven components. Every test still reported as passing — there was no
-failing assertion to point at — but the runner counted the unhandled errors and exited non-zero
-anyway, which read as unrelated flakiness rather than a CSS issue.
+happy-dom merges ancestor and own-element custom properties into one flat map and resolves
+`var()` recursively with no visited set or depth cap, so a `:host` token captured from a public
+token and forwarded back onto that same public name on a `[part]` recurses forever
+(`RangeError: Maximum call stack size exceeded` from `CSSVariableFormatter.resolveVariables`).
+Real browsers resolve host and part on separate elements and never cycle. Tests can pass while
+the unhandled errors still make the runner exit non-zero.
 
-**Current versions are unaffected.** `<lr-icon-button>` now carries a private
-`--_lr-icon-button-<token>-default` fallback tier for every paint token (background, color, border,
-and their hover/active variants — the same shape its corner radius already used via
-`--_lr-icon-button-radius-default`), and each composing component sets its own default directly on
-that private tier rather than re-declaring the public token name. `<lr-icon-button>`'s own
-stylesheet still checks the public token first, so an ancestor override reaches a composed control
-exactly as before, but no descendant declares a public `--lr-icon-button-*` token from a private
-token that was itself derived from that same public token — so no resolver, scoped or flattened,
-ever sees a cycle. A project still hitting the `RangeError` above should upgrade
-`@aceshooting/lyra-ui`; the workarounds that version range needed (patching or upgrading the DOM
-implementation to cycle-aware/depth-limited custom-property resolution, or running the affected
-suites against a real browser engine) are no longer necessary once it does.
+Current versions are unaffected: composing components set their defaults on
+`<lr-icon-button>`'s private `--_lr-icon-button-<token>-default` tier, and `<lr-icon-button>` still
+checks the public token first, so an ancestor override reaches a composed control. A project
+still hitting the `RangeError` should upgrade `@aceshooting/lyra-ui`; no resolver patch or
+real-browser fallback is needed.
 
 ## Editor and tooling integration
 
-The published package ships machine-readable metadata for editors:
-`custom-elements.json` (Custom Elements Manifest), `web-types.json` (JetBrains, zero-config), and
-`vscode-html-data.json` / `vscode-css-data.json` (point `html.customData` / `css.customData` at them
-in `.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
+The companion package `@aceshooting/lyra-ide` (not `@aceshooting/lyra-ui`) ships machine-readable
+metadata for editors: `custom-elements.json` (Custom Elements Manifest), `web-types.json`
+(JetBrains, zero-config), and `vscode-html-data.json` / `vscode-css-data.json` (point
+`html.customData` / `css.customData` at `./node_modules/@aceshooting/lyra-ide/...` in
+`.vscode/settings.json`). For an agent, `llms/components/<tag>.md` is the cheaper source; these
 files matter when scaffolding a project's editor configuration. Build tools can import the manifest
-through the explicit `@aceshooting/lyra-ui/custom-elements.json` package export; native Node ESM
+through the explicit `@aceshooting/lyra-ide/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
 
 **Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
@@ -625,7 +616,10 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
   `lockScroll`.
   `OverlayActivationOptions` exposes `host`, `panel`, optional `modalRoot`, `auxiliaryRoots`, `modal`, `lockScroll`,
   `suspendWhenUnrendered`, `onEscape`, `onBackdrop`, `preferredInitialFocus`,
-  `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, and `onTab`. `OverlayHandle` exposes
+  `beforeInitialFocus`, `restoreFocusTo`, `trapFocus`, `onTab`, and `deferredReturn` (resolved after
+  the synchronous focus return of a restoring close: a deferred pass for a target the host only
+  re-shows afterward, or `undefined` to skip it; every activation and deactivation abandons a pass
+  still pending for the host). `OverlayHandle` exposes
   `focusInitial()`, `focusAutofocus()`, `updateRestoreFocusTo(target)`,
   `deactivate({ restoreFocus?, deferScrollLockRelease? }?)`, `suspend()`, `resume()`, `isTopmost()`,
   `isActive()`, and `dismissBackdrop()`; the deactivate argument is the exported
@@ -640,7 +634,8 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
 null; modalRoot?: () => HTMLElement | null; auxiliaryRoots?: () => readonly HTMLElement[]; onEscape: () => void; onBackdrop?: () => void;
 preferredInitialFocus?: () => HTMLElement | null; beforeInitialFocus?: () => boolean;
 restoreFocusTo?: OverlayRestoreFocusTarget; modal?: boolean; trapFocus?: boolean; onTab?: () =>
-void; suspendWhenUnrendered?: boolean; lockScroll?: boolean }`, `OverlayDeactivateOptions {
+void; suspendWhenUnrendered?: boolean; lockScroll?: boolean; deferredReturn?: () =>
+DeferredFocusReturnPass | undefined }`, `OverlayDeactivateOptions {
 restoreFocus?: boolean; deferScrollLockRelease?: boolean }`, and `OverlayHandle { focusInitial():
 void; focusAutofocus(): boolean; updateRestoreFocusTo(target: OverlayRestoreFocusTarget): void;
 deactivate(options?: OverlayDeactivateOptions): (() => void) | undefined; suspend(): void;
@@ -708,7 +703,7 @@ number; clearTimeout(handle: number): void }`.
 
   ```ts
   import { bridgeLyraLocale, setLyraLocale } from "@aceshooting/lyra-ui/localization.js";
-  import "@aceshooting/lyra-ui/translations/ar.js";
+  import "@aceshooting/lyra-translations/ar.js";
 
   const stop = bridgeLyraLocale(); // mirrors onto <html>
   setLyraLocale("ar"); // <html lang="ar" dir="rtl">

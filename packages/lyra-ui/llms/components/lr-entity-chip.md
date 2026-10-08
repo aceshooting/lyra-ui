@@ -50,13 +50,13 @@ floating popover on hover or keyboard focus (the focused control matches `:focus
 text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-entity-chip-border` (default `transparent`, the chip's `--lr-border-width-thin` outline).
 
-The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The anchored detail popover is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
-`--lr-positioning-strategy` (16.0.0) — the preview popover reads this same cascading
+`--lr-positioning-strategy` — the preview popover reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-entity-chip>`; set the custom property on `:root`, a theme, or one clipping

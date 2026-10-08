@@ -188,6 +188,7 @@ it("keeps willUpdate's pre-count in sync with firstUpdated's authoritative count
 
   await el.updateComplete;
   // Give a wasted cascading update (if any) a chance to run before asserting.
+  // wait-reason: negative assertion, a wasted cascading update must not occur after the first update completes
   await aTimeout(50);
 
   // Only the `<lr-source-card>` is assigned to the default slot; the
@@ -268,11 +269,11 @@ it('exposes slotted cards as list items while preserving author roles on removal
   const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
   el.append(card);
   await el.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve));
+  await waitUntil(() => card.getAttribute('role') === 'listitem', 'slotted card gets the owned listitem role');
   expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
   expect(card.getAttribute('role')).to.equal('listitem');
   card.remove();
-  await new Promise((resolve) => setTimeout(resolve));
+  await waitUntil(() => !card.hasAttribute('role'), 'owned role released on removal');
   expect(card.hasAttribute('role')).to.be.false;
 });
 
@@ -370,14 +371,14 @@ it('reapplies owned listitem roles after disconnect and reconnect', async () => 
   )) as HTMLElement;
   const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
   const card = el.querySelector('lr-source-card')!;
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await waitUntil(() => card.getAttribute('role') === 'listitem', 'slotted card gets the owned listitem role');
   expect(card.getAttribute('role')).to.equal('listitem');
 
   el.remove();
   expect(card.hasAttribute('role')).to.be.false;
   wrapper.append(el);
   await el.updateComplete;
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await waitUntil(() => card.getAttribute('role') === 'listitem', 'slotted card gets the owned listitem role');
   expect(card.getAttribute('role')).to.equal('listitem');
 });
 
@@ -488,15 +489,17 @@ it('preserves live author roles while connected and after release', async () => 
   const card = document.createElement('lr-source-card');
   const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
   el.append(card);
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await waitUntil(() => card.getAttribute('role') === 'listitem', 'slotted card gets the owned listitem role');
   expect(card.getAttribute('role')).to.equal('listitem');
 
   card.setAttribute('role', 'article');
+  // wait-reason: negative assertion, an author-set role must survive a macrotask without being rewritten
   await new Promise<void>((resolve) => setTimeout(resolve));
   expect(card.getAttribute('role')).to.equal('article');
   expect(el.shadowRoot!.querySelector('[part="list"]')!.hasAttribute('role')).to.be.false;
 
   card.remove();
+  // wait-reason: negative assertion, an author-set role must survive removal without being cleared
   await new Promise<void>((resolve) => setTimeout(resolve));
   expect(card.getAttribute('role')).to.equal('article');
 });

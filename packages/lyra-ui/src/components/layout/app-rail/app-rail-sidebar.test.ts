@@ -1,4 +1,5 @@
-import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
 import type { LyraAppRail } from './app-rail.class.js';
@@ -27,11 +28,6 @@ function mobile(rail: LyraAppRail): void {
   (rail as unknown as { onMobileChange(event: { matches: boolean }): void }).onMobileChange({ matches: true });
 }
 function base(rail: LyraAppRail): HTMLElement { return rail.shadowRoot!.querySelector<HTMLElement>('[part="base"], [part="panel"]')!; }
-/** What `declaration` computes to inside the rail's shadow root, where its fallback tokens live. */
-function resolvedInShadow(rail: LyraAppRail, declaration: string, property: string): string {
-  const probe = document.createElement('span'); probe.setAttribute('style', declaration); rail.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property); probe.remove(); return value;
-}
 /** The controls relationship reaches the trigger either as an element reference (retargeted to
  *  the rail host across the shadow boundary) or, without that API, as an idref. */
 function controlsRail(trigger: HTMLElement, rail: LyraAppRail): boolean {
@@ -195,7 +191,7 @@ describe('app rail sidebar toggle and trigger', () => {
     expect(el.shadowRoot!.querySelector('[part="collapse-toggle"]')!.getAttribute('aria-expanded')).to.equal('false');
     el.hotkey = ''; await el.updateComplete; expect(trigger.getAttribute('aria-keyshortcuts')).to.equal('Alt+N');
     el.triggerCollapses = false; await el.updateComplete; expect(trigger.hasAttribute('aria-expanded')).to.equal(false);
-    el.triggerCollapses = true; await el.updateComplete; el.remove(); wrapper.append(el); await aTimeout(0);
+    el.triggerCollapses = true; await el.updateComplete; el.remove(); wrapper.append(el); await el.updateComplete;
     expect(trigger.getAttribute('aria-expanded')).to.equal('false');
   });
 
@@ -222,7 +218,7 @@ describe('app rail sidebar hotkey', () => {
     expect(press().defaultPrevented).to.equal(true); await el.updateComplete; expect(el.mode).to.equal('icon-only');
     expect(press('и', { code: 'KeyB' }).defaultPrevented).to.equal(true); await el.updateComplete; expect(el.mode).to.equal('full');
     el.hotkey = 'alt+b'; expect(press('∫', { ctrlKey: false, altKey: true, code: 'KeyB' }).defaultPrevented).to.equal(true); await el.updateComplete;
-    const parent = el.parentElement!; el.remove(); parent.append(el); await aTimeout(0);
+    const parent = el.parentElement!; el.remove(); parent.append(el); await el.updateComplete;
     press('∫', { ctrlKey: false, altKey: true, code: 'KeyB' }); await el.updateComplete; expect(el.mode).to.equal('full');
     el.hotkey = 'mod+b'; await el.updateComplete;
     const expected = detectPlatform(navigator) === 'mac' ? 'Meta+B' : 'Control+B';

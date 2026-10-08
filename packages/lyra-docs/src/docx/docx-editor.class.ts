@@ -20,7 +20,8 @@ import {
   imageRatioPartner, imageResizeDraft, imageResizeUnchanged,
 } from './image-tools.js';
 import { captureImageInsertionIntent, imageInsertionDefaults, imageInsertionDraft } from './image-insertion-tools.js';
-import { trackDeferredFocusReturn } from './deferred-focus-return.js';
+import { AvailabilityMemo } from './availability-memo.js';
+import { returnFocusAfterHide, trackDeferredFocusReturn } from './deferred-focus-return.js';
 import { inspectDocxImageForInsertion } from './image-bytes.js';
 import type {
   DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
@@ -432,6 +433,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private mount: HTMLDivElement | null = null;
   private hint: HTMLSpanElement | null = null;
   private lastUsable = new Map<string, boolean>();
+  private readonly availabilityMemo = new AvailabilityMemo<DocxCommandAvailability>();
   private colorItems: { key: string; text: readonly object[]; highlight: readonly object[] } | null = null;
   private session: DocxSession | null = null;
   private unsubscribeSession: (() => void) | null = null;
@@ -748,6 +750,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   /** Native input's transient `busy` keeps a control's last state instead of disabling it per keystroke. */
+  /** Focused element in this editor's own shadow root; null once detached, which cannot hold focus. */
+  private ownFocus(): Element | null {
+    return this.isConnected ? this.shadowRoot?.activeElement ?? null : null;
+  }
+
   private usable(key: string, availability: DocxCommandAvailability | undefined): boolean {
     if (availability?.reason === 'busy' && this.currentSnapshot?.activity === null) return this.lastUsable.get(key) ?? false;
     const enabled = Boolean(availability?.enabled);
@@ -756,7 +763,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private available(action: DocxCommand | DocxEdit): boolean {
-    return this.usable(JSON.stringify(action), this.can(action));
+    const key = JSON.stringify(action);
+    const snapshot = this.currentSnapshot;
+    return this.usable(key, snapshot ? this.availabilityMemo.get(snapshot, key, () => this.can(action)) : this.can(action));
   }
 
   /** Execute a supported formatting, editing or history command. */
@@ -1051,6 +1060,28 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.releaseTableIntent();
   }
 
+  private beginFocusReturn(slot: 'cancelTableFocusReturn' | 'cancelImageFocusReturn' | 'cancelInsertionFocusReturn') {
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => { if (this[slot] === focus.cancel) this[slot] = null; });
+    this[slot] = focus.cancel;
+    return focus;
+  }
+
+  /** Hide a popover, then return focus unless the user, the session, the dialog generation or the selection moved on. */
+  private hideThenReturnFocus(
+    popover: EditorPopover, focus: ReturnType<typeof trackDeferredFocusReturn>, session: DocxSession | null,
+    selectionVersion: number | undefined, sameGeneration: () => boolean, returnToEditor: boolean, triggerSelector: string,
+  ): void {
+    returnFocusAfterHide(
+      popover.hide({ focusTrigger: false }), focus,
+      () => this.isConnected && this.session === session && sameGeneration() && !popover.open &&
+        session?.snapshot().selection.version === selectionVersion,
+      () => {
+        if (returnToEditor) this.focusEditor();
+        else this.renderRoot.querySelector<HTMLElement>(triggerSelector)?.focus();
+      },
+    );
+  }
+
   private closeTableDialog(returnToEditor: boolean): void {
     this.cancelTableFocusReturn?.();
     const session = this.session;
@@ -1058,18 +1089,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const selectionVersion = session?.snapshot().selection.version;
     const popover = this.tablePopover();
     if (!popover) return;
-    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
-      if (this.cancelTableFocusReturn === focus.cancel) this.cancelTableFocusReturn = null;
-    });
-    this.cancelTableFocusReturn = focus.cancel;
-    void popover.hide({ focusTrigger: false }).then(() => {
-      const shouldFocus = !focus.cancelled && this.isConnected && this.session === session && generation === this.tableDialogGeneration &&
-        !popover.open && session?.snapshot().selection.version === selectionVersion;
-      focus.cancel();
-      if (!shouldFocus) return;
-      if (returnToEditor) this.focusEditor();
-      else this.renderRoot.querySelector<HTMLElement>('[part="table-insert-trigger"]')?.focus();
-    }, focus.cancel);
+    const focus = this.beginFocusReturn('cancelTableFocusReturn');
+    this.hideThenReturnFocus(popover, focus, session, selectionVersion, () => generation === this.tableDialogGeneration,
+      returnToEditor, '[part="table-insert-trigger"]');
   }
 
   private runTableEdit(action: DocxTableAction, fromDialog = false): void {
@@ -1148,10 +1170,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.resetImageInsertion(false);
     const generation = this.insertionGeneration;
     if (!returnFocus || !popover) { void popover?.hide({ focusTrigger: false }); return; }
-    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
-      if (this.cancelInsertionFocusReturn === focus.cancel) this.cancelInsertionFocusReturn = null;
-    });
-    this.cancelInsertionFocusReturn = focus.cancel;
+    const focus = this.beginFocusReturn('cancelInsertionFocusReturn');
     void popover.hide({ focusTrigger: false }).then(async () => {
       await this.updateComplete;
       if (focus.cancelled || !this.isConnected || this.session !== owner || generation !== this.insertionGeneration || popover.open) {
@@ -1243,7 +1262,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.insertionDescription = '';
       this.insertionPhase = 'draft';
       await this.updateComplete;
-      const active = this.shadowRoot?.activeElement;
+      const active = this.ownFocus();
       if (this.isConnected && this.session === owner && generation === this.insertionGeneration && intent?.valid(owner) &&
           this.insertionPhase === 'draft' && popover.open && active?.closest('[part="image-insert-dialog"]') === popover)
         this.renderRoot.querySelector<HTMLElement>('[part="image-insert-width"]')?.focus();
@@ -1273,10 +1292,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.insertionBytes = null;
     this.insertionDefaults = null;
     this.insertionWidth = ''; this.insertionHeight = ''; this.insertionTitle = ''; this.insertionDescription = '';
-    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
-      if (this.cancelInsertionFocusReturn === focus.cancel) this.cancelInsertionFocusReturn = null;
-    });
-    this.cancelInsertionFocusReturn = focus.cancel;
+    const focus = this.beginFocusReturn('cancelInsertionFocusReturn');
     const pending = intent.dispatch(source);
     void popover?.hide({ focusTrigger: false });
     const complete = (result: DocxResult<DocxRevision>) => {
@@ -1359,7 +1375,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       parts.includes(node.getAttribute('part') ?? '')) as HTMLElement | undefined;
     const native = path.find(node => node instanceof HTMLElement) as HTMLElement | undefined;
     const owned = () => {
-      let active = this.shadowRoot?.activeElement;
+      let active = this.ownFocus();
       if (active !== host) return false;
       while (active instanceof HTMLElement && active.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
       const current = insertion ? (this.insertionPhase === 'reading' || this.insertionPhase === 'draft') &&
@@ -1400,18 +1416,9 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const selectionVersion = session?.snapshot().selection.version;
     const popover = this.imagePopover(kind);
     if (!popover) return;
-    const focus = trackDeferredFocusReturn(this.ownerDocument, () => {
-      if (this.cancelImageFocusReturn === focus.cancel) this.cancelImageFocusReturn = null;
-    });
-    this.cancelImageFocusReturn = focus.cancel;
-    void popover.hide({ focusTrigger: false }).then(() => {
-      const shouldFocus = !focus.cancelled && this.isConnected && this.session === session && generation === this.imageDialogGeneration &&
-        !popover.open && session?.snapshot().selection.version === selectionVersion;
-      focus.cancel();
-      if (!shouldFocus) return;
-      if (returnToEditor) this.focusEditor();
-      else this.renderRoot.querySelector<HTMLElement>(`[part="image-${kind}-trigger"]`)?.focus();
-    }, focus.cancel);
+    const focus = this.beginFocusReturn('cancelImageFocusReturn');
+    this.hideThenReturnFocus(popover, focus, session, selectionVersion, () => generation === this.imageDialogGeneration,
+      returnToEditor, `[part="image-${kind}-trigger"]`);
   }
 
   private changeImageDimension(event: CustomEvent<{ value: string }>, axis: 'width' | 'height'): void {
@@ -1786,7 +1793,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       }
       return;
     }
-    if (event.key === 'Escape' && this.shadowRoot?.activeElement?.closest('[part="toolbar"]')) {
+    if (event.key === 'Escape' && this.ownFocus()?.closest('[part="toolbar"]')) {
       event.preventDefault();
       this.releaseToolbarSelection();
       this.focusEditor();

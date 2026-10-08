@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../test/frames.js';
 import { aTimeout, expect, fixture, html } from '@open-wc/testing';
 import './archive-viewer/archive-viewer.js';
 import './calendar-viewer/calendar-viewer.js';
@@ -78,7 +79,7 @@ function deferredResponse(): {
 async function waitFor(predicate: () => boolean, message: string): Promise<void> {
   for (let attempt = 0; attempt < 100; attempt++) {
     if (predicate()) return;
-    await aTimeout(10);
+    await twoFrames();
   }
   throw new Error(message);
 }

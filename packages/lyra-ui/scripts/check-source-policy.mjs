@@ -70,6 +70,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(packageDir, 'src');
@@ -81,14 +82,6 @@ const RATCHET_RULES = ['keyboard-test-coverage', 'strings-test-coverage'];
 const STRUCTURAL_STRINGS_TEST_FILES = new Set([
   'src/components/forms/locale-picker/locale-picker.class.ts',
 ]);
-
-function walk(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return walk(fullPath);
-    return [fullPath];
-  });
-}
 
 const isSource = (file) =>
   file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.stories.ts') && !file.endsWith('.d.ts');

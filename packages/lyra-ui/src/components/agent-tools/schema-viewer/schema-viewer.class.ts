@@ -207,6 +207,10 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-schema-select',
   ]);
+  /** The selected node already belongs to the frozen schema snapshot, so it crosses by identity. */
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-schema-select': Object.freeze(['schema']),
+  });
   private schemaValue: JsonSchemaNode | null = null;
   /** Last caller-assigned schema: a parent re-committing the same binding is not a change. */
   private lastSchemaInput: unknown = null;

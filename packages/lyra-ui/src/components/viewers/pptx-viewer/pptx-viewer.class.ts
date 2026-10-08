@@ -38,6 +38,7 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { renderViewerPagerButton, viewerPagerStyles } from '../viewer-pager.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerMissingLibrary, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings.generated.js';
@@ -398,7 +399,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const active = this.shadowRoot?.activeElement;
+    const active = shadowFocusTarget(this);
     this.focusedPagerPart = active?.localName === 'button' && !(active as HTMLButtonElement).disabled
       ? active.getAttribute('part')
       : null;

@@ -10,7 +10,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { composedParentElement } from '../../../internal/active-element.js';
 import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
-import { RovingToolbarController, leaseTabIndex, type TabIndexLease } from '../../../internal/roving-toolbar.js';
+import { RovingToolbarController, leaseTabIndex, observeStopChanges, type TabIndexLease } from '../../../internal/roving-toolbar.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -580,26 +580,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         current = composedParentElement(current);
       }
     }
-    const options: MutationObserverInit = {
-      attributes: true,
-      attributeOldValue: true,
-      attributeFilter: [
-        'aria-disabled',
-        'aria-hidden',
-        'contenteditable',
-        'controls',
-        'disabled',
-        'hidden',
-        'href',
-        'inert',
-        'open',
-        'role',
-        'tabindex',
-        'type',
-      ],
-      childList: true,
-      subtree: true,
-    };
+    const options = observeStopChanges();
     for (const root of roots) observer.observe(root, options);
     this.actionObserver = observer;
   }

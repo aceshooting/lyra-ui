@@ -18,7 +18,7 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
@@ -301,6 +301,12 @@ function canonicalDateRangePresets(
  *   current value.
  * @cssprop [--lr-date-picker-preset-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a
  *   quick-range button.
+ * @cssprop [--lr-date-picker-preset-hover-border-color=var(--lr-color-brand)] - Hover border color
+ *   of a quick-range button.
+ * @cssprop --lr-date-picker-preset-pressed-border-color - Pressed border color of a quick-range
+ *   button; defaults to an active-state mix of `--lr-color-brand`.
+ * @cssprop [--lr-date-picker-preset-selected-border-color=var(--lr-color-brand)] - Border color of
+ *   the selected quick-range button; wins over `--lr-date-picker-preset-selected-border`.
  * @cssprop --lr-date-picker-preset-active-bg - Pressed background of a quick-range button;
  *   defaults to a mix of the hover background with the shared active mix partner.
  * @cssprop --lr-date-picker-preset-pressed-bg - Pressed background of a quick-range button; wins
@@ -695,7 +701,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     this.viewPeriodAvailabilityCache.clear();
-    const activeElement = activeElementIn(this.renderRoot as ShadowRoot);
+    const activeElement = shadowFocusTarget(this);
     const activeViewStart = activeElement?.matches('[part~="view-item"]')
       ? parseISO(activeElement.getAttribute('data-view-start') ?? '')
       : null;
@@ -869,7 +875,7 @@ let lower = min ?? localDate(0);
     // steal focus off whatever the user is actually operating (a nav button,
     // or nothing at all); onGridKey and goToDate already arm focusPending
     // explicitly for the keyboard-driven paths that should take focus.
-const active = activeElementIn(this.renderRoot as ShadowRoot);
+const active = shadowFocusTarget(this);
     if (disabled && active?.matches('[part~="day"]')) {
       this.constraintFocusOwner = active;
       this.focusPending = true;
@@ -1358,7 +1364,7 @@ const active = activeElementIn(this.renderRoot as ShadowRoot);
     const focusedDate = this.focusedDateValue;
     const repairOwner = this.constraintFocusOwner;
     this.constraintFocusOwner = undefined;
-    const active = activeElementIn(this.renderRoot as ShadowRoot);
+    const active = shadowFocusTarget(this);
     if (repairOwner && active !== repairOwner &&
       (active !== null || activeElementIn(this.ownerDocument) !== this.ownerDocument.body)) {
       this.focusPending = false;

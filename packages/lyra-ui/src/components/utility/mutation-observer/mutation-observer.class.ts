@@ -142,9 +142,18 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   private onSlotChange = (): void => this.observeTargets();
 
-  private disconnect(): void {
+  private disconnect(flush = false): void {
     this.observerGeneration += 1;
     const observer = this.observer;
+    let pending: readonly MutationRecord[] = [];
+    // Records queued before a reconfiguration belong to the old options; deliver them first.
+    if (flush && this.isConnected) {
+      try {
+        pending = Object.freeze(observer?.takeRecords() ?? []);
+      } catch {
+        pending = [];
+      }
+    }
     // Clear the ownership fields before crossing a consumer-controlled observer boundary. A
     // malformed implementation can throw while resolving or invoking disconnect(), but it must
     // not retain a current observer through a later rebuild or reconnect.
@@ -155,10 +164,11 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     } catch {
       // Observer implementations are optional capabilities; teardown failures fail closed.
     }
+    if (pending.length > 0) this.emit('lr-mutation', { records: pending, mutationList: pending });
   }
 
   private observeTargets = (): void => {
-    this.disconnect();
+    this.disconnect(true);
     const ownerDocument = this.ownerDocument;
     let MutationObserverCtor: typeof MutationObserver | undefined;
     try {

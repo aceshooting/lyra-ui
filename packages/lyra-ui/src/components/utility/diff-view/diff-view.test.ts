@@ -1213,7 +1213,12 @@ describe("syntax highlighting", () => {
       el as unknown as { loadHighlighterCore: () => Promise<unknown> }
     ).loadHighlighterCore = () => Promise.resolve(fakeHighlighter);
     await el.updateComplete;
-    await aTimeout(10);
+    await waitUntil(
+      () =>
+        (el as unknown as { highlightedOldLines: string[] | null })
+          .highlightedOldLines != null,
+      'highlighter result applied'
+    );
     const expectedLineCount = "a\nb\n".split("\n").length;
     expect(
       (el as unknown as { highlightedOldLines: string[] | null })
@@ -1246,7 +1251,12 @@ describe("syntax highlighting", () => {
       el as unknown as { loadHighlighterCore: () => Promise<unknown> }
     ).loadHighlighterCore = () => Promise.resolve(fakeHighlighter);
     await el.updateComplete;
-    await aTimeout(10);
+    await waitUntil(
+      () =>
+        el.shadowRoot!.querySelector('[part="line"][data-type="add"]')
+          ?.textContent?.includes('HL:') === true,
+      'highlighted add line rendered'
+    );
     const addLine = el.shadowRoot!.querySelector(
       '[part="line"][data-type="add"]'
     )!;
@@ -1324,7 +1334,13 @@ describe("syntax highlighting", () => {
       el as unknown as { loadHighlighterCore: () => Promise<unknown> }
     ).loadHighlighterCore = () => Promise.resolve(fakeHighlighter);
     await el.updateComplete;
-    await aTimeout(10);
+    await waitUntil(
+      () =>
+        (el as unknown as { highlightedOldLines: string[] | null })
+          .highlightedOldLines != null,
+      'highlighter result applied'
+    );
+    await el.updateComplete;
     const diffLineCount =
       el.shadowRoot!.querySelectorAll('[part="line"]').length;
     const highlighted = (
@@ -1946,6 +1962,7 @@ describe('search and scrollToAnchor', () => {
       await waitUntil(() => results === 1);
       render(template(), host);
       await el.updateComplete;
+      // wait-reason: negative assertion, an identical re-render must not emit a second lr-anchor-result
       await aTimeout(50);
       expect(results).to.equal(1);
     } finally {

@@ -2282,7 +2282,7 @@ describe('collecting an already-slotted label/hint/error without relying on the 
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange was intercepted');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all",
@@ -2317,7 +2317,7 @@ describe('collecting an already-slotted label/hint/error without relying on the 
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the real initial slotchange fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation',
@@ -2397,4 +2397,9 @@ it('publishes data-invalid after interaction and keeps the resting segment borde
   expect(border(), 'no default danger edge').to.equal(resting);
   el.style.setProperty('--lr-otp-input-invalid-border-color', 'rgb(200, 0, 0)');
   await waitUntil(() => border() === 'rgb(200, 0, 0)', 'the invalid hook still paints');
+});
+
+it('forwards the host name to its native control', async () => {
+  const el = (await fixture(html`<lr-otp-input name="code"></lr-otp-input>`)) as LyraOtpInput;
+  expect(el.shadowRoot!.querySelector('input[part="control"]')!.getAttribute('name')).to.equal('code');
 });

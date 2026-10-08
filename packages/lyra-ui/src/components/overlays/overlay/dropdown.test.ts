@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dropdown.js';
 import '../dialog/dialog.js';
@@ -808,13 +808,14 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
   // Pointer intent opens after 150ms. Leaving the outer list schedules a 300ms close; reaching
   // the submenu before that deadline cancels it, which is the safe-corridor behavior.
   parent.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
-  await new Promise((resolve) => setTimeout(resolve, 180));
+  await waitUntil(() => parent.submenuOpen, 'pointer intent opened the submenu', { timeout: 2000 });
   expect(parent.submenuOpen).to.equal(true);
   const engine = el.shadowRoot!.querySelector('lr-menu[part~="menu"]') as LyraMenu;
   const engineSlot = engine.shadowRoot!.querySelector('slot') as HTMLSlotElement;
   engineSlot.dispatchEvent(new PointerEvent('pointerleave'));
   const nestedItem = parent.querySelector('[slot="submenu"]') as LyraDropdownItem;
   nestedItem.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+  // wait-reason: wait past the 300ms safe-corridor close deadline to prove it was cancelled
   await new Promise((resolve) => setTimeout(resolve, 330));
   expect(parent.submenuOpen).to.equal(true);
   await expect(el).to.be.accessible();
@@ -1173,9 +1174,10 @@ it('is accessible populated and open with mapped items', async () => {
 // only ever emits once per tag per page.
 it('settles closing in a single render, scheduling no follow-up update', async () => {
   const el = await basic();
+  const shown = oneEvent(el, 'lr-after-show');
   el.open = true;
   await el.updateComplete;
-  await aTimeout(120);
+  await shown;
 
   el.open = false;
   expect(await el.updateComplete, 'closing scheduled a second render').to.be.true;
@@ -1230,7 +1232,8 @@ describe('collecting an already-slotted consumer menu without relying on the ini
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial content slotchange arrived');
+      await nextFrame();
       expect(
         intercepted,
         "a real browser does fire the content slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -1276,7 +1279,7 @@ describe('collecting an already-slotted consumer menu without relying on the ini
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realContentSlotchangeCount > 0, 'the initial content slotchange arrived');
       expect(
         realContentSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'

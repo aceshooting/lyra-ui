@@ -242,6 +242,13 @@ describe('lr-test-results', () => {
     expect(failed.textContent).to.include('1');
   });
 
+  it('renders a test taking one second or more in seconds, not milliseconds', async () => {
+    const el = (await fixture(
+      html`<lr-test-results .suites=${[{ id: 's', name: 'slow', tests: [{ id: 't', name: 'slow test', status: 'passed', durationMs: 1500 }] }]}></lr-test-results>`,
+    )) as LyraTestResults;
+    expect(el.shadowRoot!.querySelector('[part="test-duration"]')!.textContent!.trim()).to.equal('1.5s');
+  });
+
   it('formats status counts and durations with the effective locale', async () => {
     const el = (await fixture(
       html`<lr-test-results lang="ar-EG" .suites=${suites}></lr-test-results>`,

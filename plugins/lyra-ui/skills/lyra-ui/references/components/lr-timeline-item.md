@@ -6,7 +6,7 @@
 - **Class** `LyraTimelineItem`, also available unregistered from `@aceshooting/lyra-ui/components/data/timeline/timeline-item.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 8 custom properties — see `lr-timeline.md`

@@ -1,7 +1,17 @@
-import { LyraElement } from '../../internal/lyra-element.js';
-import { getFormOwner, setFormOwner, type FormOwnerValue } from '../../internal/form-associated.js';
+import type { PropertyDeclarations } from 'lit';
+import { state } from 'lit/decorators.js';
+import { LyraFormControlElement } from '../../internal/form-control-element.js';
+import {
+  getFormOwner,
+  isBarredFromValidation,
+  setFormOwner,
+  type FormOwnerValue,
+} from '../../internal/form-associated.js';
+import { FormControlController, reflectFormName } from '../../internal/form-control-controller.js';
+import { GlassScrollLayer } from '../../internal/glass-scroll-layer.js';
+import { syncValidityStates } from '../../internal/custom-states.js';
 import type { LyraSelectionDirection } from '../../internal/shared-unions.js';
-import { activeElementIn } from '../../internal/active-element.js';
+import { shadowFocusTarget } from '../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../internal/aria-reflection.js';
 import {
   applyComposedFocusRepair,
@@ -15,6 +25,7 @@ interface CatalogPickerEditing {
   click(): void;
   focus(options?: FocusOptions): void;
   blur(): void;
+  hide(): void;
   select(): void;
   setSelectionRange(start: number | null, end: number | null, direction?: LyraSelectionDirection): void;
   setRangeText(replacement: string): void;
@@ -22,15 +33,149 @@ interface CatalogPickerEditing {
 }
 
 /** Shared native-control and form projection for catalog-backed model and voice fields. */
-export abstract class LyraCatalogPickerElement<Events> extends LyraElement<Events> {
+export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlElement<Events> {
+  static override properties: PropertyDeclarations = {
+    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
+    disabled: { type: Boolean, reflect: true, noAccessor: true },
+    required: { type: Boolean, reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true },
+  };
+
   protected abstract get catalogEditing(): CatalogPickerEditing;
-  protected abstract get formInternals(): ElementInternals;
-  abstract get effectiveDisabled(): boolean;
+  /** The localized `valueMissing` message. */
+  protected abstract requiredMessage(): string;
+  /** Set on first blur; gates the `data-invalid` reflection so validity styling never flashes. */
+  @state() protected touched = false;
+  protected internals: ElementInternals;
+  private validityController: FormControlController;
+  /** Consumer-supplied validation message reflected through `custom-error`. */
+  declare customError: string | null;
+  protected _fieldsetDisabled = false;
+  private _name = '';
+  private _disabled = false;
+  private _required = false;
   protected suppressControlBlur = false;
   protected modeFocusRepair?: ComposedFocusRepairSnapshot;
   protected focusedModeRepair?: ComposedFocusRepairSnapshot;
   protected focusReturnTarget?: HTMLElement;
   private hasSyncedDescribedByElements = false;
+
+  constructor() {
+    super();
+    this.validityController = new FormControlController(this, {
+      invalid: (init) => this.emitUntyped('lr-invalid', init),
+      interacted: this.markInteracted,
+      customError: () => this.validityController.customValidityMessage,
+    });
+    this.internals = this.validityController.formInternals;
+    new GlassScrollLayer(this, '[part="listbox"]', () => (this as unknown as { open: boolean }).open);
+    // A native input always submits "" from construction, so an untouched control is still in FormData.
+    this.internals.setFormValue('');
+  }
+
+  private emitUntyped(name: string, init: { cancelable: true }): CustomEvent<unknown> {
+    return (this.emit as unknown as (n: string, d: null, i: { cancelable: true }) => CustomEvent<unknown>).call(this, name, null, init);
+  }
+
+  protected get formInternals(): ElementInternals { return this.internals; }
+
+  /** The form submission key, reflected synchronously for native form APIs. */
+  get name(): string { return this._name; }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    reflectFormName(this, this._name);
+    this.requestUpdate('name', old);
+  }
+
+  get disabled(): boolean { return this._disabled; }
+  set disabled(next: boolean) {
+    const old = this._disabled;
+    this._disabled = Boolean(next);
+    this.toggleAttribute('disabled', this._disabled);
+    this._fieldsetDisabled =
+      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
+    if (this._disabled) this.releaseOnDisable();
+    // Disabling bars constraint validation, so the violation is dropped synchronously with it.
+    this.updateValidity();
+    this.requestUpdate('disabled', old);
+  }
+
+  get required(): boolean { return this._required; }
+  set required(next: boolean) {
+    const old = this._required;
+    this._required = Boolean(next);
+    this.toggleAttribute('required', this._required);
+    this.updateValidity();
+    this.requestUpdate('required', old);
+  }
+
+  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
+
+  /** Closes the popup when the control becomes disabled; hosts extend it to stop their own work. */
+  protected releaseOnDisable(): void { this.catalogEditing.hide(); }
+
+  /** Own `disabled`/`readonly` and a disabled fieldset bar constraint validation. */
+  protected get barredFromValidation(): boolean { return isBarredFromValidation(this, this.internals); }
+
+  /** `''` is the one "nothing committed" sentinel here (a catalog id is never blank), so `!value` is exact. */
+  protected updateValidity(): void {
+    if (this.barredFromValidation) {
+      this.validityController.setValidity({});
+    } else if (this.required && !(this as unknown as { value: string }).value) {
+      this.validityController.setValidity({ valueMissing: true }, this.requiredMessage());
+    } else {
+      this.validityController.setValidity({});
+    }
+    this.publishValidityStates();
+  }
+
+  /** Republishes the validity custom states; `ElementInternals` is driven directly, not through `FormAssociated`. */
+  protected publishValidityStates(): void {
+    syncValidityStates(this.internals, {
+      required: this.required,
+      hasInteracted: this.touched,
+      barred: this.barredFromValidation,
+    });
+  }
+
+  protected formDisabledChanged(disabled: boolean): void {
+    if (this.validityController?.reflectingDisabled) return;
+    const wasDisabled = this.effectiveDisabled;
+    this._fieldsetDisabled = disabled;
+    if (wasDisabled === this.effectiveDisabled) return;
+    if (disabled) this.releaseOnDisable();
+    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
+    this.updateValidity();
+    this.requestUpdate();
+  }
+
+  protected markInteracted = (): void => {
+    if (this.touched) return;
+    this.touched = true;
+    this.publishValidityStates();
+  };
+
+  checkValidity(): boolean { return this.validityController.checkValidity(); }
+  reportValidity(): boolean {
+    this.validityController.syncConstraints();
+    // A reportValidity() call is what a submit attempt runs, so it counts as interaction.
+    this.touched = true;
+    this.publishValidityStates();
+    return this.internals.reportValidity();
+  }
+
+  /**
+   * Sets or clears a consumer-supplied validation error, e.g. a server-side rejection. A non-empty
+   * `message` raises `customError` and becomes `validationMessage`; `''` clears it and restores the
+   * computed validity. It survives intrinsic recomputation and `form.reset()`. Used verbatim, never
+   * localized.
+   */
+  setCustomValidity(message: string): void {
+    this.validityController.setCustomValidity(message ?? '');
+    this.publishValidityStates();
+  }
 
   protected syncCatalogDescription(controlId: string): void {
     const hostDescribedBy = this.getAttribute('aria-describedby');
@@ -52,7 +197,7 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraElement<Event
     const changed = (renderedControl?.getAttribute('part') === 'trigger') !== closedMode;
     this.suppressControlBlur = changed;
     this.modeFocusRepair = changed && renderedControl !== null &&
-      activeElementIn(this.shadowRoot) === renderedControl
+      shadowFocusTarget(this) === renderedControl
       ? captureComposedFocusRepair(this, this.modeFocusFallback() ?? renderedControl) ?? undefined
       : changed ? this.focusedModeRepair : undefined;
     return changed;
@@ -151,14 +296,4 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraElement<Event
   /** The associated form, including an explicit external form owner. */
   get form(): HTMLFormElement | null { return getFormOwner(this.formInternals); }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  /** The associated form, including an explicit external form owner. */
-  getForm(): HTMLFormElement | null { return getFormOwner(this.formInternals); }
-  /** Native labels associated with this form control. */
-  get labels(): NodeList { return this.formInternals.labels; }
-  /** Current native validity state. */
-  get validity(): ValidityState { return this.formInternals.validity; }
-  /** Current native validation message. */
-  get validationMessage(): string { return this.formInternals.validationMessage; }
-  /** Whether this control currently participates in constraint validation. */
-  get willValidate(): boolean { return this.formInternals.willValidate; }
 }

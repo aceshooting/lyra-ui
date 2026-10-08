@@ -6,6 +6,7 @@ import { FormControlController } from '../../../internal/form-control-controller
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { isRtl } from '../../../internal/rtl.js';
@@ -21,7 +22,7 @@ import { clampSteppedValue } from '../../../internal/step-value.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './time-range.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getFormOwner,
   isBarredFromValidation,
@@ -172,6 +173,8 @@ export interface LyraTimeRangeEventMap {
  *   wins over `--lr-time-range-preset-active-border-color`.
  * @cssprop --lr-time-range-preset-selected-color - Text color of the active preset button; wins
  *   over `--lr-time-range-preset-active-color`.
+ * @cssprop [--lr-time-range-preset-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
+ *   preset button.
  * @cssprop [--lr-time-range-preset-hover-border-color=var(--lr-color-brand)] - Border color of a
  *   hovered preset button.
  * @cssprop --lr-time-range-preset-pressed-border-color - Border color of a pressed preset button;
@@ -199,7 +202,7 @@ export interface LyraTimeRangeEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
+export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -346,7 +349,9 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // the observable signal: native `blur` neither bubbles nor crosses the shadow boundary, so a
     // host-level `blur` listener would never fire for the internal handles. Registered in the
     // constructor, on the host itself, so reconnecting cannot stack duplicates.
-    this.addEventListener('focusout', this.markInteracted);
+    this.addEventListener('focusout', (event) => {
+      if (event.relatedTarget !== this) this.markInteracted();
+    });
     this.reflectValidityStates();
   }
 
@@ -372,13 +377,19 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     emitValueEvents(this, 'change', { value, ...value }, detail => this.emit('lr-change', detail));
   }
 
+  /** True when focus moves between the two handles, which is not the control gaining or losing focus. */
+  private movesBetweenHandles(related: EventTarget | null): boolean {
+    return related instanceof Element && related.matches('[part="handle-start"], [part="handle-end"]') &&
+      this.renderRoot.contains(related);
+  }
+
   private onHandleFocus = (event: FocusEvent): void => {
-    relayNativeEvent(this, event);
+    if (!this.movesBetweenHandles(event.relatedTarget)) relayNativeEvent(this, event);
   };
 
   private onHandleBlur = (event: FocusEvent): void => {
     this.finishKeyboardGesture();
-    relayNativeEvent(this, event);
+    if (!this.movesBetweenHandles(event.relatedTarget)) relayNativeEvent(this, event);
   };
 
   /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
@@ -411,21 +422,6 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** Whether the control currently satisfies its constraints — the silent query, so it
@@ -600,7 +596,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   /** Removes focus from whichever handle currently owns it. */
   override blur(): void {
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (
       active?.nodeType === 1
       && typeof (active as Partial<Element>).matches === 'function'

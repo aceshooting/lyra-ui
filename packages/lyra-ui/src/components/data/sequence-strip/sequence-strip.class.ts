@@ -3,10 +3,10 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
-import { isRtl } from '../../../internal/rtl.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styles } from './sequence-strip.styles.js';
@@ -376,21 +376,6 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     return -1;
   }
 
-  /** Steps by one cell in `direction`, skipping disabled cells without wrapping. */
-  private stepEnabledCellIndex(cells: readonly SequenceStripCell[], from: number, direction: 1 | -1): number {
-    const count = cells.length;
-    if (!count) return from;
-    let index = Math.min(Math.max(from + direction, 0), count - 1);
-    for (let steps = 0; steps < count; steps += 1) {
-      if (!this.cellDisabled(cells[index]!)) return index;
-      index += direction;
-      if (index < 0 || index >= count) break;
-    }
-    // Nothing enabled was found in that direction -- stay at the roving position the call came
-    // from (guaranteed enabled by the same invariant `nearestEnabledCellIndex()` establishes for
-    // every resting stop), rather than moving onto a disabled cell.
-    return from;
-  }
   /** Renders a static `[part="legend"]` key of every `categories` entry below the strip, so the
    *  color-to-category mapping is readable without hovering each cell. Deliberately
    *  non-interactive: unlike `<lr-graph-legend>` this toggles nothing and emits nothing — the
@@ -423,7 +408,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (changed.has('items')) {
       this.focusRestoreGeneration++;
       this.hoverIndex = null;
-      const focusedCell = activeElementIn(this.shadowRoot) as HTMLElement | null;
+      const focusedCell = shadowFocusTarget(this) as HTMLElement | null;
       const focusedCellIndex = Number(focusedCell?.dataset?.['index']);
       if (!Number.isInteger(focusedCellIndex) || focusedCellIndex < 0) {
         this.keyboardIndex = null;
@@ -625,15 +610,15 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const cells = this.cells();
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || cells.length === 0) return;
     e.preventDefault();
-    const forwardKey = isRtl(this) ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = isRtl(this) ? 'ArrowRight' : 'ArrowLeft';
-    let next = index;
-    if (e.key === 'Home') next = cells.findIndex((cell) => !this.cellDisabled(cell));
-    else if (e.key === 'End') {
-      next = cells.length - 1;
-      while (next >= 0 && this.cellDisabled(cells[next]!)) next -= 1;
-    } else if (e.key === forwardKey) next = this.stepEnabledCellIndex(cells, index, 1);
-    else if (e.key === backwardKey) next = this.stepEnabledCellIndex(cells, index, -1);
+    const moved = resolveListMove(e, {
+      count: cells.length,
+      current: index,
+      orientation: 'horizontal',
+      direction: this.effectiveDirection,
+      wrap: false,
+      isAvailable: (cellIndex) => !this.cellDisabled(cells[cellIndex]!),
+    });
+    const next = moved ?? (e.key === 'Home' || e.key === 'End' ? -1 : index);
     if (next < 0) return;
     const items = this.items;
     const targetStart = cells[next]?.start;

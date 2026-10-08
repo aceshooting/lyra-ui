@@ -445,6 +445,7 @@ describe('status / context.reportStatus', () => {
 
     await eventPromise;
     await el.updateComplete;
+    // wait-reason: asserting a later 25 ms timer report is ignored; must outlast it
     await new Promise<void>((resolve) => setTimeout(resolve, 80));
     await el.updateComplete;
 
@@ -478,6 +479,7 @@ describe('status / context.reportStatus', () => {
 
     queueMicrotask(() => staleReport('error'));
     setTimeout(() => staleReport('running'), 25);
+    // wait-reason: asserting a later 25 ms timer report is ignored; must outlast it
     await new Promise<void>((resolve) => setTimeout(resolve, 80));
     await el.updateComplete;
 

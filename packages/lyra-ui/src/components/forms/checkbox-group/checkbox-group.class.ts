@@ -8,6 +8,7 @@ import { html, nothing, type PropertyValues, type ReactiveController, type Templ
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   resolveValidityAnchor,
   VALIDITY_ANCHOR,
@@ -140,7 +141,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @status stable
  * @since 4.0.0
  */
-export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
+export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -427,6 +428,18 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.reflectValidityStates();
   }
 
+  private syncQueued = false;
+
+  /** Coalesces the render-driven child syncs of one task into a single reconciliation. */
+  private scheduleSync(): void {
+    if (this.syncQueued) return;
+    this.syncQueued = true;
+    queueMicrotask(() => {
+      this.syncQueued = false;
+      if (this.isConnected) this.sync();
+    });
+  }
+
   // Set around a loop that writes `checked`/`indeterminate` on multiple owned checkboxes in the
   // same task (applyValues(), formResetCallback()) so each child's own resulting
   // notifyCheckboxStateChange() call is a no-op instead of an independent, uncached O(N)
@@ -547,7 +560,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
       if (this.childControllers.has(box) || typeof box.addController !== 'function') continue;
       const controller: ReactiveController = {
         hostUpdated: () => {
-          if (this.isConnected && this.ownsCheckbox(box)) this.sync();
+          if (this.isConnected && this.ownsCheckbox(box)) this.scheduleSync();
         },
       };
       box.addController(controller);
@@ -818,11 +831,6 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   }
   get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  get labels(): NodeList { return this.internals.labels; }
-  get validity(): ValidityState { return this.internals.validity; }
-  get validationMessage(): string { return this.internals.validationMessage; }
-  get willValidate(): boolean { return this.internals.willValidate; }
   checkValidity(): boolean { return this.validityController.checkValidity(); }
   reportValidity(): boolean {
     this.validityController.syncConstraints();

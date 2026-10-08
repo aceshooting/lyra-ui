@@ -1736,6 +1736,7 @@ describe("controlled re-binds of filters and sort", () => {
       element.filters = [{ id: "name", value: "ada" }];
       await element.updateComplete;
     }
+    // wait-reason: asserting no further request is scheduled within the debounce window
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(
       requests(),
@@ -1769,6 +1770,7 @@ describe("controlled re-binds of filters and sort", () => {
       element.sort = [{ id: "name", desc: false }];
       await element.updateComplete;
     }
+    // wait-reason: asserting no further request is scheduled within the debounce window
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(requests(), "an unchanged sort re-bind must not request").to.equal(before);
 

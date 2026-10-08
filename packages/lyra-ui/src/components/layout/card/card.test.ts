@@ -541,7 +541,10 @@ describe("lr-card", () => {
 
       expect(activation.getAttribute("aria-label")).to.equal("Quarterly chart");
       el.querySelector("img")!.alt = "Annual chart";
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await waitUntil(
+        () => activation.getAttribute("aria-label") === "Annual chart",
+        "the slotted alt observer renames the activation button"
+      );
       await el.updateComplete;
       expect(activation.getAttribute("aria-label")).to.equal("Annual chart");
     });

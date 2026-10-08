@@ -737,3 +737,20 @@ describe('remove-button hover background', () => {
     });
   }
 });
+
+describe('disabled', () => {
+  it('disables the remove button and suppresses lr-remove', async () => {
+    const el = (await fixture(html`<lr-tag with-remove disabled>Tag</lr-tag>`)) as LyraTag;
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]')!;
+    expect(button.disabled).to.equal(true);
+    let fired = 0;
+    el.addEventListener('lr-remove', () => { fired += 1; });
+    el.click();
+    expect(fired).to.equal(0);
+    el.disabled = false;
+    await el.updateComplete;
+    expect(button.disabled).to.equal(false);
+    el.click();
+    expect(fired).to.equal(1);
+  });
+});

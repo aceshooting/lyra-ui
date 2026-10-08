@@ -13,6 +13,7 @@ describe('generation metrics live example', () => {
       status.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!.click();
       expect(status.status).to.equal('complete');
       const stopped = status.tokenCount;
+      // wait-reason: asserts no token updates after Stop for longer than one ticker interval
       await aTimeout(1150);
       expect(status.tokenCount).to.equal(stopped);
       for (let cycle = 0; cycle < 2; cycle++) {
@@ -34,6 +35,7 @@ describe('generation metrics live example', () => {
     await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 1800 });
     root.remove();
     const stopped = status.tokenCount;
+    // wait-reason: asserts no token updates after disconnect for longer than one ticker interval
     await aTimeout(1150);
     expect(status.tokenCount).to.equal(stopped);
   });
@@ -43,6 +45,7 @@ it('derives throughput from the current elapsed time between ticks', async () =>
   const el = await fixture<LyraGenerationMetrics>(html`<lr-generation-metrics
     status="running" token-count="50" .startedAt=${Date.now() - 1000}
   ></lr-generation-metrics>`);
+  // wait-reason: real elapsed time between ticks drives the derived throughput
   await aTimeout(500);
   el.tokenCount = 75;
   await el.updateComplete;

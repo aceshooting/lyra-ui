@@ -1403,18 +1403,19 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
     )) as LyraDateInput;
     await el.updateComplete;
     const priv = el as unknown as {
-      pointer: { listener?: (e: PointerEvent) => void };
+      popupController: { pointer: { listener?: (e: PointerEvent) => void } };
     };
-    expect(priv.pointer.listener).to.be.a("function");
-    const boundListener = priv.pointer.listener;
-    priv.pointer.listener = () => {};
+    const pointer = priv.popupController.pointer;
+    expect(pointer.listener).to.be.a("function");
+    const boundListener = pointer.listener;
+    pointer.listener = () => {};
     try {
       document.body.dispatchEvent(
         new PointerEvent("pointerdown", { bubbles: true, composed: true })
       );
       expect(el.open, "the stale listener no-ops instead of hiding").to.be.true;
     } finally {
-      priv.pointer.listener = boundListener;
+      pointer.listener = boundListener;
     }
   });
 
@@ -1574,7 +1575,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       cleanupFn?: () => void;
       overlayHandle?: { deactivate: (opts: { restoreFocus: boolean }) => void };
       visibilityListenerDocument?: Document;
-      pointer: { document?: Document };
+      popupController: { pointer: { document?: Document } };
       adoptedCallback(): void;
     };
     expect(priv.cleanupFn, "positioned while open").to.be.a("function");
@@ -1584,7 +1585,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       "visibility listener bound"
     ).to.equal(true);
     expect(
-      priv.pointer.document != null,
+      priv.popupController.pointer.document != null,
       "pointer listener bound"
     ).to.equal(true);
 
@@ -1603,7 +1604,7 @@ describe("lr-date-input cross-document and reconnect listener guards", () => {
       "visibility listener unbound"
     ).to.equal(true);
     expect(
-      priv.pointer.document === undefined,
+      priv.popupController.pointer.document === undefined,
       "pointer listener unbound"
     ).to.equal(true);
   });
@@ -1868,4 +1869,23 @@ it("renders its calendar only while the popup is open or settling", async () => 
   await el.hide();
   await el.updateComplete;
   expect(picker() === null, "the settled close drops it").to.equal(true);
+});
+
+it("shares the text-field native passthrough shape: boolean autocorrect, inputMode aliases, name", async () => {
+  const el = (await fixture(
+    html`<lr-date-input name="due" autocorrect="off" inputmode="numeric"></lr-date-input>`
+  )) as LyraDateInput;
+  const native = () => el.shadowRoot!.querySelector("input[part=\"input\"]") as HTMLInputElement;
+  expect(el.autocorrect).to.equal(false);
+  expect(native().getAttribute("autocorrect")).to.equal("off");
+  expect(el.inputMode).to.equal("numeric");
+  expect(native().getAttribute("name")).to.equal("due");
+  el.autocorrect = true;
+  el.inputmode = "text";
+  el.enterkeyhint = "go";
+  await el.updateComplete;
+  expect(el.autocorrect).to.equal(true);
+  expect(el.inputMode).to.equal("text");
+  expect(native().getAttribute("inputmode")).to.equal("text");
+  expect(native().getAttribute("enterkeyhint")).to.equal("go");
 });

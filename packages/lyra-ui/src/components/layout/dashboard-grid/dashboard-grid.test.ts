@@ -1,6 +1,6 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import { sendKeys } from "@web/test-runner-commands";
 import { LitElement, type PropertyValues } from "lit";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
@@ -197,6 +197,7 @@ it("keeps keyboard-navigation feedback silent when the host or a composed ancest
           cancelable: true,
         })
       );
+      // wait-reason: negative assertion: the keystroke must not leak a child to the sink
       await new Promise<void>((resolve) => setTimeout(resolve, 20));
 
       expect(sink.childElementCount, scenario.label).to.equal(0);
@@ -1313,13 +1314,17 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
         cancelable: true,
       })
     );
+    // wait-reason: negative assertion: nothing may be announced or applied before the host accepts the layout
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect(el.layout[0]!.x).to.equal(0);
     expect(mirror.textContent?.trim()).to.equal('');
 
     el.layout = proposedLayout!;
     await el.updateComplete;
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitUntil(
+      () => mirror.textContent?.trim() === 'Alpha moved to column 2, row 1.',
+      'the move is announced'
+    );
     expect(mirror.textContent?.trim()).to.equal(
       'Alpha moved to column 2, row 1.'
     );
@@ -1334,6 +1339,7 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
         cancelable: true,
       })
     );
+    // wait-reason: negative assertion: nothing may be announced or applied before the host accepts the layout
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect(el.layout[0]!.w).to.equal(1);
     expect(mirror.textContent?.trim()).to.equal(
@@ -1342,7 +1348,10 @@ describe("keyboard move (Ctrl/Cmd+Arrow)", () => {
 
     el.layout = proposedLayout!;
     await el.updateComplete;
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitUntil(
+      () => mirror.textContent?.trim() === 'Alpha resized to width 2, height 1.',
+      'the resize is announced'
+    );
     expect(mirror.textContent?.trim()).to.equal(
       'Alpha resized to width 2, height 1.'
     );

@@ -28,6 +28,7 @@ for (const state of ['own disabled', 'fieldset disabled', 'readonly'] as const) 
     await focusByKeyboard(input);
     await sendKeys({ type: '7' });
     await waitUntil(() => completions === 1);
+    // wait-reason: asserting nothing changes after the completion event (negative assertion)
     await aTimeout(60);
     expect(el.value).to.equal('7');
     expect(submissions).to.equal(0);
@@ -36,6 +37,7 @@ for (const state of ['own disabled', 'fieldset disabled', 'readonly'] as const) 
     else if (state === 'fieldset disabled') form.querySelector('fieldset')!.disabled = false;
     else el.readonly = false;
     await el.updateComplete;
+    // wait-reason: asserting the cancelled submission is not replayed (negative assertion)
     await aTimeout(30);
     expect(submissions, 'restoring editability must not replay the cancelled submission').to.equal(0);
     el.clear();
@@ -62,6 +64,7 @@ it('autosubmits exactly once through the named custom default submitter after na
   await focusByKeyboard(el.shadowRoot!.querySelector<HTMLInputElement>('input')!);
   await sendKeys({ type: '7' });
   await waitUntil(() => submissions.length === 1);
+  // wait-reason: asserting no second submission follows the first (negative assertion)
   await aTimeout(30);
   expect(submissions).to.deep.equal([{ code: '7', submitterName: 'action', submitterValue: 'verify' }]);
 });

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import "./app-rail-item.js";
 import "./app-rail.js";
 import type { LyraAppRailItem } from "./app-rail-item.js";
@@ -653,7 +653,8 @@ describe("tooltip", () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     base.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="tooltip"]') !== null, 'the tooltip flyout did not render');
+    await nextFrame();
 
     const flyout = el.shadowRoot!.querySelector(
       '[part="tooltip"]'
@@ -1526,7 +1527,8 @@ describe('nested children (treeitem-with-link)', () => {
     const late = document.createElement('lr-app-rail-item');
     late.setAttribute('slot', 'children');
     el.appendChild(late);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // wait-reason: negative assertion; a late child of a disconnected parent must stay untouched
+    await nextFrame();
     expect(late.hasAttribute('icon-only')).to.equal(false);
   });
 
@@ -1664,7 +1666,7 @@ describe('collecting already-slotted meta/end content without relying on the ini
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => intercepted >= 2, 'the initial slotchange events never fired');
       expect(
         intercepted,
         "a real browser does fire each named slot's own initial slotchange -- this test suppresses them to reproduce happy-dom, which never fires either at all"
@@ -1696,7 +1698,7 @@ describe('collecting already-slotted meta/end content without relying on the ini
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'

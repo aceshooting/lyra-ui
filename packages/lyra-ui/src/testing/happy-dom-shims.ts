@@ -87,6 +87,134 @@ export function installHappyDomFormAssociatedShims(): void {
   };
 }
 
+interface ActiveElementHolder {
+  activeElement: Element | null;
+}
+
+/** True when reading a sibling shadow root's `activeElement` throws, as in Happy DOM 20.14. */
+function siblingActiveElementThrows(): boolean {
+  const body = document.body;
+  if (!body) return false;
+  const previous = document.activeElement;
+  const hosts = [document.createElement('div'), document.createElement('div')];
+  const roots = hosts.map((host) => host.attachShadow({ mode: 'open' }));
+  const button = document.createElement('button');
+  roots[0]?.appendChild(button);
+  hosts.forEach((host) => body.appendChild(host));
+  try {
+    button.focus();
+    void (roots[1] as unknown as ActiveElementHolder).activeElement;
+    return false;
+  } catch {
+    return true;
+  } finally {
+    button.blur();
+    hosts.forEach((host) => host.remove());
+    if (previous instanceof HTMLElement) previous.focus();
+  }
+}
+
+function detachedActiveElementThrows(): boolean {
+  const root = document.createElement('div').attachShadow({ mode: 'open' });
+  try {
+    void (root as unknown as ActiveElementHolder).activeElement;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Wraps `proto`'s `activeElement` getter so a TypeError (sibling or detached shadow root) reads as
+ * `null`. Returns a restore function, or `undefined` when the getter already behaves.
+ */
+export function guardShadowActiveElement(proto: object, misbehaves: () => boolean): (() => void) | undefined {
+  const descriptor = Object.getOwnPropertyDescriptor(proto, 'activeElement');
+  const native = descriptor?.get;
+  if (!descriptor || !native || !misbehaves()) return undefined;
+  Object.defineProperty(proto, 'activeElement', {
+    ...descriptor,
+    get(this: unknown): Element | null {
+      try {
+        return native.call(this) as Element | null;
+      } catch (error) {
+        if (error instanceof TypeError) return null;
+        throw error;
+      }
+    },
+  });
+  return () => Object.defineProperty(proto, 'activeElement', descriptor);
+}
+
+/**
+ * Makes `ShadowRoot.activeElement` return `null` instead of throwing for a sibling or detached
+ * shadow root (Happy DOM dereferences a missing host/focus node, e.g. during teardown while an
+ * update is queued). Own-root and nested-root focus are untouched. No-op wherever the getter
+ * already behaves; returns a function that restores the original descriptor.
+ */
+export function installHappyDomShadowFocusShim(): () => void {
+  if (typeof ShadowRoot === 'undefined' || typeof document === 'undefined') return () => {};
+  return guardShadowActiveElement(
+    ShadowRoot.prototype,
+    () => siblingActiveElementThrows() || detachedActiveElementThrows(),
+  ) ?? (() => {});
+}
+
+function isInScope(source: Element, target: Element): boolean {
+  const targetRoot = target.getRootNode();
+  let root: Node | null = source.getRootNode();
+  while (root) {
+    if (root === targetRoot) return true;
+    root = 'host' in root ? (root as ShadowRoot).host.getRootNode() : null;
+  }
+  return false;
+}
+
+/** Descriptor for `ariaControlsElements`: explicit references, else ids from `aria-controls`. */
+export function createAriaControlsElementsDescriptor(): PropertyDescriptor {
+  const explicit = new WeakMap<Element, { elements: Element[]; attr: string }>();
+  return {
+    configurable: true,
+    enumerable: true,
+    get(this: Element): readonly Element[] | null {
+      const attr = this.getAttribute('aria-controls');
+      if (attr === null) return null;
+      const stored = explicit.get(this);
+      if (stored && stored.attr === attr) {
+        return stored.elements.filter((element) => isInScope(this, element));
+      }
+      const root = this.getRootNode() as Partial<Pick<Document, 'getElementById'>>;
+      return attr
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((id) => root.getElementById?.(id) ?? null)
+        .filter((element): element is HTMLElement => element !== null);
+    },
+    set(this: Element, value: readonly Element[] | null | undefined) {
+      if (value == null) {
+        explicit.delete(this);
+        this.removeAttribute('aria-controls');
+        return;
+      }
+      this.setAttribute('aria-controls', '');
+      explicit.set(this, { elements: Array.from(value), attr: '' });
+    },
+  };
+}
+
+/** Adds `Element.prototype.ariaControlsElements` only when the engine lacks it. */
+export function installHappyDomAriaControlsShim(proto: object | undefined = globalThis.Element?.prototype): void {
+  if (!proto || 'ariaControlsElements' in proto) return;
+  Object.defineProperty(proto, 'ariaControlsElements', createAriaControlsElementsDescriptor());
+}
+
+/** Installs every Happy DOM shim: form-associated internals, shadow focus and ARIA reflection. */
+export function installHappyDomShims(): void {
+  installHappyDomFormAssociatedShims();
+  installHappyDomShadowFocusShim();
+  installHappyDomAriaControlsShim();
+}
+
 /** Test-only: returns a fresh stub `ElementInternals`-shaped object, independent of whether
  *  `attachInternals` already exists natively -- exists purely so this module's own test can
  *  verify the stub's call-shape coverage without needing to run under happy-dom itself. */

@@ -17,7 +17,12 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
-import { renderRegionHighlightLayer } from '../region-highlight-layer.js';
+import {
+  regionHighlightLabel,
+  renderRegionHighlightActions,
+  renderRegionHighlightLayer,
+  sameRegionRect,
+} from '../region-highlight-layer.js';
 import type {
   HighlightActivateDetail,
   LyraAnchor,
@@ -41,7 +46,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_convertingDocument, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewAlt, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentPreviewGenericFile, LYRA_DEFAULT_documentPreviewNotAvailable, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -125,16 +130,6 @@ function projectRegionAnchor(
   } catch {
     return undefined;
   }
-}
-
-function sameRegionAnchor(a: ProjectedRegionAnchor, b: ProjectedRegionAnchor): boolean {
-  return (
-    a.page === b.page &&
-    a.rect.x === b.rect.x &&
-    a.rect.y === b.rect.y &&
-    a.rect.width === b.rect.width &&
-    a.rect.height === b.rect.height
-  );
 }
 
 const ICON_VIEW_BOX = '0 0 24 24';
@@ -289,7 +284,9 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
     convertingDocument: LYRA_DEFAULT_convertingDocument,
+    details: LYRA_DEFAULT_details,
     documentPreviewAlt: LYRA_DEFAULT_documentPreviewAlt,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
@@ -303,7 +300,14 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     download: LYRA_DEFAULT_download,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -680,14 +684,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     index: number,
     total: number,
   ): string {
-    if (highlight.label) {
-      return this.localize('highlightWithLabel', undefined, { label: highlight.label });
-    }
-    const numberFormat = getNumberFormat(this.effectiveLocale);
-    return this.localize('highlightOfTotal', undefined, {
-      index: numberFormat.format(index + 1),
-      total: numberFormat.format(total),
-    });
+    return regionHighlightLabel(highlight, index, total, this.effectiveLocale,
+      (key, values) => this.localize(key, undefined, values));
   }
 
   private renderHighlightLayer(
@@ -699,48 +697,13 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
   }
 
-  /** Moves focus among the `region-highlight-action` list to match `<lr-highlight-layer>`'s
-   *  roving arrow-key shortcut. Every action button keeps its own native tabindex (this list
-   *  isn't a roving-tabindex widget), so this only offers ArrowDown/ArrowUp/Home/End as a
-   *  faster alternative to repeated Tab, direction-aware under RTL. */
-  private onHighlightActionKeyDown(e: KeyboardEvent, index: number, total: number): void {
-    const rtl = this.effectiveDirection === 'rtl';
-    const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
-    const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
-    let nextIndex: number | undefined;
-    if (forward) nextIndex = Math.min(total - 1, index + 1);
-    else if (backward) nextIndex = Math.max(0, index - 1);
-    else if (e.key === 'Home') nextIndex = 0;
-    else if (e.key === 'End') nextIndex = total - 1;
-    if (nextIndex === undefined || nextIndex === index) return;
-    e.preventDefault();
-    this.renderRoot
-      .querySelectorAll<HTMLElement>('[part="region-highlight-action"]')
-      [nextIndex]?.focus();
-  }
-
   private renderHighlightActions(
     regionHighlights: readonly ProjectedRegionHighlight[],
   ): TemplateResult | typeof nothing {
-    if (regionHighlights.length < 2) return nothing;
-    return html`<div part="highlight-actions">
-      ${regionHighlights.map((highlight, index) => {
-        const label = this.highlightActionLabel(highlight, index, regionHighlights.length);
-        return html`
-        <button
-          part="region-highlight-action"
-          type="button"
-          data-highlight-id=${highlight.id}
-          aria-label=${label}
-          @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
-          @keydown=${(e: KeyboardEvent) =>
-            this.onHighlightActionKeyDown(e, index, regionHighlights.length)}
-        >
-          ${highlight.label || label}
-        </button>
-      `;
-      })}
-    </div>`;
+    return renderRegionHighlightActions(regionHighlights,
+      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
+      this.renderRoot, this.effectiveDirection === 'rtl',
+      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
   }
 
   /** Scrolls a `region` highlight into view (image format only). See `<lr-svg-viewer>`'s
@@ -757,7 +720,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
         const targetRegion = projectRegionAnchor(target);
         if (targetRegion) {
           region = this._regionHighlights.find((highlight) =>
-            sameRegionAnchor(highlight.anchor, targetRegion),
+            sameRegionRect(highlight.anchor, targetRegion),
           );
         }
       }

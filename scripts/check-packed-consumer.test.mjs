@@ -270,7 +270,8 @@ test('packed migration inventory requires the complete split runtime and rejects
   assert.ok(preflight, 'the real CLI inventory preflight must be exercised');
   const inspect = new Function('fixtureDir', 'readdir', 'join', `return (async () => {${preflight}})();`);
   const files = [
-    'component-inventory.mjs', 'html-comments.mjs', 'lyra-rename-ledger.mjs', 'migrate-wa.mjs',
+    'agent-registry.mjs', 'component-inventory.mjs', 'html-comments.mjs', 'init-agents.mjs', 'is-main-module.mjs',
+    'lyra-rename-ledger.mjs', 'lyra-ui.mjs', 'migrate-wa.mjs',
     'migration-analysis.mjs', 'migration-contract.json', 'migration-contract.mjs',
     'migration-renames.mjs', 'migration-transforms.mjs',
   ];

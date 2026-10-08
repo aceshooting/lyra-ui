@@ -25,7 +25,7 @@ import {
   literalSetConverter,
   trueDefaultSpellcheckConverter as spellcheckConverter,
 } from '../../../internal/converters.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import {
@@ -533,201 +533,11 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-column-resize': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
 }
 /**
- * `<lr-table>` — a sort/select-aware data table.
- *
- * A sortable-header activation first proposes a cancelable `lr-sort-request`. If accepted, client
- * mode writes `sortKey`/`sortDir` and reorders the rendered rows before emitting `lr-sort`; server
- * mode leaves those properties controlled and emits the same committed transaction so the caller
- * can fetch and supply the corresponding row order. Single/multiple selection is self-managed in
- * one `selectedRowKeys` store; row expansion follows the same opt-in shape through
- * `expansionMode`/`expandedRowKeys` -- see that property's own doc block below for the
- * request/commit detail. The
- * direction chosen the first time a column becomes the active `sortKey` comes from that column's
- * own `columns[].defaultSortDir` when set, falling back to the element-level `defaultSortDir`
- * (`'asc'` by default) otherwise -- letting one column in an otherwise-ascending table (e.g. a
- * "last updated" column) start descending. Re-activating the column that is already `sortKey`
- * still only toggles between `'asc'` and `'desc'`.
- *
- * Header/row activation is delegated: one `click` and one `keydown`
- * listener on `<table>` resolve the target via `closest('[data-col-key]'
- * | '[data-row-key]')` and a key→object lookup map, instead of allocating
- * fresh per-column/per-row closures on every render. Both listeners inspect
- * the delegated event's composed path for actual native, role, or tabindex
- * semantics (see `INTERACTIVE_SELECTOR`) so a button/link/input inside a cell
- * owns its own activation instead of triggering `lr-row-activate`. A passive
- * custom element remains part of the row activation surface; an opaque
- * closed-shadow control marks its host with `data-table-interactive`.
- *
- * Keyboard focus follows a roving-tabindex pattern (one `tabindex="0"` stop
- * among the header cells, one among the body rows — see `focusedColKey()` /
- * `focusedRowKey()`), matching this repo's other `role="grid"`/composite
- * widgets. Left/Right/Home/End move within the header row; Up/Down/Home/End
- * move within the body; Down from the header enters the body's roving stop,
- * and Up from the body's first row returns to the header's roving stop.
- * Enter/Space still only sort/activate (see `activateColumn()` /
- * `activateRow()`). When controlled rows or columns replace the focused
- * member, focus follows the same stable key when it survives and otherwise
- * clamps to the nearest surviving index; an update never reclaims focus once
- * the user has moved it outside the table. Effective locale changes use the same current
- * page identity for activation, editing, and direct row-focus restoration.
- *
- * A column with `editTrigger: 'double-click'` additionally gives its own resting cell a
- * `tabindex="-1"` roving-focus stop — reachable, once the row itself has focus, with ArrowRight
- * (ArrowLeft under RTL) to enter at the first editable cell in the row and step forward, ArrowLeft
- * (ArrowRight under RTL) to step back and, from the first editable cell, return focus to the row —
- * never through Tab, so a table with one or more editable columns gains no new Tab stop, only a
- * new arrow-reachable one, and a table with none renders no `tabindex`/`part='cell'[data-editable]`
- * at all. `F2` or `Enter` on that focused cell opens its editor (`startEditing()`); `editCell()` is
- * the same effect as a public method, for a consumer's own key binding, menu action, or other
- * trigger. `Enter` on the row itself (not a focused cell) still only activates the row, exactly as
- * before — the two coexist because the table tells them apart from which of the two currently has
- * focus, not from the key alone. Escape and Enter inside the open editor keep cancelling/committing
- * as already documented below; either one now also returns focus to the cell that opened it (the
- * editor's own DOM node is what closes), matching a conventional grid's F2/Escape contract and
- * closing the WCAG 2.1.1 (Keyboard) gap a pointer-only `double-click` trigger otherwise leaves.
- * Priority-hidden columns hide their header, body, and footer cells together; revealing
- * priority columns restores all three bands.
- * Blank and later-duplicate column keys are omitted first-wins at assignment. Rows retain their
- * caller-owned records, then one canonical `rowKey` projection omits blank and later-duplicate
- * identities before filtering, counts, pagination, focus, actions, and events.
- *
- * Set `aria-label` on the host to give the `role="grid"` element an
- * accessible name; it's forwarded into the shadow DOM's `<table>`.
- *
- * `columns[].priority` ('medium' | 'low') hides that column once measured overflow says
- * `[part='base']` actually needs the room -- `'low'` first, `'medium'` next if the table would still
- * overflow with just `'low'` gone -- never at a fixed container width; `[part='reveal-columns-button']`
- * forces them all back into view. The public `hasHiddenPriorityColumns`
- * property reports only whether a priority column is actually hidden right
- * now, measured via `ResizeObserver` on `[part='base']` plus a post-render DOM
- * check. The toggle separately measures whether priority columns would hide
- * at the current allocation, so it stays available while force-visible mode
- * is active without making `hasHiddenPriorityColumns` contradict the rendered
- * state. `priorityColumnsVisible` defaults to `false` and toggles itself on
- * `[part='reveal-columns-button']` activation with no external wiring
- * required, but is also settable up front (property or the reflected
- * `priority-columns-visible` attribute) to restore a previously-persisted
- * preference, and readable back — directly or via the `lr-priority-columns-visibility-change`
- * event — to persist the current one. `columns[].sticky` pins a column's
- * header/cells to the inline-start (`'start'`) or inline-end (`'end'`)
- * edge while the table scrolls horizontally. Every member of the priority-column family --
- * `revealColumnsLabel`/`columnsHideLabel` (which only ever reach the DOM on
- * `[part='reveal-columns-button']`), `priorityColumnsVisible` (which only overrides a hide rule
- * there is none of) and `storageKey` (which persists nothing else) -- is inert unless at least one
- * column declares `priority`, so configuring any of them without one logs a one-time,
- * production-silent, page-bounded development `console.warn` naming the members that will do
- * nothing (the same dev-diagnostic shape as an unnamed grid's own warning). The read-only
- * `priorityColumnsToggleAvailable` reports whether the reveal button is currently offered at all,
- * which is the same measured state the button itself renders from.
- *
- * Row expansion: `expandedContent` and `canExpand` render the leading chevron column, and
- * `expansionMode`/`expandedRowKeys` decide who owns which rows are open, including off-view keys —
- * see those members.
- *
- * Selection is opt-in through the `selectionMode` property. Use `single` or
- * `multiple` to self-manage row selection; the default `none` remains
- * presentational. `selectedRowKeys` contains the raw keys in every mode; single mode enforces one.
- *
- * `rowElement(rowKey)`, `cellElement(rowKey, columnKey)` and `expandedContentElement(rowKey)`
- * resolve a rendered `<tr>`/`<td>` from the identity a consumer already has, for code that has to
- * reach content its own `cell(row)` or `expandedContent(row)` callback rendered into this shadow
- * root (measuring it, scrolling it into view, or applying a style `::part()` cannot express, since
- * only pseudo-classes may follow a part selector). One method per callback, because the expansion
- * panel is a *sibling* `<tr part='expanded-row'>` of the data row rather than a descendant of it:
- * `rowElement`/`cellElement` reach `cell(row)` output only, and `expandedContentElement` returns
- * the `[part='expanded-cell']` holding `expandedContent(row)` output. All three read the current
- * render output, so `await table.updateComplete` first and treat `null` as "not rendered right
- * now". They resolve the `data-row-key`/`data-col-key`/`data-expanded-row-key` attributes those
- * elements carry: `data-col-key` is the column's own `key`, while `data-row-key` and
- * `data-expanded-row-key` are a type-tagged encoding of the row key (`string:a` vs `number:1`)
- * that keeps a numeric key distinct from the string that stringifies the same way. The panel
- * deliberately does not repeat `data-row-key`, so every `[data-row-key]` query still resolves
- * exactly one element per row. All three attributes are stable public API; prefer the methods over
- * building a selector from them, since a consumer-supplied key is not safe to interpolate into CSS
- * unescaped.
- *
- * `filterable` adds a compact search field above the grid. `filterText` is
- * controlled and emits `lr-filter-change`; `filter` can provide a typed
- * predicate, otherwise the row is matched against its JSON representation.
- * The internal filter and cell-editor native value events are contained at
- * their translation boundaries; hosts receive `lr-filter-change` and
- * `lr-cell-edit` instead.
- * `pageSize` bounds pagination through the existing `<lr-pagination>` primitive (100 rows by
- * default, normalized to 1..500). Client mode owns the accepted page and slices `rows`; server mode
- * leaves `page` controlled, bounds the supplied page to `pageSize`, and uses `totalItems` for the
- * navigation summary. `unknownTotal` (server mode only) forwards `<lr-pagination>`'s own
- * indeterminate mode for a caller with no total -- see `unknownTotal` and `hasNext`. `loading`
- * keeps the table shell busy; see `loadingAppearance` for how. Initial declarative loading stays
- * silent; every post-mount transition into either
- * loading appearance appends to the shared light-DOM polite sink — including repeated cycles —
- * while every placeholder opts out of `<lr-skeleton>`'s own announcement.
- * Columns with `editTrigger: 'double-click'` open a native text/number/select editor on
- * double-click, `F2`, or `Enter` on the cell's own roving focus stop (see the keyboard paragraph
- * above), and emit `lr-cell-edit`; row mutation remains consumer-owned. `editType: 'select'`
- * renders a native `<select>` populated from `editOptions` (`{ value, label }[]`) instead of an
- * `<input>` -- a column with no `editOptions` renders an empty, valueless `<select>` rather than
- * throwing. `editTrigger: 'always'` instead renders that editor in every body cell of the
- * column from first paint — a settings/rate-style column meant to be typed
- * straight into. Persistent editors are plain tab stops (no `tabindex` of their
- * own, exactly like the row-expand toggle) outside the header/row roving model,
- * so arrow keys still navigate the grid from a row's own tab stop and act as
- * caret movement once focus is inside a field. Enter commits and keeps focus;
- * Escape has nothing to cancel back to, so it is left uncancelled for an
- * ancestor dialog/popover. Their value binds as a content attribute, so once
- * the user has typed into one an out-of-band `rows` update to that same cell no
- * longer replaces the draft; an untouched editor still picks up a new value. A persistent
- * `editType: 'select'` editor has no such native protection -- `<select>`/`<option>` carry no
- * dirty-value flag, so an out-of-band `rows` update to that cell re-applies the selection even
- * after the user has picked a different option.
- * Each editor's accessible name is `columns[].editLabel(row)` when the column defines it, or
- * otherwise the interpolated `tableEditCell` string (`Edit {column}`) -- the same name for every
- * row in that column, since the default carries no row context. Define `editLabel` for any
- * `editTrigger: 'always'` column: its editors are permanent, individually focusable Tab stops, so
- * leaving every one of them identically named (e.g. fifty "Edit Status" controls) fails WCAG 2.4.6
- * and 1.3.1 for keyboard and screen-reader users.
- * Focus is restored across a re-sort that moves the editor's node, and dropped
- * (never re-aimed at an unrelated row) when its row leaves the rendered page.
- * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
- * (the default) `editType`, the inline cell editor -- no effect on a `'number'` or `'select'` cell
- * editor.
- * `groupBy` inserts non-focusable group header rows before each group; use
- * `groupLabel` when the raw group key needs custom content. A client-mode
- * sort applies *within* each group, so grouping survives sorting on a column
- * unrelated to the group key.
- *
- * `columns[].heatValue` opts a column into heat-tint mode: its numeric return value is normalized
- * against a shared scale spanning every `heatValue`-defining column across every currently-rendered
- * row (auto-derived, or overridden via `heatTintScale`) and painted as a `color-mix()` background via
- * the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties (matching `lr-heatmap`'s own
- * ramp-token convention). The heat-tint and resize properties can be set on the table or a theme
- * ancestor; a value set directly on the table wins through the normal cascade. `rowTotal`/`grandTotal`
- * add a trailing column mirroring `expandedContent`'s
- * leading one: `rowTotal(row)` renders per-row, `grandTotal(rows)` renders at its intersection with
- * the footer row (only when a column also defines `footer`) — both share `footer`'s own
- * "consumer computes/renders" contract rather than assuming addition.
- *
- * The public readonly `viewRows` (`rows` after filtering and client-mode sorting, ignoring
- * pagination) and `pageRows` (`viewRows` sliced to the page currently rendered in `<tbody>`) getters
- * expose the same rows `footer(rows)`/`grandTotal(rows)`/the heat-tint domain already see, so a
- * consumer that needs "what the grid currently shows" -- e.g. to export it -- reads one of these
- * instead of re-implementing filtering, sorting, and pagination itself. Both return a fresh, frozen
- * array on every read; mutating the result cannot reach the table's own internal state.
- *
- * The built-in empty state is addressable rather than fixed: every `<lr-empty>` the table renders
- * carries `part="empty"` and re-exports its own inner parts as `empty-heading`/`empty-description`/
- * `empty-icon`/`empty-actions`/`empty-base`, the two *data*-empty branches (no rows at all, and
- * filtered/paginated down to zero) render it as the fallback content of a named `empty` slot so a
- * consumer can replace it wholesale, and `emptySize` overrides each branch's built-in `compact`
- * default. The no-columns branch is deliberately **not** slot-replaceable — it reports a
- * configuration problem (`emptyColumnsHeading`), not "this query returned nothing", and a single slot
- * covering all three would collapse that distinction.
- *
- * A failed load keeps the grid's context: see `error` (and its precedence over the loading and
- * empty states), the `error` slot, and the cancelable `lr-retry-request`.
- *
- * `layout` sets a floor on the `<table>`'s `table-layout`: `'fixed'` forces it even with no column
- * widths, while the default `'auto'` still resolves to `fixed` whenever a column declares a `width`
- * or a drag-resize is in flight (column resizing does not work under `table-layout: auto`).
+ * `<lr-table>` — a sort/select-aware data table. Sorting is a cancelable request followed by a
+ * committed `lr-sort` (client mode reorders rows; server mode leaves order to the caller);
+ * selection and expansion are opt-in and self-managed; a failed load keeps the grid's context
+ * through `error`, its slot and `lr-retry-request`. Behavior, precedence rules and examples:
+ * `llms/data.md`.
  *
  * @customElement lr-table
  * @event lr-sort-request - Cancelable sort proposal. Frozen readonly
@@ -898,6 +708,11 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @cssprop [--lr-table-font-size=inherit] - Font size of the `<table>` element and, through normal
  *   inheritance, every cell inside it. The rest of the font shorthand (family, weight, etc.) keeps
  *   inheriting from the host regardless of this override.
+ * @cssprop [--lr-table-surface=var(--lr-color-surface)] - Surface of the frame, resting and striped rows,
+ *   sticky header and columns, expanded rows and footer. One declaration recolours the table in every
+ *   row state; the selected and hovered fills stay their own tokens.
+ * @cssprop [--lr-table-radius=var(--lr-radius-container)] - Corner radius of the frame. The frame clips
+ *   its painted content to it in `self` mode and in `auto` mode while content fits.
  * @cssprop [--lr-table-max-height=none] - Cap on the scroll container's block size, past which the
  *   table body scrolls.
  * @cssprop [--lr-table-heat-tint-lo=var(--lr-color-brand-quiet)] - Low endpoint of the heat-tint
@@ -1948,13 +1763,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
   /** Applies the opt-in responsive scroll policy from rendered geometry. A one-pixel tolerance
    *  absorbs CSSOM's integer rounding of fractional layouts, matching the library's other
-   *  overflow-aware controls. Existing `'self'` and `'page'` modes never retain this internal
+   *  overflow-aware controls. The existing `'self'` mode never retains this internal
    *  measurement marker, so their established CSS remains authoritative. */
   private syncAutoScrollMode(): void {
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
     if (!base) return;
     const overflows =
-      this.scrollMode === 'auto' &&
+      (this.scrollMode === 'auto' || this.scrollMode === 'page') &&
       base.scrollWidth - base.clientWidth > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
     base.toggleAttribute('data-scroll-overflow', overflows);
   }
@@ -2556,7 +2371,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    * contracts, and the editor restoration path below handles the one supported moved-node case. */
   private captureRovingFocus(changed: PropertyValues): void {
     this.rovingFocusSnapshot = null;
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     const HTMLElementCtor = this.ownerDocument?.defaultView?.HTMLElement;
     if (!HTMLElementCtor || !(active instanceof HTMLElementCtor)) return;
 
@@ -2683,7 +2498,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // a while ago" are indistinguishable from the DOM alone.
     this.editorHadFocusBeforeUpdate =
       this.focusedEditorCell !== null &&
-      activeElementIn(this.shadowRoot) ===
+      shadowFocusTarget(this) ===
         this.editorElementFor(this.focusedEditorCell.rowKey, this.focusedEditorCell.columnKey);
   }
 
@@ -2932,7 +2747,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.rovingFocusSnapshot = null;
     if (snapshot === null) return;
 
-    const internalActive = activeElementIn(this.shadowRoot);
+    const internalActive = shadowFocusTarget(this);
     if (internalActive !== null && internalActive !== snapshot.element) return;
     const documentActive = activeElementIn(this.ownerDocument);
     if (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body) {
@@ -3066,7 +2881,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const editor = this.editorElementFor(cell.rowKey, cell.columnKey);
     if (editor === null) {
       this.focusedEditorCell = null;
-    } else if (this.editorHadFocusBeforeUpdate && activeElementIn(this.shadowRoot) !== editor) {
+    } else if (this.editorHadFocusBeforeUpdate && shadowFocusTarget(this) !== editor) {
       editor.focus();
     }
     this.editorHadFocusBeforeUpdate = false;

@@ -3,7 +3,7 @@ import type {
   ChatMessageRole,
   MessagePart,
   MessagePartState,
-  ToolCallStatus,
+  ToolStatus,
 } from '../types.js';
 import { positiveInteger } from '../../internal/numbers.js';
 import {
@@ -57,7 +57,7 @@ function partState(value: unknown): MessagePartState {
 
 /** AI SDK 6 tool states, read structurally. A denial -- `output-denied`, or `approval-responded`
  *  with a rejected approval before the SDK moves it on -- is a policy outcome, not a running call. */
-function toolStatus(value: unknown, approval: unknown): ToolCallStatus {
+function toolStatus(value: unknown, approval: unknown): ToolStatus {
   if (value === 'output-error') return 'error';
   if (value === 'output-available') return 'success';
   if (value === 'approval-requested') return 'pending';

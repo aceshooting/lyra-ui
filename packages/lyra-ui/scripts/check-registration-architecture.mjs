@@ -870,6 +870,8 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/code-block/code-block.ts',
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/conversation/markdown/markdown.ts',
   'src/components/agent-tools/evaluation-run/evaluation-run.class.ts -> src/components/retrieval/grounding-summary/grounding-summary.ts',
+  // The approval dialog registers when the first approval-gated entry arrives.
+  'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.ts',
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
   // The searchable catalog pickers load the filter combobox on first use.
   'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',

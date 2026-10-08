@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Дыбыс деңгейі',
   videoCaptions: 'Субтитрлер',
   videoCaptionsOff: 'Өшірулі',
-  videoPlaybackSpeed: 'Ойнату жылдамдығы',
   videoPictureInPicture: '«Сурет ішіндегі сурет» режиміне өту',
   videoExitPictureInPicture: '«Сурет ішіндегі сурет» режимінен шығу',
   videoEnterFullscreen: 'Толық экранға өту',

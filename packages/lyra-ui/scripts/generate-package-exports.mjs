@@ -1,4 +1,3 @@
-import { deriveLocaleDeclarationExports } from './declaration-entrypoints.mjs';
 import { isMainModule } from './is-main-module.mjs';
 import { checkPublishedCompatibilitySync } from './check-published-compatibility.mjs';
 import { compatibilityKey } from './published-compatibility.mjs';
@@ -507,7 +506,9 @@ export function closeWildcardPackageExports(
       continue;
     }
     if (key === './ai/*') continue;
-    if (key.startsWith('./translations/') && key !== './translations/*' && !key.startsWith('./translations/pseudo/')) continue;
+    // Real catalogs ship in @aceshooting/lyra-translations; only the pseudo-locales (which need
+    // private runtime helpers) stay routed here.
+    if (key.startsWith('./translations/') && !key.startsWith('./translations/pseudo/')) continue;
     if (retiredPaths.has(key)) continue;
     result[key] = value;
   }
@@ -557,7 +558,7 @@ function expectedPackage(packageDir) {
       pkg.exports,
       componentExports,
       utilityExports,
-      deriveLocaleDeclarationExports(packageDir),
+      {},
       retiredExportIdentities,
       admissionExports,
     ),
@@ -570,6 +571,11 @@ export function checkPackageExports(packageDir = defaultPackageDir) {
   const findings = [];
   if (Object.hasOwn(current, './components/*')) findings.push('package.json still exposes ./components/*');
   if (Object.hasOwn(current, './ai/*')) findings.push('package.json still exposes ./ai/*');
+  for (const key of Object.keys(current)) {
+    if (key === './custom-elements.json' || (key.startsWith('./translations/') && !key.startsWith('./translations/pseudo/'))) {
+      findings.push(`package.json still exposes ${key}, which ships in a companion package`);
+    }
+  }
   // A `null` target is the documented closed door (see deriveExplicitUtilityExports) -- only a
   // real, resolvable target here means the wildcard subpath was reopened.
   if (Object.hasOwn(current, './utilities/*') && current['./utilities/*'] !== null) {

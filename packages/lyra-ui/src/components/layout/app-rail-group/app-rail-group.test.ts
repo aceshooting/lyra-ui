@@ -1,5 +1,5 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './app-rail-group.js';
 import '../app-rail/app-rail-item.js';
@@ -92,12 +92,12 @@ describe('<lr-app-rail-group>', () => {
 
     el.heading = 'Projects';
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(headingText()).to.equal('Projects');
 
     el.heading = 'Archive';
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(headingText()).to.equal('Archive');
   });
 
@@ -109,7 +109,7 @@ describe('<lr-app-rail-group>', () => {
       </lr-app-rail-group>
     `)) as LyraAppRailGroup;
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     // The slotted node lives in the light DOM, so read it through the slot rather than through the
     // wrapper's textContent -- which only ever holds the fallback the property renders.
     const slot = (): HTMLSlotElement =>
@@ -121,7 +121,7 @@ describe('<lr-app-rail-group>', () => {
 
     el.heading = 'Projects';
     await el.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     expect(slottedText()).to.equal('Rich heading');
     // The property must NOT reappear alongside the slotted heading.
     expect(slot().textContent!.trim()).to.equal('');
@@ -434,10 +434,10 @@ describe('<lr-app-rail-group>', () => {
       )
     );
     el.remove();
-    await aTimeout(0);
     const late = document.createElement('lr-app-rail-item');
     el.appendChild(late);
-    await aTimeout(0);
+    // wait-reason: negative assertion; a late child of a disconnected group must stay untouched
+    await nextFrame();
     expect(late.hasAttribute('icon-only')).to.equal(false);
   });
 
@@ -508,7 +508,7 @@ describe('collecting already-slotted heading/header-actions content without rely
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => intercepted >= 2, 'the initial slotchange events never fired');
       expect(
         intercepted,
         "a real browser does fire each named slot's own initial slotchange -- this test suppresses them to reproduce happy-dom, which never fires either at all"
@@ -541,7 +541,7 @@ describe('collecting already-slotted heading/header-actions content without rely
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'

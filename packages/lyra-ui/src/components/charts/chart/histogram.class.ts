@@ -19,7 +19,6 @@ import { chartSurfaceStyles } from './chart-surface.styles.js';
 import { binnedBuckets } from './histogram-buckets.js';
 export { binnedBuckets } from './histogram-buckets.js';
 import { bidiStyles } from './chart-bidi.js';
-import { chartSyncStyles } from './chart-sync.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_histogramFrequency } from '../../../internal/default-strings.generated.js';
@@ -62,7 +61,7 @@ export class LyraHistogram extends LyraChart {
   // here (mirrors `LyraChart.styles`) since the inherited `renderDataTable()`
   // relies on it to visually hide the fallback `<table>`/description when
   // `withDataTable` is false.
-  static override styles = [LyraElement.styles, specialistTokens, chartSurfaceStyles, styles, srOnly, bidiStyles, chartSyncStyles];
+  static override styles = [LyraElement.styles, specialistTokens, chartSurfaceStyles, styles, srOnly, bidiStyles];
 
   override type = 'bar' as const;
 

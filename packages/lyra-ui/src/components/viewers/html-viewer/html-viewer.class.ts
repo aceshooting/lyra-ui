@@ -11,6 +11,7 @@ import { styles } from './html-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -87,7 +88,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
 
   /** URL to fetch and render as sanitized inline HTML. */
   @property() src = '';
@@ -182,6 +183,11 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       case 'idle':
       default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     }
+  }
+
+  /** Only the loaded content is searchable and quotable, never the empty-note, spinner or error text. */
+  protected override textContentRoot(): Element | null {
+    return this.fetchState.kind === 'loaded' ? super.textContentRoot() : null;
   }
 
   override render(): TemplateResult {

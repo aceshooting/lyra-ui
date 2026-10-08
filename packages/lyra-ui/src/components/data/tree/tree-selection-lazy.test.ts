@@ -214,6 +214,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     item.expand();
     await item.updateComplete;
     item.collapse();
+    // wait-reason: must outlast the 30ms show duration to prove the stale lr-after-expand never fires
     await new Promise((resolve) => setTimeout(resolve, 45));
     expect(events).to.eql(['lr-expand', 'lr-collapse', 'lr-after-collapse']);
   });
@@ -266,6 +267,7 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     item.collapse();
     await item.updateComplete;
     item.expand();
+    // wait-reason: must outlast the 35ms hide duration to prove the reversed hide never completes
     await new Promise((resolve) => setTimeout(resolve, 60));
     await item.updateComplete;
 

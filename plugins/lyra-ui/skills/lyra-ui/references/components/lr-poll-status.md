@@ -6,7 +6,7 @@
 - **Class** `LyraPollStatus`, also available unregistered from `@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below

@@ -27,3 +27,16 @@ export const SizeTiers: StoryObj = {
     </div>
   `,
 };
+
+export const IndicatorOffset: StoryObj = {
+  name: 'Indicator and indicatorOffset',
+  render: () => html`
+    <lr-progress-bar value="65" with-value>Uploading files</lr-progress-bar>
+    <p data-readout style="font-family: monospace;">indicatorOffset: waiting</p>
+  `,
+  play: async ({ canvasElement }) => {
+    const bar = canvasElement.querySelector('lr-progress-bar') as HTMLElement & { updateComplete: Promise<unknown>; indicatorOffset: number };
+    await bar.updateComplete;
+    canvasElement.querySelector('[data-readout]')!.textContent = `indicatorOffset: ${bar.indicatorOffset}% unfilled`;
+  },
+};

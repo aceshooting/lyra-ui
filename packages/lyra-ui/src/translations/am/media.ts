@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'ድምጽ መጠን',
   videoCaptions: 'መግለጫ ጽሑፎች',
   videoCaptionsOff: 'ጠፍቷል',
-  videoPlaybackSpeed: 'የማጫወቻ ፍጥነት',
   videoPictureInPicture: 'በሥዕል ውስጥ ሥዕል ሁነታ አስገባ',
   videoExitPictureInPicture: 'ከሥዕል ውስጥ ሥዕል ሁነታ ውጣ',
   videoEnterFullscreen: 'ወደ ሙሉ ማያ ገጽ ግባ',

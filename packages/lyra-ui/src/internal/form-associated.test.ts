@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { nothing } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import {
+  CheckedFormAssociated,
   createStringArrayFormDataState,
   FormAssociated,
   isBarredFromValidation,
@@ -996,6 +997,16 @@ describe('validity custom states', () => {
     expect(ctl.internals.states.has('user-invalid')).to.be.false;
   });
 
+  it('does not count a focusout while the host is already :disabled as interaction', async function () {
+    if (!supportsCustomStates) this.skip();
+    const form = await fixture<HTMLFormElement>(
+      html`<form><fieldset disabled><lr-demo-ctl required></lr-demo-ctl></fieldset></form>`,
+    );
+    const ctl = form.querySelector('lr-demo-ctl') as unknown as Ctl;
+    (ctl as unknown as HTMLElement).dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    expect(ctl.internals.states.has('user-invalid')).to.be.false;
+  });
+
   it('counts an explicit reportValidity() call as interaction', async function () {
     if (!supportsCustomStates) this.skip();
     const ctl = (await fixture(html`<lr-demo-ctl required></lr-demo-ctl>`)) as unknown as Ctl;
@@ -1609,5 +1620,66 @@ describe('module side effects', () => {
     } finally {
       frame.remove();
     }
+  });
+});
+
+describe('CheckedFormAssociated', () => {
+  class Chk extends CheckedFormAssociated(LyraElement) {
+    constructor() {
+      super();
+      this.value = 'on';
+    }
+    override render() {
+      return html``;
+    }
+  }
+  customElements.define(tag('demo-chk'), Chk);
+
+  const mount = async (markup: ReturnType<typeof html>) => {
+    const form = (await fixture(html`<form>${markup}</form>`)) as HTMLFormElement;
+    return { form, el: form.querySelector(tag('demo-chk')) as Chk };
+  };
+
+  it('submits value only while checked, tracking later value writes', async () => {
+    const { form, el } = await mount(html`<lr-demo-chk name="c"></lr-demo-chk>`);
+    expect(new FormData(form).has('c')).to.equal(false);
+    el.checked = true;
+    expect(new FormData(form).get('c')).to.equal('on');
+    el.value = 'yes';
+    expect(new FormData(form).get('c')).to.equal('yes');
+    el.checked = false;
+    expect(new FormData(form).has('c')).to.equal(false);
+  });
+
+  it('treats required as must-be-checked', async () => {
+    const { el } = await mount(html`<lr-demo-chk name="c" required></lr-demo-chk>`);
+    expect(el.checkValidity()).to.equal(false);
+    expect(el.validity.valueMissing).to.equal(true);
+    el.checked = true;
+    expect(el.checkValidity()).to.equal(true);
+  });
+
+  it('resets to the checked attribute, keeping a dirty value independent of defaults', async () => {
+    const { form, el } = await mount(html`<lr-demo-chk name="c" checked></lr-demo-chk>`);
+    expect(el.checked).to.equal(true);
+    expect(el.defaultChecked).to.equal(true);
+    el.checked = false;
+    el.defaultChecked = false;
+    expect(el.checked, 'a dirty live state survives a default change').to.equal(false);
+    el.defaultChecked = true;
+    form.reset();
+    expect(el.checked).to.equal(true);
+    expect(el.hasAttribute('checked')).to.equal(true);
+  });
+
+  it('restores checked from form state and a dirty-free default follows the attribute', async () => {
+    const { el } = await mount(html`<lr-demo-chk name="c"></lr-demo-chk>`);
+    el.formStateRestoreCallback('checked', 'restore');
+    expect(el.checked).to.equal(true);
+    el.formStateRestoreCallback('unchecked', 'restore');
+    expect(el.checked).to.equal(false);
+    const fresh = (await fixture(html`<lr-demo-chk></lr-demo-chk>`)) as Chk;
+    fresh.defaultChecked = true;
+    expect(fresh.checked, 'an untouched control follows its default').to.equal(true);
   });
 });

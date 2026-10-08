@@ -3366,6 +3366,7 @@ it("does not schedule a Lit update from the initial collapse observer setup", as
       >`
     )) as LyraMultiSplit;
     await el.updateComplete;
+    // wait-reason: negative assertion: no late scheduled-update warning may surface after the first update
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   } finally {
     console.warn = originalWarn;
@@ -5678,7 +5679,10 @@ describe("ordered panel ownership", () => {
     panelA.style.setProperty("inline-size", "77px");
     panelA.hidden = "until-found";
     panelA.setAttribute("data-collapse-state", "author-late");
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await waitUntil(
+      () => panelA.style.order === "0",
+      "the component reasserts its live layout over the late author write"
+    );
     await elementUpdated(el);
     expect(panelA.style.order).to.equal("0");
     expect(panelA.style.getPropertyPriority("order")).to.equal("");

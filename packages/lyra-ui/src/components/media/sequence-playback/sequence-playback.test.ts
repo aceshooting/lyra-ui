@@ -83,13 +83,14 @@ it('does not leak an untracked duplicate timer chain when play() is called synch
   el.play();
   // Let the reentrant pause()+play() cycle above happen on the very first
   // tick, then explicitly pause from the outside.
-  await aTimeout(25);
+  await waitUntil(() => reentered, 'the first lr-sequence-step never fired');
   el.pause();
   const indexAfterPause = el.currentIndex;
 
   // If a second, untracked setTimeout chain leaked out of the reentrant
   // pause()+play() cycle, the index keeps climbing here even though pause()
   // (and disconnectedCallback()) believe playback is fully stopped.
+  // wait-reason: asserting the index does NOT advance after pause() (a leaked chain would tick at 20ms)
   await aTimeout(150);
   expect(el.currentIndex).to.equal(indexAfterPause);
 });
@@ -98,6 +99,7 @@ it('does not schedule a tick when an lr-play listener pauses reentrantly', async
   const el = (await fixture(html`<lr-sequence-playback item-count="10" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
   el.addEventListener('lr-play', () => el.pause());
   el.play();
+  // wait-reason: asserting no tick is ever scheduled (several 20ms intervals pass with no advance)
   await aTimeout(60);
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(0);
@@ -111,7 +113,7 @@ it('advances the index on each tick and wraps by default', async () => {
   const playEvent = oneEvent(el, 'lr-play');
   el.play();
   await playEvent;
-  await aTimeout(35);
+  await waitUntil(() => el.currentIndex > 0, 'the index never advanced');
   el.pause();
   expect(el.currentIndex).to.be.greaterThan(0);
 });
@@ -122,7 +124,7 @@ it('stops at the last index when withoutLoop is set and the end is reached', asy
   )) as LyraSequencePlayback;
   el.withoutLoop = true;
   el.play();
-  await aTimeout(30);
+  await waitUntil(() => !el.playing, 'playback never stopped at the last index');
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(1);
 });
@@ -133,7 +135,7 @@ it('stops at the last index when the without-loop attribute is set', async () =>
   )) as LyraSequencePlayback;
   expect(el.withoutLoop).to.be.true;
   el.play();
-  await aTimeout(30);
+  await waitUntil(() => !el.playing, 'playback never stopped at the last index');
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(1);
 });
@@ -142,6 +144,7 @@ describe('canonical loop control', () => {
   // Runs the two-item sequence from its last item and reports whether it wrapped (still playing).
   async function wrapsAtEnd(el: LyraSequencePlayback): Promise<boolean> {
     el.play();
+    // wait-reason: after one interval the sequence must still be playing; there is no event to await for "did not stop"
     await aTimeout(30);
     const wrapped = el.playing;
     el.pause();
@@ -173,6 +176,7 @@ it('keeps playing read-only: a write throws, an authored attribute starts nothin
   expect(() => {
     (el as unknown as { playing: boolean }).playing = true;
   }).to.throw(TypeError);
+  // wait-reason: asserting an authored playing attribute starts no timer (index stays put across several intervals)
   await aTimeout(60);
   expect(el.playing).to.be.false;
   expect(el.currentIndex).to.equal(0);
@@ -313,6 +317,7 @@ it('auto-pauses when length is externally reduced to <= 1 while playing', async 
   // `playing` flag, by waiting well past interval-ms and checking the index
   // never advances again.
   const indexAfterPause = el.currentIndex;
+  // wait-reason: asserting the index does NOT advance after pause()
   await aTimeout(60);
   expect(el.currentIndex).to.equal(indexAfterPause);
 });
@@ -403,8 +408,7 @@ it('re-reads interval-ms fresh instead of baking the original value into the tim
   el.play();
 
   // First tick has fired (~30ms in) but not the second (~60ms in).
-  await aTimeout(45);
-  expect(el.currentIndex).to.equal(1);
+  await waitUntil(() => el.currentIndex === 1, 'the first tick never fired');
 
   // Slow playback down drastically right after the first tick. The second
   // tick was already scheduled at the old cadence, so it still lands
@@ -415,6 +419,7 @@ it('re-reads interval-ms fresh instead of baking the original value into the tim
   // would let several more 30ms ticks land (index climbing well past 2);
   // fixed, only the already-in-flight second tick fires and then playback
   // stalls at the new, much longer cadence.
+  // wait-reason: asserting no further ticks land at the old cadence (only the in-flight second tick)
   await aTimeout(200);
   expect(el.currentIndex).to.equal(2);
 
@@ -698,9 +703,11 @@ it('shows a focus ring on the slider when it receives keyboard/programmatic focu
 it('stops the real timer when pause() is called', async () => {
   const el = (await fixture(html`<lr-sequence-playback item-count="5" interval-ms="20"></lr-sequence-playback>`)) as LyraSequencePlayback;
   el.play();
+  // wait-reason: pause mid-interval before the first 20ms tick, then assert no tick follows
   await aTimeout(15);
   el.pause();
   const indexAfterStop = el.currentIndex;
+  // wait-reason: asserting the index does NOT advance after pause()
   await aTimeout(60);
   expect(el.currentIndex).to.equal(indexAfterStop);
 });
@@ -715,6 +722,7 @@ it('uses one fixed development-only diagnostic for invalid intervals without exp
   try {
     const el = (await fixture(html`<lr-sequence-playback item-count="1000" interval-ms="11.23456789"></lr-sequence-playback>`)) as LyraSequencePlayback;
     el.play();
+    // wait-reason: asserting the clamped interval bounds the tick count within a real 50ms window
     await aTimeout(50);
     // With no clamp this would have ticked dozens/hundreds of times already;
     // clamped to a sane minimum, only a handful of ticks land in 50ms.

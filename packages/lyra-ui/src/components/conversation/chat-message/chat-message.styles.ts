@@ -89,19 +89,19 @@ export const styles = css`
     cursor: pointer;
   }
   [part='collapse-button']:hover {
-    background: var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet));
-    color: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    background: var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised));
+    color: var(--lr-icon-button-color-hover, var(--lr-color-text));
   }
   [part='collapse-button']:active {
     background: var(
       --lr-icon-button-bg-active,
       color-mix(
         in oklab,
-        var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)),
+        var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)),
         var(--lr-color-mix-partner) var(--lr-color-mix-active)
       )
     );
-    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-brand)));
+    color: var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-color-text)));
   }
   [part~='bubble']:focus-visible {
     ${focusRing}

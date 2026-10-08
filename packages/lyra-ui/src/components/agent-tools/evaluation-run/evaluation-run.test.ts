@@ -512,6 +512,8 @@ it('keeps the real nested approval pending when the correlated wrapper decision 
   chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
   await timeline.updateComplete;
   const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  await customElements.whenDefined('lr-tool-approval-dialog');
+  await dialog.updateComplete;
   expect(dialog.open).to.be.true;
 
   let wrapperCancelable = false;
@@ -539,6 +541,8 @@ it('settles a vetoed nested approval through finalizePendingApproval/revertPendi
     .dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
   await timeline.updateComplete;
   const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  await customElements.whenDefined('lr-tool-approval-dialog');
+  await dialog.updateComplete;
   el.addEventListener('lr-example-tool-approval-decide-request', (event) => event.preventDefault());
   dialog.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
   await dialog.updateComplete;

@@ -3,12 +3,10 @@ import type { LyraToolStatus } from '../../internal/shared-unions.js';
 
 /**
  * A tool call's status: the shared tool lifecycle plus `incomplete`, a call that ended without a
- * result (an interrupted stream, a cancelled run). Spelled out here, rather than imported from the
- * chip's public `ToolCallStatus`, so this leaf module stays free of import cycles.
- *
- * @internal
+ * result (an interrupted stream, a cancelled run). The one status union for the chip, result
+ * dialog, result view, timeline and call block.
  */
-export type ToolCallStatusValue = LyraToolStatus | 'incomplete';
+export type ToolStatus = LyraToolStatus | 'incomplete';
 
 /**
  * The one tool-call status vocabulary shared by `<lr-tool-call-chip>`, `<lr-tool-result-dialog>`,
@@ -24,7 +22,7 @@ export const TOOL_CALL_STATUSES = Object.freeze([
   'error',
   'denied',
   'incomplete',
-] as const satisfies readonly ToolCallStatusValue[]);
+] as const satisfies readonly ToolStatus[]);
 
 const TOOL_CALL_STATUS_SET: ReadonlySet<string> = new Set<string>(TOOL_CALL_STATUSES);
 
@@ -32,7 +30,7 @@ const TOOL_CALL_STATUS_SET: ReadonlySet<string> = new Set<string>(TOOL_CALL_STAT
  *
  * @internal
  */
-export function isToolCallStatus(value: unknown): value is ToolCallStatusValue {
+export function isToolCallStatus(value: unknown): value is ToolStatus {
   return typeof value === 'string' && TOOL_CALL_STATUS_SET.has(value);
 }
 
@@ -105,7 +103,7 @@ function incompleteIcon(): SVGTemplateResult {
   );
 }
 
-const STATUS_ICON: Readonly<Record<ToolCallStatusValue, () => SVGTemplateResult>> = Object.freeze({
+const STATUS_ICON: Readonly<Record<ToolStatus, () => SVGTemplateResult>> = Object.freeze({
   pending: pendingIcon,
   running: runningIcon,
   success: successIcon,
@@ -129,7 +127,7 @@ export function toolStatusIcon(status: unknown): SVGTemplateResult {
  */
 // A plain object literal (typed read-only) rather than a frozen call, so the default-string gate
 // can resolve every `localize(TOOL_STATUS_LABEL_KEY[status])` call site to this closed key set.
-export const TOOL_STATUS_LABEL_KEY: Readonly<Record<ToolCallStatusValue, string>> = {
+export const TOOL_STATUS_LABEL_KEY: Readonly<Record<ToolStatus, string>> = {
   pending: 'statusPending',
   running: 'statusRunning',
   success: 'statusSuccess',

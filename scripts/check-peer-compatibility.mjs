@@ -3048,8 +3048,8 @@ export function inspectPeerTarballArchive(compressed, { expectedPackage, limits:
   }
   if (!isRecord(expectedPackage)) throw new TypeError('Expected tarball package identity is required.');
   stableVersion(expectedPackage.version, 'expected tarball package version');
-  if (expectedPackage.name !== '@aceshooting/lyra-ui') {
-    throw new Error('Expected tarball package name must be @aceshooting/lyra-ui.');
+  if (!['@aceshooting/lyra-ui', '@aceshooting/lyra-ide', '@aceshooting/lyra-translations'].includes(expectedPackage.name)) {
+    throw new Error('Expected tarball package name must be @aceshooting/lyra-ui or one of its paired companions.');
   }
   const limits = resolvedTarballLimits(overrides);
   const bytes = Buffer.from(compressed);

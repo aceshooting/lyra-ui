@@ -38,7 +38,7 @@ import {
 } from './chart-forced-colors.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {
   MAX_RENDERED_CHART_RECORDS,
@@ -1042,6 +1042,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Arrowing only changes `activeMarkIndex`; every other change may alter the sentences.
+    for (const name of changed.keys()) if (name !== 'activeMarkIndex') this.dataListMemo = undefined;
     // Native SVG titles depend on subscription state. Prepare transitions before rendering so
     // the controller's synchronous notification joins this update; geometry refresh stays below
     // in updated(), after the current mark positions have been rendered.
@@ -1055,7 +1057,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     });
     const marksChanged = ['type', 'labels', 'datasets', 'skipZero'].some((name) => changed.has(name));
     if (!marksChanged) return;
-    const active = activeElementIn(this.shadowRoot) ?? null;
+    const active = shadowFocusTarget(this) ?? null;
     const hadFocusedMark = active?.matches('[part="bar"], [part="point"]') ?? false;
     const priorPosition = Number(active?.getAttribute('data-mark-index') ?? this.activeMarkIndex);
     const datasetAttribute = active?.getAttribute('data-dataset-index');
@@ -1106,8 +1108,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       this.refocusChartAfterUpdate = false;
       this.svgEl?.focus();
     }
-    this.fitAxisTitles();
-    this.fitCategoryLabels();
+    // An arrow key changes only the active mark, so skip the per-tick text measurements.
+    if ([...changed.keys()].some((name) => name !== 'activeMarkIndex')) {
+      this.fitAxisTitles();
+      this.fitCategoryLabels();
+    }
     this.syncAxisTitleTargets();
     const dataChanged = ['datasets', 'labels', 'type', 'skipZero', 'layout', 'maxRecords', 'maxSeries']
       .some((name) => changed.has(name));
@@ -1611,7 +1616,21 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     };
   }
 
-  private markAnnouncement(index: number, marks = this.interactiveMarks()): string {
+  private dataListMemo?: { marks: readonly InteractiveMark[]; visible: boolean; value: TemplateResult[] };
+
+  /** The data-list items, rebuilt only when the marks or visibility change, not per arrow key. */
+  private dataListItems(marks: readonly InteractiveMark[]): TemplateResult[] {
+    const visible = this.dataTableVisible;
+    const memo = this.dataListMemo;
+    if (memo?.marks === marks && memo.visible === visible) return memo.value;
+    const value = marks.map((_mark, index) => html`<li>${visible
+      ? this.markListItem(index, marks)
+      : this.markAnnouncement(index, marks)}</li>`);
+    this.dataListMemo = { marks, visible, value };
+    return value;
+  }
+
+  private markAnnouncement(index: number, marks: readonly InteractiveMark[] = this.interactiveMarks()): string {
     const summary = this.markSummary(index, marks);
     return summary ? summary.format(summary.values) : '';
   }
@@ -1646,7 +1665,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const markEls = Array.from(this.renderRoot.querySelectorAll('[part="bar"], [part="point"]')) as HTMLElement[];
       const mark = markEls[index];
       if (!mark) return;
-      if (activeElementIn(this.shadowRoot) === mark) this.onMarkFocus(index);
+      if (shadowFocusTarget(this) === mark) this.onMarkFocus(index);
       else mark.focus();
     });
   }
@@ -2816,9 +2835,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               class=${this.dataTableVisible ? nothing : 'sr-only'}
               aria-label=${this.localize('chartData')}
             >
-              ${marksForA11y.map((_mark, index) => html`<li>${this.dataTableVisible
-                ? this.markListItem(index, marksForA11y)
-                : this.markAnnouncement(index, marksForA11y)}</li>`)}
+              ${this.dataListItems(marksForA11y)}
             </ul>`}
         </div>
         ${this.withLegend

@@ -11,7 +11,7 @@ import {
   type ToolRendererDefinition,
   type ToolRendererRegistry,
   type ToolRenderContext,
-  type ToolResultStatus,
+  type ToolStatus,
 } from './registry.js';
 import { styles } from './tool-result-view.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
@@ -19,7 +19,7 @@ import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/copy-button/copy-button.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_loading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -88,6 +88,9 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     loading: LYRA_DEFAULT_loading,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -144,7 +147,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
    * later renderer that stays quiet doesn't inherit a stale outcome from a previous one. Reuses the
    * same vocabulary as `<lr-tool-result-dialog>`'s own `status` property.
    */
-  @property({ reflect: true }) status: ToolResultStatus = 'success';
+  @property({ reflect: true }) status: ToolStatus = 'success';
 
   @state() private renderState: RenderState = FALLBACK_STATE;
 

@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Kelantangan',
   videoCaptions: 'Sari kata',
   videoCaptionsOff: 'Mati',
-  videoPlaybackSpeed: 'Kelajuan main balik',
   videoPictureInPicture: 'Masuk mod gambar dalam gambar',
   videoExitPictureInPicture: 'Keluar mod gambar dalam gambar',
   videoEnterFullscreen: 'Masuk skrin penuh',

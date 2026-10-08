@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import test from 'node:test';
 import {
+  companionBudgetFindings,
   formatPackageSummary,
   metricsFromPackResult,
   parsePackageSizeArguments,
@@ -32,7 +33,6 @@ const budgets = {
 };
 
 const requiredTarballFiles = [
-  'custom-elements.json',
   'llms.txt',
   'llms/index.md',
   'llms/shared.md',
@@ -40,6 +40,10 @@ const requiredTarballFiles = [
   'llms/peers.md',
   'llms/migration.md',
   'llms/components/lr-table.md',
+  'skills/lyra-ui/SKILL.md',
+  'skills/compose-lyra-interfaces/SKILL.md',
+  'dist/cli/lyra-ui.mjs',
+  'dist/cli/init-agents.mjs',
 ];
 
 const expectedPackage = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -133,7 +137,7 @@ test('accepts 9,999,999 compressed bytes and rejects exactly 10,000,000 bytes', 
     assert.deepEqual(
       packageBudgetFindings({
         packedBytes,
-        unpackedBytes: 34_095_803,
+        unpackedBytes: 19_900_000,
         fileCount: requiredTarballFiles.length,
         files: tarballFiles(),
       }, actualBudgets),
@@ -410,7 +414,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     fileBudget.baseArtifactCeiling +
       fileBudget.stableTagAliasCount * fileBudget.emittedFilesPerAlias +
       fileBudget.measuredEntrypointRemainder,
-    4_194,
+    3_345,
     'the derivation must bind the reviewed complete package inventory',
   );
   assert.equal(
@@ -420,13 +424,13 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.equal(
     actualBudgets.maximum.fileCount,
-    4_201,
+    3_352,
     'the complete inventory retains exactly seven scaffold files',
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 35_069_948],
-    'only the packed download ceiling changes; the unpacked hard ceiling remains unchanged',
+    [9_999_999, 20_400_000],
+    'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
   const requiredAdditions = [
@@ -437,21 +441,45 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     'dist/internal/opaque-content-border.styles.js',
     'dist/internal/opaque-content-border.styles.d.ts',
   ];
-  for (const fileCount of [4_194, 4_201, 4_202]) {
+  for (const fileCount of [3_345, 3_352, 3_353]) {
     const extraFiles = Array.from(
       { length: fileCount - requiredTarballFiles.length - requiredAdditions.length },
       (_, index) => `dist/required-entrypoint-${index}.js`,
     );
     const metrics = metricsFromPackResult({
       size: 7_584_288,
-      unpackedSize: 34_095_803,
+      unpackedSize: 19_900_000,
       files: tarballFiles(...requiredAdditions, ...extraFiles),
     });
     const findings = packageBudgetFindings(metrics, actualBudgets);
     assert.deepEqual(
       findings,
-      fileCount === 4_202 ? ['fileCount 4,202 exceeds hard budget 4,201'] : [],
+      fileCount === 3_353 ? ['fileCount 3,353 exceeds hard budget 3,352'] : [],
       'the measured package and exact reserve pass, while one additional artifact fails',
     );
+  }
+});
+
+test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates each companion', () => {
+  const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+  const file = (path, size = 1) => ({ path, size });
+  const uiMetrics = {
+    packedBytes: 1, unpackedBytes: 1, fileCount: 3,
+    files: [...requiredTarballFiles, 'custom-elements.json', 'dist/translations/fr.js', 'dist/translations/pseudo/en-XA.js'].map((path) => file(path)),
+  };
+  const findings = packageBudgetFindings(uiMetrics, actualBudgets);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /2 file\(s\) that ship in a companion package: custom-elements\.json, dist\/translations\/fr\.js/u);
+
+  const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));
+  assert.deepEqual(companionBudgetFindings({ packedBytes: 1, unpackedBytes: 1, fileCount: 4, files: ide }, '@aceshooting/lyra-ide', actualBudgets), []);
+  assert.deepEqual(
+    companionBudgetFindings({ packedBytes: 1, unpackedBytes: 99_000_000, fileCount: 3, files: ide.slice(1) }, '@aceshooting/lyra-ide', actualBudgets),
+    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 9,900,000'],
+  );
+  assert.throws(() => companionBudgetFindings({ files: [] }, '@example/other', actualBudgets), /no companion package budget/u);
+  assert.deepEqual(parsePackageSizeArguments(['--package', '@aceshooting/lyra-translations', '--tarball', 'a.tgz']), { package: '@aceshooting/lyra-translations', tarball: 'a.tgz' });
+  for (const args of [['--package', '@aceshooting/lyra-translations'], ['--package', 'x', '--tarball', 'a.tgz']]) {
+    assert.throws(() => parsePackageSizeArguments(args), /Usage:/u);
   }
 });

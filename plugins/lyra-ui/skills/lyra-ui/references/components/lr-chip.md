@@ -27,19 +27,6 @@ already follow.
 Collapsed groups reapply `max-visible` when assigned children are replaced or reordered at the same
 count, preserving authored hidden/inert state and releasing departed visibility leases.
 
-**Two breaks in 8.0.0.** `tone` is now `variant`, with no alias — one concept, one spelling,
-library-wide. And a chip is **no longer a pill by default**: `--lr-chip-radius` used to be
-`var(--lr-radius-pill)` unconditionally, is now `var(--lr-radius)` (a rounded rectangle), and the
-fully-rounded treatment moved behind the new opt-in `pill` boolean. Existing markup keeps its corner
-radius only if you add `pill`, or set `--lr-chip-radius: var(--lr-radius-pill)` once at the app
-level. `<lr-badge>`/`<lr-tag>` made the identical shape change, with the identical `pill` opt-in.
-
-**Two breaks in 9.0.0.** The chip's leading adornment slot and CSS part are now `start`, matching
-the library-wide adornment vocabulary; migrate `slot="icon"` to `slot="start"` and
-`::part(icon)` to `::part(start)`. Also, `toggleable` is now the sole toggle-mode opt-in:
-`selected` represents only current pressed state, so add `toggleable` anywhere that previously
-relied on `<lr-chip selected>` to create an action.
-
 ### `lr-chip`
 
 **Properties:**
@@ -50,17 +37,16 @@ relied on `<lr-chip selected>` to create an action.
   of `s`/`m`/`l` and round-trip unchanged. Unsupported attributes and untyped property writes
   normalize to reflected `m`.
 - `variant: 'neutral' | 'brand' | 'primary' | 'success' | 'warning' | 'danger' = 'neutral'`
-  (reflected) — `primary` is an alias that renders as `brand`.
-  **renamed from `tone` in 8.0.0, with no alias** (see above). `<lr-badge>`, `<lr-callout>` and
+  (reflected) — `primary` is an alias that renders as `brand`. `<lr-badge>`, `<lr-callout>` and
   `<lr-toast-item>` all already spelled it `variant`. It tints the whole surface using the
   loud-color-on-quiet-tint convention: background is the
   variant's quiet fill, text/icon its loud fill, both read from the shared semantic grid. `neutral`
   deliberately opts out of that grid and falls back to a plain bordered-surface look. Unsupported
   attributes and untyped property writes normalize to reflected `neutral`.
-- `removable: boolean = false` (reflected — shows the remove (×) button)
+- `removable: boolean = false` (reflected — shows the remove (×) button); `withRemove` (`with-remove`) is `lr-tag`'s spelling of the same state, last write wins
 - `disabled: boolean = false` (reflected) — disables the active native toggle/remove control,
   blocks focus and activation, and suppresses selection/removal requests without mutating state
-- `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
+- `pill: boolean = false` (reflected) — Fully-rounded ends instead of the default
   rounded rectangle; the same property `<lr-badge>`/`<lr-tag>` carry. Since it defaults to `false`,
   `pill="false"` is not a way to switch it off — remove the attribute, or assign `.pill = false`.
 - `selected: boolean = false` (reflected) — current pressed value. It does not opt into interaction

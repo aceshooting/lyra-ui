@@ -26,7 +26,7 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { styles } from './known-date.styles.js';
 import { localeDateOrder, localeDigitMap, normalizeLocaleDigits } from '../../../internal/locale-date.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   isImplicitSubmission,
   submitOnEnter,
@@ -916,7 +916,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     e.stopPropagation();
     this.commitChangeIfNeeded();
     const related = e.relatedTarget;
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     const staysInsideControl =
       e.isTrusted &&
       (this.isRenderedFieldTarget(related) ||

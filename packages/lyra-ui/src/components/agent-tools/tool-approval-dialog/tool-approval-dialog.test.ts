@@ -295,7 +295,9 @@ describe('editing', () => {
 
     const approved = oneEvent(el, 'lr-approve-request');
     approveButton(el).click();
-    expect((await approved).detail).to.deep.equal({ args: null });
+    const approvedDetail = (await approved).detail;
+    expect(typeof approvedDetail.waitUntil).to.equal('function');
+    expect({ args: approvedDetail.args }).to.deep.equal({ args: null });
   });
 
   it('shows an inline error and disables Approve when the textarea content is invalid JSON', async () => {
@@ -664,7 +666,8 @@ describe('approve/deny', () => {
     const approveEvent = await approveListener;
     const closeEvent = await closeListener;
 
-    expect(approveEvent.detail).to.deep.equal({ args: ARGS });
+    expect(typeof approveEvent.detail.waitUntil).to.equal('function');
+    expect({ args: approveEvent.detail.args }).to.deep.equal({ args: ARGS });
     expect(closeEvent.detail).to.deep.equal({ reason: 'approve' });
     expect(el.open).to.be.false;
   });
@@ -682,7 +685,8 @@ describe('approve/deny', () => {
     approveButton(el).click();
     const { detail } = await listener;
 
-    expect(detail).to.deep.equal({ args: { query: 'edited', max_results: 1 } });
+    expect(typeof detail.waitUntil).to.equal('function');
+    expect({ args: detail.args }).to.deep.equal({ args: { query: 'edited', max_results: 1 } });
   });
 
   it('emits lr-deny-request, then lr-close with reason "deny"', async () => {
@@ -696,10 +700,9 @@ describe('approve/deny', () => {
     const denyEvent = await denyListener;
     const closeEvent = await closeListener;
 
-    // CustomEventInit's `detail` member defaults to `null`, not `undefined`,
-    // per the DOM spec -- this.emit('lr-deny-request') passes no second argument,
-    // which is equivalent to an absent `detail` option.
-    expect(denyEvent.detail).to.be.null;
+    // The denial carries no data of its own, only the `waitUntil()` resolver.
+    expect(Object.keys(denyEvent.detail)).to.deep.equal(['waitUntil']);
+    expect(typeof denyEvent.detail.waitUntil).to.equal('function');
     expect(closeEvent.detail).to.deep.equal({ reason: 'deny' });
     expect(el.open).to.be.false;
   });
@@ -1313,6 +1316,42 @@ describe('async pending decisions', () => {
     expect(denyEl.pendingAction).to.equal('deny');
     expect(denyEl.open).to.be.true;
     expect(denyClosed).to.be.false;
+  });
+
+  it('waitUntil() holds the dialog pending, then closes and settles on resolution', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    let resolve!: () => void;
+    el.addEventListener('lr-approve-request', (e) => {
+      (e as CustomEvent).detail.waitUntil(new Promise<void>((r) => (resolve = r)));
+    });
+    const decisions: string[] = [];
+    el.addEventListener('lr-decision-settled', (e) => decisions.push((e as CustomEvent).detail.decision));
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(el.pendingAction).to.equal('approve');
+    expect(el.open).to.be.true;
+    expect(decisions.length).to.equal(0);
+    resolve();
+    await waitUntil(() => !el.open);
+    expect(decisions).to.deep.equal(['approved']);
+  });
+
+  it('a rejected waitUntil() promise bounces back to the undecided state', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog tool-name="web_search" open></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    el.addEventListener('lr-deny-request', (e) => {
+      (e as CustomEvent).detail.waitUntil(Promise.reject(new Error('nope')));
+    });
+    let settled = false;
+    el.addEventListener('lr-decision-settled', () => (settled = true));
+    denyButton(el).click();
+    await waitUntil(() => el.pendingAction === null);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(settled).to.be.false;
   });
 
   it('shows loading on the pending button and disables the other one', async () => {

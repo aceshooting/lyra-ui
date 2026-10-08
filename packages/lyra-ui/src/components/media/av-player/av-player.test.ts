@@ -33,6 +33,7 @@ async function waitForStableLayout(
   let stableSince = Date.now();
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    // wait-reason: quiet-period layout detection polls the rect at a fixed cadence (no event signals layout stability)
     await settle(30);
     const rect = target.getBoundingClientRect();
     if (
@@ -3132,6 +3133,7 @@ it.skip('keeps rate hover visible in forced colors', async function () {
       await sendMouse({ type: 'move', position });
       const deadline = Date.now() + 3000;
       while (!select.matches(':hover') && Date.now() < deadline) {
+        // wait-reason: poll interval inside a bounded per-attempt retry loop (waitUntil would throw)
         await aTimeout(10);
       }
       hovered = select.matches(':hover');

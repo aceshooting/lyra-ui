@@ -1,4 +1,5 @@
 import { focusAfterPointer } from '../../../../test/wtr-focus.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./chat-message.js";
@@ -1636,4 +1637,23 @@ describe("RTL", () => {
     expect(header.matches(":dir(rtl)")).to.be.true;
     expect(getComputedStyle(header).flexDirection).to.equal("row");
   });
+});
+
+it("paints the collapse button hover from the shared icon-button surface, not a brand tint", async () => {
+  const el = (await fixture(
+    html`<lr-chat-message collapsible>hi</lr-chat-message>`
+  )) as LyraChatMessage;
+  const button = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLElement;
+  const probe = document.createElement("div");
+  probe.style.cssText = "background: var(--lr-color-surface-raised); color: var(--lr-color-text);";
+  el.shadowRoot!.append(probe);
+  const expected = [getComputedStyle(probe).backgroundColor, getComputedStyle(probe).color];
+  probe.remove();
+  try {
+    await hoverUntilMatched(button, "collapse button hover");
+    await waitUntil(() => getComputedStyle(button).backgroundColor === expected[0], "hover fill");
+    expect(getComputedStyle(button).color).to.equal(expected[1]);
+  } finally {
+    await resetMouse();
+  }
 });

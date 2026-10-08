@@ -1,5 +1,4 @@
 import type { PropertyDeclaration, ReactiveElement } from 'lit';
-import { readPersistedState } from './persisted-state.js';
 
 /**
  * Restore-on-first-update support for a reactive property that also persists to `localStorage`.
@@ -47,13 +46,10 @@ import { readPersistedState } from './persisted-state.js';
  *
  * ```ts
  * if (!this.hasUpdated) {
- *   const restored = restoreFromStorage<boolean>(
- *     this.storageFullKey,
- *     isPersistedPropertyExplicitlySet(this, 'open'),
- *     (v): v is { value?: boolean } =>
- *       typeof v === 'object' && v !== null && typeof (v as { value?: unknown }).value === 'boolean',
- *   );
- *   if (restored !== undefined) this.open = restored;
+ *   const restored = isPersistedPropertyExplicitlySet(this, 'open')
+ *     ? null
+ *     : readPersistedState(this.storageFullKey, isOpenRecord);
+ *   if (restored?.value !== undefined) this.open = restored.value;
  * }
  * ```
  *
@@ -72,8 +68,7 @@ import { readPersistedState } from './persisted-state.js';
  *
  * A record holding several fields under one key (a rail persisting open state, width and mode
  * together) reads through `readPersistedState()` directly and gates each field with
- * `isPersistedPropertyExplicitlySet()`; `restoreFromStorage()` covers the single-value
- * `{ value }` record only. Every field gated that way must itself be installed by
+ * `isPersistedPropertyExplicitlySet()`. Every field gated that way must itself be installed by
  * `definePersistedProperty()` -- an ordinary `@property` owns no persisted slot, so asking about it
  * throws rather than silently answering `false` and turning a sound guard into an unconditional
  * overwrite. A field that stays an ordinary `@property` with no declared default keeps its existing
@@ -208,23 +203,4 @@ export function isPersistedPropertyExplicitlySet(host: object, name: PropertyKey
     );
   }
   return persistedSlots.get(host)?.get(name)?.explicitlySet === true;
-}
-
-/**
- * The persisted value for `storageKey`, or `undefined` when there is nothing to apply.
- *
- * Returns `undefined` -- without touching storage at all -- when `wasExplicitlySet` is `true`, so
- * a consumer-supplied value is never overwritten. Otherwise it reads through
- * `readPersistedState()`, which already fails silently on unavailable storage, malformed JSON and
- * a record that fails `isValid`. An unset `storageKey` reads nothing, matching the rule that a
- * component without persistence configured touches storage neither to read nor to write.
- */
-export function restoreFromStorage<V>(
-  storageKey: string | undefined,
-  wasExplicitlySet: boolean,
-  isValid: (parsed: unknown) => parsed is { value?: V },
-): V | undefined {
-  if (wasExplicitlySet) return undefined;
-  const parsed = readPersistedState(storageKey, isValid);
-  return parsed === null ? undefined : parsed.value;
 }

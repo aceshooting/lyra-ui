@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html } from '@open-wc/testing';
 import './format-number.js';
 import './format-date.js';
 import './format-bytes.js';
@@ -486,11 +486,16 @@ it('executes the scheduled boundary refresh through a real timer and reschedules
   const originalSetTimeout = window.setTimeout;
   let scheduleCalls = 0;
   let callbackInvocations = 0;
+  let firstWakeRan: () => void = () => undefined;
+  // Resolved by the wrapped callback itself: waitUntil() polls through the stubbed setTimeout,
+  // which would spend this test's accelerated-timer budget on its own polls.
+  const firstWake = new Promise<void>((resolve) => { firstWakeRan = resolve; });
   window.setTimeout = ((handler: TimerHandler, delay?: number): number => {
     scheduleCalls += 1;
     const wrapped = (): void => {
       callbackInvocations += 1;
       (handler as VoidFunction)();
+      if (callbackInvocations === 1) firstWakeRan();
     };
     // Fire through a REAL timer almost immediately (never a fake clock) so the guarded callback
     // body actually runs within the test's lifetime; capped at 2 accelerated rounds so the
@@ -500,7 +505,7 @@ it('executes the scheduled boundary refresh through a real timer and reschedules
   try {
     el.sync = true;
     await el.updateComplete; // the single schedule() call triggered by `sync` changing
-    await aTimeout(100);
+    await firstWake;
 
     expect(callbackInvocations, 'the scheduled boundary callback actually ran').to.be.greaterThan(0);
     expect(

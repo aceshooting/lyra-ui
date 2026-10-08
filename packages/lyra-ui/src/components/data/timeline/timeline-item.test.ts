@@ -1,4 +1,4 @@
-import { fixture, fixtureSync, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { fixture, fixtureSync, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './timeline-item.js';
 import type { LyraTimelineItem } from './timeline-item.js';
 import type { LyraRelativeTime } from '../../utility/format/relative-time.js';
@@ -352,7 +352,7 @@ describe('collecting already-slotted marker-icon/timestamp/description content w
       // Give the three real initial slotchange events (queued around slot assignment) time to
       // arrive and be swallowed, so the assertions below only see whatever `firstUpdated()` alone
       // collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted >= 3, 'the initial slotchange events never arrived');
       expect(
         intercepted,
         'a real browser does fire each named slot\'s own initial slotchange -- this test suppresses all of them to reproduce happy-dom, which never fires any of them'
@@ -383,7 +383,7 @@ describe('collecting already-slotted marker-icon/timestamp/description content w
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange events never arrived');
       expect(
         realSlotchangeCount,
         'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'

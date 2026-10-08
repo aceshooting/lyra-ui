@@ -413,6 +413,13 @@ assert(
   ),
   'the documented widget registry helper route must remain curated'
 );
+assert(
+  CURATED_COMPONENT_HELPER_MODULES.includes('src/components/viewers/document-viewer/document-viewer-kinds.ts')
+    && JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')).exports[
+      './components/viewers/document-viewer/document-viewer-kinds.js'
+    ] !== undefined,
+  'the document-viewer kinds helper must stay curated and packaged'
+);
 for (const loader of [
   'src/components/charts/chart/chart-core-loader.ts',
   'src/components/charts/chart/chart-feature-loader.ts',

@@ -1,41 +1,17 @@
-import {
-  isHtmlSanitizer,
-  resolveOptionalPeerCapability,
-  type HtmlSanitizer,
-} from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { clearDompurifyCache, loadDompurify } from '../../../internal/dompurify-loader.js';
+import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 
-const ICON_SANITIZER_WARNING_KEY = 'lyra-icon-sanitizer-unavailable';
-const ICON_SANITIZER_WARNING = '<lr-icon> could not load its optional dompurify peer.';
-
-let sanitizer: Promise<HtmlSanitizer | null> | undefined;
-
-export async function loadIconSanitizerDeps(
+export function loadIconSanitizerDeps(
   importDompurify: () => Promise<unknown> = () => import('dompurify'),
 ): Promise<HtmlSanitizer | null> {
-  try {
-    // Different bundler/interop configurations resolve a CJS-published optional peer as either
-    // `{ default: X }` or the bare module namespace. Prefer the named capability on either shape
-    // and reject a candidate that cannot sanitize: resolving `undefined` here would turn the one
-    // barrier between fetched remote markup and the DOM into a silent no-op.
-    const module = await importDompurify();
-    return resolveOptionalPeerCapability(module, isHtmlSanitizer);
-  } catch {
-    devWarnOnce(ICON_SANITIZER_WARNING_KEY, ICON_SANITIZER_WARNING);
-    return null;
-  }
+  return loadDompurify(importDompurify);
 }
 
-/** Resolves the shared sanitizer, importing `dompurify` on first use. `importDompurify` is
- *  consulted only while the module-level cache is cold, so an application that already bundles
- *  its own DOMPurify build can supply it once before the first icon fetch. */
-export function loadIconSanitizer(
-  importDompurify?: () => Promise<unknown>,
-): Promise<HtmlSanitizer | null> {
-  if (!sanitizer) sanitizer = loadIconSanitizerDeps(importDompurify);
-  return sanitizer;
+/** Resolves the shared sanitizer; an `importer` (an application's own DOMPurify build) is consulted per call, uncached. */
+export function loadIconSanitizer(importer?: () => Promise<unknown>): Promise<HtmlSanitizer | null> {
+  return loadDompurify(importer);
 }
 
 export function clearIconSanitizerCache(): void {
-  sanitizer = undefined;
+  clearDompurifyCache();
 }

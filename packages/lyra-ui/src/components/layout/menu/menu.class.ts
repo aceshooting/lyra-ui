@@ -16,7 +16,7 @@ import {
 } from '../../../internal/anchored-overlay-runtime.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
 import { isRovingTargetAvailable, resolveListMove } from '../../../internal/list-navigation.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController } from '../../../internal/popup-controller.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -40,7 +40,7 @@ import {
 } from './menu-shared.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, isUsableActiveElement, safeDeepActiveElement } from '../../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import './menu-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -85,49 +85,6 @@ function isLyraMenuItemElement(value: unknown): value is LyraMenuItem {
 
 function isLyraMenuElement(value: unknown): value is LyraMenu {
   return isHtmlElement(value) && value.localName === tag('menu');
-}
-
-/** `activeElement` is Web-IDL typed as an Element, but an embedders' partial DOM may return a
- * structural lookalike. Brand-check before passing it to composed containment, whose parent walk
- * necessarily reads native Node accessors. */
-function isUsableActiveElement(value: unknown): value is Element {
-  if ((typeof value !== 'object' && typeof value !== 'function') || value === null)
-    return false;
-  try {
-    const candidate = value as Node;
-    if (candidate.nodeType !== 1) return false;
-    const NodeConstructor =
-      candidate.ownerDocument?.defaultView?.Node ??
-      (typeof Node === 'undefined' ? undefined : Node);
-    if (!NodeConstructor) return false;
-    NodeConstructor.prototype.getRootNode.call(candidate);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Descend through open shadow roots without allowing a malformed active-element result to reach
- * composed containment. The guarded read itself stays centralized in `activeElementIn()`. */
-function safeDeepActiveElement(
-  root: Document | ShadowRoot | null | undefined,
-): Element | null {
-  const initial: unknown = activeElementIn(root);
-  if (!isUsableActiveElement(initial)) return null;
-  let active: Element = initial;
-  while (true) {
-    let shadowRoot: ShadowRoot | null;
-    try {
-      shadowRoot = active.shadowRoot;
-    } catch {
-      return null;
-    }
-    if (!shadowRoot) return active;
-    const nested: unknown = activeElementIn(shadowRoot);
-    if (nested === null) return active;
-    if (!isUsableActiveElement(nested)) return null;
-    active = nested;
-  }
 }
 
 interface OwnedTimeout {
@@ -340,7 +297,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private presentationPositioned = false;
   private placedTopLayer?: boolean;
   private itemStateObserver?: MutationObserver;
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({ host: this, onPointer: (event) => this.onDocPointer(event) });
   private menubarAnchored = false;
   private pendingFocus: MenuFocusTarget = 'first';
   private submenuOpenTimer?: OwnedTimeout;
@@ -513,15 +470,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.presentationPositioned = false;
       if (this.presentationOpen) {
         if (this.submenuAnchor) {
-          this.bindDocumentPointer();
+          this.popupController.bindPointer();
           this.reposition();
         } else {
-          this.unbindDocumentPointer();
+          this.popupController.unbindPointer();
           this.presentationPositioned = true;
           this.focusRoving(this.pendingFocus);
         }
       } else {
-        this.unbindDocumentPointer();
+        this.popupController.unbindPointer();
         this.resetTypeAhead();
         this.activeIndex = -1;
         this.applyRovingTabIndex();
@@ -637,21 +594,13 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.clearSubmenuTimers();
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     for (const item of this.items) this.releaseItemOwner(item);
     this._dropdownOpen = false;
     this.presentationOpen = false;
     this.cancelPresentationHideWatch();
     this.presentationHidden = true;
     this.submenuStateChange?.(false);
-  }
-
-  private bindDocumentPointer(): void {
-    this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
   }
 
   private scheduleOwnedTimeout(

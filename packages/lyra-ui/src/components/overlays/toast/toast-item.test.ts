@@ -89,6 +89,7 @@ it("restarts the full normalized duration after a one-shot auto-dismiss veto", a
   await oneEvent(el, "lr-show");
   const afterHide = oneEvent(el, "lr-after-hide");
 
+  // wait-reason: real restarted-duration semantics: a full duration must not have elapsed yet
   await aTimeout(125);
   expect(
     hideTimes.length,
@@ -159,7 +160,7 @@ it("keeps rearming a full duration while every timer dismissal is vetoed", async
   });
   await oneEvent(el, "lr-show");
 
-  await aTimeout(150);
+  await waitUntil(() => hideCount >= 3, 'the vetoed dismissal retried repeatedly', { timeout: 3000 });
   expect(hideCount).to.be.at.least(3);
   expect(el.isConnected).to.be.true;
   expect(el.hasAttribute("data-visible")).to.be.true;
@@ -189,10 +190,12 @@ it("holds a restarted vetoed countdown while paused, then resumes from the full 
   await oneEvent(el, "lr-show");
   await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
 
+  // wait-reason: asserting the pointer pause suppresses every retry over real time
   await aTimeout(110);
   expect(hideCount, "the pointer pause suppresses every retry").to.equal(1);
   const afterHide = oneEvent(el, "lr-after-hide");
   surface.dispatchEvent(new PointerEvent("pointerleave"));
+  // wait-reason: real time shorter than a full duration after resume
   await aTimeout(35);
   expect(
     hideCount,
@@ -221,10 +224,12 @@ it("keeps a vetoed countdown stopped while disconnected and restarts it on recon
   await oneEvent(el, "lr-show");
   await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
 
+  // wait-reason: asserting no retry runs while disconnected
   await aTimeout(100);
   expect(hideCount).to.equal(1);
   parent.append(el);
   const afterHide = oneEvent(el, "lr-after-hide");
+  // wait-reason: real time shorter than a full duration after reconnect
   await aTimeout(35);
   expect(hideCount, "reconnect starts a full duration").to.equal(1);
   await waitUntil(
@@ -253,6 +258,7 @@ it("uses a duration changed by the veto listener and lets a manual retry dismiss
   });
   await oneEvent(el, "lr-show");
   await waitUntil(() => hideCount === 1, "the first timer dismissal is vetoed");
+  // wait-reason: real time shorter than the changed duration
   await aTimeout(90);
   expect(
     hideCount,
@@ -263,6 +269,7 @@ it("uses a duration changed by the veto listener and lets a manual retry dismiss
   await el.hide();
   await afterHide;
   expect(hideCount).to.equal(2);
+  // wait-reason: asserting a manual success clears the rearmed timer past its duration
   await aTimeout(320);
   expect(hideCount, "manual success clears the rearmed timer").to.equal(2);
 });
@@ -282,6 +289,7 @@ it("rearms an initial show and a visible auto-dismiss timer after reconnect", as
   const visible = (await fixture(html`<lr-toast-item duration="100">visible</lr-toast-item>`)) as LyraToastItem;
   await oneEvent(visible, 'lr-show');
   visible.remove();
+  // wait-reason: real time elapsed while disconnected
   await aTimeout(30);
   document.body.appendChild(visible);
   await oneEvent(visible, 'lr-after-hide');
@@ -303,6 +311,7 @@ it('does not auto-dismiss early after an interleaved pointer+focus pause/resume 
   item.dispatchEvent(new FocusEvent('focusout')); // resume again, no pause between -- leaks the first one
   item.dispatchEvent(new PointerEvent('pointerenter')); // pause: should cancel *every* pending timer
 
+  // wait-reason: asserting paused state survives past duration and any leaked timer
   await aTimeout(300); // well past `duration`, and past any leaked timer's delay
   expect(el.isConnected, 'toast should still be open -- it was paused again after the leak').to.be.true;
 });
@@ -316,6 +325,7 @@ it('resyncs the running auto-dismiss timer when `duration` changes after creatio
   el.duration = 400; // extend well past the original 60ms window
   await el.updateComplete;
 
+  // wait-reason: asserting the extended duration outlives the original
   await aTimeout(150); // past the original duration, well before the new one
   expect(el.isConnected, 'toast should still be open -- duration was extended').to.be.true;
 
@@ -344,6 +354,7 @@ it('hides immediately when called before the show animation frame has run', asyn
 
 it('hides promptly when duration is shortened below the already-elapsed time', async () => {
   const el = (await fixture(html`<lr-toast-item duration="5000">msg</lr-toast-item>`)) as LyraToastItem;
+  // wait-reason: real elapsed time before shortening the duration
   await aTimeout(50);
   el.duration = 10;
   // resumeTimer() must call hide() synchronously once it sees the shortened
@@ -380,6 +391,7 @@ it('does not schedule a redundant re-render when a shortened duration forces hid
     const el = (await fixture(
       html`<lr-toast-item duration="5000">msg</lr-toast-item>`,
     )) as LyraToastItem;
+    // wait-reason: real elapsed time before shortening the duration
     await aTimeout(50);
     el.duration = 10; // already behind elapsedMs -- resumeTimer() calls hide() synchronously
     await oneEvent(el, 'lr-after-hide');
@@ -393,6 +405,7 @@ it('does not schedule a redundant re-render when a shortened duration forces hid
 
 it('restarts the timer when duration changes from disabled (0) back to a positive value', async () => {
   const el = (await fixture(html`<lr-toast-item duration="0">msg</lr-toast-item>`)) as LyraToastItem;
+  // wait-reason: asserting duration 0 never auto-dismisses
   await aTimeout(20);
   expect(el.isConnected).to.be.true;
   el.duration = 15;
@@ -403,6 +416,7 @@ it('restarts the timer when duration changes from disabled (0) back to a positiv
 it('keeps an explicit Infinity duration meaning "never auto-dismiss" instead of coercing it into a large finite timeout', async () => {
   const el = (await fixture(html`<lr-toast-item duration="Infinity">msg</lr-toast-item>`)) as LyraToastItem;
   expect((el as any).safeDuration).to.equal(Infinity);
+  // wait-reason: asserting Infinity never schedules a dismiss timer
   await aTimeout(60);
   expect(el.isConnected, 'Infinity must never schedule a real dismiss timer').to.be.true;
 });
@@ -413,6 +427,7 @@ it('self-heals a NaN duration to the constructed default, and a negative duratio
 
   const negativeEl = (await fixture(html`<lr-toast-item duration="-50">msg</lr-toast-item>`)) as LyraToastItem;
   expect((negativeEl as any).safeDuration).to.equal(0);
+  // wait-reason: asserting a clamped negative duration never dismisses
   await aTimeout(30);
   expect(negativeEl.isConnected, 'a negative duration clamps to 0, which this component already treats as disabled').to.be
     .true;
@@ -491,13 +506,14 @@ it('continues an accepted show after an immediate reconnect and completes exactl
 
   const completed = await Promise.race([
     waitUntil(() => afterShowCount === 1).then(() => true),
+    // wait-reason: failure-detection guard only; never reached when the show resumes
     aTimeout(180).then(() => false),
   ]);
   expect(completed, 'the accepted show transaction must resume after reconnect').to.equal(true);
   el.shadowRoot!
     .querySelector('[part="toast-item"]')!
     .dispatchEvent(new Event('transitionend'));
-  await aTimeout(0);
+  await nextFrame();
   expect(afterShowCount).to.equal(1);
 });
 
@@ -655,7 +671,8 @@ it('does not fire lr-hide/lr-after-hide twice when hide() is called twice concur
   void el.hide();
   void el.hide();
 
-  await aTimeout(300);
+  await waitUntil(() => afterHideCount >= 1, 'the toast finished hiding', { timeout: 3000 });
+  await nextFrame();
   expect(hideCount, 'lr-hide should fire exactly once').to.equal(1);
   expect(afterHideCount, 'lr-after-hide should fire exactly once').to.equal(1);
 });
@@ -674,7 +691,8 @@ it('marks the close button aria-disabled once hiding starts and ignores a rapid 
   expect(button.getAttribute('aria-disabled')).to.equal('true');
   button.click();
 
-  await aTimeout(300);
+  await waitUntil(() => afterHideCount >= 1, 'the toast finished hiding', { timeout: 3000 });
+  await nextFrame();
   expect(hideCount, 'lr-hide should fire exactly once').to.equal(1);
   expect(afterHideCount, 'lr-after-hide should fire exactly once').to.equal(1);
 });
@@ -874,6 +892,7 @@ it('stays paused on pointerleave while focus still holds it paused', async () =>
   item.dispatchEvent(new FocusEvent('focusin'));
   item.dispatchEvent(new PointerEvent('pointerleave')); // hover ends, but focus still holds the pause
 
+  // wait-reason: asserting focus holds the pause past duration
   await aTimeout(200); // past `duration`, but focus should still hold the toast paused
   expect(el.isConnected, 'toast should still be open -- focus still holds the pause').to.be.true;
 });
@@ -887,6 +906,7 @@ it('stays paused on focusout while the pointer is still hovering', async () => {
   item.dispatchEvent(new PointerEvent('pointerenter'));
   item.dispatchEvent(new FocusEvent('focusout')); // focus ends, but hover still holds the pause
 
+  // wait-reason: asserting hover holds the pause past duration
   await aTimeout(200); // past `duration`, but hover should still hold the toast paused
   expect(el.isConnected, 'toast should still be open -- hover still holds the pause').to.be.true;
 });
@@ -902,6 +922,7 @@ it('cancels the pending first-paint rAF when removed before it fires, so it cann
   el.remove(); // disconnect before the browser's next paint
 
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // wait-reason: asserting no lr-show fires for a toast removed before first paint
   await aTimeout(20);
 
   expect(sawShow, 'lr-show should not fire for a toast removed before first paint').to.be.false;
@@ -919,6 +940,7 @@ it('cancels the pending show-animation timeout when disconnected out-of-band, so
 
   el.remove(); // disconnect out-of-band (e.g. the hosting region itself was torn down)
 
+  // wait-reason: asserting no lr-after-show fires past the animation window
   await aTimeout(220); // past ANIM_MS
   expect(sawAfterShow, 'lr-after-show should not fire for a node disconnected mid-show-animation').to.be
     .false;
@@ -936,6 +958,7 @@ it('cancels the pending hide-animation timeout when disconnected out-of-band, so
   void el.hide(); // starts the ANIM_MS hide delay
   el.remove(); // disconnect out-of-band before the hide animation timeout fires
 
+  // wait-reason: asserting no lr-after-hide fires past the animation window
   await aTimeout(220); // past ANIM_MS
   expect(sawAfterHide, 'lr-after-hide should not fire for a node disconnected mid-hide-animation').to.be
     .false;
@@ -1233,7 +1256,7 @@ it('keeps pruned action shadow content out of message observation and accessible
 
   expect(close.getAttribute('aria-label')).to.equal('Close: Visible message');
   actionLabel.shadowRoot!.textContent = 'Beta';
-  await aTimeout(30);
+  await nextFrame();
   await el.updateComplete;
 
   expect(close.getAttribute('aria-label')).to.equal('Close: Visible message');
@@ -1892,6 +1915,7 @@ it('keeps the inactive subtree inert and hidden, then releases a vetoed initial 
   expect(surface.inert, 'pre-show actions are outside sequential/programmatic focus').to.be.true;
   expect(document.activeElement === action, 'an inert slotted action must reject focus').to.be.false;
 
+  // wait-reason: asserting the surface stays hidden and inert through the veto point
   await aTimeout(80);
   expect(hiddenDuringRequest, 'the surface stays hidden throughout the veto point').to.be.true;
   expect(inertDuringRequest, 'the surface stays inert throughout the veto point').to.be.true;
@@ -1937,6 +1961,7 @@ it('honours preventDefault() on lr-hide, leaving the toast up', async () => {
   el.addEventListener('lr-hide', (event) => event.preventDefault(), { once: true });
 
   await el.hide();
+  // wait-reason: asserting a vetoed dismissal never removes the item
   await aTimeout(60);
   expect(el.isConnected, 'a vetoed dismissal never removes the item').to.be.true;
   expect(el.hasAttribute('data-visible')).to.be.true;
@@ -2047,6 +2072,7 @@ it('does not resurrect a show request whose lifecycle listener disconnects the i
     el.addEventListener('lr-after-show', () => afterShows++);
 
     document.body.append(el);
+    // wait-reason: asserting nothing becomes visible after a removal inside lr-show
     await aTimeout(40);
 
     expect(el.isConnected, `veto=${veto}`).to.be.false;
@@ -2170,6 +2196,7 @@ it('pauses its countdown while the document is hidden', async () => {
   Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
   try {
     document.dispatchEvent(new Event('visibilitychange'));
+    // wait-reason: asserting a hidden document pauses the countdown past its duration
     await aTimeout(500);
     expect(el.isConnected, 'a hidden document pauses the countdown').to.equal(true);
   } finally {

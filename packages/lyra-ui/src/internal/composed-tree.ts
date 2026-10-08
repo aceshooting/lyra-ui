@@ -18,8 +18,9 @@ function shadowRootHost(root: Node): Element | null {
   return root.nodeType === 11 && isElementLike(candidate) ? candidate : null;
 }
 
-/** The slot an element is assigned to, when its shadow root exposes one. Closed roots hide it. */
-export function assignedSlotOf(element: Element): Element | null {
+/** The slot an element or text node is assigned to, when its shadow root exposes one. Closed roots
+ * hide it. */
+export function assignedSlotOf(element: Node): Element | null {
   const candidate = (element as { assignedSlot?: unknown }).assignedSlot;
   return isElementLike(candidate) ? candidate : null;
 }
@@ -33,6 +34,16 @@ export function domParentElement(element: Element): Element | null {
  * inherit this way. */
 export function flattenedParentElement(element: Element): Element | null {
   return assignedSlotOf(element) ?? domParentElement(element);
+}
+
+/** Whether `candidate` is `container` or inside it along the flattened tree. */
+export function composedContains(container: Element, candidate: Element | null): boolean {
+  let current = candidate;
+  while (current) {
+    if (current === container) return true;
+    current = flattenedParentElement(current);
+  }
+  return false;
 }
 
 /** The element's owner window: `null` for a document without a browsing context, `undefined` when

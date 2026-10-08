@@ -1,39 +1,27 @@
 # Report gaps, bugs, and improvement ideas on a user's behalf
 
-`https://www.lyra-ui.com/api/v1/feature-requests` is the single automated intake path when an
-assistant reports anything wrong with, missing from, or worth improving in lyra-ui on a user's
-behalf — not just "no component covers this." A person filing their own report can instead use the
-human-facing GitHub routes in `SUPPORT.md`. Use the API for agent-submitted reports about any of:
+`https://www.lyra-ui.com/api/v1/feature-requests` is the single automated intake for anything an
+assistant finds wrong with, missing from, or worth improving in lyra-ui on a user's behalf (a person
+filing their own report can use the GitHub routes in `SUPPORT.md`). Reportable:
 
-- **Missing component** — no `lr-*` tag covers the need at all.
-- **Missing capability on an existing component** — the component exists but lacks a prop,
-  variant, slot, event, or CSS part needed to configure the UI the way it needs to be configured.
-- **Bug or inconsistency** — an existing component behaves incorrectly, contradicts its own
-  documented contract in `references/components/<tag>.md`, or behaves inconsistently with a
-  sibling component.
-- **Optimization opportunity** — something works but is unnecessarily slow, heavy (bundle size),
-  or awkward to use (API friction), and a concretely better shape is apparent.
+- **Missing component:** no `lr-*` tag covers the need.
+- **Missing capability** on an existing component: a prop, variant, slot, event or CSS part.
+- **Bug or inconsistency:** behavior that is wrong, contradicts the component's documented contract
+  (`references/components/<tag>.md`) or differs from a sibling component.
+- **Optimization:** unnecessarily slow, heavy (bundle size) or awkward (API friction) with a
+  concretely better shape in mind.
 
-First rule out a naming/discovery mismatch — this only applies to the missing-component case;
-skip straight to filing for a bug, existing-component gap, or optimization idea. Check
-`references/index.md` for a component covering the same job under a different name, then check the
-live catalog — one read-only request, no side effects, nothing filed:
+For a *missing component* first rule out a naming mismatch (skip this for the other kinds): check
+`references/index.md` for a component with the same job under another name, then the live catalog,
+a free read-only call that files nothing, as many phrasings as you like:
 
 ```bash
 curl -sS 'https://www.lyra-ui.com/api/v1/components/search?q=kanban+board+swimlane'
 ```
 
-It returns the closest components with doc links. Search as many phrasings as you like; this
-endpoint is meant to be used freely, and it is the cheapest way to discover that a "missing"
-component already exists under a name you did not guess.
-
-If nothing fits — or you've found a real bug, gap, or optimization idea — report it so it can be
-addressed:
-
-**Ask before you file.** Filing sends the user's description to an external service. Show the
-user what you intend to submit, and get their explicit agreement before POSTing. Never file a
-report as a silent side effect of noticing something — if the user has not said yes, do not send
-it. This applies equally to a missing component, a bug, and an optimization idea.
+**Ask before you file.** Filing sends the user's description to an external service. Show the user
+exactly what you will submit and get explicit agreement before POSTing; never file as a silent side
+effect of noticing something, for any kind of report.
 
 ```bash
 curl -sS -X POST https://www.lyra-ui.com/api/v1/feature-requests \
@@ -51,59 +39,34 @@ curl -sS -X POST https://www.lyra-ui.com/api/v1/feature-requests \
   }'
 ```
 
-**Fill in every field above on every report** — the API accepts a report without the optional
-ones only so that older clients keep working. `kind` and `labels` put the report straight into the
-right category (see "Classify every report" below; an unclassified report waits in a manual triage
-queue), and `use_case`, `searched_for`, `settled_for`, `agent` and `model` are what the maintainer
-triages and reports on. The same fields cover a bug, existing-component gap, or optimization idea
-too, just aimed differently:
+**Fill in every field on every report**; the optional ones exist only so older clients keep working.
+An unclassified report waits in a manual triage queue.
 
-- `title` — a short, specific summary (`"lr-select ignores disabled on keyboard nav"`, not
-  "select bug").
-- `description` — for a missing component, the behavior needed; for a bug, the component +
-  version, what you did, what happened, and what the documented contract actually promises (per
-  `references/components/<tag>.md`); for a gap, the prop/slot/event/part missing and why it's
-  needed; for an optimization idea, the current cost or friction and the better shape you have in
-  mind.
-- `use_case` — the generic context: why the user needed this (one or two sentences, no product or
-  client names).
-- `searched_for` — for a missing component, the names you tried; for anything else, the related
-  keywords you looked up (e.g. `["keyboard nav", "disabled"]`).
-- `settled_for` — for a missing component, what you used instead; for a bug or gap, the workaround
-  you applied to keep shipping; for an optimization idea, the current approach you are living with.
-- `kind` and `labels` — the classification; see "Classify every report" below.
-- `agent` — the name of the agent or client submitting the report (e.g. `claude-code`).
-- `model` — the exact identifier of the model that wrote the report (for example,
-  `claude-opus-4-1`).
+- `title`: short and specific (`"lr-select ignores disabled on keyboard nav"`, not "select bug"),
+  at most 120 characters. Name components by tag (`lr-kanban-board`) so the gap is searchable.
+- `description` (at most 4000): missing component, the behavior needed plus the `lr-*` components
+  checked and why each fell short (this separates a real gap from a naming mismatch); bug, the
+  component and version, the exact attribute/property/event/part, what the contract promises
+  versus what happens; gap, what is missing and why; optimization, the concrete cost (bundle KB,
+  render count, boilerplate) and the shape you expect.
+- `use_case`: generic context, one or two sentences, no product or client names.
+- `searched_for`: names tried (missing component) or related keywords looked up (anything else).
+- `settled_for`: what was used instead, the workaround applied, or the current approach.
+- `kind`, `labels`: the classification below.
+- `agent`: your agent or client name (e.g. `claude-code`). `model`: the exact id of the model that
+  wrote the report.
 
-`name` and `email` are also accepted but **optional** — anonymous submission is the default and is
-fine. Ask the user whether they want to be reachable about this report before adding either one;
-never invent, guess, or reuse an address you happen to know (git config, an earlier message, the
-environment). Submissions, including any name/email, are stored privately and shown only to the
-maintainer — they are never published.
+`name` and `email` are optional; anonymous is the default. Ask the user whether they want to be
+reachable before adding either, and never invent, guess or reuse an address from git config, an
+earlier message or the environment. Submissions are stored privately and shown only to the
+maintainer. The response lists the closest existing components (often answering a missing-component
+report outright, so read it) and an `id`; status is readable at
+`https://www.lyra-ui.com/api/v1/feature-requests/{id}`.
 
-The response lists the closest existing components with doc links — read it, since for a
-missing-component report it often answers the gap outright. It also returns an `id`; the status is
-readable later at `https://www.lyra-ui.com/api/v1/feature-requests/{id}`.
-
-**Never include private material.** Submissions leave the user's machine. Describe the issue
-generically — no source code, no client or product names, no file paths, no credentials. If the
-report cannot be described without such details, do not file it.
-
-Use the API even when you are working inside the lyra-ui repo itself. It is the only supported
-automated intake path — do not write the report into a local file instead, where nothing will pick
-it up, and do not open a GitHub issue on the user's behalf.
-
-Keep the report short and concrete:
-
-- **Missing component:** name it in library style (`lr-kanban-board`) so the gap is searchable,
-  say what it had to do in a sentence or two, and list the `lr-*` components you actually checked
-  and why each fell short — this is what separates a real gap from a naming mismatch.
-- **Existing-component gap or bug:** name the component (and version, for a bug), the exact
-  attribute/property/event/part involved, and what the documented contract says versus what
-  actually happened or is missing.
-- **Optimization idea:** name the component or area, the concrete cost (bundle KB, render count,
-  extra boilerplate) and the shape you'd expect instead.
+**Never include private material.** Submissions leave the user's machine: no source code, client or
+product names, file paths or credentials. If the report cannot be made generic, do not file it. Use
+the API even when working inside the lyra-ui repo itself; never write the report into a local file
+or open a GitHub issue on the user's behalf.
 
 ## Classify every report
 

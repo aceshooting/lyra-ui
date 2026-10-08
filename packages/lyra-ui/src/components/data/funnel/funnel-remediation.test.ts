@@ -48,3 +48,16 @@ it('draws the comparison outline and overflow cap from the border-width ladder',
   const cap = getComputedStyle(element.shadowRoot!.querySelector('[part~="bar-overflow"]')!).borderInlineEndWidth;
   expect([outline, cap]).to.deep.equal(['2px', '5px']);
 });
+
+it('keeps a sub-thousandth stage value readable instead of rounding it to zero', async () => {
+  const el = await fixture<LyraFunnel>(html`<lr-funnel .stages=${[{ label: 'Rare', value: 0.0004 }]}></lr-funnel>`);
+  expect(el.shadowRoot!.querySelector('[part="stage-value"]')!.textContent).to.equal('0.0004');
+});
+
+it('draws the comparison outline and overflow cap from the border-width tokens', async () => {
+  const el = await fixture<LyraFunnel>(html`<lr-funnel style="--lr-border-width-thin: 5px; --lr-border-width-thick: 7px"
+    .stages=${[{ label: 'A', value: 10 }, { label: 'B', value: 20 }]}
+    .comparison=${[{ label: 'A', value: 10 }, { label: 'B', value: 5 }]}></lr-funnel>`);
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="comparison-bar"]')!).borderTopWidth).to.equal('5px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="bar-overflow"]')!).borderInlineEndWidth).to.equal('7px');
+});

@@ -167,31 +167,31 @@ test('publish and recovery signing share one credential-free verification workfl
   assert.match(reusable, /actions\/upload-artifact@/);
 });
 
-test('first Docs publication uses a protected, provenance-bearing token path only for an absent package', () => {
+test('first publication of a companion package uses a protected, provenance-bearing token path only for an absent package', () => {
   const release = read('.github/workflows/release.yml');
   const publish = read('.github/workflows/publish.yml');
   const plan = release.slice(release.indexOf('\n  plan:\n'), release.indexOf('\n  pack:\n'));
   const dispatch = release.slice(release.indexOf('      - name: Dispatch npm publish for each tag'));
   const protectedJob = publish.slice(publish.indexOf('\n  publish:\n'));
   const eligibility = protectedJob.slice(
-    protectedJob.indexOf('      - name: Require an unpublished Docs package for bootstrap after approval'),
+    protectedJob.indexOf('      - name: Require an unpublished first-publication package for bootstrap after approval'),
     protectedJob.indexOf('      - name: Generate release provenance'),
   );
   const normalPublish = protectedJob.slice(
     protectedJob.indexOf('      - name: Publish to npm'),
-    protectedJob.indexOf('      - name: Bootstrap first Docs package with npm provenance'),
+    protectedJob.indexOf('      - name: Bootstrap first package publication with npm provenance'),
   );
   const bootstrapPublish = protectedJob.slice(
-    protectedJob.indexOf('      - name: Bootstrap first Docs package with npm provenance'),
+    protectedJob.indexOf('      - name: Bootstrap first package publication with npm provenance'),
   );
 
   assert.match(release, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
   assert.match(publish, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
-  assert.match(plan, /"\$PACKAGE" != lyra-docs \|\| ! "\$TAGS" =~ \^lyra-docs@/u);
+  assert.match(plan, /"\$PACKAGE" =~ \^lyra-\(docs\|ide\|translations\)\$[\s\S]*"\$TAGS" =~ \^lyra-\(docs\|ide\|translations\)@/u);
   assert.match(plan, /"\$status" != 404/u);
   assert.match(dispatch, /-f first_package_bootstrap=true/u);
   assert.match(eligibility, /"\$GITHUB_EVENT_NAME" != workflow_dispatch \|\| "\$DRY_RUN" == true/u);
-  assert.match(eligibility, /! "\$TAG" =~ \^lyra-docs@/u);
+  assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\)@/u);
   assert.match(eligibility, /"\$status" != 404/u);
   assert.match(normalPublish, /if: \$\{\{ inputs\.first_package_bootstrap != true \}\}/u);
   assert.doesNotMatch(normalPublish, /NODE_AUTH_TOKEN|NPM_BOOTSTRAP_TOKEN|--provenance/u);
@@ -218,8 +218,8 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
     }
     return lines.join('\n');
   };
-  const plan = stepScript(read('.github/workflows/release.yml'), 'Require an unpublished Docs package for bootstrap');
-  const publish = stepScript(read('.github/workflows/publish.yml'), 'Require an unpublished Docs package for bootstrap after approval');
+  const plan = stepScript(read('.github/workflows/release.yml'), 'Require an unpublished first-publication package for bootstrap');
+  const publish = stepScript(read('.github/workflows/publish.yml'), 'Require an unpublished first-publication package for bootstrap after approval');
   const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-docs-bootstrap-'));
   try {
     const curl = path.join(fixture, 'curl');
@@ -250,6 +250,12 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
     assert.equal(run(plan, { PACKAGE: 'lyra-ui' }).status, 1);
     assert.equal(run(plan, { TAGS: 'lyra-docs@0.1.1 lyra-ui@25.6.2' }).status, 1);
     assert.equal(run(publish, { TAG: 'lyra-ui@25.6.2' }).status, 1);
+    for (const [name, version] of [['lyra-ide', '27.0.0'], ['lyra-translations', '27.0.0']]) {
+      const vars = { PACKAGE: name, TAG: `${name}@${version}`, TAGS: `${name}@${version}` };
+      assert.equal(run(plan, vars).status, 0);
+      assert.equal(run(publish, vars).status, 0);
+      assert.equal(run(plan, { ...vars, PACKAGE: 'lyra-docs' }).status, 1);
+    }
     assert.equal(run(publish, { DRY_RUN: 'true' }).status, 1);
     assert.equal(run(publish, { GITHUB_EVENT_NAME: 'release' }).status, 1);
   } finally {

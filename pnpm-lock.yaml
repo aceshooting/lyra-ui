@@ -330,8 +330,23 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
 
+  packages/lyra-ide:
+    devDependencies:
+      '@aceshooting/lyra-ui':
+        specifier: workspace:*
+        version: link:../lyra-ui
+
+  packages/lyra-translations:
+    devDependencies:
+      '@aceshooting/lyra-ui':
+        specifier: workspace:*
+        version: link:../lyra-ui
+
   packages/lyra-ui:
     dependencies:
+      '@aceshooting/lyra-translations':
+        specifier: workspace:^
+        version: link:../lyra-translations
       '@floating-ui/dom':
         specifier: ^1.8.0
         version: 1.8.0

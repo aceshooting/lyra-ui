@@ -11,16 +11,21 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { nextId } from '../../../internal/a11y.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { styles } from './tool-approval-dialog.styles.js';
-import type { ApprovalAction } from '../approval-state.js';
+import {
+  approvalDecision,
+  type ApprovalAction,
+  type ApprovalDecision,
+} from '../approval-state.js';
+import { createWaitUntil, type ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
 import { optionalLiteralSetConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_cancel, LYRA_DEFAULT_deny, LYRA_DEFAULT_edit, LYRA_DEFAULT_invalidJson, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Retained name for the shared native `<textarea wrap>` vocabulary. */
@@ -58,9 +63,13 @@ export interface LyraToolApprovalDialogCloseDetail {
   reason: ToolApprovalDialogCloseReason;
 }
 
+/** The `waitUntil(promise)` resolver `lr-approve-request`/`lr-deny-request` carry, as on `<lr-confirm-bar>`. */
+export type ToolApprovalDialogWaitUntil = ApprovalWaitUntil;
+
 export interface LyraToolApprovalDialogEventMap {
-  'lr-approve-request': CustomEvent<{ args: unknown }>;
-  'lr-deny-request': CustomEvent<null>;
+  'lr-approve-request': CustomEvent<{ args: unknown; waitUntil: ToolApprovalDialogWaitUntil }>;
+  'lr-deny-request': CustomEvent<{ waitUntil: ToolApprovalDialogWaitUntil }>;
+  'lr-decision-settled': CustomEvent<{ decision: ApprovalDecision }>;
   'lr-close': CustomEvent<LyraToolApprovalDialogCloseDetail>;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -148,14 +157,18 @@ export interface LyraToolApprovalDialogEventMap {
  * @customElement lr-tool-approval-dialog
  * @slot footer - Optional supplementary content (e.g. a "remember this
  * choice" checkbox), rendered before the built-in Deny/Edit/Approve buttons.
- * @event lr-approve-request - The call was approved. `detail: { args }` — the
+ * @event lr-approve-request - The call was approved. `detail: { args, waitUntil }` — `args` is the
  * current, already-parsed arguments object: the original `args` prop, or (if
  * an edit was in progress) the user's edited-and-validated version. Cancelable: a listener
- * calling `preventDefault()` sets `pendingAction` to `'approve'` instead of closing. Otherwise always
- * followed by `lr-close` with reason `'approve'`.
- * @event lr-deny-request - The call was denied (no detail). Cancelable, same `pendingAction` mechanism as
- * `lr-approve-request` (`pendingAction` is set to `'deny'`). Otherwise always followed by `lr-close` with
- * reason `'deny'`.
+ * calling `preventDefault()` sets `pendingAction` to `'approve'` instead of closing. `waitUntil(promise)`
+ * does the same declaratively, as on `<lr-confirm-bar>`: the dialog stays pending until the promise
+ * settles, then closes with reason `'approve'` on resolution or bounces back on rejection. Otherwise
+ * always followed by `lr-close` with reason `'approve'`.
+ * @event lr-deny-request - The call was denied. `detail: { waitUntil }`. Cancelable, same `pendingAction`
+ * and `waitUntil()` mechanism as `lr-approve-request` (`pendingAction` is set to `'deny'`). Otherwise
+ * always followed by `lr-close` with reason `'deny'`.
+ * @event lr-decision-settled - `detail: { decision }` (`'approved'` or `'denied'`). Emitted right after
+ * the `lr-close` whose reason is `'approve'` or `'deny'`, on every path that reaches a decision.
  * @event lr-close - `detail: { reason: ToolApprovalDialogCloseReason }`. Fired exactly
  * once per dismissal — via Escape, an opted-in backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
@@ -213,6 +226,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -391,7 +407,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         // steering focus into the textarea beats leaving it on the Edit
         // button the click already left it on.
         this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
-      } else if (this.open && !activeElementIn(this.shadowRoot)) {
+      } else if (this.open && !shadowFocusTarget(this)) {
         // Reached when editing was turned off some way other than clicking
         // Cancel (e.g. `readonly` turning on while the textarea held
         // focus, in willUpdate above) -- the textarea that held focus was
@@ -484,6 +500,9 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     if (!this.open) return;
     this.open = false;
     this.emit('lr-close', { reason });
+    // The close-reason union is open-ended (`string & {}`), which TypeScript cannot narrow by equality.
+    if (reason === 'approve') this.emit('lr-decision-settled', { decision: approvalDecision('approve') });
+    else if (reason === 'deny') this.emit('lr-decision-settled', { decision: approvalDecision('deny') });
   }
 
   /** Opens the dialog. No-op when already open. */
@@ -546,6 +565,31 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private onEditorFocus = (event: FocusEvent): void => { relayNativeEvent(this, event); };
   private onEditorBlur = (event: FocusEvent): void => { relayNativeEvent(this, event); };
 
+  /** Bumped per deferred decision, so a stale settlement never resolves a newer one. */
+  private deferralGeneration = 0;
+
+  /** Applies a veto (`preventDefault()` or `waitUntil()`); true when the dispatch was vetoed. */
+  private settleDispatch(action: ApprovalAction, event: CustomEvent, deferrals: Promise<unknown>[]): boolean {
+    if (!event.defaultPrevented && deferrals.length === 0) return false;
+    if (this.dispatchWriteGuard.touched) {
+      // The listener resolved the state itself; absorb promises it handed over.
+      for (const deferral of deferrals) void deferral.catch(() => undefined);
+      return true;
+    }
+    this.pendingAction = action;
+    if (deferrals.length > 0) {
+      this.deferralGeneration += 1;
+      const generation = this.deferralGeneration;
+      const stillOurs = (): boolean =>
+        generation === this.deferralGeneration && this.open && this.pendingAction === action;
+      void Promise.all(deferrals).then(
+        () => { if (stillOurs()) this.close(action); },
+        () => { if (stillOurs()) this.pendingAction = null; },
+      );
+    }
+    return true;
+  }
+
   private decisionDispatching = false;
   private onApprove = (): void => {
     if (this.decisionDispatching) return;
@@ -575,13 +619,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
       // "awaiting the host" pending state applies; otherwise it would silently clobber whatever the
       // listener just did.
       this.dispatchWriteGuard.open();
-      const event = this.emitApproveRequest({ args: currentArgs });
-      if (event.defaultPrevented) {
-        if (!this.dispatchWriteGuard.touched) {
-          this.pendingAction = 'approve';
-        }
-        return;
-      }
+      const { waitUntil, deferrals, seal } = createWaitUntil('tool-approval-dialog');
+      const event = this.emitApproveRequest({ args: currentArgs, waitUntil });
+      seal();
+      if (this.settleDispatch('approve', event, deferrals)) return;
       if (!this.dispatchWriteGuard.touched) this.close('approve');
     } finally {
       this.decisionDispatching = false;
@@ -594,13 +635,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     try {
       if (this.pendingAction != null) return;
       this.dispatchWriteGuard.open();
-      const event = this.emitDenyRequest(null);
-      if (event.defaultPrevented) {
-        if (!this.dispatchWriteGuard.touched) {
-          this.pendingAction = 'deny';
-        }
-        return;
-      }
+      const { waitUntil, deferrals, seal } = createWaitUntil('tool-approval-dialog');
+      const event = this.emitDenyRequest({ waitUntil });
+      seal();
+      if (this.settleDispatch('deny', event, deferrals)) return;
       if (!this.dispatchWriteGuard.touched) this.close('deny');
     } finally {
       this.decisionDispatching = false;

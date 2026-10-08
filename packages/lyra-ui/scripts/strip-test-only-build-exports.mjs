@@ -8,7 +8,7 @@ const TEST_ONLY_EXPORTS = Object.freeze({
   'internal/aria-controls': ['describeElement', 'undescribeElement'],
   'internal/converters': ['trueDefaultBooleanFromAttributeConverter'],
   'internal/deprecated-aliases': ['invertAlias'],
-  'internal/persisted-restore': ['restoreFromStorage'],
+  'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
   'internal/text-quote': ['resolveTextQuote', 'findTextQuoteMatches'],
 });
 

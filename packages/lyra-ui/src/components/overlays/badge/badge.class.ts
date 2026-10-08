@@ -11,12 +11,13 @@ import {
   type LyraSizeStep,
   type LyraVariant,
 } from '../../../internal/variants.js';
+import { effectiveSemanticVariant, type SemanticVariant } from '../../../internal/semantic-variant.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './badge.styles.js';
 
 /** The library's semantic-tone vocabulary plus Shoelace's spelling for the brand tone. */
-export type BadgeVariant = LyraVariant | 'primary';
+export type BadgeVariant = SemanticVariant;
 /** The library's one size ladder, including both upstream long-form spellings. */
 export type BadgeSize = LyraSize;
 /** Visual treatment of a labelled surface: how much of the variant palette is spent on fill,
@@ -137,11 +138,7 @@ export class LyraBadge<
   private readonly slotPresence = new SlotPresenceController(this);
 
   protected get effectiveVariant(): LyraVariant {
-    const value = this.variant as string;
-    if (value === 'primary') return 'brand';
-    return ['neutral', 'brand', 'success', 'warning', 'danger'].includes(value)
-      ? (value as LyraVariant)
-      : 'neutral';
+    return effectiveSemanticVariant(this.variant);
   }
 
   protected get effectiveSize(): LyraSizeStep {

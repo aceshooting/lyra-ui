@@ -46,7 +46,7 @@ import {
   validates them on `tool-upsert` events and `tool-call` parts: a non-finite or non-number time, or
   a `redactedFields` that is not an array of at most 100 strings of at most 4,096 characters, fails
   the event as `invalid_stream_event`.
-- **Tool display name and incomplete calls** (21.1.0) — `ToolInvocation.displayName` is the
+- **Tool display name and incomplete calls** — `ToolInvocation.displayName` is the
   application's own, already-translated tool label; `<lr-message-parts>` (both `tool-display`
   modes) and `<lr-tool-timeline>` show it in place of `name`, which still selects the result
   renderer. `status: 'incomplete'` marks a call that ended without a result (an interrupted stream,
@@ -118,7 +118,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 29 peers are optional, in two groups. The 26 component-facing peers remain outside the default
+All 30 peers are optional, in two groups. The 27 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty

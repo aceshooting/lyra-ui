@@ -40,11 +40,8 @@ if (
 ) {
   problems.push('package.json root export must pair ./dist/lyra.d.ts with the existing ./dist/lyra.js runtime.');
 }
-if (pkg.exports?.['./custom-elements.json'] !== './custom-elements.json') {
-  problems.push('package.json must explicitly export ./custom-elements.json.');
-}
-if (pkg.customElements !== 'custom-elements.json') {
-  problems.push('package.json#customElements must be the published custom-elements.json path.');
+if (pkg.exports?.['./custom-elements.json'] !== undefined || pkg.customElements !== undefined) {
+  problems.push('package.json must not carry the custom-elements manifest metadata; @aceshooting/lyra-ide ships it.');
 }
 for (const [subpath, stem] of [
   ['./framework-types', 'framework-types'],

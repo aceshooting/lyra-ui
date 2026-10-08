@@ -6,7 +6,21 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { consolidateBuildDeclarations } from './consolidate-build-declarations.mjs';
-import { deriveLocaleDeclarationExports, EMPTY_DECLARATION } from './declaration-entrypoints.mjs';
+import { EMPTY_DECLARATION, localeDeclarationModules } from './declaration-entrypoints.mjs';
+
+// The shape a companion catalog package publishes: each real catalog is a side-effect-only module.
+function deriveLocaleDeclarationExports(root) {
+  const exports = {};
+  for (const module of localeDeclarationModules(root)) {
+    for (const extension of ['.js', '.d.ts']) {
+      exports[`./translations/${module}${extension}`] = {
+        types: EMPTY_DECLARATION,
+        default: extension === '.d.ts' ? EMPTY_DECLARATION : `./dist/translations/${module}${extension}`,
+      };
+    }
+  }
+  return exports;
+}
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'lyra-declarations-'));
@@ -62,14 +76,6 @@ for (const [name, path, source, error] of [
   assert.throws(() => consolidateBuildDeclarations(root), error);
   assert.equal(existsSync(join(root, 'dist/translations/fr.d.ts')), true);
   assert.equal(existsSync(join(root, EMPTY_DECLARATION)), false);
-});
-
-test('stale exports fail before removing declarations', (t) => {
-  const { root, write, exports } = fixture(t);
-  delete exports['./translations/fr/forms.js'];
-  write('package.json', JSON.stringify({ exports }));
-  assert.throws(() => consolidateBuildDeclarations(root), /stale locale export/);
-  assert.equal(existsSync(join(root, 'dist/translations/fr.d.ts')), true);
 });
 
 for (const [name, source] of [

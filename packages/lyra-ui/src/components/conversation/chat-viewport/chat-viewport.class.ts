@@ -193,7 +193,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private readonly knownProjectedNodes = new WeakSet<Node>();
   private unreadBoundaryEl?: HTMLElement;
 
+  /** Flattened message list, rebuilt only after a slotchange / update / public read invalidates it. */
+  private messageElementsCache: HTMLElement[] | null = null;
+
   private get messageElements(): HTMLElement[] {
+    return (this.messageElementsCache ??= this.collectMessageElements());
+  }
+
+  private collectMessageElements(): HTMLElement[] {
     let elements = this.contentSlot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
     // A composing shadow host can forward its own named slot as this
     // viewport's default content (agent-workspace does this). Native
@@ -240,6 +247,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.messageElementsCache = null;
     this.teardownObservers();
     // Safety net for a drag still in progress (pointerdown fired, no matching pointerup/
     // pointercancel/lostpointercapture yet) when this element is disconnected -- without this the
@@ -255,6 +263,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.messageElementsCache = null;
     if (this.hasUpdated && changed.has('follow') && this.follow && changed.get('follow') === false) {
       const pill = this.renderRoot.querySelector<HTMLElement>('[part="jump-pill"]');
       this.followFocusRepair = pill
@@ -279,6 +288,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
 
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
+    this.messageElementsCache = null;
     this.armObservers();
   }
 
@@ -343,6 +353,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   scrollToUnread(options?: { behavior?: 'auto' | 'smooth' }): boolean {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
     if (unreadStartIndex == null) return false;
+    this.messageElementsCache = null;
     const behavior = prefersReducedMotion(this)
       ? 'auto'
       : (options?.behavior ?? 'smooth');
@@ -570,6 +581,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   };
 
   private onSlotChange = (): void => {
+    this.messageElementsCache = null;
     this.announceNewProjectedNodes();
     const wasVirtual = this.armedMode === 'virtual';
     this.armObservers();

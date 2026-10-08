@@ -13,30 +13,18 @@ import {
 } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
-import {
-  parseCellRange,
-  type ParsedCellRange,
-} from '../../../internal/cell-range.js';
+import { parseCellRange } from '../../../internal/cell-range.js';
 import {
   DocumentAnchorTarget,
-  prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
-import type {
-  LyraAnchor,
-  LyraAnchorKind,
-  LyraHighlight,
-} from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { styles } from './dataset-viewer.styles.js';
 import { parseDelimitedRecords } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { TableViewerScrollController, tableHighlightsForColumn, tableHighlightsForRow } from '../table-viewer-shared.js';
-import { advanceViewerSearchIndex, viewerSearchDetail } from '../../../internal/viewer-search.js';
+import { TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 export type {
   LyraViewerDiagnostic,
@@ -50,14 +38,10 @@ import {
   viewerSemanticRole,
 } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import {
-  boundedViewerSearchQuery,
-  ViewerSearchWorkBudget,
-} from '../viewer-search-limits.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DatasetTable {
@@ -74,7 +58,6 @@ type DatasetFetchState =
   | { kind: 'loaded'; table: DatasetTable }
   | { kind: 'empty' }
   | { kind: 'error'; message: string };
-const MAX_SEARCH_MATCHES = 1_000;
 
 /** Which element scrolls when `<lr-dataset-viewer>` overflows. */
 export type DatasetViewerScrollMode = 'self' | 'page';
@@ -91,12 +74,6 @@ export interface LyraDatasetViewerEventMap
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
-}
-
-/** One `highlights` entry resolved against the parsed grid, alongside its parsed `cell-range`. */
-interface ResolvedCellHighlight {
-  highlight: LyraHighlight;
-  parsed: ParsedCellRange;
 }
 
 class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
@@ -178,17 +155,26 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
     cellHighlightWithLabel: LYRA_DEFAULT_cellHighlightWithLabel,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
     datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
     datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
     datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
     datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
+    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeDataset: LYRA_DEFAULT_documentPreviewTypeDataset,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -239,105 +225,48 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: DatasetFetchState = { kind: 'idle' };
-  /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
-   *  navigation -- bound to `<lr-virtual-list>`'s own `active-item-id`. */
-  @state() private activeRowKey: number | '' = '';
-  /** `cell-range` highlights parsed once per `highlights`/`activeHighlightId` change. */
-  private cellHighlights: ResolvedCellHighlight[] = [];
-  @state() private searchMatches: { row: number; col: number }[] = [];
-  private searchMatchCountExact = true;
-  @state() private searchActiveIndex = -1;
-  private searchQuery = '';
-  private lastSearchLocale = '';
-  private pendingSearchResetEvent = false;
   private loadTask = new LatestTask();
-  private lastLoadSrc = '';
-  private readonly announcements = new ViewerAnnouncementController(this);
-  private readonly tableScroll = new TableViewerScrollController(this);
-
-  /** A same-task DOM move keeps the loaded table; a genuine disconnect cancels pending work. */
-  private readonly detached = new DeferredTeardown(() => {
-    this.loadTask.next();
-    this.tableScroll.cancel();
+  // @renderController TableViewerController
+  private readonly table = new TableViewerController<{ row: number; col: number }>(this, {
+    emitSearch: (detail) => this.emit('lr-search-change', detail),
+    emitActivate: (highlightId) => this.emit('lr-highlight-activate', { highlightId }),
+    localize: (key, fallback, values) => this.localize(key, fallback, values),
+    locale: () => this.effectiveLocale,
+    schedule: (callback, key) => this.scheduleAfterUpdate(callback, key),
+    load: () => this.load(),
+    research: (query) => this.search(query),
+    jump: (match) => this.jumpToCell(match.row, match.col),
+    teardown: () => this.loadTask.next(),
   });
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.announcements.connect();
-    if (this.detached.cancel()) return;
-    if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
-      this.scheduleAfterUpdate(() => {
-        void this.load();
-      });
-    }
+    this.table.connected();
   }
 
   override disconnectedCallback(): void {
-    this.announcements.disconnect();
+    this.table.disconnecting();
     super.disconnectedCallback();
-    this.detached.schedule();
+    this.table.disconnected();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.detached.flush();
-    this.tableScroll.cancel();
-    this.announcements.adopted();
+    this.table.adopted();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
-    if (changed.has('src')) {
-      this.pendingSearchResetEvent ||= this.searchQuery !== ''
-        || this.searchMatches.length > 0
-        || !this.searchMatchCountExact
-        || this.searchActiveIndex !== -1;
-      this.searchQuery = '';
-      this.searchMatches = [];
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
-      this.activeRowKey = '';
-    }
-    if (changed.has('highlights') || changed.has('activeHighlightId')) {
-      this.cellHighlights = prioritizedHighlightCandidates(this.highlights, this.activeHighlightId)
-        .flatMap((highlight) => {
-          if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet) return []; // dataset-viewer has no sheets
-          const parsed = parseCellRange(highlight.anchor.range);
-          return parsed ? [{ highlight, parsed }] : [];
-        });
-    }
+    this.table.willUpdate(changed, this.highlights, this.activeHighlightId, false); // dataset-viewer has no sheets
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.announcements.transition(
-      'load',
-      this.fetchState.kind,
-      this.fetchState.kind === 'error'
-        ? this.fetchState.message
-        : this.localize('loadingDocument')
-    );
-    if (changed.has('src'))
-      this.scheduleAfterUpdate(() => {
-        void this.load();
-      });
-    if (changed.has('src') && this.pendingSearchResetEvent) {
-      this.pendingSearchResetEvent = false;
-      this.emitSearchChange();
-    }
-    const locale = this.effectiveLocale;
-    if (locale !== this.lastSearchLocale) {
-      const shouldRecompute = !!this.searchQuery;
-      this.lastSearchLocale = locale;
-      if (shouldRecompute)
-        this.scheduleAfterUpdate(() => {
-          void this.search(this.searchQuery);
-        }, 'search');
-    }
+    this.table.updated(changed, this.fetchState);
   }
 
   private async load(): Promise<void> {
-    this.lastLoadSrc = this.src;
+    this.table.lastLoadSrc = this.src;
     const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) {
@@ -368,7 +297,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       if (this.isConnected && this.loadTask.isCurrent(generation)) {
         const { table } = parsed;
         this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
-        if (table && this.searchQuery) await this.search(this.searchQuery);
+        if (table && this.table.search.query) await this.search(this.table.search.query);
         if (
           parsed.errors.length &&
           this.isConnected &&
@@ -434,55 +363,16 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
 
   // -- cell highlights -----------------------------------------------------------------------------
 
-  /** `rawRow` is 1-based, always including the header row -- the same raw-file-grid addressing
-   *  convention every `cell-range` anchor uses. */
-  private cellHighlightsForRow(rawRow: number): ResolvedCellHighlight[] {
-    return tableHighlightsForRow(this.cellHighlights, rawRow);
-  }
-
   private renderCell(
     value: string,
     colIndex: number,
     rowHighlights: ResolvedCellHighlight[],
     role: 'cell' | 'columnheader' = 'cell'
   ): TemplateResult {
-    const colHighlights = tableHighlightsForColumn(rowHighlights, colIndex);
-    const part = role === 'columnheader' ? 'header-cell' : 'cell';
-    if (!colHighlights.length)
-      return html`<div part=${part} role=${role}>${value}</div>`;
-    const active = colHighlights.find(
-      (entry) => entry.highlight.id === this.activeHighlightId
+    return this.table.renderCell(
+      value, colIndex, rowHighlights, role, role === 'columnheader' ? 'header-cell' : 'cell',
+      '--_lr-dataset-viewer-highlight-color', this.activeHighlightId,
     );
-    const primary = active ?? colHighlights[0]!;
-    const accessibleLabel = primary.highlight.label
-      ? this.localize('cellHighlightWithLabel', undefined, {
-          value,
-          label: primary.highlight.label,
-        })
-      : this.localize('highlightWithLabel', undefined, { label: value });
-    const activate = (): void => {
-      this.emit('lr-highlight-activate', { highlightId: primary.highlight.id });
-    };
-    // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
-    // cell) remains valid; the activation affordance is a nested native <button>, which carries
-    // the button role plus Enter/Space activation on its own, without disturbing that structure.
-    return html`<div
-      part="${part} cell-highlight"
-      role=${role}
-      ?data-active=${!!active}
-      style=${active
-        ? '--_lr-dataset-viewer-highlight-color: var(--lr-color-warning, var(--lr-color-brand))'
-        : ''}
-    >
-      <button
-        part="cell-highlight-action"
-        type="button"
-        aria-label=${accessibleLabel}
-        @click=${activate}
-      >
-        ${value}
-      </button>
-    </div>`;
   }
 
   private renderRow = (
@@ -491,7 +381,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     fields: string[]
   ): TemplateResult => {
     const rawRow = index + 2; // +1 for the always-present header row, +1 to become 1-based
-    const rowHighlights = this.cellHighlightsForRow(rawRow);
+    const rowHighlights = this.table.highlightsForRow(rawRow);
     return html`<div part="data-row" role="presentation">
       ${fields.map((field, col) =>
         this.renderCell(row[field] ?? '', col, rowHighlights)
@@ -516,21 +406,11 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
       return false;
     const bodyIndex = rawRow - 2; // -1 raw(1-based) -> 0-based, -1 for the always-present header row
     if (bodyIndex < 0) {
-      const target = this.renderRoot
+      return this.table.revealCell(this.renderRoot
         .querySelector('[part="header-row"]')
-        ?.querySelectorAll('[part~="header-cell"]')[col] as
-        | HTMLElement
-        | undefined;
-      target?.scrollIntoView({
-        behavior: prefersReducedMotion(this)
-          ? 'auto'
-          : 'smooth',
-        block: 'nearest',
-        inline: 'nearest',
-      });
-      return !!target;
+        ?.querySelectorAll('[part~="header-cell"]')[col] as HTMLElement | undefined);
     }
-    this.activeRowKey = bodyIndex;
+    this.table.setActiveRow(bodyIndex);
     await this.updateComplete;
     await this.scrollColumnIntoView(col);
     // `fetchState` is only ever reassigned by load(), so an identity change across the awaits above
@@ -543,10 +423,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   }
 
   private async scrollColumnIntoView(col: number): Promise<void> {
-    const list = this.renderRoot.querySelector(tag('virtual-list')) as
-      | (HTMLElement & { updateComplete?: Promise<unknown> })
-      | null;
-    await this.tableScroll.scrollColumnIntoView(list, col);
+    await this.table.scrollColumnIntoView(this.renderRoot, tag('virtual-list'), col);
   }
 
   protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -563,103 +440,35 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
    *  `clearSearch()` and resolves `0`. Returns at most 1,000 retained matches;
    *  `lr-search-change.detail.matchCountExact=false` identifies that return as a lower bound. */
   async search(query: string): Promise<number> {
-    this.searchQuery = query;
-    this.lastSearchLocale = this.effectiveLocale;
-    const boundedQuery = boundedViewerSearchQuery(query, this.effectiveLocale);
-    const trimmed = boundedQuery.needle;
-    const matches: { row: number; col: number }[] = [];
-    let matchCountExact = boundedQuery.accepted;
-    if (boundedQuery.accepted && trimmed && this.fetchState.kind === 'loaded') {
-      const budget = new ViewerSearchWorkBudget();
+    return this.table.runSearch(query, this.fetchState.kind === 'loaded', (visit) => {
+      if (this.fetchState.kind !== 'loaded') return;
       const { fields, rows } = this.fetchState.table;
-      searchCells: {
-        for (let c = 0; c < fields.length; c++) {
-          if (budget.includes(fields[c]!, trimmed, this.effectiveLocale)) {
-            if (matches.length === MAX_SEARCH_MATCHES) {
-              matchCountExact = false;
-              break searchCells;
-            }
-            matches.push({ row: 1, col: c });
-          }
-          if (!budget.complete) {
-            matchCountExact = false;
-            break searchCells;
-          }
-        }
-        for (let r = 0; r < rows.length; r++) {
-          const row = rows[r]!;
-          for (let c = 0; c < fields.length; c++) {
-            if (
-              budget.includes(
-                row[fields[c]!] ?? '',
-                trimmed,
-                this.effectiveLocale
-              )
-            ) {
-              if (matches.length === MAX_SEARCH_MATCHES) {
-                matchCountExact = false;
-                break searchCells;
-              }
-              matches.push({ row: r + 2, col: c });
-            }
-            if (!budget.complete) {
-              matchCountExact = false;
-              break searchCells;
-            }
-          }
-        }
+      for (let c = 0; c < fields.length; c++)
+        if (!visit(fields[c]!, { row: 1, col: c })) return;
+      for (let r = 0; r < rows.length; r++) {
+        const row = rows[r]!;
+        for (let c = 0; c < fields.length; c++)
+          if (!visit(row[fields[c]!] ?? '', { row: r + 2, col: c })) return;
       }
-    }
-    this.searchMatches = matches;
-    this.searchMatchCountExact = matchCountExact;
-    this.searchActiveIndex = matches.length > 0 ? 0 : -1;
-    this.emitSearchChange();
-    if (this.searchActiveIndex >= 0)
-      await this.jumpToCell(matches[0]!.row, matches[0]!.col);
-    return matches.length;
+    });
   }
 
   /** Advances to the next match, wrapping to the first after the last. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchNext(): Promise<boolean> {
-    if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, 1);
-    this.emitSearchChange();
-    await this.jumpToCell(
-      this.searchMatches[this.searchActiveIndex]!.row,
-      this.searchMatches[this.searchActiveIndex]!.col
-    );
-    return true;
+    return this.table.step(1);
   }
 
   /** Moves to the previous match, wrapping to the last before the first. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchPrevious(): Promise<boolean> {
-    if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = advanceViewerSearchIndex(this.searchActiveIndex, this.searchMatches.length, -1);
-    this.emitSearchChange();
-    await this.jumpToCell(
-      this.searchMatches[this.searchActiveIndex]!.row,
-      this.searchMatches[this.searchActiveIndex]!.col
-    );
-    return true;
+    return this.table.step(-1);
   }
 
   /** Clears the query, matches, and active index, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
-    this.searchQuery = '';
-    this.searchMatches = [];
-    this.searchMatchCountExact = true;
-    this.searchActiveIndex = -1;
-    this.activeRowKey = '';
-    this.emit('lr-search-change', viewerSearchDetail('', 0, true, -1));
-  }
-
-  private emitSearchChange(): void {
-    this.emit('lr-search-change', viewerSearchDetail(
-      this.searchQuery, this.searchMatches.length, this.searchMatchCountExact, this.searchActiveIndex,
-    ));
+    this.table.clearSearch();
   }
 
   private stopInternalEvent = (event: Event): void => {
@@ -688,7 +497,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
           : this.localize('datasetViewerCaption', undefined, {
               count: localizedCount,
             });
-        const headerHighlights = this.cellHighlightsForRow(1);
+        const headerHighlights = this.table.highlightsForRow(1);
         return html`
           <div
             part="table"
@@ -708,7 +517,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
               .renderItem=${(row: unknown, index: number) =>
                 this.renderRow(row as Record<string, string>, index, fields)}
               .keyFunction=${this.virtualListKeyFunction}
-              .activeItemId=${this.activeRowKey}
+              .activeItemId=${this.table.activeRowKey}
               .scrollElement=${this.scrollMode === 'page' ? this.ownerDocument.defaultView ?? undefined : undefined}
               item-role="row"
               row-index-offset="1"

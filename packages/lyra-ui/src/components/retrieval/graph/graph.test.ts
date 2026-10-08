@@ -1428,7 +1428,15 @@ it('preserves existing node positions across an incremental nodes/links update i
   );
 
   // Let a few ticks run so node 'a' settles away from its initial random start.
-  await aTimeout(200);
+  const initialCx = (
+    el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement
+  ).getAttribute('cx');
+  await waitUntil(
+    () =>
+      (el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement).getAttribute('cx') !== initialCx,
+    'simulation ticks moved node a',
+    { timeout: NODE_COUNT_TIMEOUT }
+  );
   const beforeA = (
     el.shadowRoot!.querySelectorAll('[part="node"]')[0] as SVGCircleElement
   ).getAttribute('cx');

@@ -910,7 +910,7 @@ describe('collecting already-slotted options without relying on the initial slot
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange was intercepted');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -955,7 +955,7 @@ describe('collecting already-slotted options without relying on the initial slot
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the real initial slotchange fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -1802,7 +1802,7 @@ it('throws on a non-array, non-{rows} source result instead of silently acceptin
   try {
     el.source = async () => "not a valid envelope" as unknown as never;
     await el.updateComplete;
-    await aTimeout(20);
+    await waitUntil(() => el.shadowRoot!.querySelector('.source-error') !== null, 'the malformed result fails closed');
     await el.updateComplete;
 
     expect(
@@ -1960,6 +1960,7 @@ it('never settles a stale lr-after-show promise when disconnected mid-transition
   await el.updateComplete; // updated() runs while still connected: settleTransition('lr-after-show')
   // starts and is awaiting its own internal updateComplete/rAF chain.
   el.remove(); // disconnectedCallback() bumps transitionToken synchronously before that chain settles.
+  // wait-reason: asserting a removed combobox never fires lr-after-show (negative assertion)
   await aTimeout(50);
 
   expect(
@@ -2079,7 +2080,7 @@ it("fails closed with the source-error state when a resolved source result's row
         },
       }) as unknown as import("./combobox.js").ComboboxSourceResult;
     await el.updateComplete;
-    await aTimeout(20);
+    await waitUntil(() => el.shadowRoot!.querySelector('.source-error') !== null, 'the hostile result fails closed');
     await el.updateComplete;
 
     const error = el.shadowRoot!.querySelector(".source-error");
@@ -2106,10 +2107,12 @@ it("invalidates an in-flight request when source is replaced and clamps active s
   )) as LyraCombobox;
   el.source = () => oldRows;
   await el.updateComplete;
+  // wait-reason: lets the first async source settle before it is replaced; no event marks it
   await aTimeout(10);
 
   el.source = async () => [{ value: "new", label: "New" }];
   await el.updateComplete;
+  // wait-reason: lets the replacement source settle before the stale one resolves; no event marks it
   await aTimeout(10);
   await el.updateComplete;
   resolveOld([{ value: "old", label: "Old" }]);
@@ -2243,6 +2246,7 @@ it('re-runs an active async source when inputValue is set programmatically', asy
 
   el.inputValue = "ban";
   await el.updateComplete;
+  // wait-reason: asserting the debounced search issued exactly one query (negative assertion)
   await aTimeout(50);
   await el.updateComplete;
 
@@ -2736,11 +2740,12 @@ describe("row state feedback on the already-selected option", () => {
         <lr-option value="c">Cherry</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
     // The listbox is placed by the Floating UI positioner a tick after the open render, so a
     // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
-    await aTimeout(50);
+    await shown;
     return el;
   };
 
@@ -3086,12 +3091,14 @@ it("honours preventDefault() on lr-show and lr-hide, keeping property and attrib
   });
   await el.show();
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
   expect(el.open, "a vetoed open never applies").to.be.false;
   expect(el.hasAttribute("open")).to.be.false;
 
   await el.show();
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
   expect(el.open, "the veto was one-shot; the next request opens normally").to
     .be.true;
@@ -3101,6 +3108,7 @@ it("honours preventDefault() on lr-show and lr-hide, keeping property and attrib
   });
   el.open = false;
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
   expect(el.open, "a vetoed close stays open even for a direct property write")
     .to.be.true;
@@ -3159,9 +3167,11 @@ it("makes lr-show/lr-hide cancelable and the settled after-events not", async ()
   }
   el.open = true;
   await el.updateComplete;
+  // wait-reason: bounded window; the after-events are optional for this cancelable-flag contract
   await aTimeout(80);
   el.open = false;
   await el.updateComplete;
+  // wait-reason: bounded window; the after-events are optional for this cancelable-flag contract
   await aTimeout(80);
 
   const byType = new Map(seen.map((event) => [event.type, event.cancelable]));

@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'အသံအတိုးအကျယ်',
   videoCaptions: 'စာတန်းများ',
   videoCaptionsOff: 'ပိတ်',
-  videoPlaybackSpeed: 'ဖွင့်နှုန်း',
   videoPictureInPicture: 'ရုပ်ပုံအတွင်း ရုပ်ပုံစနစ်သို့ ဝင်ရန်',
   videoExitPictureInPicture: 'ရုပ်ပုံအတွင်း ရုပ်ပုံစနစ်မှ ထွက်ရန်',
   videoEnterFullscreen: 'မျက်နှာပြင်အပြည့်သို့ ဝင်ရန်',

@@ -1,4 +1,4 @@
-import { setNativeRangeText } from '../../../internal/native-text-control.js';
+import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -41,6 +41,8 @@ import {
 } from '../../../internal/native-event-relay.js';
 import {
   declaredDefaultConverter,
+  autocorrectConverter,
+  normalizeAutocorrect,
   trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -294,8 +296,21 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   invalidText = 'The value is invalid.';
   private invalidTextAuthored = false;
   @property({ useDefault: true }) autocomplete = 'tel';
-  @property({ useDefault: true }) inputmode: 'tel' | 'numeric' | 'text' = 'tel';
-  @property() enterkeyhint = '';
+  @property({ attribute: 'inputmode', useDefault: true }) override inputMode: string = 'tel';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /** Lowercase mapped IDLs that delegate to the camel-case native spellings. */
+  get inputmode(): string {
+    return this.inputMode;
+  }
+  set inputmode(next: string) {
+    this.inputMode = next ?? 'tel';
+  }
+  get enterkeyhint(): string {
+    return this.enterKeyHint;
+  }
+  set enterkeyhint(next: string) {
+    this.enterKeyHint = next ?? '';
+  }
   /** Native readonly mode: keeps the telephone value focusable/copyable/submittable while
    * preventing telephone and country edits and barring constraint validation. */
   @property({ type: Boolean, reflect: true }) readonly = false;
@@ -309,13 +324,17 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,
    *  leaving the browser's own default behavior. */
   @property() override autocapitalize = '';
-  /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
-   *  string omits the attribute. Named `autoCorrect` (capital `C`), not `autocorrect`, purely to
-   *  dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a `boolean`-typed
-   *  `HTMLElement.autocorrect` IDL member, which would conflict with this `string`-typed reactive
-   *  property; the explicit `attribute: 'autocorrect'` mapping preserves the standard lowercase
-   *  `autocorrect` wire name in both Lit and the rendered attribute. */
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   * boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
 
   @query('input[part="input"]') private inputElement?: HTMLInputElement;
   @state() private editableValue = '';
@@ -875,11 +894,12 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
             .value=${this.editableValue}
             placeholder=${this.placeholder}
             autocomplete=${this.autocomplete}
-            inputmode=${this.inputmode}
-            enterkeyhint=${this.enterkeyhint || nothing}
+            name=${this.name || nothing}
+            inputmode=${this.inputMode || nothing}
+            enterkeyhint=${this.enterKeyHint || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.autoCorrect || nothing}
+            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             aria-label=${this.effectivePhoneLabel(hasLabel)}
             aria-describedby=${describedBy || nothing}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}

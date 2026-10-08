@@ -349,7 +349,17 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  routed, so it has no registry `capabilities.anchors` entry to declare this on instead. */
   readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
-  @state() private lines: TerminalLine[] = [];
+  /** Bumped whenever the buffer changes; `lines` re-snapshots lazily, so a burst of writes copies it once per render. */
+  @state() private linesRevision = 0;
+  private linesSnapshot: TerminalLine[] | null = [];
+  private get lines(): TerminalLine[] {
+    void this.linesRevision; // reactive dependency of every render that reads the lines
+    return (this.linesSnapshot ??= [...this.buffer]);
+  }
+  private invalidateLines(): void {
+    this.linesSnapshot = null;
+    this.linesRevision += 1;
+  }
   @state() private scrollTargetLineNumber: number | null = null;
   @state() private copyStatus: 'rest' | 'success' | 'error' = 'rest';
 
@@ -440,7 +450,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.retainedCellCount = 0;
     this.lineSeq = 0;
     this.column = 0;
-    this.lines = [];
+    this.invalidateLines();
     this.scrollTargetLineNumber = null;
     this.searchQuery = '';
     this.searchMatches = [];
@@ -475,7 +485,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const trimmed = removed.length > 0 || resourceTrimmed;
     if (!trimmed) return;
     if (refresh) {
-      this.lines = [...this.buffer];
+      this.invalidateLines();
       if (this.searchQuery) this.recomputeSearchMatches();
     }
     if (
@@ -544,7 +554,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       }
     }
     this.trimScrollback(false, false);
-    this.lines = [...this.buffer];
+    this.invalidateLines();
     if (this.searchQuery) this.refreshSearchMatchesFrom(startNumber);
     if (this.follow) {
       const last = this.buffer[this.buffer.length - 1];

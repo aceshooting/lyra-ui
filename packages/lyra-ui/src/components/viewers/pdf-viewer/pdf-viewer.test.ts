@@ -1,4 +1,4 @@
-import { twoFrames as nextFrame } from '../../../../test/frames.js';
+import { twoFrames } from '../../../../test/frames.js';
 import {
   aTimeout,
   expect,
@@ -609,7 +609,6 @@ describe("lr-pdf-viewer", () => {
       expect(list.source.itemAt(2)).to.equal(3);
       expect(list.source.keyAt!(2)).to.equal(3);
       expect(list.source.indexOfKey!(3)).to.equal(2);
-      await aTimeout(80);
       await waitUntil(
         () => list.shadowRoot!.querySelector('[part="page"] canvas') !== null
       );
@@ -888,10 +887,10 @@ describe("lr-pdf-viewer", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50); // page 1's canvas is already mounted (pageCanvases is non-empty)
+      await twoFrames(); // page 1's canvas is already mounted (pageCanvases is non-empty)
       el.highlights = [{ id: "cite-1", anchor: { kind: "page", page: 1 } }];
       await el.updateComplete;
-      await aTimeout(20);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const layer = list.shadowRoot!.querySelector(
         "lr-highlight-layer"
@@ -972,10 +971,10 @@ describe("lr-pdf-viewer", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(30); // let the page-1 canvas mount and start its (never-resolving) render task
+      await twoFrames(); // let the page-1 canvas mount and start its (never-resolving) render task
       const canvas = document.createElement("canvas");
       void el.renderPageThumbnail(1, canvas); // a second, separately-tracked in-flight render task
-      await aTimeout(30);
+      await twoFrames();
       if (document.body.contains(el)) el.remove();
       await aTimeout(0); // teardown runs once the element has really left (not on a same-task move)
       expect(cancels.length).to.be.greaterThan(1); // both the page-render task and the thumbnail task were cancelled
@@ -1003,7 +1002,7 @@ describe("lr-pdf-viewer", () => {
       const snapshot = el.pageViewerSnapshot;
       host.append(el); // a move: disconnect and reconnect within one task
       await el.updateComplete;
-      await aTimeout(30);
+      await twoFrames();
       expect(fetches).to.equal(1);
       expect(el.page).to.equal(2);
       expect(el.pageViewerSnapshot.identity).to.equal(snapshot.identity);
@@ -1061,7 +1060,7 @@ describe("lr-pdf-viewer", () => {
       el.highlights = [{ id: "cite-1", anchor: { kind: "page", page: 1 } }];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const canvas = list.shadowRoot!.querySelector(
         '[part="page"] canvas'
@@ -1096,7 +1095,7 @@ describe("lr-pdf-viewer", () => {
       el.highlights = [{ id: "cite-1", anchor: { kind: "page", page: 1 } }];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const canvas = list.shadowRoot!.querySelector(
         '[part="page"] canvas'
@@ -1122,7 +1121,7 @@ describe("lr-pdf-viewer", () => {
             clientY: rect.top + rect.height / 2,
           })
         );
-        await aTimeout(10);
+        await twoFrames();
         expect(activated).to.be.false;
       } finally {
         ownerView.getSelection = originalGetSelection;
@@ -1141,7 +1140,7 @@ describe("lr-pdf-viewer", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const canvas = list.shadowRoot!.querySelector(
         '[part="page"] canvas'
@@ -1163,7 +1162,7 @@ describe("lr-pdf-viewer", () => {
           })
         )
       ).to.not.throw();
-      await aTimeout(10);
+      await twoFrames();
       expect(activated).to.be.false;
     } finally {
       restore();
@@ -1189,7 +1188,7 @@ describe("lr-pdf-viewer", () => {
       ];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const canvas = list.shadowRoot!.querySelector(
         '[part="page"] canvas'
@@ -1210,7 +1209,7 @@ describe("lr-pdf-viewer", () => {
           clientY: rect.bottom - 2,
         })
       );
-      await aTimeout(10);
+      await twoFrames();
       expect(activated).to.be.false;
     } finally {
       restore();
@@ -1228,7 +1227,7 @@ describe("lr-pdf-viewer", () => {
       el.highlights = [{ id: "cite-1", anchor: { kind: "page", page: 1 } }];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const layerEl = list.shadowRoot!.querySelector(
         "lr-highlight-layer"
@@ -1266,7 +1265,7 @@ describe("lr-pdf-viewer", () => {
           cancelable: true,
         })
       );
-      await aTimeout(10);
+      await twoFrames();
 
       expect(
         receivedCount,
@@ -1582,7 +1581,7 @@ describe("anchor-target adoption", () => {
     installFakeLoader(el, fakeDocument(2));
     try {
       el.src = "https://example.test/first.pdf";
-      await aTimeout(20); // let load() reach `await fetchTarget.view.fetch(...)` and suspend there
+      await twoFrames(); // let load() reach `await fetchTarget.view.fetch(...)` and suspend there
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pdf"; // bumps generation, superseding the first load
       expect((await loadPromise).detail).to.deep.equal({ pageCount: 2 });
@@ -1593,7 +1592,7 @@ describe("anchor-target adoption", () => {
       // The stale first load's own fetch now resolves late; it must bail silently instead of
       // clobbering the second (current) document.
       firstFetch.resolve(response());
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(
         el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent
@@ -1625,7 +1624,7 @@ describe("anchor-target adoption", () => {
     installFakeLoader(el, fakeDocument(2));
     try {
       el.src = "https://example.test/first.pdf";
-      await aTimeout(20); // let load() reach `await readResponseArrayBuffer(response)` and suspend there
+      await twoFrames(); // let load() reach `await readResponseArrayBuffer(response)` and suspend there
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pdf"; // bumps generation, superseding the first load
       expect((await loadPromise).detail).to.deep.equal({ pageCount: 2 });
@@ -1636,7 +1635,7 @@ describe("anchor-target adoption", () => {
       // The stale first load's response body now finishes reading late; it must bail silently
       // instead of clobbering the second (current) document.
       firstBody.resolve(new ArrayBuffer(8));
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(
         el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent
@@ -1656,7 +1655,7 @@ describe("anchor-target adoption", () => {
       () => lib.promise;
     try {
       el.src = "https://example.test/first.pdf";
-      await aTimeout(20); // let load() reach `await this.loadLibrary()` and suspend there
+      await twoFrames(); // let load() reach `await this.loadLibrary()` and suspend there
       installFakeLoader(el, fakeDocument(2));
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pdf"; // bumps generation, superseding the first load
@@ -1672,7 +1671,7 @@ describe("anchor-target adoption", () => {
         GlobalWorkerOptions: { workerSrc: "" },
         TextLayer: FakeTextLayer,
       });
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(
         el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent
@@ -1697,7 +1696,7 @@ describe("anchor-target adoption", () => {
         });
     try {
       el.src = "https://example.test/first.pdf";
-      await aTimeout(20); // let load() reach `await pdfjsLib.getDocument({ data }).promise` and suspend there
+      await twoFrames(); // let load() reach `await pdfjsLib.getDocument({ data }).promise` and suspend there
       installFakeLoader(el, fakeDocument(3));
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pdf"; // bumps generation, superseding the first load
@@ -1715,7 +1714,7 @@ describe("anchor-target adoption", () => {
           staleDestroyCalls++;
         },
       });
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(
         staleDestroyCalls,
@@ -1744,7 +1743,7 @@ describe("anchor-target adoption", () => {
         });
     try {
       el.src = "https://example.test/first.pdf";
-      await aTimeout(20);
+      await twoFrames();
       installFakeLoader(el, fakeDocument(1));
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pdf";
@@ -1754,7 +1753,7 @@ describe("anchor-target adoption", () => {
         renderErrorFired = true;
       });
       docPromise.reject(new Error("stale boom"));
-      await aTimeout(20);
+      await twoFrames();
       expect(renderErrorFired).to.be.false;
     } finally {
       restore();
@@ -2061,7 +2060,7 @@ describe("anchor-target adoption", () => {
       ];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const layer = list.shadowRoot!.querySelector(
         "lr-highlight-layer"
@@ -2096,7 +2095,7 @@ describe("anchor-target adoption", () => {
       el.activeHighlightId = "h1000";
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const layer = listShadowRoot(el).querySelector(
         "lr-highlight-layer"
       ) as unknown as {
@@ -2122,7 +2121,7 @@ describe("anchor-target adoption", () => {
       ];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50);
+      await twoFrames();
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const layer = list.shadowRoot!.querySelector(
         "lr-highlight-layer"
@@ -2150,11 +2149,16 @@ describe("anchor-target adoption", () => {
       ];
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(80); // let the text layer render so resolveHighlightRectsForPage() has a scope
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
-      const layer = list.shadowRoot!.querySelector(
+      const layerOf = () => list.shadowRoot!.querySelector(
         "lr-highlight-layer"
-      ) as unknown as { items: { id: string; rects: unknown[] }[] };
+      ) as unknown as { items: { id: string; rects: unknown[] }[] } | null;
+      // The text layer must render before resolveHighlightRectsForPage() has a scope.
+      await waitUntil(
+        () => (layerOf()?.items.find((i) => i.id === "cite-1")?.rects.length ?? 0) > 0,
+        "the quote highlight never resolved a rect"
+      );
+      const layer = layerOf()!;
       const item = layer.items.find((i) => i.id === "cite-1");
       expect(item).to.exist;
       expect(item!.rects.length).to.be.greaterThan(0);
@@ -2176,11 +2180,12 @@ describe("anchor-target adoption", () => {
       }));
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(80);
       const internals = el as unknown as {
         pdfTextScopeBuildCount(): number;
         pdfTextQuoteScanCount(page: number): number;
       };
+      await waitUntil(() => internals.pdfTextQuoteScanCount(1) >= 1, "the quote scan never ran");
+      await twoFrames();
       const scopes = internals.pdfTextScopeBuildCount();
       const scans = internals.pdfTextQuoteScanCount(1);
       expect(scopes).to.be.at.most(1);
@@ -2188,7 +2193,7 @@ describe("anchor-target adoption", () => {
 
       el.highlights = [...el.highlights];
       await el.updateComplete;
-      await aTimeout(10);
+      await twoFrames();
       expect(internals.pdfTextScopeBuildCount()).to.equal(scopes);
       expect(internals.pdfTextQuoteScanCount(1)).to.equal(scans);
     } finally {
@@ -2205,7 +2210,7 @@ describe("anchor-target adoption", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(50); // let renderPage() actually set the real canvas's style.width/height
+      await twoFrames(); // let renderPage() actually set the real canvas's style.width/height
       const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
       const canvas = list.shadowRoot!.querySelector(
         '[part="page"] canvas'
@@ -2744,7 +2749,7 @@ describe("anchor-target adoption", () => {
       el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
         new PointerEvent("pointerup", { bubbles: true })
       );
-      await aTimeout(10);
+      await twoFrames();
       expect(fired).to.be.false;
       selection.removeAllRanges();
     } finally {
@@ -2822,7 +2827,7 @@ describe("goToPage", () => {
       // A small height + zero overscan keeps the render window narrow -- page 20 is well outside
       // it, so `waitForPageMount` cannot resolve synchronously and must wait on the event.
       list.overscan = 0;
-      await nextFrame();
+      await twoFrames();
       const internals = el as unknown as {
         pageCanvases: Map<number, HTMLCanvasElement>;
         waitForPageMount(page: number): Promise<boolean>;
@@ -2900,7 +2905,7 @@ describe("goToPage", () => {
         ) => void;
       };
       list.overscan = 0;
-      await nextFrame();
+      await twoFrames();
       // A small height + zero overscan keeps the render window narrow -- page 20 is well outside it.
       expect(
         list.shadowRoot!.querySelectorAll('[part="page"]').length
@@ -2908,7 +2913,7 @@ describe("goToPage", () => {
       const goToPromise = el.goToPage(20);
       await el.updateComplete; // let goToPage() reach `await this.waitForPageMount(20)` and register its listener
       list.scrollToIndex(19, { align: "start", behavior: "auto" });
-      await nextFrame();
+      await twoFrames();
       const ok = await goToPromise;
       expect(ok).to.be.true;
       expect(el.page).to.equal(20);
@@ -2932,7 +2937,7 @@ describe("goToPage", () => {
         "lr-virtual-list"
       ) as HTMLElement & { overscan: number };
       list.overscan = 0;
-      await nextFrame();
+      await twoFrames();
       const base = list.shadowRoot!.querySelector(
         '[part="base"]'
       ) as HTMLElement;
@@ -4005,7 +4010,7 @@ describe("search", () => {
     try {
       el.src = 'https://example.test/no-stream.pdf';
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(20);
+      await twoFrames();
       const malformedDocument = doc as unknown as { getPage: () => Promise<unknown> };
       malformedDocument.getPage = () => Promise.resolve({
         ...fakePage(1),
@@ -4083,7 +4088,7 @@ describe("search", () => {
     try {
       el.src = 'https://example.test/concurrent-text.pdf';
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(20);
+      await twoFrames();
       doc.getPage = (pageNumber: number) => Promise.resolve({
         ...fakePage(pageNumber),
         streamTextContent: () => new ReadableStream({
@@ -4127,7 +4132,7 @@ describe("search", () => {
     try {
       el.src = 'https://example.test/cache-aba.pdf';
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(20);
+      await twoFrames();
       doc.getPage = () => ++getPageCalls === 1 ? firstPage.promise : secondPage.promise;
       const stale = el.getPageText(1);
       await Promise.resolve();
@@ -4222,7 +4227,7 @@ describe("search", () => {
     try {
       el.src = 'https://example.test/remount.pdf';
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(20);
+      await twoFrames();
       const firstPage = deferred<ReturnType<typeof fakePage>>();
       const secondPage = deferred<ReturnType<typeof fakePage>>();
       let calls = 0;
@@ -4273,7 +4278,7 @@ describe("search", () => {
     try {
       el.src = 'https://example.test/render-race.pdf';
       await waitFor(el, '[part="toolbar"]');
-      await aTimeout(20);
+      await twoFrames();
       const canvas = listShadowRoot(el).querySelector('[part="page-canvas"]') as HTMLCanvasElement;
       const fallback = canvas.parentElement!.querySelector('[part~="page-error"]') as HTMLElement;
       const firstDone = deferred<void>();
@@ -4321,14 +4326,12 @@ describe("search", () => {
       el.remove();
       await aTimeout(0); // the search reset happens once the element has really left
       expect(await el.searchNext()).to.be.false;
-      const detached = el as unknown as {
-        searchQuery: string;
-        searchMatches: unknown[];
-        searchActiveIndex: number;
-      };
-      expect(detached.searchQuery).to.equal('');
-      expect(detached.searchMatches).to.deep.equal([]);
-      expect(detached.searchActiveIndex).to.equal(-1);
+      const detached = (el as unknown as {
+        searchState: { query: string; matches: unknown[]; activeIndex: number };
+      }).searchState;
+      expect(detached.query).to.equal('');
+      expect(detached.matches).to.deep.equal([]);
+      expect(detached.activeIndex).to.equal(-1);
       document.body.appendChild(el);
       await waitUntil(() => el.pageViewerSnapshot.status === 'ready');
       expect(await el.searchNext()).to.be.false;
@@ -4487,7 +4490,7 @@ describe("search", () => {
       };
       el.locale = "fr";
       await el.updateComplete;
-      await aTimeout(20);
+      await twoFrames();
       expect(getPageTextCalls, "no active query -> locale change must not trigger a scan").to.equal(0);
     } finally {
       restore();
@@ -4801,7 +4804,7 @@ describe("workerSrc", () => {
       await waitFor(el, '[part="toolbar"]');
       // The text layer of the first document asks the loader for a library of its own, so drain
       // those calls before recording what the *next* load is told.
-      await aTimeout(20);
+      await twoFrames();
       seen.length = 0;
       el.workerSrc = "https://cdn.example.test/pdf.worker.min.mjs";
       el.src = "https://example.test/second.pdf";
@@ -4911,7 +4914,7 @@ describe("virtualized page part styling", () => {
       const restore = stubFetch();
       try {
         const root = await loadedPage(el);
-        await nextFrame();
+        await twoFrames();
         const pageRect = root
           .querySelector('[part="page"]')!
           .getBoundingClientRect();
@@ -4941,7 +4944,7 @@ describe("virtualized page part styling", () => {
       await waitFor(el, '[part="toolbar"]');
       el.zoom = 4;
       await el.updateComplete;
-      await nextFrame();
+      await twoFrames();
       const base = el
         .shadowRoot!.querySelector("lr-virtual-list")!
         .shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -4965,7 +4968,7 @@ describe("virtualized page part styling", () => {
       await waitFor(el, '[part="toolbar"]');
       el.zoom = 4;
       await el.updateComplete;
-      await nextFrame();
+      await twoFrames();
       const base = el
         .shadowRoot!.querySelector("lr-virtual-list")!
         .shadowRoot!.querySelector('[part="base"]') as HTMLElement;

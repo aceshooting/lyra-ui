@@ -986,3 +986,18 @@ it('canonicalizes the selection once per render, not per band', async () => {
   }
   expect(calls).to.equal(0);
 });
+
+it('canonicalizes the selection once across renders until the selection or segment count changes', async () => {
+  const el = (await fixture(html`<lr-context-meter total="100" .segments=${SEGMENTS} .selectedIndices=${[1]}></lr-context-meter>`)) as LyraContextMeter;
+  let calls = 0;
+  const original = Reflect.get(el, 'canonicalSelectedIndices') as () => number[];
+  Reflect.set(el, 'canonicalSelectedIndices', function (this: unknown) { calls += 1; return original.call(el); });
+  for (const total of [200, 300, 400]) {
+    el.total = total;
+    await el.updateComplete;
+  }
+  expect(calls).to.equal(0);
+  el.selectedIndices = [2];
+  await el.updateComplete;
+  expect(calls).to.equal(1);
+});

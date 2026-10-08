@@ -82,7 +82,7 @@ describe('lr-artifact-panel', () => {
     expect(el.view).to.equal('code');
 
     el.querySelector('#code')!.remove();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitUntil(() => el.view === 'preview', 'view fell back to preview after slotted code removal');
     await el.updateComplete;
     expect(el.view).to.equal('preview');
     expect((el.shadowRoot!.querySelector('[part="view-toggle"]')) == null).to.be.true;

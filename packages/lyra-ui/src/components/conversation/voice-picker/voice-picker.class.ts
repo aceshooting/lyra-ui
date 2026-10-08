@@ -1,7 +1,6 @@
+import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
-import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -12,11 +11,9 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { isBarredFromValidation } from '../../../internal/form-associated.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { autocorrectConverter, normalizeAutocorrect, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -24,7 +21,7 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { CATALOG_ROW_LIMIT } from '../../../internal/selection-catalog.js';
+import { collectionSupport } from '../../../internal/collection-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings.generated.js';
@@ -50,87 +47,6 @@ export type LyraVoicePickerSelectionDirection = LyraSelectionDirection;
 
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
 type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
-
-function ownString(value: object, key: keyof LyraVoiceCatalogEntry): string | undefined {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    return descriptor && 'value' in descriptor && typeof descriptor.value === 'string'
-      ? descriptor.value
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** Reads a boolean own DATA property without ever invoking an accessor -- an accessor-backed
- *  `disabled` (`{ get() {...} }`) has no `value` in its own descriptor, so it is silently dropped
- *  here rather than read, matching every other hardened public-collection projection in this
- *  library. */
-function ownBoolean(value: object, key: keyof LyraVoiceCatalogEntry): boolean | undefined {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    return descriptor && 'value' in descriptor && typeof descriptor.value === 'boolean'
-      ? descriptor.value
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function snapshotVoiceCatalog(
-  value: LyraCatalog<LyraVoiceCatalogEntry> | undefined,
-): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const stringSnapshot: string[] = [];
-  const entrySnapshot: LyraVoiceCatalogEntry[] = [];
-  let objectCatalog = false;
-  let length = 0;
-  try {
-    length = Math.min(value.length, CATALOG_ROW_LIMIT);
-  } catch {
-    return Object.freeze(stringSnapshot);
-  }
-  for (let index = 0; index < length; index += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(value, String(index));
-    } catch {
-      continue;
-    }
-    if (!descriptor || !('value' in descriptor)) continue;
-    const candidate: unknown = descriptor.value;
-    if (typeof candidate === 'string') {
-      if (objectCatalog) entrySnapshot.push(Object.freeze({ id: candidate, label: candidate }));
-      else stringSnapshot.push(candidate);
-      continue;
-    }
-    if (candidate === null || typeof candidate !== 'object') continue;
-    const id = ownString(candidate, 'id');
-    const label = ownString(candidate, 'label');
-    if (id === undefined || label === undefined) continue;
-    if (!objectCatalog) {
-      entrySnapshot.push(
-        ...stringSnapshot.map((entry) => Object.freeze({ id: entry, label: entry })),
-      );
-      objectCatalog = true;
-    }
-    const language = ownString(candidate, 'language');
-    const description = ownString(candidate, 'description');
-    const previewUrl = ownString(candidate, 'previewUrl');
-    const icon = ownString(candidate, 'icon');
-    const disabled = ownBoolean(candidate, 'disabled');
-    entrySnapshot.push(Object.freeze({
-      id,
-      label,
-      ...(language === undefined ? {} : { language }),
-      ...(description === undefined ? {} : { description }),
-      ...(previewUrl === undefined ? {} : { previewUrl }),
-      ...(icon === undefined ? {} : { icon }),
-      ...(disabled === undefined ? {} : { disabled }),
-    }));
-  }
-  return objectCatalog ? Object.freeze(entrySnapshot) : Object.freeze(stringSnapshot);
-}
 
 export interface LyraVoicePickerEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -172,8 +88,8 @@ export interface LyraVoicePickerEventMap {
  * `readonly` keeps both combobox owners focusable and browseable while blocking user typing and
  * catalog commits; selection/copy, voice previews, form submission/reset, and programmatic writes
  * remain available.
- * Catalog assignments become clone-owned, frozen snapshots of at most the first 1,024 source
- * rows. Create and reassign a new catalog array after changing its rows; mutating an assigned
+ * Catalog assignments become clone-owned, frozen snapshots through the shared collection
+ * boundary, and at most the first 1,024 rows are admitted. Create and reassign a new catalog array after changing its rows; mutating an assigned
  * source does not update the picker.
  *
  * A catalog row may also set `disabled`, marking it non-actionable exactly like `lr-model-select`'s
@@ -332,10 +248,11 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
+  protected static override collectionSupport = collectionSupport;
+
+  protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
+
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    disabled: { type: Boolean, reflect: true, noAccessor: true },
-    required: { type: Boolean, reflect: true, noAccessor: true },
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
@@ -348,7 +265,6 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
       useDefault: true,
       noAccessor: true,
     },
-    name: { reflect: true, noAccessor: true },
   };
 
   /** Informational only (e.g. `'elevenlabs'`); rendered as a small leading badge. */
@@ -358,18 +274,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
    *  entirely, first wins; rows with a blank/whitespace-only id are omitted. Replacing the catalog
    *  retires any internal preview before the rendered candidate can change; reassign a new array
    *  after row changes. */
-  @property({ attribute: false })
-  get catalog(): LyraCatalog<LyraVoiceCatalogEntry> | undefined {
-    return this._catalog;
-  }
-  set catalog(next: LyraCatalog<LyraVoiceCatalogEntry> | undefined) {
-    const old = this._catalog;
-    if (next === old || next === this.catalogSource) return;
-    if (this.internalPreviewTargetId !== null) this.stopInternalPreview();
-    this.catalogSource = next;
-    this._catalog = snapshotVoiceCatalog(next);
-    this.requestUpdate('catalog', old);
-  }
+  @property({ attribute: false }) catalog?: LyraCatalog<LyraVoiceCatalogEntry>;
   /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
   @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
   /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
@@ -386,7 +291,17 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   @property() placeholder = '';
   @property({ converter: spellcheckConverter }) override spellcheck = true;
   @property() override autocapitalize = '';
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
@@ -403,17 +318,12 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
 
   private get activeIndex(): number { return this.catalogPicker.activeIndex; }
   private get query(): string { return this.catalogPicker.query; }
-  @state() private touched = false;
   // Label/hint/error wrappers share one hydration-aware slot-presence authority. On the server,
   // unknowable authored slots remain progressively visible until the browser reconciles them.
   private readonly slotPresence = new SlotPresenceController(this);
   /** The voiceId currently playing via the internal `<audio>` (`null` when nothing is). */
   @state() private previewingId: string | null = null;
 
-  private internals: ElementInternals;
-  private validityController: FormControlController;
-  /** Consumer-supplied validation message reflected through `custom-error`. */
-  declare customError: string | null;
   private listId = nextId('voice-picker-list');
   private controlId = nextId('voice-picker-control');
   private audioEl?: HTMLAudioElement;
@@ -421,17 +331,8 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
    *  state; it exists solely to cancel/supersede stale async completions. */
   private pendingPreviewId: string | null = null;
   private previewGeneration = 0;
-  private _catalog?: LyraCatalog<LyraVoiceCatalogEntry>;
-  private catalogSource?: unknown;
-  private _fieldsetDisabled = false;
-  private _name = '';
-  private _disabled = false;
-  private _required = false;
   protected get catalogEditing(): CatalogPickerController<LyraVoiceCatalogEntry> {
     return this.catalogPicker;
-  }
-  protected get formInternals(): ElementInternals {
-    return this.internals;
   }
   private readonly catalogPicker = new CatalogPickerController<LyraVoiceCatalogEntry>(this, {
     catalog: () => this.catalog,
@@ -473,19 +374,6 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     },
   });
 
-  constructor() {
-    super();
-    this.validityController = new FormControlController(this, {
-      invalid: (init) => this.emit('lr-invalid', null, init),
-      interacted: this.markInteracted,
-      customError: () => this.validityController.customValidityMessage,
-    });
-    this.internals = this.validityController.formInternals;
-    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
-
-    this.internals.setFormValue('');
-  }
-
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
     return this.renderRoot?.querySelector('[part="trigger"], [part="combobox-input"]') ?? null;
@@ -516,6 +404,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
       );
       this.reconcilePreviewVisibility(this.open, rows);
     }
+    if (changed.has('catalog') && this.internalPreviewTargetId !== null) this.stopInternalPreview();
     if (changed.has('withoutPreview') && this.withoutPreview) this.stopInternalPreview();
   }
 
@@ -546,90 +435,13 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.catalogPicker.defaultValue = next;
   }
 
-  get name(): string {
-    return this._name;
-  }
-  set name(next: string) {
-    const old = this._name;
-    this._name = next ?? '';
-    reflectFormName(this, this._name);
-    this.requestUpdate('name', old);
+  protected requiredMessage(): string {
+    return this.localize('voicePickerRequired');
   }
 
-  get disabled(): boolean {
-    return this._disabled;
-  }
-  set disabled(next: boolean) {
-    const old = this._disabled;
-    this._disabled = Boolean(next);
-    this.toggleAttribute('disabled', this._disabled);
-    this._fieldsetDisabled =
-      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
-    if (this._disabled) {
-      this.hide();
-      this.stopInternalPreview();
-    }
-    // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
-    // synchronously, for the same reason the attribute is reflected synchronously.
-    this.updateValidity();
-    this.requestUpdate('disabled', old);
-  }
-
-  get required(): boolean {
-    return this._required;
-  }
-  set required(next: boolean) {
-    const old = this._required;
-    this._required = Boolean(next);
-    this.toggleAttribute('required', this._required);
-    this.updateValidity();
-    this.requestUpdate('required', old);
-  }
-
-  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
-  get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled;
-  }
-
-  /**
-   * Shared with every other form control: own `disabled`/`readonly` and a `<fieldset disabled>`
-   * ancestor bar constraint validation. A barred control matches
-   * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
-   * required picker is what painted it red under the documented `:state(user-invalid)` rule.
-   */
-  private get barredFromValidation(): boolean {
-    return isBarredFromValidation(this, this.internals);
-  }
-
-  /** The `!this.value` check here is deliberately NOT the `''`-as-missing-value truthiness defect
-   *  `<lr-select>`/`<lr-combobox>` were corrected for. There, `''` was a legitimate option value
-   *  being misread as "no value". `value` here is `catalogPicker.value`, and `normalizeCatalog()`
-   *  rejects a blank `id` outright, so `''` can never name a row -- it is this control's one
-   *  "nothing committed" sentinel, exactly as documented on `withSyntheticCatalogValue()`. */
-  private updateValidity(): void {
-    if (this.barredFromValidation) {
-      this.validityController.setValidity({});
-    } else if (this.required && !this.value) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('voicePickerRequired'));
-    } else {
-      this.validityController.setValidity({});
-    }
-    this.publishValidityStates();
-  }
-
-  /** Republishes the six validity custom states. Driven from every place validity or interaction
-   *  can move -- {@linkcode updateValidity}, `reportValidity()`, and `updated()` -- because this
-   *  control drives `ElementInternals` directly rather than through the `FormAssociated` mixin,
-   *  which does this for the controls that do use it. `touched` is the interaction flag: it flips
-   *  on the trigger's/input's first blur, and on interactive validation -- `reportValidity()` and
-   *  a submission attempt alike, via `installInteractionOnInvalid()`. A silent `checkValidity()`
-   *  alone never counts. */
-  private publishValidityStates(): void {
-    syncValidityStates(this.internals, {
-      required: this.required,
-      hasInteracted: this.touched,
-      barred: this.barredFromValidation,
-    });
+  protected override releaseOnDisable(): void {
+    super.releaseOnDisable();
+    this.stopInternalPreview();
   }
 
   formResetCallback(): void {
@@ -640,57 +452,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.catalogPicker.restoreState(state);
   }
   formDisabledCallback(disabled: boolean): void {
-    if (this.validityController?.reflectingDisabled) return;
-    const wasDisabled = this.effectiveDisabled;
-    this._fieldsetDisabled = disabled;
-    if (wasDisabled === this.effectiveDisabled) return;
-    if (disabled) {
-      this.hide();
-      this.stopInternalPreview();
-    }
-    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
-    this.updateValidity();
-    this.requestUpdate();
-  }
-  private markInteracted = (): void => {
-    if (this.touched) return;
-    this.touched = true;
-    this.publishValidityStates();
-  };
-  checkValidity(): boolean {
-    return this.validityController.checkValidity();
-  }
-  reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
-    // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
-    // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
-    // control should read as invalid, not stay pristine. (A submission attempt itself never calls
-    // this method -- it drives `ElementInternals` directly -- which is what
-    // `installInteractionOnInvalid()` above covers.)
-    this.touched = true;
-    this.publishValidityStates();
-    return this.internals.reportValidity();
-  }
-
-  /**
-   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
-   * rejection ("that voice is not enabled for your account") that no client-side constraint can
-   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
-   * control fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears
-   * it.
-   *
-   * Clearing restores the control's own computed validity rather than forcing it valid: a
-   * `required` picker with no value stays `valueMissing`. The custom error also survives every
-   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
-   * and a `form.reset()` — matching a native control, where only another `setCustomValidity('')`
-   * clears it.
-   *
-   * The message is caller-supplied content, so it is used verbatim and never localized here.
-   */
-  setCustomValidity(message: string): void {
-    this.validityController.setCustomValidity(message ?? '');
-    this.publishValidityStates();
+    this.formDisabledChanged(disabled);
   }
 
   /** Closed-dropdown-with-listbox mode vs. free-text filterable mode — see class doc. */
@@ -1135,7 +897,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
             autocomplete=${this.autocomplete || nothing}
             spellcheck=${this.spellcheck}
             autocapitalize=${this.autocapitalize || nothing}
-            autocorrect=${this.autoCorrect || nothing}
+            autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
             inputmode=${this.inputMode || nothing}
             enterkeyhint=${this.enterKeyHint || nothing}
             .value=${this.open ? this.query : this.labelFor(this.value)}

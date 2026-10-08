@@ -1,3 +1,4 @@
+import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
@@ -93,13 +94,13 @@ export const styles = css`
   /* A three-quarter arc, not a full ring: a full circle looks identical at every rotation
      frame. */
   :host([status="running"]) [part="icon"] svg {
-    animation: var(--_lr-motion-animation, lr-tool-call-chip-spin
+    animation: var(--_lr-motion-animation, lr-tool-status-spin
       var(--lr-tool-call-chip-spin, var(--_lr-tool-call-chip-spin)) infinite);
   }
   /* Subtler than the spin: a slow opacity breathe, so several still-queued chips do not compete
      visually with any 'running' ones next to them. */
   :host([status="pending"]) [part="icon"] svg {
-    animation: var(--_lr-motion-animation, lr-tool-call-chip-pulse var(--lr-transition-ambient) infinite);
+    animation: var(--_lr-motion-animation, lr-tool-status-pulse var(--lr-transition-ambient) infinite);
   }
 
   [part="label"] {
@@ -216,20 +217,6 @@ export const styles = css`
     color: var(--lr-color-text);
   }
 
-  @keyframes lr-tool-call-chip-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes lr-tool-call-chip-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.35;
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
     [part="base"] {
       transition: none !important;
@@ -239,4 +226,5 @@ export const styles = css`
       animation: none !important;
     }
   }
+  ${toolStatusKeyframes}
 `;

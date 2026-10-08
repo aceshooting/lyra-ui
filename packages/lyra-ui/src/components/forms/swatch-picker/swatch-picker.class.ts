@@ -16,7 +16,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './swatch-picker.styles.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { swatchKeyTarget } from './swatch-keys.js';
 
 export interface SwatchPickerItem {
@@ -334,7 +334,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this.focusRevealFrame = requestAnimationFrame(() => {
       this.focusRevealFrame = undefined;
       if (!this.isConnected || this.disabled) return;
-      const focused = activeElementIn(this.shadowRoot);
+      const focused = shadowFocusTarget(this);
       if (!(focused instanceof HTMLElement) || !focused.part.contains('swatch')) return;
       // Native focus can leave a partially visible radio clipped when its center already fits.
       // Resolve the current node after consumer updates and focus restoration have settled.
@@ -357,7 +357,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     super.willUpdate(changed);
     setCustomState(this.stateInternals, 'selected', this.resolveSelectedIndex() >= 0);
     if (!changed.has('items')) return;
-    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     if (!active?.part?.contains('swatch')) return;
     const previousOptions = changed.get('items') as
       | readonly SwatchPickerItem[]
@@ -447,7 +447,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           (candidate as HTMLElement).part?.contains('swatch') === true &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
-    const focused = activeElementIn(this.shadowRoot);
+    const focused = shadowFocusTarget(this);
     const candidate =
       fromEvent ??
       (focused?.part?.contains('swatch')

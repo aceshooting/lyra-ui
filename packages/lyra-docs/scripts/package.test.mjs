@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { renderedControlTags } from './lib/editor-tags.mjs';
 
 test('root and session entries resolve without a DOM, engine, fetch or stylesheet side effects', async () => {
   for (const specifier of ['@aceshooting/lyra-docs', '@aceshooting/lyra-docs/docx']) {
@@ -77,8 +78,7 @@ test('the class entry does not register the editor or its controls', () => {
 
 test('the registration entry defines the editor and every rendered Lyra control', () => {
   const editorClass = readFileSync(new URL('../src/docx/docx-editor.class.ts', import.meta.url), 'utf8');
-  const controls = [...editorClass.matchAll(/\bunsafeStatic\(tag\('([a-z][a-z0-9-]*)'\)\)/gu)]
-    .map((match) => `lr-${match[1]}`);
+  const controls = renderedControlTags(editorClass).map((name) => `lr-${name}`);
   const deferred = [...readFileSync(new URL('../src/docx/editor.ts', import.meta.url), 'utf8')
     .matchAll(/\bimport\('@aceshooting\/lyra-ui\/components\/lr-([a-z][a-z0-9-]*)\.js'\)/gu)].map((match) => match[1]);
   assert(controls.length > 0);

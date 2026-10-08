@@ -6,7 +6,7 @@
 - **Class** `LyraFormatBytes`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-bytes.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
@@ -25,8 +25,7 @@ Text-only host — no CSS parts, events, or own tokens; locale resolution and
 - `value: number = 0`
 - `unit: 'byte' | 'bit' = 'byte'`
 - `display: 'long' | 'short' | 'narrow' = 'short'` — forwarded as `unitDisplay`
-- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. **Changed in 8.0.0:**
-  the former Lyra default was `1024`; it remains an opt-in extension
+- `unitStep: number = 1000` (attribute `unit-step`) — mapped decimal scaling. `1024` is the opt-in binary extension
 - `decimals: number = 1` — maximum fraction digits on the scaled amount
 
 **Slots:** default — fallback content, rendered only when `value` is not finite.

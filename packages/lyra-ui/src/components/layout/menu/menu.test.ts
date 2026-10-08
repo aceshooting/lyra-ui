@@ -1,6 +1,5 @@
 import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
-  aTimeout,
   expect,
   fixture,
   html,
@@ -339,7 +338,7 @@ it('coalesces same-tick item disabled notifications into one roving-focus reconc
   for (const item of items) item.disabled = true;
   await Promise.all(items.map((item) => item.updateComplete));
   await menu.updateComplete;
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
 
   // An unfixed listener re-scans `this.items` once per item's own state-change dispatch (one
   // call per item here). The coalesced path collapses every same-tick dispatch into one pass;
@@ -677,6 +676,7 @@ it('opens a submenu only after pointer intent and never steals focus', async () 
     new PointerEvent('pointerover', { bubbles: true, composed: true })
   );
   expect(share.submenuOpen).to.equal(false);
+  // wait-reason: real hover-intent open delay
   await new Promise((resolve) => setTimeout(resolve, 220));
   await settle(menu, byId(menu, 'share-menu'));
   expect(share.submenuOpen).to.equal(true);
@@ -1077,6 +1077,7 @@ it('resets the typeahead buffer after the timeout so a repeated key searches fre
   byId(menu, 'banana').focus();
   press(byId(menu, 'banana'), 'a');
   expect(document.activeElement?.id).to.equal('apple');
+  // wait-reason: real type-ahead buffer reset timing
   await new Promise((resolve) => setTimeout(resolve, 600));
   press(byId(menu, 'apple'), 'a');
   expect(document.activeElement?.id).to.equal('apricot');
@@ -1135,6 +1136,7 @@ it('keeps an open submenu when the pointer leaves but keyboard focus is still in
   submenuSurface(level2).dispatchEvent(
     new PointerEvent('pointerleave', { bubbles: true, composed: true })
   );
+  // wait-reason: negative assertion; the submenu must stay open past the pointer-leave close delay
   await new Promise((resolve) => setTimeout(resolve, 380));
   await settle(menu, level2, byId(menu, 'level-3'));
   expect(more.submenuOpen).to.equal(true);
@@ -1417,7 +1419,7 @@ describe('collecting already-slotted items without relying on the initial slotch
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial slotchange never fired');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -1451,7 +1453,7 @@ describe('collecting already-slotted items without relying on the initial slotch
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'

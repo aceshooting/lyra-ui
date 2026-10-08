@@ -198,6 +198,24 @@ it('keeps one run observer until the option set changes', async () => {
   }
 });
 
+it('reads each shared ancestor style once per sync, not once per radio', async () => {
+  const items = Array.from({ length: 8 }, (_, index) => `<lr-radio value="${index}">${index}</lr-radio>`).join('');
+  const group = await fixture<LyraRadioGroup>(`<lr-radio-group>${items}</lr-radio-group>`);
+  await settle(group);
+  const original = window.getComputedStyle;
+  let reads = 0;
+  window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+    if (element === group) reads += 1;
+    return original.call(window, element, pseudo);
+  }) as typeof window.getComputedStyle;
+  try {
+    (group as unknown as { syncRadios(): void }).syncRadios();
+  } finally {
+    window.getComputedStyle = original;
+  }
+  expect(reads).to.be.lessThan(4);
+});
+
 it('emits lr-activate for every activation, after lr-change when the selection moves', async () => {
   const group = await fixture<LyraRadioGroup>('<lr-radio-group value="a"><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group>');
   await settle(group);
@@ -251,4 +269,26 @@ it('keeps option and radio identities equal across a native-listener rewrite', a
   option.click();
   expect(details.map(detail => detail.value)).to.deep.equal(['a', 'a', 'a']);
   expect(details.every(detail => detail.option === option && detail.radio === option)).to.equal(true);
+});
+
+it('dims the group label while disabled', async () => {
+  const group = await fixture<LyraRadioGroup>('<lr-radio-group label="Pick" hint="Hint" disabled><lr-radio value="a">A</lr-radio></lr-radio-group>');
+  await settle(group);
+  const label = group.shadowRoot!.querySelector<HTMLElement>('[part~="label"]')!;
+  expect(Number(getComputedStyle(label).opacity)).to.be.lessThan(1);
+});
+
+it('leaves modified arrow keys to the platform and resolves plain arrows through the shared list move', async () => {
+  const group = await fixture<LyraRadioGroup>('<lr-radio-group value="a"><lr-radio value="a">A</lr-radio><lr-radio value="b">B</lr-radio></lr-radio-group>');
+  await settle(group);
+  const [a, b] = group.querySelectorAll<LyraRadio>('lr-radio');
+  const press = (init: KeyboardEventInit): KeyboardEvent => {
+    const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true, ...init });
+    a!.dispatchEvent(event);
+    return event;
+  };
+  expect(press({ ctrlKey: true }).defaultPrevented).to.equal(false);
+  expect(press({}).defaultPrevented).to.equal(true);
+  await settle(group);
+  expect(b!.checked).to.equal(true);
 });

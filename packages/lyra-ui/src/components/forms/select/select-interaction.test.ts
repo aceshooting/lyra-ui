@@ -77,6 +77,7 @@ it("honours preventDefault() on lr-show, leaving the property and attribute clos
 
   await el.show();
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
 
   expect(el.open, "a vetoed open never applies").to.be.false;
@@ -102,12 +103,14 @@ it("honours preventDefault() on lr-hide, including a direct `open` assignment", 
   `)) as LyraSelect;
   el.open = true;
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
   expect(el.open).to.be.true;
 
   el.addEventListener("lr-hide", (event) => event.preventDefault());
   el.open = false;
   await el.updateComplete;
+  // wait-reason: asserting a vetoed transition never applies; there is no event to await
   await aTimeout(60);
 
   expect(el.open, "a vetoed close stays open").to.be.true;
@@ -203,6 +206,7 @@ it("drops a stale lr-after-show when closing interrupts the opening transition",
     "lr-after-hide never fired after the interrupted transition",
     { timeout: 5000 },
   );
+  // wait-reason: asserting no further lifecycle event follows lr-after-hide (negative assertion)
   await aTimeout(50);
 
   expect(events).to.deep.equal(["lr-show", "lr-hide", "lr-after-hide"]);
@@ -229,7 +233,7 @@ it("drops a settleTransition() call that is already stale before its first await
   // `await this.updateComplete` has a chance to resolve -- guaranteeing it finds itself stale the
   // instant that first await settles, rather than racing a real transition to land the same
   // outcome.
-  (el as unknown as { transitionToken: number }).transitionToken++;
+  (el as unknown as { popupController: { token: number } }).popupController.token++;
   await pending;
 
   expect(
@@ -771,6 +775,7 @@ it("resets the type-ahead buffer after ~500ms of inactivity", async () => {
   await oneEvent(el, "change");
   expect(el.value).to.equal("b");
 
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(600);
 
   // Buffer reset -> 'c' alone (not 'bc') should now match Cherry.
@@ -807,6 +812,7 @@ it("still resets its type-ahead buffer after a disconnect and reconnect", async 
   );
   await el.updateComplete;
   expect(buffer(), "a reconnected select still accumulates").to.equal("b");
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(700);
   expect(buffer(), "and its reset still fires").to.equal("");
 });
@@ -830,15 +836,18 @@ it("leaves the type-ahead buffer alone when its reset timer fires after being su
   // generation counter: the counter now lives inside the shared DebounceController, and the
   // contract this test exists for is the user-visible one -- the first keystroke's reset must not
   // clear a buffer the second keystroke has already taken over.
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(300);
   type("b");
   await el.updateComplete;
   expect(buffer(), "a second keystroke extends the buffer").to.equal("ab");
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(350);
   expect(
     buffer(),
     "a superseded timer must not clear a buffer it no longer owns"
   ).to.equal("ab");
+  // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
   await aTimeout(400);
   expect(buffer(), "the surviving reset still fires on its own schedule").to.equal("");
 });

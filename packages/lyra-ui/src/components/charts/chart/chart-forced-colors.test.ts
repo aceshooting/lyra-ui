@@ -1,22 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
 import './chart.js';
 import type { LyraChart } from './chart.js';
-
-function forcedColorsMatchMedia(original: typeof window.matchMedia): typeof window.matchMedia {
-  return ((query: string) => {
-    if (query !== '(forced-colors: active)') return original(query);
-    return {
-      matches: true,
-      media: query,
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-      dispatchEvent: () => false,
-    };
-  }) as typeof window.matchMedia;
-}
 
 describe('chart forced-colors encodings', () => {
   it('gives eight repeated-color series distinct dashes, point shapes, fill patterns, and legend patterns', async () => {

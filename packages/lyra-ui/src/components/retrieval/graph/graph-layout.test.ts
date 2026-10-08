@@ -160,7 +160,10 @@ describe('node typing', () => {
     const squareEl = el.shadowRoot!.querySelector(
       '[part="node"]'
     ) as SVGPathElement;
-    await aTimeout(50);
+    await waitUntil(
+      () => /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/.test(squareEl.getAttribute('transform') ?? ''),
+      'per-tick transform applied'
+    );
     expect(squareEl.getAttribute('transform')).to.match(
       /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/
     );
@@ -676,6 +679,7 @@ describe('expand affordance', () => {
     svgEl.dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, cancelable: true })
     );
+    // wait-reason: real d3-zoom dblclick transition (250ms default); fit-style tweens expose no completion signal
     await aTimeout(350);
     expect(g.getAttribute('transform')).to.match(/scale\(/);
   });
@@ -694,6 +698,7 @@ describe('expand affordance', () => {
     expect(expandCount).to.equal(1);
 
     // Outside the window: reset by waiting past EXPAND_KEY_INTERVAL_MS.
+    // wait-reason: real timing semantics, the double-Enter window (EXPAND_KEY_INTERVAL_MS) must elapse
     await aTimeout(600);
     nodeEl.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
@@ -723,7 +728,10 @@ describe('expand affordance', () => {
       '[part="expand-indicator"]'
     ) as SVGGElement;
     expect(indicator.getAttribute('aria-hidden')).to.equal('true');
-    await aTimeout(50);
+    await waitUntil(
+      () => /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/.test(indicator.getAttribute('transform') ?? ''),
+      'per-tick transform applied'
+    );
     expect(indicator.getAttribute('transform')).to.match(
       /^translate\(-?\d+(\.\d+)?,-?\d+(\.\d+)?\)$/
     );
@@ -1034,6 +1042,7 @@ describe('focus and camera fit', () => {
   it('fit() frames the bounding box of all visible node positions within width/height minus padding', async () => {
     const el = await mountWide();
     el.fit({ padding: 10 });
+    // wait-reason: real fit() tween duration; fit() returns void and exposes no completion signal
     await aTimeout(400); // let the default (non-reduced-motion) tween settle
     const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
     const transform = svgEl.querySelector('g')!.getAttribute('transform')!;
@@ -1071,7 +1080,11 @@ describe('focus and camera fit', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    await aTimeout(400);
+    await waitUntil(() => {
+      const h = el.shadowRoot!.querySelector('[part="focus-halo"]');
+      const t = el.simNodes.find((n) => n.id === 'b');
+      return h != null && !h.hasAttribute('hidden') && t?.x != null && Math.abs(Number(h.getAttribute('cx')) - t.x) <= 0.5;
+    }, 'focus halo shown at the focused node');
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
@@ -1154,6 +1167,7 @@ describe('selection', () => {
 
     el.selectedNodeIds = ['a']; // host reflects the controlled prop back, per the contract
     await el.updateComplete;
+    // wait-reason: real timing semantics, the click must land outside the 500ms double-activate window
     await aTimeout(550); // a later click, outside the 500 ms double-activate (expand) window
     nodeEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(detail).to.deep.equal({ selectedNodeIds: [], selectedEdgeIds: [] });
@@ -1537,7 +1551,10 @@ describe('type filtering', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    await aTimeout(400);
+    await waitUntil(() => {
+      const h = el.shadowRoot!.querySelector('[part="focus-halo"]');
+      return h != null && !h.hasAttribute('hidden');
+    }, 'focus halo shown');
     const halo = el.shadowRoot!.querySelector(
       '[part="focus-halo"]'
     ) as SVGCircleElement;
@@ -1660,7 +1677,10 @@ describe('community hulls', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50);
+    await waitUntil(
+      () => el.shadowRoot!.querySelectorAll('[part="cursor-item"]').length === 1,
+      'cursor item rendered'
+    );
 
     const items = [
       ...el.shadowRoot!.querySelectorAll('[part="cursor-item"]'),
@@ -1814,6 +1834,7 @@ describe('community hulls', () => {
   it('fit() bounding box accounts for hull padding when communities render', async () => {
     const el = await mountHulls();
     el.fit({ padding: 10 });
+    // wait-reason: real fit() tween duration; fit() returns void and exposes no completion signal
     await aTimeout(400);
     const svgEl = el.shadowRoot!.querySelector('svg') as SVGSVGElement;
     const transform = svgEl.querySelector('g')!.getAttribute('transform')!;

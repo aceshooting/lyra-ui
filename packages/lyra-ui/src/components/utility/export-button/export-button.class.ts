@@ -21,7 +21,7 @@ import { resolveEffectivePositioningStrategy } from '../../../internal/positioni
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { buildCsv, downloadBlob, type LyraCsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   activateNonmodalOverlay,
   type OverlayHandle,
@@ -32,7 +32,7 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController } from '../../../internal/popup-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
@@ -402,7 +402,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  opacity/transform open transition one render past the `hidden` -> unhidden one -- see that
    *  rule's own comment. */
   @state() private menuPositioned = false;
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({ host: this, onPointer: (event) => this.onDocPointer(event) });
   private connectionGeneration = 0;
   private connectedDocument?: Document;
   private pendingDisconnectDocument?: Document;
@@ -488,12 +488,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   }
 
   private bindDocumentPointer(): void {
-    if (!this.isConnected) return;
-    this.pointer.bind();
+    this.popupController.bindPointer();
   }
 
   private unbindDocumentPointer(): void {
-    this.pointer.unbind();
+    this.popupController.unbindPointer();
   }
 
   private onDocPointer = (e: PointerEvent): void => {
@@ -657,7 +656,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this._isFirstUpdate = !this.hasUpdated;
     this.setAttribute('aria-busy', String(this.loading));
     if ((changed.has('disabled') || changed.has('loading')) && (this.disabled || this.loading)) {
-      const active = activeElementIn(this.shadowRoot);
+      const active = shadowFocusTarget(this);
       if (
         active === this.triggerEl ||
         active?.getAttribute('part') === 'menu-item'
@@ -678,7 +677,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       }
     }
     if (changed.has('formats')) {
-      const active = activeElementIn(this.shadowRoot);
+      const active = shadowFocusTarget(this);
       const items = this.menuItemEls();
       const index = items.indexOf(active as HTMLButtonElement);
       const previousFormats = changed.get('formats') as readonly LyraExportFormatOption[] | undefined;
@@ -737,7 +736,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       !this.loading &&
       this.injectedHostTabIndex
     ) {
-      const parked = this.ownerDocument.activeElement === this && !this.shadowRoot?.activeElement;
+      const parked = this.ownerDocument.activeElement === this && !shadowFocusTarget(this);
       if (this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
       this.injectedHostTabIndex = false;
       if (parked) this.triggerEl?.focus({ preventScroll: true });

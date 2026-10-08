@@ -47,6 +47,10 @@ reimplemented.
   `heldFileCount`/`heldTotalSize`: `0` (the default) means "nothing held" and reproduces prior
   behavior exactly, and a negative, `NaN`, or `Infinity` override is normalized to `0` via
   `finiteCount` rather than corrupting every later comparison.
+- `allowedMimeTypes` / `forbiddenMimeTypes: readonly string[] = []` (property only) — exact MIME
+  allow/deny lists, identical to `lr-file-input`'s (denylist first); a mismatch rejects with `'type'`.
+- `acceptedMessage` / `rejectedMessage: string` (attributes `accepted-message` / `rejected-message`) —
+  caller-owned outcome copy with `{count}`; unset uses the localized default.
 - `readonly dragging: boolean` — `true` during an active drag session
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone

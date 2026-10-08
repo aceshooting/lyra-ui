@@ -1832,6 +1832,7 @@ describe("lr-stepper read-only mode", () => {
   }
 
   /** Real timers with a margined threshold -- @sinonjs/fake-timers does not work under wtr. */
+  // wait-reason: negative assertion (no lr-step-select may fire for read-only steps)
   function settle(): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, 60));
   }

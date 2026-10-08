@@ -31,8 +31,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   "a.test.ts" --files "b.test.ts"`), or bare positional args (`pnpm test -- a.test.ts
   b.test.ts`, matching `test:platform`'s own convention).
 - Calling `oneEvent()` *after* a synchronous `dispatchEvent()` races and hangs — always set up
-  the `oneEvent()` listener *before* triggering the dispatch (a pitfall that recurred across
-  multiple plan docs' own sample code, always fixed the same way).
+  the `oneEvent()` listener *before* triggering the dispatch.
 - **Focus-modality tests use `test/wtr-focus.ts`** (`focusByKeyboard()` / `focusAfterPointer()`).
   Programmatic `.focus()` inherits the previous focus's `:focus-visible` state and the window's
   last recorded input, so it is order-dependent in a shared wtr page. Synthetic focus events never
@@ -60,9 +59,8 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   Patching a prototype hook (the `LitElement.prototype.willUpdate`/`updated` trick used to prove a
   component chains to `super`) and recording a bare `called = true` boolean is vacuous: almost every
   component mounts other Lit elements in its own shadow root (`lr-button`, `lr-live-region`,
-  `lr-icon`, …), and any one of them trips the flag. Observed for real on 2026-08-12 — a
-  `lr-confirm-bar` super-chain test passed identically with and without the `super` calls, because
-  its nested `lr-button` was doing the calling. Record *which* element called
+  `lr-icon`, …), and any one of them trips the flag (a super-chain test then passes with and
+  without the `super` calls). Record *which* element called
   (`calledBy[hook].add(this.localName)`, then assert the tag you care about) or capture the instance
   and compare identity. The same reasoning applies to any spy on a shared global — `Intl`,
   `matchMedia`, `ResizeObserver`, `DOMParser`, `fetch`: attribute each call to a caller before
@@ -139,8 +137,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   (`template-whitespace-contract` in `src/lifecycle-contracts.test.ts`) runs it on every root-barrel
   tag's default state.
 - **A *failing* assertion whose `actual`/`expected` is a DOM node, `NodeList`, or any other
-  non-structured-cloneable value hangs the whole test file** under `wtr`. Root cause (verified
-  empirically, 2026-07-20): `@web/test-runner-mocha`'s `collectTestResults` copies
+  non-structured-cloneable value hangs the whole test file** under `wtr`. Cause: `@web/test-runner-mocha`'s `collectTestResults` copies
   `err.actual`/`err.expected` *verbatim* into the `wtr-session-finished` message;
   `@web/dev-server-core`'s browser `sendMessage` serializes it with `stable()`, whose very first
   statement is `structuredClone(obj)`; `structuredClone` throws `DataCloneError` on any DOM
@@ -156,8 +153,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   `.to.be.undefined`, `.to.deep.equal(...)`); `.to.have.lengthOf(n)` and asserting `.length` are
   safe because chai passes a *number* as `actual`. The trap bites only during a TDD red phase —
   the assertion passes fine once the behaviour is right — so a hang immediately after writing a
-  new test is almost always this, not the code under test (two separate agents hit it via
-  `.to.not.exist` while writing tests for this very guidance). If a test file hangs with no
+  new test is almost always this, not the code under test. If a test file hangs with no
   informative output: bisect it (binary-split the `it()` blocks into scratch files until you
   isolate the one test), then either fix the underlying wrong expectation or restructure the
   assertion to compare something other than the DOM elements directly (e.g. an id/attribute). Two
@@ -183,9 +179,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   implementation from a broken one, and will happily go green against code that never wrote the mark.
   Decode with `new TextDecoder('utf-8', { ignoreBOM: true })` over `await blob.arrayBuffer()`, and
   cross-check the raw byte length (a 3-byte BOM plus the payload). This is only a test-observation
-  trap, never a product bug — Excel, the consumer that needs the BOM, reads raw bytes and never goes
-  through this decoder — which is exactly what makes it dangerous: the shipped behaviour is correct
-  while the test proving it is vacuous. Found while adding `<lr-export-button>`'s `bom` option.
+  trap, never a product bug (Excel reads raw bytes), but it makes the proving test vacuous.
 - **WebKit implements `enterkeyhint`/`inputmode` as HTML attributes but leaves the matching IDL
   properties (`el.enterKeyHint`, `el.inputMode`) undefined.** A test that reads the JS property to
   confirm forwarding passes on Chromium/Firefox and silently proves nothing on WebKit — assert the
@@ -196,9 +190,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   boolean-attribute binding only *toggles the attribute's presence*, and removing an attribute
   that was never present fires no `attributeChangedCallback`, so the property stays at its
   constructor default. The only way to assign `false` from a template is a **property** binding:
-  `.boolProp=${false}`. This bit both a shipped component's own test suite and its Storybook
-  stories in this family (search for `submitOnEnter`/`editable` in `git log` for the two real
-  instances) — grep for `?` bindings against any property whose class-field default is `true`
+  `.boolProp=${false}`. Grep for `?` bindings against any property whose class-field default is `true`
   before trusting a `?attr=${false}` test setup at face value. The authoring-side fix is a custom
   converter — see the `true`-defaulting boolean rule in
   [coding-conventions.md](coding-conventions.md).
@@ -213,8 +205,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   sandbox in this repo to auto-restore a monkey-patched global, so every author hand-rolls
   save/restore: assign inside a `try` block whose `finally` restores the saved original (or
   restore in `afterEach`). A leaked stub bleeds into later, unrelated tests and produces
-  state-dependent failures — this bit `lr-push-to-talk`'s
-  `MediaRecorder`/`getUserMedia`/`AudioContext` stubs during the voice-component work.
+  state-dependent failures.
 - **Deprecated usage is seeded or captured, never left to warn.** A component that observes a
   deprecated usage (property/attribute set, tag connect, alias veto; never slotted content — that
   detection ships in every production bundle, so `lr-stat`/`lr-menu` slot deprecations stay silent) calls `warnDeprecatedUsage(host, kind, name, replacement)`
@@ -252,27 +243,10 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   `wtr`'s esbuild pipeline strips TypeScript types at transform time, so an incomplete DTO fixture
   (e.g. missing a required `mimeType`) can run and pass the test while still failing `pnpm lint`'s
   `tsc --noEmit`. Type-check a batch of new test fixtures before committing, not just run them.
-- **A failing coverage run points at `scripts/coverage-floors.json`.** `pnpm test:coverage`
-  (`WTR_COVERAGE=1 wtr …`) runs the suite with istanbul instrumentation and hands `wtr`'s blocking
-  `coverageConfig.threshold` the four per-metric floors read out of that file —
-  `statements`/`branches`/`functions`/`lines`. A red "coverage threshold" line names the metric that
-  dropped; the fix is to cover the code you just added, not to edit the number. The file also
-  records the `measured` snapshot and `measuredAt` date the floors were derived from, so the diff
-  says what the suite was actually at.
-  - Floors are **generated, not hand-written**: `pnpm run coverage-floors` (i.e.
-    `node scripts/write-coverage-floors.mjs --write-floors`, run from `packages/lyra-ui` after a
-    coverage run has populated `coverage/`) re-derives each floor as `floor(measured − margin)`,
-    with a default 1.5-point margin (`--margin N` overrides it). `pnpm run check:coverage-floors`
-    is the read-only form the `build-and-coverage` CI job runs right after `test:coverage`; it fails
-    both when a floor sits *above* the measurement (the suite can never pass) and when it has fallen
-    more than 5 points *below* it (the floor stopped gating anything).
-  - **Lowering a floor needs `--allow-lower` on top of `--write-floors`.** Without it the refresh
-    keeps the higher floor, prints which metrics it blocked, and exits non-zero — so a coverage
-    regression cannot be silently re-baselined by whoever last ran the command. The flag exists to
-    make accepting one an explicit act that lands as a reviewable one-line drop in
-    `coverage-floors.json`, next to the `measured` values that justify it. Hand-edited floors are
-    exactly the failure this replaced: they were last left at 75/65/65/75 while the suite measured
-    99/94/99/99, so about a quarter of the tree could have gone uncovered without the gate firing.
+- **A failing coverage run points at `scripts/coverage-floors.json`.** A red "coverage threshold" line
+  names the metric that dropped; cover the code you just added rather than editing the number. Floors
+  are generated (`pnpm run coverage-floors`), never hand-written, and lowering one needs
+  `--allow-lower`; see [Coverage floors](ci-and-gates.md#coverage-floors-scriptscoverage-floorsjson).
 - **A newly-added opt-in property gets an explicit unset-regression test.** When an
   already-shipped component gains a new opt-in `@property`/attribute, add a test proving that,
   left unset, the component's rendered DOM/events/behavior are unchanged from before the property
@@ -287,18 +261,18 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 - **The local gate is Chromium-only and cannot see a contract that is absent on another engine.**
   Run `WTR_BROWSER=firefox|webkit pnpm exec wtr --files <path>` for anything touching an `<iframe>`,
   a re-emitted non-composed native event, or pointer/`:active` state — a full local single-engine
-  sweep also catches what CI's *sharding* hides.
+  sweep also catches what CI's *sharding* hides. (Firefox dispatches neither `focus` nor `focusin`
+  on an `<iframe>` element for a programmatic `.focus()`; the element still becomes
+  `shadowRoot.activeElement`, so a test that only asserts focus _moved_ passes with the events missing.)
 - **Reading a pointer-driven `:hover`/`:active` state, or a transitioning paint, straight after
   `sendMouse` is racy per engine.** `sendMouse()` resolves when the synthesized command completes,
   which does not mean the browser has processed the resulting native pointer event — and a late
   layout settle can move the target out from under an already-dispatched position. Land the pointer
   with `hoverUntilMatched()` (`packages/lyra-ui/test/wtr-mouse.ts`), which re-reads the rect and
   re-dispatches until `:hover` actually matches, then poll the rendered result with `waitUntil`
-  and/or zero `--lr-transition-fast` on the fixture. Five separate tests have been fixed for exactly
-  this, four of them only reproducing under `Test All Browsers` — the unsharded complete-suite run,
-  whose higher per-process page count is the condition the sharded gates never create.
+  and/or zero `--lr-transition-fast` on the fixture. It reproduces mainly under `Test All Browsers`, whose higher per-process
+  page count the sharded gates never create.
   A component-managed `:state(x)` is the strictest case: it needs the event dispatched, the handler
   run *and* the `CustomStateSet` updated, so never read one synchronously after a press
-  (`image-comparer.test.ts`'s drag assertion is the reference). Reading such state right after a
-  `sendMouse({ type: 'down' })` is a live pattern in ~46 places; converting one is cheap, and the
-  sweep that finds them is a grep for an `expect(` within three lines of a mouse `down`.
+  (`image-comparer.test.ts`'s drag assertion is the reference). Find offenders by grepping for an
+  `expect(` within three lines of a mouse `down`.

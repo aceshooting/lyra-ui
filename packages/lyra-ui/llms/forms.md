@@ -1,28 +1,3 @@
-## Breaking changes in 10.0.0
-
-`<lr-swatch-picker>` drops the three members it carried through 9.x as documented one-major
-back-compat aliases, each with a like-for-like replacement that has shipped since. The `options`
-property is now `items` — same frozen owned-snapshot contract, still `attribute: false`, so no
-markup changes. The `label` property/attribute is now `accessibleLabel` (attribute `aria-label`), or
-the host `aria-label` directly; this is the one worth grepping for, because an un-updated
-`<lr-swatch-picker label="Brand colours">` leaves the internal `role="radiogroup"` with no accessible
-name at all rather than failing loudly. And the exported `SwatchOption` type is now
-`SwatchPickerItem`. The item shape itself is unchanged, including its own per-item `label` field,
-which is a different member and stays.
-
-Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
-meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
-never applied at all. In this family: arrow-keying onto the already-selected option in
-`<lr-select>` or `<lr-combobox>` produces a visible keyboard highlight again — `[aria-selected="true"]`
-was written after the active-descendant rule at equal specificity and swallowed it, so the highlight
-was absent exactly on the row a user is most likely to arrow onto first. `appearance="filled"` has a
-focus indicator again on `<lr-combobox>` and `<lr-date-input>`, both of which previously had none:
-the appearance rule out-ranked `:focus-within`, and the only `outline` in the focus rule was
-`solid transparent`. Both now express appearance as private custom properties, so no `[part]` rule
-can out-rank another. `<lr-option>` and `<lr-time-range>`'s active preset regain their pointer
-feedback, and `<lr-token-input>` can now veto all three of its mutations (adding and editing a
-token became cancelable alongside removing one, which already was — additive; see that section).
-
 ## Setter-only `null` clearing in 8.0.0
 
 Several mapped string IDLs accept `null` on assignment without widening their read type. This is a
@@ -1686,8 +1661,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 
 Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
 `errorText`, `accessibleLabel` (attribute `aria-label`), `clearLabel`, `openLabel`, `dialogLabel`,
-`spellcheck`, `autocapitalize`, `autoCorrect` (attribute `autocorrect`), `inputMode: string = ''`
-(attribute `inputmode`), `enterKeyHint: string = ''` (attribute `enterkeyhint`), and the reflected
+`spellcheck`, `autocapitalize`, boolean `autocorrect` (the string `autoCorrect` is removed; attribute `autocorrect="on|off"`),
+`inputMode: string = ''` (attribute `inputmode`, lowercase `inputmode` property alias),
+`enterKeyHint: string = ''` (attribute `enterkeyhint`, lowercase `enterkeyhint` property alias), the host `name`, which is also
+forwarded to the internal text input (as it is on `lr-otp-input`), and the reflected
 `customError: string | null` (attribute `custom-error`). `withLabel` and `withHint` are SSR hints:
 they force those slot wrappers into the first render so server output and hydration have the same
 structure even before assigned-slot state is observable. The shared Lyra FACE contract also
@@ -1890,6 +1867,11 @@ and `dateTimeFormat(locale, options)`.
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its
   background.
+- `--lr-date-picker-preset-hover-border-color` (default `var(--lr-color-brand)`),
+  `--lr-date-picker-preset-pressed-border-color` (default an active-state mix of
+  `var(--lr-color-brand)`) and `--lr-date-picker-preset-selected-border-color` (default
+  `var(--lr-color-brand)`; wins over `--lr-date-picker-preset-selected-border`) — the border color of
+  a hovered, pressed and selected quick-range button.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
   hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and
@@ -3706,8 +3688,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   — SSR slot-presence hints for slotted label/hint content that cannot be inspected before
   hydration.
 - `placeholder: string = ''` — forwarded to the native telephone input.
-- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
-  (attribute `autocorrect`) — forwarded to the internal telephone input's own `spellcheck`/
+- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autocorrect: boolean = true`
+  (attribute `autocorrect`, same shape as `<lr-input>`; the string `autoCorrect` is removed) — forwarded to the internal telephone input's own `spellcheck`/
   `autocapitalize`/`autocorrect`; `spellcheck="false"` is parsed as `false` via a string-aware
   converter (Lit's default presence-based boolean converter would otherwise treat any attribute
   value, including the literal string `"false"`, as `true`).
@@ -3734,8 +3716,10 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   including the English default, wins verbatim. An empty override retains the localized native
   error reason. Removing the attribute restores its declared English property default and resumes
   localization.
-- `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
-  `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
+- `autocomplete: string = 'tel'`, `inputMode: string = 'tel'` (attribute `inputmode`),
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal
+  `<input type="tel">`; lowercase `inputmode`/`enterkeyhint` accessors delegate to them. The host
+  `name` is forwarded to the internal field.
 - `readonly: boolean = false` (reflected) — forwards to the native telephone input, locks the
   country selector and all user edit handlers, and bars validation while retaining focus,
   selection/copying, canonical form value, and submission.
@@ -4041,9 +4025,10 @@ and win over the `preset-active-*` names, so one theme can style both controls' 
 
 Pointer states and handle chrome are independently themeable too:
 
-- `--lr-time-range-preset-hover-border-color`,
+- `--lr-time-range-preset-hover-bg`, `--lr-time-range-preset-hover-border-color`,
   `--lr-time-range-preset-pressed-border-color`, and `--lr-time-range-preset-pressed-bg` control
-  preset hover/press paint.
+  preset hover/press paint; `<lr-date-picker>` takes the same `-hover-border-color`,
+  `-pressed-border-color` and `-selected-border-color` names, and both rows share one paint sheet.
 - `--lr-time-range-handle-bg`, `--lr-time-range-handle-border-color`,
   `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-pressed-bg` control the handle's
   resting, hovered, and pressed paint.

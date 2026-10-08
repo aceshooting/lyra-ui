@@ -31,9 +31,9 @@ test('manifest and loader map preserve authored aliases while publishing canonic
 
   assert.equal(inventory.catalogs.size, 66);
   assert.equal(byLocale.get('fil').sourceLocale, 'tl');
-  assert.equal(byLocale.get('fil').aggregateImport, '@aceshooting/lyra-ui/translations/tl.js');
+  assert.equal(byLocale.get('fil').aggregateImport, '@aceshooting/lyra-translations/tl.js');
   assert.equal(byLocale.get('lah').sourceLocale, 'pnb');
-  assert.equal(byLocale.get('lah').aggregateImport, '@aceshooting/lyra-ui/translations/pnb.js');
+  assert.equal(byLocale.get('lah').aggregateImport, '@aceshooting/lyra-translations/pnb.js');
   assert.equal(byLocale.get('lah').pluralCategories.join(','), 'one,other');
   assert.equal(manifest.runtimeFallbacks.lah.resolvedLocale, 'en-US');
   assert.equal(loaderLocales.find((entry) => entry.locale === 'fil').importPath, '../translations/tl.js');

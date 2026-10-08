@@ -30,7 +30,7 @@ import {
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { canonicalIdentityList, isRecord } from '../retrieval-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -533,7 +533,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                     const chip = event.currentTarget as HTMLElement;
                     this.removeScope(
                       s,
-                      activeElementIn(chip.shadowRoot) !== null
+                      shadowFocusTarget(chip) !== null
                     );
                   }}
                   >${s}</lr-chip
@@ -548,7 +548,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                     const chip = event.currentTarget as HTMLElement;
                     this.removeFilter(
                       k,
-                      activeElementIn(chip.shadowRoot) !== null
+                      shadowFocusTarget(chip) !== null
                     );
                   }}
                   >${this.localize('retrievalFilterChipLabel', undefined, {

@@ -1,5 +1,4 @@
 import {
-  aTimeout,
   fixture,
   expect,
   html,
@@ -1424,7 +1423,7 @@ describe('submenu parent', () => {
     panelOf(item).shadowRoot!.querySelector('.submenu-surface') as HTMLElement;
 
   const settleLabel = async (item: LyraMenuItem): Promise<void> => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await item.updateComplete;
   };
 
@@ -2441,7 +2440,7 @@ describe('collecting already-slotted icon/details/suffix content without relying
       await el.updateComplete;
       // Give every real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial slotchange never fired');
       expect(
         intercepted,
         "a real browser does fire each rendered slot's initial slotchange -- this test suppresses all of them to reproduce happy-dom, which fires none"
@@ -2476,7 +2475,7 @@ describe('collecting already-slotted icon/details/suffix content without relying
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange(s) must actually have fired for this to prove anything about double-invocation'

@@ -1,10 +1,11 @@
+import { CSS_NUMBER_SOURCE } from './css-number.js';
 /** CSS's initial `font-size` (`medium`), used when a computed font size can't be read — a
  *  disconnected element has no computed style, so `getComputedStyle()` reports empty strings. */
 const FALLBACK_FONT_SIZE_PX = 16;
 
 /** A signed CSS `<number>` plus, optionally, one of the supported resolvable units.
  *  Exponent notation is deliberately excluded: `1e3px` is not a valid CSS length either. */
-const CSS_LENGTH_RE = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px|rem|em|vw|vh|%)?$/i;
+const CSS_LENGTH_RE = new RegExp(`^(${CSS_NUMBER_SOURCE})(px|rem|em|vw|vh|%)?$`, 'i');
 
 /** Explicit layout context used to resolve relative CSS lengths. */
 export interface ResolveCssLengthOptions {

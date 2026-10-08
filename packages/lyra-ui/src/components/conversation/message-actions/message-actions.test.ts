@@ -994,14 +994,14 @@ it("reveal-on-interaction binds to the closest lr-chat-message ancestor", async 
     // getComputedStyle() immediately after the triggering DOM mutation observes a mid-transition
     // value rather than the settled end value (the same class of race app-rail.test.ts documents
     // for its own transitioned transform), so wait past the transition duration first.
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await waitUntil(() => getComputedStyle(actions).opacity === "1", "the toolbar never finished fading in", { timeout: 3000 });
     expect(getComputedStyle(actions).opacity).to.equal("1");
     message.dispatchEvent(
       new PointerEvent("pointerleave", { bubbles: true, composed: true })
     );
     await actions.updateComplete;
     expect(actions.hasAttribute("data-revealed")).to.be.false;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await waitUntil(() => getComputedStyle(actions).opacity === "0", "the toolbar never finished fading out", { timeout: 3000 });
     expect(getComputedStyle(actions).opacity).to.equal("0");
   } finally {
     host.remove();
@@ -1508,6 +1508,7 @@ describe("reveal-on-interaction with a slotted menu", () => {
     );
     await sendMouse({ type: "move", position: [700, 580] });
     await waitUntil(() => !message.matches(":hover"), "the pointer left the message");
+    // wait-reason: asserts the menu stays open after the pointer leaves; absence window
     await aTimeout(50);
     expect(dropdown.open, "moving the pointer away does not close the menu").to.equal(true);
     expect(
@@ -1567,4 +1568,39 @@ it('continues navigation when a provider focus operation throws', async () => {
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
   base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
   expect(document.activeElement?.id).to.equal('focus-fallback');
+});
+
+it("ignores keys a slotted control already handled, that come from a text field, or from an open menu", async () => {
+  const el = (await fixture(html`
+    <lr-message-actions .controls=${["regenerate"]}>
+      <button id="handled" type="button">Handled</button>
+      <input id="field" value="hello" />
+      <div role="menu"><button id="menu-item" role="menuitem" type="button">Item</button></div>
+    </lr-message-actions>
+  `)) as LyraMessageActions;
+  await el.updateComplete;
+  await aTimeout(0);
+
+  const handled = el.querySelector<HTMLElement>("#handled")!;
+  handled.addEventListener("keydown", (event) => event.preventDefault());
+  handled.focus();
+  handled.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true, composed: true, cancelable: true }));
+  await aTimeout(0);
+  expect(document.activeElement === handled, "a handled key stays with its control").to.be.true;
+
+  const field = el.querySelector<HTMLInputElement>("#field")!;
+  field.focus();
+  const fieldKey = new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, composed: true, cancelable: true });
+  field.dispatchEvent(fieldKey);
+  await aTimeout(0);
+  expect(fieldKey.defaultPrevented).to.be.false;
+  expect(document.activeElement === field).to.be.true;
+
+  const item = el.querySelector<HTMLElement>("#menu-item")!;
+  item.focus();
+  const menuKey = new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, composed: true, cancelable: true });
+  item.dispatchEvent(menuKey);
+  await aTimeout(0);
+  expect(menuKey.defaultPrevented, "a menu item is not a roving stop").to.be.false;
+  expect(document.activeElement === item).to.be.true;
 });

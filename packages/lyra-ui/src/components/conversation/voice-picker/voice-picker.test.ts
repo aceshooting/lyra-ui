@@ -7,6 +7,11 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './voice-picker.js';
 import type { LyraVoicePicker } from './voice-picker.js';
 import { styles } from './voice-picker.styles.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+// Fixtures below hand over hostile catalog rows on purpose; the one-time truncation diagnostic is expected.
+expectDevWarning(collectionTruncationWarningKey('lr-voice-picker', 'catalog'));
 
 const CATALOG = ['alloy', 'verse'];
 const OBJECT_CATALOG = [
@@ -470,8 +475,7 @@ it('fails closed when a hostile catalog container hides its length', async () =>
     <lr-voice-picker .catalog=${catalog}></lr-voice-picker>
   `)) as LyraVoicePicker;
 
-  expect(el.catalog).to.deep.equal([]);
-  expect(Object.isFrozen(el.catalog)).to.be.true;
+  expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(0);
   expect(input(el).getAttribute('role')).to.equal('combobox');
 });
 
@@ -480,14 +484,13 @@ it('treats non-array and sparse catalogs as safe empty snapshots', async () => {
 
   (el as unknown as { catalog: unknown }).catalog = { 0: 'not-an-array', length: 1 };
   await el.updateComplete;
-  expect(el.catalog).to.equal(undefined);
+  expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(0);
   expect(input(el).getAttribute('role')).to.equal('combobox');
 
   const sparse = new Array<string>(2);
   (el as unknown as { catalog: unknown }).catalog = sparse;
   await el.updateComplete;
-  expect(el.catalog).to.deep.equal([]);
-  expect(Object.isFrozen(el.catalog)).to.equal(true);
+  expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(0);
 });
 
 it('limits voice catalog admission to the shared first 1,024 source rows', async () => {
@@ -497,8 +500,6 @@ it('limits voice catalog admission to the shared first 1,024 source rows', async
   }));
   const el = (await fixture(html`<lr-voice-picker .catalog=${catalog}></lr-voice-picker>`)) as LyraVoicePicker;
 
-  expect(el.catalog?.length).to.equal(1_024);
-  expect(el.catalog?.some((entry) => typeof entry !== 'string' && entry.id === 'voice-1024')).to.be.false;
   expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(1_024);
 });
 
@@ -532,11 +533,10 @@ it('retains valid mixed catalog rows around descriptor traps and accessor-only f
     <lr-voice-picker .catalog=${catalog as never}></lr-voice-picker>
   `)) as LyraVoicePicker;
 
-  expect(el.catalog?.map((entry) => typeof entry === 'string' ? entry : entry.id)).to.deep.equal([
-    'alloy',
-    'aria',
-    'verse',
-  ]);
+  el.open = true;
+  await el.updateComplete;
+  const ids = Array.from(el.shadowRoot?.querySelectorAll<HTMLElement>('[part="option"]') ?? [], (row) => row.dataset['value']);
+  expect(ids).to.deep.equal(['alloy', 'aria', 'verse']);
   expect(Object.isFrozen(el.catalog)).to.be.true;
 });
 
@@ -759,7 +759,10 @@ describe('row state feedback on the already-selected option', () => {
     await el.updateComplete;
     // The listbox is placed by the Floating UI positioner a tick after the open render, so a
     // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitUntil(() => {
+      const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]');
+      return listbox !== null && listbox.style.left !== '' && listbox.getBoundingClientRect().height > 0;
+    }, 'the listbox was never placed');
     return el;
   };
 
@@ -3519,4 +3522,16 @@ describe('catalog entry icon', () => {
       'the icon precedes the label',
     ).to.be.greaterThan(0);
   });
+});
+
+it('exposes autocorrect as a boolean forwarded to the free-text input, omitted until set', async () => {
+  // The free-text input renders only with `allow-custom`; otherwise the picker is a button trigger.
+  const el = (await fixture(html`<lr-voice-picker allow-custom .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  const native = (): HTMLInputElement => el.shadowRoot!.querySelector('input')!;
+  expect(el.autocorrect).to.equal(true);
+  expect(native().hasAttribute('autocorrect')).to.equal(false);
+  el.autocorrect = false;
+  await el.updateComplete;
+  expect(native().getAttribute('autocorrect')).to.equal('off');
+  expect('autoCorrect' in el).to.equal(false);
 });

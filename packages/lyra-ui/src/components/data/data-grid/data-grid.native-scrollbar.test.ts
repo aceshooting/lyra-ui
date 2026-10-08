@@ -230,6 +230,8 @@ it('keeps pinned header, body, and footer columns aligned after a physical horiz
       // A press on the track can page immediately and later auto-repeat. Keep the pointer still
       // through a generous native repeat window, so only subsequent held-pointer movement can
       // account for the trusted scroll below.
+      // wait-reason: the pointer must stay still through a native track auto-repeat window, so
+      // the absence of any scroll change is the assertion
       await new Promise<void>((resolve) => setTimeout(resolve, 700));
       expect(
         Math.abs(logicalOffset() - offsetBeforePointerDown),

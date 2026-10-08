@@ -54,3 +54,10 @@ export const RightToLeft: StoryObj = {
     <lr-tag variant="success" with-remove pill>جاهز</lr-tag>
   </div>`,
 };
+
+export const Disabled: StoryObj = {
+  name: 'Disabled',
+  render: () => html`<div style=${row}>
+    <lr-tag variant="brand" with-remove disabled>locked</lr-tag>
+  </div>`,
+};

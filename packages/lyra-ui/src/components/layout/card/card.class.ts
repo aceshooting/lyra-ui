@@ -1,6 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
@@ -238,7 +238,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
       this.semanticFocusOrigin =
         previous !== null &&
         previous.localName !== nextKind &&
-        activeElementIn(this.shadowRoot) === previous
+        shadowFocusTarget(this) === previous
           ? previous
           : undefined;
     }
@@ -251,7 +251,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.semanticFocusOrigin = undefined;
     if (!focusOrigin) return;
     this.scheduleAfterUpdate(() => {
-      const internalActive = activeElementIn(this.shadowRoot);
+      const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       if (
         (internalActive !== null && internalActive !== focusOrigin) ||

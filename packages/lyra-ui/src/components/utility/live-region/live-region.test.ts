@@ -299,6 +299,7 @@ it('cancels a pending announcement on disconnect so it never lands after removal
   el.announce('too late');
   el.remove();
 
+  // wait-reason: negative assertion, a pending announcement must not flush after disconnect (outlasts the 30ms throttle)
   await new Promise((resolve) => setTimeout(resolve, 90));
   expect(region.textContent, 'a disconnected region must not still flush').to.equal('');
   expect(sinkElement('polite') === null, 'and must not resurrect a sink').to.be.true;

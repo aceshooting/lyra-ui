@@ -11,22 +11,17 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
-import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolGlyph, toolStatusIcon } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolGlyph, toolStatusIcon, type ToolStatus } from '../tool-status.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_maximize, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** Same status vocabulary as `<lr-tool-call-chip>`, including `incomplete` for a call that ended
- *  without a result. */
-export type ToolResultStatus = LyraToolStatus | 'incomplete';
 
 /**
  * Reason the dialog was dismissed, forwarded as the `lr-close` event
@@ -74,7 +69,7 @@ function shrinkIcon(): SVGTemplateResult {
 // The status glyphs and label keys are shared with `<lr-tool-call-chip>`, `<lr-tool-timeline>` and
 // `<lr-tool-call-block>` (../tool-status.ts), so a call reads identically wherever it is shown.
 
-const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolResultStatus>(TOOL_CALL_STATUSES, 'pending');
+const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES, 'pending');
 
 /**
  * `<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/
@@ -212,15 +207,15 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
    * assignment from an untyped caller) normalizes and reflects as `'pending'`.
    */
   @property({ reflect: true, converter: TOOL_RESULT_DIALOG_STATUS })
-  get status(): ToolResultStatus {
+  get status(): ToolStatus {
     return this.statusValue;
   }
-  set status(next: ToolResultStatus) {
+  set status(next: ToolStatus) {
     const old = this.statusValue;
     this.statusValue = TOOL_RESULT_DIALOG_STATUS.normalizeReflected(this, 'status', next);
     this.requestUpdate('status', old);
   }
-  private statusValue: ToolResultStatus = 'pending';
+  private statusValue: ToolStatus = 'pending';
 
   /** How long the call took, in milliseconds. Omitted from the header entirely when unset. */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.

@@ -299,16 +299,17 @@ export type LyraAfterExpandEvent =
   | LyraTreeItemEventMap['lr-after-expand'];
 
 /**
- * `lr-after-hide` — dispatched by 15 components: `<lr-alert>`, `<lr-color-picker>`,
- * `<lr-combobox>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`,
- * `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
- * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 13, e.g.
+ * `lr-after-hide` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`,
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 14, e.g.
  * `LyraAlertEventMap['lr-after-hide']`.
  */
 export type LyraAfterHideEvent =
   | LyraAlertEventMap['lr-after-hide']
   | LyraColorPickerEventMap['lr-after-hide']
   | LyraComboboxEventMap['lr-after-hide']
+  | LyraCommandPaletteEventMap['lr-after-hide']
   | LyraContextMenuEventMap['lr-after-hide']
   | LyraDateInputEventMap['lr-after-hide']
   | LyraDetailsEventMap['lr-after-hide']
@@ -321,16 +322,17 @@ export type LyraAfterHideEvent =
   | LyraTooltipEventMap['lr-after-hide'];
 
 /**
- * `lr-after-show` — dispatched by 15 components: `<lr-alert>`, `<lr-color-picker>`,
- * `<lr-combobox>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`,
- * `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
- * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 13, e.g.
+ * `lr-after-show` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`,
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
+ * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 14, e.g.
  * `LyraAlertEventMap['lr-after-show']`.
  */
 export type LyraAfterShowEvent =
   | LyraAlertEventMap['lr-after-show']
   | LyraColorPickerEventMap['lr-after-show']
   | LyraComboboxEventMap['lr-after-show']
+  | LyraCommandPaletteEventMap['lr-after-show']
   | LyraContextMenuEventMap['lr-after-show']
   | LyraDateInputEventMap['lr-after-show']
   | LyraDetailsEventMap['lr-after-show']
@@ -978,10 +980,13 @@ export type LyraDatumVisibilityChangeEvent = LyraChartEventMap['lr-datum-visibil
 export type LyraDatumVisibilityChangeRequestEvent = LyraChartEventMap['lr-datum-visibility-change-request'];
 
 /**
- * `lr-decision-settled` — dispatched by `<lr-confirm-bar>`; detail
+ * `lr-decision-settled` — dispatched by 2 components: `<lr-confirm-bar>`,
+ * `<lr-tool-approval-dialog>`; detail union of 2, e.g.
  * `LyraConfirmBarEventMap['lr-decision-settled']`.
  */
-export type LyraDecisionSettledEvent = LyraConfirmBarEventMap['lr-decision-settled'];
+export type LyraDecisionSettledEvent =
+  | LyraConfirmBarEventMap['lr-decision-settled']
+  | LyraToolApprovalDialogEventMap['lr-decision-settled'];
 
 /**
  * `lr-deny-request` — dispatched by 2 components: `<lr-confirm-bar>`, `<lr-tool-approval-dialog>`;
@@ -1404,16 +1409,17 @@ export type LyraGroupToggleRequestEvent = LyraThreadListEventMap['lr-group-toggl
 export type LyraHiddenTypesChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change'];
 
 /**
- * `lr-hide` — dispatched by 17 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
- * `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`,
- * `<lr-drawer>`, `<lr-dropdown>`, `<lr-export-button>`, `<lr-lightbox>`, `<lr-popover>`,
- * `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 14, e.g.
- * `LyraAlertEventMap['lr-hide']`.
+ * `lr-hide` — dispatched by 18 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-date-input>`,
+ * `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-export-button>`,
+ * `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`,
+ * `<lr-tooltip>`; detail union of 15, e.g. `LyraAlertEventMap['lr-hide']`.
  */
 export type LyraHideEvent =
   | LyraAlertEventMap['lr-hide']
   | LyraColorPickerEventMap['lr-hide']
   | LyraComboboxEventMap['lr-hide']
+  | LyraCommandPaletteEventMap['lr-hide']
   | LyraContextMenuEventMap['lr-hide']
   | LyraDateInputEventMap['lr-hide']
   | LyraDetailsEventMap['lr-hide']

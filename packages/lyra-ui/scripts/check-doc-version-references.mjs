@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isMainModule } from './is-main-module.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 const defaultRepoRoot = path.resolve(defaultPackageDir, '..', '..');
@@ -16,11 +17,7 @@ const PLUGIN_DOC_ROOTS = Object.freeze([
 ]);
 
 function walkDocumentation(directory, files = []) {
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) walkDocumentation(entryPath, files);
-    else if (entry.isFile() && /\.(?:md|txt)$/i.test(entry.name)) files.push(entryPath);
-  }
+  files.push(...walk(directory).filter((file) => /\.(?:md|txt)$/i.test(file)));
   return files;
 }
 

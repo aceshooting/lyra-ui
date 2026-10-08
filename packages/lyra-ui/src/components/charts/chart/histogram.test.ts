@@ -1,3 +1,4 @@
+import type { CSSResult, CSSResultOrNative } from 'lit';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './histogram.js';
 // Registers the real shipped `de` catalog's `shared` and `charts` slices (a side effect, like every
@@ -274,4 +275,15 @@ it('exports and reports plain bucket labels without invisible isolate controls',
   expect(el.labels.length).to.equal(2);
   expect(el.labels.filter((label) => /[\u2066-\u2069]/u.test(label))).to.deep.equal([]);
   expect(/[\u2066-\u2069]/u.test(el.exportData('csv'))).to.equal(false);
+});
+
+it('does not statically bundle the sync-group chrome styles', () => {
+  type StyleEntry = CSSResultOrNative | readonly StyleEntry[];
+  const sheets: string[] = [];
+  const collect = (entry: StyleEntry): void => {
+    if (Array.isArray(entry)) entry.forEach(collect);
+    else if ('cssText' in entry) sheets.push((entry as CSSResult).cssText);
+  };
+  collect((customElements.get('lr-histogram') as typeof LyraHistogram).styles ?? []);
+  expect(sheets.some((cssText) => cssText.includes('sync-crosshair'))).to.be.false;
 });

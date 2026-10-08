@@ -3,6 +3,7 @@ import type { LitElement } from 'lit';
 import { tag, defineElement } from './prefix.js';
 import { FormControlController } from './form-control-controller.js';
 import { LyraElement } from './lyra-element.js';
+import { LyraFormControlElement } from './form-control-element.js';
 import { VALIDITY_ANCHOR } from './anchored-validity.js';
 import { LyraCheckbox } from '../components/forms/checkbox/checkbox.js';
 import '../components/forms/switch/switch.js';
@@ -86,6 +87,24 @@ for (const name of controls) {
       control.name = '';
       expect(control.hasAttribute('name')).to.equal(false);
     }
+  });
+}
+
+for (const name of controls.filter((entry) => entry !== 'input')) {
+  it(`${name} reads the native form surface from the shared base instead of its own copy`, async () => {
+    const control = document.createElement(tag(name)) as unknown as Control & { labels: NodeList; getForm(): HTMLFormElement | null };
+    if (name === 'locale-picker') control.setAttribute('without-flags', '');
+    const form = await fixture<HTMLFormElement>(html`<form></form>`);
+    form.append(control);
+    await control.updateComplete;
+    expect(control instanceof LyraFormControlElement).to.equal(true);
+    const own = Object.getPrototypeOf(control);
+    for (const member of ['getForm', 'labels', 'validity', 'validationMessage', 'willValidate']) {
+      expect(Object.prototype.hasOwnProperty.call(own, member), `${name}.${member}`).to.equal(false);
+    }
+    expect(control.getForm() === form).to.equal(true);
+    expect(control.labels.length).to.equal(0);
+    expect(control.validity === (control as unknown as { internals: ElementInternals }).internals.validity).to.equal(true);
   });
 }
 

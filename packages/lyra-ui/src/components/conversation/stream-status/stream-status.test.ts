@@ -1,6 +1,7 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { fixture as renderFixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
+import { fixture as renderFixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
 import './stream-status.js';
 import '../../utility/live-region/live-region.js';
 import type { LyraStreamStatus } from './stream-status.js';
@@ -122,6 +123,7 @@ it('treats recordActivity() as a no-op while idle or connecting -- never throws,
   await el.updateComplete;
   expect(() => el.recordActivity()).to.not.throw();
 
+  // wait-reason: asserts no self-transition occurs within a window several times the 40ms stall threshold
   await aTimeout(150);
   expect(el.phase, 'idle/connecting must never self-transition to stalled').to.equal('connecting');
   expect(stalled).to.be.false;
@@ -140,16 +142,18 @@ it('recordActivity() while streaming resets the stall deadline instead of just r
   let stalled = false;
   el.addEventListener('lr-stall', () => (stalled = true));
 
+  // wait-reason: real stall-threshold timing: reset must push the 120ms deadline out
   await aTimeout(70);
   el.recordActivity(); // pushes the 120ms deadline out from here
 
+  // wait-reason: still under the reset deadline; elapsed-time semantics
   await aTimeout(70); // 140ms since mount, but only 70ms since the reset -- still under threshold
   expect(el.phase, 'the reset must have pushed the deadline out, not just tracked elapsed time').to.equal(
     'streaming',
   );
   expect(stalled).to.be.false;
 
-  await aTimeout(120); // now well past 120ms since the last recordActivity()
+  await waitUntil(() => stalled, 'lr-stall must fire once the reset deadline passes', { timeout: 2000 });
   expect(el.phase).to.equal('stalled');
   expect(stalled).to.be.true;
 });
@@ -167,7 +171,7 @@ it('re-arms the stall timer with the new deadline the moment stallThresholdMs ch
   el.stallThresholdMs = 40;
   await el.updateComplete;
 
-  await aTimeout(120);
+  await waitUntil(() => stalled, 'a shortened stall-threshold-ms must apply immediately', { timeout: 2000 });
   expect(
     stalled,
     'a shortened stall-threshold-ms must apply immediately, not on the next recordActivity()/phase change',
@@ -200,6 +204,7 @@ it('clears the stall timer when the host reassigns connectionState away from str
   el.connectionState = 'idle';
   await el.updateComplete;
 
+  // wait-reason: asserts a cleared timer never fires after the threshold would have elapsed
   await aTimeout(150);
   expect(stalled, 'a stale timer scheduled before the reassignment must not still fire').to.be.false;
   expect(el.phase).to.equal('idle');
@@ -433,6 +438,7 @@ it('clears the stall timer on disconnect so it cannot fire on a detached element
   el.addEventListener('lr-stall', () => (stalled = true));
 
   el.remove();
+  // wait-reason: asserts a disconnected element never stalls after the threshold would have elapsed
   await aTimeout(150);
   expect(stalled, 'a disconnected element must not still transition to stalled').to.be.false;
 });
@@ -475,7 +481,7 @@ it('re-arms the stall timer on reconnect while still "streaming", e.g. after bei
   parent.removeChild(el);
   parent.appendChild(el);
 
-  await aTimeout(220);
+  await waitUntil(() => stalled, 'reconnecting must resume stall detection', { timeout: 2000 });
   expect(stalled, 'reconnecting mid-stream must resume stall detection, not leave it disarmed').to.be.true;
   expect(el.phase).to.equal('stalled');
 });
@@ -565,6 +571,7 @@ it('does not arm a stall timer on connect while phase is not "streaming"', async
   parent.removeChild(el);
   parent.appendChild(el);
 
+  // wait-reason: asserts no stall while idle after reparenting, past the 40ms threshold
   await aTimeout(80);
   expect(stalled).to.be.false;
   expect(el.phase).to.equal('idle');
@@ -576,6 +583,7 @@ it('never arms a timer for a non-positive stall-threshold-ms', async () => {
   )) as LyraStreamStatus;
   let stalled = false;
   el.addEventListener('lr-stall', () => (stalled = true));
+  // wait-reason: asserts a non-positive threshold never arms a timer
   await aTimeout(80);
   expect(stalled).to.be.false;
   expect(el.phase).to.equal('streaming');
@@ -591,6 +599,7 @@ it('caps an absurdly large stall-threshold-ms at the browser timer ceiling inste
   )) as LyraStreamStatus;
   let stalled = false;
   el.addEventListener('lr-stall', () => (stalled = true));
+  // wait-reason: asserts an uncapped delay would have fired by now; it must not
   await aTimeout(80);
   expect(stalled, 'an uncapped delay would have overflowed and fired within a few ms').to.be.false;
   expect(el.phase).to.equal('streaming');
@@ -614,15 +623,6 @@ it('is accessible while stalled with slotted message and actions', async () => {
 describe('phase-dot cssprop escape hatches', () => {
   const indicator = (el: LyraStreamStatus): HTMLElement =>
     el.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
-
-  const resolvedInShadow = (el: LyraStreamStatus, declaration: string, property: string): string => {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  };
 
   it('inherits dot color and opacity from an ancestor in a phase with its own defaults', async () => {
     const wrapper = (await fixture(html`
@@ -670,15 +670,6 @@ describe('stalled-row cssprop escape hatches', () => {
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const message = (el: LyraStreamStatus): HTMLElement =>
     el.shadowRoot!.querySelector('[part="message"]') as HTMLElement;
-
-  const resolvedInShadow = (el: LyraStreamStatus, declaration: string, property: string): string => {
-    const probe = document.createElement('span');
-    probe.setAttribute('style', declaration);
-    el.shadowRoot!.appendChild(probe);
-    const value = getComputedStyle(probe).getPropertyValue(property);
-    probe.remove();
-    return value;
-  };
 
   it('lets --lr-stream-status-stalled-bg override the base row background while stalled', async () => {
     const el = (await fixture(html`
@@ -817,6 +808,7 @@ it('stops stall detection during interruption and localizes resume without chang
   await el.updateComplete;
   el.recordActivity();
   el.markStalled();
+  // wait-reason: asserts stale timers do not alter interrupted phase after the 20ms threshold
   await aTimeout(80);
   expect(el.phase).to.equal('interrupted');
   expect(el.shadowRoot!.querySelector('[part="phase"]')?.textContent).to.equal('Interrompu');

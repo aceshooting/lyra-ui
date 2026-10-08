@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: '音量',
   videoCaptions: '字幕',
   videoCaptionsOff: '關閉',
-  videoPlaybackSpeed: '播放速度',
   videoPictureInPicture: '進入畫中畫',
   videoExitPictureInPicture: '退出畫中畫',
   videoEnterFullscreen: '進入全屏',

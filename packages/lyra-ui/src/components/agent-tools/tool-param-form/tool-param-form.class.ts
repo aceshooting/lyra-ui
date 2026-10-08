@@ -10,6 +10,7 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -44,6 +45,11 @@ installFormControlLabelSupport();
 
 /** A single-choice selection error names its choices only up to this many. */
 const MAX_LISTED_CHOICES = 10;
+
+function sameErrors(left: Record<string, string>, right: Record<string, string>): boolean {
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => left[key] === right[key]);
+}
 
 export interface LyraToolParamFormEventMap {
   'lr-invalid': CustomEvent<null>;
@@ -188,7 +194,7 @@ export interface LyraToolParamFormEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
+export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -309,22 +315,6 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
   }
-  /** Returns the browser-resolved owning form, including an external owner selected by `form`. */
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
-  }
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | undefined {
@@ -400,7 +390,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   /** Blurs whichever nested field currently holds focus. */
   override blur(): void {
-    const active = deepActiveElementIn(this.shadowRoot);
+    const active = deepActiveElementIn(this.isConnected ? this.shadowRoot : null);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -896,7 +886,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       formValue = null;
     }
     this._effectiveValue = effective;
-    if (JSON.stringify(this._errors) !== JSON.stringify(errors)) this._errors = errors;
+    if (!sameErrors(this._errors, errors)) this._errors = errors;
     this._formError = formError;
     this._validityFlags = flags;
     this.syncInternals(formValue);

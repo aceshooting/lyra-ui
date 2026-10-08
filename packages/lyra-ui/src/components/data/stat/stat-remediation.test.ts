@@ -139,3 +139,12 @@ it('merges an authored rel with the target guard and drops opener', async () => 
   await el.updateComplete;
   expect(anchor.getAttribute('rel')).to.equal('nofollow');
 });
+
+it('does not schedule an update when the same rows array or strings object is re-assigned', async () => {
+  const rows = [{ label: 'A', value: '1' }];
+  const strings = { zero: 'x' } as never;
+  const element = await fixture<LyraStat>(html`<lr-stat .rows=${rows} .strings=${strings}></lr-stat>`);
+  element.rows = rows;
+  element.strings = strings;
+  expect(element.isUpdatePending).to.equal(false);
+});

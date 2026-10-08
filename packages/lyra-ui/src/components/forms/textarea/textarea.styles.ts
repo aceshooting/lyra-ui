@@ -3,6 +3,7 @@ import { css } from 'lit';
 import {
   formControlTextWrap,
   formControlChrome,
+  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -24,8 +25,8 @@ export const styles = css`
     --_lr-textarea-font-size: var(--lr-form-control-font-size);
     --_lr-textarea-radius: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; the mapped default is outlined. */
-    --_lr-textarea-fill: var(--lr-color-surface);
-    --_lr-textarea-border-color: var(--lr-color-border);
+    --_lr-textarea-fill: var(--_lr-form-control-fill);
+    --_lr-textarea-border-color: var(--_lr-form-control-border-color);
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this field. */
@@ -37,32 +38,7 @@ export const styles = css`
   :host([pill]) {
     --_lr-textarea-radius: var(--lr-radius-pill);
   }
-  :host([appearance="filled-outlined"]) {
-    --_lr-textarea-fill: var(--lr-color-surface-raised);
-    --_lr-textarea-border-color: var(--lr-color-border);
-  }
-  :host([appearance="outlined"]) {
-    --_lr-textarea-fill: var(--lr-color-surface);
-    --_lr-textarea-border-color: var(--lr-color-border);
-  }
-  :host([appearance="filled"]) {
-    --_lr-textarea-fill: var(--lr-color-surface-raised);
-    --_lr-textarea-border-color: transparent;
-  }
-  :host([filled]) {
-    --_lr-textarea-fill: var(--lr-color-surface-raised);
-    --_lr-textarea-border-color: transparent;
-  }
-  :host([appearance="plain"]) {
-    --_lr-textarea-fill: transparent;
-    --_lr-textarea-border-color: transparent;
-  }
-  /* Quiet brand tint as the fill, loud brand only on the border -- same reasoning as lr-input's
-     accent tier: the user's own text has to stay legible on it. */
-  :host([appearance="accent"]) {
-    --_lr-textarea-fill: var(--lr-color-brand-quiet);
-    --_lr-textarea-border-color: var(--lr-color-brand);
-  }
+    ${formControlAppearance}
   [part="form-control"] {
     display: flex;
     flex-direction: column;

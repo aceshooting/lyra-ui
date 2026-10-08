@@ -17,6 +17,7 @@
     "allowUnusedLabels": false,
     "noImplicitOverride": true,
     "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
     "noUncheckedSideEffectImports": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,

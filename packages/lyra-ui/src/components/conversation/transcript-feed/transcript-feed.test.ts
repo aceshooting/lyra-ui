@@ -732,3 +732,16 @@ it('never announces the entries it was mounted with -- only captions that finali
   await el.updateComplete;
   expect(sinkMessages()).to.deep.equal(['brand new']);
 });
+
+it('normalizes the entry list once per entries assignment, not once per read', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  const internals = el as unknown as { normalizedEntries: LyraTranscriptEntry[] };
+  el.entries = [{ id: 'a', text: 'one' }, { id: 'a', text: 'dup' }, { id: 'b', text: 'two' }] as LyraTranscriptEntry[];
+  await el.updateComplete;
+  const first = internals.normalizedEntries;
+  expect(first.map((entry) => entry.id)).to.deep.equal(['a', 'b']);
+  expect(internals.normalizedEntries === first, 'same list reused for the same source').to.be.true;
+  el.entries = [{ id: 'c', text: 'three' }] as LyraTranscriptEntry[];
+  await el.updateComplete;
+  expect(internals.normalizedEntries.map((entry) => entry.id)).to.deep.equal(['c']);
+});

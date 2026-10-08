@@ -86,18 +86,19 @@ for data-heavy and streaming applications.
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent web components for Lit, React, Vue, Angular, Svelte, and plain JavaScript. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) |
 | [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lr-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
 | [`packages/lyra-docs`](./packages/lyra-docs) | Experimental DOCX editor companion with an optional document engine; document viewers stay in `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-docs)](https://www.npmjs.com/package/@aceshooting/lyra-docs) | See the [package README](./packages/lyra-docs/README.md) |
+| [`packages/lyra-ide`](./packages/lyra-ide) | Editor data (Custom Elements Manifest, JetBrains web-types, VS Code HTML/CSS custom data), versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide) | *n/a — JSON data* |
+| [`packages/lyra-translations`](./packages/lyra-translations) | The 66 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
 
 See each package's own README for full install/usage details.
 
 ## Quick Start
 
-### Quick start prompt
+### Use with AI coding agents
 
-Paste this into Claude or Codex:
-
-```text
-Install the Lyra UI skill from GitHub aceshooting/lyra-ui. Start a Lit app with Vite+ and lyra-ui, following the skill.
-```
+Run `npx lyra-ui init-agents` in your project (add `--agent <name>` if not auto-detected, `--json` for machine-readable
+output) to install the bundled `lyra-ui` and `compose-lyra-interfaces` skills for Claude Code, Codex, OpenCode, Cursor,
+Gemini CLI, GitHub Copilot, Amp and Windsurf; re-running is safe. Options and the marketplace route:
+[package README](./packages/lyra-ui/README.md#quick-start) and [Codex and Claude Code plugin](#codex-and-claude-code-plugin).
 
 ### Manual setup
 
@@ -119,14 +120,9 @@ import '@aceshooting/lyra-ui/components/lr-option.js';
 
 Per-component optional peers and the tree-shakeable import patterns:
 [`packages/lyra-ui/README.md#install`](./packages/lyra-ui/README.md#install).
-For new apps, the [Lyra signature starter](./packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter)
-combines Shadcn, glass, Emerald, theme-aware spotlights, compact gemstones and country-flag language
-controls, while preserving saved preferences and explicit branding. Shadcn/Glass/Emerald/System
-with comfortable density is the built-in profile. Select `look: 'lyra'`, `surface: 'solid'`,
-and `accent: null` explicitly to retain the earlier appearance.
-For arbitrary server/CMS markup, the optional guarded loader discovers only rendered tags and has a
-separate ESM-CDN auto-start entry:
-[`packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry`](./packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry).
+For new apps, start from the [Lyra signature starter](./packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter);
+for arbitrary server/CMS markup, use the guarded
+[autoloader](./packages/lyra-ui/README.md#optional-autoloader-and-cdn-entry).
 
 🔗 **[Open in StackBlitz](https://stackblitz.com/github/aceshooting/lyra-ui)** — try it in-browser, no local install.
 
@@ -148,31 +144,20 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Highlights
 
-- **Six composable looks:** Lyra, shadcn, Material, data, terminal and high contrast, with
-  independent solid/glass surfaces, density, mode and gemstone or custom accents. Additional looks
-  and styling options load only when imported.
-- **Documentation theme builder:** preview real controls, import and export validated presets,
-  inspect contrast, and edit typography, motion, shape, elevation and chart palettes.
-- **Navigation and actions:** context menus, menubars, navigation menus, pressed toggles and toggle
-  groups; app-rail sidebar controls, shortcuts and persistence; multi-split external launchers.
-- **Conversation UI:** progressive Markdown, code headers with copy controls, scrollable GFM tables,
-  styled task lists, and expandable tool-call blocks.
-- **Overlay placement:** opt-in browser top-layer popups for tooltips, selectors, navigation menus
-  and app-rail labels inside fixed headers and other stacking contexts.
-- **Progress and refresh:** incomplete task and trace states, optional polling refresh and
-  random-content next actions, and public graph framing controls.
-- **Localization and styling:** 66 optional complete translation catalogs plus built-in English, typography
-  utilities, and separate decorative and control-border tokens.
+- **Six composable looks** (Lyra, shadcn, Material, data, terminal, high contrast) with independent solid/glass
+  surfaces, density, mode and accent, plus a documentation theme builder for validated presets.
+- **Conversation UI:** progressive Markdown, code headers with copy controls, scrollable GFM tables, task lists and
+  expandable tool-call blocks.
+- **Navigation and overlays:** context menus, menubars, navigation menus, toggles, app-rail and multi-split, with
+  opt-in browser top-layer popups.
+- **Localization:** 66 optional translation catalogs plus built-in English.
 
-See the [feature guide](./packages/lyra-ui/README.md#highlights) for APIs and examples.
-The [roadmap](./docs/roadmap.md) tracks future scope and historical release commitments, including
-[native document editing](./docs/roadmap/document-editing.md). Its
-[rollout page](./docs/roadmap/post-v24-rollout.md) covers website, admin and consumer work.
-For version-by-version changes and older upgrades, use the
-[package changelog](./packages/lyra-ui/CHANGELOG.md).
-Upgrading to v23? Review the [compatibility and sizing changes](./packages/lyra-ui/README.md#upgrading-to-v23)
-before updating existing layouts.
-Upgrading to v24? Follow the [project migration and cleanup guide](./packages/lyra-ui/llms/shared/v23-to-v24-migration.md).
+The [feature guide](./packages/lyra-ui/README.md#highlights) has APIs and examples; the [roadmap](./docs/roadmap.md)
+records shipped releases and open work, including [native document editing](./docs/roadmap/document-editing.md).
+Version history and older upgrades: [package changelog](./packages/lyra-ui/CHANGELOG.md). Upgrading to
+[v23](./packages/lyra-ui/README.md#upgrading-to-v23), [v24](./packages/lyra-ui/llms/shared/v23-to-v24-migration.md) or
+[v27](./packages/lyra-ui/README.md#upgrading-to-v27)? Editor data moved to [`@aceshooting/lyra-ide`](./packages/lyra-ide)
+and locale catalogs to [`@aceshooting/lyra-translations`](./packages/lyra-translations).
 
 ## Principles & Guidelines
 
@@ -219,23 +204,13 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-Every one of the 308 tags is built on the same three guarantees — not opt-in per component:
-
-- **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
-  no per-component theming API to learn. A ready-made light/dark base ships as `theme.css`; optional
-  `looks/*.css`, surface and density sheets provide additional choices. The independent style API
-  supports scoped switching and persistence while keeping look, surface, density, mode and accent
-  separate. The [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)
-  shows the required imports and shadow-root setup.
-- **Internationalization** via a small runtime (`registerLyraLocale`/`setLyraLocale`, or a
-  per-instance `.strings` override) — every built-in string (labels, announcements, aria-labels)
-  is translatable without a rebuild or a per-locale bundle.
-- **RTL** with zero per-component opt-in — set `dir="rtl"` anywhere up the tree and every component
-  mirrors its layout and keyboard navigation to match. `lang` selects locale data; it does not
-  silently change writing direction.
-
-See [`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl)
-for the full usage details.
+All 308 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (a light/dark
+base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
+[styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)),
+**internationalization** through one runtime (`registerLyraLocale`/`setLyraLocale` or a per-instance `.strings`
+override, no rebuild), and **RTL** with zero opt-in (`dir="rtl"` anywhere up the tree mirrors layout and keyboard
+navigation; `lang` never changes direction). Usage details:
+[`packages/lyra-ui/README.md#theming-internationalization--rtl`](./packages/lyra-ui/README.md#theming-internationalization--rtl).
 
 ## Framework integration (React, Vue, Angular, Svelte)
 
@@ -252,25 +227,11 @@ import type {} from '@aceshooting/lyra-ui/custom-elements-jsx';
 </lr-combobox>
 ```
 
-```vue
-<!-- Vue -->
-<lr-combobox label="Fruit" @lr-change="onChange" />
-```
+Vue uses `@lr-change="onChange"`, Angular `(lr-change)="onChange($event)"` plus `schemas: [CUSTOM_ELEMENTS_SCHEMA]`,
+and Svelte 5 `onlr-change={onChange}`.
 
-```html
-<!-- Angular — module/component needs schemas: [CUSTOM_ELEMENTS_SCHEMA] -->
-<lr-combobox label="Fruit" (lr-change)="onChange($event)"></lr-combobox>
-```
-
-```svelte
-<!-- Svelte -->
-<lr-combobox label="Fruit" on:lr-change={onChange} />
-```
-
-React/JSX, Vue, and Svelte each have an opt-in, type-only declaration entry generated from the same
-Custom Elements Manifest; they add template/ref/event/CSS-property types without a runtime wrapper
-or tag registration. Property-vs-attribute binding, Angular's `CUSTOM_ELEMENTS_SCHEMA`, and
-event-name casing notes:
+React/JSX, Vue, and Svelte each have an opt-in, type-only declaration entry (no runtime wrapper, no tag
+registration). Property-vs-attribute binding and event-name casing notes:
 [`packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte`](./packages/lyra-ui/README.md#framework-integration-react-vue-angular-svelte).
 Complete React 19, Vue, and Svelte Vite applications live in
 [`examples/frameworks/`](./examples/frameworks/); each is typechecked and production-built against
@@ -278,15 +239,11 @@ the packed package.
 
 ## SSR & Declarative Shadow DOM
 
-Root and granular component imports are server-safe. Lyra ships a tested `@lit-labs/ssr` support
-matrix: compatible components emit Declarative Shadow DOM and hydrate in place, while components
-that need browser DOM during their first render use an explicit host-and-light-DOM fallback before
-rendering on upgrade. On the server, register the components used by the rendered page and use
-Lyra's SSR helpers from `@aceshooting/lyra-ui/ssr.js`. In the browser, import
-`@aceshooting/lyra-ui/hydration.js` before component registrations or other Lit imports, then
-register only the tags the page uses. See
-[`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom)
-for the renderer setup, machine-readable matrix, diagnostics, and capability limits.
+Root and granular component imports are server-safe. A tested `@lit-labs/ssr` support matrix emits Declarative Shadow
+DOM and hydrates in place for compatible components; the rest use an explicit host-and-light-DOM fallback. Use the
+helpers from `@aceshooting/lyra-ui/ssr.js` on the server and import `@aceshooting/lyra-ui/hydration.js` before any other
+Lit import in the browser. Renderer setup, diagnostics and limits:
+[`packages/lyra-ui/README.md#ssr--declarative-shadow-dom`](./packages/lyra-ui/README.md#ssr--declarative-shadow-dom).
 
 ## Browser & Node support
 
@@ -308,18 +265,9 @@ for the renderer setup, machine-readable matrix, diagnostics, and capability lim
   matrix behind them, assistive-technology status, and the policy for engines outside the window:
   [`docs/support-policy.md`](./docs/support-policy.md).
 
-### Verified release snapshot
-
-The checks below qualified
-[`@aceshooting/lyra-ui@25.0.0`](https://github.com/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73).
-The workflow badges above report newer commits.
-
-| Scope | Result |
-| --- | --- |
-| [Push CI](https://github.com/aceshooting/lyra-ui/actions/runs/36788745458) | Passed |
-| [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/36788769887) | Passed |
-| [Full browser-engine suite](https://github.com/aceshooting/lyra-ui/actions/runs/36788772557) | Passed |
-| [Codecov line coverage](https://app.codecov.io/gh/aceshooting/lyra-ui/commit/33cff6d4baa1efd61766ea888defad31fc69ef73) | 99.53% (459,954 / 462,114 lines) |
+Per-commit and release evidence lives in the workflow badges above and the
+[Actions history](https://github.com/aceshooting/lyra-ui/actions); [`docs/component-quality.md`](./docs/component-quality.md)
+records per-tag results.
 
 ## Built with
 
@@ -333,8 +281,9 @@ The workflow badges above report newer commits.
 
 - **Humans:** the [live docs site](https://aceshooting.github.io/lyra-ui/) (Storybook — every
   component's canvas, source, and props/events/slots reference).
-- **Release scope:** the [roadmap](./docs/roadmap.md) and its
-  [post-publication rollout](./docs/roadmap/post-v24-rollout.md).
+- **Release history:** [package changelog](./packages/lyra-ui/CHANGELOG.md); older majors in the
+  [archive](./docs/changelog/).
+- **Release scope:** the [roadmap](./docs/roadmap.md).
 - **AI agents integrating this library:** [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt)
   indexes per-component references and focused guides, so an integration task can load only the
   relevant API details.
@@ -358,9 +307,12 @@ The workflow badges above report newer commits.
 
 ## Codex and Claude Code plugin
 
-`@aceshooting/lyra-ui` ships a shared [Codex](https://learn.chatgpt.com/docs/plugins) and
-[Claude Code](https://claude.com/claude-code) plugin so coding agents get the exact component API
-(not a guess from training data) while working in a project that depends on this library, plus
+The npm package already bundles both skills and the command playbooks under `skills/`;
+`npx lyra-ui init-agents` installs them into a project (see [Use with AI coding agents](#use-with-ai-coding-agents)).
+The repository is also a shared [Codex](https://learn.chatgpt.com/docs/plugins) and
+[Claude Code](https://claude.com/claude-code) plugin marketplace, generated from the same source in
+`plugins/lyra-ui`, for users who prefer a marketplace install: coding agents get the exact component API
+(not a guess from training data), plus
 workflows for migrating off Web Awesome/Shoelace and auditing lyra-ui usage.
 
 ```bash
@@ -374,17 +326,6 @@ codex plugin add lyra-ui@aceshooting
 /plugin marketplace add aceshooting/lyra-ui
 /plugin install lyra-ui@aceshooting
 ```
-
-For a direct Codex skill install without the plugin:
-
-```text
-$skill-installer install https://github.com/aceshooting/lyra-ui/tree/main/plugins/lyra-ui/skills/lyra-ui
-$skill-installer install https://github.com/aceshooting/lyra-ui/tree/main/plugins/lyra-ui/skills/compose-lyra-interfaces
-```
-
-Clients that accept standalone skill bundles can instead download
-[`skills/lyra-ui.skill`](./skills/lyra-ui.skill) for exact API lookup or
-[`skills/compose-lyra-interfaces.skill`](./skills/compose-lyra-interfaces.skill) for composition.
 
 See [`plugins/lyra-ui`](./plugins/lyra-ui) for the plugin source, or
 [`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) for the same component reference

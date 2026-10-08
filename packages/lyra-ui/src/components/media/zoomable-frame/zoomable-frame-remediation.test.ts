@@ -38,6 +38,7 @@ it('distinguishes zoom control focus from iframe entry, exit, public blur and re
   el.addEventListener('focus', (event) => { if (event.bubbles) relays.push('focus'); });
   el.addEventListener('blur', (event) => { if (event.bubbles) relays.push('blur'); });
   control.focus();
+  // wait-reason: asserting that focusing the zoom control does NOT enter the iframe
   await aTimeout(25);
   expect(el.shadowRoot!.activeElement === control).to.equal(true);
   expect(el.hasAttribute('data-frame-focused')).to.equal(false);
@@ -83,6 +84,7 @@ it('distinguishes zoom control focus from iframe entry, exit, public blur and re
   parent.append(el);
   await el.updateComplete;
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="zoom-in-button"]')!.focus();
+  // wait-reason: asserting that focusing the zoom control does NOT enter the iframe
   await aTimeout(25);
   expect(el.hasAttribute('data-frame-focused')).to.equal(false);
   expect(relays).to.deep.equal(['focus', 'blur', 'focus', 'blur']);
@@ -114,4 +116,41 @@ it('observes no theme while theme sync is off', async () => {
     MutationObserver.prototype.observe = observe;
   }
   expect(themeObservers).to.equal(0);
+});
+
+it('shares one set of owner-document focus listeners across frames', async () => {
+  let focusinListeners = 0;
+  const add = document.addEventListener;
+  document.addEventListener = function (this: Document, type: string, ...rest: unknown[]) {
+    if (type === 'focusin') focusinListeners += 1;
+    return (add as (...args: unknown[]) => void).call(this, type, ...rest);
+  } as typeof document.addEventListener;
+  try {
+    await fixture(html`<div><lr-zoomable-frame></lr-zoomable-frame><lr-zoomable-frame></lr-zoomable-frame><lr-zoomable-frame></lr-zoomable-frame></div>`);
+  } finally {
+    document.addEventListener = add;
+  }
+  expect(focusinListeners).to.be.at.most(1);
+});
+
+it('stops observing the theme once theme sync is turned off', async () => {
+  const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame with-theme-sync></lr-zoomable-frame>`);
+  expect(Reflect.get(el, 'themeWatcher')).to.not.equal(undefined);
+  el.withThemeSync = false;
+  await el.updateComplete;
+  expect(Reflect.get(el, 'themeWatcher')).to.equal(undefined);
+});
+
+it('projects a host description onto the iframe', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="zf-help">Preview help</p>
+    <lr-zoomable-frame aria-describedby="zf-help"></lr-zoomable-frame>
+  </div>`);
+  const frame = wrapper.querySelector<LyraZoomableFrame>('lr-zoomable-frame')!.shadowRoot!.querySelector<HTMLElement>('iframe')!;
+  const help = wrapper.querySelector<HTMLElement>('#zf-help')!;
+  expect(
+    frame.ariaDescribedByElements?.includes(help) === true ||
+    (frame.getAttribute('aria-describedby')?.split(/\s+/).includes('zf-help') ?? false),
+  ).to.equal(true);
 });

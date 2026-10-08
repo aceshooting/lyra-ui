@@ -143,3 +143,21 @@ it('retains hover after focus releases', async () => {
   await badge.updateComplete;
   expect(tooltip(badge).hidden).to.be.true;
 });
+
+it('lets Escape reach an application listener while it closes the tooltip', async () => {
+  const badge = await fixture<LyraUsageBadge>(html`<lr-usage-badge tokens-in="12"></lr-usage-badge>`);
+  await enter(badge);
+  expect(tooltip(badge).hidden).to.be.false;
+  let seen = 0;
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') seen += 1;
+  };
+  window.addEventListener('keydown', onKeyDown);
+  try {
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => tooltip(badge).hidden, 'Escape closes the tooltip');
+  } finally {
+    window.removeEventListener('keydown', onKeyDown);
+  }
+  expect(seen).to.equal(1);
+});

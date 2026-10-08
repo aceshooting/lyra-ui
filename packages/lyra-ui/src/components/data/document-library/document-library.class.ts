@@ -4,7 +4,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { requestThenCommit } from '../../../internal/request-commit.js';
+import { createRetryForwarder } from '../../../internal/retry-forwarder.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import {
   getCollator,
@@ -449,32 +449,11 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
   private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
-  private retryRequestActive = false;
-
   /** Forward the nested table's retry as this component's request; a veto keeps both error states. */
-  private onTableRetry = (event: CustomEvent<null>): void => {
-    event.stopPropagation();
-    if (this.retryRequestActive) {
-      event.preventDefault();
-      return;
-    }
-    this.retryRequestActive = true;
-    try {
-      const request = requestThenCommit<null, CustomEvent>({
-        requestDetail: null,
-        emitRequest: (detail, init: { cancelable: true }) => {
-          const request = this.emit('lr-retry-request', detail, init);
-          return request;
-        },
-        commit: () => {
-          this.error = false;
-        },
-      });
-      if (request.defaultPrevented) event.preventDefault();
-    } finally {
-      this.retryRequestActive = false;
-    }
-  };
+  private onTableRetry = createRetryForwarder(
+    (init) => this.emit('lr-retry-request', null, init),
+    () => { this.error = false; },
+  );
 
   private _size?: LyraSize;
 
@@ -670,11 +649,25 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   /** Every distinct tag across `documents`, sorted for stable combobox ordering. Empty when no
    *  document declares any tag -- the tag-filter combobox itself is only rendered while this is
    *  non-empty. */
+  private tagsMemo?: { documents: readonly LibraryDocument[]; locale: string; tags: string[] };
   private get allTags(): string[] {
+    const locale = this.effectiveLocale;
+    if (this.tagsMemo?.documents === this._documents && this.tagsMemo.locale === locale) return this.tagsMemo.tags;
     const tags = new Set<string>();
     for (const document of this._documents)
       for (const tag of document.tags ?? []) tags.add(tag);
-    return [...tags].sort(getCollator(this.effectiveLocale).compare);
+    const sorted = [...tags].sort(getCollator(locale).compare);
+    this.tagsMemo = { documents: this._documents, locale, tags: sorted };
+    return sorted;
+  }
+
+  private selectedMemo?: { ids: readonly string[]; set: ReadonlySet<string> };
+  /** The selection as a Set, rebuilt only when `selectedDocumentIds` is replaced. */
+  private get selectedIdSet(): ReadonlySet<string> {
+    if (this.selectedMemo?.ids !== this._selectedDocumentIds) {
+      this.selectedMemo = { ids: this._selectedDocumentIds, set: new Set(this._selectedDocumentIds) };
+    }
+    return this.selectedMemo.set;
   }
 
   private emitFilterChange(): void {
@@ -930,7 +923,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
       hostAriaLabel(this)?.trim() ??
       (this.label == null ? this.localize('documentLibraryLabel') : this.label);
     const visible = this.matchingDocuments.sort(this.compareDocuments);
-    const selected = new Set(this.selectedDocumentIds);
+    const selected = this.selectedIdSet;
     const tags = this.allTags;
     const emptyHeading =
       this._documents.length === 0

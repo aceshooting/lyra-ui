@@ -21,6 +21,8 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const flagsPackage = join(root, 'packages', 'lyra-flags');
 const docsPackage = join(root, 'packages', 'lyra-docs');
+const translationsPackage = join(root, 'packages', 'lyra-translations');
+const idePackage = join(root, 'packages', 'lyra-ide');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
@@ -78,6 +80,7 @@ const FIXTURE_OPTIONAL_PEERS = Object.freeze({
  */
 const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
   '@aceshooting/lyra-flags': 'installed from the packed workspace tarball, not the registry',
+  '@aceshooting/lyra-translations': 'installed from the packed workspace tarball, not the registry',
   xlsx: 'the supported >=0.20.3 range is published only on the SheetJS CDN, not the public npm registry',
   'maplibre-gl': 'installed with an explicit version by the dedicated v5/v6 fixtures below',
   react: 'framework declaration peer; type-only, exercised by the packed type-consumer checks',
@@ -364,6 +367,76 @@ import.meta.resolve('@aceshooting/lyra-docs/docx/editor');
   await run(process.execPath, ['load.mjs'], fixtureDir, 'lyra-docs entry load check');
 }
 
+/** Shared companion checks: no workspace: leak, and a lyra-ui peer range that accepts the lyra-ui packed beside it. */
+function verifyPackedCompanionManifest({ label, manifest, uiTarball }) {
+  const ranges = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']
+    .flatMap((section) => Object.values(manifest[section] ?? {}));
+  assert.deepEqual(ranges.filter((range) => String(range).startsWith('workspace:')), [], `${label} leaks workspace: ranges`);
+  const uiVersion = packedManifest(uiTarball).version;
+  const uiRange = manifest.peerDependencies?.['@aceshooting/lyra-ui'];
+  assert.equal(uiRange, `^${uiVersion}`, `${label} requires @aceshooting/lyra-ui ${uiRange}, packed beside ${uiVersion}`);
+  assert.equal(manifest.version, uiVersion, `${label} must be versioned with the lyra-ui packed beside it`);
+  return uiVersion;
+}
+
+/** lyra-translations as consumers install it: catalogs register through the installed lyra-ui, and the lazy loader reaches them. */
+async function verifyPackedTranslationsPackage({ workspace, uiTarball, translationsTarball }) {
+  verifyPackedCompanionManifest({ label: 'lyra-translations', manifest: packedManifest(translationsTarball), uiTarball });
+  await run(pnpm, ['exec', 'publint', 'run', '--strict', '--pack=false', translationsTarball], root, 'lyra-translations publint package check');
+  const fixtureDir = join(workspace, 'translations-consumer');
+  await mkdir(fixtureDir, { recursive: true });
+  const uiSpecifier = `file:${relative(fixtureDir, uiTarball)}`;
+  await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
+    name: 'lr-packed-translations-consumer', private: true, type: 'module',
+    dependencies: { '@aceshooting/lyra-translations': `file:${relative(fixtureDir, translationsTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
+    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
+  }));
+  await writeFile(join(fixtureDir, 'load.mjs'), `import '@aceshooting/lyra-translations/fr.js';
+import '@aceshooting/lyra-translations/ar/forms.js';
+import { getRegisteredLyraLocales } from '@aceshooting/lyra-ui/localization.js';
+import { loadLyraLocale } from '@aceshooting/lyra-ui/locale-loader.js';
+await loadLyraLocale('de');
+const registered = getRegisteredLyraLocales();
+for (const locale of ['fr', 'ar', 'de']) {
+  if (!registered.includes(locale)) throw new Error('the packed ' + locale + ' catalog did not register through lyra-ui');
+}
+// Assembled so the export-reachability lint reads these deliberately absent subpaths as non-literals.
+for (const specifier of ['translations/fr.js', 'custom-elements.json'].map((subpath) => '@aceshooting/lyra-ui/' + subpath)) {
+  let resolved;
+  try { resolved = import.meta.resolve(specifier); } catch { resolved = undefined; }
+  if (resolved) throw new Error(specifier + ' must not resolve from lyra-ui');
+}
+`);
+  await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixtureDir, 'lyra-translations fixture install');
+  await run(process.execPath, ['load.mjs'], fixtureDir, 'lyra-translations load check');
+}
+
+/** lyra-ide as consumers install it: every data file resolves through its export, and the manifest field points at the manifest. */
+async function verifyPackedIdePackage({ workspace, uiTarball, ideTarball }) {
+  const manifest = packedManifest(ideTarball);
+  const uiVersion = verifyPackedCompanionManifest({ label: 'lyra-ide', manifest, uiTarball });
+  await run(pnpm, ['exec', 'publint', 'run', '--strict', '--pack=false', ideTarball], root, 'lyra-ide publint package check');
+  const fixtureDir = join(workspace, 'ide-consumer');
+  await mkdir(fixtureDir, { recursive: true });
+  const uiSpecifier = `file:${relative(fixtureDir, uiTarball)}`;
+  await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
+    name: 'lr-packed-ide-consumer', private: true, type: 'module',
+    dependencies: { '@aceshooting/lyra-ide': `file:${relative(fixtureDir, ideTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
+    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
+  }));
+  await writeFile(join(fixtureDir, 'load.mjs'), `import { readFile } from 'node:fs/promises';
+const read = async (specifier) => JSON.parse(await readFile(new URL(import.meta.resolve(specifier)), 'utf8'));
+const cem = await read('@aceshooting/lyra-ide/custom-elements.json');
+if (!Array.isArray(cem.modules) || cem.modules.length === 0) throw new Error('the packed Custom Elements Manifest has no modules');
+const webTypes = await read('@aceshooting/lyra-ide/web-types.json');
+if (webTypes.version !== ${JSON.stringify(uiVersion)}) throw new Error('web-types describes ' + webTypes.version);
+if (!(await read('@aceshooting/lyra-ide/vscode-html-data.json')).tags?.length) throw new Error('vscode-html-data has no tags');
+if (!(await read('@aceshooting/lyra-ide/vscode-css-data.json')).properties?.length) throw new Error('vscode-css-data has no properties');
+`);
+  await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixtureDir, 'lyra-ide fixture install');
+  await run(process.execPath, ['load.mjs'], fixtureDir, 'lyra-ide data load check');
+}
+
 // pnpm substitutes every workspace: specifier for a real semver range when `pnpm pack` runs, so
 // this has never actually leaked -- but nothing asserted that, and a future pnpm/config change or
 // a hand-edited fixture could silently break it for real npm/yarn consumers, who cannot resolve
@@ -392,9 +465,13 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   const cliFiles = (await readdir(join(packageRoot, 'dist', 'cli'))).sort();
   const expectedCliFiles = [
+    'agent-registry.mjs',
     'component-inventory.mjs',
     'html-comments.mjs',
+    'init-agents.mjs',
+    'is-main-module.mjs',
     'lyra-rename-ledger.mjs',
+    'lyra-ui.mjs',
     'migrate-wa.mjs',
     'migration-analysis.mjs',
     'migration-contract.json',
@@ -449,6 +526,35 @@ async function verifyPackedMigrationCli(fixtureDir) {
   }
 }
 
+async function verifyPackedInitAgents(fixtureDir) {
+  const projectDir = join(fixtureDir, 'init-agents-project');
+  await mkdir(projectDir, { recursive: true });
+  const executable = join(fixtureDir, 'node_modules', '.bin', binName('lyra-ui'));
+  const packageRoot = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
+  for (const skill of ['lyra-ui', 'compose-lyra-interfaces']) {
+    await stat(join(packageRoot, 'skills', skill, 'SKILL.md'));
+  }
+  await stat(join(packageRoot, 'skills', 'lyra-ui', 'commands', 'review.md'));
+  // The bundled references must resolve inside the installed package, not the plugin.
+  const skillText = await readFile(join(packageRoot, 'skills', 'lyra-ui', 'SKILL.md'), 'utf8');
+  if (!skillText.includes('node_modules/@aceshooting/lyra-ui/llms/components/') && !skillText.includes('node_modules/@aceshooting/lyra-ui/llms/index.md')) {
+    throw new Error('Bundled lyra-ui skill does not point at the package llms/ directory.');
+  }
+  await stat(join(packageRoot, 'llms', 'index.md'));
+  await run(executable, ['init-agents', '--yes', '--dir', projectDir], fixtureDir, 'packed init-agents apply');
+  for (const skill of ['lyra-ui', 'compose-lyra-interfaces']) {
+    await stat(join(projectDir, '.agents', 'skills', skill, 'SKILL.md'));
+  }
+  const agents = await readFile(join(projectDir, 'AGENTS.md'), 'utf8');
+  if (!agents.includes('<!-- lyra-ui:start -->') || !agents.includes('node_modules/@aceshooting/lyra-ui/llms.txt')) {
+    throw new Error('Packed init-agents did not write its AGENTS.md block.');
+  }
+  await run(executable, ['init-agents', '--yes', '--dir', projectDir], fixtureDir, 'packed init-agents idempotence');
+  if ((await readFile(join(projectDir, 'AGENTS.md'), 'utf8')) !== agents) {
+    throw new Error('Packed init-agents is not idempotent for AGENTS.md.');
+  }
+}
+
 async function writeFixture(
   fixtureDir,
   packageTarball,
@@ -456,9 +562,11 @@ async function writeFixture(
   withOptionalPeers,
   maplibreVersion = '^6.0.0',
   performanceBaselineTarball,
+  translationsTarball,
 ) {
   const dependencies = {
     '@aceshooting/lyra-ui': `file:${relative(fixtureDir, packageTarball)}`,
+    '@aceshooting/lyra-translations': `file:${relative(fixtureDir, translationsTarball)}`,
     lit: uiPackageJson.dependencies.lit,
   };
   if (performanceBaselineTarball) {
@@ -981,7 +1089,10 @@ export default defineConfig({
     rollupOptions: {
       input: resolve(process.cwd(), 'src', \`bundle-\${entry}.\${hasStaticFallback ? 'html' : 'ts'}\`),
       external: noOptionalPeers
-        ? (id) => optionalPeers.some((peer) => id === peer || id.startsWith(\`\${peer}/\`))
+        ? (id) =>
+            // The locale entry measures the catalogs themselves, so they bundle into one registry.
+            !(entry === 'locale' && id.startsWith('@aceshooting/lyra-translations')) &&
+            optionalPeers.some((peer) => id === peer || id.startsWith(\`\${peer}/\`))
         : [],
       output: {
         entryFileNames: 'index.js',
@@ -1006,9 +1117,9 @@ export default defineConfig({
     nativeStyles: `import '@aceshooting/lyra-ui/native.css';\nexport const loaded = true;\n`,
     utilitiesStyles: `import '@aceshooting/lyra-ui/utilities.css';\nexport const loaded = true;\n`,
     reservationStyles: `import '@aceshooting/lyra-ui/reservations.css';\nexport const loaded = true;\n`,
-    locale: `import '@aceshooting/lyra-ui/translations/fa.js';
-import '@aceshooting/lyra-ui/translations/fr.js';
-import '@aceshooting/lyra-ui/translations/he.js';
+    locale: `import '@aceshooting/lyra-translations/fa.js';
+import '@aceshooting/lyra-translations/fr.js';
+import '@aceshooting/lyra-translations/he.js';
 import { getRegisteredLyraLocales } from '@aceshooting/lyra-ui/localization.js';
 const registered = getRegisteredLyraLocales();
 for (const locale of ['fa', 'fr', 'he']) {
@@ -1418,11 +1529,18 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
   if (peerGraph.staticallyReachableModuleCount === 0) {
     violations.push('the Vite graph diagnostic recorded no entry module');
   }
-  if (noOptionalPeers && peerGraph.eagerPeers.length > 0) {
-    violations.push(`optional peer(s) are statically reachable: ${peerGraph.eagerPeers.join(', ')}`);
+  // The locale entry imports the catalogs on purpose: the companion package is what it measures.
+  const unexpectedEagerPeers = peerGraph.eagerPeers.filter(
+    (peer) => !(entry === 'locale' && peer === '@aceshooting/lyra-translations'),
+  );
+  if (noOptionalPeers && unexpectedEagerPeers.length > 0) {
+    violations.push(`optional peer(s) are statically reachable: ${unexpectedEagerPeers.join(', ')}`);
   }
-  if (noOptionalPeers && peerGraph.bundledPeers.length > 0) {
-    violations.push(`optional peer(s) were physically bundled: ${peerGraph.bundledPeers.join(', ')}`);
+  const unexpectedBundledPeers = peerGraph.bundledPeers.filter(
+    (peer) => !(entry === 'locale' && peer === '@aceshooting/lyra-translations'),
+  );
+  if (noOptionalPeers && unexpectedBundledPeers.length > 0) {
+    violations.push(`optional peer(s) were physically bundled: ${unexpectedBundledPeers.join(', ')}`);
   }
   if (
     entry === 'map' &&
@@ -1516,6 +1634,16 @@ async function main() {
       destination: tarballDir,
       compareExports: true,
     })) ?? await pack(docsPackage, tarballDir);
+    const translationsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.translations, {
+      packageDir: translationsPackage,
+      destination: tarballDir,
+      compareExports: true,
+    })) ?? await pack(translationsPackage, tarballDir);
+    const ideTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.ide, {
+      packageDir: idePackage,
+      destination: tarballDir,
+      compareExports: true,
+    })) ?? await pack(idePackage, tarballDir);
 
     await run(
       pnpm,
@@ -1534,6 +1662,8 @@ async function main() {
       console.log('Skipping only ATTW; packed install, runtime, declaration, and bundle contracts remain enabled.');
     }
     await verifyPackedDocsPackage({ workspace, uiTarball, docsTarball });
+    await verifyPackedTranslationsPackage({ workspace, uiTarball, translationsTarball });
+    await verifyPackedIdePackage({ workspace, uiTarball, ideTarball });
 
     await writeFixture(
       coreFixture,
@@ -1542,9 +1672,10 @@ async function main() {
       false,
       '^6.0.0',
       performanceOptions?.baselineTarballPath,
+      translationsTarball,
     );
-    await writeFixture(optionalFixture, uiTarball, flagsTarball, true);
-    await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0');
+    await writeFixture(optionalFixture, uiTarball, flagsTarball, true, '^6.0.0', undefined, translationsTarball);
+    await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0', undefined, translationsTarball);
     await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], coreFixture, 'core fixture install');
     await run(
       pnpm,
@@ -1577,6 +1708,7 @@ async function main() {
     await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);
 
     await verifyPackedMigrationCli(coreFixture);
+    await verifyPackedInitAgents(coreFixture);
     const compatibilityHistoryDirectory = join(uiPackage, 'scripts/fixtures/compatibility-history');
     const publishedHistory = checkPublishedCompatibilitySync(compatibilityHistoryDirectory);
     const migrationProof = await verifyPackedMigrationConsumers({

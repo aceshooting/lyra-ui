@@ -145,12 +145,43 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. The
    *  first N runs in input order are kept, so pass newest-first history to chart the most recent runs. */
   @property({ type: Number, attribute: 'max-rendered-runs' }) maxRenderedRuns = 100;
+  private metricsFor?: unknown;
+  private metricsCache: AgentEvaluationMetric[] = [];
+  private runsFor?: unknown;
+  private runsCache: AgentEvaluationDashboardRun[] = [];
   private get normalizedMetrics(): AgentEvaluationMetric[] {
-    return firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);
+    if (this.metricsFor !== this.metrics) {
+      this.metricsFor = this.metrics;
+      this.metricsCache = firstByIdentity(Array.isArray(this.metrics) ? this.metrics : [], (metric) => metric.id);
+    }
+    return this.metricsCache;
   }
   private get normalizedRuns(): AgentEvaluationDashboardRun[] {
-    return firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
+    if (this.runsFor !== this.runs) {
+      this.runsFor = this.runs;
+      this.runsCache = firstByIdentity(Array.isArray(this.runs) ? this.runs : [], (run) => run.id);
+    }
+    return this.runsCache;
   }
+  private slicedFor?: { source: AgentEvaluationDashboardRun[]; limit: number; runs: AgentEvaluationDashboardRun[] };
+  /** Chart labels/datasets, rebuilt only when the rendered runs or the active metric change. */
+  private chartFor?: { runs: AgentEvaluationDashboardRun[]; active: AgentEvaluationMetric | undefined };
+  private chartCache: { labels: string[]; datasets: { label: string; data: (number | null)[] }[] } = { labels: [], datasets: [] };
+  private chartInputs(runs: AgentEvaluationDashboardRun[], active: AgentEvaluationMetric | undefined): typeof this.chartCache {
+    if (this.chartFor?.runs !== runs || this.chartFor.active !== active) {
+      this.chartFor = { runs, active };
+      const values = runs.map((run) => {
+        const value = active ? run.metrics?.[active.id] : undefined;
+        return value != null && Number.isFinite(value) ? value : null;
+      });
+      this.chartCache = {
+        labels: runs.map((run) => run.label),
+        datasets: active ? [{ label: active.label, data: values }] : [],
+      };
+    }
+    return this.chartCache;
+  }
+
   private get activeMetric(): AgentEvaluationMetric | undefined {
     const metrics = this.normalizedMetrics;
     return this.metricId === null
@@ -205,13 +236,13 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     const semanticLabel = overallSemanticLabel(this, label);
     const active = this.activeMetric;
     const allRuns = this.normalizedRuns;
-    const runs = allRuns.slice(0, Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500)));
+    const limit = Math.max(1, finiteCount(this.maxRenderedRuns, 100, 500));
+    if (this.slicedFor?.source !== allRuns || this.slicedFor.limit !== limit) {
+      this.slicedFor = { source: allRuns, limit, runs: allRuns.slice(0, limit) };
+    }
+    const runs = this.slicedFor.runs;
     this.projectedRunsTruncated = allRuns.length > runs.length;
     const metrics = this.normalizedMetrics;
-    const values = runs.map((run) => {
-      const value = active ? run.metrics?.[active.id] : undefined;
-      return value != null && Number.isFinite(value) ? value : null;
-    });
     const level = resolveHeadingLevel(this.headingLevel ?? '2');
     return html`<section part="base" aria-label=${semanticLabel ?? nothing}>
       ${label === '' ? nothing : html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${label}</div>`}
@@ -232,7 +263,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
           })}</div>`
         : nothing}
       ${!this.withoutChart && active && runs.length
-        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} with-legend aria-label=${active.label}></lr-lite-chart></div>`
+        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${this.chartInputs(runs, active).labels} .datasets=${this.chartInputs(runs, active).datasets} with-legend aria-label=${active.label}></lr-lite-chart></div>`
         : nothing}
       ${this.renderRuns(runs)}
       ${this.projectedRunsTruncated

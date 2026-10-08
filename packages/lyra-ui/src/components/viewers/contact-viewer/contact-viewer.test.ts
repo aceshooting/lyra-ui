@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './contact-viewer.js';
 import type { LyraContactViewer } from './contact-viewer.js';
@@ -8,6 +9,13 @@ const CARD = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:John Q. Public', 'ORG:ABC, Inc.'
 function response(body: string): Response { return { ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(body) } as Response; }
 
 describe('lr-contact-viewer', () => {
+  it('does not search its own empty-state text', async () => {
+    const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer></lr-contact-viewer>`);
+    const note = el.shadowRoot!.querySelector('[part="body"]')!.textContent!.trim();
+    expect(note.length).to.be.greaterThan(0);
+    expect(await el.search(note.split(' ')[0]!)).to.equal(0);
+  });
+
   it('keeps loaded contacts and later updates working when a highlight omits its anchor', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response(CARD))) as typeof window.fetch;
@@ -83,7 +91,7 @@ describe('lr-contact-viewer', () => {
     window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
-      await aTimeout(20);
+      await twoFrames();
       await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
       await el.updateComplete;
       expect(el.shadowRoot!.querySelectorAll('[part="contact"]')).to.have.length(2);
@@ -169,7 +177,7 @@ describe('lr-contact-viewer', () => {
       let renderErrors = 0;
       el.addEventListener('lr-render-error', () => { renderErrors++; });
       el.src = 'https://example.test/a.vcf';
-      await aTimeout(20);
+      await twoFrames();
       await waitUntil(() => el.shadowRoot!.querySelector('.empty-note') !== null);
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No contacts found in this file.');
@@ -263,7 +271,7 @@ describe('lr-contact-viewer', () => {
     window.fetch = (() => Promise.resolve(response(`${CARD}\r\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Second\r\nEND:VCARD`))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`)) as LyraContactViewer;
-      await aTimeout(20);
+      await twoFrames();
       await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="contact"]').length === 2);
       await el.updateComplete;
       await expect(el).to.be.accessible();
@@ -306,7 +314,7 @@ describe('lr-contact-viewer', () => {
       const el = await fixture<LyraContactViewer>(html`<lr-contact-viewer src="https://example.test/a.vcf"></lr-contact-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="contact"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="contact"]') !== null).to.be.true;
     } finally {

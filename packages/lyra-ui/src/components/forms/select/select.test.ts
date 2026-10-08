@@ -96,6 +96,7 @@ it('keeps a cold-open listbox hidden and defers after-show until placement succe
 
     const shown = el.show();
     await el.updateComplete;
+    // wait-reason: asserting a vetoed transition never applies; there is no event to await
     await aTimeout(50);
     const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
     expect(getComputedStyle(listbox).visibility).to.equal('hidden');
@@ -193,7 +194,7 @@ describe('collecting already-slotted options without relying on the initial slot
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange was intercepted');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -236,7 +237,7 @@ describe('collecting already-slotted options without relying on the initial slot
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the real initial slotchange fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -335,8 +336,8 @@ describe("adoptedCallback", () => {
       "the old stack lease is released"
     ).to.equal("");
     expect(
-      (el as unknown as { pointer: { document?: Document } }).pointer
-        .document === undefined
+      (el as unknown as { popupController: { pointer: { document?: Document } } })
+        .popupController.pointer.document === undefined
     ).to.be.true;
 
     frameDocument.body.append(el);
@@ -355,8 +356,8 @@ describe("adoptedCallback", () => {
       "reconnect gets a new owner-document stack entry"
     ).to.be.false;
     expect(
-      (el as unknown as { pointer: { document?: Document } }).pointer
-        .document === frameDocument,
+      (el as unknown as { popupController: { pointer: { document?: Document } } })
+        .popupController.pointer.document === frameDocument,
       "the capture listener belongs only to the adopted document"
     ).to.be.true;
     expect(el.style.getPropertyValue("--lr-overlay-stack-index")).to.not.equal(
@@ -428,6 +429,7 @@ describe("reconnectOpenPopup (connectedCallback re-arming)", () => {
     await el.updateComplete;
     parent.appendChild(el);
     await el.updateComplete;
+    // wait-reason: asserting the queued reconnect handler did not close the select (negative assertion)
     await aTimeout(20);
 
     expect(el.open).to.be.true;
@@ -465,6 +467,7 @@ describe("reconnectOpenPopup (connectedCallback re-arming)", () => {
     parent.appendChild(el);
     el.remove(); // synchronously, before the microtask connectedCallback() just queued can run
     await el.updateComplete;
+    // wait-reason: asserting the queued reconnect handler does nothing after a synchronous remove (negative assertion)
     await aTimeout(20);
 
     expect(el.isConnected).to.be.false;
@@ -484,6 +487,7 @@ describe("reconnectOpenPopup (connectedCallback re-arming)", () => {
     parent.appendChild(el);
     el.open = false; // synchronously, before the microtask connectedCallback() just queued can run
     await el.updateComplete;
+    // wait-reason: asserting the queued reconnect handler does not reopen the select (negative assertion)
     await aTimeout(20);
 
     expect(el.open).to.be.false;
@@ -596,19 +600,19 @@ describe("bindDocumentPointer (internal, defensive guards)", () => {
     await el.updateComplete;
     el.remove();
     expect(() =>
-      (el as unknown as { bindDocumentPointer(): void }).bindDocumentPointer()
+      (el as unknown as { popupController: { bindPointer(): void } }).popupController.bindPointer()
     ).to.not.throw();
   });
 
   it("is idempotent for an already-bound owner document", async () => {
     const el = (await fixture(basic())) as LyraSelect;
     await el.show();
-    const before = (el as unknown as { pointer: { listener?: unknown } })
-      .pointer.listener;
+    const pointer = (el as unknown as { popupController: { pointer: { listener?: unknown } } })
+      .popupController.pointer;
+    const before = pointer.listener;
     expect(before, "show() already bound a listener").to.not.equal(undefined);
-    (el as unknown as { bindDocumentPointer(): void }).bindDocumentPointer();
-    const after = (el as unknown as { pointer: { listener?: unknown } })
-      .pointer.listener;
+    (el as unknown as { popupController: { bindPointer(): void } }).popupController.bindPointer();
+    const after = pointer.listener;
     expect(
       after,
       "rebinding for the same document is a no-op, not a fresh listener"
@@ -1177,6 +1181,7 @@ describe("multiple", () => {
 
     // Let the ~500ms type-ahead buffer lapse, so the next keystroke starts a fresh search
     // instead of extending this one into 'ab'.
+    // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
     await aTimeout(600);
     trigger(el).dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -1521,9 +1526,10 @@ describe("placement", () => {
       </div>
     `);
     const el = wrapper.querySelector("lr-select") as LyraSelect;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
-    await aTimeout(60);
+    await shown;
 
     const listbox = el
       .shadowRoot!.querySelector('[part="listbox"]')!
@@ -1542,16 +1548,17 @@ describe("placement", () => {
       </div>
     `);
     const el = wrapper.querySelector("lr-select") as LyraSelect;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
-    await aTimeout(40);
+    await shown;
     const initialCleanup = (el as unknown as { cleanup?: () => void }).cleanup;
     const overlay = (el as unknown as { overlayHandle?: unknown })
       .overlayHandle;
 
     el.placement = "top-start";
     await el.updateComplete;
-    await aTimeout(40);
+    await (el as unknown as { positioningReady: Promise<boolean> }).positioningReady;
     const listbox =
       el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
     expect(listbox.getBoundingClientRect().bottom).to.be.at.most(
@@ -1569,6 +1576,7 @@ describe("placement", () => {
       .cleanup;
     el.hoist = true;
     await el.updateComplete;
+    // wait-reason: hoist re-places through a path with no observable hook
     await aTimeout(20);
     expect(getComputedStyle(listbox).position).to.equal("fixed");
     expect(
@@ -1589,9 +1597,10 @@ describe("placement", () => {
       </div>
     `);
     const el = wrapper.querySelector("lr-select") as LyraSelect;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
-    await aTimeout(40);
+    await shown;
     const initialCleanup = (el as unknown as { cleanup?: () => void }).cleanup;
     const overlay = (el as unknown as { overlayHandle?: unknown })
       .overlayHandle;
@@ -1605,6 +1614,7 @@ describe("placement", () => {
     el.placement = "top-start";
     el.hoist = true;
     await el.updateComplete;
+    // wait-reason: asserting the vetoed close still applies live position options; no event marks it
     await aTimeout(40);
 
     const listbox =
@@ -1637,7 +1647,7 @@ describe("placement", () => {
 
     el.dir = "rtl";
     await el.updateComplete;
-    await aTimeout(20);
+    await (el as unknown as { positioningReady: Promise<boolean> }).positioningReady;
     expect((el as unknown as { cleanup?: () => void }).cleanup !== before).to.be
       .true;
     expect(

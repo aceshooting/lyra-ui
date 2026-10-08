@@ -1,4 +1,4 @@
-import { setNativeRangeText } from '../../../internal/native-text-control.js';
+import { nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { observeReactivePropertyWrites } from '../../../internal/reactive-property-writes.js';
@@ -21,13 +21,11 @@ import {
 } from '../../../internal/anchored-validity.js';
 import {
   deferredPlaceReady as place,
-  settlePopupTransition,
-  PopupTransitionWaiters,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { nextId } from '../../../internal/a11y.js';
 import {
@@ -78,7 +76,9 @@ import {
 } from './date-picker.class.js';
 import './date-picker.class.js';
 import {
+  autocorrectConverter,
   literalSetConverter,
+  normalizeAutocorrect,
   spellcheckFromAttributeConverter as spellcheckConverter,
 } from '../../../internal/converters.js';
 import {
@@ -584,18 +584,35 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
   @property() override autocapitalize = '';
-  /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
-   *  string omits the attribute (browser default).
-   *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
-   *  collision: newer DOM typings declare a `boolean`-typed `HTMLElement.autocorrect` IDL member,
-   *  which conflicts with this component's `string`-typed property of the same name. The explicit
-   *  attribute mapping preserves the standard lowercase `autocorrect` wire name in both Lit and
-   *  generated component metadata. */
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
   /** Forwarded to the internal date text input. Empty strings preserve the browser default. */
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /** Lowercase alias of {@link inputMode}. */
+  get inputmode(): string {
+    return this.inputMode;
+  }
+  set inputmode(next: string) {
+    this.inputMode = next ?? '';
+  }
+  /** Lowercase alias of {@link enterKeyHint}. */
+  get enterkeyhint(): string {
+    return this.enterKeyHint;
+  }
+  set enterkeyhint(next: string) {
+    this.enterKeyHint = next ?? '';
+  }
   /** Overrides the internal `<input>`'s computed accessible name. Wins over
    *  `label`/`placeholder`/the localized `date` fallback in that order --
    *  see the `aria-label` binding in `render()`. Attribute-reflects from a
@@ -717,7 +734,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private inputRelayedSinceCommit = false;
 
   private cleanupFn?: DeferredOperationHandle;
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({
+    host: this,
+    popup: () => this.renderRoot.querySelector('[part="popup"]'),
+    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    onPointer: (event) => this.onDocPointer(event),
+  });
   private visibilityListenerDocument?: Document;
   private visibilityListener?: () => void;
   private overlayHandle?: OverlayHandle;
@@ -732,8 +754,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  painted frame to transition from), so this flips to `true` only once `place()` has actually
    *  positioned the popup, one render after `popupHidden` clears. */
   @state() private popupPositioned = false;
-  private transitionToken = 0;
-  private readonly transitionWaiters = new PopupTransitionWaiters<'lr-after-show' | 'lr-after-hide'>();
   private interactionListeners = new Map<string, EventListener>();
   private daySlotObserver?: MutationObserver;
   private disabledDateKeysCache?: [unknown, ReadonlySet<string>];
@@ -1324,9 +1344,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     super.willUpdate(changed);
     if (changed.has('open')) {
       if (this.open && this.isConnected) {
-        this.bindDocumentPointer();
+        this.popupController.bindPointer();
       } else {
-        this.unbindDocumentPointer();
+        this.popupController.unbindPointer();
       }
       this.popupPositioned = false;
     }
@@ -1345,8 +1365,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       return Promise.resolve();
     const request = this.emit('lr-show', null, { cancelable: true });
     if (request.defaultPrevented) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-hide');
-    const settled = this.transitionWaiters.wait('lr-after-show');
+    const settled = this.popupController.wait(true);
     this.open = true;
     void this.settleTransition('lr-after-show');
     return settled;
@@ -1356,8 +1375,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (!this.open) return Promise.resolve();
     const request = this.emit('lr-hide', null, { cancelable: !this.forcingClose });
     if (request.defaultPrevented) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-show');
-    const settled = this.transitionWaiters.wait('lr-after-hide');
+    const settled = this.popupController.wait(false);
     this.restorePopupFocusOnClose ||= restoreFocus;
     this.open = false;
     void this.settleTransition('lr-after-hide');
@@ -1377,17 +1395,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (!e.composedPath().includes(this)) void this.hide(false);
   };
 
-  private bindDocumentPointer(): void {
-    if (this.isConnected) this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
-  }
-
   private reconnectOpenPopup(): void {
     if (!this.isConnected || !this.open) return;
-    this.bindDocumentPointer();
+    this.popupController.bindPointer();
     this.cleanupFn?.();
     const anchor = this.renderRoot.querySelector(
       '[part="input-wrapper"]'
@@ -1420,29 +1430,19 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     });
   }
 
-  private async settleTransition(
-    event: 'lr-after-show' | 'lr-after-hide'
-  ): Promise<void> {
-    const token = ++this.transitionToken;
-    await settlePopupTransition({
-      host: this,
-      popup: () => this.renderRoot.querySelector('[part="popup"]'),
-      isCurrent: () => this.transitionToken === token,
-      waitForPosition: event === 'lr-after-show' ? async () => {
+  private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return this.popupController.settle(event, {
+      waitForPosition: async (stale) => {
         const positioned = await waitForDeferredPlacement(() => this.cleanupFn);
-        if (this.transitionToken !== token || !this.open) return false;
+        if (stale() || !this.open) return false;
         if (!positioned) {
-          this.transitionWaiters.resolve('lr-after-show');
+          this.popupController.release('lr-after-show');
           this.open = false;
           return false;
         }
         return true;
-      } : undefined,
-      conceal: event === 'lr-after-hide' ? () => { this.popupHidden = true; } : undefined,
-      onSettled: () => {
-        this.emit(event);
-        this.transitionWaiters.resolve(event);
       },
+      conceal: () => { this.popupHidden = true; },
     });
   }
 
@@ -1606,17 +1606,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.daySlotObserver = undefined;
     this.externalDescription?.release();
     this.externalDescription = undefined;
-    this.transitionToken++;
+    this.popupController.cancel();
     this.cleanupFn?.();
     this.cleanupFn = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
     this.unbindVisibilityListener();
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.disconnectValidatorAttributeObserver();
     this.restorePopupFocusOnClose = false;
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
     for (const [name, listener] of this.interactionListeners)
       this.removeEventListener(name, listener);
     this.interactionListeners.clear();
@@ -1643,7 +1641,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
     this.unbindVisibilityListener();
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.disconnectValidatorAttributeObserver();
   }
 
@@ -2201,7 +2199,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                     aria-controls=${this.popupId}
                     spellcheck=${this.spellcheck}
                     autocapitalize=${this.autocapitalize || nothing}
-                    autocorrect=${this.autoCorrect || nothing}
+                    autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
+                    name=${this.name || nothing}
                     autocomplete=${this.autocomplete || nothing}
                     inputmode=${this.inputMode || nothing}
                     enterkeyhint=${this.enterKeyHint || nothing}

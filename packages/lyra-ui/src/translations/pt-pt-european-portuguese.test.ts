@@ -52,8 +52,6 @@ it('uses the periphrastic "a" + infinitive for progressive/status labels, never 
   expect(resolveLyraString(host, 'toolCallBlockHeaderRunning', undefined, undefined, { name: 'x' })).to.equal(
     'A usar x',
   );
-  expect(resolveLyraString(host, 'evaluationRunStatusWaitingInput')).to.equal('A aguardar entrada');
-  expect(resolveLyraString(host, 'evaluationRunStatusWaitingApproval')).to.equal('A aguardar aprovação');
   expect(resolveLyraString(host, 'agentRunStatusCollecting')).to.equal('A reunir contexto');
   expect(resolveLyraString(host, 'agentRunStatusWaitingInput')).to.equal('A aguardar entrada');
   expect(resolveLyraString(host, 'agentRunStatusWaitingApproval')).to.equal('A aguardar aprovação');

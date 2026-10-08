@@ -1,7 +1,6 @@
 import { SaxesParser } from 'saxes';
-import { CHART_NS as C } from './ooxml.js';
+import { CHART_NS as C, DRAWING_MAIN_NS as A } from './ooxml.js';
 
-const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const LIMITS = { bytes: 2 * 1024 * 1024, nodes: 50_000, depth: 64, series: 16, points: 500, text: 256 };
 const BAR = new Set(['barChart', 'bar3DChart']);
 const LINE = new Set(['lineChart', 'line3DChart', 'areaChart', 'area3DChart']);
@@ -58,7 +57,7 @@ const clip = (text: string) => text.trim().slice(0, LIMITS.text);
 function points(reference: Node | undefined): Map<number, string> {
   const values = new Map<number, string>();
   for (const point of descendants(reference, C, 'pt')) {
-    const index = Number(point.attributes.idx);
+    const index = Number(point.attributes['idx']);
     const value = child(point, C, 'v');
     if (Number.isSafeInteger(index) && index >= 0 && index < LIMITS.points && value) values.set(index, value.text);
   }
@@ -91,12 +90,12 @@ export function parseDocxChart(xml: string): DocxChartModel | null {
     return Number.isFinite(number) ? number : null;
   })) }));
   if (data.every(entry => entry.data.every(value => value === null))) return null;
-  const grouping = child(group, C, 'grouping')?.attributes.val ?? '';
+  const grouping = child(group, C, 'grouping')?.attributes['val'] ?? '';
   const titleRuns = descendants(child(chart, C, 'title'), A, 't').map(run => run.text).join('');
   return Object.freeze({
     type: BAR.has(group.name) ? 'bar' : 'line',
     stacked: BAR.has(group.name) && (grouping === 'stacked' || grouping === 'percentStacked'),
-    title: clip(titleRuns || (data.length === 1 && child(chart, C, 'autoTitleDeleted')?.attributes.val !== '1' ? data[0]!.label : '')),
+    title: clip(titleRuns || (data.length === 1 && child(chart, C, 'autoTitleDeleted')?.attributes['val'] !== '1' ? data[0]!.label : '')),
     labels: Object.freeze(labels),
     series: Object.freeze(data),
   });

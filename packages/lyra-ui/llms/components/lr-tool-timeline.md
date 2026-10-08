@@ -23,8 +23,8 @@ primitives, with retry counts and sensitive-field redaction.
 
 - `entries: readonly ToolTimelineEntry[] = []` (attribute: false) — `ToolTimelineEntry` **extends
   `ToolInvocation` from `@aceshooting/lyra-ui/ai`** (`{ id: string; name: string; displayName?:
-string; args: Record<string, unknown>; status: ToolCallStatus; result?: unknown; error?: string }`, where
-  `ToolCallStatus = 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete'`) with `{ startedAt?:
+string; args: Record<string, unknown>; status: ToolStatus; result?: unknown; error?: string }`, where
+  `ToolStatus = 'pending' | 'running' | 'success' | 'error' | 'denied' | 'incomplete'`) with `{ startedAt?:
 number; endedAt?: number; retryCount?: number; redactedFields?: readonly string[]; needsApproval?: boolean;
 approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies the owning run or
   source generation when invocation ids can be reused; every expansion, activation, renderer error,

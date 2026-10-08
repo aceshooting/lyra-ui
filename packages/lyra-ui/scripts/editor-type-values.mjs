@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { walk } from './lib/fs-walk.mjs';
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const STRING_LITERAL = /^(?:'[^']*'|"[^"]*")$/;
@@ -54,15 +54,7 @@ function parseSimpleUnion(typeText) {
  * can never be expanded.
  */
 export function readTypeAliases(root) {
-  const sources = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) sources.push(full);
-    }
-  };
-  walk(root);
+  const sources = walk(root).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'));
   sources.sort();
 
   const aliases = new Map(EXTERNAL_CLOSED_TYPES);

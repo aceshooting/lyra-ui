@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import "./reorder-list.js";
 import "./reorder-item.js";
 import type { LyraReorderList } from "./reorder-list.class.js";
@@ -99,8 +99,8 @@ describe("<lr-reorder-list>", () => {
     for (const [index, item] of items.entries()) item.value = `${item.value}${index}-2`;
     await Promise.all(items.map((item) => item.updateComplete));
     await el.updateComplete;
-    // Flush a macrotask boundary so any coalesced microtask work has definitely settled.
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    // Flush a frame boundary so any coalesced microtask work has definitely settled.
+    await nextFrame();
 
     expect(calls).to.equal(1);
   });

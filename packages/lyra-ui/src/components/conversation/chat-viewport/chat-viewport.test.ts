@@ -1569,6 +1569,7 @@ describe("virtual mode", () => {
     // once every few hundred milliseconds), but well after the gesture's own settle window, so a
     // fix that proactively clears a no-op gesture's intent (rather than waiting out a generous
     // fixed timeout) must not misattribute this.
+    // wait-reason: gesture-intent timing: append must land after the gesture settle window but far inside the wall-clock expiry
     await new Promise<void>((r) => setTimeout(r, 50));
 
     let fired = false;
@@ -1856,4 +1857,41 @@ it("paints the themed focus ring on the keyboard-focused transcript", async () =
   const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
   await focusByKeyboard(scroll);
   expect(getComputedStyle(scroll).outlineColor).to.equal("rgb(1, 2, 3)");
+});
+
+it("reuses the flattened message list between reads and refreshes it on slotchange", async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport><div>a</div><div>b</div></lr-chat-viewport>`
+  )) as LyraChatViewport;
+  await el.updateComplete;
+  const internals = el as unknown as { totalCount: number };
+  const slot = el.shadowRoot!.querySelector('[part="content"] > slot') as HTMLSlotElement;
+  let calls = 0;
+  const original = slot.assignedElements.bind(slot);
+  slot.assignedElements = ((options?: AssignedNodesOptions) => {
+    calls += 1;
+    return original(options);
+  }) as typeof slot.assignedElements;
+  const reads = [internals.totalCount, internals.totalCount, internals.totalCount];
+  expect(reads).to.deep.equal([2, 2, 2]);
+  expect(calls, "three reads rebuild the list at most once").to.be.at.most(1);
+  el.append(document.createElement("div"));
+  await waitUntil(() => internals.totalCount === 3);
+});
+
+it("resolves a host aria-describedby onto its log owner", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="host-hint">Help text</p>
+    <lr-chat-viewport aria-describedby="host-hint"></lr-chat-viewport>
+  </div>`);
+  const host = wrapper.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>("lr-chat-viewport")!;
+  await host.updateComplete;
+  const owner = () => host.shadowRoot!.querySelector<HTMLElement & { ariaDescribedByElements?: readonly Element[] | null }>('[part="scroll"][role="log"]')!;
+  const ids = (): string[] =>
+    Reflect.has(owner(), "ariaDescribedByElements")
+      ? Array.from(owner().ariaDescribedByElements ?? []).map((node) => node.id)
+      : owner().getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+  await waitUntil(() => ids().includes("host-hint"), "the host description reaches the role owner");
+  host.removeAttribute("aria-describedby");
+  await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });

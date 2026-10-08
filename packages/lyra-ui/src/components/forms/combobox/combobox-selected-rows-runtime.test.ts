@@ -61,6 +61,7 @@ it('does not accept a pending selected-row response after the control disconnect
   el.remove();
   expect(signal?.aborted).to.equal(true);
   resolveRows([{ value: 'late', label: 'Late' }]);
+  // wait-reason: asserting a late aborted resolution is ignored (negative assertion)
   await aTimeout(30);
   expect(el.value).to.equal('');
   expect(el.selectedRows).to.deep.equal([]);

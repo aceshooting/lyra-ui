@@ -49,3 +49,26 @@ it('defers Escape to a newer dialog opened on top, instead of closing its own to
     if (dialog.open) await dialog.close('api');
   }
 });
+
+it('lets Escape reach an application listener while it closes the tooltip', async () => {
+  const el = (await fixture(
+    html`<lr-tool-call-chip name="web_search"><p>Detail</p></lr-tool-call-chip>`,
+  )) as LyraToolCallChip;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+  base.dispatchEvent(new MouseEvent('mouseenter'));
+  await el.updateComplete;
+  expect(tooltip.hidden).to.be.false;
+  let seen = 0;
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') seen += 1;
+  };
+  window.addEventListener('keydown', onKeyDown);
+  try {
+    await sendKeys({ press: 'Escape' });
+    await waitUntil(() => tooltip.hidden, 'Escape closes the tooltip');
+  } finally {
+    window.removeEventListener('keydown', onKeyDown);
+  }
+  expect(seen).to.equal(1);
+});

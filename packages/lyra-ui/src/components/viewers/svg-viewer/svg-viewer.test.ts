@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { PropertyValues } from 'lit';
@@ -67,7 +68,7 @@ describe('lr-svg-viewer', () => {
     window.fetch = (() => Promise.resolve(response('<svg><script>alert(1)</script><circle r="2" /></svg>'))) as typeof window.fetch;
     try {
       const el = (await fixture(html`<lr-svg-viewer src="https://example.test/a.svg" name="Chart"></lr-svg-viewer>`)) as LyraSvgViewer;
-      await aTimeout(20);
+      await twoFrames();
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
@@ -227,7 +228,7 @@ describe('lr-svg-viewer', () => {
       const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer src="https://example.test/icon.svg"></lr-svg-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
     } finally {
@@ -762,12 +763,18 @@ describe('region highlights', () => {
       await el.updateComplete;
       const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
       const scrolled: string[] = [];
+      let scrollOptions: ScrollIntoViewOptions | undefined;
       for (const region of regions) {
-        region.scrollIntoView = () => scrolled.push(region.dataset['id']!);
+        region.scrollIntoView = (options?: boolean | ScrollIntoViewOptions) => {
+          scrolled.push(region.dataset['id']!);
+          scrollOptions = options as ScrollIntoViewOptions;
+        };
       }
       const ok = await el.scrollToAnchor('h2');
       expect(ok).to.be.true;
       expect(scrolled).to.deep.equal(['h2']);
+      // Centering would also scroll the surrounding page on every anchor re-apply.
+      expect([scrollOptions?.block, scrollOptions?.inline]).to.deep.equal(['nearest', 'nearest']);
     } finally {
       restore();
     }

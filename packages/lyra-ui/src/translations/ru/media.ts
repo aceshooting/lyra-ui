@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Громкость',
   videoCaptions: 'Субтитры',
   videoCaptionsOff: 'Выкл.',
-  videoPlaybackSpeed: 'Скорость воспроизведения',
   videoPictureInPicture: 'Включить режим «картинка в картинке»',
   videoExitPictureInPicture: 'Выйти из режима «картинка в картинке»',
   videoEnterFullscreen: 'Полноэкранный режим',

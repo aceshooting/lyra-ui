@@ -46,8 +46,8 @@ when migrated markup relies on `open`, timed dismissal, countdown, or identity-p
   rather than a density knob — and its optical pull-out toward the panel edge is clamped to the
   tier's own gutter, so the two smallest tiers cannot push it through the panel's clipped border. An
   unsupported value normalizes to the omitted state and removes the attribute.
-- `variant: 'primary' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
-  `primary` resolves through Lyra's shared brand semantic tokens. Unsupported attributes and
+- `variant: 'primary' | 'brand' | 'success' | 'neutral' | 'warning' | 'danger' = 'primary'` (reflected) —
+  `primary` and `brand` resolve through Lyra's shared brand semantic tokens. Unsupported attributes and
   untyped property writes normalize to reflected `primary`.
 - `duration: number = Infinity` — milliseconds before automatic dismissal. `Infinity` stays open;
   hover or focus pauses the timer, and leaving interaction restarts the full duration.

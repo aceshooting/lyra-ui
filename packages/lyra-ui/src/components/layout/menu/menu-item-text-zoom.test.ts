@@ -1,4 +1,4 @@
-import { expect, fixture, html, aTimeout, nextFrame, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import './menu.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import './menu-item.js';
@@ -26,14 +26,14 @@ describe('mounted menu text follows root text zoom after look changes', function
 
   beforeEach(async () => {
     await setReducedMotion('reduce');
-    await aTimeout(50);
+    await waitUntil(() => matchMedia('(prefers-reduced-motion: reduce)').matches, 'reduced motion did not apply');
     previousFont = document.documentElement.style.fontSize;
     previousLook = document.documentElement.getAttribute('data-lr-look');
     document.documentElement.style.fontSize = '16px';
   });
   afterEach(async () => {
     await setReducedMotion('no-preference');
-    await aTimeout(50);
+    await waitUntil(() => !matchMedia('(prefers-reduced-motion: reduce)').matches, 'reduced motion did not clear');
     document.documentElement.style.fontSize = previousFont;
     if (previousLook === null) document.documentElement.removeAttribute('data-lr-look');
     else document.documentElement.setAttribute('data-lr-look', previousLook);
@@ -53,7 +53,7 @@ describe('mounted menu text follows root text zoom after look changes', function
       document.documentElement.setAttribute('data-lr-look', look);
       for (const rootSize of [16, 32, 16, 32]) {
         document.documentElement.style.fontSize = `${rootSize}px`;
-        await aTimeout(100);
+        await nextFrame();
         const expected = rootSize * (look === 'shadcn' ? 0.875 : 1);
         expect(bases.map(base => getComputedStyle(base).fontSize), `${look} at ${rootSize}px`).to.deep.equal(bases.map(() => `${expected}px`));
       }
@@ -68,7 +68,7 @@ describe('mounted menu text follows root text zoom after look changes', function
     const slot = menu.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])')!;
     for (const motion of ['no-preference', 'reduce'] as const) {
       await setReducedMotion(motion);
-      await aTimeout(50);
+      await waitUntil(() => matchMedia('(prefers-reduced-motion: reduce)').matches === (motion === 'reduce'), 'reduced-motion preference did not apply');
       expect(Number.parseFloat(getComputedStyle(slot).transitionDuration)).to.equal(0);
       base.style.transition = 'none';
       base.style.opacity = '0';

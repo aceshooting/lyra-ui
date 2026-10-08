@@ -6,17 +6,27 @@ const MAX_CHOICES = 500;
 const FORMATS = new Set(['email', 'uri', 'date', 'date-time']);
 const own = (object: object, key: string): boolean => Object.prototype.hasOwnProperty.call(object, key);
 
-/** Field snapshots have already removed accessors and detached nested values. */
+const choicesCache = new WeakMap<object, readonly ToolParamChoice[] | undefined>();
+const constraintsCache = new WeakMap<object, boolean>();
+
+/** Field snapshots have already removed accessors and detached nested values; the result is memoized per field. */
 export function toolParamChoices(property: ToolParamFormProperty): readonly ToolParamChoice[] | undefined {
+  if (choicesCache.has(property)) return choicesCache.get(property);
+  const choices = computeChoices(property);
+  choicesCache.set(property, choices);
+  return choices;
+}
+
+function computeChoices(property: ToolParamFormProperty): readonly ToolParamChoice[] | undefined {
   const titled = property.type === 'array' ? property.items?.anyOf : property.oneOf;
   const values = property.type === 'array' ? property.items?.enum : property.enum;
   if (Array.isArray(titled)) {
-    return titled.slice(0, MAX_CHOICES).filter((option) => option && typeof option.const === 'string' && typeof option.title === 'string')
-      .map((option) => ({ value: option.const, label: option.title }));
+    return Object.freeze(titled.slice(0, MAX_CHOICES).filter((option) => option && typeof option.const === 'string' && typeof option.title === 'string')
+      .map((option) => Object.freeze({ value: option.const, label: option.title })));
   }
-  if (Array.isArray(values)) return values.slice(0, MAX_CHOICES).map((value, index) => ({
+  if (Array.isArray(values)) return Object.freeze(values.slice(0, MAX_CHOICES).map((value, index) => Object.freeze({
     value, label: property.type === 'string' ? property.enumNames?.[index] ?? value : value,
-  }));
+  })));
   return undefined;
 }
 
@@ -30,8 +40,14 @@ function validStringChoices(value: unknown): boolean {
   return Array.isArray(value) && value.length <= MAX_CHOICES && Array.from(value).every((choice) => typeof choice === 'string');
 }
 
-/** Reject malformed constraints before looking at a field's value, including optional fields. */
+/** Reject malformed constraints before looking at a field's value, including optional fields (memoized per field). */
 export function validToolParamConstraints(property: ToolParamFormProperty): boolean {
+  let valid = constraintsCache.get(property);
+  if (valid === undefined) constraintsCache.set(property, valid = computeValidConstraints(property));
+  return valid;
+}
+
+function computeValidConstraints(property: ToolParamFormProperty): boolean {
   for (const key of ['minLength', 'maxLength', 'minItems', 'maxItems'] as const) {
     const value = property[key];
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) return false;

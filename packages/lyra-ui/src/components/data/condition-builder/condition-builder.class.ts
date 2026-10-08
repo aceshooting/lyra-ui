@@ -13,7 +13,7 @@ import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js';
 import { styles } from './condition-builder.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -631,7 +631,7 @@ export class LyraConditionBuilder extends LyraElement<LyraConditionBuilderEventM
     if (this.disabled) return;
     if (!this._value.conditions.some((c) => c.id === id)) return;
     const row = this.conditionElement(id);
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (row && active && row.contains(active)) this.pendingFocusAdd = true;
     const conditions = this._value.conditions.filter((c) => c.id !== id);
     this.commit({ ...this._value, conditions });

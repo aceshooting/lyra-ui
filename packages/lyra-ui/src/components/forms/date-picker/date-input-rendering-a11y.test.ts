@@ -2088,12 +2088,11 @@ describe('coverage-gap fixes', () => {
     )) as LyraDateInput;
     el.remove();
     const priv = el as unknown as {
-      bindDocumentPointer(): void;
-      pointerListenerDocument?: Document;
+      popupController: { bindPointer(): void; pointer: { document?: Document } };
     };
-    priv.bindDocumentPointer();
+    priv.popupController.bindPointer();
     expect(
-      priv.pointerListenerDocument == null,
+      priv.popupController.pointer.document == null,
       "no pointer listener bound while disconnected"
     ).to.be.true;
   });

@@ -9,6 +9,7 @@ import { acquireNativeControlDescription, type NativeControlDescriptionLease } f
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   deferredPlace as place,
   awaitPopupAnimations,
@@ -23,7 +24,7 @@ import { syncValidityStates } from '../../../internal/custom-states.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { getDisplayNames, resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   activateNonmodalOverlay,
   type OverlayHandle,
@@ -48,7 +49,7 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -297,7 +298,7 @@ export interface LyraLocalePickerEventMap {
  * @status stable
  * @since 6.0.0
  */
-export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
+export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -479,7 +480,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @state() private listboxHidden = true;
   private closeSettleToken = 0;
   private overlayHandle?: OverlayHandle;
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({
+    host: this,
+    popup: () => this.renderRoot.querySelector('[part="listbox"]'),
+    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    onPointer: (event) => this.onDocPointer(event),
+  });
   private stopRegistrySubscription?: () => void;
   private _value = '';
   private _open = false;
@@ -520,7 +526,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
   /** Blur the internal trigger or the optional focused search input. */
   override blur(): void {
-    if (this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement) this.searchElement.blur();
+    if (this.searchElement && shadowFocusTarget(this) === this.searchElement) this.searchElement.blur();
     else this.triggerElement?.blur();
   }
   /** Activates the internal trigger -- `HTMLElement.prototype.click()` on a custom element with
@@ -542,21 +548,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** @internal */
@@ -625,7 +616,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (this.hasUpdated) this.syncExternalDescription();
     this.cleanup?.();
     this.cleanup = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.overlayHandle?.suspend();
     this.typeBuffer.clear();
     if (this.open) queueMicrotask(() => this.syncPopup());
@@ -640,7 +631,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (this.hasUpdated) this.refreshLocalizedIntrinsicValidity(changed);
     if (changed.has('searchable') && !this.searchable) {
       this.clearSearch();
-      if (this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement) this.focus();
+      if (this.searchElement && shadowFocusTarget(this) === this.searchElement) this.focus();
     }
     if (changed.has('open') && this.open) this.setActiveIndex(this.visibleEntries.findIndex((row) => row.tag === this._value));
     if (this.open && (this.searchable || changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
@@ -954,11 +945,11 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const generation = ++this.searchFocusGeneration;
     const ownerDocument = this.ownerDocument;
     const outerFocus = activeElementIn(ownerDocument);
-    const innerFocus = activeElementIn(this.shadowRoot);
+    const innerFocus = shadowFocusTarget(this);
     void this.updateComplete.then(() => {
       if (generation !== this.searchFocusGeneration || !this.isConnected || !this.open ||
           !this.searchable || this.liveDisabled || this.ownerDocument !== ownerDocument ||
-          activeElementIn(ownerDocument) !== outerFocus || activeElementIn(this.shadowRoot) !== innerFocus) return;
+          activeElementIn(ownerDocument) !== outerFocus || shadowFocusTarget(this) !== innerFocus) return;
       this.searchElement?.focus();
     });
   }
@@ -1023,14 +1014,6 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.hide();
   };
 
-  private bindDocumentPointer(): void {
-    if (this.isConnected) this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
-  }
-
   private activatePopupOverlay(): void {
     if (this.overlayHandle?.isActive()) {
       this.overlayHandle.resume();
@@ -1049,7 +1032,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const overlay = this.overlayHandle;
     this.overlayHandle = undefined;
     overlay?.deactivate({ restoreFocus });
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
   }
 
   private syncPopup(): void {
@@ -1060,7 +1043,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       return;
     }
     this.activatePopupOverlay();
-    this.bindDocumentPointer();
+    this.popupController.bindPointer();
     // Keep inline failure guidance outside the options' floating surface in either placement.
     const anchor = this.renderRoot.querySelector(
       this.loadFailureTag !== undefined ? '[part="form-control"]' : '[part="trigger"]',
@@ -1118,7 +1101,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       this.searchAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
       this.searchAnnouncements.announce(this.localize('localePickerEmpty'));
     }
-    if (changed.has('searchable') && this.searchable && activeElementIn(this.shadowRoot) === this.triggerElement) {
+    if (changed.has('searchable') && this.searchable && shadowFocusTarget(this) === this.triggerElement) {
       this.queueSearchFocus();
     }
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
@@ -1164,7 +1147,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       if (request.defaultPrevented || this.liveDisabled || this.valueWriteVersion !== version ||
           this.loadGeneration !== generation || this.localeLoader !== loader || !this.entryFor(tag)) return;
       const commitValue = () => {
-        const searchFocus = this.searchElement && activeElementIn(this.shadowRoot) === this.searchElement
+        const searchFocus = this.searchElement && shadowFocusTarget(this) === this.searchElement
           ? this.searchElement : undefined;
         this.value = tag;
         this.hide();
@@ -1172,7 +1155,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         const committed = Object.freeze({ ...detail, direction: getLyraLocaleDirection(tag) });
         emitValueEvents(this, 'input', committed, detail => this.emit('lr-input', detail));
         emitValueEvents(this, 'change', committed, detail => this.emit('lr-change', detail));
-        if (searchFocus && this.isConnected && this.searchable && activeElementIn(this.shadowRoot) === searchFocus) this.focus();
+        if (searchFocus && this.isConnected && this.searchable && shadowFocusTarget(this) === searchFocus) this.focus();
       };
       if (loader === undefined) {
         commitValue();
@@ -1203,10 +1186,10 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   }
 
   private retryLocaleLoad = (): void => {
-    const restoreFocus = activeElementIn(this.shadowRoot)?.getAttribute('part') === 'load-retry';
+    const restoreFocus = shadowFocusTarget(this)?.getAttribute('part') === 'load-retry';
     if (this.loadFailureTag !== undefined) this.commit(this.loadFailureTag);
     if (restoreFocus && this.loadFailureTag === undefined && this.isConnected &&
-        activeElementIn(this.shadowRoot)?.getAttribute('part') === 'load-retry') this.focus();
+        shadowFocusTarget(this)?.getAttribute('part') === 'load-retry') this.focus();
   };
 
   private onTriggerClick = (): void => {

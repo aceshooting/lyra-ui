@@ -1,5 +1,6 @@
 import { getActiveNativeModal, isPageHelperRegion } from './native-modal-context.js';
 import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
+import type { DeferredFocusReturnPass } from './deferred-focus-return.js';
 import { RenderedStateController } from './rendered-state.js';
 import { lockScroll } from './scroll-lock.js';
 import {
@@ -45,6 +46,10 @@ export interface OverlayActivationOptions {
   suspendWhenUnrendered?: boolean;
   /** Ref-counts a document scroll lock for exactly as long as this entry is registered. */
   lockScroll?: boolean;
+  /** Resolved after the synchronous focus return of a restoring close: the deferred pass for a
+   *  target the host only re-shows afterward, or `undefined` to skip it. A pass still pending for
+   *  the host is abandoned by every activation and deactivation. */
+  deferredReturn?: () => DeferredFocusReturnPass | undefined;
 }
 
 export interface OverlayDeactivateOptions {
@@ -99,6 +104,8 @@ interface ModalDocumentState {
   pendingInertWrites: Map<HTMLElement, boolean[]>;
   observer?: MutationObserver;
   observedRoots: Set<Document | ShadowRoot>;
+  /** Parents whose direct children the last pass classified; a childList record elsewhere is irrelevant. */
+  allowedParents: Set<ParentNode>;
   inertUpdateQueued: boolean;
   started: boolean;
   unsubscribeStack?: () => void;
@@ -120,6 +127,7 @@ function modalStateFor(doc: Document): ModalDocumentState {
     inerted: new Map(),
     pendingInertWrites: new Map(),
     observedRoots: new Set(),
+    allowedParents: new Set(),
     inertUpdateQueued: false,
     started: false,
   };
@@ -148,6 +156,16 @@ function pruneExternalModalSuspensions(state: ModalDocumentState): boolean {
   return changed;
 }
 
+/** Whether a childList record added or removed a subtree holding an active overlay's host. */
+function movesStackHost(state: ModalDocumentState, record: MutationRecord): boolean {
+  for (const entry of state.snapshot.entries) {
+    for (const list of [record.addedNodes, record.removedNodes]) {
+      for (const node of list) if (node.contains(entry.host)) return true;
+    }
+  }
+  return false;
+}
+
 function handleMutations(state: ModalDocumentState, records: MutationRecord[]): void {
   const prunedExternalModal = pruneExternalModalSuspensions(state);
   let needsInertUpdate = prunedExternalModal;
@@ -155,7 +173,9 @@ function handleMutations(state: ModalDocumentState, records: MutationRecord[]): 
     const record = records[index];
     if (!record) continue;
     if (record.type === 'childList') {
-      needsInertUpdate = true;
+      if (state.allowedParents.has(record.target as ParentNode) || movesStackHost(state, record)) {
+        needsInertUpdate = true;
+      }
       continue;
     }
     if (record.attributeName === 'open') {
@@ -340,6 +360,7 @@ function applyTopmostInert(state: ModalDocumentState): void {
     }
   }
   const desired = new Set<HTMLElement>();
+  state.allowedParents = new Set();
   if (state.externalModalSuspensions.size > 0) {
     const allowed = new Map<ParentNode, Set<Element>>();
     for (const suspension of state.externalModalSuspensions) {
@@ -374,6 +395,7 @@ function inertOutsideAllowedPaths(
   desired: Set<HTMLElement>,
 ): void {
   for (const [parent, children] of allowed) {
+    state.allowedParents.add(parent);
     if (isShadowRoot(parent)) observeMutationRoot(state, parent);
     for (const child of composedChildren(parent)) {
       if (!children.has(child)) inertElement(state, child, desired);

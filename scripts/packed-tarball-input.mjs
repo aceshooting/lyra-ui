@@ -7,6 +7,8 @@ export const PACKED_TARBALL_ENVIRONMENT = Object.freeze({
   ui: 'LYRA_PACKED_UI_TARBALL',
   flags: 'LYRA_PACKED_FLAGS_TARBALL',
   docs: 'LYRA_PACKED_DOCS_TARBALL',
+  translations: 'LYRA_PACKED_TRANSLATIONS_TARBALL',
+  ide: 'LYRA_PACKED_IDE_TARBALL',
 });
 
 export const packedManifest = (tarball) => JSON.parse(execFileSync('tar', ['-xzOf', tarball, 'package/package.json'], {

@@ -261,6 +261,7 @@ describe('code-block header: copy outcomes, announcements and timing', () => {
         expect(frameParts(el)).to.deep.equal(['code-block-copy code-block-copy-success']);
         expect(copyButtons(el)[0]!.title).to.equal('Copied to clipboard');
         // Margined well inside the 1500 ms window, then well past it.
+        // wait-reason: asserts the 1500ms copy-success feedback is still shown inside its window
         await aTimeout(600);
         expect(frameParts(el)).to.deep.equal(['code-block-copy code-block-copy-success']);
         await waitUntil(() => frameParts(el)[0] === 'code-block-copy', 'success state never reverted', { timeout: 4000 });
@@ -567,6 +568,7 @@ describe('code-block header: forgery, fallback highlights and focus restore', ()
         const fake = [...el.shadowRoot!.querySelectorAll<HTMLElement>('button')].find((button) => button.textContent === 'Fake');
         expect(fake !== undefined, 'authored decoy button was not rendered').to.equal(true);
         fake!.click();
+        // wait-reason: asserts a decoy button click never writes to the clipboard
         await aTimeout(50);
         expect(writes.length).to.equal(0);
         expect(fake!.hasAttribute('data-lr-code-chrome')).to.equal(false);

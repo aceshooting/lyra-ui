@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,6 +47,8 @@ remains empty.
 | `status` | Localized controlled connection status (`tabindex="-1"`). |
 | `error` | Optional host-localized error text. |
 | `action` | Native action button, themed through the shared `--lr-button-*` tokens. |
+| `action-base` | The action button's internal control (forwarded from `<lr-button>`). |
+| `action-label` | The action button's label wrapper (forwarded from `<lr-button>`). |
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid connectors were supplied. |
 

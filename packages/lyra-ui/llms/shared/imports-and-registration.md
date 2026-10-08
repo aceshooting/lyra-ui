@@ -39,7 +39,7 @@ Deprecated **package entry points**, **stylesheets**, **exported types/functions
 **global events/root attributes** are listed under "Deprecated package exports" at the end of
 `llms/index.md`. Deprecated named exports also carry `@deprecated` in their declarations for editor
 feedback. Each component's own deprecations
-are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (the declaration's
+are listed in its `llms/components/<tag>.md` header and in `custom-elements.json` (from `@aceshooting/lyra-ide`; the declaration's
 `deprecations`, with a member's `deprecationRef` identifying its record as `kind:name`).
 The standard `deprecated` field remains available to generic CEM readers. These records are the complete
 list of deprecated APIs; audit an upgrade against them, not against console output.
@@ -196,7 +196,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-ui/translations/<locale>.js` (the sixty-six shipped message catalogs),
+  `@aceshooting/lyra-translations/<locale>.js` (the sixty-six message catalogs, in the companion package),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of

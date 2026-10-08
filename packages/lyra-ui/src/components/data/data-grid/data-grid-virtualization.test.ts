@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, sendWheel } from '../../../../test/wtr-mouse.js';
 import './data-grid.js';
 import type { LyraDataGrid } from './data-grid.js';
@@ -8,6 +8,12 @@ import { type Person, columns, rows, dataGrid, measurementAccess, header, dataCe
 
 
 expectLocaleFallback('de-DE', ['select']);
+
+/** Two animation frames: scroll handling and virtual-window rendering land on the next frame. */
+const settleFrames = async (): Promise<void> => {
+  await nextFrame();
+  await nextFrame();
+};
 
 it("auto-sizes bounded columns and distributes body width by flex", async () => {
   const sizingColumns: DataGridColumn<Person>[] = [
@@ -352,7 +358,7 @@ it('keeps ancestor scroll positions when aligning an already-rendered row', asyn
       body.dispatchEvent(new Event('scroll'));
       outer.scrollTop = 250;
       window.scrollTo(0, 250);
-      await aTimeout(40);
+      await settleFrames();
       const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
       expect(target !== null).to.equal(true);
       const targetRect = target.getBoundingClientRect();
@@ -370,7 +376,7 @@ it('keeps ancestor scroll positions when aligning an already-rendered row', asyn
       const horizontalBefore = body.scrollLeft;
       if (align === 'nearest') element.scrollToIndex(2);
       else element.scrollToIndex(2, { align });
-      await aTimeout(40);
+      await settleFrames();
       expect(Math.abs(body.scrollTop - expectedTop), `${align} body alignment`).to.be.at.most(1);
       expect(window.scrollY, `${align} page position`).to.equal(pageBefore);
       expect(outer.scrollTop, `${align} outer position`).to.equal(outerBefore);
@@ -412,7 +418,7 @@ it('uses native nearest geometry for an oversized rendered row without scrolling
   try {
     await waitUntil(() => target.getBoundingClientRect().height > body.clientHeight);
     await waitUntil(() => measurementAccess(element).measuredItemHeights.has('row:number:2'));
-    await aTimeout(40);
+    await settleFrames();
     for (const state of ['spanning', 'bottom-outside', 'top-outside'] as const) {
       const bodyTop = body.getBoundingClientRect().top + body.clientTop;
       const rowTop = target.getBoundingClientRect().top - bodyTop + body.scrollTop;
@@ -423,7 +429,7 @@ it('uses native nearest geometry for an oversized rendered row without scrolling
       body.dispatchEvent(new Event('scroll'));
       outer.scrollTop = 250;
       window.scrollTo(0, 250);
-      await aTimeout(40);
+      await settleFrames();
       const before = body.scrollTop;
       const pageBefore = window.scrollY;
       const outerBefore = outer.scrollTop;
@@ -439,7 +445,7 @@ it('uses native nearest geometry for an oversized rendered row without scrolling
         expect(beforeRect.top < viewportTop && beforeRect.bottom <= viewportBottom, geometry).to.equal(true);
 
       element.scrollToIndex(2);
-      await aTimeout(40);
+      await settleFrames();
       const afterRect = target.getBoundingClientRect();
       if (state === 'spanning') expect(Math.abs(body.scrollTop - before)).to.be.at.most(1);
       else if (state === 'bottom-outside') expect(Math.abs(afterRect.top - viewportTop)).to.be.at.most(1);
@@ -470,7 +476,7 @@ it('aligns rendered rows in a scaled ancestor using the body viewport geometry',
   for (const align of ['start', 'center', 'end'] as const) {
     body.scrollTop = 50;
     body.dispatchEvent(new Event('scroll'));
-    await aTimeout(40);
+    await settleFrames();
     const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="4"]')!;
     expect(target !== null).to.equal(true);
     element.scrollToIndex(4, { align });
@@ -486,11 +492,11 @@ it('aligns rendered rows in a scaled ancestor using the body viewport geometry',
   }
   body.scrollTop = 50;
   body.dispatchEvent(new Event('scroll'));
-  await aTimeout(40);
+  await settleFrames();
   const shifted = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="4"]')!;
   shifted.style.transform = 'translateY(12px)';
   element.scrollToIndex(4, { align: 'start' });
-  await aTimeout(40);
+  await settleFrames();
   const shiftedViewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
   expect(Math.abs(shifted.getBoundingClientRect().top - shiftedViewportTop)).to.be.at.most(1);
   shifted.style.transform = '';
@@ -498,22 +504,22 @@ it('aligns rendered rows in a scaled ancestor using the body viewport geometry',
   shifted.style.top = '0px';
   body.scrollTop = 190;
   body.dispatchEvent(new Event('scroll'));
-  await aTimeout(40);
+  await settleFrames();
   expect(shifted.isConnected).to.equal(true);
   const stickyViewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
   expect(Math.abs(shifted.getBoundingClientRect().top - stickyViewportTop)).to.be.at.most(1);
   const beforeStickyScroll = body.scrollTop;
   element.scrollToIndex(4);
-  await aTimeout(40);
+  await settleFrames();
   expect(body.scrollTop).to.equal(beforeStickyScroll);
   shifted.style.position = '';
   shifted.style.top = '';
-  await aTimeout(40);
+  await settleFrames();
   body.scrollTop = 0;
   body.style.maxBlockSize = '100px';
   expect(body.clientHeight).to.equal(100);
   element.scrollToIndex(2, { align: 'start' });
-  await aTimeout(40);
+  await settleFrames();
   const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
   const viewportTop = body.getBoundingClientRect().top + body.clientTop * 0.5;
   expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
@@ -532,14 +538,14 @@ it('aligns a rendered row after a fractional viewport resize in the same task', 
   `);
   const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
   body.style.height = '54.55px';
-  await aTimeout(40);
+  await settleFrames();
   const roundedHeight = body.offsetHeight;
   body.style.height = '55.45px';
   expect(body.offsetHeight).to.equal(roundedHeight);
   const row = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="2"]')!;
   expect(row !== null).to.equal(true);
   element.scrollToIndex(2, { align: 'start' });
-  await aTimeout(40);
+  await settleFrames();
   const viewportTop = body.getBoundingClientRect().top + body.clientTop;
   expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
 });
@@ -576,7 +582,7 @@ it('records layout row heights despite an ancestor scale and a fractional expand
   expect(Math.abs(measured - layoutHeight), `measured ${measured} vs layout ${layoutHeight}`).to.be.at.most(0.1);
 
   element.scrollToIndex(2, { align: 'start' });
-  await aTimeout(40);
+  await settleFrames();
   const scale = body.getBoundingClientRect().height / body.offsetHeight;
   const viewportTop = body.getBoundingClientRect().top + body.clientTop * scale;
   expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
@@ -663,21 +669,21 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
   await waitUntil(() => measurementAccess(element).measuredItemHeights.has('row:number:2'));
   const beforeZoom = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
   wrapper.querySelector<HTMLElement>('#scaled')!.style.zoom = '125%';
-  await aTimeout(40);
+  await settleFrames();
   measurementAccess(element).measureRenderedItems();
   const measured = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
   const expected = (row.getBoundingClientRect().height + detail.getBoundingClientRect().height) / 1.25;
   expect(Math.abs(beforeZoom - expected)).to.be.greaterThan(0.1);
   expect(Math.abs(measured - expected), `measured ${measured} vs visual/zoom ${expected}`).to.be.at.most(0.1);
   row.style.borderBlockEnd = '2.25px solid transparent';
-  await aTimeout(40);
+  await settleFrames();
   measurementAccess(element).measureRenderedItems();
   const borderChanged = (row.getBoundingClientRect().height + detail.getBoundingClientRect().height) / 1.25;
   const measuredAfterBorder = measurementAccess(element).measuredItemHeights.get('row:number:2')!;
   expect(Math.abs(borderChanged - expected)).to.be.greaterThan(0.1);
   expect(Math.abs(measuredAfterBorder - borderChanged), `border-only measured ${measuredAfterBorder} vs ${borderChanged}`).to.be.at.most(0.1);
   element.scrollToIndex(2, { align: 'start' });
-  await aTimeout(40);
+  await settleFrames();
   const viewportTop = body.getBoundingClientRect().top + body.clientTop * 1.25;
   expect(Math.abs(row.getBoundingClientRect().top - viewportTop)).to.be.at.most(1);
   const outer = wrapper.querySelector<HTMLElement>('#outer')!;
@@ -686,13 +692,13 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
     body.scrollLeft = 75;
     outer.scrollTop = 250;
     window.scrollTo(0, 250);
-    await aTimeout(40);
+    await settleFrames();
     const pageBefore = window.scrollY;
     const outerBefore = outer.scrollTop;
     const horizontalBefore = body.scrollLeft;
     expect(element.shadowRoot!.querySelector('[part~="row"][data-visible-index="70"]') !== null).to.equal(true);
     element.scrollToIndex(70, { align: 'start' });
-    await aTimeout(40);
+    await settleFrames();
     const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="70"]')!;
     const marker = document.createElement('div');
     marker.style.cssText = 'position: sticky; top: 0; width: 0; height: 0; pointer-events: none';
@@ -708,7 +714,7 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
         ? target.offsetTop - body.clientHeight - 20
         : 0;
       body.dispatchEvent(new Event('scroll'));
-      await aTimeout(40);
+      await settleFrames();
       if (align === 'nearest') {
         const beforeRect = target.getBoundingClientRect();
         const beforeViewportEnd = alignedTop + body.clientHeight * 1.25;
@@ -716,7 +722,7 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
       }
       if (align === 'nearest') element.scrollToIndex(70);
       else element.scrollToIndex(70, { align });
-      await aTimeout(40);
+      await settleFrames();
       const edge = document.createElement('div');
       edge.style.cssText = 'position: sticky; top: 0; width: 0; height: 0; pointer-events: none';
       body.prepend(edge);
@@ -734,13 +740,13 @@ it('settles fractional bordered row and detail heights under CSS zoom', async ()
     }
     body.scrollTop = target.offsetTop + 1;
     body.dispatchEvent(new Event('scroll'));
-    await aTimeout(40);
+    await settleFrames();
     measurementAccess(element).pendingVirtualScroll = {
       itemKey: target.dataset['virtualItemKey']!, align: 'start',
     };
     measurementAccess(element).alignPendingVirtualScroll();
     await waitUntil(() => measurementAccess(element).pendingVirtualScroll === undefined);
-    await aTimeout(40);
+    await settleFrames();
     expect(Math.abs(target.getBoundingClientRect().top - alignedTop)).to.be.at.most(1);
     expect(window.scrollY).to.equal(pageBefore);
     expect(outer.scrollTop).to.equal(outerBefore);
@@ -787,7 +793,7 @@ it('contains measured offscreen-row alignment to the grid body', async () => {
       body.dispatchEvent(new Event('scroll'));
       outer.scrollTop = 0;
       window.scrollTo(0, 250);
-      await aTimeout(40);
+      await settleFrames();
       expect(targetFor(60) === null).to.equal(true);
       const pageBefore = window.scrollY;
       const outerBefore = outer.scrollTop;
@@ -827,7 +833,7 @@ it('contains measured offscreen-row alignment to the grid body', async () => {
       body.dispatchEvent(new Event('scroll'));
       outer.scrollTop = 0;
       window.scrollTo(0, 250);
-      await aTimeout(40);
+      await settleFrames();
       const beforeRect = targetFor(60)!.getBoundingClientRect();
       const viewportTop = body.getBoundingClientRect().top + body.clientTop;
       const viewportBottom = viewportTop + body.clientHeight;

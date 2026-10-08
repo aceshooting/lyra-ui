@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Ìwọ̀n ohùn',
   videoCaptions: 'Àwọn àkọlé',
   videoCaptionsOff: 'Pá',
-  videoPlaybackSpeed: 'Iyára eré',
   videoPictureInPicture: 'Tẹ ipo àwòrán nínú àwòrán wọlé',
   videoExitPictureInPicture: 'Jáde ní ipo àwòrán nínú àwòrán',
   videoEnterFullscreen: 'Lọ sí ojú ìbòjú kíkún',

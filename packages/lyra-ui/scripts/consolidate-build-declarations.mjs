@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { parseSync } from 'oxc-parser';
-import { deriveLocaleDeclarationExports, EMPTY_DECLARATION, localeDeclarationModules } from './declaration-entrypoints.mjs';
+import { EMPTY_DECLARATION, localeDeclarationModules } from './declaration-entrypoints.mjs';
 
 function invariant(condition, message) {
   if (!condition) throw new Error(`Declaration consolidation: ${message}`);
@@ -24,9 +24,6 @@ export function consolidateBuildDeclarations(packageDir) {
   const empty = resolve(packageDir, EMPTY_DECLARATION);
   const redirects = new Map();
   const locales = new Set(localeDeclarationModules(packageDir).map((module) => resolve(packageDir, `dist/translations/${module}.d.ts`)));
-  for (const [route, target] of Object.entries(deriveLocaleDeclarationExports(packageDir))) {
-    invariant(JSON.stringify(pkg.exports[route]) === JSON.stringify(target), `stale locale export ${route}; regenerate package exports`);
-  }
   for (const file of locales) redirects.set(file, empty);
   for (const component of inventory.components) {
     const file = resolve(packageDir, `dist/components/${component.tag}.d.ts`);

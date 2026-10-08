@@ -6,7 +6,7 @@
 - **Class** `LyraFormatDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
@@ -24,8 +24,7 @@ resolution and `Intl`-instance caching are as described in
 
 - `date: string | number | Date = new Date()` — unset means the construction-time current instant.
   Numeric HTML attributes are epoch milliseconds, matching numeric property assignment (including
-  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing. **Changed in
-  8.0.0:** the former empty-string default rendered fallback content
+  zero and negative epochs); nonnumeric strings retain ordinary date/ISO parsing.
 - optional granular fields: `weekday`, `era`, `year`, `month`, `day`, `hour`, `minute`, `second`,
   and `timeZoneName` (attribute `time-zone-name`), each restricted to its corresponding published
   `Intl.DateTimeFormat` literal set

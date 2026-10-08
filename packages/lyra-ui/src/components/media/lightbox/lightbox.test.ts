@@ -1273,3 +1273,33 @@ it('joins the top layer above an already open dialog and leaves it on close', as
   await lightbox.close('api');
   expect(lightbox.matches(':popover-open')).to.equal(false);
 });
+
+it('projects a host description onto the dialog panel', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="lb-help">Gallery help</p>
+    <lr-lightbox open aria-describedby="lb-help" .images=${[image]}></lr-lightbox>
+  </div>`);
+  const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+  const help = wrapper.querySelector<HTMLElement>('#lb-help')!;
+  await waitUntil(() => {
+    const target = el.shadowRoot!.querySelector<HTMLElement>('dialog[data-native-modal-carrier], [part="panel"][role="dialog"]');
+    return target?.ariaDescribedByElements?.includes(help) === true ||
+      (target?.getAttribute('aria-describedby')?.split(/\s+/).includes('lb-help') ?? false);
+  });
+});
+
+it('does not hijack navigation keys from a slotted action button', async () => {
+  const images = [image, { ...image, caption: 'Second' }];
+  const el = (await fixture(html`
+    <lr-lightbox .images=${images} open>
+      <button slot="actions">Share</button>
+    </lr-lightbox>
+  `)) as LyraLightbox;
+  const key = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true });
+  el.querySelector('button')!.dispatchEvent(key);
+  await el.updateComplete;
+  expect(el.index).to.equal(0);
+  expect(key.defaultPrevented).to.be.false;
+  el.open = false;
+});

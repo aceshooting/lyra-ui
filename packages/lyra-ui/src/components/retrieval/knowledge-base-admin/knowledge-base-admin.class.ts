@@ -9,7 +9,7 @@ export type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js'
 import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 export type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -138,7 +138,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
       this.withoutIngestion && this.activeTab === 'ingestion';
     if (!invalidTab && !unavailableIngestion) return;
     this.focusSourcesAfterUpdate =
-      activeElementIn(this.shadowRoot)?.matches('[role="tab"]') ?? false;
+      shadowFocusTarget(this)?.matches('[role="tab"]') ?? false;
     this.activeTab = 'sources';
     this.emit('lr-tab-change', { activeTab: 'sources' });
   }

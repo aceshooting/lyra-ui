@@ -1,3 +1,4 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
@@ -119,6 +120,10 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
    *  explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
    *  overall owner; an explicitly empty host label stays empty on the region. */
   @property() label?: string;
+  /** Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens chunk-button padding; `m` (the default) and larger keep the full padding. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each compared chunk's bordered, filled button. `'plain'` removes the border, background and corner radius from every compared chunk button, for use inside an already-bordered container. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   private readonly headingIdPrefix = nextId('retrieval-compare');
 

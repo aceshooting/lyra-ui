@@ -23,12 +23,6 @@ mirrored upstreams and avoiding repeated announcements when a category badge is 
 Authors can opt a genuinely changing badge into live semantics with `role="status"`; that and every
 other author-supplied role remain authoritative across updates, hydration, and reconnect.
 
-**Visual break in 8.0.0 — a badge is no longer a pill by default.** Both components used to render
-fully-rounded ends unconditionally. `--lr-badge-radius` now defaults to `var(--lr-radius)` (a rounded
-rectangle) and the pill treatment moved behind the new opt-in `pill` boolean. Existing markup keeps
-its corner radius only if you add `pill`, or set `--lr-badge-radius: var(--lr-radius-pill)` once at
-the app level.
-
 **Properties** (all are declared by `lr-badge` and inherited by `lr-tag`; `lr-tag` adds the
 `variant="text"` spelling plus `withRemove` / `removable`):
 
@@ -41,16 +35,16 @@ the app level.
   dimensions. Both short and long upstream spellings round-trip verbatim while resolving to the
   same private effective size for rendering.
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
-  (reflected) — **new in 8.0.0.** The second visual axis: `variant` picks the palette, `appearance`
+  (reflected) — The second visual axis: `variant` picks the palette, `appearance`
   decides how much of it lands on the fill, the border and the text. `filled-outlined` (the default)
-  is quiet tint + loud border + loud text, i.e. exactly the pre-8.0.0 treatment; `filled` drops the
+  is quiet tint + loud border + loud text; `filled` drops the
   border, `outlined` drops the fill, `accent` fills solidly with on-loud text, and `plain` drops both
   fill and border while keeping the label color. The border-less appearances use a `transparent`
   border rather than `none`, so switching appearance never changes the badge's layout box.
-- `pill: boolean = false` (reflected) — **new in 8.0.0.** Fully-rounded ends instead of the default
+- `pill: boolean = false` (reflected) — Fully-rounded ends instead of the default
   rounded rectangle; see the visual break above. Since it defaults to `false`, `pill="false"` is not
   a way to switch it off — remove the attribute, or assign `.pill = false`.
-- `attention: 'none' | 'pulse' | 'bounce' = 'none'` (reflected) — **new in 8.0.0.** An opt-in,
+- `attention: 'none' | 'pulse' | 'bounce' = 'none'` (reflected) — An opt-in,
   infinitely-looping attention animation for a badge that has to be noticed: `pulse` draws an
   expanding ring, `bounce` hops the surface vertically (block-direction, so it needs no RTL
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
@@ -61,13 +55,14 @@ the app level.
   intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
   because the two pinned upstreams disagree on both defaults.
 - `value?: string` — opaque bookkeeping value echoed in `lr-remove`'s detail; never rendered.
-- `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only, new in
-  8.0.0.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
+- `withRemove: boolean = false` (attribute `with-remove`, reflected) — **`lr-tag` only.** Renders the remove affordance. `lr-badge` never renders one, even if the attribute is
   present on the markup.
 - `removable: boolean = false` (attribute `removable`) — **`lr-tag` only.** Shoelace-compatible
   alias for `withRemove`; reading either property reports the shared state. Either authored
   attribute keeps removal enabled until both are absent. Assigning `false` through either property
   clears both attributes, while assigning `true` reflects that property's own spelling.
+- `disabled: boolean = false` (reflected) — **`lr-tag` only.** Disables the remove button and suppresses
+  `lr-remove`; a tag without `withRemove` has no action to gate.
 
 **Events:** `lr-remove` — noncancelable, bubbles and composes, `detail: { value }` echoing the tag's
 `value` property (`undefined` when never set), exactly like `lr-chip`'s, so one handler serves both.
@@ -75,8 +70,9 @@ Emitted by `lr-tag` only (a badge emits nothing at all) when the remove button i
 or by Enter/Space while focused; it is a real native `<button>`, so both come for free. Only
 rendered, and therefore only fired, while `withRemove` / `removable` is set, and the event's
 `target` is the tag itself. `lr-tag` and `lr-chip` share the removable-pill contract: `lr-remove`
-with `{ value }`, the `removable` attribute (`with-remove` is `lr-tag`'s upstream-mirroring alias),
-`--lr-<tag>-remove-hover-bg` and the same × glyph size; only `lr-chip` has `disabled`.
+with `{ value }`, the `removable` and `with-remove` attributes (aliases on both),
+`--lr-<tag>-remove-hover-bg`, the same × glyph size and `disabled` (which disables the remove button
+and suppresses `lr-remove`); `lr-chip` also accepts `with-remove` as an alias of `removable`.
 
 Like `<lr-chip>`, a removable `lr-tag` is controlled: activation only announces the request. The
 tag remains connected even if a listener calls `preventDefault()` (the event is not cancelable),
@@ -95,7 +91,7 @@ available during that same-task window so it can release the stale focused butto
 there is no owner to blur.
 
 **Slots:** default (the label), `start` (content before the label, typically an icon) and `end`
-(content after it) — both new in 8.0.0. Each wrapper collapses entirely (`display: none`, so no
+(content after it). Each wrapper collapses entirely (`display: none`, so no
 stray gap) while its slot is empty, and is seeded from the light-DOM children before the first
 render so declarative content never flashes hidden for a frame. Mark purely decorative slotted
 content `aria-hidden`.
@@ -117,7 +113,7 @@ win over whatever `variant`/`appearance` resolved: `--lr-badge-background` (fall
 `--lr-badge-fill`), `--lr-badge-border` (falls back to `--lr-badge-stroke`), `--lr-badge-color`
 (falls back to `--lr-badge-text`).
 
-_Palette — what `variant` chooses_ (new in 8.0.0): `--lr-badge-tint` (private default
+_Palette — what `variant` chooses_: `--lr-badge-tint` (private default
 `var(--lr-color-surface)`, the quiet fill; each non-neutral variant changes that private default to
 `var(--lr-color-fill-quiet)`, which the shared variants sheet has already re-pointed at that
 variant's row of the semantic grid), `--lr-badge-solid` (private default
@@ -129,7 +125,7 @@ variant's row of the semantic grid), `--lr-badge-solid` (private default
 the only variant whose border and text colors differ, which is why `-edge` and `-ink` are separate
 slots rather than one loud color.
 
-_Surface — what `appearance` routes onto the box_ (new in 8.0.0): `--lr-badge-fill` (default
+_Surface — what `appearance` routes onto the box_: `--lr-badge-fill` (default
 `var(--lr-badge-tint)`), `--lr-badge-stroke` (default `var(--lr-badge-edge)`) and `--lr-badge-text`
 (default `var(--lr-badge-ink)`). Set one of these to retune a single appearance without touching the
 palette.
@@ -138,14 +134,14 @@ _Density and shape:_ `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
 `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
 `var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
-badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`, new in 8.0.0) is the space between
+badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`) is the space between
 the `start` slot, the label and the `end` slot — it collapses on its own when a wrapper is empty,
 because the empty wrapper is `display: none` rather than zero-width. `--lr-badge-radius` (default
 `var(--lr-radius)`; `pill` raises it to `var(--lr-radius-pill)`) is `[part='base']`'s corner radius,
 retunable without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the
 same `--lr-button-radius` pattern.
 
-_Attention_ (all new in 8.0.0): `--lr-badge-attention-duration` (default
+_Attention_: `--lr-badge-attention-duration` (default
 `var(--lr-duration-ambient)` — one cycle of the animation), `--lr-badge-attention-easing` (default
 `var(--lr-easing-emphasized)` — kept a separate token from the duration so the `animation` shorthand
 expands to exactly one timing function), `--lr-badge-pulse-color` (default
@@ -154,7 +150,7 @@ expands to exactly one timing function), `--lr-badge-pulse-color` (default
 `--lr-badge-pulse-spread` (default `var(--lr-size-0-25rem)` — how far the ring expands) and
 `--lr-badge-bounce-distance` (default `var(--lr-size-0-1875rem)` — the hop's peak travel).
 
-_`lr-tag`'s own two_ (new in 8.0.0): `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
+_`lr-tag`'s own two_: `--lr-tag-remove-radius` (default `var(--lr-badge-radius)`, so
 retuning the tag's corner retunes the remove button's with it) and
 `--lr-tag-remove-hover-bg` (default `color-mix(in srgb, currentColor 16%, transparent)` —
 the remove button's `:hover` fill).

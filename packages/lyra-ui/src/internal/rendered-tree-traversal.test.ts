@@ -5,6 +5,8 @@ import {
   RenderedTreeTraversalError,
   collectRenderedTree,
   nativeElementLocalName,
+  nativeGetter,
+  resetNativeGetterCache,
   renderedTreeTraversalLimits,
 } from './rendered-tree-traversal.js';
 
@@ -13,6 +15,7 @@ function withThrowingNativeDescriptor<T>(
   property: PropertyKey,
   run: () => T,
 ): T {
+  resetNativeGetterCache();
   const original = Object.getOwnPropertyDescriptor;
   Object.getOwnPropertyDescriptor = ((candidate: object, key: PropertyKey) => {
     if (candidate === target && key === property) throw new Error(`unavailable ${String(key)}`);
@@ -22,8 +25,28 @@ function withThrowingNativeDescriptor<T>(
     return run();
   } finally {
     Object.getOwnPropertyDescriptor = original;
+    resetNativeGetterCache();
   }
 }
+
+describe('nativeGetter', () => {
+  it('looks a prototype accessor up once per name, however often it is read', () => {
+    resetNativeGetterCache();
+    const original = Object.getOwnPropertyDescriptor;
+    let lookups = 0;
+    Object.getOwnPropertyDescriptor = ((candidate: object, key: PropertyKey) => {
+      if (candidate === Node.prototype && key === 'nodeType') lookups += 1;
+      return original(candidate, key);
+    }) as typeof Object.getOwnPropertyDescriptor;
+    try {
+      for (let index = 0; index < 5; index += 1) nativeGetter(Node.prototype, 'nodeType');
+    } finally {
+      Object.getOwnPropertyDescriptor = original;
+    }
+    expect(lookups).to.equal(1);
+    expect(nativeGetter(Node.prototype, 'nodeType')?.call(document.createElement('i'))).to.equal(1);
+  });
+});
 
 describe('RenderedTreeTraversalError', () => {
   it('carries operation/limit/maximum fields and a formatted message', () => {

@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Hlasitost',
   videoCaptions: 'Titulky',
   videoCaptionsOff: 'Vypnuto',
-  videoPlaybackSpeed: 'Rychlost přehrávání',
   videoPictureInPicture: 'Zapnout obraz v obraze',
   videoExitPictureInPicture: 'Ukončit obraz v obraze',
   videoEnterFullscreen: 'Celá obrazovka',

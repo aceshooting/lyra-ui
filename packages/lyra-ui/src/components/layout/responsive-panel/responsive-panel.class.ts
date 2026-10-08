@@ -3,7 +3,7 @@ import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -220,7 +220,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private resizeObserver?: ResizeObserver;
   private resizeView?: Window;
   private lastTrigger?: HTMLElement;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private overlayHandle?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.close('escape'); },
@@ -297,16 +296,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         // transition restores the opener.
         const restoreFocus = changed.has('open') && !this.open;
         this.deactivateOverlayChrome(restoreFocus);
-        // The synchronous attempt above keeps the established timing whenever the opener can
-        // already take focus; this covers an opener the host only re-shows afterward.
-        const opener = this.lastTrigger;
-        if (restoreFocus && opener) {
-          this.deferredFocusReturn.schedule({
-            host: this,
-            candidates: () => [opener],
-            isCurrent: () => !this.open,
-          });
-        }
       }
     }
     if (changed.has('open') && !this.open) this.lastTrigger = undefined;
@@ -368,7 +357,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     this.resetOwnerRealmWork();
     super.disconnectedCallback();
   }
@@ -412,7 +401,6 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   private activateOverlayChrome(): void {
     this.nativeModal.prepare();
-    this.deferredFocusReturn.cancel();
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -422,6 +410,11 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       restoreFocusTo: this.lastTrigger ?? null,
       lockScroll: true,
       suspendWhenUnrendered: true,
+      // Covers an opener the host only re-shows after the close.
+      deferredReturn: () => {
+        const opener = this.lastTrigger;
+        return opener ? { candidates: () => [opener], isCurrent: () => !this.open } : undefined;
+      },
     });
   }
 

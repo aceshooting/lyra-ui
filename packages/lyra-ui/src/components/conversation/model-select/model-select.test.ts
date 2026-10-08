@@ -2510,6 +2510,16 @@ describe("spellcheck/autocapitalize/autocorrect passthrough", () => {
     expect(inp.getAttribute("autocorrect")).to.equal("off");
   });
 
+  it("exposes autocorrect as a boolean, omitting the native attribute until set", async () => {
+    const el = (await fixture(html`<lr-model-select></lr-model-select>`)) as LyraModelSelect;
+    expect(el.autocorrect).to.equal(true);
+    expect(input(el).hasAttribute("autocorrect")).to.equal(false);
+    el.autocorrect = false;
+    await el.updateComplete;
+    expect(input(el).getAttribute("autocorrect")).to.equal("off");
+    expect("autoCorrect" in el).to.equal(false);
+  });
+
   it("forwards autocomplete, inputmode, and enterkeyhint onto the free-text input", async () => {
     const el = (await fixture(
       html`<lr-model-select
@@ -2986,7 +2996,10 @@ describe("row state feedback on the already-selected option", () => {
     await el.updateComplete;
     // The listbox is placed by the Floating UI positioner a tick after the open render, so a
     // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitUntil(() => {
+      const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]');
+      return listbox !== null && listbox.style.left !== '' && listbox.getBoundingClientRect().height > 0;
+    }, 'the listbox was never placed');
     return el;
   };
 

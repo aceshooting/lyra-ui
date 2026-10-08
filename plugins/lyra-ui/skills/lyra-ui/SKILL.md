@@ -1,169 +1,156 @@
 ---
 name: lyra-ui
 description: >
-  Use when writing or reviewing code that imports @aceshooting/lyra-ui or its
-  @aceshooting/lyra-docs and @aceshooting/lyra-flags companions, uses any lr-* custom element,
-  or migrates a project off Web Awesome (wa-*) or Shoelace (sl-*) components. Covers
-  component APIs (attributes, slots, events, parts, CSS custom properties), design-token theming,
-  localization, framework/TypeScript integration, and migration paths from wa-*/sl-* to lr-*.
+  Use when writing or reviewing code that imports @aceshooting/lyra-ui (or its lyra-docs,
+  lyra-flags, lyra-translations and lyra-ide companions), uses any lr-* custom element, or
+  migrates a project off Web Awesome (wa-*) or Shoelace (sl-*). Covers exact component APIs
+  (attributes, slots, events, parts, CSS custom properties), design-token theming, localization,
+  framework/TypeScript integration, and wa-*/sl-* to lr-* migration.
 ---
 
 # lyra-ui
 
-`@aceshooting/lyra-ui` is a free, MIT-licensed, framework-agnostic Lit 3 web-component library — an
-independent alternative to Shoelace and Web Awesome, with no runtime dependency on either. Its
-custom elements use the `lr-` prefix and ship with design tokens, localization, RTL support and
-(for form controls) native form association. The current element count and complete tag list live
-in `references/index.md`; do not repeat a remembered count.
+`@aceshooting/lyra-ui` is a free, MIT-licensed, framework-agnostic Lit 3 web-component library, an
+independent alternative to Shoelace and Web Awesome with no runtime dependency on either. Elements
+use the `lr-` prefix and ship design tokens, localization, RTL support and native form association.
+The tag count and full tag list live in `references/index.md`; never repeat a remembered count.
 
-## Companion packages
-
-`@aceshooting/lyra-docs` is the **experimental** DOCX editor companion, not a core component.
-For `<lr-docx-editor>` and its session API, read the installed
-`@aceshooting/lyra-docs/README.md`, or the [public package README](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-docs/README.md).
-It documents the exact `@docx-editor.dev/core` optional peer, granular editor registration and
-stylesheet imports, save receipts, and current limits. Core document viewers remain in this
-skill's `references/components/` catalog.
-
-`@aceshooting/lyra-flags` supplies optional assets for `<lr-flag>`. Read
-`references/components/lr-flag.md` for its component and peer registration contract. For direct
-asset loading or fidelity-specific imports, read the installed `@aceshooting/lyra-flags/README.md`
-or the [public package README](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-flags/README.md).
-
-## Appearance defaults
-
-The built-in profile is Shadcn look, Glass surfaces, Emerald accent, System mode and comfortable
-density. Use the [Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter)
-for optional spotlights, compact gemstones and 44px gemstone/mode/design/flag-language controls.
-For the signature gemstone selector, show one localized “Selected accent: {name}” heading that
-updates with selection. Use that same interpolated label for the trigger's accessible name and
-hover title, dialog, and radiogroup. Show the selected gem in the glyph, pass localized item labels
-to the picker, and keep `lr-swatch-picker` generic.
-Preserve saved style and locale choices and explicit project branding. Read the installed package's
-matching guide before changing startup or persistence; older releases have different defaults.
-To retain the earlier appearance, select `look: 'lyra'`, `surface: 'solid'`, `accent: null` explicitly.
-`accent: null` still clears; `resetLyraStyle()` restores Emerald. Existing-app restyling needs an
-authorized migration or redesign.
+<!-- plugin-only:start -->
+AI coding agents: run `npx lyra-ui init-agents` (add `--agent <name>` if not auto-detected) to install
+this skill for yourself at the installed package's own version; it prints what to do so your agent
+loads it. Humans: `npm i @aceshooting/lyra-ui && npx lyra-ui init-agents` (a terminal prompts for agents).
+<!-- plugin-only:end -->
 
 ## Look up the exact API before writing any `lr-*` markup
 
-Never infer attributes, slots, events, parts or CSS custom properties from memory, or from a
-similarly-named component in another library. Read the component and shared guides needed for the
-task:
+Never infer attributes, slots, events, parts or CSS custom properties from memory or from a
+similarly named component in another library.
 
 | Need | Read |
 |---|---|
-| Find a component by need | Search `references/index.md` for the relevant family or term |
-| Known tag's full API and import | `references/components/<tag>.md` — derive the path from the tag, skipping the index |
-| Imports, registration, events, forms, styling, localization, frameworks, AI, or utilities | The matching focused `references/shared/<topic>.md` guide below |
+| Find a component by need | Search `references/index.md` |
+| A known tag's full API and import | `references/components/<tag>.md` (path derived from the tag, e.g. `lr-table`) |
+| Imports, registration, events, forms, styling, localization, frameworks, AI, utilities, testing | The matching `references/shared/<topic>.md` (`imports-and-registration.md`, `events-and-types.md`, `forms-and-accessibility.md`, `styles-and-tokens.md`, `native-styles-and-utilities.md`, `localization-and-rtl.md`, `frameworks-and-ssr.md`, `ai-and-peers.md`, `testing-and-utilities.md`) |
 | Design tokens | `references/tokens.md` |
-| Native light-DOM CSS, typography and utility classes | `references/shared/native-styles-and-utilities.md` |
-| What to `npm install` | `references/peers.md` |
-| One `wa-*`/`sl-*` tag | Search for that tag's section in `references/migration.md`; read the applicable mapping and warning |
-| Lyra v23 → v24 project upgrade | `references/shared/v23-to-v24-migration.md` |
+| What to install (optional peers) | `references/peers.md` |
+| One `wa-*`/`sl-*` tag | That tag's section in `references/migration.md` |
+| Lyra v23 to v24 upgrade | `references/shared/v23-to-v24-migration.md` |
+| Any other version upgrade | `CHANGELOG.md` of the package (current major; it links older history) |
 
-Focused `references/shared/` files: `imports-and-registration.md`, `v23-to-v24-migration.md`,
-`events-and-types.md`, `forms-and-accessibility.md`, `styles-and-tokens.md`,
-`native-styles-and-utilities.md`,
-`localization-and-rtl.md`, `frameworks-and-ssr.md`, `ai-and-peers.md`, and
-`testing-and-utilities.md`. `references/shared.md` remains an aggregate for tools that require a
-single compatibility document.
+Each component file carries its import path, optional peers, properties with types and defaults,
+events with payloads, slots, CSS parts, themeable properties, a usage snippet and gotchas.
 
-Example: `<lr-table>` → `references/components/lr-table.md`. Each component file carries
-its import path, optional peers, properties with types and defaults, events with payloads, slots,
-CSS parts, themeable properties, a usage snippet and gotchas; a tag documented together with a
-sibling points to that sibling's file for the shared prose.
+<!-- plugin-only:start -->
+If the project has lyra-ui installed, prefer `node_modules/@aceshooting/lyra-ui/llms/`: the same
+files at the exact installed version, which may differ from this plugin's copy.
+<!-- plugin-only:end -->
 
-**If the project already has lyra-ui installed, prefer its own copies** — the same files ship at
-`node_modules/@aceshooting/lyra-ui/llms/`, matching the exact installed version, which may differ
-from whatever this skill last shipped with.
-
-If local package references are unavailable, use the public machine surfaces rather than guessing:
+Without local references, use the public surfaces instead of guessing:
 
 | Need | Public fallback |
 |---|---|
-| Search by intent, synonym, typo, or localized name | `GET https://www.lyra-ui.com/api/v1/components/search?q=<query>` |
+| Search by intent, synonym or typo | `GET https://www.lyra-ui.com/api/v1/components/search?q=<query>` |
 | Exact component API | `GET https://www.lyra-ui.com/api/v1/components/<lr-tag>` |
-| Search shared/component documentation | `GET https://www.lyra-ui.com/api/v1/documentation/search?q=<query>` |
-| Resolve a Web Awesome/Shoelace tag | `GET https://www.lyra-ui.com/api/v1/migrations/<wa-or-sl-tag>` |
-| Complete structured index | `https://www.lyra-ui.com/component-api-index.json` |
+| Shared documentation search | `GET https://www.lyra-ui.com/api/v1/documentation/search?q=<query>` |
+| Resolve a `wa-*`/`sl-*` tag | `GET https://www.lyra-ui.com/api/v1/migrations/<tag>` |
+| Structured index | `https://www.lyra-ui.com/component-api-index.json` |
 
-MCP clients can connect to `https://www.lyra-ui.com/mcp` (streamable HTTP, no authentication).
-Use `search_components` to discover a tag, `get_component` to retrieve its exact API,
-`search_documentation` for library-wide behavior, and `resolve_migration` for `wa-*`/`sl-*`
-lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, and
-`lyra://guide/{topic}`.
+MCP clients can connect to `https://www.lyra-ui.com/mcp` (streamable HTTP, no authentication):
+`search_components`, `get_component`, `search_documentation`, `resolve_migration`; resources
+`lyra://catalog`, `lyra://component/{tag}`, `lyra://guide/{topic}`.
 
 ## Non-negotiable conventions
 
-- **Prefer stable tag registration aliases.**
-  `@aceshooting/lyra-ui/components/<lr-tag>.js` stays valid if the component's internal family
-  folder moves; `references/index.md` has the exact path for every tag. Class-only `.class.js`
-  entries keep their owning family path.
+- **Register through stable tag-shaped paths**, one per rendered tag:
+  `import '@aceshooting/lyra-ui/components/lr-combobox.js';`. `import '@aceshooting/lyra-ui'` is
+  registration-free. `all.js` is a compatibility set (prefer per-component entries in applications)
+  and omits the 15 optional-peer tags (charts, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
+  `lr-geojson-viewer`), which always need their own import. Class-only `.class.js` entries keep
+  their family path; `references/index.md` lists every exact path.
+- **Use the style API and `--lr-theme-*` inputs**, never ad-hoc values: look, surface, density, mode
+  and accent compose through the style API or scope attributes
+  (`references/shared/styles-and-tokens.md`, exact tokens in `references/tokens.md`).
+  `@aceshooting/lyra-ui/theme.css` supplies the document-level default profile.
+- **Events are `lr-*`-prefixed, bubbling, composed `CustomEvent`s** with payload on `event.detail`,
+  non-cancelable unless the component says otherwise. Native wrappers also relay only the native
+  events their section lists; do not assume an unlisted native event works.
+- **Complex values need property bindings**, not attributes (an object attribute becomes
+  `[object Object]`): Lit `.rows=${rows}`, Vue `:rows.prop`, Angular `[rows]`, React 19+ natively,
+  older React via a ref.
+- **Form controls are form-associated** (native submit and validation, no wiring). Read
+  `effectiveDisabled`, not `disabled`, for the state merged with an ancestor `<fieldset disabled>`.
+- **Every built-in string is localizable** through a per-instance `.strings` override or an app-wide
+  catalog via `registerLyraLocale()`; never overwrite slotted content to translate. Locale does not
+  set writing direction: inherit an explicit `dir="rtl"`.
 
-  ```js
-  import '@aceshooting/lyra-ui/components/lr-combobox.js';
-  ```
-  ```html
-  <lr-combobox label="Fruit"></lr-combobox>
-  ```
+## Appearance defaults
 
-  `import '@aceshooting/lyra-ui';` is registration-free. `all.js` gives the explicit
-  compatibility registration set — prefer per-component entries in application code — and omits
-  the 15 peer-gated tags (the chart family, `lr-map`, `lr-graph`, `lr-knowledge-graph-explorer`,
-  `lr-geojson-viewer`).
+The built-in profile is Shadcn look, Glass surface, Emerald accent, System mode, comfortable
+density. Preserve saved style/locale choices and explicit project branding; restyle an existing app
+only inside an authorized migration or redesign. To keep the pre-default look select
+`look: 'lyra'`, `surface: 'solid'`, `accent: null` explicitly (`accent: null` clears;
+`resetLyraStyle()` restores Emerald). For optional spotlights, gemstones and the 44px
+gemstone/mode/design/flag-language controls follow the
+[Lyra signature starter](references/shared/styles-and-tokens.md#lyra-signature-starter), which owns
+the exact recipe, labels and persistence; read it before changing startup or persistence.
 
-- **Use documented style axes and tokens.** Compose look, surface, density, mode and accent through
-  the style API or scope attributes; customize with the documented `--lr-theme-*` inputs.
-  `references/shared/styles-and-tokens.md` explains the API and `references/tokens.md` lists exact
-  tokens. `@aceshooting/lyra-ui/theme.css` supplies the document-level default profile and style scopes;
-  granular components also carry the built-in visual defaults.
+## Companion packages
 
-- **Lyra-specific events are `lr-*`-prefixed `CustomEvent`s** (`lr-change`, `lr-input`, …),
-  bubbling and composed, with payload on `event.detail`; they are non-cancelable unless the
-  component's own section says otherwise. Native wrappers may also relay the native `Event`,
-  `InputEvent`, and `FocusEvent` contracts explicitly listed for that component. Don't assume an
-  unlisted native DOM event name works.
+Install each at the same version as `@aceshooting/lyra-ui`.
 
-- **Complex values need property bindings, not attributes.** An object set as an attribute
-  stringifies to `[object Object]`. Lit `.rows=${rows}`, Vue `:rows.prop`, Angular `[rows]`,
-  React 19+ natively, earlier React via a ref.
+- **`@aceshooting/lyra-translations`** (optional peer): the 66 locale catalogs. Import
+  `@aceshooting/lyra-translations/<locale>.js` (or `<locale>/<family>.js` slices); it is also what
+  `loadLyraLocale()` from `@aceshooting/lyra-ui/locale-loader.js` imports. Only the pseudo-locales
+  stay under `@aceshooting/lyra-ui/translations/pseudo/`. The old
+  `@aceshooting/lyra-ui/translations/<locale>.js` path no longer exists.
+- **`@aceshooting/lyra-ide`** (dev dependency): `custom-elements.json`, `web-types.json`,
+  `vscode-html-data.json`, `vscode-css-data.json`. Point editor settings and manifest imports there;
+  `@aceshooting/lyra-ui` no longer exports `custom-elements.json`.
+- **`@aceshooting/lyra-flags`** (optional peer): assets for `<lr-flag>`. Read
+  `references/components/lr-flag.md`; for direct asset loading read the installed package README.
+- **`@aceshooting/lyra-docs`**: experimental `<lr-docx-editor>`; read its installed README for the
+  optional peer, registration, stylesheet imports, save receipts and limits. Core document viewers
+  stay in `references/components/`.
 
-- **Form controls are form-associated** — they participate in native `<form>` submission and
-  validation with no extra wiring. Read `effectiveDisabled`, not `disabled`, for the state merged
-  with an ancestor `<fieldset disabled>`.
+Tests under Happy DOM: call `installHappyDomShims()` from `@aceshooting/lyra-ui/testing` in the
+setup file instead of local patches (details in `references/shared/testing-and-utilities.md`).
 
-- **Every built-in string is localizable.** Components accept a per-instance `.strings` override or
-  an app-wide catalog via `registerLyraLocale()`; don't assume built-in text is hardcoded English,
-  and don't hand-translate by overwriting slotted content.
+## Upgrading to 27
+
+Check these first when a project moves to 27.0.0 (the `CHANGELOG.md` has the complete notes):
+
+- `ToolCallStatus` and `ToolResultStatus` became the single `ToolStatus` union.
+- `heading-level` defaults to `none` on `lr-task-list`, `lr-prompt-studio` and `lr-result-card`;
+  set `heading-level` explicitly to keep a semantic heading.
+- Locale catalogs and editor data moved to the two companion packages above.
+- `lr-copy-button` `feedbackDuration` defaults to 1500 ms.
 
 ## Migrating from Web Awesome or Shoelace
 
-`references/migration.md` holds `wa-*`/`sl-*` mappings, import rewrites and warnings. Determine
-each occurrence's source ecosystem and installed version. Apply verified automatic mappings;
-review warnings and semantic differences in context. A mapped tag does not guarantee a safe
-automatic rewrite.
+`references/migration.md` holds the `wa-*`/`sl-*` mappings, import rewrites and warnings. Resolve
+each occurrence against the source ecosystem and installed version that supplied it; apply verified
+automatic mappings, review warnings and semantic differences in context. A mapped tag is not a
+guaranteed lossless rename, and a tag absent from the tables has no documented counterpart. Some
+deprecated Lyra spellings stay supported (`removalNotBefore` is a floor, not a removal date), such
+as `clearable`/`with-clear` on the combobox and `lr-icon`'s `autoWidth` (a CSS-level alias of
+`canvas="auto"`; an explicit `canvas` wins); do not blanket-rewrite them.
 
-Some deprecated Lyra spellings remain supported while the mirrored upstream still publishes them;
-their `removalNotBefore` floor is not an automatic removal date. Prefer the current Lyra spelling
-for new code and see `references/migration.md` for the exact protected list. In particular,
-`lr-icon`'s `autoWidth` is only a CSS-level alias for `canvas="auto"`; explicit `canvas` wins, so
-review selector reach before changing `[auto-width]` rules. Do not blanket-rewrite these aliases.
+## Workflows
 
-Read `references/components/<tag>.md` for the target contract. Lyra combobox accepts both
-`clearable` and `with-clear`; a tag absent from the tables has no documented counterpart. For a
-Lyra v23 → v24 upgrade, use `references/shared/v23-to-v24-migration.md` for the route, style, SSR
-and event-detail changes.
+Slash commands in the plugin; in an `init-agents` install read the matching file in this skill's
+`commands/` directory:
 
-`/lyra-ui:migrate` performs verified rewrites and reports manual/unresolved occurrences (both
-ecosystems are best-effort). `/lyra-ui:review` audits a whole consumer project: fixes local misuse
-and every workaround the installed version already covers, files genuine gaps upstream with the
-user's consent, and keeps a request ledger so a later run can close each item out. `/lyra-ui:update`
-bumps the dependency and reports the changelog.
+- `/lyra-ui:migrate` (`commands/migrate.md`): verified `wa-*`/`sl-*` rewrites plus a manual list.
+- `/lyra-ui:review` (`commands/review.md`): whole-project audit, local fixes, upstream requests, ledger.
+- `/lyra-ui:frontend` (`commands/frontend.md`): read-only review of how a project uses lyra-ui.
+- `/lyra-ui:new-component` (`commands/new-component.md`): usage snippet from the real API.
+- `/lyra-ui:update` (`commands/update.md`): bump the dependency and report the changelog.
 
-## Report gaps, bugs, and improvement ideas on a user's behalf
+For page and interface design use the sibling `compose-lyra-interfaces` skill.
 
-Found something lyra-ui doesn't cover, does wrong, or could do better? Read
-[reporting.md](reporting.md) for the naming-mismatch check, the feature-request API and payload,
-and the response format. **Always get the user's explicit agreement before filing** — never as a
-side effect of noticing something — and never include source, file paths, or product/client names.
+## Report gaps and bugs on a user's behalf
+
+For a missing component, capability, bug or improvement idea, read [reporting.md](reporting.md)
+(naming-mismatch check, payload, classification). **Always get the user's explicit agreement before
+filing**, never as a side effect of noticing something, and never include source, file paths or
+product/client names.

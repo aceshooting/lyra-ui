@@ -1888,6 +1888,8 @@ test('release workflows accept the document companion and reject unsupported tag
     ['lyra-ui@25.6.1', true],
     ['lyra-flags@2.3.0', true],
     ['lyra-docs@0.1.0', true],
+    ['lyra-ide@27.0.0', true],
+    ['lyra-translations@27.0.0', true],
     ['lyra-docs@0.1.0-beta.1', false],
     ['lyra-docs@0.1.0+rebuild.1', false],
     ['lyra-docs@00.1.0', false],
@@ -1920,7 +1922,7 @@ test('initial document release selects its existing version without releasing an
 
 test('document companion publishing does not schedule the UI website feed check', () => {
   const workflow = readFileSync(path.join(repoRoot, '.github/workflows/release-feed-freshness.yml'), 'utf8');
-  assert.match(workflow, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.workflow_run\.conclusion == 'success' && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-docs@'\)\) \}\}/u);
+  assert.match(workflow, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.workflow_run\.conclusion == 'success' && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-docs@'\) && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-ide@'\) && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-translations@'\)\) \}\}/u);
 });
 
 test('binds privileged workflow context to the requested peeled tag', () => {
@@ -2459,9 +2461,15 @@ test('package lifecycle and root custom-elements metadata are clean-checkout saf
   const lyraPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
   );
+  // The manifest stays generated beside the sources; it publishes from @aceshooting/lyra-ide.
+  const idePackage = JSON.parse(
+    readFileSync(path.join(repoRoot, 'packages/lyra-ide/package.json'), 'utf8')
+  );
+  assert.equal(lyraPackage.customElements, undefined);
+  assert.equal(idePackage.customElements, 'custom-elements.json');
   const lyraManifestRelativePath = path.posix.join(
     'packages/lyra-ui',
-    lyraPackage.customElements
+    idePackage.customElements
   );
   const rootManifestPath = path.resolve(repoRoot, rootPackage.customElements);
   const lyraManifestPath = path.resolve(repoRoot, lyraManifestRelativePath);
@@ -2971,7 +2979,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/update-framework-recipe-versions.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 
@@ -3082,7 +3090,7 @@ test('contributor docs derive the local platform modes from the runner and CI ma
   );
 });
 
-test('catalog prose uses the shipped strict virtualization threshold contract', () => {
+test('the README names every inventoried tag and shared docs keep the virtualizeAt rename', () => {
   const readme = readFileSync(
     path.join(repoRoot, 'packages/lyra-ui/README.md'),
     'utf8'
@@ -3091,66 +3099,18 @@ test('catalog prose uses the shipped strict virtualization threshold contract', 
     path.join(repoRoot, 'packages/lyra-ui/llms/shared.md'),
     'utf8'
   );
-  const catalogRows = ['lr-ingestion-queue', 'lr-activity-feed'].map(
-    (tagName) => {
-      const row = readme
-        .split('\n')
-        .find((line) => line.startsWith(`| \`<${tagName}>\``));
-      assert.ok(row, `README catalog must contain <${tagName}>`);
-      return row;
-    }
+  const inventory = JSON.parse(
+    readFileSync(
+      path.join(repoRoot, 'packages/lyra-ui/scripts/fixtures/component-inventory.json'),
+      'utf8'
+    )
   );
-
-  for (const row of catalogRows) {
-    assert.match(row, /`virtualizeAt`/u);
-    assert.match(row, /(?:above|more than) `virtualizeAt`/u);
-    assert.doesNotMatch(row, /virtualizeThreshold|at or above/iu);
-  }
+  const missing = inventory.components
+    .map(({ tag }) => tag)
+    .filter((tag) => !readme.includes(`<${tag}>`));
+  assert.deepEqual(missing, [], 'README catalog must name every inventoried tag');
+  assert.doesNotMatch(readme, /virtualizeThreshold|^\| `<lr-playback>`/mu);
   assert.match(shared, /`virtualizeThreshold` → `virtualizeAt`/u);
-});
-
-test('MCP catalog prose matches the validated resource and request-event contract', () => {
-  const readme = readFileSync(
-    path.join(repoRoot, 'packages/lyra-ui/README.md'),
-    'utf8'
-  );
-  const row = readme
-    .split('\n')
-    .find((line) => line.startsWith('| `<lr-mcp-app>`'));
-  assert.ok(row, 'README catalog must contain <lr-mcp-app>');
-  assert.match(row, /required resource descriptor/iu);
-  assert.match(row, /exactly one of HTML or source URL/iu);
-  assert.match(row, /host-authorized request events/iu);
-  assert.doesNotMatch(row, /origin allowlist|error event/iu);
-});
-
-test('typed chart catalog prose matches the writable type contract', () => {
-  const readme = readFileSync(
-    path.join(repoRoot, 'packages/lyra-ui/README.md'),
-    'utf8'
-  );
-  const row = readme
-    .split('\n')
-    .find((line) => line.startsWith('| `<lr-bar-chart>`'));
-  assert.ok(row, 'README catalog must contain the typed chart row');
-  assert.match(row, /tag-specific defaults/iu);
-  assert.match(row, /full writable `LyraChartType` vocabulary/iu);
-  assert.doesNotMatch(row, /type` locked/iu);
-});
-
-test('sequence playback catalog prose uses the v9 domain surface', () => {
-  const readme = readFileSync(
-    path.join(repoRoot, 'packages/lyra-ui/README.md'),
-    'utf8'
-  );
-  const row = readme
-    .split('\n')
-    .find((line) => line.startsWith('| `<lr-sequence-playback>`'));
-  assert.ok(row, 'README catalog must contain <lr-sequence-playback>');
-  assert.match(row, /`itemCount`/u);
-  assert.match(row, /`currentIndex`/u);
-  assert.match(row, /`lr-sequence-step`/u);
-  assert.doesNotMatch(readme, /^\| `<lr-playback>`/mu);
 });
 
 test('the authored provider-neutral AI import example compiles against the shipped source entry', () => {

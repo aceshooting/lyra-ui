@@ -116,7 +116,7 @@ If the import fails, leave the native disclosure visible and usable.
 - `distance: number = 8` — anchor-offset distance in px (Floating UI's main-axis `offset()`). May
   legitimately be negative to overlap the trigger; a non-finite value falls back to the default.
 - `skidding: number = 0` — offset _along_ the anchor's edge, in px (Floating UI's cross-axis
-  offset). New in 8.0.0.
+  offset).
 - `for: string = ''` (reflected) — id of an element resolved in this element's own root. It is the
   positioning source behind a direct `.anchor`; when it resolves to a live HTML element and no
   trigger is slotted, it also owns click and generated ARIA. A slotted trigger wins interaction/ARIA
@@ -149,7 +149,7 @@ If the import fails, leave the native disclosure visible and usable.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""`; only when it is absent does the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
-- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none` (new in 11.0.0)
+- `popupRole: 'dialog'|'menu'|'none' = 'dialog'` (attribute `popup-role`). `none`
   renders **no** `role` and no generated `aria-label` on the popup surface, and leaves
   `aria-haspopup` off the trigger, so slotted content owns its own semantics and accessible name.
   Unsupported attribute values and untyped property writes normalize to `dialog` before any role
@@ -174,7 +174,7 @@ If the import fails, leave the native disclosure visible and usable.
   For a whole bar of such flyouts — coordinated so one opens at a time, sharing one panel region,
   with arrow keys between triggers and an optional collapsed layout — use `lr-navigation-menu`
   (documented in `layout.md`) instead of several popovers.
-- `disabled: boolean = false` (reflected, new in 10.0.0) — prevents opening the popover; pointer,
+- `disabled: boolean = false` (reflected) — prevents opening the popover; pointer,
   keyboard, and programmatic `show()`/`open = true` are all refused while set. Becoming disabled also
   closes an already-open popover, and initial `disabled` plus `open` normalizes closed in either
   attribute order. `lr-dropdown` now inherits this from `lr-popover` rather than declaring its own;
@@ -248,15 +248,11 @@ an open ancestor popover containing the newcomer or its trigger remain independe
 the same `show()` or `hide()` request from its own before-event coalesces onto one transition
 promise and emits the lifecycle once.
 
-**Breaking in 8.0.0:** `lr-show`/`lr-hide` now fire _before_ the state changes and are cancelable —
+`lr-show`/`lr-hide` fire _before_ the state changes and are cancelable —
 `preventDefault()` on `lr-show` leaves the popover closed for the trigger click, `show()` and
 `open = true` alike, and on `lr-hide` keeps it open for every dismissal path (Escape, light dismiss,
 `hide()`, `open = false`). Reading `el.open` inside such a handler therefore returns the _old_
-value; in 7.x these events fired after the fact and were purely informational. That is exactly the
-timing `wa-show`/`wa-hide` always had, so the `wa-*` → `lr-*` migration table's "mechanical rename"
-promise now holds for these names too — which also means 7.x Lyra code that read `el.open` in the
-handler was relying on the _opposite_ polarity and must be re-read. `lr-after-show`/`lr-after-hide`
-are new in 8.0.0 and settle after the public `popover.show` / `popover.hide` registry animation.
+value. `lr-after-show`/`lr-after-hide` settle after the public `popover.show` / `popover.hide` registry animation.
 Per-element overrides win over page defaults; keyframes-only overrides retain the popup's
 `--show-duration` / `--hide-duration` and shared easing. Reduced motion flattens timing to zero, and
 a `null` registration skips interpolation, but neither path skips the after-event or its

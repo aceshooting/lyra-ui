@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Âm lượng',
   videoCaptions: 'Phụ đề',
   videoCaptionsOff: 'Tắt',
-  videoPlaybackSpeed: 'Tốc độ phát',
   videoPictureInPicture: 'Bật chế độ hình trong hình',
   videoExitPictureInPicture: 'Thoát chế độ hình trong hình',
   videoEnterFullscreen: 'Bật chế độ toàn màn hình',

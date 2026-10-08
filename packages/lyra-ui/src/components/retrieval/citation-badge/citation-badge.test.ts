@@ -288,7 +288,7 @@ describe('hover/focus preview popover', () => {
     await el.updateComplete;
     expect(popover.hidden, 'should still be visible immediately after leave -- grace period').to.be.false;
 
-    await aTimeout(300);
+    await waitUntil(() => popover.hidden, 'popover hidden once the grace period elapses', { timeout: 2000 });
     expect(popover.hidden, 'should be hidden once the grace period elapses').to.be.true;
   });
 
@@ -316,6 +316,7 @@ describe('hover/focus preview popover', () => {
     // Wait past when the original hide timer would have fired. If it wasn't
     // actually cancelled, the popover silently closes here despite hover
     // having returned.
+    // wait-reason: negative assertion, a cancelled hide timer must not fire after hover returned
     await aTimeout(300);
     expect(popover.hidden, 'the stale hide timer must not fire after hover returned').to.be.false;
   });
@@ -350,6 +351,7 @@ describe('hover/focus preview popover', () => {
     expect(popover.hidden).to.be.false;
 
     wrapper.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    // wait-reason: negative assertion, focus must hold the popover open past the grace period
     await aTimeout(300);
     expect(popover.hidden, 'focus should still hold the popover open').to.be.false;
   });
@@ -532,6 +534,7 @@ describe('keyboard-only preview focus', () => {
     await focusByKeyboard(base);
     wrapper.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
     wrapper.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    // wait-reason: negative assertion, keyboard focus must hold the popover open past the grace period
     await aTimeout(400);
     expect(popover.hidden, 'keyboard focus holds it after pointer leave').to.equal(false);
     base.blur();

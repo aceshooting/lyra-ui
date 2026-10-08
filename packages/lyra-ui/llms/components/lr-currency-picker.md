@@ -6,7 +6,7 @@
 - **Class** `LyraCurrencyPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/currency-picker/currency-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below

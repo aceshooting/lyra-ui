@@ -15,6 +15,7 @@ import {
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_stackTraceHideFrames, LYRA_DEFAULT_stackTraceLabel, LYRA_DEFAULT_stackTraceLimit, LYRA_DEFAULT_stackTraceShowFrames } from '../../../internal/default-strings.generated.js';
@@ -22,7 +23,7 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_D
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
-const COPY_CONFIRM_MS = 1500;
+const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 const MAX_INTERNAL_PATTERNS = 10_000;
 
 function snapshotInternalPatterns(value: unknown): readonly (string | RegExp)[] {

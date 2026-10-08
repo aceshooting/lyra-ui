@@ -9,6 +9,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   finiteCount,
   finiteNumber,
@@ -203,7 +204,7 @@ function starSolid(): SVGTemplateResult {
  * @status stable
  * @since 4.0.0
  */
-export class LyraRating extends LyraElement<LyraRatingEventMap> {
+export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -513,21 +514,6 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** @internal */

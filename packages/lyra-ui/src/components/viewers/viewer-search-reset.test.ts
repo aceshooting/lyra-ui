@@ -49,11 +49,11 @@ describe('viewer source search resets', () => {
     ].map(([name, create]) => ({
       name: name as string,
       create: create as () => Promise<SearchResetViewer>,
-      seed: (target: Record<string, unknown>) => Object.assign(target, {
-        searchQuery: 'hit',
-        searchMatches: [{}],
-        searchMatchCountExact: false,
-        searchActiveIndex: 0,
+      seed: (target: Record<string, unknown>) => Object.assign((target['table'] as { search: object }).search, {
+        query: 'hit',
+        matches: [{}],
+        exact: false,
+        activeIndex: 0,
       }),
     })),
     {
@@ -108,11 +108,11 @@ describe('viewer source search resets', () => {
     {
       name: 'PDF',
       create: () => fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`),
-      seed: (target) => Object.assign(target, {
-        searchQuery: 'hit',
-        searchMatches: [{ page: 1, start: 0, length: 3 }],
-        searchMatchCountExact: false,
-        searchActiveIndex: 0,
+      seed: (target) => Object.assign(target['searchState'] as object, {
+        query: 'hit',
+        matches: [{ page: 1, start: 0, length: 3 }],
+        exact: false,
+        activeIndex: 0,
       }),
     },
   ];

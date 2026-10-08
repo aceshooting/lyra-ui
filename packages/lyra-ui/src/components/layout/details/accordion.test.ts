@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './accordion.js';
 import './accordion-item.js';
 import './details.js';
@@ -1564,7 +1564,7 @@ describe('collecting already-slotted panels without relying on the initial slotc
     try {
       await el.updateComplete;
       await Promise.all(items.map((item) => item.updateComplete));
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange is intercepted', { timeout: 2000 });
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -1600,7 +1600,8 @@ describe('collecting already-slotted panels without relying on the initial slotc
     try {
       await el.updateComplete;
       await Promise.all(items.map((item) => item.updateComplete));
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange fires', { timeout: 2000 });
+      await el.updateComplete;
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -1679,6 +1680,30 @@ describe('accordion events, keys, availability and findability', () => {
     }
     expect(document.activeElement === items[1]).to.equal(true);
     expect(reads).to.be.at.most(200);
+  });
+
+  it('ignores ancestor style writes that touch no visibility declaration and reacts to hiding ones', async () => {
+    const shell = await fixture<HTMLElement>(html`<div><lr-accordion>
+      <lr-accordion-item id="a" label="A"></lr-accordion-item><lr-accordion-item id="b" label="B"></lr-accordion-item>
+    </lr-accordion></div>`);
+    const items = Array.from(shell.querySelectorAll<LyraAccordionItem>('lr-accordion-item'));
+    await Promise.all(items.map((item) => item.updateComplete));
+    const original = window.getComputedStyle;
+    let reads = 0;
+    window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
+      reads += 1;
+      return original.call(window, element, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      shell.style.overflow = 'hidden';
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(reads).to.equal(0);
+      shell.style.display = 'none';
+      await waitUntil(() => reads > 0, 'a display write re-checks availability');
+    } finally {
+      window.getComputedStyle = original;
+      shell.style.display = '';
+    }
   });
 
   it('moves focus to the trigger when collapsing hides the focused content', async () => {

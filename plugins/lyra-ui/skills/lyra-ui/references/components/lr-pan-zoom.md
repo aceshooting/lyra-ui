@@ -59,9 +59,7 @@ relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed,
 action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
-and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
-`--lr-zoomable-frame-zoom` compatibility names were removed in v9; migrate them to the two
-`--lr-pan-zoom-*` names. Scaling
+and the read-only `--lr-pan-zoom-zoom`. Scaling
 uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 

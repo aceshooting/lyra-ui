@@ -8,7 +8,6 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import type { ToolInvocation, ToolApprovalEventDetail } from '../../../ai/types.js';
-import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import type { LyraDetailsToggleDetail } from '../../layout/details/details.class.js';
 import { styles } from './tool-timeline.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
@@ -19,7 +18,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { TOOL_CALL_STATUSES } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, type ToolStatus } from '../tool-status.js';
 import {
   EMPTY_REDACTION_PATHS,
   projectedRedactionFields,
@@ -111,7 +110,7 @@ interface CanonicalToolTimelineEntry {
   readonly name: string;
   readonly displayName?: string;
   readonly args: unknown;
-  readonly status: ToolCallStatus;
+  readonly status: ToolStatus;
   readonly result?: unknown;
   readonly error?: string;
   readonly sourceKey?: string;
@@ -125,9 +124,10 @@ interface CanonicalToolTimelineEntry {
 }
 
 let resultViewRegistration: Promise<unknown> | undefined;
+let approvalDialogRegistration: Promise<unknown> | undefined;
 
 const MAX_RENDERED_ENTRIES = 500;
-const TOOL_STATUSES: ReadonlySet<ToolCallStatus> = new Set<ToolCallStatus>(TOOL_CALL_STATUSES);
+const TOOL_STATUSES: ReadonlySet<ToolStatus> = new Set<ToolStatus>(TOOL_CALL_STATUSES);
 
 function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
   return getOwnDataDescriptor(value, property);
@@ -204,7 +204,7 @@ function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | 
       name: typeof name === 'string' ? name : '',
       ...(typeof displayName === 'string' ? { displayName } : {}),
       args: valueOf(argsDescriptor),
-      status: TOOL_STATUSES.has(status as ToolCallStatus) ? status as ToolCallStatus : 'pending',
+      status: TOOL_STATUSES.has(status as ToolStatus) ? status as ToolStatus : 'pending',
       ...(result === undefined ? {} : { result }),
       ...(typeof error === 'string' ? { error } : {}),
       ...(typeof sourceKey === 'string' ? { sourceKey } : {}),
@@ -428,6 +428,11 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     if (!changed.has('entries')) return;
     this.rebuildProjection();
     const projected = this.projectedEntriesCache;
+    // Registered on first need, so a timeline with no approval-gated entry never loads the dialog.
+    if (projected.some((entry) => entry.needsApproval))
+      approvalDialogRegistration ??= import('../tool-approval-dialog/tool-approval-dialog.js').catch(
+        () => (approvalDialogRegistration = undefined)
+      );
     const identities = new Set(projected.map(entryIdentity));
     if (this.reviewingEntryKey !== undefined) {
       const still = projected.find((entry) => entryIdentity(entry) === this.reviewingEntryKey);

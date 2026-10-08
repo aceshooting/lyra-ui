@@ -1,4 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -6,7 +7,7 @@ import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -29,11 +30,6 @@ import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { hasTopLayerAncestor, needsTopLayerEscape, promoteToTopLayer, releaseTopLayer } from '../../../internal/top-layer-escape.js';
 import { styles } from './tour.styles.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
-
 /** Default distance (px) between the target and the popover -- see `LyraTour.distance`. */
 const DEFAULT_DISTANCE = 12;
 /** Default extra px between a target's own box and the spotlight cutout/ring -- see
@@ -41,12 +37,18 @@ const DEFAULT_DISTANCE = 12;
 const DEFAULT_SPOTLIGHT_PADDING = 4;
 const MAX_TOUR_STEPS = 256;
 const MAX_STEP_ID_LENGTH = 256;
+import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: START
+import type { LyraLocaleStrings } from '../../../internal/localization.js';
+import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_tourDone, LYRA_DEFAULT_tourSkip, LYRA_DEFAULT_tourStepOf } from '../../../internal/default-strings.generated.js';
+// GENERATED DEFAULT-STRING SLICE IMPORT: END
+
 const MAX_TARGET_SELECTOR_LENGTH = 8_192;
 const MAX_HEADING_LENGTH = 4_096;
 const MAX_CONTENT_LENGTH = 65_536;
 const MAX_STEP_SPOTLIGHT_PADDING = 10_000;
 /** A CSS `<number>` followed by one of the length units the spotlight padding resolves live. */
-const SPOTLIGHT_PADDING_LENGTH = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|vw|vh)$/i;
+const SPOTLIGHT_PADDING_LENGTH = new RegExp(`^${CSS_NUMBER_SOURCE}(?:px|rem|em|vw|vh)$`, 'i');
 
 /** `spotlight-padding`: a value carrying a `px`, `rem`, `em`, `vw` or `vh` unit stays the authored
  *  CSS length, resolved to pixels whenever the spotlight is painted; any other value parses with
@@ -173,17 +175,6 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
   );
 }
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null) return false;
-  try {
-    if (Array.isArray(value)) return false;
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === null || Object.getPrototypeOf(prototype) === null;
-  } catch {
-    return false;
-  }
-}
-
 function ownDataValue(record: Record<string, unknown>, key: string): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
@@ -241,7 +232,7 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
   const length = safeArrayLength(value);
   for (let index = 0; index < length; index += 1) {
     const candidate = arrayItem(value, index);
-    if (!isPlainRecord(candidate)) continue;
+    if (!isCrossRealmPlainRecord(candidate)) continue;
     const stepId = boundedString(ownDataValue(candidate, 'stepId'), MAX_STEP_ID_LENGTH);
     const target = normalizeTourTarget(ownDataValue(candidate, 'target'));
     const heading = boundedString(ownDataValue(candidate, 'heading'), MAX_HEADING_LENGTH);
@@ -508,7 +499,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private overlayInteractive?: boolean;
   private activeTargetSnapshot: HTMLElement | null = null;
   private focusReturnTarget: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private escapedInset?: {
     previous: { property: string; value: string; priority: string }[];
     written: string;
@@ -546,7 +536,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       if (this.hasUpdated) this.emit('lr-tour-end', { reason: 'unavailable' });
     } else if (changed.has('open')) {
       if (this.open) {
-        this.deferredFocusReturn.cancel();
         const active = deepActiveElement(this.ownerDocument);
         this.focusReturnTarget = isHtmlElement(active) ? active : null;
         this.activateOverlayInternal();
@@ -633,7 +622,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.disposePositioning();
     this.nativeModal.hide();
     this.overlay?.suspend();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     if (this.open) {
       // Deferred a microtask so a synchronous reparent (disconnect immediately followed by
       // reconnect) isn't mistaken for a real removal -- mirrors lr-dialog's identical case.
@@ -959,6 +948,15 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       trapFocus: !interactive,
       lockScroll: true,
       suspendWhenUnrendered: true,
+      // Covers a trigger the host only re-shows after the close.
+      deferredReturn: () => {
+        const trigger = this.focusReturnTarget;
+        if (!trigger || !this.isConnected) return undefined;
+        return {
+          candidates: () => [trigger.isConnected && trigger.ownerDocument === this.ownerDocument ? trigger : null],
+          isCurrent: () => !this.open,
+        };
+      },
     });
     this.overlayInteractive = interactive;
     return true;
@@ -968,22 +966,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.disposePositioning();
     this.releaseContainingBlockEscape();
     this.activeTargetSnapshot = null;
-    const hadOverlay = this.overlay !== undefined;
     this.nativeModal.hide();
     this.overlay?.deactivate();
     this.overlay = undefined;
     this.overlayInteractive = undefined;
-    // The synchronous return above keeps the established timing whenever the trigger can already
-    // take focus; this covers a trigger the host only re-shows afterward.
-    const trigger = this.focusReturnTarget;
     this.focusReturnTarget = null;
-    if (hadOverlay && trigger && this.isConnected) {
-      this.deferredFocusReturn.schedule({
-        host: this,
-        candidates: () => [trigger.isConnected && trigger.ownerDocument === this.ownerDocument ? trigger : null],
-        isCurrent: () => !this.open,
-      });
-    }
   }
 
   private onBackdropClick = (): void => {

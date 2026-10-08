@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'آواز جي سطح',
   videoCaptions: 'ڪيپشن',
   videoCaptionsOff: 'بند',
-  videoPlaybackSpeed: 'هلائڻ جي رفتار',
   videoPictureInPicture: 'تصوير اندر تصوير کوليو',
   videoExitPictureInPicture: 'تصوير اندر تصوير مان نڪرو',
   videoEnterFullscreen: 'پوري اسڪرين ڪريو',

@@ -7,26 +7,17 @@
 // verifies the *registration* file for each of those class modules is actually declared as having
 // side effects, in both the published `./dist/...` form and the in-repo `./src/...` form.
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deriveSideEffects, discoverComponentSideEffectModules } from './generate-side-effects.mjs';
 import { sideEffectsCover, sideEffectPatternHasSource } from './side-effects-patterns.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const componentsRoot = join(packageDir, 'src', 'components');
 const packageJsonPath = join(packageDir, 'package.json');
 const inventoryPath = join(packageDir, 'scripts', 'fixtures', 'component-inventory.json');
-
-function walk(directory) {
-  const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(entryPath));
-    else files.push(entryPath);
-  }
-  return files;
-}
 
 const allClassFiles = walk(componentsRoot)
   .filter((file) => file.endsWith('.class.ts'))

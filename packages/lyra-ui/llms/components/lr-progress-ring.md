@@ -19,7 +19,7 @@
 A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0` (reflected), `max: number = 100`, `indeterminate: boolean = false`
-(reflected), `variant: LyraProgressVariant = 'brand'` (reflected, added in 9.0.0 — matches sibling
+(reflected), `variant: LyraProgressVariant = 'brand'` (reflected — matches sibling
 `lr-progress-bar`'s semantic-palette vocabulary: `neutral`/`brand`/`success`/`warning`/`danger`;
 `primary` is an alias of `brand`, and an unsupported value falls back to `brand` on both),
 `withValue: boolean = false` (attribute `with-value`),
@@ -39,12 +39,8 @@ back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage **only when `with-value` is set** (and nothing at all while `indeterminate`); `label` —
 named alias for center content, matching `lr-progress-bar`.
-**Breaking in 10.0.0:** a determinate ring used to render its percentage unconditionally, with no way
-to suppress it short of slotting replacement content. It now gains `showValue`/`show-value` defaulting
-to `false`, exactly matching `lr-progress-bar` — which is what "the same value contract as
-`lr-progress-bar`" above has always claimed but did not deliver. Add `show-value` (now spelled
-`with-value`) to keep the percentage. `aria-valuetext` still carries it regardless, mirroring `lr-progress-bar`'s own
-independence there, so the accessible value is unaffected.
+The percentage is opt-in via `with-value` (default `false`), matching `lr-progress-bar`.
+`aria-valuetext` carries it regardless, so the accessible value is unaffected.
 Its accessible text uses the same visibility filtering, forwarding-slot mutation/reassignment
 tracking, and explicit-empty host-label precedence as `lr-progress-bar`.
 **Live members:** `indicator: SVGCircleElement | null` returns the rendered indicator circle (or
@@ -65,7 +61,7 @@ bridge directly, which `theme.css` declares at `3px`),
 `--lr-progress-ring-indicator-width` (defaulting to the track width),
 `--lr-progress-ring-indicator-color` (default
 `var(--lr-progress-ring-indicator-variant-color)`, so the active `variant` supplies the color),
-`--lr-progress-ring-indicator-variant-color` (added in 9.0.0, same override precedence as
+`--lr-progress-ring-indicator-variant-color` (same override precedence as
 `lr-progress-bar`'s `--lr-progress-indicator-variant-color` — the palette slot `variant` resolves
 into),
 `--lr-progress-ring-indicator-transition-duration` (default `var(--lr-transition-base)`), and

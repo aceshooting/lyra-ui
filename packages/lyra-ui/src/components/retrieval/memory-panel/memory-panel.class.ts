@@ -1,3 +1,4 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -27,17 +28,17 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
-import type { LyraScoreThresholds } from '../graph/graph.class.js';
+import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { LyraScoreThresholds } from '../graph/graph.class.js';
+export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 /**
  * One item held in a memory panel's short-term or long-term list. `provenance` reuses
  * `lr-provenance-panel`'s own `LyraProvenance` shape verbatim -- assigning `item.provenance` onto
@@ -354,6 +355,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     select: LYRA_DEFAULT_select,
     showLess: LYRA_DEFAULT_showLess,
     showMore: LYRA_DEFAULT_showMore,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -415,6 +419,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
    *  explicitly empty host label stays empty on the group, and so does an explicitly empty
    *  `label`. */
   @property() label?: string;
+  /** Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens `[part="item"]` padding; `m` (the default) and larger keep the full padding. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps each memory item's bordered, filled box. `'plain'` removes the border, background and corner radius from every `[part="item"]`, for use inside an already-bordered container. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
 
   @state() private expandedIds = new Set<string>();
   @state() private pending: PendingAction | null = null;
@@ -478,7 +486,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private captureControlledFocus(changed: PropertyValues<this>): void {
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
-    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     if (!active) return;
 
     const row = active.closest<HTMLElement>('[part="item"]');
@@ -589,7 +597,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private tier(score: number): Tier {
-    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    const { high, medium } = resolveScoreTiers(DEFAULT_TIERS, this.thresholds);
     if (score >= high) return 'high';
     if (score >= medium) return 'medium';
     return 'low';

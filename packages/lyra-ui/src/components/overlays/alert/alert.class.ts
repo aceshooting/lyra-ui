@@ -15,16 +15,15 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
-  literalSetConverter,
   optionalLiteralSetConverter,
 } from '../../../internal/converters.js';
 import {
   normalizeReflectedOptionalSize,
   optionalSizeConverter,
   type LyraSize,
-  type LyraVariant,
 } from '../../../internal/variants.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
+import { semanticVariantConverter, type SemanticVariant } from '../../../internal/semantic-variant.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { getToastRegion } from '../toast/toast-region.js';
 import {
@@ -44,13 +43,10 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings.generated.
 
 /** Shoelace's physical countdown direction. */
 export type AlertCountdown = 'rtl' | 'ltr' | undefined;
-/** Shoelace's alert tones; `primary` resolves through Lyra's shared brand row. */
-export type AlertVariant = Exclude<LyraVariant, 'brand'> | 'primary';
+/** Alert tones; `primary` and `brand` resolve through Lyra's shared brand row. */
+export type AlertVariant = SemanticVariant;
 
-const ALERT_VARIANT = literalSetConverter<AlertVariant>(
-  ['neutral', 'primary', 'success', 'warning', 'danger'],
-  'primary',
-);
+const ALERT_VARIANT = semanticVariantConverter('primary');
 // Same opt-in shape as `size` below -- an unsupported value is absent, not a fallback member -- so
 // both read from the one shared helper instead of a second hand-rolled copy in this file.
 const ALERT_COUNTDOWN = optionalLiteralSetConverter<Exclude<AlertCountdown, undefined>>([

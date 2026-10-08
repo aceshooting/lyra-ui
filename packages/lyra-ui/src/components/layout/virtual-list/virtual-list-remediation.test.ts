@@ -85,3 +85,26 @@ describe('virtual-list focused row', () => {
     });
   }
 });
+
+describe('virtual-list part lookups', () => {
+  it('queries the base and spacer once while they stay attached', async () => {
+    const el = await fixture<LyraVirtualList>(html`<lr-virtual-list style="--lr-virtual-list-height: 200px"
+      .items=${Array.from({ length: 50 }, (_, index) => index)} .renderItem=${(item: unknown) => html`<div>${item}</div>`}></lr-virtual-list>`);
+    await nextFrame();
+    const first = el.scrollContainer;
+    const root = el.shadowRoot!;
+    const original = root.querySelector;
+    let lookups = 0;
+    root.querySelector = ((selector: string) => {
+      lookups += 1;
+      return original.call(root, selector);
+    }) as typeof root.querySelector;
+    try {
+      for (let read = 0; read < 10; read += 1) el.scrollContainer;
+    } finally {
+      root.querySelector = original;
+    }
+    expect(el.scrollContainer === first).to.equal(true);
+    expect(lookups).to.equal(0);
+  });
+});

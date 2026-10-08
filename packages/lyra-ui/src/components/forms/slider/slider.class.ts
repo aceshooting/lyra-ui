@@ -6,6 +6,7 @@ import { FormControlController, reflectFormName } from '../../../internal/form-c
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   getFormOwner,
   isBarredFromValidation,
@@ -34,7 +35,7 @@ import {
   dispatchNativeInputEvent,
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -111,7 +112,7 @@ export interface LyraSliderEventMap {
 
 type SliderDragState = RangeDragState<SliderHandle>;
 
-class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
+class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
 
 /**
  * `<lr-slider>` — a numeric range control (e.g. an LLM "temperature"
@@ -487,21 +488,6 @@ export class LyraSlider extends LyraSliderBase {
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
   }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
-  }
 
   /** Lower domain bound.
    * @default 0 */
@@ -794,7 +780,7 @@ export class LyraSlider extends LyraSliderBase {
       this.pendingValueBatch = undefined;
     }
     if (!changed.has('range') || !this.hasUpdated) return;
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active?.matches('[part~="thumb"]')) {
       const target = this.range ? 'min' : 'value';
       this.rangeFocusTransfer = {
@@ -822,7 +808,7 @@ export class LyraSlider extends LyraSliderBase {
     const generation = this.rangeFocusGeneration;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.rangeFocusGeneration || !this.isConnected || this.effectiveDisabled) return;
-      const internalActive = activeElementIn(this.shadowRoot);
+      const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       const focusStayedAtOrigin = internalActive === transfer.origin;
       const originWasRemovedWithoutReplacement =
@@ -1059,7 +1045,7 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Removes focus from whichever internal thumb currently owns it. */
   override blur(): void {
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (
       active?.nodeType === 1
       && typeof (active as Partial<Element>).matches === 'function'

@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import {
   aTimeout,
   expect,
@@ -259,7 +260,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(30);
+      await twoFrames();
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
       (
         el.shadowRoot!.querySelector(
@@ -657,14 +658,14 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(30);
+      await twoFrames();
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
       (el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).click();
       await waitUntil(() => el.page === 2);
 
       otherContainer.appendChild(el); // a move: disconnect + reconnect synchronously, same instance
       await el.updateComplete;
-      await aTimeout(30);
+      await twoFrames();
       expect(fake.calls.destroy).to.equal(0);
       expect(fake.calls.open).to.equal(1);
       expect(el.page).to.equal(2);
@@ -692,7 +693,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(30);
+      await twoFrames();
       const previous = el.shadowRoot!.querySelector(
         '[part="previous-button"]'
       ) as HTMLElement;
@@ -750,7 +751,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(30);
+      await twoFrames();
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
@@ -940,7 +941,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(30);
+      await twoFrames();
       expect(el.shadowRoot!.querySelectorAll('[part="nav"]').length).to.equal(
         1
       );
@@ -960,7 +961,7 @@ describe("lr-pptx-viewer", () => {
     const unsafe = (await fixture(
       html`<lr-pptx-viewer .src=${"javascript:alert(1)"}></lr-pptx-viewer>`
     )) as LyraPptxViewer;
-    await aTimeout(10);
+    await twoFrames();
     expect(
       unsafe.shadowRoot!.querySelector('[part="error"]')!.textContent
     ).to.contain("Document URL is not allowed");
@@ -971,7 +972,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => null;
       el.src = "https://example.test/deck.pptx";
-      await aTimeout(20);
+      await twoFrames();
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent
       ).to.contain('@aiden0z/pptx-renderer is not installed');
@@ -1131,7 +1132,7 @@ describe("lr-pptx-viewer", () => {
         errors++;
       });
       el.src = "https://example.test/expansion-bomb.pptx";
-      await aTimeout(50);
+      await twoFrames();
       expect(fake.calls.open).to.equal(0);
       expect(errors).to.equal(1);
       expect(
@@ -1179,7 +1180,7 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = () => rendererLoad.promise;
       el.src = "https://example.test/first.pptx";
-      await aTimeout(20); // let mount() reach `await Promise.all(...)` and suspend on the renderer import
+      await twoFrames(); // let mount() reach `await Promise.all(...)` and suspend on the renderer import
       const fake = fakeModule(3);
       el.loadRenderer = async () => fake.module;
       const loadPromise = oneEvent(el, "lr-load");
@@ -1192,7 +1193,7 @@ describe("lr-pptx-viewer", () => {
       // The stale first mount's renderer import now resolves late; it must bail silently instead of
       // clobbering the second (current) presentation.
       rendererLoad.resolve(fake.module);
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
     } finally {
@@ -1217,17 +1218,17 @@ describe("lr-pptx-viewer", () => {
       )) as LyraPptxViewer;
       el.loadRenderer = async () => fake.module;
       el.src = "https://example.test/first.pptx";
-      await aTimeout(20); // let mount() resolve Promise.all and suspend inside readResponseArrayBuffer()
+      await twoFrames(); // let mount() resolve Promise.all and suspend inside readResponseArrayBuffer()
       const loadPromise = oneEvent(el, "lr-load");
       el.src = "https://example.test/second.pptx"; // bumps generation, superseding the first mount
-      await aTimeout(20); // let the second mount also reach and suspend on the same gated read
+      await twoFrames(); // let the second mount also reach and suspend on the same gated read
       bufferGate.resolve(zipWithDeclaredSize()); // release both suspended reads together
       expect((await loadPromise).detail).to.deep.equal({ slideCount: 4 });
       let extraLoadFired = false;
       el.addEventListener("lr-load", () => {
         extraLoadFired = true;
       });
-      await aTimeout(20);
+      await twoFrames();
       expect(extraLoadFired).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
     } finally {
@@ -1266,7 +1267,7 @@ describe("lr-pptx-viewer", () => {
           RECOMMENDED_ZIP_LIMITS: {},
         } as never);
       el.src = "https://example.test/first.pptx";
-      await aTimeout(20); // let mount() reach `await module.PptxViewer.open(...)` and suspend there
+      await twoFrames(); // let mount() reach `await module.PptxViewer.open(...)` and suspend there
       const fake = fakeModule(5);
       el.loadRenderer = async () => fake.module;
       const loadPromise = oneEvent(el, "lr-load");
@@ -1275,7 +1276,7 @@ describe("lr-pptx-viewer", () => {
       // The stale first mount's pending open() now resolves late; it must be torn down immediately
       // instead of being adopted as the live viewer.
       openGate.resolve(staleViewer);
-      await aTimeout(20);
+      await twoFrames();
       expect(staleDestroyCalls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
     } finally {

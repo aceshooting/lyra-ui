@@ -53,12 +53,7 @@ a focused zoom control.
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
 
-**Authoring type:** `LyraZoomableFrameLoading`. The former unprefixed
-`ZoomableFrameLoading` name is removed in v9 rather than retained as an alias.
-The former deep-class-module implementation exports `DEFAULT_ZOOM_LEVELS`,
-`DEFAULT_IFRAME_SANDBOX`, `safeZoomableFrameSrc()`, and `safeZoomableFrameSandbox()` are also
-removed in v9. They were never part of the registration, root, or documented component surface;
-configure the corresponding public properties instead of depending on sink-policy internals.
+**Authoring type:** `LyraZoomableFrameLoading`.
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The control group also accepts `+`/`=` and `-`/`_` while one

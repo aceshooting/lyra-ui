@@ -1,0 +1,67 @@
+{
+  "name": "@aceshooting/lyra-translations",
+  "version": "26.0.0",
+  "description": "Built-in locale catalogs for @aceshooting/lyra-ui. Import a locale to register it; English is built in.",
+  "keywords": [
+    "lyra-ui",
+    "i18n",
+    "l10n",
+    "translations",
+    "locales",
+    "web-components"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-translations"
+  },
+  "homepage": "https://www.lyra-ui.com/",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "sideEffects": [
+    "./dist/**/*.js"
+  ],
+  "exports": {
+    "./*.js": {
+      "types": "./dist/side-effect-only.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./*.d.ts": {
+      "types": "./dist/side-effect-only.d.ts",
+      "default": "./dist/side-effect-only.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "assemble": "node scripts/build.mjs",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm assemble",
+    "lint": "node scripts/check-package.mjs",
+    "test": "node --test scripts/package.test.mjs"
+  },
+  "peerDependencies": {
+    "@aceshooting/lyra-ui": "workspace:^"
+  },
+  "devDependencies": {
+    "@aceshooting/lyra-ui": "workspace:*"
+  }
+}

@@ -1,8 +1,34 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlPresetButton } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
+    --_lr-preset-hover-bg: var(--lr-date-picker-preset-hover-bg);
+    --_lr-preset-hover-border-color: var(--lr-date-picker-preset-hover-border-color);
+    --_lr-preset-pressed-bg: var(--lr-date-picker-preset-pressed-bg, var(--lr-date-picker-preset-active-bg));
+    --_lr-preset-pressed-border-color: var(--lr-date-picker-preset-pressed-border-color);
+    --_lr-preset-selected-bg: var(--lr-date-picker-preset-selected-bg);
+    --_lr-preset-selected-border-color: var(
+      --lr-date-picker-preset-selected-border-color,
+      var(--lr-date-picker-preset-selected-border)
+    );
+    --_lr-preset-selected-color: var(--lr-date-picker-preset-selected-color);
+    --_lr-preset-selected-pressed-bg: var(
+      --lr-date-picker-preset-pressed-bg,
+      var(
+        --lr-date-picker-preset-active-bg,
+        var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)))
+      )
+    );
+    --_lr-preset-selected-pressed-image: linear-gradient(
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
+    --_lr-preset-selected-pressed-border-color: var(
+      --lr-date-picker-preset-selected-border-color,
+      var(--lr-date-picker-preset-selected-border, var(--lr-color-brand))
+    );
     display: inline-block;
     --_lr-cell-size: var(--lr-size-2-25rem);
     --_lr-date-picker-month-gap: var(--lr-space-l);
@@ -397,61 +423,18 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     margin-block-end: var(--lr-space-xs);
   }
+  ${formControlPresetButton}
   [part~="preset-button"] {
-    font: inherit;
     font-size: var(--lr-font-size-xs);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-0-15rem) var(--lr-size-0-5rem);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    cursor: pointer;
     white-space: normal;
     overflow-wrap: anywhere;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* Hover/active below only repaint background, so that is all this needs; without it this
-       button's fill snaps while lr-button/lr-icon-button ease. */
-    transition: background-color var(--lr-transition-fast);
-  }
-  [part~="preset-button"]:hover:not(:disabled) {
-    background: var(--lr-date-picker-preset-hover-bg, var(--lr-color-brand-quiet));
-  }
-  [part~="preset-button"]:active:not(:disabled) {
-    background: var(
-      --lr-date-picker-preset-pressed-bg,
-      var(
-        --lr-date-picker-preset-active-bg,
-        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
-      )
-    );
-  }
-  [part~="preset-button"][data-active] {
-    background: var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand));
-    border-color: var(--lr-date-picker-preset-selected-border, var(--lr-color-brand));
-    color: var(--lr-date-picker-preset-selected-color, var(--lr-color-on-brand));
-  }
-  [part~="preset-button"]:where([data-active]):hover:not(:disabled) {
-    background-color: var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)));
-    background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
-    );
-  }
-  [part~="preset-button"]:where([data-active]):active:not(:disabled) {
-    background-color: var(--lr-date-picker-preset-pressed-bg, var(--lr-date-picker-preset-active-bg, var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)))));
-    background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
-    );
-  }
-  [part~="preset-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
   }
   [part~="preset-button"]:disabled {
-    cursor: not-allowed;
     opacity: var(--lr-opacity-disabled);
   }
   @media (forced-colors: active) {

@@ -27,7 +27,7 @@ test('flags a restore helper guarded on a defaulted property', () => {
   ]);
 });
 
-test('flags an inline restore that keeps the guard after moving to restoreFromStorage', () => {
+test('flags an inline restore that keeps the guard after moving to readPersistedState', () => {
   const source = `
     class Example extends LyraElement {
       static properties = { collapsed: { type: Boolean, reflect: true } };
@@ -36,7 +36,7 @@ test('flags an inline restore that keeps the guard after moving to restoreFromSt
       protected override willUpdate(changed: PropertyValues): void {
         super.willUpdate(changed);
         if (!this.hasUpdated) {
-          const restored = restoreFromStorage(this.storageFullKey, changed.has('collapsed'), isRecord);
+          const restored = readPersistedState(this.storageFullKey, changed.has('collapsed'), isRecord);
           if (restored !== undefined) this.collapsed = restored;
         }
       }

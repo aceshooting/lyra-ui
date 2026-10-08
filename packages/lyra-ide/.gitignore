@@ -1,0 +1,5 @@
+# Copied from ../lyra-ui by scripts/sync.mjs (prepack); lyra-ui commits and freshness-checks the originals.
+/custom-elements.json
+/web-types.json
+/vscode-html-data.json
+/vscode-css-data.json

@@ -1,6 +1,7 @@
 import { css } from 'lit';
 import {
   formControlTextWrap,
+  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -29,24 +30,10 @@ export const styles = css`
        reaches this row. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
     /* Fill/border pair swapped per appearance below. */
-    --_lr-phone-input-fill-default: var(--lr-color-surface);
-    --_lr-phone-input-border-color-default: var(--lr-color-border);
+    --_lr-phone-input-fill-default: var(--_lr-form-control-fill);
+    --_lr-phone-input-border-color-default: var(--_lr-form-control-border-color);
   }
-  :host([appearance='filled-outlined']) {
-    --_lr-phone-input-fill-default: var(--lr-color-surface-raised);
-  }
-  :host([appearance='filled']) {
-    --_lr-phone-input-fill-default: var(--lr-color-surface-raised);
-    --_lr-phone-input-border-color-default: transparent;
-  }
-  :host([appearance='plain']) {
-    --_lr-phone-input-fill-default: transparent;
-    --_lr-phone-input-border-color-default: transparent;
-  }
-  :host([appearance='accent']) {
-    --_lr-phone-input-fill-default: var(--lr-color-brand-quiet);
-    --_lr-phone-input-border-color-default: var(--lr-color-brand);
-  }
+  ${formControlAppearance}
   :host([pill]) {
     --_lr-phone-input-radius-default: var(--lr-radius-pill);
   }

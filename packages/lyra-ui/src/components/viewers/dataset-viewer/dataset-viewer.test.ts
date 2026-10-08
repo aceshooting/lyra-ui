@@ -1,4 +1,5 @@
-import { assertHighlightedCellActivation, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
+import { twoFrames } from '../../../../test/frames.js';
+import { assertHighlightedCellActivation, describeCellHighlightStyling, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
 import { assertScrollFrameFollowsAdoption, shrinkAnchorRetry } from '../../../../test/viewer-scroll-test-support.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
@@ -14,7 +15,6 @@ import type { LyraDatasetViewer } from './dataset-viewer.js';
 import { findDocumentRenderer } from '../document-viewer/registry.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { VIEWER_SEARCH_WORK_LIMIT } from '../viewer-search-limits.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const TAB_DATA = 'name\tage\tcity\nAda\t30\tLondon\nGrace\t85\tArlington';
 const GRID_DATASET =
@@ -485,7 +485,7 @@ describe('lr-dataset-viewer', () => {
       const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src="https://example.test/a.tsv"></lr-dataset-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="table"]') !== null).to.be.true;
     } finally {
@@ -996,7 +996,7 @@ describe('lr-dataset-viewer', () => {
       });
       expect(await el.search('hit')).to.equal(1_000);
       expect(
-        (el as unknown as { searchMatches: unknown[] }).searchMatches
+        (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
       ).to.have.lengthOf(1_000);
       expect(cappedDetail).to.deep.include({
         matchCount: 1_000,
@@ -1048,7 +1048,7 @@ describe('lr-dataset-viewer', () => {
         await el.updateComplete;
         await aTimeout(0);
         expect(
-          (el as unknown as { searchMatches: unknown[] }).searchMatches
+          (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
         ).to.have.lengthOf(2);
       } finally {
         restore();
@@ -1156,48 +1156,6 @@ describe('lr-dataset-viewer', () => {
         ];
         await el.updateComplete;
         await assertHighlightedCellActivation(el, { id: 'h1', hitArea: '36px' });
-      } finally {
-        restore();
-      }
-    });
-
-    it('keeps inherited and direct highlight-color inputs authoritative for the active cell', async () => {
-      const wrapper = await fixture<HTMLElement>(html`
-        <div style="--lr-dataset-viewer-highlight-color: rgb(7, 8, 9)">
-          <lr-dataset-viewer></lr-dataset-viewer>
-        </div>
-      `);
-      const el = wrapper.querySelector(
-        'lr-dataset-viewer'
-      ) as LyraDatasetViewer;
-      const restore = fetchText(GRID_DATASET);
-      try {
-        el.highlights = [
-          { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
-        ];
-        el.activeHighlightId = 'h1';
-        el.src = 'https://example.test/data.tsv';
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
-        );
-        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-        await waitUntil(
-          () =>
-            list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
-        );
-        const highlighted = list.shadowRoot!.querySelector(
-          '[part~="cell-highlight"]'
-        ) as HTMLElement;
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(7, 8, 9)'
-        );
-        el.style.setProperty(
-          '--lr-dataset-viewer-highlight-color',
-          'rgb(10, 11, 12)'
-        );
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(10, 11, 12)'
-        );
       } finally {
         restore();
       }
@@ -1416,52 +1374,10 @@ describe('scrollMode', () => {
   });
 });
 
-describe('styling', () => {
-  it('changes the rendered cell-highlight action background under real pointer hover', async () => {
-    const el = await fixture<LyraDatasetViewer>(html`
-      <lr-dataset-viewer
-        style="--lr-color-brand-quiet: rgb(1, 2, 3)"
-      ></lr-dataset-viewer>
-    `);
-    const restore = fetchText(GRID_DATASET);
-    try {
-      el.highlights = [
-        { id: 'h1', anchor: { kind: 'cell-range', range: 'A2' } },
-      ];
-      el.src = 'https://example.test/data.tsv';
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
-      );
-      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-      await waitUntil(
-        () =>
-          list.shadowRoot!.querySelector('[part="cell-highlight-action"]') !==
-          null
-      );
-      const action = list.shadowRoot!.querySelector(
-        '[part="cell-highlight-action"]'
-      ) as HTMLElement;
-      const resting = getComputedStyle(action).backgroundColor;
-      const box = action.getBoundingClientRect();
-
-      await resetMouse();
-      await sendMouse({
-        type: 'move',
-        position: [
-          Math.round(box.left + box.width / 2),
-          Math.round(box.top + box.height / 2),
-        ],
-      });
-      await waitUntil(
-        () => getComputedStyle(action).backgroundColor !== resting,
-        'the dataset highlight action never entered its rendered hover state'
-      );
-      expect(getComputedStyle(action).backgroundColor).to.not.equal(resting);
-    } finally {
-      await resetMouse();
-      restore();
-    }
-  });
+describeCellHighlightStyling({
+  tag: 'lr-dataset-viewer',
+  src: 'https://example.test/data.tsv',
+  install: () => fetchText(GRID_DATASET),
 });
 
 // -- Document-renderer registry entry ---------------------------------------

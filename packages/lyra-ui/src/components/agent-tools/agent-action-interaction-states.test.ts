@@ -11,10 +11,11 @@ async function assertHoverAndPress(
   button: HTMLButtonElement,
   hoverVariable: string,
   activeVariable: string,
+  styleHost: HTMLElement = button,
 ): Promise<void> {
   // Deterministic fills make this assertion independent of the test runner's active color scheme.
-  button.style.setProperty(hoverVariable, 'rgb(220 230 240)');
-  button.style.setProperty(activeVariable, 'rgb(200 210 220)');
+  styleHost.style.setProperty(hoverVariable, 'rgb(220 230 240)');
+  styleHost.style.setProperty(activeVariable, 'rgb(200 210 220)');
   const resting = getComputedStyle(button).backgroundColor;
   try {
     await hoverUntilMatched(button, `${button.getAttribute('part')} button receives hover`);
@@ -30,6 +31,13 @@ async function assertHoverAndPress(
   }
 }
 
+/** A composed `<lr-button>`: the rendered control is its inner base, themed through `--lr-button-*`. */
+async function assertComposedButtonHoverAndPress(host: HTMLElement): Promise<void> {
+  await (host as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  const base = host.shadowRoot!.querySelector<HTMLButtonElement>('[part~="base"]')!;
+  await assertHoverAndPress(base, '--lr-button-hover-bg', '--lr-button-active-bg', host);
+}
+
 describe('agent action interaction states', () => {
   it('renders hover and pressed states for permission, connector, and run actions', async () => {
     const permission = await fixture<HTMLElement>(html`<lr-permission-grant request-id="permission"></lr-permission-grant>`);
@@ -40,8 +48,8 @@ describe('agent action interaction states', () => {
       { id: 'build', label: 'Build', status: 'running' },
     ]}></lr-background-runs>`);
 
-    await assertHoverAndPress(permission.shadowRoot!.querySelector<HTMLButtonElement>('[part="decision"]')!, '--_lr-permission-grant-decision-hover-bg', '--_lr-permission-grant-decision-active-bg');
-    await assertHoverAndPress(connector.shadowRoot!.querySelector<HTMLButtonElement>('[part="action"]')!, '--_lr-connector-manager-action-hover-bg', '--_lr-connector-manager-action-active-bg');
+    await assertComposedButtonHoverAndPress(permission.shadowRoot!.querySelector<HTMLElement>('[part="decision"]')!);
+    await assertComposedButtonHoverAndPress(connector.shadowRoot!.querySelector<HTMLElement>('[part="action"]')!);
     await assertHoverAndPress(runs.shadowRoot!.querySelector<HTMLButtonElement>('[part="open"]')!, '--_lr-background-runs-action-hover-bg', '--_lr-background-runs-action-active-bg');
   });
 

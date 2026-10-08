@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import type { LyraAlert } from './alert.js';
 import './alert.js';
@@ -149,7 +149,7 @@ it('accepts and reflects the complete public attribute vocabulary', async () => 
 
 it('normalizes unsupported closed-set attributes and untyped property writes', async () => {
   const el = (await fixture(html`
-    <lr-alert countdown="sideways" variant="brand"></lr-alert>
+    <lr-alert countdown="sideways" variant="bogus"></lr-alert>
   `)) as LyraAlert;
   expect(el.countdown).to.equal(undefined);
   expect(el.hasAttribute('countdown')).to.be.false;
@@ -304,6 +304,7 @@ it('runs the same lifecycle for direct open assignments without announcing initi
   let initialEvents = 0;
   initial.addEventListener('lr-show', () => initialEvents++);
   await initial.updateComplete;
+  // wait-reason: asserting that no lr-show fires for initial open markup
   await delay(20);
   expect(initialEvents).to.equal(0);
 
@@ -441,12 +442,15 @@ it('auto-hides after duration and restarts the full timer after interaction', as
     <lr-alert duration="400" style=${motionless}>Timed message</lr-alert>
   `)) as LyraAlert;
   await el.show();
+  // wait-reason: real auto-hide duration semantics
   await delay(250);
   el.dispatchEvent(new Event('pointerenter'));
+  // wait-reason: real auto-hide duration semantics (pause window)
   await delay(300);
   expect(el.open, 'interaction pauses the timer').to.be.true;
 
   el.dispatchEvent(new Event('pointerleave'));
+  // wait-reason: real auto-hide duration semantics (restart window)
   await delay(250);
   expect(el.open, 'leaving restarts the entire duration rather than only the remainder').to.be.true;
   await waitUntil(() => !el.open, 'duration should eventually hide the alert', { timeout: 1000 });
@@ -457,6 +461,7 @@ it('normalizes hostile duration values before timer math', async () => {
     <lr-alert duration="Infinity" style=${motionless}>Persistent</lr-alert>
   `)) as LyraAlert;
   await el.show();
+  // wait-reason: asserting an infinite duration never hides
   await delay(30);
   expect(el.open).to.be.true;
 
@@ -578,6 +583,7 @@ it('uses the adopted owner realm for motion preferences and focus containment', 
       composed: true,
       relatedTarget: inside,
     }));
+    // wait-reason: real auto-hide timer must stay paused across this window
     await new Promise<void>((resolve) => frameView.setTimeout(resolve, 80));
     expect(el.open, 'an iframe-realm descendant keeps the auto-hide timer paused').to.be.true;
 
@@ -930,7 +936,7 @@ it('restores focus inside an active alert when its toast lifecycle moves to anot
   expect(alert.shadowRoot!.activeElement === close).to.equal(true);
 
   second.append(alert);
-  await delay(0);
+  await nextFrame();
 
   expect(alert.hasAttribute('data-toast-queued')).to.equal(false);
   expect(
@@ -954,7 +960,7 @@ it('discards stale managed alerts before a toast region is reconnected after a l
   const settled = await Promise.race([completion.then(() => true), delay(120).then(() => false)]);
   expect(settled).to.equal(true);
   document.body.append(region);
-  await delay(0);
+  await nextFrame();
 
   expect(alert.isConnected, 'a settled toast must not resurrect when its old region reconnects').to.equal(false);
   expect(region.children.length).to.equal(0);
@@ -1089,6 +1095,7 @@ it('disconnecting an open timed alert clears stale work and reconnect restarts i
   `)) as LyraAlert;
   await el.show();
   el.remove();
+  // wait-reason: real timer semantics: disconnected alert must not hide
   await delay(100);
   expect(el.open).to.be.true;
 
@@ -1140,10 +1147,12 @@ it('pauses the auto-hide timer while focus is inside and resumes when it leaves'
   await el.show();
 
   await focusByKeyboard(el.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement);
+  // wait-reason: real timer semantics: pause while focused
   await delay(300);
   expect(el.open, 'focus inside pauses the timer').to.be.true;
 
   await focusByKeyboard(wrapper.querySelector('#inside') as HTMLElement);
+  // wait-reason: real timer semantics: pause while focus moves within
   await delay(300);
   expect(el.open, 'focus moving within the alert keeps the timer paused').to.be.true;
 

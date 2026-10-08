@@ -10,6 +10,7 @@ import {
   unregisterIconLibrary,
 } from './icon-library.js';
 import { clearIconSanitizerCache, loadIconSanitizer } from './dompurify-loader.js';
+import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
 import { __clearIconResourceCacheForTesting } from './icon-resource.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
@@ -596,6 +597,7 @@ describe('lr-icon icon libraries', () => {
     try {
       const el = (await fixture(html`<lr-icon src="https://icons.test/evil.svg"></lr-icon>`)) as LyraIcon;
       await waitUntil(() => partCount(el, '[part="svg"]') === 1);
+      // wait-reason: negative assertion, a sanitized payload must not execute scripts or handlers after it renders
       await aTimeout(20);
       expect(partCount(el, 'script')).to.equal(0);
       expect(el.shadowRoot!.querySelector('circle')!.hasAttribute('onload')).to.be.false;
@@ -734,9 +736,12 @@ describe('lr-icon icon libraries', () => {
     const originalWarn = console.warn;
     console.warn = () => {};
     clearIconSanitizerCache();
+    // The sanitizer is shared and a failed load is retried, so the missing peer is simulated at the
+    // shared import itself; every consumer of the shared loader, the icon included, sees it fail.
+    __setDompurifyImporterForTesting(() => Promise.reject(new Error('no dompurify')));
     const restore = stubFetch(() => Promise.resolve(svgResponse(CIRCLE_SVG)));
     try {
-      expect(await loadIconSanitizer(() => Promise.reject(new Error('no dompurify')))).to.equal(null);
+      expect(await loadIconSanitizer()).to.equal(null);
       const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
       const errored = oneEvent(el, 'lr-error');
       el.src = 'https://icons.test/star.svg';
@@ -745,6 +750,7 @@ describe('lr-icon icon libraries', () => {
       expect(partCount(el, 'circle')).to.equal(0);
     } finally {
       restore();
+      __setDompurifyImporterForTesting(undefined);
       clearIconSanitizerCache();
       console.warn = originalWarn;
     }
@@ -846,6 +852,7 @@ describe('lr-icon icon libraries', () => {
       await waitUntil(() => resolverCalls.length === 2);
       await waitUntil(() => partCount(el, '[part="svg"] rect') === 1);
       resolveClassic('https://icons.test/classic/regular/star.svg');
+      // wait-reason: negative assertion, the superseded resolver result must not paint or fetch after it resolves
       await aTimeout(20);
 
       expect(resolverCalls).to.deep.equal([
@@ -959,6 +966,7 @@ describe('lr-icon icon libraries', () => {
       await aTimeout(0);
       el.src = 'https://icons.test/fast.svg';
       await waitUntil(() => partCount(el, '[part="svg"] rect') === 1);
+      // wait-reason: negative assertion, the superseded slow load (80ms stub) must not paint over the newer one
       await aTimeout(200);
       expect(partCount(el, '[part="svg"] rect')).to.equal(1);
       expect(partCount(el, 'circle')).to.equal(0);
@@ -1128,6 +1136,7 @@ describe('lr-icon icon libraries', () => {
       const el = (await fixture(html`<lr-icon name="search"></lr-icon>`)) as LyraIcon;
       el.addEventListener('lr-load', () => events.push('load'));
       el.addEventListener('lr-error', () => events.push('error'));
+      // wait-reason: negative assertion, a name-only icon must not fetch or emit lr-load/lr-error
       await aTimeout(30);
       expect(calls).to.equal(0);
       expect(events).to.deep.equal([]);

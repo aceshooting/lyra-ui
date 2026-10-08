@@ -139,3 +139,36 @@ export function handleDrop(
   const rejectedFolders = folders.map((folder) => failure(folder.name, 'directory'));
   if (files.length || rejectedFolders.length) emit(files, rejectedFolders);
 }
+
+const MAX_MIME_TYPES = 10_000;
+export const EMPTY_MIME_TYPES: readonly string[] = Object.freeze([]);
+
+export function snapshotMimeTypes(value: unknown): readonly string[] {
+  try {
+    if (!Array.isArray(value)) return EMPTY_MIME_TYPES;
+    const count = Math.min(value.length, MAX_MIME_TYPES);
+    const values: string[] = [];
+    for (let index = 0; index < count; index++) {
+      try {
+        const candidate = value[index];
+        if (typeof candidate === 'string') values.push(candidate);
+      } catch {
+        // A hostile indexed getter invalidates only its own entry.
+      }
+    }
+    return values.length ? Object.freeze(values) : EMPTY_MIME_TYPES;
+  } catch {
+    return EMPTY_MIME_TYPES;
+  }
+}
+
+/** Caller-owned outcome copy with `{count}` substituted; `undefined` falls back to the localized default. */
+export function outcomeText(override: string | undefined, fallback: () => string, count: string): string {
+  return override == null ? fallback() : override.replace(/\{count\}/g, count);
+}
+
+/** Exact-MIME gate: the denylist is evaluated first, an empty allowlist allows everything else. */
+export const mimeTypeFilter =
+  (allowed: readonly string[], forbidden: readonly string[]) =>
+  ({ type }: File): boolean =>
+    !forbidden.includes(type) && (allowed.length === 0 || allowed.includes(type));

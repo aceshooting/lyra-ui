@@ -112,4 +112,12 @@ export const styles = css`
       grid-template-columns: 1fr;
     }
   }
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part~='chunk'] {
+    padding: var(--lr-space-xs);
+  }
+  :host([frame='plain']) [part~='chunk'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
 `;

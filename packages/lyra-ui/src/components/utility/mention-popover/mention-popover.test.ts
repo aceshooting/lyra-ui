@@ -356,6 +356,31 @@ it("scrolls the active row into view as ArrowDown moves it past the popup's visi
     .true;
 });
 
+it('reveals the active row without scrolling the page', async () => {
+  const manyItems: LyraMentionItem[] = Array.from({ length: 20 }, (_, i) => ({
+    suggestionId: `item-${i}`,
+    label: `Item ${i}`,
+  }));
+  const spacer = document.createElement('div');
+  spacer.style.blockSize = '4000px';
+  document.body.append(spacer);
+  try {
+    const el = await openWithItems(manyItems);
+    window.scrollTo(0, 120);
+    const before = window.scrollY;
+    expect(before).to.be.greaterThan(0);
+    for (let i = 0; i < 15; i++) {
+      el.handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true }));
+      await el.updateComplete;
+    }
+    expect(listbox(el).scrollTop).to.be.greaterThan(0);
+    expect(window.scrollY).to.equal(before);
+  } finally {
+    spacer.remove();
+    window.scrollTo(0, 0);
+  }
+});
+
 it('ArrowDown/ArrowUp preventDefault and report the key as consumed', async () => {
   const el = await openWithItems();
   const evt = new KeyboardEvent('keydown', {
@@ -492,6 +517,7 @@ it('does not fire lr-mention-close for markup that mounts already open="false"',
   let closeFired = false;
   el.addEventListener('lr-mention-close', () => (closeFired = true));
   await el.updateComplete;
+  // wait-reason: negative assertion, markup mounting open="false" must not fire lr-mention-close
   await new Promise((r) => setTimeout(r, 20));
   expect(closeFired).to.be.false;
 });

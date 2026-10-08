@@ -60,10 +60,12 @@ import { styles } from './pdf-viewer.styles.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { ViewerSearchState } from '../../../internal/viewer-search.js';
 import { wrapTextRangeInMarks, unwrapTextMark, type TextMarkPaintBudget } from '../../../internal/text-highlights.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -485,6 +487,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     pdfViewerPreviousPage: LYRA_DEFAULT_pdfViewerPreviousPage,
     pdfViewerZoomIn: LYRA_DEFAULT_pdfViewerZoomIn,
     pdfViewerZoomOut: LYRA_DEFAULT_pdfViewerZoomOut,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -562,10 +567,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private pdfPageSourceCount = -1;
   private pdfPageSource: LyraVirtualListIndexedSource<number> = this.createPageSource(0);
 
-  @state() private searchMatches: PdfSearchMatch[] = [];
-  private searchMatchCountExact = true;
-  @state() private searchActiveIndex = -1;
-  private searchQuery = '';
+  private readonly searchState = new ViewerSearchState<PdfSearchMatch[]>(
+    () => [],
+    (detail) => this.emit('lr-search-change', detail),
+    () => this.requestUpdate(),
+  );
+  private get searchMatches(): PdfSearchMatch[] { return this.searchState.matches; }
+  private set searchMatches(matches: PdfSearchMatch[]) { this.searchState.matches = matches; }
+  private get searchActiveIndex(): number { return this.searchState.activeIndex; }
+  private set searchActiveIndex(index: number) { this.searchState.activeIndex = index; }
   private searchGeneration = 0;
   private textIndexLocale?: string;
   private pendingSearchResetEvent = false;
@@ -605,7 +615,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
-    const active = this.shadowRoot?.activeElement;
+    const active = shadowFocusTarget(this);
     this.focusedToolbarPart = active?.localName === 'button' && !(active as HTMLButtonElement).disabled
       ? active.getAttribute('part')
       : null;
@@ -619,7 +629,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       // Search match page/offset coordinates are only meaningful for the document they were found
       // in. Reset here (rather than after rendering) so the state belongs to this update; the
       // canonical empty search event is emitted from updated() when there was public state to clear.
-      this.pendingSearchResetEvent ||= this.hasSearchState();
+      this.pendingSearchResetEvent ||= this.searchState.dirty;
       // Painted marks are torn down with the old page DOM. Reassigning these @state() fields here
       // folds the reset into this update instead of scheduling a follow-up render.
       this.resetSearchState();
@@ -654,7 +664,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.mountedPageTextIndexes.clear();
       if (this.pendingSearchResetEvent) {
         this.pendingSearchResetEvent = false;
-        this.emitSearchChange();
+        this.searchState.emit();
       }
     }
     // Deliberately diffed here rather than emitted from each navigation path: this viewer owns
@@ -684,8 +694,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         layer.activeHighlightId = this.activeHighlightId;
       }
     }
-    if (localeChanged && this.searchQuery.trim()) {
-      this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); }, 'pdf-search');
+    if (localeChanged && this.searchState.query.trim()) {
+      this.scheduleAfterUpdate(() => { void this.search(this.searchState.query); }, 'pdf-search');
     }
   }
 
@@ -1564,28 +1574,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     // before the unloaded/empty branches so locale-fold expansion still reports inexact rejection.
     invalidateLyraLocaleCache(this);
     const generation = ++this.searchGeneration;
-    this.searchQuery = query;
+    this.searchState.query = query;
     this.clearSearchPaint();
     if (!boundedViewerSearchQuery(query, this.effectiveLocale).accepted) {
-      this.searchMatches = [];
-      this.searchMatchCountExact = false;
-      this.searchActiveIndex = -1;
-      this.emitSearchChange();
-      return 0;
-    }
-    if (this.loadState.kind !== 'ready') {
-      this.searchMatches = [];
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
-      this.emitSearchChange();
+      this.searchState.publish(undefined, false);
       return 0;
     }
     const trimmedQuery = query.trim();
-    if (!trimmedQuery) {
-      this.searchMatches = [];
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
-      this.emitSearchChange();
+    if (this.loadState.kind !== 'ready' || !trimmedQuery) {
+      this.searchState.publish();
       return 0;
     }
     const { pageCount } = this.loadState;
@@ -1646,10 +1643,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       }
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
-    this.searchMatches = matches;
-    this.searchMatchCountExact = matchCountExact;
-    this.searchActiveIndex = matches.length > 0 ? 0 : -1;
-    this.emitSearchChange();
+    this.searchState.publish(matches, matchCountExact);
     if (this.searchActiveIndex >= 0) await this.focusSearchMatch(this.searchActiveIndex);
     return matches.length;
   }
@@ -1657,9 +1651,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Advances to the next match, wrapping to the first after the last. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchNext(): Promise<boolean> {
-    if (this.searchMatches.length === 0) return false;
-    this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
-    this.emitSearchChange();
+    if (!this.searchState.step(1)) return false;
     await this.focusSearchMatch(this.searchActiveIndex);
     return true;
   }
@@ -1667,9 +1659,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Moves to the previous match, wrapping to the last before the first. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchPrevious(): Promise<boolean> {
-    if (this.searchMatches.length === 0) return false;
-    this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
-    this.emitSearchChange();
+    if (!this.searchState.step(-1)) return false;
     await this.focusSearchMatch(this.searchActiveIndex);
     return true;
   }
@@ -1679,31 +1669,12 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   clearSearch(): void {
     this.resetSearchState();
     this.clearSearchPaint();
-    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
-  }
-
-  private hasSearchState(): boolean {
-    return this.searchQuery !== ''
-      || this.searchMatches.length > 0
-      || !this.searchMatchCountExact
-      || this.searchActiveIndex !== -1;
+    this.searchState.emit();
   }
 
   private resetSearchState(): void {
     this.searchGeneration++;
-    this.searchQuery = '';
-    this.searchMatches = [];
-    this.searchMatchCountExact = true;
-    this.searchActiveIndex = -1;
-  }
-
-  private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.searchState.reset();
   }
 
   private async focusSearchMatch(index: number): Promise<void> {

@@ -228,7 +228,7 @@ Beyond `components/*`, the package publishes a small set of focused entries:
 | `@aceshooting/lyra-ui/ai`                                        | Provider-neutral types and stream adapters for the agentic components.                                                   |
 | `@aceshooting/lyra-ui/utilities`                                 | The curated, semver-covered helper surface (also importable one module at a time, e.g. `utilities/positioner`).          |
 | `@aceshooting/lyra-ui/testing`                                   | happy-dom shims so form-associated controls are constructible in a non-browser test DOM.                                 |
-| `@aceshooting/lyra-ui/translations/<locale>.js`                  | One of 66 optional locale catalogs; built-in English is the fallback. Each import registers its catalog.                 |
+| `@aceshooting/lyra-translations/<locale>.js`                  | One of 66 optional locale catalogs; built-in English is the fallback. Each import registers its catalog.                 |
 
 `theme.js`, `localization.js` and `events` are deliberately free of component imports, so an
 application can set up theming, locales and event typing without pulling the component graph into

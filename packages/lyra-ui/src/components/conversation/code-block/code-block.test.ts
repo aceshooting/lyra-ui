@@ -404,6 +404,7 @@ describe("shiki highlighting (real peer)", () => {
     el.code = jsSample;
     document.body.appendChild(el);
     el.remove();
+    // wait-reason: asserts a disconnected instance never becomes shikiReady
     await aTimeout(50);
 
     expect(
@@ -520,6 +521,7 @@ describe("shiki highlighting (real peer)", () => {
       }
     );
     await el.updateComplete;
+    // wait-reason: asserts a stale grammar load never clobbers rendered output
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // The stale rust-tokenized result must never clobber the correct,
@@ -877,7 +879,7 @@ describe("copy button", () => {
       await copied;
       await el.updateComplete;
       expect(button.textContent!.trim()).to.equal("Copied!");
-      await aTimeout(1600);
+      await waitUntil(() => button.textContent!.trim() === "Copy", "the copied feedback never reverted", { timeout: 5000 });
       await el.updateComplete;
       expect(button.textContent!.trim()).to.equal("Copy");
     } finally {

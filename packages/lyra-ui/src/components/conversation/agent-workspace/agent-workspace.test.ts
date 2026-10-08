@@ -397,6 +397,8 @@ it('lets a host retry a rejected built-in tool approval without entering the wor
   timeline.shadowRoot!.querySelector<HTMLElement>('lr-tool-call-chip')!.click();
   await timeline.updateComplete;
   const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  await customElements.whenDefined('lr-tool-approval-dialog');
+  await dialog.updateComplete;
   dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="edit-button"]')!.click();
   await dialog.updateComplete;
   const editor = dialog.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="args-editor"]')!;
@@ -438,6 +440,8 @@ it('finalizes a vetoed built-in denial and ignores absent or custom details time
   timeline.shadowRoot!.querySelector<HTMLElement>('lr-tool-call-chip')!.click();
   await timeline.updateComplete;
   const dialog = timeline.shadowRoot!.querySelector<LyraToolApprovalDialog>('lr-tool-approval-dialog')!;
+  await customElements.whenDefined('lr-tool-approval-dialog');
+  await dialog.updateComplete;
   el.addEventListener('lr-tool-approval-decide-request', (event) => event.preventDefault());
   dialog.shadowRoot!.querySelector<HTMLButtonElement>('[part="deny-button"]')!.click();
   await timeline.updateComplete;

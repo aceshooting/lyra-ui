@@ -1,27 +1,23 @@
 ---
 name: compose-lyra-interfaces
-description: Design and implement coherent interfaces with @aceshooting/lyra-ui, its @aceshooting/lyra-docs and @aceshooting/lyra-flags companions, and lr-* custom elements. Use when selecting Lyra components for a page, dashboard, form, data view, retrieval flow, conversation or agent experience; composing responsive layouts and application states; or reviewing a Lyra interface for accessibility, localization, RTL, theming, framework binding, and granular imports.
+description: Design and implement coherent interfaces with @aceshooting/lyra-ui, its companion packages, and lr-* custom elements. Use when selecting Lyra components for a page, dashboard, form, data view, retrieval flow, conversation or agent experience; composing responsive layouts and application states; or reviewing a Lyra interface for accessibility, localization, RTL, theming, framework binding, and granular imports.
 ---
 
 # Compose Lyra Interfaces
 
 Turn product intent into a small, coherent Lyra component hierarchy, then implement and verify it.
-Use the separate `$lyra-ui` API skill or the installed package's `llms.txt` reference for exact
-properties, events, slots, parts, custom properties, peers, and import paths before writing code.
-For the experimental DOCX editor or optional flag assets, follow that skill's companion-package
-routes to the corresponding package README before choosing imports.
+Use the sibling `lyra-ui` skill (or the installed package's `llms.txt`) for exact properties, events,
+slots, parts, custom properties, peers and import paths before writing code; its companion-package
+routes cover the experimental DOCX editor, flag assets, locale catalogs and editor data.
 
-Shadcn, Glass, Emerald, System mode and comfortable density are the built-in appearance defaults.
-Use the [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)
-for optional spotlights, compact gemstones and separate 44px gemstone/mode/design/flag-language
-controls. The signature gemstone selector uses one localized “Selected accent: {name}” heading
-that updates with selection. Use the same interpolated label for its trigger name and hover title,
-dialog, and radiogroup; show the selected gem in the glyph and give each swatch a localized item
-label. Language menus retain flags and readable localized names. Prefer
-the installed `llms/shared/styles-and-tokens.md` guide for exact startup and persistence; older
-releases have different defaults. Preserve saved preferences and branding, and keep the canonical
-recipe in that guide. Select Lyra/Solid/`accent: null` explicitly to retain the earlier appearance.
-Retheme an existing application only within an authorized migration or redesign.
+Appearance: Shadcn look, Glass surface, Emerald accent, System mode and comfortable density are the
+built-in defaults. The [Lyra signature starter](../lyra-ui/references/shared/styles-and-tokens.md#lyra-signature-starter)
+owns the optional spotlights, gemstone selector (one localized "Selected accent: {name}" label used
+for its trigger name, hover title, dialog and radiogroup), 44px mode/design/flag-language controls
+and persistence recipe; older releases have different defaults, so read the installed
+`llms/shared/styles-and-tokens.md`. Language menus keep flags and readable localized names. Preserve
+saved preferences and branding, and retheme an existing app only within an authorized migration or
+redesign (Lyra look, Solid surface, `accent: null` selected explicitly retains the earlier look).
 
 ## Workflow
 

@@ -15,7 +15,7 @@ import { tag } from '../../../internal/prefix.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
-import { requestThenCommit } from '../../../internal/request-commit.js';
+import { createRetryForwarder } from '../../../internal/retry-forwarder.js';
 import {
   getDateTimeFormat,
   getNumberFormat,
@@ -355,32 +355,11 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
   private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
-  private retryRequestActive = false;
-
   /** Forward the nested table's retry as this component's request; a veto keeps both error states. */
-  private onTableRetry = (event: CustomEvent<null>): void => {
-    event.stopPropagation();
-    if (this.retryRequestActive) {
-      event.preventDefault();
-      return;
-    }
-    this.retryRequestActive = true;
-    try {
-      const request = requestThenCommit<null, CustomEvent>({
-        requestDetail: null,
-        emitRequest: (detail, init: { cancelable: true }) => {
-          const request = this.emit('lr-retry-request', detail, init);
-          return request;
-        },
-        commit: () => {
-          this.error = false;
-        },
-      });
-      if (request.defaultPrevented) event.preventDefault();
-    } finally {
-      this.retryRequestActive = false;
-    }
-  };
+  private onTableRetry = createRetryForwarder(
+    (init) => this.emit('lr-retry-request', null, init),
+    () => { this.error = false; },
+  );
 
   private sourcesCache?: { source: unknown; value: KnowledgeSource[] };
 

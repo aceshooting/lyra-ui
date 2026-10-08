@@ -38,7 +38,7 @@ progress, and `No data` only for a terminal status.
   `label` override replaces the whole header, this included
 - `callId: string = ''` (attribute `call-id`) — invocation id echoed in `lr-toggle` and
   `lr-render-error` details
-- `status: ToolCallStatus = 'pending'` (reflected, including the default) —
+- `status: ToolStatus = 'pending'` (reflected, including the default) —
   `'pending'|'running'|'success'|'error'|'denied'|'incomplete'`; selects the header verb, glyph
   and accent. `incomplete` (21.1.0) is a call that ended without a result (an interrupted stream, a
   cancelled run): it reads `Did not finish using {name}` (`toolCallBlockHeaderIncomplete`), or

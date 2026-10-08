@@ -88,12 +88,6 @@ coalesce into one update.
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
   localized default (`'Untitled file'` in English)
 
-**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
-`lr-file-icon`'s). In this library `size` names a tier on the shared size ladder, and a numeric byte
-count answering to the same property name is a collision a consumer only discovers at runtime. A
-leftover `size="245000"` is not a byte count: it is an unsupported tier, so it normalizes to unset
-and is removed, `bytes` stays omitted and the `size` part renders nothing.
-
 The component identifies _which_ attachment an action event is about through `attachmentId`. Set
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
 and `file` is set, a stable attachment id is
@@ -104,10 +98,7 @@ generated internal id is used as a last resort.
 `without-remove-button` is set), `lr-retry`
 (`detail: { attachmentId }`, only rendered while `status="error"`), and
 `lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
-notification that the preview action was activated. **Breaking in 10.0.0:** this event was
-advertised as cancelable, but the chip never read `defaultPrevented` and owns no preview default
-action to veto (it never registers or owns a viewer/overlay), so `preventDefault()` was a no-op.
-The flag is gone rather than left as a promise the component cannot keep.
+notification that the preview action was activated.
 
 **Slots:** none.
 

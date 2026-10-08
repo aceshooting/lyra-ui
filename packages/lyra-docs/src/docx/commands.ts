@@ -39,22 +39,22 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
         ? success(value as DocxCommand) : unsupported;
     }
     const action = ownDataRecord(value);
-    if (!action || typeof action.type !== 'string') return invalid;
-    const type = action.type;
+    if (!action || typeof action['type'] !== 'string') return invalid;
+    const type = action['type'];
     switch (type) {
       case 'resize-image': {
         if (!keys(action, ['type', 'widthPoints', 'heightPoints'])) return invalid;
-        for (const value of [action.widthPoints, action.heightPoints]) {
+        for (const value of [action['widthPoints'], action['heightPoints']]) {
           if (typeof value !== 'number' || !Number.isFinite(value) || value < 1) return invalid;
           if (value > DOCX_LIMITS.imagePoints) return limited;
         }
-        return success(Object.freeze({ type, widthPoints: action.widthPoints as number, heightPoints: action.heightPoints as number }));
+        return success(Object.freeze({ type, widthPoints: action['widthPoints'] as number, heightPoints: action['heightPoints'] as number }));
       }
       case 'image-description': {
         if (!keys(action, ['type', 'title', 'description'])) return invalid;
-        const title = text(action.title, DOCX_LIMITS.imageTitle, true);
+        const title = text(action['title'], DOCX_LIMITS.imageTitle, true);
         if (!title.ok) return title;
-        const description = text(action.description, DOCX_LIMITS.imageDescription, true);
+        const description = text(action['description'], DOCX_LIMITS.imageDescription, true);
         if (!description.ok) return description;
         if (!isDocxXmlText(title.value) || !isDocxXmlText(description.value)) return invalid;
         return success(Object.freeze({ type, title: title.value, description: description.value }));
@@ -62,57 +62,57 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
       case 'delete-image':
         return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
       case 'insert-table': {
-        if (!keys(action, ['type', 'rows', 'columns']) || typeof action.rows !== 'number' ||
-          typeof action.columns !== 'number' || !Number.isSafeInteger(action.rows) ||
-          !Number.isSafeInteger(action.columns) || action.rows < 1 || action.columns < 1) return invalid;
-        if (action.rows > DOCX_LIMITS.tableRows || action.columns > DOCX_LIMITS.tableColumns ||
-          action.rows * action.columns > DOCX_LIMITS.tableCells) return limited;
-        return success(Object.freeze({ type, rows: action.rows, columns: action.columns }));
+        if (!keys(action, ['type', 'rows', 'columns']) || typeof action['rows'] !== 'number' ||
+          typeof action['columns'] !== 'number' || !Number.isSafeInteger(action['rows']) ||
+          !Number.isSafeInteger(action['columns']) || action['rows'] < 1 || action['columns'] < 1) return invalid;
+        if (action['rows'] > DOCX_LIMITS.tableRows || action['columns'] > DOCX_LIMITS.tableColumns ||
+          action['rows'] * action['columns'] > DOCX_LIMITS.tableCells) return limited;
+        return success(Object.freeze({ type, rows: action['rows'], columns: action['columns'] }));
       }
       case 'insert-table-row':
-        if (!keys(action, ['type', 'where']) || (action.where !== 'above' && action.where !== 'below')) return invalid;
-        return success(Object.freeze({ type, where: action.where }));
+        if (!keys(action, ['type', 'where']) || (action['where'] !== 'above' && action['where'] !== 'below')) return invalid;
+        return success(Object.freeze({ type, where: action['where'] }));
       case 'insert-table-column':
-        if (!keys(action, ['type', 'where']) || (action.where !== 'left' && action.where !== 'right')) return invalid;
-        return success(Object.freeze({ type, where: action.where }));
+        if (!keys(action, ['type', 'where']) || (action['where'] !== 'left' && action['where'] !== 'right')) return invalid;
+        return success(Object.freeze({ type, where: action['where'] }));
       case 'delete-table-row':
       case 'delete-table-column':
       case 'delete-table':
         return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
       case 'paragraph-style': {
         if (!keys(action, ['type', 'styleId'])) return invalid;
-        const id = text(action.styleId, DOCX_LIMITS.styleId);
+        const id = text(action['styleId'], DOCX_LIMITS.styleId);
         return id.ok ? success(Object.freeze({ type, styleId: id.value })) : id;
       }
       case 'alignment':
         if (!keys(action, ['type', 'value']) ||
-          (action.value !== 'left' && action.value !== 'center' && action.value !== 'right' && action.value !== 'justify')) return invalid;
-        return success(Object.freeze({ type, value: action.value }));
+          (action['value'] !== 'left' && action['value'] !== 'center' && action['value'] !== 'right' && action['value'] !== 'justify')) return invalid;
+        return success(Object.freeze({ type, value: action['value'] }));
       case 'toggle-list':
-        if (!keys(action, ['type', 'kind']) || (action.kind !== 'bullet' && action.kind !== 'numbered')) return invalid;
-        return success(Object.freeze({ type, kind: action.kind }));
+        if (!keys(action, ['type', 'kind']) || (action['kind'] !== 'bullet' && action['kind'] !== 'numbered')) return invalid;
+        return success(Object.freeze({ type, kind: action['kind'] }));
       case 'font-family': {
-        if (!keys(action, ['type', 'family']) || typeof action.family !== 'string') return invalid;
+        if (!keys(action, ['type', 'family']) || typeof action['family'] !== 'string') return invalid;
         // Each Unicode code point has at most two UTF-16 code units; bound allocation before counting.
-        if (action.family.length > DOCX_LIMITS.fontFamily * 2 || [...action.family].length > DOCX_LIMITS.fontFamily) return limited;
-        if (!FONT_FAMILY.test(action.family)) return invalid;
-        return success(Object.freeze({ type, family: action.family }));
+        if (action['family'].length > DOCX_LIMITS.fontFamily * 2 || [...action['family']].length > DOCX_LIMITS.fontFamily) return limited;
+        if (!FONT_FAMILY.test(action['family'])) return invalid;
+        return success(Object.freeze({ type, family: action['family'] }));
       }
       case 'font-size':
-        if (!keys(action, ['type', 'points']) || typeof action.points !== 'number' ||
-          !Number.isFinite(action.points) || action.points < 1 || action.points > 1638 || !Number.isInteger(action.points * 2)) return invalid;
-        return success(Object.freeze({ type, points: action.points }));
+        if (!keys(action, ['type', 'points']) || typeof action['points'] !== 'number' ||
+          !Number.isFinite(action['points']) || action['points'] < 1 || action['points'] > 1638 || !Number.isInteger(action['points'] * 2)) return invalid;
+        return success(Object.freeze({ type, points: action['points'] }));
       case 'text-color':
-        if (!keys(action, ['type', 'color']) || typeof action.color !== 'string' ||
-          (action.color !== 'auto' && !/^#[0-9a-f]{6}$/i.test(action.color))) return invalid;
-        return success(Object.freeze({ type, color: action.color === 'auto' ? 'auto' : action.color.toUpperCase() }));
+        if (!keys(action, ['type', 'color']) || typeof action['color'] !== 'string' ||
+          (action['color'] !== 'auto' && !/^#[0-9a-f]{6}$/i.test(action['color']))) return invalid;
+        return success(Object.freeze({ type, color: action['color'] === 'auto' ? 'auto' : action['color'].toUpperCase() }));
       case 'link': {
         if (!keys(action, ['type', 'href', 'text'])) return invalid;
-        const href = text(action.href, DOCX_LIMITS.href);
+        const href = text(action['href'], DOCX_LIMITS.href);
         if (!href.ok) return href;
         if (!isSafeDocxHyperlink(href.value)) return invalid;
-        if (action.text === undefined) return success(Object.freeze({ type, href: href.value }));
-        const label = authoredText(action.text);
+        if (action['text'] === undefined) return success(Object.freeze({ type, href: href.value }));
+        const label = authoredText(action['text']);
         return label.ok ? success(Object.freeze({ type, href: href.value, text: label.value })) : label;
       }
       case 'remove-link':
@@ -120,15 +120,15 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
       case 'page-break':
         return keys(action, ['type']) ? success(Object.freeze({ type })) : invalid;
       case 'highlight':
-        if (!keys(action, ['type', 'color']) || !(DOCX_HIGHLIGHTS as readonly unknown[]).includes(action.color)) return invalid;
-        return success(Object.freeze({ type, color: action.color as DocxHighlight }));
+        if (!keys(action, ['type', 'color']) || !(DOCX_HIGHLIGHTS as readonly unknown[]).includes(action['color'])) return invalid;
+        return success(Object.freeze({ type, color: action['color'] as DocxHighlight }));
       case 'indent':
-        if (!keys(action, ['type', 'direction']) || (action.direction !== 'increase' && action.direction !== 'decrease')) return invalid;
-        return success(Object.freeze({ type, direction: action.direction }));
+        if (!keys(action, ['type', 'direction']) || (action['direction'] !== 'increase' && action['direction'] !== 'decrease')) return invalid;
+        return success(Object.freeze({ type, direction: action['direction'] }));
       case 'line-spacing':
-        if (!keys(action, ['type', 'multiple']) || typeof action.multiple !== 'number' || !Number.isFinite(action.multiple) ||
-          action.multiple < 1 || action.multiple > 5 || Math.abs(action.multiple * 20 - Math.round(action.multiple * 20)) > 1e-9) return invalid;
-        return success(Object.freeze({ type, multiple: action.multiple }));
+        if (!keys(action, ['type', 'multiple']) || typeof action['multiple'] !== 'number' || !Number.isFinite(action['multiple']) ||
+          action['multiple'] < 1 || action['multiple'] > 5 || Math.abs(action['multiple'] * 20 - Math.round(action['multiple'] * 20)) > 1e-9) return invalid;
+        return success(Object.freeze({ type, multiple: action['multiple'] }));
       default:
         return unsupported;
     }
@@ -144,9 +144,9 @@ export function normalizeDocxSearch(query: unknown, options?: unknown): DocxResu
     if (!checked.ok) return checked;
     const values = options === undefined ? Object.create(null) as Record<string, unknown> : ownDataRecord(options);
     if (!values || !keys(values, ['matchCase', 'wholeWord', 'limit'])) return invalid;
-    const matchCase = values.matchCase === undefined ? false : values.matchCase;
-    const wholeWord = values.wholeWord === undefined ? false : values.wholeWord;
-    const limit = values.limit === undefined ? DOCX_LIMITS.matches : values.limit;
+    const matchCase = values['matchCase'] === undefined ? false : values['matchCase'];
+    const wholeWord = values['wholeWord'] === undefined ? false : values['wholeWord'];
+    const limit = values['limit'] === undefined ? DOCX_LIMITS.matches : values['limit'];
     if (typeof matchCase !== 'boolean' || typeof wholeWord !== 'boolean' || typeof limit !== 'number' ||
       !Number.isSafeInteger(limit) || limit < 1) return invalid;
     if (limit > DOCX_LIMITS.matches) return limited;

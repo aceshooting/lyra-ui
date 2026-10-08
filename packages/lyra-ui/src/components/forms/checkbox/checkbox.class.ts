@@ -4,6 +4,7 @@ import { FormControlController, reflectFormName } from '../../../internal/form-c
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { tag } from '../../../internal/prefix.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -223,7 +224,7 @@ export interface LyraCheckboxEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
+export class LyraCheckbox extends LyraFormControlElement<LyraCheckboxEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -461,19 +462,6 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     return getFormOwner(this.internals);
   }
   set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-  getForm(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
-  }
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {

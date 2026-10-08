@@ -26,9 +26,10 @@ import { isMainModule } from './is-main-module.mjs';
 //
 // Run: node scripts/check-border-subtle.mjs
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 
 const defaultPackageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -54,13 +55,6 @@ const toPosix = (path) => path.split(sep).join('/');
 /** Whether `file` is a test module (`*.test.ts`, `*.docs.test.mjs`, ...), which never ships. */
 export function isTestFile(file) {
   return /\.test\.[cm]?[jt]s$/.test(file);
-}
-
-function walk(directory) {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const file = join(directory, entry.name);
-    return entry.isDirectory() ? walk(file) : [file];
-  });
 }
 
 /**

@@ -356,7 +356,9 @@ test('staged standalone references preserve package truth in their own link cont
   const staged = validateStandaloneTree(skillRoot);
   const table = readFileSync(path.join(referencesRoot, 'components', 'lr-table.md'), 'utf8');
   assert.match(table, /\[CHANGELOG\.md\]\(\.\.\/\.\.\/CHANGELOG\.md\)/u);
-  assert.match(table, /family-wide breaking-change summaries/u);
+  // `charts.md` carries a "Breaking changes" section, so its components link the family summary.
+  const chart = readFileSync(path.join(referencesRoot, 'components', 'lr-chart.md'), 'utf8');
+  assert.match(chart, /family-wide breaking-change summaries/u);
   assert.equal(staged.componentFiles.length, expectedComponentCount);
 });
 

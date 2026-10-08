@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar-viewer.js';
@@ -18,6 +19,13 @@ async function loaded(body: string): Promise<{ el: LyraCalendarViewer; restore: 
 expectLocaleFallback('ja', ['calendarViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeCalendar', 'loadingDocument']);
 
 describe('lr-calendar-viewer', () => {
+  it('does not search its own empty-state text', async () => {
+    const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+    const note = el.shadowRoot!.querySelector('[part="body"]')!.textContent!.trim();
+    expect(note.length).to.be.greaterThan(0);
+    expect(await el.search(note.split(' ')[0]!)).to.equal(0);
+  });
+
   it('renders a localized empty state by default', async () => { const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('No calendar to display.'); });
   it('parses and renders events with plain text fields', async () => { const { el, restore } = await loaded(SAMPLE_ICS); try { expect(el.shadowRoot!.querySelectorAll('[part="event"]')).to.have.lengthOf(1); expect(el.shadowRoot!.querySelector('[part="event-summary"]')!.textContent).to.contain('Quarterly planning'); expect(el.shadowRoot!.querySelector('[part="event-location"]')!.textContent).to.contain('Room 204'); expect(el.shadowRoot!.querySelector('[part="event-description"]')!.textContent).to.contain('Review roadmap'); expect(el.shadowRoot!.querySelector('[part="event-time"]')!.textContent).to.not.equal(''); } finally { restore(); } });
   it('reports found:false for a fragment matching generated event data because event markup has no ids', async () => {
@@ -265,7 +273,7 @@ describe('lr-calendar-viewer', () => {
       const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer src="https://example.test/calendar.ics"></lr-calendar-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="event"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="event"]') !== null).to.be.true;
     } finally {

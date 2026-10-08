@@ -6,7 +6,7 @@ import {
   deepActiveElement,
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import {
@@ -498,7 +498,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
       const previous = this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null;
       const nextIsLink = Boolean(safeLinkHref(this.href)) && !this.disabled;
       const ownerReplaced = previous !== null && (previous.localName === 'a') !== nextIsLink;
-      this.semanticFocusRepair = ownerReplaced && activeElementIn(this.shadowRoot) === previous
+      this.semanticFocusRepair = ownerReplaced && shadowFocusTarget(this) === previous
         ? captureComposedFocusRepair(this, this.focusFallback() ?? previous) ?? undefined
         : undefined;
     }

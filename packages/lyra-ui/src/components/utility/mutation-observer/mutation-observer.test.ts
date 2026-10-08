@@ -1,5 +1,5 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './mutation-observer.js';
 import type { LyraMutationObserver } from './mutation-observer.class.js';
 
@@ -18,6 +18,7 @@ describe('<lr-mutation-observer> retired option aliases', () => {
     let legacyFired = false;
     legacy.addEventListener('lr-mutation', () => { legacyFired = true; });
     legacy.querySelector('div')!.setAttribute('data-state', 'after');
+    // wait-reason: negative assertion, the retired spelling must not emit lr-mutation
     await aTimeout(20);
     expect(legacyFired, 'the retired spelling alone must not enable observation').to.equal(false);
 
@@ -30,6 +31,7 @@ describe('<lr-mutation-observer> retired option aliases', () => {
     let mutationCount = 0;
     filtered.addEventListener('lr-mutation', () => { mutationCount += 1; });
     target.setAttribute('data-other', 'y');
+    // wait-reason: negative assertion, an ignored mutation must not emit lr-mutation
     await aTimeout(20);
     expect(mutationCount, 'the canonical filter excludes data-other').to.equal(0);
     const eventPromise = oneEvent(filtered, 'lr-mutation');
@@ -239,6 +241,22 @@ describe('<lr-mutation-observer>', () => {
     expect(el.disabled).to.equal(true);
   });
 
+  it('delivers records queued before a reconfiguration instead of dropping them', async () => {
+    const el = await fixture<LyraMutationObserver>(
+      html`<lr-mutation-observer child-list><div></div></lr-mutation-observer>`,
+    );
+    await el.updateComplete;
+    await aTimeout(0);
+    const counts: number[] = [];
+    el.addEventListener('lr-mutation', (e) => counts.push((e as CustomEvent<{ records: readonly MutationRecord[] }>).detail.records.length));
+    el.querySelector('div')!.append(document.createElement('span'));
+    el.childList = false;
+    el.charData = true;
+    await el.updateComplete;
+    await waitUntil(() => counts.length > 0, 'lr-mutation after the property swap');
+    expect(counts).to.deep.equal([1]);
+  });
+
   describe('mapped observer defaults and compatibility aliases', () => {
     it('defaults child-list to false while retaining Lyra\'s subtree default', async () => {
       const el = await fixture<LyraMutationObserver>(
@@ -262,6 +280,7 @@ describe('<lr-mutation-observer>', () => {
         fired = true;
       });
       nestedGrandchild.append(document.createElement('em'));
+      // wait-reason: negative assertion, a nested mutation must not emit lr-mutation without subtree
       await aTimeout(20);
       expect(fired, 'a mutation nested below the direct slotted child must NOT be reported without-subtree').to.equal(false);
 
@@ -288,7 +307,7 @@ describe('<lr-mutation-observer>', () => {
       let descendantMutationObserved = false;
       legacy.addEventListener('lr-mutation', () => { descendantMutationObserved = true; });
       legacy.querySelector('span')!.append(document.createElement('em'));
-      await aTimeout(20);
+      await waitUntil(() => descendantMutationObserved, 'descendant mutation observed');
       expect(descendantMutationObserved, 'the retired subtree spelling leaves the true default in effect').to.equal(true);
 
       const canonical = await fixture<LyraMutationObserver>(
@@ -299,6 +318,7 @@ describe('<lr-mutation-observer>', () => {
       let fired = false;
       canonical.addEventListener('lr-mutation', () => { fired = true; });
       canonical.querySelector('span')!.append(document.createElement('em'));
+      // wait-reason: negative assertion, without-subtree must not report a nested mutation
       await aTimeout(20);
       expect(fired).to.equal(false);
     });
@@ -313,6 +333,7 @@ describe('<lr-mutation-observer>', () => {
       let legacyFired = false;
       legacy.addEventListener('lr-mutation', () => { legacyFired = true; });
       legacy.querySelector('div')!.firstChild!.textContent = 'after';
+      // wait-reason: negative assertion, the retired spelling must not emit lr-mutation
       await aTimeout(20);
       expect(legacyFired, 'the retired spelling must not enable character-data observation').to.equal(false);
 
@@ -345,6 +366,7 @@ describe('<lr-mutation-observer>', () => {
       });
 
       target.append(document.createElement('span'));
+      // wait-reason: negative assertion, a child-list mutation must not emit lr-mutation
       await aTimeout(20);
       expect(fired, 'child-list mutation must NOT be reported').to.equal(false);
 

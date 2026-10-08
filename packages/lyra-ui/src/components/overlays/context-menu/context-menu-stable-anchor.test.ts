@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './context-menu.js';
 import '../../layout/menu/menu-item.js';
@@ -23,7 +23,9 @@ it('keeps a context menu open when viewport scrolling leaves its fixed anchor in
     await shown;
     const baseline = anchor.getBoundingClientRect();
     window.scrollTo({ top: 300, behavior: 'auto' });
-    await aTimeout(60);
+    await waitUntil(() => window.scrollY > 0, 'viewport scroll was applied');
+    await nextFrame();
+    await nextFrame();
     expect(window.scrollY).to.be.greaterThan(0);
     expect(anchor.getBoundingClientRect().top).to.equal(baseline.top);
     expect(el.open).to.equal(true);

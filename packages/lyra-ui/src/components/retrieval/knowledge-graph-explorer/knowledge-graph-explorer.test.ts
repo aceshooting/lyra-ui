@@ -1215,6 +1215,7 @@ describe('lr-knowledge-graph-explorer', () => {
       expect(frameCancellations).to.include(pagehideHandle);
       const settledOnPagehide = await Promise.race([
         pagehidePending.then(() => true),
+        // wait-reason: timeout guard inside a race; the race settles as soon as the pending wait resolves
         aTimeout(100).then(() => false),
       ]);
       expect(
@@ -1250,6 +1251,7 @@ describe('lr-knowledge-graph-explorer', () => {
       ).to.equal(0);
       const settledOnAdoption = await Promise.race([
         adoptionPending.then(() => true),
+        // wait-reason: timeout guard inside a race; the race settles as soon as the pending wait resolves
         aTimeout(100).then(() => false),
       ]);
       expect(settledOnAdoption, 'adoption resolves the pending skeleton wait')
@@ -2738,4 +2740,21 @@ describe('fit-to="container"', () => {
       { timeout: NODE_COUNT_TIMEOUT }
     );
   });
+});
+
+it('reports when an oversized entityDetails map was dropped', async () => {
+  // Past the shared boundary's 50,000-value budget the whole map is dropped, so the notice reads 0 of N.
+  const details = Object.fromEntries(Array.from({ length: 10_001 }, (_unused, index) => [`n${index}`, { description: 'd', a: 1, b: 2, c: 3, d: 4 }]));
+  const previousWarn = console.warn;
+  console.warn = () => undefined;
+  let el: LyraKnowledgeGraphExplorer;
+  try {
+    el = (await fixture(html`<lr-knowledge-graph-explorer .nodes=${[{ id: 'n0', label: 'N0' }]} .entityDetails=${details}></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+  } finally {
+    console.warn = previousWarn;
+  }
+  expect(el.shadowRoot!.querySelector('[part="details-limit"]')!.textContent).to.include('0 of 10,001');
+  el.entityDetails = {};
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="details-limit"]') === null).to.equal(true);
 });

@@ -439,6 +439,20 @@ describe('<lr-toggle>', () => {
     });
   }
 
+  it('keeps the unpressed hover token off a pressed toggle', async () => {
+    const el = await fixture<LyraToggle>(
+      html`<lr-toggle pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(250, 0, 0)">Bold</lr-toggle>`,
+    );
+    const button = control(el);
+    try {
+      await hoverUntilMatched(button, 'the pointer never hovered the toggle');
+      await settlePointer();
+      expect(getComputedStyle(button).backgroundColor).to.not.equal('rgb(250, 0, 0)');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   for (const [name, style] of [
     ['canonical --lr-toggle-pressed-bg', '--lr-toggle-pressed-bg: rgb(1, 2, 3)'],
     ['deprecated --lr-toggle-pressed-background', '--lr-toggle-pressed-background: rgb(1, 2, 3)'],

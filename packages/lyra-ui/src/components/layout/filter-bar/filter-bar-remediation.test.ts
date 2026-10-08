@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LitElement, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import './filter-bar.js';
@@ -90,7 +90,7 @@ describe('filter-bar debounce controller lifecycle', () => {
     native.value = 'tim';
     native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     expect(controllerCount(element), 'an in-flight edit holds exactly one controller').to.equal(1);
-    await aTimeout(200);
+    await waitUntil(() => controllerCount(element) === 0, 'the debounced edit settles', { timeout: 2000 });
     expect(element.value).to.deep.equal({ q: 'tim' });
     expect(controllerCount(element), 'a settled edit leaves no controller behind').to.equal(0);
   });
@@ -111,7 +111,7 @@ describe('filter-bar debounce controller lifecycle', () => {
     const native = await nativeInput(element, 'q');
     native.value = 'gone';
     native.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    await aTimeout(200);
+    await waitUntil(() => controllerCount(element) === 0, 'the debounced edit settles', { timeout: 2000 });
     element.filters = [{ filterId: 'other', label: 'Other', type: 'text', debounce: 40 }];
     await element.updateComplete;
     expect(controllerCount(element), 'the removed id keeps nothing alive').to.equal(0);
@@ -151,7 +151,7 @@ describe('filter-bar under a re-rendering parent', () => {
     await bar.updateComplete;
     expect(native.value, 'the pending text stays in the field').to.equal('abc');
     expect(rebindSignals[0]!.aborted, 'an identical schema is not a replacement').to.equal(false);
-    await aTimeout(300);
+    await waitUntil(() => (bar.value as { q?: string }).q === 'abc', 'the pending edit commits', { timeout: 2000 });
     expect(bar.value).to.deep.equal({ q: 'abc' });
   });
 });

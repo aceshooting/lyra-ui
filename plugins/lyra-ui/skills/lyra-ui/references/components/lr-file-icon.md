@@ -30,11 +30,6 @@ next to the label in `mode="label"`; `0`, the default, renders no size), `label`
 registry). A host `aria-label` wins over the computed localized file-type/size name. `decorative`
 changes the semantic owner to presentation and renders `aria-hidden="true"` explicitly.
 
-**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
-library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
-same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
-is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
-
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).

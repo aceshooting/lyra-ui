@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Volume',
   videoCaptions: 'Teks katrangan',
   videoCaptionsOff: 'Pateni',
-  videoPlaybackSpeed: 'Kacepetan puter maneh',
   videoPictureInPicture: 'Bukak gambar sajroning gambar',
   videoExitPictureInPicture: 'Metu saka gambar sajroning gambar',
   videoEnterFullscreen: 'Bukak layar wutuh',

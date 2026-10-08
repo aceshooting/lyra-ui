@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing, panelFrame } from '../../../internal/interactive-control.styles.js';
+import { focusRing, panelFrame } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -68,39 +68,4 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
   }
-
-  [part='decision'] {
-    --_lr-permission-grant-decision-hover-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
-    --_lr-permission-grant-decision-active-bg: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
-    box-sizing: border-box;
-    ${iconHitTarget}
-    max-inline-size: 100%;
-    padding-inline: var(--lr-button-padding-inline, var(--lr-space-s));
-    border: var(--lr-border-width-thin) solid var(--lr-button-outlined-border, var(--lr-color-border));
-    border-radius: var(--lr-button-radius, var(--lr-radius-xs));
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
-    font: inherit;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-    transition: background-color var(--lr-transition-fast);
-  }
-
-  [part='decision']:not(:disabled):hover {
-    background: var(--lr-button-hover-bg, var(--_lr-permission-grant-decision-hover-bg));
-  }
-
-  [part='decision']:not(:disabled):active {
-    background: var(--lr-button-active-bg, var(--_lr-permission-grant-decision-active-bg));
-  }
-
-  [part='decision']:focus-visible {
-    ${focusRing}
-  }
-
-  [part='decision']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
-  }
-
 `;

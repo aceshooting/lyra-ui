@@ -17,12 +17,13 @@ import { isMainModule } from './is-main-module.mjs';
 // The output is deterministic (stable sort order, no timestamps, no absolute paths) so
 // `check-event-types.mjs` can regenerate it in memory and diff.
 
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sourceDir = path.join(packageDir, 'src');
@@ -37,13 +38,6 @@ const EVENT_MAP_DECLARATION_RE = /export\s+interface\s+(?:Lyra\w*EventMap|Autolo
 const DOC_WIDTH = 96;
 
 const byLocale = (a, b) => a.localeCompare(b);
-
-function walk(directory) {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name);
-    return entry.isDirectory() ? walk(entryPath) : [entryPath];
-  });
-}
 
 // The generated file itself lives under src/ and declares `LyraGlobalEventMap`, which matches the
 // same naming convention this script scans for — reading it back would fold the previous run's

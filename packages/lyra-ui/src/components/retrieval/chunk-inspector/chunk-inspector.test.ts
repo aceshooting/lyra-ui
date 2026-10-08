@@ -57,6 +57,17 @@ it('names each open control by its sorted ordinal and supports a containing list
   expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Result 1 of 1');
 });
 
+it('drops its own group, list and listitem semantics when a containing list supplies the ordinal', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
+  el.chunks = [chunks[0]!];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="group"], [role="list"], [role="listitem"]').length).to.equal(3);
+  el.ordinalIndex = 1;
+  el.ordinalTotal = 3;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="group"], [role="list"], [role="listitem"]').length).to.equal(0);
+});
+
 it('omits blank and later-duplicate chunk ids before sorting, current state, and actions', async () => {
   const el = (await fixture(
     html`<lr-chunk-inspector active-chunk-id="duplicate"></lr-chunk-inspector>`,
@@ -710,6 +721,14 @@ it('falls back to the default tiers when thresholds is not an object', async () 
   await el.updateComplete;
   const tones = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="score-fill"]')].map((fill) => fill.dataset['tone']);
   expect(tones).to.deep.equal(['success', 'warning', 'danger']);
+});
+
+it('treats inverted thresholds like the same pair in order', async () => {
+  const tones = async (thresholds: { high: number; medium: number }): Promise<(string | undefined)[]> => {
+    const el = (await fixture(html`<lr-chunk-inspector .thresholds=${thresholds} .chunks=${chunks}></lr-chunk-inspector>`)) as LyraChunkInspector;
+    return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="score-fill"]')].map((fill) => fill.dataset['tone']);
+  };
+  expect(await tones({ high: 0.3, medium: 0.95 })).to.deep.equal(await tones({ high: 0.95, medium: 0.3 }));
 });
 
 it('marks the current row with an outline under forced colors', async () => {

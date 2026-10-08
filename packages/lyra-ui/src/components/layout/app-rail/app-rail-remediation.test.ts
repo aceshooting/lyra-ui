@@ -153,3 +153,23 @@ describe('rail overlay clicks, resizer keys and label', () => {
     expect(Number.parseFloat(style.transitionDuration)).to.be.greaterThan(0);
   });
 });
+
+describe('non-resizable rail measuring', () => {
+  it('does not measure the base on a plain re-render', async () => {
+    const el = await fixture<LyraAppRail>(html`<lr-app-rail label="Main"></lr-app-rail>`);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const original = base.getBoundingClientRect;
+    let reads = 0;
+    base.getBoundingClientRect = () => {
+      reads += 1;
+      return original.call(base);
+    };
+    try {
+      el.label = 'Other';
+      await el.updateComplete;
+    } finally {
+      base.getBoundingClientRect = original;
+    }
+    expect(reads).to.equal(0);
+  });
+});

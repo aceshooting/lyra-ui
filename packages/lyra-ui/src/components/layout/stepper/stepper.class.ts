@@ -15,7 +15,7 @@ import {
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './stepper.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 
 export type LyraStepState = 'pending' | 'current' | 'completed' | 'error';
@@ -391,9 +391,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('steps')) {
-      const focusedStep = activeElementIn(
-        this.renderRoot as ShadowRoot
-      ) as HTMLElement | null;
+      const focusedStep = shadowFocusTarget(this) as HTMLElement | null;
       if (focusedStep?.getAttribute('part') === 'step') {
         this.pendingStepFocus = {
           stepId: focusedStep.dataset['stepId'] ?? '',
@@ -637,9 +635,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       .map((step, index) => ({ step, index }))
       .filter(({ step }) => !step.disabled);
     if (navigable.length === 0) return;
-    const focused = activeElementIn(
-      this.renderRoot as ShadowRoot
-    ) as HTMLElement | null;
+    const focused = shadowFocusTarget(this) as HTMLElement | null;
     const focusedIndex = Number(focused?.dataset['index']);
     const currentIndex = navigable.findIndex(
       (item) => item.index === focusedIndex

@@ -7,6 +7,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { nextId } from '../../../internal/a11y.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
@@ -487,7 +488,7 @@ export interface LyraRubricFormEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
+export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -585,22 +586,6 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  /** Delegates straight to `ElementInternals.labels` -- no logic of its own. */
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   get keys(): readonly RubricKey[] {

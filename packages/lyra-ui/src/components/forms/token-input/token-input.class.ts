@@ -4,7 +4,8 @@ import { FormControlController, reflectFormName } from '../../../internal/form-c
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import {
   type ComposedFocusRepairSnapshot,
@@ -237,7 +238,7 @@ const stringArrayConverter = {
  * @status stable
  * @since 4.0.0
  */
-export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
+export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -517,21 +518,6 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
   }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
-  }
   /** Effective disabled state: this element's own `disabled` OR an ancestor
    *  `<fieldset disabled>`'s inherited state -- mirrors native `<input>`, whose
    *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
@@ -616,7 +602,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.inputEl?.focus(options);
   }
   override blur(): void {
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -777,7 +763,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   private retireDisabledInteraction(): void {
     this.tokenFocusRepairPending = undefined;
     this.discardTransientState(true);
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -795,7 +781,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     // the old token DOM. Compare with that rendered list, not with the previous property value, so
     // the second setter cannot erase the still-required repair.
     if (next.length >= tokens.length) return;
-    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     const token = typeof active?.closest === 'function'
       ? active.closest<HTMLElement>('[part~="token"]')
       : null;

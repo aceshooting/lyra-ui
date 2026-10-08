@@ -254,7 +254,6 @@ try {
     './dist/components/forms/zeta/alpha-entry.js',
     './dist/components/viewers/archive/archive-register.js',
     './dist/theme.css',
-    './dist/translations/fr.js',
     './src/all.ts',
     './src/autoloader-cdn.ts',
     './src/ssr/all.ts',

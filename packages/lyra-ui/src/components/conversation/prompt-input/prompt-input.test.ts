@@ -2218,3 +2218,17 @@ it("forwards a host aria-describedby and the composer's row, submit and stop kno
   expect([composer.submitDisabled, composer.withoutStop, composer.minRows, composer.maxRows]).to.deep.equal([true, true, 2, 4]);
   await waitUntil(() => describedByIds(composer.input!).includes("prompt-hint"), "the host description reaches the textarea");
 });
+
+it("forwards frame, actions-layout and the toolbar slot to the composed composer", async () => {
+  const el = await fixture<LyraPromptInput>(html`<lr-prompt-input frame="plain" actions-layout="stacked"
+    ><span slot="toolbar" id="tb">tools</span></lr-prompt-input
+  >`);
+  await el.updateComplete;
+  const composer = el.shadowRoot!.querySelector("lr-chat-composer") as LyraChatComposer;
+  await composer.updateComplete;
+  expect([composer.frame, composer.actionsLayout]).to.deep.equal(["plain", "stacked"]);
+  await waitUntil(() => {
+    const slot = composer.shadowRoot!.querySelector('slot[name="toolbar"]') as HTMLSlotElement;
+    return slot.assignedElements({ flatten: true }).some((node) => node.id === "tb");
+  }, "the toolbar content reaches the composer toolbar slot");
+});

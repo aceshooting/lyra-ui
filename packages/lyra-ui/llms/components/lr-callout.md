@@ -19,7 +19,7 @@
 An inline status, warning, or error surface. Set `inline` for lightweight reactive form or mutation
 errors without panel chrome.
 
-**Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'brand'` (reflected when
+**Properties:** `variant: 'neutral'|'brand'|'primary'|'success'|'warning'|'danger' = 'brand'` (`primary` is stored and reflected as `brand`; reflected when
 explicit — an unset nested callout inherits its ancestor's semantic colour context without
 materializing a `variant` attribute. Explicitly writing even the same-default `brand` materializes
 the attribute and pins the local brand palette; removing the attribute restores contextual
@@ -27,7 +27,7 @@ inheritance),
 `appearance: 'accent'|'filled'|'outlined'|'plain'|'filled-outlined'` (reflected, with no explicit
 default — when set, controls how much of the active variant palette is spent on fill, border, and
 text; leaving it unset preserves the established quiet-fill/loud-edge treatment),
-`size: LyraSize = 'm'` (reflected when explicit — **new in 8.0.0**; visual density on the library's shared ladder,
+`size: LyraSize = 'm'` (reflected when explicit — visual density on the library's shared ladder,
 accepting both spellings of the aliased tiers (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
 from `wa-callout` needs no attribute rewrite. An unset nested callout inherits its ancestor's size
 context; standalone fallback is `m`. Explicitly writing even the same-default `m` pins the local
@@ -79,16 +79,6 @@ The surface chrome lives on the custom-element host, not inside `base`. Ordinary
 work directly and take normal author precedence. `inline` removes the host's border, background,
 and padding.
 
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
-
 **Themeable custom properties:** `--lr-callout-bg`, `--lr-callout-color`, and
 `--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
@@ -102,7 +92,7 @@ retargets for the panel itself) so a consumer can retint the hover fill — e.g.
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
 panel background, and vice versa.
 
-Three more, all new in 8.0.0: `--lr-callout-font-size` (private default
+Three more: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
 `size` tier maps that private default from the shared ladder), `--lr-callout-padding` (private
 default `var(--lr-form-control-padding-inline, var(--lr-space-m))` — the panel's padding on _both_

@@ -77,3 +77,18 @@ it('renders the empty agenda message as a styleable part', async () => {
   const el = await fixture<LyraCalendar>(html`<lr-calendar view="agenda" view-date="2026-07-01"></lr-calendar>`);
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent!.trim()).to.equal('No events this month.');
 });
+
+it('buckets events once across renders that do not replace them', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Meeting' }]}></lr-calendar>`);
+  let calls = 0;
+  const original = Reflect.get(el, 'bucketEventsByDate') as (events: unknown) => unknown;
+  Reflect.set(el, 'bucketEventsByDate', (events: unknown) => { calls += 1; return original.call(el, events); });
+  for (const value of ['2026-07-02', '2026-07-03']) {
+    el.value = value;
+    await el.updateComplete;
+  }
+  expect(calls).to.equal(0);
+  el.events = [{ date: '2026-07-16', title: 'Other' }];
+  await el.updateComplete;
+  expect(calls).to.equal(1);
+});

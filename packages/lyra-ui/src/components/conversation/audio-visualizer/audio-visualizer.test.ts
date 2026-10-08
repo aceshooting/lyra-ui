@@ -1858,3 +1858,20 @@ it('reads the reduced-motion preference on change, not on every animation frame'
   expect(frameHandle(el)).to.not.be.undefined;
   expect(calls).to.equal(0);
 });
+
+it('reads the reduced-motion preference once, not per drawn frame', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer state="listening"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  await settleRaf(el, 2);
+  const original = window.matchMedia;
+  let reads = 0;
+  window.matchMedia = ((query: string) => {
+    if (query.includes('prefers-reduced-motion')) reads += 1;
+    return original.call(window, query);
+  }) as typeof window.matchMedia;
+  try {
+    for (let frame = 0; frame < 5; frame++) invokeDrawFrame(el, 1000 + frame * 40);
+  } finally {
+    window.matchMedia = original;
+  }
+  expect(reads, 'cached preference, refreshed only by the media listener').to.equal(0);
+});

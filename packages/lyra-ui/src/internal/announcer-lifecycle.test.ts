@@ -33,7 +33,7 @@ it('cancels a deferred modal announcement on release without removing a peer sin
     expect(peer.element === transitioning.element).to.equal(true);
     transitioning.release();
     peer.announce('Retained peer');
-    await new Promise<void>(resolve => setTimeout(resolve, 30));
+    await waitUntil(() => peer!.element.childElementCount === 1, 'retained peer announcement flushed');
     expect(peer.element.parentElement === dialog).to.equal(true);
     expect([...peer.element.children].map(child => child.textContent)).to.deep.equal(['Retained peer']);
     transitioning.announce('Released producer');

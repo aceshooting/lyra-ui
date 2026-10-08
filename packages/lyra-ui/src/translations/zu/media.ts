@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Ivolumu',
   videoCaptions: 'Imibhalo engezansi',
   videoCaptionsOff: 'Valiwe',
-  videoPlaybackSpeed: 'Isivinini sokudlala',
   videoPictureInPicture: 'Faka isithombe ngaphakathi kwesithombe',
   videoExitPictureInPicture: 'Phuma esithombeni ngaphakathi kwesithombe',
   videoEnterFullscreen: 'Vula isikrini esigcwele',

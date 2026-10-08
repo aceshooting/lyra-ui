@@ -93,6 +93,17 @@ it('emits the selected JSON Pointer and record', async () => {
   });
 });
 
+it('hands out the viewer\'s own frozen schema node instead of re-cloning it on a root selection', async () => {
+  const el = (await fixture(
+    html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`
+  )) as LyraJsonSchemaViewer;
+  const pending = oneEvent(el, 'lr-schema-select');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[data-path=""]')!.click();
+  const { schema: selected } = (await pending).detail as { schema: unknown };
+  expect(selected === el.schema).to.equal(true);
+  expect(Object.isFrozen(selected)).to.equal(true);
+});
+
 it('fails closed for malformed/circular input and is accessible', async () => {
   const circular: Record<string, unknown> = { type: 'object' };
   circular['properties'] = { self: circular };

@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Ƙarar sauti',
   videoCaptions: 'Rubutun magana',
   videoCaptionsOff: 'Kashe',
-  videoPlaybackSpeed: 'Saurin kunnawa',
   videoPictureInPicture: 'Kunna hoto a cikin hoto',
   videoExitPictureInPicture: 'Fita daga yanayin hoto a cikin hoto',
   videoEnterFullscreen: 'Kunna cika allo',

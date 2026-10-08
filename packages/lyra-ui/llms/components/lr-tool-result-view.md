@@ -130,8 +130,8 @@ DirectToolRendererDefinition }>` and `render?: never` — lazy loader
 
 **`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
 
-- `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
-  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied' |
+- `reportStatus: (status: ToolStatus) => void` — reports this render's outcome without
+  throwing. `ToolStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied' |
   'incomplete'`, the same union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported
   from this module. Calling
   it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
@@ -230,7 +230,7 @@ registerToolRenderer("web_search", {
   `ToolRendererDefinition`) — write the registration as a plain object literal (as in every example
   above) or annotate it as `ToolRendererDefinition` directly, so TypeScript checks the actual
   current `render`/`matches`/`load` shape, including the `context: ToolRenderContext` 3rd
-  parameter and the exact `ToolResultStatus` string union `reportStatus` accepts. A loosened/`any`
+  parameter and the exact `ToolStatus` string union `reportStatus` accepts. A loosened/`any`
   signature type-checks either way but silently gives up the compiler's ability to catch a typo'd
   status string or a dropped `context` parameter
 - `fallback` implements exactly two kinds, `"json"` and `"text"`; any _other_ runtime value

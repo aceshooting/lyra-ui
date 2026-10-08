@@ -755,7 +755,7 @@ code. See each control's own reference page for its exact pair.
   formula from the `--lr-theme-*` inputs you control:
   ```css
   padding-inline-start: calc(
-    min(var(--lr-theme-icon-button-size, 2.5rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
+    min(var(--lr-theme-icon-button-size, 2.25rem), 1.75rem) + var(--lr-theme-space-s, 0.5rem)
   );
   ```
 

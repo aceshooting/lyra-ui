@@ -2,10 +2,10 @@ import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
 import type { DocxCommandAvailability, DocxResult, DocxTableAction, DocxTableContext } from './types.js';
 import { DOCX_LIMITS } from './commands.js';
-import { WORD_NS as WORD } from './ooxml.js';
+import { OOXML_TREE_LIMITS, WORD_NS as WORD } from './ooxml.js';
 
 export type TableReaders = Pick<typeof import('@docx-editor.dev/core/store'), 'findNode' | 'parentNodeOf'>;
-const TABLE_READ_LIMITS = Object.freeze({ parts: 128, nodes: 20_000, depth: 64, attributes: 64, cells: 4_000 });
+const TABLE_READ_LIMITS = Object.freeze({ ...OOXML_TREE_LIMITS, cells: 4_000 });
 const word = (node: OoxmlNode, name: string): node is OoxmlElement =>
   node.kind !== 'textValue' && node.namespaceUri === WORD && node.localName === name;
 const refusal = (code: 'unsupported' | 'resource-limit' | 'stale-selection'): DocxResult<never> => ({ ok: false, code });

@@ -55,7 +55,7 @@ structured points retain their y-value formatting.
   controls angle lines and `y` controls concentric grid lines
 - `indexAxis: 'x'|'y' = 'x'` (attribute `index-axis`) — Chart.js index axis. `'y'` is Chart.js's own
   mechanism for horizontal bars (it also flips `line`/`area` types onto a horizontal category axis).
-  The `horizontal` boolean that used to alias `'y'` was removed in 9.0.0 — use `index-axis="y"`
+  Use `index-axis="y"` for a horizontal bar
 - `label: string | null = null` — accessible chart label. Host `aria-label` has highest precedence
   by presence, including an explicit empty string
 - `max: number | null = null`, `min: number | null = null` — finite value-axis bounds. They apply to
@@ -94,9 +94,7 @@ structured points retain their y-value formatting.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraChartSeries[] = []` (attribute: false) — `LyraChartSeries { readonly
   label: string; readonly data?: readonly (number|null)[]; readonly points?: readonly
-  LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`. The
-  deprecated `Series` and `ChartPoint` names were removed in 9.0.0 — import
-  `LyraChartSeries`/`LyraChartPoint` instead.
+  LyraChartPoint[]; readonly color?: string|readonly string[]; readonly stack?: string; ... }`.
   - `stack` is a Chart.js dataset `stack` group id: series sharing one `stack` value on the same
     (stacked) axis accumulate into one stack; a different id starts an independent stack Chart.js
     draws side by side with the first on that axis. Omitted series share one implicit group, so
@@ -286,7 +284,7 @@ structured points retain their y-value formatting.
   displaces the caller's options.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the always-available
   accessible data table visible rather than screen-reader-only.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,
@@ -434,8 +432,8 @@ optional overlay content positioned at the chart area's center, useful for dough
 **Bounded rendering and data alternative:** simplified `labels`/`datasets` canvas rendering, the
 DOM legend, generated table, keyboard-operable datum model, generated point-details in the summary,
 and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
-the selected category and series indexes are distributed
-deterministically and retain their first and last endpoints; a localized `data-truncation` notice
+every series stays plotted and listed in the legend; only categories are thinned to the first,
+last and evenly spaced entries (series are thinned only beyond 500); a localized `data-truncation` notice
 is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
 between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
 bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and

@@ -14,7 +14,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { formatTimeOfDay, getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 import { autocorrectConverter, normalizeAutocorrect, spellcheckConverter } from '../../../internal/converters.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
@@ -437,7 +437,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
       // controlled draft/state so reconnect can restore the same editing session and focus.
       if (
         !this.isConnected ||
-        (!synthetic && activeElementIn(this.shadowRoot) === this.labelInput)
+        (!synthetic && shadowFocusTarget(this) === this.labelInput)
       )
         return;
       this.commitRename();

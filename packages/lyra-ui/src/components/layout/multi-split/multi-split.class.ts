@@ -14,7 +14,7 @@ import {
 } from '../../../internal/overlay-manager.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
 import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
 import { nextId } from '../../../internal/a11y.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -623,7 +623,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private generatedTriggerPanelId?: string;
   private overlayReturnTarget: HTMLElement | null = null;
   private overlayOpener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   /** The panel `role`/`aria-modal` were last overwritten on and their prior values, so closing the
    *  drawer restores exactly what the consumer had authored rather than assuming it was unset. */
   private floatingDialogPanel: HTMLElement | null = null;
@@ -735,14 +734,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.resetCollapseObserver();
     this.resetGutterObserver();
     this.overlayHandle?.suspend();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     this.releaseExternalTriggerA11y();
     this.releaseOwnedPanels();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     this.releaseExternalTriggerA11y();
     this.endDragGestures();
     this.resetCollapseObserver();
@@ -2245,7 +2244,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   private activateFloatingOverlay(): void {
     this.nativeModal.prepare();
-    this.deferredFocusReturn.cancel();
     const opener = deepActiveElement(this.ownerDocument);
     this.overlayOpener = isHtmlElement(opener) ? opener : null;
     const trigger = this.resolveExternalTrigger();
@@ -2279,6 +2277,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       onBackdrop: () => this.setOpen(false),
       lockScroll: true,
       suspendWhenUnrendered: true,
+      deferredReturn: () => {
+        if (!(this.resolveExternalTrigger() || this.trigger || this.for)) return undefined;
+        // Only focus still inside this closed panel is stranded: the split's other panes are
+        // light-DOM children of the host, so host containment would take back focus the
+        // application deliberately moved into the surviving pane.
+        const panel = this.floatingDialogPanel;
+        return {
+          candidates: () => [this.resolveExternalTrigger(), this.overlayReturnTarget, this.overlayOpener],
+          stranded: (active) => panel !== null && composedContains(panel, active),
+          isCurrent: () => !this.overlayActive,
+        };
+      },
     });
   }
 
@@ -2287,23 +2297,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.nativeModal.hide();
     this.nativeModal.prepare(false);
     const trigger = this.resolveExternalTrigger();
-    // Captured before its dialog semantics are restored below: the deferred pass counts only focus
-    // still inside this closed panel as stranded. The split's other panes are light-DOM children of
-    // the host, so the helper's default host containment would take back focus the application
-    // deliberately moved into the surviving pane.
+    // The deferred return reads the panel during deactivation, so it is released afterwards.
     const panel = this.floatingDialogPanel;
-    this.floatingDialogPanel = null;
     if (trigger) this.overlayHandle?.updateRestoreFocusTo(trigger);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
-    if (trigger || this.trigger || this.for) {
-      this.deferredFocusReturn.schedule({
-        host: this,
-        candidates: () => [this.resolveExternalTrigger(), this.overlayReturnTarget, this.overlayOpener],
-        stranded: (active) => panel !== null && composedContains(panel, active),
-        isCurrent: () => !this.overlayActive,
-      });
-    }
+    this.floatingDialogPanel = null;
     if (!panel) return;
     if (this.floatingDialogPreviousRole === null) panel.removeAttribute('role');
     else panel.setAttribute('role', this.floatingDialogPreviousRole);

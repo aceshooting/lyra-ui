@@ -89,6 +89,7 @@ describe('submenu content and focus lifecycle', () => {
     try {
       await sendMouse({ type: 'move', position: [Math.round(bounds.left + bounds.width / 2), Math.round(bounds.top + bounds.height / 2)] });
       await waitUntil(() => sibling.matches(':hover'));
+      // wait-reason: negative assertion; the submenu must not open within the hover-intent delay
       await aTimeout(400);
       expect(parent.submenuOpen).to.equal(false);
       expect(parent.hasAttribute('submenuopen')).to.equal(false);

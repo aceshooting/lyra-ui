@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer } from '../../test/wtr-focus.js';
 import { resolveAccessibleTrigger } from './a11y.js';
@@ -2317,4 +2317,33 @@ it('no-ops a second consecutive suspend call while still active but unregistered
 
   handle.resume();
   handle.deactivate({ restoreFocus: false });
+});
+
+it('ignores childList churn outside the allowed paths while a modal is open, yet inerts a new sibling', async () => {
+  const background = document.createElement('main');
+  background.dataset['overlayBackground'] = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  let queued = 0;
+  globalThis.queueMicrotask = (callback: () => void) => {
+    queued += 1;
+    originalQueueMicrotask(callback);
+  };
+  try {
+    background.append(document.createElement('span'));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(queued, 'a deep unrelated mutation schedules no inert pass').to.equal(0);
+
+    const sibling = document.createElement('aside');
+    document.body.append(sibling);
+    await waitUntil(() => sibling.inert);
+    expect(queued).to.be.greaterThan(0);
+    sibling.remove();
+  } finally {
+    globalThis.queueMicrotask = originalQueueMicrotask;
+    handle.deactivate({ restoreFocus: false });
+    background.remove();
+  }
 });

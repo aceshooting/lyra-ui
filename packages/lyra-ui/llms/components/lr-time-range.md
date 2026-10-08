@@ -6,10 +6,10 @@
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -155,9 +155,10 @@ and win over the `preset-active-*` names, so one theme can style both controls' 
 
 Pointer states and handle chrome are independently themeable too:
 
-- `--lr-time-range-preset-hover-border-color`,
+- `--lr-time-range-preset-hover-bg`, `--lr-time-range-preset-hover-border-color`,
   `--lr-time-range-preset-pressed-border-color`, and `--lr-time-range-preset-pressed-bg` control
-  preset hover/press paint.
+  preset hover/press paint; `<lr-date-picker>` takes the same `-hover-border-color`,
+  `-pressed-border-color` and `-selected-border-color` names, and both rows share one paint sheet.
 - `--lr-time-range-handle-bg`, `--lr-time-range-handle-border-color`,
   `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-pressed-bg` control the handle's
   resting, hovered, and pressed paint.

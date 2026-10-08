@@ -21,76 +21,6 @@ Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate
 longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains available. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
-## Breaking changes in 10.0.0
-
-`lr-entity-card`, `lr-entity-chip` and `lr-neighbor-list` no longer emit `lr-entity-activate`. The
-canonical name for that gesture is `lr-entity-select` (`detail: { entityId }`), fired from the same
-gesture with the same detail — only the second spelling is gone. It is removed outright rather than
-kept as a dual-emitting alias, because the library has no released consumers and an alias is a
-permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
-
-Two composites narrow with them. `lr-entity-dossier` surfaces its embedded entity card's and
-neighbor list's gesture as `lr-entity-select` only, and `lr-provenance-panel` does the same for its
-embedded entity chip. On both, `lr-entity-activate` now reaches a host only from the embedded
-community card or relationship path strip, which is also the only source of the richer
-`{ entityId, occurrenceIndex? }` detail — so on these two elements the names now carry different
-shapes rather than being two spellings of one event.
-
-`lr-community-card` and `lr-path-strip` keep `lr-entity-activate` unchanged. It is their only name
-and never was an alias, so do **not** rename those listeners.
-
-`lr-rag-eval-dashboard` no longer emits `lr-run-select`; listen for `lr-run-change`
-(`detail: { run }`, unchanged). Same removal, same reason.
-
-`lr-knowledge-graph-explorer`'s `lr-search-change` detail is now exactly
-`{ query, matchCount, matchCountExact, activeIndex }`. The old `searchQuery` member is replaced by the canonical
-`query` rather than carried beside it, so the event finally has the `LyraSearchChangeDetail` shape
-the rest of the library's search emitters use — read `e.detail.query`. `activeIndex` is always `-1`
-(this is a live node filter, not a cursor-based search), and `matchCountExact` is always
-`true`, since that filter has no truncating ceiling. The `query` property (formerly `searchQuery`)
-is a different member and is unaffected: the component still applies the query to it before
-emitting, so reassigning it from the handler stays a no-op.
-
-Also corrected in 10.0.0 — not breaking, but visible. A chip with no `entity-id` renders its button
-disabled, and now looks it: `lr-entity-chip` used to paint that state pixel-identical to a working
-chip — full opacity, a hand cursor, complete hover and press feedback for a control that cannot emit
-anything — and now dims to `--lr-opacity-disabled` with a `not-allowed` cursor and no pointer
-response. `lr-embedding-explorer`'s selected point has a focus ring again. And
-`lr-knowledge-graph-explorer` no longer announces on mount: a preset `search-query` used to fire its
-live region before any user action.
-
-## Breaking changes in 9.0.0
-
-`lr-graph`'s exported types `GraphLayout`, `GraphRenderer`, `GraphSelectionMode`, `GraphPickKind`, and
-`GraphCommunity` are renamed to `LyraGraphLayout`, `LyraGraphRenderer`, `LyraGraphSelectionMode`,
-`LyraGraphPickKind`, and `LyraGraphCommunity` — update any TypeScript import; no markup/runtime
-change.
-
-`lr-node-palette`'s exported `PaletteItem` type is renamed to `LyraPaletteItem` — update any
-TypeScript import; no markup/runtime change.
-
-`lr-rag-answer`'s exported `RagAnswerState` type is renamed to `LyraRagAnswerState` — update any
-TypeScript import; no markup/runtime change.
-
-`lr-rag-eval-dashboard`'s exported types `RagEvaluationMetricCategory`, `RagEvaluationMetricFormat`,
-`RagEvaluationMetric`, and `RagEvaluationRun` are renamed to `LyraRagEvaluationMetricCategory`,
-`LyraRagEvaluationMetricFormat`, `LyraRagEvaluationMetric`, and `LyraRagEvaluationRun` — update any
-TypeScript import; no markup/runtime change.
-
-`lr-entity-chip`'s `label` property/attribute (the chip's visible text) is renamed to `text`; `label`
-is now reserved, matching every other retrieval component, for the family's ARIA-fallback-name
-convention. Update `<lr-entity-chip label="...">` to `text="...">` and any `el.label` read/write to
-`el.text`.
-
-`lr-grounding-summary`'s `heading-level`/`headingLevel` switches from a local numeric `1`-`6` union to
-the shared string union `LyraHeadingLevel` (`'1'|'2'|'3'|'4'|'5'|'6'|'none'`), matching `lr-empty`/
-`lr-dialog`/`lr-task-list`/`lr-contact-viewer`. Existing `heading-level="2"` markup keeps working
-unchanged (numeric-string attribute values are unaffected), but a JS assignment of a bare number
-(`el.headingLevel = 2`) must become a string (`el.headingLevel = '2'`); an out-of-range or otherwise
-invalid value now falls back to level 3 (matching every sibling) instead of clamping toward the
-nearest bound; and the new `heading-level="none"` value opts the warnings/evidence section headings
-out of heading semantics entirely (renders plain text, no `role`/level).
-
 ## `lr-graph`
 
 A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
@@ -718,13 +648,13 @@ floating popover on hover or keyboard focus (the focused control matches `:focus
 text/accent color), `--lr-entity-chip-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-entity-chip-border` (default `transparent`, the chip's `--lr-border-width-thin` outline).
 
-The anchored detail popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The anchored detail popover is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
-`--lr-positioning-strategy` (16.0.0) — the preview popover reads this same cascading
+`--lr-positioning-strategy` — the preview popover reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-entity-chip>`; set the custom property on `:root`, a theme, or one clipping
@@ -979,7 +909,8 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   sole overall owner; an explicitly empty host label stays empty
 - `ordinalIndex?: number` / `ordinalTotal?: number` (attribute: false) — optional one-based result
   position and count supplied by a containing results list. Standalone rows use their position in
-  the sorted inspector list. The open-button name includes this ordinal, title, and score tier.
+  the sorted inspector list. The open-button name includes this ordinal, title, and score tier. Setting it marks the inspector as one row of that list, so it renders without its own
+  group, list or listitem semantics.
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
@@ -1407,13 +1338,13 @@ public value remains authoritative in every status. Shared tokens include
 > per-confidence colors)? Set the component hooks above on their ancestor wrapper. Use
 > `--lr-theme-*` instead only when changing a shared semantic palette input for the entire subtree.
 
-The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The anchored source-preview popover is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
 surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
 
-`--lr-positioning-strategy` (16.0.0) — the source-preview popover reads this same cascading
+`--lr-positioning-strategy` — the source-preview popover reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
 its own `fixed` default when nothing is set. There is no per-instance `positioning-strategy`
 property on `<lr-citation-badge>`; set the custom property on `:root`, a theme, or one clipping
@@ -2136,7 +2067,7 @@ pin toggle; no effect while `details` is overridden.
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
-shown/total notice when more than 50 nodes match), `pinned` (only while
+shown/total notice when more than 50 nodes match), `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
@@ -2205,6 +2136,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
   panel label. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
   empty host label stays empty
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens each `item`'s padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each memory item's bordered, filled box; `'plain'` removes the border, background and corner radius from every `item`, for use inside an already-bordered container.
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,
@@ -2579,6 +2512,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   explicit empty string clears it. An authored host `aria-label` independently names the trace and is
   not cloned onto the timeline; explicit-empty/dynamic host changes preserve that single-owner
   distinction
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
 Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
@@ -2846,6 +2781,8 @@ owner, while an explicitly empty host label stays empty on the region).
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 Each set's chunk buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; the selected
 chunk remains controlled by `selectedChunkId`.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the compared `chunk` buttons' padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each compared chunk's bordered, filled button; `'plain'` removes the border, background and corner radius from every `chunk`, for use inside an already-bordered container.
 
 Set ids and each set's nested chunk ids are canonicalized independently. Malformed/blank rows and
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,
@@ -2951,6 +2888,8 @@ record, and renders at most 100 steps. `label` sets the visible group heading an
 unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
 localized default for an empty one). The `headingLevel` property and `heading-level` attribute
 (`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `base` padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps the panel's bordered box; `'plain'` removes the border, corner radius and padding from `base`, for use inside an already-bordered container.
 
 **CSS parts:**
 

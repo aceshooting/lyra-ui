@@ -10,7 +10,6 @@ const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
 const FIXTURE_PATH = /(?:^|\/)fixtures(?:\/|$)/u;
 const REQUIRED_TARBALL_FILES = Object.freeze([
-  'custom-elements.json',
   'llms.txt',
   'llms/index.md',
   'llms/shared.md',
@@ -18,8 +17,18 @@ const REQUIRED_TARBALL_FILES = Object.freeze([
   'llms/peers.md',
   'llms/migration.md',
   'llms/components/lr-table.md',
+  'skills/lyra-ui/SKILL.md',
+  'skills/compose-lyra-interfaces/SKILL.md',
+  'dist/cli/lyra-ui.mjs',
+  'dist/cli/init-agents.mjs',
 ]);
 const REPOSITORY_ONLY_TARBALL_FILES = Object.freeze(['llms-full.txt']);
+// Published by @aceshooting/lyra-ide and @aceshooting/lyra-translations instead; the pseudo-locales stay.
+const COMPANION_TARBALL_FILE = /^(?:custom-elements\.json|web-types\.json|vscode-(?:html|css)-data\.json|dist\/translations\/(?!pseudo\/).+)$/u;
+const COMPANIONS = Object.freeze({
+  '@aceshooting/lyra-translations': { directory: 'lyra-translations', required: ['dist/side-effect-only.d.ts', 'dist/fr.js', 'dist/fr/forms.js'] },
+  '@aceshooting/lyra-ide': { directory: 'lyra-ide', required: ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'] },
+});
 // The trailing segment is matched with a single unbounded class after the literal marker rather
 // than `[^/]+(?:\.[^/]+)+$`: those two quantifiers can both consume the same dots, so a path like
 // `a.test.` followed by many `..` backtracks exponentially (CodeQL js/redos). One class each side
@@ -179,6 +188,12 @@ export function packageBudgetFindings(metrics, budgets) {
       findings.push(`published tarball is missing required file: ${requiredFile}`);
     }
   }
+  const misplaced = packagePaths.filter((file) => COMPANION_TARBALL_FILE.test(file));
+  if (misplaced.length > 0) {
+    findings.push(
+      `published tarball contains ${misplaced.length} file(s) that ship in a companion package: ${misplaced.slice(0, 3).join(', ')}`,
+    );
+  }
   for (const repositoryOnlyFile of REPOSITORY_ONLY_TARBALL_FILES) {
     if (packagedFiles.has(repositoryOnlyFile)) {
       findings.push(
@@ -214,6 +229,27 @@ export function packageBudgetFindings(metrics, budgets) {
   if (stories.length > 0) {
     findings.push(`published tarball contains ${stories.length} story path(s)`);
   }
+  return findings;
+}
+
+/** Hard ceilings and required contents for a companion package archive. */
+export function companionBudgetFindings(metrics, packageName, budgets) {
+  const companion = COMPANIONS[packageName];
+  const maximum = budgets?.companions?.[packageName]?.maximum;
+  assert.ok(companion && maximum, `no companion package budget for ${packageName}`);
+  const findings = [];
+  const packagePaths = new Set(metrics.files.map(normalizedPackagePath));
+  for (const requiredFile of companion.required) {
+    if (!packagePaths.has(requiredFile)) findings.push(`published tarball is missing required file: ${requiredFile}`);
+  }
+  for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
+    assert.ok(Number.isInteger(maximum[metric]) && maximum[metric] > 0, `${packageName} budget maximum.${metric} must be a positive integer`);
+    if (metrics[metric] > maximum[metric]) {
+      findings.push(`${metric} ${metrics[metric].toLocaleString('en')} exceeds hard budget ${maximum[metric].toLocaleString('en')}`);
+    }
+  }
+  const stray = [...packagePaths].filter((file) => /(?:\.map$|^src\/|(?:^|\/)[^/]*\.test\.[^/]+$)/u.test(file));
+  if (stray.length > 0) findings.push(`published tarball contains ${stray.length} source map, source or test file(s)`);
   return findings;
 }
 
@@ -264,12 +300,21 @@ function readPackedMetrics() {
 
 export function parsePackageSizeArguments(args) {
   if (args.length === 0) return {};
-  if (args.length !== 2 || args[0] !== '--tarball' ||
-      typeof args[1] !== 'string' || !args[1].trim() || args[1].startsWith('--') ||
-      /[\u0000\r\n]/u.test(args[1])) {
-    throw new TypeError('Usage: check-package-size.mjs [--tarball <archive.tgz>]');
+  const usage = () => new TypeError('Usage: check-package-size.mjs [--package <name>] [--tarball <archive.tgz>]');
+  const valid = (value) => typeof value === 'string' && value.trim() && !value.startsWith('--') && !/[\u0000\r\n]/u.test(value);
+  const options = {};
+  let rest = args;
+  if (rest[0] === '--package') {
+    if (rest.length < 2 || !Object.hasOwn(COMPANIONS, rest[1])) throw usage();
+    options.package = rest[1];
+    rest = rest.slice(2);
   }
-  return { tarball: args[1] };
+  if (rest.length === 0 && options.package) throw usage();
+  if (rest.length > 0) {
+    if (rest.length !== 2 || rest[0] !== '--tarball' || !valid(rest[1])) throw usage();
+    options.tarball = rest[1];
+  }
+  return options;
 }
 
 /** Inspect the already-produced archive; its download size is never inferred from a dry run. */
@@ -297,6 +342,21 @@ export async function readTarballMetrics(tarball, expectedPackage = JSON.parse(r
 async function main() {
   const options = parsePackageSizeArguments(process.argv.slice(2));
   const budgets = validatePackageBudgets(JSON.parse(readFileSync(budgetsPath, 'utf8')));
+  if (options.package) {
+    // A companion archive is always inspected as produced; there is no dry-run estimate for it.
+    const companionDir = join(packageDir, '..', COMPANIONS[options.package].directory);
+    const metrics = await readTarballMetrics(options.tarball, JSON.parse(readFileSync(join(companionDir, 'package.json'), 'utf8')));
+    console.log(`Package archive SHA-256: ${metrics.sha256}`);
+    const findings = companionBudgetFindings(metrics, options.package, budgets);
+    const summary = `${options.package}: ${formatBytes(metrics.packedBytes)} packed archive, ${formatBytes(metrics.unpackedBytes)} unpacked, ${metrics.fileCount.toLocaleString('en')} files`;
+    if (findings.length > 0) {
+      console.error(`${summary}\n${findings.join('\n')}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`${summary} — within hard package budgets`);
+    return;
+  }
   const metrics = options.tarball ? await readTarballMetrics(options.tarball) : readPackedMetrics();
   if (metrics.sha256) console.log(`Package archive SHA-256: ${metrics.sha256}`);
   const findings = packageBudgetFindings(metrics, budgets);

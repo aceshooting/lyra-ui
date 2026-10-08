@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './animation.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
@@ -23,7 +23,7 @@ for (const reduced of [false, true]) {
     try {
       parent.append(el);
       await el.updateComplete;
-      await aTimeout(35);
+      await waitUntil(() => events.includes('start'), 'lr-start never fired');
       if (reduced) await waitUntil(() => events.includes('finish'));
       expect(created).to.equal(1);
       expect(events).to.deep.equal(reduced ? ['start', 'finish'] : ['start']);
@@ -31,14 +31,15 @@ for (const reduced of [false, true]) {
       else el.start();
       if (!reduced) el.duration = 20000;
       await el.updateComplete;
-      await aTimeout(25);
-      expect(events.filter((event) => event === 'start').length).to.equal(2);
+      const starts = (): number => events.filter((event) => event === 'start').length;
+      await waitUntil(() => starts() === 2, 'second lr-start never fired');
+      expect(starts()).to.equal(2);
       el.remove();
       el.play = true;
       parent.append(el);
       await el.updateComplete;
-      await aTimeout(35);
-      expect(events.filter((event) => event === 'start').length).to.equal(3);
+      await waitUntil(() => starts() === 3, 'third lr-start never fired');
+      expect(starts()).to.equal(3);
     } finally {
       el.remove();
       await setReducedMotion('no-preference');

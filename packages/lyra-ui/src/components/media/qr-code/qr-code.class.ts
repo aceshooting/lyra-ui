@@ -298,7 +298,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   @state() private loadState: QrCodeState = { kind: 'empty' };
-  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive', 'polite'] });
+  private readonly announcements = new AnnouncementSinkController(this);
   private pendingLoadingAnnouncement = false;
   private readonly accessibilityInternals?: ElementInternals;
 
@@ -514,6 +514,9 @@ export class LyraQrCode extends LyraElement {
       this.transitionTo({ kind: 'empty' });
       return;
     }
+    // Only a code with a value can load or fail; mount both regions before any announcement.
+    this.announcements.current('assertive');
+    this.announcements.current('polite');
     this.transitionTo({ kind: 'loading' });
     try {
       const api = await this.loadLibrary();

@@ -286,3 +286,19 @@ it('paints no pointer affordance on its sliders while disabled or readonly', asy
   expect(await outlineOnHover('disabled')).to.equal('none');
   expect(await outlineOnHover('readonly')).to.equal('none');
 });
+
+for (const attribute of ['disabled', 'readonly']) {
+  it(`paints no hover edge on a ${attribute} trigger`, async () => {
+    const picker = await fixture<LyraColorPicker>(
+      `<lr-color-picker ${attribute} value="#336699" style="--lr-color-picker-hover-border-color: rgb(250, 0, 0)"></lr-color-picker>`,
+    );
+    const trigger = part(picker, 'trigger');
+    try {
+      await hoverUntilMatched(trigger, 'the pointer never hovered the trigger');
+      await settlePointer();
+      expect(getComputedStyle(trigger).borderTopColor).to.not.equal('rgb(250, 0, 0)');
+    } finally {
+      await resetMouse();
+    }
+  });
+}

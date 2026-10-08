@@ -17,3 +17,15 @@ for (const attribute of ['label', 'sublabel'] as const) {
     expect(element.shadowRoot!.querySelector(`[part="${attribute}"]`)?.textContent).to.equal('Recovered');
   });
 }
+
+it('keeps the views snapshot and schedules no update when the same array is rebound', async () => {
+  const views = [{ viewId: 'chart', label: 'Chart' }, { viewId: 'table', label: 'Table' }];
+  const element = await fixture<LyraWidget>(html`<lr-widget .views=${views}>Content</lr-widget>`);
+  await element.updateComplete;
+  const snapshot = element.views;
+  element.views = views;
+  expect(element.isUpdatePending).to.equal(false);
+  expect(element.views === snapshot).to.equal(true);
+  element.views = snapshot;
+  expect(element.isUpdatePending).to.equal(false);
+});

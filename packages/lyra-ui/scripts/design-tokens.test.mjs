@@ -22,6 +22,11 @@ assert.equal(source.schemaVersion, 1);
 assert.equal(source.valueNamedTokenPolicy.frozenCount, 88);
 assert.ok(Object.keys(source.tokens).length >= 300, 'the canonical source must cover every shared token');
 assert.deepEqual(verifyRuntimeTokenParity(source, packageDir), []);
+assert.equal(
+  source.tokens['--lr-color-surface-overlay'].values.dark,
+  'var(--lr-theme-color-surface-overlay, #171717)',
+  'the dark overlay is authored independent of the page surface',
+);
 const missingRamp = structuredClone(source);
 delete missingRamp.tokens['--lr-ramp-brand-05'];
 assert.match(validateCanonicalTokens(missingRamp).join('; '), /--lr-ramp-brand-05: canonical palette input is missing/u);

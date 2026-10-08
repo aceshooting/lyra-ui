@@ -32,14 +32,14 @@ function searchRevisionOptions(value: unknown, allowSelection = false): DocxResu
   try {
     const options = ownDataRecord(value);
     if (!options || Object.keys(options).some(key => key !== 'expectedRevision' && !(allowSelection && key === 'selection'))) return refused('invalid-option');
-    if (options.selection !== undefined && (!options.selection || typeof options.selection !== 'object')) return refused('invalid-option');
-    const selection = options.selection === undefined ? {} : { selection: options.selection as DocxSelectionLease };
-    if (options.expectedRevision === undefined) return ok(selection);
-    const revision = ownDataRecord(options.expectedRevision);
+    if (options['selection'] !== undefined && (!options['selection'] || typeof options['selection'] !== 'object')) return refused('invalid-option');
+    const selection = options['selection'] === undefined ? {} : { selection: options['selection'] as DocxSelectionLease };
+    if (options['expectedRevision'] === undefined) return ok(selection);
+    const revision = ownDataRecord(options['expectedRevision']);
     if (!revision || Object.keys(revision).some(key => key !== 'documentId' && key !== 'value') ||
-        typeof revision.documentId !== 'string' || !revision.documentId.length || revision.documentId.length > 128 ||
-        typeof revision.value !== 'number' || !Number.isSafeInteger(revision.value) || revision.value < 0) return refused('invalid-option');
-    return ok({ expectedRevision: { documentId: revision.documentId, value: revision.value }, ...selection });
+        typeof revision['documentId'] !== 'string' || !revision['documentId'].length || revision['documentId'].length > 128 ||
+        typeof revision['value'] !== 'number' || !Number.isSafeInteger(revision['value']) || revision['value'] < 0) return refused('invalid-option');
+    return ok({ expectedRevision: { documentId: revision['documentId'], value: revision['value'] }, ...selection });
   } catch { return refused('invalid-option'); }
 }
 interface Operation {

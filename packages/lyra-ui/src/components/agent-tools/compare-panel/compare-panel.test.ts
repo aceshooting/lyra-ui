@@ -134,7 +134,7 @@ describe('lr-compare-panel', () => {
 
     paneA.scrollTop = paneA.scrollHeight - paneA.clientHeight; // scroll to the very bottom
     paneA.dispatchEvent(new Event('scroll'));
-    await aTimeout(50);
+    await waitUntil(() => paneB.scrollTop > 0, 'scroll mirrored to pane B');
 
     expect(paneB.scrollTop).to.be.greaterThan(0);
   });
@@ -254,6 +254,7 @@ describe('lr-compare-panel', () => {
 
     paneA.scrollTop = paneA.scrollHeight - paneA.clientHeight;
     paneA.dispatchEvent(new Event('scroll'));
+    // wait-reason: asserting scroll does NOT sync; allow the scroll handler a frame-plus margin
     await aTimeout(50);
 
     expect(paneB.scrollTop).to.equal(0);
@@ -629,7 +630,7 @@ describe('collecting already-slotted prompt content without relying on the initi
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'initial slotchange arrived');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -660,7 +661,7 @@ describe('collecting already-slotted prompt content without relying on the initi
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'initial slotchange arrived');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'

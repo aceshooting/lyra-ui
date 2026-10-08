@@ -1,3 +1,4 @@
+import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
@@ -108,10 +109,10 @@ export const styles = css`
   }
   /* A three-quarter arc spins; a full ring would look identical at every frame. */
   :host(:where([status='running'])) [part='icon'] svg {
-    animation: var(--_lr-motion-animation, lr-tool-call-block-spin var(--lr-transition-ambient) infinite);
+    animation: var(--_lr-motion-animation, lr-tool-status-spin var(--lr-transition-ambient) infinite);
   }
   :host(:where([status='pending'])) [part='icon'] svg {
-    animation: var(--_lr-motion-animation, lr-tool-call-block-pulse var(--lr-transition-ambient) infinite);
+    animation: var(--_lr-motion-animation, lr-tool-status-pulse var(--lr-transition-ambient) infinite);
   }
 
   [part='toggle'] {
@@ -177,20 +178,6 @@ export const styles = css`
     }
   }
 
-  @keyframes lr-tool-call-block-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  @keyframes lr-tool-call-block-pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.35;
-    }
-  }
 
   @media (prefers-reduced-motion: reduce) {
     [part='icon'] svg {
@@ -207,4 +194,5 @@ export const styles = css`
       outline-offset: calc(-1 * var(--lr-border-width-thin));
     }
   }
+  ${toolStatusKeyframes}
 `;

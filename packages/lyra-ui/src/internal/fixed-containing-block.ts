@@ -1,3 +1,4 @@
+import { assignedSlotOf } from './composed-tree.js';
 import { nativePopoverSupported } from './native-popover.js';
 
 /**
@@ -111,7 +112,7 @@ function fixedContainingBlockNodeName(node: Node): string {
  *  `backdrop-filter` panel) that establish the containing block this module cares about. */
 export function fixedContainingBlockParentNode(node: Node): Node {
   if (fixedContainingBlockNodeName(node) === 'html') return node;
-  const assignedSlot = node instanceof Element ? node.assignedSlot : null;
+  const assignedSlot = node instanceof Element ? assignedSlotOf(node) : null;
   const result: Node =
     assignedSlot ??
     node.parentNode ??

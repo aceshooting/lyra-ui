@@ -70,7 +70,7 @@ become bounded clone-owned frozen snapshots; create and reassign a new array aft
 affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
 `spellcheck: boolean = true` (string-aware converter, same as `lr-model-select`), `autocapitalize:
-string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
+string = ''`, `autocorrect: boolean = true`, `autocomplete: string = 'off'`,
 `inputMode: string = ''` (attribute `inputmode`), `enterKeyHint: string = ''` (attribute
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
 identically-named properties. `size: LyraSize = 'm'` (reflected) selects the shared

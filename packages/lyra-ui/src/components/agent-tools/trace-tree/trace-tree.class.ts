@@ -13,6 +13,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './trace-tree.styles.js';
 import { MAX_RENDERED_LYRA_SPANS, normalizeLyraSpans, type LyraSpan } from './span.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_cost, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_statusUnknown, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings.generated.js';
@@ -406,7 +407,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         current = byId.get(parentOf.get(current.id)!);
       }
       this.focusedId = current?.id ?? null;
-      if (current && current.id !== before && this.shadowRoot?.activeElement) {
+      if (current && current.id !== before && shadowFocusTarget(this)) {
         this.renderedRowById(current.id)?.focus();
       }
     }

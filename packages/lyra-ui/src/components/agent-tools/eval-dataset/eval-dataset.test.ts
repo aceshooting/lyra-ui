@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './eval-dataset.js';
 import type { LyraEvalDataset, EvalExample } from './eval-dataset.js';
 import type { LyraTable } from '../../data/table/table.class.js';
+import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraChip } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInput } from '../../media/file-input/file-input.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -33,6 +34,19 @@ function examples(): EvalExample[] {
     { id: 'ex-2', input: 'Summarize the report', expectedOutput: 'A short summary', tags: ['summarization'] },
     { id: 'ex-3', input: 'Translate hello to French', expectedOutput: 'Bonjour', tags: ['math', 'translation'] },
   ];
+}
+
+function searchHost(el: LyraEvalDataset): LyraInput {
+  return el.shadowRoot!.querySelector<LyraInput>('[part="search-input"]')!;
+}
+function searchField(el: LyraEvalDataset): HTMLInputElement {
+  return searchHost(el).shadowRoot!.querySelector<HTMLInputElement>('input')!;
+}
+async function typeSearch(el: LyraEvalDataset, value: string): Promise<void> {
+  await searchHost(el).updateComplete;
+  const field = searchField(el);
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 }
 
 function gridRowCount(el: LyraEvalDataset): number {
@@ -146,9 +160,7 @@ it('clears a private search filter when searchable becomes false', async () => {
   const el = (await fixture(
     html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  search.value = 'bonjour';
-  search.dispatchEvent(new Event('input'));
+  await typeSearch(el, 'bonjour');
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(1);
   el.searchable = false;
@@ -160,22 +172,22 @@ it('shows a clear button once the search filter has text, and clears it on click
   const el = (await fixture(
     html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
-
-  search.value = 'bonjour';
-  search.dispatchEvent(new Event('input'));
   await el.updateComplete;
+  expect(searchHost(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]') === null).to.be.true;
+
+  await typeSearch(el, 'bonjour');
+  await el.updateComplete;
+  await searchHost(el).updateComplete;
   expect(gridRowCount(el)).to.equal(1);
-  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]');
+  const clear = searchHost(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]');
   expect(clear).to.not.equal(null);
-  expect(clear!.getAttribute('aria-label')).to.equal('Clear');
 
   clear!.click();
   await el.updateComplete;
-  expect(search.value).to.equal('');
+  await searchHost(el).updateComplete;
+  expect(searchField(el).value).to.equal('');
   expect(gridRowCount(el)).to.equal(3);
-  expect(el.shadowRoot!.querySelector('[part="search-clear"]') === null).to.be.true;
+  expect(searchHost(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]') === null).to.be.true;
 });
 
 it('forwards native editing-assistance and virtual-keyboard hints to the search input', async () => {
@@ -190,7 +202,8 @@ it('forwards native editing-assistance and virtual-keyboard hints to the search 
       enterkeyhint="search"
     ></lr-eval-dataset>
   `)) as LyraEvalDataset;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  await searchHost(el).updateComplete;
+  const search = searchField(el);
 
   expect(search.getAttribute('autocomplete')).to.equal('off');
   expect(search.spellcheck).to.be.false;
@@ -202,14 +215,14 @@ it('forwards native editing-assistance and virtual-keyboard hints to the search 
 
 it('leaves optional search editing-assistance hints unset by default', async () => {
   const el = (await fixture(html`<lr-eval-dataset searchable></lr-eval-dataset>`)) as LyraEvalDataset;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  const host = searchHost(el);
 
-  expect(search.spellcheck).to.be.true;
-  expect(search.getAttribute('autocomplete')).to.equal(null);
-  expect(search.getAttribute('autocapitalize')).to.equal(null);
-  expect(search.getAttribute('autocorrect')).to.equal(null);
-  expect(search.getAttribute('inputmode')).to.equal(null);
-  expect(search.getAttribute('enterkeyhint')).to.equal(null);
+  expect(host.spellcheck).to.be.true;
+  expect(host.hasAttribute('autocomplete')).to.be.false;
+  expect(host.hasAttribute('autocapitalize')).to.be.false;
+  expect(host.hasAttribute('autocorrect')).to.be.false;
+  expect(host.hasAttribute('inputmode')).to.be.false;
+  expect(host.hasAttribute('enterkeyhint')).to.be.false;
 });
 
 it('parses a literal spellcheck="false" attribute for the searchable input', async () => {
@@ -218,14 +231,14 @@ it('parses a literal spellcheck="false" attribute for the searchable input', asy
   )) as LyraEvalDataset;
 
   expect(el.spellcheck).to.be.false;
-  expect(el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!.spellcheck).to.be.false;
+  expect(searchHost(el).spellcheck).to.be.false;
 });
 
 it('gates search, tags, and row selection while disabled', async () => {
   const el = (await fixture(
     html`<lr-eval-dataset disabled searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  const search = searchHost(el);
   const chip = el.shadowRoot!.querySelector('lr-chip') as LyraChip;
   const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { selectionMode: string };
   expect(search.disabled).to.be.true;
@@ -291,8 +304,7 @@ it('contains auxiliary native/child events while deliberately passing through ta
   for (const type of ['input', 'change', 'lr-invalid', 'lr-show', 'lr-hide', 'lr-selection-change', 'lr-page-change']) {
     el.addEventListener(type, () => leaked.push(type));
   }
-  const search = el.shadowRoot!.querySelector('[part="search-input"]')!;
-  search.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  searchField(el).dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   const fileInput = el.shadowRoot!.querySelector('lr-file-input')!;
   fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
   fileInput.dispatchEvent(new CustomEvent('lr-invalid', { bubbles: true, composed: true }));
@@ -414,6 +426,7 @@ it('suppresses the export-button built-in download and re-emits lr-export-reques
       const ev = await listener;
       expect(ev.detail).to.deep.equal({ format: 'csv' });
       expect(ev.target === el).to.be.true;
+      // wait-reason: asserting no completion event fires after the export event
       await new Promise((r) => setTimeout(r, 10));
       expect(completed).to.be.false;
       expect(leakedLegacyEvent).to.be.false;
@@ -487,9 +500,7 @@ it('filters by the built-in search field across input, expected output, and tags
     html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await el.updateComplete;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  search.value = 'bonjour';
-  search.dispatchEvent(new Event('input'));
+  await typeSearch(el, 'bonjour');
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(1);
 });
@@ -505,9 +516,7 @@ it('clears selection and emits null when a search filter hides the selected exam
   expect(removeButton.disabled).to.be.false;
 
   const selectionCleared = oneEvent(el, 'lr-example-select');
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  search.value = 'summary';
-  search.dispatchEvent(new Event('input'));
+  await typeSearch(el, 'summary');
   const event = await selectionCleared;
   await el.updateComplete;
 
@@ -540,14 +549,23 @@ it('shows the no-matches message (not the empty-dataset message) once a filter m
     html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await el.updateComplete;
-  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  search.value = 'no such example exists anywhere';
-  search.dispatchEvent(new Event('input'));
+  await typeSearch(el, 'no such example exists anywhere');
   await el.updateComplete;
   const empty = el.shadowRoot!.querySelector('lr-table')!.shadowRoot!.querySelector('[part="empty"]') as
     | (HTMLElement & { heading: string })
     | null;
   expect(empty!.heading).to.equal('No examples match the current filters.');
+});
+
+it('keeps the table columns and selection key set stable across unrelated renders', async () => {
+  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+  const table = el.shadowRoot!.querySelector('lr-table') as LyraTable<EvalExample>;
+  const columns = table.columns;
+  const selected = table.selectedRowKeys;
+  el.disabled = true;
+  await el.updateComplete;
+  expect(table.columns).to.equal(columns);
+  expect(table.selectedRowKeys).to.equal(selected);
 });
 
 it('does not render a search field unless `searchable` is set', async () => {
@@ -616,44 +634,16 @@ it('honors a `.strings` override for the search field label', async () => {
     html`<lr-eval-dataset searchable .strings=${{ evalDatasetSearchLabel: 'Rechercher' }}></lr-eval-dataset>`,
   )) as LyraEvalDataset;
   await el.updateComplete;
-  const search = el.shadowRoot!.querySelector('[part="search-input"]')!;
+  const search = searchHost(el);
   expect(search.getAttribute('aria-label')).to.equal('Rechercher');
   expect(search.getAttribute('placeholder')).to.equal('Rechercher');
-});
-
-it("colors the search-input's placeholder and undoes Firefox's reduced default opacity", async () => {
-  const el = (await fixture(
-    html`<lr-eval-dataset searchable></lr-eval-dataset>`,
-  )) as LyraEvalDataset;
-  await el.updateComplete;
-  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
-  const placeholderStyle = getComputedStyle(input, '::placeholder');
-
-  // Resolve the --lr-color-text-quiet token the same way the stylesheet does, via a probe element
-  // in the same shadow tree, rather than hardcoding an expected color string.
-  const probe = document.createElement('span');
-  probe.setAttribute('style', 'color: var(--lr-color-text-quiet)');
-  el.shadowRoot!.appendChild(probe);
-  const expectedColor = getComputedStyle(probe).color;
-  probe.remove();
-
-  expect(placeholderStyle.color).to.equal(expectedColor);
-  expect(placeholderStyle.opacity).to.equal('1');
-});
-
-it('removes the native webkit search-cancel glyph where that pseudo-element exists', async () => {
-  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable></lr-eval-dataset>`);
-  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
-  input.value = 'query';
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  await el.updateComplete;
-  expect(getComputedStyle(input).appearance).to.equal('none');
 });
 
 it('bridges native focus/blur on the search field to the host element', async () => {
   const el = (await fixture(html`<lr-eval-dataset searchable></lr-eval-dataset>`)) as LyraEvalDataset;
   await el.updateComplete;
-  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  await searchHost(el).updateComplete;
+  const input = searchField(el);
 
   const focusListener = oneEvent(el, 'focus');
   input.dispatchEvent(new FocusEvent('focus'));
@@ -822,21 +812,20 @@ it('contains the import control value events while exposing the import request',
   expect(seen).to.deep.equal(['lr-import-request']);
 });
 
-it('gates the shared search clear action immediately when disabled changes', async () => {
+it('gates the search clear action immediately when disabled changes', async () => {
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable></lr-eval-dataset>`);
-  const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  field.value = 'pending';
-  field.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  await typeSearch(el, 'pending');
   await el.updateComplete;
-  const clear = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="search-clear"]')!;
+  await searchHost(el).updateComplete;
+  const clear = searchHost(el).shadowRoot!.querySelector<HTMLButtonElement>('[part="clear-button"]')!;
   el.disabled = true;
   clear.click();
-  expect(field.value).to.equal('pending');
+  expect(searchField(el).value).to.equal('pending');
   await el.updateComplete;
-  expect(field.value).to.equal('pending');
-  expect(clear.disabled).to.equal(true);
+  await searchHost(el).updateComplete;
+  expect(searchField(el).value).to.equal('pending');
+  expect(searchHost(el).disabled).to.equal(true);
 });
-
 
 it('announces newly truncated example ownership in the adopted document and stays quiet on an unchanged render', async () => {
   expectDevWarning(collectionTruncationWarningKey('lr-eval-dataset', 'examples'));

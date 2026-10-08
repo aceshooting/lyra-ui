@@ -112,6 +112,7 @@ describe('lr-combobox async source failures', () => {
       const veto = (event: Event): void => event.preventDefault();
       el.addEventListener('lr-retry-request', veto);
       retryButton(el)!.click();
+      // wait-reason: asserting a vetoed retry leaves the failure visible (negative assertion)
       await aTimeout(30);
       el.removeEventListener('lr-retry-request', veto);
       expect(errorRow(el) === null).to.equal(false, 'a vetoed retry leaves the failure visible');
@@ -166,6 +167,7 @@ describe('lr-combobox async source failures', () => {
     );
     await withSilencedWarning(async () => {
       el.source = async () => {
+        // wait-reason: simulates a slow source so loading outranks error
         await aTimeout(300);
         throw new Error('slow failure');
       };
@@ -233,6 +235,7 @@ describe('lr-combobox refresh()', () => {
     el.inputValue = 'a';
     el.inputValue = 'ab';
     el.inputValue = 'abc';
+    // wait-reason: asserting the burst stays debounced inside the 60 ms source delay (negative assertion)
     await aTimeout(20);
     expect(queries.length).to.equal(2, 'the burst is still debounced, not run per keystroke');
     await waitUntil(() => queries.length === 3, 'the debounced query lands once', {
@@ -253,6 +256,7 @@ describe('lr-combobox refresh()', () => {
     await el.updateComplete;
     const before = queries.length;
     el.refresh();
+    // wait-reason: asserting a closed combobox does not fetch (negative assertion)
     await aTimeout(30);
     expect(queries.length).to.equal(before, 'a closed combobox does not fetch');
     el.open = true;
@@ -319,6 +323,7 @@ describe('lr-combobox refresh()', () => {
       </lr-combobox>`
     );
     el.refresh();
+    // wait-reason: asserting a source-less combobox stays inert (negative assertion)
     await aTimeout(20);
     expect(optionCount(el)).to.equal(1, 'local options are untouched');
     expect(errorRow(el) === null).to.equal(true);

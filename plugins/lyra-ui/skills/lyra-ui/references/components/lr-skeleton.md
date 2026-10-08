@@ -22,11 +22,9 @@ with `text`/`circle`/`rect` geometry and opt-in `pulse`/`sheen` effects.
 **Properties:**
 
 - `shape: 'text'|'circle'|'rect' = 'text'` (reflected) — the canonical geometry vocabulary;
-  exported as `LyraSkeletonShape`. The former `variant` property/attribute and `SkeletonVariant`
-  type are removed in v9; use `shape` and `LyraSkeletonShape`.
+  exported as `LyraSkeletonShape`.
 - `effect: 'pulse'|'sheen'|'none' = 'none'` (not reflected; the live value is exposed as
-  `data-effect` on `[part="base"]`) — animation is opt-in. **Changed in
-  8.0.0:** the Lyra default was `pulse`; set `effect="pulse"` to preserve that motion explicitly.
+  `data-effect` on `[part="base"]`) — animation is opt-in.
 - `width?: string`
 - `height?: string`
 - `label?: string` — text announced when `announce` is set. Only absence uses the localized

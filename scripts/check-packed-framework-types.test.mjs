@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { pack, verifyInstalledArtifacts } from './check-packed-framework-types.mjs';
 
-const manifest = { name: '@aceshooting/lyra-ui', version: '1.0.0', customElements: 'custom-elements.json', exports: { './custom-elements.json': './custom-elements.json' } };
+const manifest = { name: '@aceshooting/lyra-ui', version: '1.0.0' };
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'lr-framework-artifact-contract-'));
@@ -40,7 +40,6 @@ test('installed supplied artifacts reject a missing declaration and executable r
   const installed = join(root, 'node_modules', '@aceshooting', 'lyra-ui');
   await mkdir(join(installed, 'dist'), { recursive: true });
   await writeFile(join(installed, 'package.json'), JSON.stringify(manifest));
-  await writeFile(join(installed, 'custom-elements.json'), '{}');
   for (const stem of ['custom-elements-jsx', 'svelte', 'vue']) {
     await writeFile(join(installed, 'dist', `${stem}.d.ts`), 'export {};');
     await writeFile(join(installed, 'dist', `${stem}.js`), 'export {};');

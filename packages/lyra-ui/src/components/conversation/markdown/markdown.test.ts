@@ -1143,6 +1143,7 @@ it("cancels a pending streaming frame through the realm that scheduled it after 
     document.body.appendChild(document.adoptNode(el));
     const updateSettled = await Promise.race([
       pendingUpdate.then(() => true),
+      // wait-reason: bounded guard so a hung updateComplete fails the test instead of hanging
       aTimeout(100).then(() => false),
     ]);
     expect(foreignCancellations).to.deep.equal([731]);
@@ -1896,6 +1897,7 @@ describe("shiki highlighting (real peer)", () => {
     )) as LyraMarkdown;
     el.content = "```ts\nconst x = 1;\n```";
     await el.updateComplete;
+    // wait-reason: asserts no highlighting starts while streaming
     await aTimeout(300); // long enough that a wrongly-kicked-off highlight would have resolved
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null).to
       .be.true;
@@ -1989,6 +1991,7 @@ describe("shiki highlighting (real peer)", () => {
     el.withoutSyntaxHighlighting = true;
     el.content = "```ts\nconst x = 1;\n```";
     await el.updateComplete;
+    // wait-reason: asserts no highlighting appears when syntax highlighting is disabled
     await aTimeout(500);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null).to
       .be.true;
@@ -2075,6 +2078,7 @@ describe("shiki highlighting (real peer)", () => {
       )) as LyraMarkdown;
       el.content = "```ts\nconst x = 1;\n```";
       await el.updateComplete;
+      // wait-reason: asserts a failed highlight is never cached into view
       await aTimeout(300); // long enough that a wrongly-cached highlight would have appeared
       expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null)
         .to.be.true;
@@ -2118,6 +2122,7 @@ describe("shiki highlighting (real peer)", () => {
       await el.updateComplete;
       // Long enough for the fire-and-forget highlightPending() to have rejected, if it were going
       // to -- matches flag.test.ts's own unhandledrejection-detection margin.
+      // wait-reason: absence window for a fire-and-forget rejection to surface as unhandledrejection
       await aTimeout(100);
       expect(
         caught,

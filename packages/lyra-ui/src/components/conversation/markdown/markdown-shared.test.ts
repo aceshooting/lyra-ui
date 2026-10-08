@@ -156,6 +156,21 @@ describe('Markdown highlight resource bounds', () => {
     expect(parse()).to.have.lengthOf(0);
   });
 
+  it('keeps the retained-byte total exact across replacement and eviction', () => {
+    const cache = new Map<string, string>();
+    const maxBytes = 120;
+    const bytes = (): number => [...cache].reduce((sum, [key, html]) => sum + (key.length + html.length) * 2, 0);
+    for (let round = 0; round < 40; round++) {
+      setCachedHighlight(cache, `k${round % 7}`, 'x'.repeat(5 + (round % 5)), 100, maxBytes);
+      expect(bytes(), `round ${round}`).to.be.at.most(maxBytes);
+    }
+    setCachedHighlight(cache, 'fresh', 'y'.repeat(20), 100, maxBytes);
+    setCachedHighlight(cache, 'fresh', 'y'.repeat(20), 100, maxBytes);
+    expect(cache.get('fresh')).to.equal('y'.repeat(20));
+    expect(bytes()).to.be.at.most(maxBytes);
+    expect(setCachedHighlight(cache, 'huge', 'z'.repeat(200), 100, maxBytes)).to.be.false;
+  });
+
   it('uses bounded digests instead of retaining raw source in cache and failure keys', () => {
     const source = `private-${'x'.repeat(10_000)}`;
     const key = markdownHighlightKey('ts', source);

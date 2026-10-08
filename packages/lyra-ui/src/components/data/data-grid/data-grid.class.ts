@@ -79,6 +79,7 @@ import type {
   LyraDataGridEventMap,
   SortingState,
 } from './data-grid-types.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
@@ -1643,7 +1644,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         const index = items.findIndex((item) => displayItemKey(item) === key);
         if (index >= 0) this.focusedRow = index;
       }
-      const active = this.shadowRoot?.activeElement;
+      const active = shadowFocusTarget(this);
       this.restoreCellFocus =
         active?.getAttribute('role') === 'gridcell' && active.hasAttribute('data-focus-cell');
     }
@@ -1676,7 +1677,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.restoreCellFocus = false;
       // Only when the re-render dropped focus: a cell that kept it (the row stayed in place) is
       // already the roving cell.
-      if (!this.shadowRoot?.activeElement && this.focusedRow >= 0) {
+      if (!shadowFocusTarget(this) && this.focusedRow >= 0) {
         this.focusCell(this.focusedRow, this.focusedColumn);
       }
     }

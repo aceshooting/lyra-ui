@@ -1,22 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.js';
-
-function forcedColorsMatchMedia(original: typeof window.matchMedia): typeof window.matchMedia {
-  return ((query: string) => {
-    if (query !== '(forced-colors: active)') return original(query);
-    return {
-      matches: true,
-      media: query,
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-      dispatchEvent: () => false,
-    };
-  }) as typeof window.matchMedia;
-}
 
 function boxes(count: number) {
   return Array.from({ length: count }, (_, index) => ({

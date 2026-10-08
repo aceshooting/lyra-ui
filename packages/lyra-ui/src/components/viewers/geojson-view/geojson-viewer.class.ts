@@ -544,21 +544,6 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   @property() name = '';
   /** A CSS `max-height` capping `[part="base"]`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
-  /** Shared search/anchor surface for the ordinary-DOM serialized feature metadata and status
-   * text, independent of whether the optional map peer is available. */
-  override async search(query: string): Promise<number> {
-    return super.search(query);
-  }
-  override async searchNext(): Promise<boolean> {
-    return super.searchNext();
-  }
-  override async searchPrevious(): Promise<boolean> {
-    return super.searchPrevious();
-  }
-  override clearSearch(): void {
-    super.clearSearch();
-  }
-
   @state() private loadState: GeoJsonViewerState = { kind: 'idle' };
   @state() private mapReady = false;
   private mapCanvas: HTMLCanvasElement | null = null;

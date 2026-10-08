@@ -15,7 +15,8 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { literalSetConverter } from '../../../internal/converters.js';
-import type { LyraSizeAlias, LyraSizeStep, LyraVariant } from '../../../internal/variants.js';
+import type { LyraSizeAlias, LyraSizeStep } from '../../../internal/variants.js';
+import { semanticVariantConverter, type SemanticVariant } from '../../../internal/semantic-variant.js';
 import { variants } from '../../../internal/variants.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './chip.styles.js';
@@ -25,7 +26,7 @@ import { LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_selec
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
-export type ChipVariant = LyraVariant | 'primary';
+export type ChipVariant = SemanticVariant;
 /** The shared six-step ladder plus one step below it (a chip is the library's smallest labelled
  *  surface and needs a tier that fits inside a table cell, which no other component does), plus
  *  the `small`/`medium`/`large` aliases `<lr-badge>`/`<lr-callout>` already accept for the six
@@ -37,10 +38,7 @@ const CHIP_SIZE = literalSetConverter<ChipSize>(
   ['3xs', '2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
   'm'
 );
-const CHIP_VARIANT = literalSetConverter<ChipVariant>(
-  ['neutral', 'brand', 'primary', 'success', 'warning', 'danger'],
-  'neutral'
-);
+const CHIP_VARIANT = semanticVariantConverter('neutral');
 
 export interface ChipRemoveDetail {
   value?: string;
@@ -257,6 +255,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   /** Shows the remove (×) button. */
   @property({ type: Boolean, reflect: true }) removable = false;
 
+  /** `<lr-tag>`'s spelling of `removable`; both name one state, and the last write wins. */
+  @property({ type: Boolean, attribute: 'with-remove' })
+  get withRemove(): boolean {
+    return this.removable;
+  }
+  set withRemove(next: boolean) {
+    this.removable = Boolean(next);
+  }
+
   /** Disables the active toggle/remove control and suppresses its request event. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
@@ -462,6 +469,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (changed.has('removable') && !this.removable) this.removeAttribute('with-remove');
     if (changed.has('removable') || changed.has('toggleable')) {
       this.syncLabelObservation();
       if (this.hasUpdated) {

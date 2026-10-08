@@ -17,7 +17,7 @@
 ## `lr-tooltip`
 
 A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
-interactions open it is configurable as of 8.0.0; by default it is still hover and focus. Focus
+interactions open it is configurable; by default it is hover and focus. Focus
 means keyboard focus; see `trigger`.
 
 An open lr-tooltip repositions when its effective host or inherited text direction changes,
@@ -31,7 +31,7 @@ later text renders normally.
 - `open: boolean = false` (reflected) — assigning it runs the same lifecycle as `show()`/`hide()`.
   Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
   already closed, so a pending timer can't reopen it behind the caller's back.
-- `trigger: string = 'hover focus'` — **new in 8.0.0.** A _space-separated_ list of `hover`,
+- `trigger: string = 'hover focus'` — A _space-separated_ list of `hover`,
   `focus`, `click` and `manual`. `focus` means keyboard focus: the focused element must match
   `:focus-visible` and the last input must not have been a pointer press. Pointer, touch and
   scripted focus that follows them do not open it, but any focus inside the trigger still wires its
@@ -47,17 +47,14 @@ later text renders normally.
 - `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
   better on a tooltip that is only ever driven from script
 - `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute
-  `hide-delay`) — **breaking in 8.0.0:** the single `delay` property is gone, split into these two
-  independent milliseconds values, so a tooltip can linger after the pointer leaves without also
-  being slow to appear. `showDelay` keeps the old `delay` default of 150ms; `hideDelay` defaults to
-  `0`, so leaving the trigger now closes the tooltip at once, where 7.x's single `delay` also held
-  it open for 150ms first. A non-finite value falls back to the default; a negative one clamps to
+  `hide-delay`) — independent milliseconds values, so a tooltip can linger after the pointer leaves without also
+  being slow to appear; `hideDelay` `0` closes the tooltip at once. A non-finite value falls back to the default; a negative one clamps to
   `0` (immediate) and an oversized one to the largest delay `setTimeout` can represent, so neither
   can hang the tooltip open.
 - `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored under RTL
 - `distance: number = 8` — anchor-offset distance in px; identical semantics to
   `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
-- `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
+- `skidding: number = 0` — offset along the anchor's edge, in px.
 - `for: string = ''` (reflected) — id of an element in this tooltip's own root. It positions behind
   a direct `.anchor`; when it resolves to a live HTML element and no trigger is slotted, it also owns
   the configured interaction listeners and `aria-describedby`. A slotted trigger wins interaction
@@ -84,7 +81,7 @@ later text renders normally.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected),
   `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
   `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
-  documents (`llms/components/lr-popover.md`), new in 8.0.0.
+  documents (`llms/components/lr-popover.md`).
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
@@ -111,8 +108,8 @@ origin-aware migration emits those tokens.
 
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
 same four-event contract, timing and veto semantics `<lr-popover>` documents
-(`llms/components/lr-popover.md`), and all four are
-new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
+(`llms/components/lr-popover.md`).
+A vetoed `lr-show` leaves the tooltip closed whether the delay
 elapsed, `show()` was called, or `open` was assigned.
 
 Tooltip motion resolves `tooltip.show` / `tooltip.hide` through the public animation registry.

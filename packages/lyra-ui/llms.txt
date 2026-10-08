@@ -6,9 +6,6 @@
 > keep documented Web Awesome-compatible public names under a `lr-` prefix to ease migration; the
 > implementation, design tokens, localization runtime and release surface are standalone.
 
-Every component styles itself through this library's own `--lr-theme-*` design tokens with hardcoded
-fallbacks, so it works standalone with no theme or runtime dependency.
-
 ## Which file to read
 
 Read the narrow reference for the task. `llms/index.md` is the source of truth for the current
@@ -17,11 +14,11 @@ element count and complete tag list.
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
   **start here** to pick a component.
 - [llms/components/&lt;tag&gt;.md](./llms/components/): the full API of one component (properties,
-  events, slots, CSS parts, themeable custom properties, usage snippet, gotchas). The path is
-  derived from the tag name, so no search is needed: `llms/components/lr-table.md`.
+  events, slots, CSS parts, custom properties, snippet, gotchas), derived from the tag name with no
+  search: `llms/components/lr-table.md`.
 - [llms/shared.md](./llms/shared.md): library-wide behavior — status/deprecation, importing and the
-  guarded autoloader, events, forms, theming/native styles, localization/RTL, TypeScript/frameworks,
-  SSR, shared utilities, the `@aceshooting/lyra-ui/ai` data types, and testing.
+  autoloader, events, forms, theming, localization/RTL, TypeScript/frameworks, SSR, utilities, the
+  `@aceshooting/lyra-ui/ai` types, and testing.
 - [llms/shared/imports-and-registration.md](./llms/shared/imports-and-registration.md): version
   policy, entry points, registration, and scoped registries.
 - [llms/shared/v23-to-v24-migration.md](./llms/shared/v23-to-v24-migration.md): project upgrade
@@ -42,6 +39,9 @@ element count and complete tag list.
   AI composition, and optional peer dependencies.
 - [llms/shared/testing-and-utilities.md](./llms/shared/testing-and-utilities.md): test helpers,
   shared utilities, and feature requests.
+- Companion packages: `@aceshooting/lyra-translations` (locale catalogs; see
+  `llms/shared/localization-and-rtl.md`) and `@aceshooting/lyra-ide` (editor and manifest metadata;
+  see `llms/shared/testing-and-utilities.md`).
 - [llms/tokens.md](./llms/tokens.md): every design token, including its theme input and fallback or
   its derived value, as applicable.
 - [llms/peers.md](./llms/peers.md): which optional peer dependency each component needs.
@@ -49,12 +49,14 @@ element count and complete tag list.
   exact/rewritten/warning/conceptual/unsupported decision and safe codemod rules.
 - [CHANGELOG.md](./CHANGELOG.md): chronological release notes, including breaking changes and
   post-major minor/patch additions and fixes — read it before upgrading.
-- [README.md](./README.md): install, catalog, theming, accessibility, and package-level commands.
-- [Live docs site](https://aceshooting.github.io/lyra-ui/): interactive examples per component —
-  useful for a human reviewer, redundant for an assistant reading these files.
+- [README.md](./README.md): install, catalog, theming, accessibility, commands.
 
-Claude Code users can install the matching skill (component APIs, theming rules, migration
-codemods) from the marketplace at <https://github.com/aceshooting/lyra-ui>.
+## Use with AI coding agents
+
+AI coding agents: run `npx lyra-ui init-agents` (add `--agent <name>` if not auto-detected) to install
+the Lyra UI skill for yourself. Humans: `npm i @aceshooting/lyra-ui && npx lyra-ui init-agents`
+(a terminal asks which agents). Plugin marketplaces: `/plugin marketplace add aceshooting/lyra-ui`
+(Claude Code), `codex plugin marketplace add aceshooting/lyra-ui` (Codex).
 
 ## Rules that apply to every component
 

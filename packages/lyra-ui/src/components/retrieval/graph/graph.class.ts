@@ -60,7 +60,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
@@ -106,11 +106,7 @@ export type LyraGraphFit = 'none' | 'container';
 
 type BrowserWindow = Window & typeof globalThis;
 
-/** Shared score-tier thresholds for retrieval relevance and grounding confidence. */
-export interface LyraScoreThresholds {
-  readonly high: number;
-  readonly medium: number;
-}
+export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 
 // `interface ... extends` heritage clauses only accept an identifier/qualified-name
 // (not an inline `import('...').X` type query), so the lazy d3-force types are routed
@@ -2030,7 +2026,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private updateCanvasFocus(scene: CanvasScene): void {
-    const focused = activeElementIn(this.shadowRoot)?.getAttribute('part') === 'cursor-item';
+    const focused = shadowFocusTarget(this)?.getAttribute('part') === 'cursor-item';
     const index = focused ? this.normalizedGraphItem() : -1;
     const node = index >= 0 && index < this.linkIndexBase()
       ? this.simNodes[index] : undefined;
@@ -2651,7 +2647,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       structureChanged || changed.has('simNodes') || changed.has('communities')
     );
     const activePart =
-      activeElementIn(this.shadowRoot)?.getAttribute('part') ?? '';
+      shadowFocusTarget(this)?.getAttribute('part') ?? '';
     const hadGraphItemFocus =
       graphItemsChanged &&
       ['node', 'link', 'hull', 'cursor-item'].includes(activePart);

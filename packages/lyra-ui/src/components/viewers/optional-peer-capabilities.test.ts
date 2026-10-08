@@ -15,6 +15,8 @@ describe('viewer optional-peer capability validation', () => {
     expectDevWarning('lyra-calendar-viewer-ical-unavailable');
     expectDevWarning('lyra-spreadsheet-viewer-xlsx-unavailable');
     expectDevWarning('lyra-dompurify-unavailable');
+    expectDevWarning('lyra-ebook-viewer-epubjs-unavailable');
+    expectDevWarning('lyra-pdf-viewer-pdfjs-unavailable');
     expect(await loadIcalDeps(async () => ({}) as never)).to.equal(null);
     expect(await loadEpubJs(async () => ({}) as never)).to.equal(null);
     expect(await loadHtmlSanitizerDeps(async () => ({}) as never)).to.equal(null);
@@ -26,6 +28,7 @@ describe('viewer optional-peer capability validation', () => {
 
   it('rejects malformed members independently for combined peer loaders', async () => {
     expectDevWarning('lyra-email-viewer-postal-mime-unavailable');
+    expectDevWarning('lyra-docx-viewer-mammoth-unavailable');
     const docx = await loadMammothAndSanitizer(
       async () => ({}) as never,
       async () => ({}) as never,

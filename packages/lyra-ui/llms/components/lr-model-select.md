@@ -94,10 +94,8 @@ focus move.
   honored — matches `<lr-textarea>`/`<lr-date-input>`).
 - `autocapitalize: string = ''` — forwarded to the free-text mode's native `<input>`; empty omits
   the attribute.
-- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the free-text mode's native
-  `<input>`'s own `autocorrect` (Safari/WebKit-specific); empty omits the attribute. Named
-  `autoCorrect` in JS purely to dodge a `lib.dom.d.ts` typing collision — the wire attribute is
-  still plain `autocorrect`.
+- `autocorrect: boolean = true` — forwarded to the free-text mode's native `<input>` as
+  `autocorrect="on"|"off"`; the attribute is omitted until `autocorrect` is written or set.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`), and
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the free-text input;
   they have no effect in closed-dropdown mode

@@ -6,7 +6,7 @@
 - **Class** `LyraPhoneInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -123,8 +123,8 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   — SSR slot-presence hints for slotted label/hint content that cannot be inspected before
   hydration.
 - `placeholder: string = ''` — forwarded to the native telephone input.
-- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autoCorrect: string = ''`
-  (attribute `autocorrect`) — forwarded to the internal telephone input's own `spellcheck`/
+- `spellcheck: boolean = true`, `autocapitalize: string = ''`, `autocorrect: boolean = true`
+  (attribute `autocorrect`, same shape as `<lr-input>`; the string `autoCorrect` is removed) — forwarded to the internal telephone input's own `spellcheck`/
   `autocapitalize`/`autocorrect`; `spellcheck="false"` is parsed as `false` via a string-aware
   converter (Lit's default presence-based boolean converter would otherwise treat any attribute
   value, including the literal string `"false"`, as `true`).
@@ -151,8 +151,10 @@ null` (attribute `custom-error`) carries a consumer-supplied validation message.
   including the English default, wins verbatim. An empty override retains the localized native
   error reason. Removing the attribute restores its declared English property default and resumes
   localization.
-- `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
-  `enterkeyhint: string = ''` — forwarded to the internal `<input type="tel">`.
+- `autocomplete: string = 'tel'`, `inputMode: string = 'tel'` (attribute `inputmode`),
+  `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the internal
+  `<input type="tel">`; lowercase `inputmode`/`enterkeyhint` accessors delegate to them. The host
+  `name` is forwarded to the internal field.
 - `readonly: boolean = false` (reflected) — forwards to the native telephone input, locks the
   country selector and all user edit handlers, and bars validation while retaining focus,
   selection/copying, canonical form value, and submission.

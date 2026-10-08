@@ -461,6 +461,10 @@ pnpm --filter '!@aceshooting/lyra-ui' -r test
 step "document companion type and package checks"
 pnpm --filter @aceshooting/lyra-docs lint
 
+step "editor-data and translation companion package checks"
+pnpm --filter @aceshooting/lyra-ide lint
+pnpm --filter @aceshooting/lyra-translations lint
+
 step "check:dead-code"
 pnpm run check:dead-code
 
@@ -521,6 +525,7 @@ step "plugin reference sync"
 freshness_diff "plugin skill package (./package.sh)" \
   plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md \
   plugins/lyra-ui/skills/lyra-ui/references/ \
+  packages/lyra-ui/skills/ \
   skills/lyra-ui.skill \
   skills/compose-lyra-interfaces.skill
 

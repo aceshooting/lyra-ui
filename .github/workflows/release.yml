@@ -26,8 +26,10 @@ on:
           - lyra-ui
           - lyra-flags
           - lyra-docs
+          - lyra-ide
+          - lyra-translations
       first_package_bootstrap:
-        description: 'Use the protected npm token for the first lyra-docs publication only'
+        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide or lyra-translations only'
         required: false
         type: boolean
         default: false
@@ -79,7 +81,7 @@ jobs:
             --package "$PACKAGE" \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Require an unpublished Docs package for bootstrap
+      - name: Require an unpublished first-publication package for bootstrap
         env:
           BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
           PACKAGE: ${{ inputs.package }}
@@ -87,15 +89,15 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
-          if [[ "$PACKAGE" != lyra-docs || ! "$TAGS" =~ ^lyra-docs@[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo '::error::First-package bootstrap requires a single, named stable lyra-docs release.'
+          if [[ ! "$PACKAGE" =~ ^lyra-(docs|ide|translations)$ || ! "$TAGS" =~ ^lyra-(docs|ide|translations)@[0-9]+\.[0-9]+\.[0-9]+$ || "${TAGS%@*}" != "$PACKAGE" ]]; then
+            echo '::error::First-package bootstrap requires a single, named stable lyra-docs, lyra-ide or lyra-translations release.'
             exit 1
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
             --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
-            'https://registry.npmjs.org/%40aceshooting%2Flyra-docs')"
+            "https://registry.npmjs.org/%40aceshooting%2F$PACKAGE")"
           if [[ "$status" != 404 ]]; then
-            echo "::error::Expected npm registry absence (HTTP 404) before Docs bootstrap; received HTTP $status."
+            echo "::error::Expected npm registry absence (HTTP 404) before $PACKAGE bootstrap; received HTTP $status."
             exit 1
           fi
 

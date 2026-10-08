@@ -4,7 +4,7 @@ import { live } from 'lit/directives/live.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
-import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
@@ -395,7 +395,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
   set groups(value: readonly EmojiPickerGroup[]) {
     const old = this._groups;
-    const focused = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const focused = shadowFocusTarget(this) as HTMLElement | null;
     const focusedIndex = Number(focused?.dataset?.['index']);
     this.pendingGridFocus =
       typeof focused?.getAttribute === 'function' &&
@@ -567,7 +567,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   /** Blurs the currently focused owned search or emoji target, including a nested shadow owner. */
   override blur(): void {
-    const active = deepActiveElementIn(this.shadowRoot);
+    const active = deepActiveElementIn(this.isConnected ? this.shadowRoot : null);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }

@@ -211,6 +211,7 @@ describe('Markdown code direction: rendered geometry', () => {
         expect(getComputedStyle(pre).direction).to.equal('ltr');
         expect(getComputedStyle(paragraph).direction).to.equal(dir);
       }
+      // wait-reason: asserts a direction flip does not trigger a re-settle
       await aTimeout(50);
       expect(settled).to.equal(0);
     });

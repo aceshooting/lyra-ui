@@ -1,4 +1,5 @@
 import type { ComplexAttributeConverter } from 'lit';
+import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import {
   canonicalIdentityList,
@@ -7,7 +8,7 @@ import {
 } from '../retrieval-identity.js';
 
 /** A CSS `<number>` followed by one of the length units a graph viewport resolves live. */
-const GRAPH_LENGTH_WITH_UNIT = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|vw|vh)$/i;
+const GRAPH_LENGTH_WITH_UNIT = new RegExp(`^${CSS_NUMBER_SOURCE}(?:px|rem|em|vw|vh)$`, 'i');
 
 /** `width`/`height` attributes of the graph components: a value carrying a `px`, `rem`, `em`,
  *  `vw` or `vh` unit stays the authored CSS length, resolved to pixels when it is used; any other

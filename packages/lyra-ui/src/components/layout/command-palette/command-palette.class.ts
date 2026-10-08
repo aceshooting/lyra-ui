@@ -226,8 +226,11 @@ export interface LyraCommandPaletteCloseDetail {
 export interface LyraCommandPaletteEventMap {
   'lr-select': CustomEvent<Readonly<{ command: LyraCommand }>>;
   'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<LyraCommandPaletteCloseDetail>;
   'lr-close-request': CustomEvent<LyraCommandPaletteCloseDetail>;
   'lr-close': CustomEvent<LyraCommandPaletteCloseDetail>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
   focus: FocusEvent;
   blur: FocusEvent;
 }
@@ -249,8 +252,12 @@ export interface LyraCommandPaletteEventMap {
  * @event lr-select - A command was chosen; detail is `{ command }`.
  * @event lr-show - Emitted before the palette opens. Cancelable: `preventDefault()` keeps it
  * closed.
+ * @event lr-after-show - The palette is open and rendered.
+ * @event lr-hide - The palette is about to close, after `lr-close-request` was not vetoed.
+ * Non-cancelable, with `{ reason }` detail; veto the close through `lr-close-request`.
  * @event lr-close-request - Cancelable proposal before dismissal, with `{ reason }` detail.
  * @event lr-close - Non-cancelable notification after closing, with `{ reason }` detail.
+ * @event lr-after-hide - The palette is closed and rendered closed.
  * @event {FocusEvent} focus - Re-dispatched when the search input receives focus. Native `focus` neither
  * bubbles nor crosses the shadow boundary, so a host listener on `<lr-command-palette>` itself
  * never sees it otherwise.
@@ -330,6 +337,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     'lr-select',
   ]);
   private _open = false;
+  /** Whether `lr-after-show` has fired for the current open, so only a real close reports `lr-after-hide`. */
+  private hasShown = false;
   /** Whether the palette is open. Post-mount IDL and attribute writes use the same synchronous,
    * cancelable lifecycle as `openPalette()` and `close()`; initial markup stays silent. */
   @property({ type: Boolean, reflect: true })
@@ -481,6 +490,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (changed.has('open') && this.open) {
       this.enterTopLayer();
       this.overlay?.focusInitial();
+    }
+    if (changed.has('open') && (this.open || this.hasShown)) {
+      this.hasShown = this.open;
+      this.emit(this.open ? 'lr-after-show' : 'lr-after-hide');
     }
     // The list is a fixed-height, scrollable box -- without this, arrowing past its visible rows
     // moves activeIndex/aria-activedescendant correctly but leaves the highlighted row scrolled
@@ -723,6 +736,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       return false;
     }
     if (next) this.resetOpeningState();
+    else this.emit('lr-hide', { reason });
     this.commitOpen(next);
     if (!next) this.emit('lr-close', { reason });
     return true;

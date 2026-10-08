@@ -52,10 +52,15 @@ packages/lyra-ui/                 @aceshooting/lyra-ui, the library
                                   GENERATED; never edit, CI diffs them
 packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)
 packages/lyra-docs/               public experimental editor companion; viewers stay in lyra-ui for now
+packages/lyra-ide/                editor data (custom-elements/web-types/vscode-*-data json), copied from lyra-ui at prepack
+packages/lyra-translations/       the 66 locale catalogs, assembled from lyra-ui's dist/translations (pseudo stay in lyra-ui)
 docs/agents/                      detail behind this file's digests
 .storybook/ | .agents/            Storybook docs site | Codex skill links + marketplace metadata
-plugins/lyra-ui/                  shared Codex/Claude plugin; skills/lyra-ui/references/ GENERATED
-skills/*.skill                    packaged skill bundles, GENERATED (both by ./package.sh)
+plugins/lyra-ui/                  AUTHORED skills + commands (single source); shared Codex/Claude
+                                  plugin; skills/lyra-ui/references/ GENERATED
+packages/lyra-ui/skills/          GENERATED npm-bundled skills for `npx lyra-ui init-agents`, from
+                                  plugins/lyra-ui (scripts/build-skill-bundle.mjs); refs -> llms/
+skills/*.skill                    packaged skill bundles, GENERATED (all by ./package.sh)
 ```
 
 After a doc change run `./package.sh` directly (it regenerates `llms/` first); `pnpm lint` misses
@@ -85,19 +90,15 @@ three-engine baseline: **[docs/agents/component-scaffold.md](docs/agents/compone
 
 - `packages/lyra-ui/package.json#scripts.contract-policy` and `.github/workflows/ci.yml` are the
   authoritative gate lists; reproduce CI failures in that order, never from a prose copy.
-- Before every release, run `./scripts/upgrade.sh` with the pinned Node version.
-  If the author has run it for this release, use that completed run; do not repeat it or run it
-  concurrently. Review and verify its resulting changes before proceeding.
-  Upgrade dependencies across the root and every workspace package to their latest stable versions,
-  review the manifest/lockfile/generated changes, and fix compatibility failures before preparing
-  the version bump. Keep supported consumer peer ranges unless a reviewed API change requires
-  narrowing them; test their latest versions without dropping supported older peers unnecessarily.
-  Commit the verified dependency update before `pnpm release:prepare` so preparation starts clean.
-  Do not add dependency upgrades after release qualification or mutate an existing release tag.
+- Before every release, run `./scripts/upgrade.sh` with the pinned Node (reuse the author's completed
+  run for this release; never run it concurrently), commit the verified dependency update, then
+  `pnpm release:prepare`. No dependency changes after release qualification
+  ([detail](docs/agents/ci-and-gates.md#release-integrity)).
 - Release flow: `pnpm release:prepare`, review, commit `chore(release): <pkg>@<version>`, push to
   main; push CI, all Test All Browsers aggregates and all full-engine shards must pass on that exact
   commit; then `gh workflow run release.yml --ref main` tags, releases and dispatches `publish.yml`
-  (approve `npm-publish`). Nothing is tagged or published locally
+  (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version together,
+  so each lyra-ui release publishes all three). Nothing is tagged or published locally
   ([release integrity](docs/agents/ci-and-gates.md#release-integrity)).
 - `./scripts/test.sh` mirrors full-engine's split via `TEST_SH_ENGINE_SHARDS` (a count, default
   `1`), so a failing CI shard reproduces as the same-numbered local shard.

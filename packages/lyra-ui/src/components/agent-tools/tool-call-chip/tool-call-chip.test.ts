@@ -250,12 +250,12 @@ it('uses themeable motion values for running and pending statuses', async () => 
     ></lr-tool-call-chip>
   `)) as LyraToolCallChip;
   const runningGlyph = running.shadowRoot!.querySelector('[part="icon"] svg')!;
-  expect(getComputedStyle(runningGlyph).animationName).to.equal('lr-tool-call-chip-spin');
+  expect(getComputedStyle(runningGlyph).animationName).to.equal('lr-tool-status-spin');
   expect(getComputedStyle(runningGlyph).animationDuration).to.equal('2.5s');
 
   const pending = (await fixture(html`<lr-tool-call-chip status="pending"></lr-tool-call-chip>`)) as LyraToolCallChip;
   const pendingGlyph = pending.shadowRoot!.querySelector('[part="icon"] svg')!;
-  expect(getComputedStyle(pendingGlyph).animationName).to.equal('lr-tool-call-chip-pulse');
+  expect(getComputedStyle(pendingGlyph).animationName).to.equal('lr-tool-status-pulse');
   expect(getComputedStyle(pendingGlyph).animationDuration).to.equal('1.8s');
 });
 
@@ -272,8 +272,8 @@ it('disables rendered running and pending glyph animations under prefers-reduced
       (chip) => chip.shadowRoot!.querySelector('[part="icon"] svg')!,
     );
     expect(glyphs.map((glyph) => getComputedStyle(glyph).animationName)).to.deep.equal([
-      'lr-tool-call-chip-spin',
-      'lr-tool-call-chip-pulse',
+      'lr-tool-status-spin',
+      'lr-tool-status-pulse',
     ]);
 
     await setReducedMotion('reduce');

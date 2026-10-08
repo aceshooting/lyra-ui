@@ -1,5 +1,4 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 
 const PPTX_RENDERER_WARNING_KEY = 'lyra-pptx-viewer-renderer-unavailable';
 const PPTX_RENDERER_WARNING = '<lr-pptx-viewer> could not load its optional @aiden0z/pptx-renderer peer.';
@@ -105,7 +104,7 @@ const MAX_SAFE_PPTX_ZIP_LIMITS: Readonly<PptxZipLimits> = {
   maxConcurrency: 8,
 };
 
-let modulePromise: Promise<PptxRendererModule | null> | undefined;
+let override: Promise<PptxRendererModule | null> | undefined;
 
 function hasPptxOpenCapability(value: unknown): value is PptxRendererModule {
   if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return false;
@@ -239,24 +238,23 @@ export function adaptPptxViewer(value: unknown): PptxViewerAdapter | null {
   });
 }
 
-export async function loadPptxRenderer(
-  importer: () => Promise<unknown> = () => import('@aiden0z/pptx-renderer'),
-): Promise<PptxRendererModule | null> {
-  try {
-    const module = await importer();
-    return resolveOptionalPeerCapability(module, hasPptxOpenCapability);
-  } catch {
-    devWarnOnce(PPTX_RENDERER_WARNING_KEY, PPTX_RENDERER_WARNING);
-    return null;
-  }
+const pptxRenderer = /* @__PURE__ */ createOptionalPeerLoader<PptxRendererModule>({
+  load: () => import('@aiden0z/pptx-renderer'),
+  isCapability: hasPptxOpenCapability,
+  warningKey: PPTX_RENDERER_WARNING_KEY,
+  warning: PPTX_RENDERER_WARNING,
+});
+
+export function loadPptxRenderer(importer?: () => Promise<unknown>): Promise<PptxRendererModule | null> {
+  return pptxRenderer.loadWith(importer);
 }
 
 export function getPptxRenderer(): Promise<PptxRendererModule | null> {
-  if (!modulePromise) modulePromise = loadPptxRenderer();
-  return modulePromise;
+  return override ?? pptxRenderer.get();
 }
 
 /** @internal */
 export function __setPptxRendererForTesting(module: PptxRendererModule | null | undefined): void {
-  modulePromise = module === undefined ? undefined : Promise.resolve(module);
+  override = module === undefined ? undefined : Promise.resolve(module);
+  pptxRenderer.clear();
 }

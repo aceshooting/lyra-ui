@@ -28,9 +28,7 @@ the slide animation are its own.
 
 - `open: boolean = false` (attribute `open`, reflected) — assigning it runs the same lifecycle as
   `show()`/`hide()`, so the property, the reflected attribute and the two methods can never disagree
-- `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected). **Changed in
-  8.0.0:** the default used to be `start`. `end` is what `wa-drawer` does, so a mechanical
-  `wa-drawer` → `lr-drawer` rename no longer silently slides the panel in from the other edge.
+- `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected).
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
@@ -84,16 +82,6 @@ controls, rendered before the built-in close button), `footer` — all inherited
 `header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
 Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
-
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Themeable custom properties:** mapped `--size` controls the active axis. For start/end drawers,
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither

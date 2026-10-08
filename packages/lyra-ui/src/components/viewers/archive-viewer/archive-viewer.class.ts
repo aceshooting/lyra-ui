@@ -24,6 +24,7 @@ import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -123,7 +124,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly, viewerLoadingStyles];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
   /** Display name used on the shadow listing owner when host `aria-label` is absent. A non-empty

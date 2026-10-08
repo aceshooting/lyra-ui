@@ -7,7 +7,6 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
-import type { LyraToolStatus } from '../../../internal/shared-unions.js';
 import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -15,19 +14,13 @@ import { nextId } from '../../../internal/a11y.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 
-import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-
-/** Same status vocabulary as `<lr-tool-result-dialog>`, so a call's chip
- *  and its detail dialog always agree on icon/label/tone. `incomplete` marks
- *  a call that ended without a result (an interrupted stream, a cancelled
- *  run). */
-export type ToolCallStatus = LyraToolStatus | 'incomplete';
 
 export interface ToolChipSelectDetail {
   name: string;
@@ -43,7 +36,7 @@ export interface LyraToolCallChipEventMap {
 // call reads identically wherever it is shown.
 const STATUS_ICON = toolStatusIcon;
 
-const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolCallStatus>(TOOL_CALL_STATUSES, 'pending');
+const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES, 'pending');
 
 /**
  * `<lr-tool-call-chip>` — a compact inline pill representing one tool/
@@ -177,15 +170,15 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
    * normalize and reflect as `pending`.
    */
   @property({ reflect: true, converter: TOOL_CALL_CHIP_STATUS })
-  get status(): ToolCallStatus {
+  get status(): ToolStatus {
     return this.statusValue;
   }
-  set status(next: ToolCallStatus) {
+  set status(next: ToolStatus) {
     const old = this.statusValue;
     this.statusValue = TOOL_CALL_CHIP_STATUS.normalizeReflected(this, 'status', next);
     this.requestUpdate('status', old);
   }
-  private statusValue: ToolCallStatus = 'pending';
+  private statusValue: ToolStatus = 'pending';
 
   /** Short human-readable status text, e.g. `Searching web…`. Removing the attribute clears its displayed text. */
   @property() summary = '';

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { LyraPopover } from './popover.class.js';
 import type { LyraTooltip } from './tooltip.class.js';
 import type { LyraDropdown } from './dropdown.class.js';
@@ -1486,13 +1486,15 @@ it('cancels a delayed tooltip open when manual mode, explicit close, or trigger 
   trigger.dispatchEvent(new MouseEvent('mouseenter'));
   el.manual = true;
   await el.updateComplete;
-  await new Promise((resolve) => setTimeout(resolve, 80));
+  // wait-reason: asserting a delayed (40ms) show never fires after manual mode
+  await new Promise((resolve) => setTimeout(resolve, 60));
   expect(el.open).to.be.false;
 
   el.manual = false;
   trigger.dispatchEvent(new MouseEvent('mouseenter'));
   el.open = false;
-  await new Promise((resolve) => setTimeout(resolve, 80));
+  // wait-reason: asserting a delayed (40ms) show never fires after explicit close
+  await new Promise((resolve) => setTimeout(resolve, 60));
   expect(el.open).to.be.false;
 
   trigger.dispatchEvent(new MouseEvent('mouseenter'));
@@ -1500,7 +1502,8 @@ it('cancels a delayed tooltip open when manual mode, explicit close, or trigger 
   replacement.slot = 'trigger';
   replacement.textContent = 'B';
   trigger.replaceWith(replacement);
-  await new Promise((resolve) => setTimeout(resolve, 80));
+  // wait-reason: asserting a delayed (40ms) show never fires after the trigger is replaced
+  await new Promise((resolve) => setTimeout(resolve, 60));
   expect(el.open).to.be.false;
 });
 
@@ -1661,7 +1664,7 @@ it('falls back to the default 150ms delay when delay is NaN, instead of opening 
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.dispatchEvent(new MouseEvent('mouseenter'));
   expect(el.open, 'must not open synchronously on an invalid delay').to.be.false;
-  await new Promise((resolve) => setTimeout(resolve, 250));
+  await waitUntil(() => el.open, 'must still open, via the normalized default delay', { timeout: 2000 });
   expect(el.open, 'must still open, via the normalized default delay').to.be.true;
 });
 
@@ -1953,7 +1956,7 @@ it('keeps stack ownership when a separate-root underlying popover receives a rep
   replacement.slot = 'trigger';
   replacement.textContent = 'Replacement underlying trigger';
   underlying.querySelector('[slot="trigger"]')!.replaceWith(replacement);
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await nextFrame();
   await underlying.updateComplete;
 
   expect(
@@ -2003,7 +2006,7 @@ it('does not transiently focus a separate-root underlying popover when the top p
   replacement.slot = 'trigger';
   replacement.textContent = 'Replacement top trigger';
   top.querySelector('[slot="trigger"]')!.replaceWith(replacement);
-  await new Promise<void>((resolve) => setTimeout(resolve));
+  await nextFrame();
   await top.updateComplete;
 
   expect(underlyingFocusCount, 'refreshing the top popover target must not focus the overlay underneath').to.equal(0);
@@ -2991,13 +2994,13 @@ describe('lr-tooltip trigger and delays', () => {
     trigger.dispatchEvent(new MouseEvent('mouseenter'));
     await el.updateComplete;
     expect(el.open, 'show-delay has not elapsed yet').to.be.false;
-    await new Promise((resolve) => setTimeout(resolve, 140));
+    await waitUntil(() => el.open, 'show-delay elapsed', { timeout: 2000 });
     expect(el.open).to.be.true;
 
     trigger.dispatchEvent(new MouseEvent('mouseleave'));
     await el.updateComplete;
     expect(el.open, 'hide-delay has not elapsed yet').to.be.true;
-    await new Promise((resolve) => setTimeout(resolve, 260));
+    await waitUntil(() => !el.open, 'hide-delay elapsed', { timeout: 2000 });
     expect(el.open).to.be.false;
   });
 

@@ -1412,6 +1412,7 @@ it('does not let a slow auto-load overwrite an explicitly-set groups value', asy
   document.body.append(el);
   el.groups = groups; // set immediately, before any real network/import round-trip could resolve
   await el.updateComplete;
+  // wait-reason: asserting no stray auto-load overwrites the explicit groups (negative assertion)
   await new Promise((resolve) => setTimeout(resolve, 50)); // let any stray auto-load attempt settle
   expect(el.groups).to.deep.equal(groups);
 });

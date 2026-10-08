@@ -1,4 +1,5 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { resetNativeGetterCache } from './internal/rendered-tree-traversal.js';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { AUTOLOADER_PENDING_ATTRIBUTE, discover, start, stop, type AutoloadableTagName } from './autoloader.js';
 import { setAutoloaderLoaderForTesting } from './internal/autoloader-loaders.js';
 
@@ -975,7 +976,7 @@ describe('autoloader', () => {
       const subtree = document.createElement('section');
       subtree.append(document.createElement(tag), ...Array.from({ length: 4 }, () => document.createElement('span')));
       shadow.append(subtree);
-      await aTimeout(20);
+      await waitUntil(() => detail !== undefined, 'limit event dispatched');
 
       expect(detail?.limit).to.equal('maxElements');
       expect(detail?.maximum).to.equal(3);
@@ -1159,6 +1160,7 @@ describe('autoloader', () => {
     hostA.remove();
     await aTimeout(0);
     shadowA.append(document.createElement(removedTag));
+    // wait-reason: asserting a pruned shadow root is no longer observed (no load happens)
     await aTimeout(20);
     expect(removedLoads, 'a pruned shadow root must not still be observed').to.equal(1);
 
@@ -1284,9 +1286,11 @@ describe('autoloader', () => {
             throw new Error('hostile shadow host');
           },
         });
+        resetNativeGetterCache();
         callback([record(host, [shadow])], observer);
       } finally {
         Object.defineProperty(ShadowRoot.prototype, 'host', hostDescriptor);
+        resetNativeGetterCache();
       }
 
       const loaded = document.createElement(loadedTag);

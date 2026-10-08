@@ -1,11 +1,14 @@
 import type { NativeModalCarrier } from './native-modal-carrier.js';
 import { promoteToTopLayer, releaseTopLayer } from './top-layer-escape.js';
-import { DeferredFocusReturn, captureFocusReturnOpener } from './deferred-focus-return.js';
+import {
+  cancelDeferredFocusReturn,
+  captureFocusReturnOpener,
+  scheduleDeferredFocusReturn,
+} from './deferred-focus-return.js';
 
 /** Keeps a modal host above sibling top-layer surfaces when no nested native carrier is needed. */
 export class ModalSurfaceController {
   private opener: HTMLElement | null = null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   constructor(
     private readonly host: HTMLElement & { readonly updateComplete: Promise<unknown> },
     private readonly carrier: NativeModalCarrier,
@@ -18,7 +21,7 @@ export class ModalSurfaceController {
 
   /** Applies the common open effect before component-specific state resets. */
   open(activate: () => void): void {
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this.host);
     this.opener = captureFocusReturnOpener(this.host);
     this.prepare();
     activate();
@@ -31,7 +34,7 @@ export class ModalSurfaceController {
     const opener = this.opener;
     this.opener = null;
     if (hadOverlay && opener && this.host.isConnected) {
-      this.deferredFocusReturn.schedule({
+      scheduleDeferredFocusReturn({
         host: this.host,
         candidates: () => [opener],
         isCurrent,
@@ -41,7 +44,7 @@ export class ModalSurfaceController {
 
   disconnect(): void {
     this.hide();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this.host);
   }
 
   show(): void {

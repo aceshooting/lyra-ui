@@ -18,7 +18,8 @@ export const styles = css`
     max-block-size: var(--lr-table-max-height, none);
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius-container);
+    border-radius: var(--lr-table-radius, var(--lr-radius-container));
+    background: var(--lr-table-surface, var(--lr-color-surface));
     /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
        scrollport's own previous literal ('auto') as the fallback, so a consumer who never sets the
        --lr-theme-* input on an ancestor sees no change. */
@@ -39,6 +40,11 @@ export const styles = css`
   :host([scroll-mode='auto']) [part='base']:not([data-scroll-overflow]) {
     overflow: visible;
     max-block-size: none;
+  }
+  /* While content fits, clip rather than show: paints stay inside the rounded frame without a scroll container, so the sticky header still pins to the page. A page-mode table that overflows stays visible. */
+  :host([scroll-mode='page']) [part='base']:not([data-scroll-overflow]),
+  :host([scroll-mode='auto']) [part='base']:not([data-scroll-overflow]) {
+    overflow: clip;
   }
   [part='filter-label'] {
     display: flex;
@@ -179,7 +185,7 @@ export const styles = css`
        --_lr-table-row-bg/[part='row'] pattern for body rows) -- reading it here, instead of a plain
        background: var(--lr-color-surface), lets the sorted fill still reach a header cell even when
        the sticky-header rule further below is the one that wins the cascade for 'background'. */
-    background: var(--_lr-table-header-bg, var(--lr-color-surface));
+    background: var(--_lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface)));
     text-align: start;
     font-weight: var(--lr-font-weight-semibold);
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
@@ -251,7 +257,7 @@ export const styles = css`
     /* Surface fill, not transparent: the cell is position: sticky, so a transparent default lets
        body rows scroll visibly through the sorted column's header in a height-capped table. The
        sticky-column rules below keep it for the same reason. */
-    --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-color-surface));
+    --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-table-surface, var(--lr-color-surface)));
     background: var(--_lr-table-header-bg);
     color: var(--lr-table-header-sorted-color, inherit);
   }
@@ -323,7 +329,7 @@ export const styles = css`
        stays transparent by default, but its sticky cell must stay opaque (--lr-color-surface) to
        keep hiding content scrolled underneath -- so this reads the same public token with an
        opaque fallback instead of transparent. */
-    --_lr-table-row-bg: var(--lr-table-row-stripe-bg, var(--lr-color-surface));
+    --_lr-table-row-bg: var(--lr-table-row-stripe-bg, var(--lr-table-surface, var(--lr-color-surface)));
   }
   /* Inline var() fallback, not a :host declaration, which is re-declared per instance and shadows
      any ancestor value. Needed because Shadow Parts forbids an attribute selector after ::part():
@@ -573,7 +579,7 @@ export const styles = css`
   [part='expanded-row'] [part='expanded-cell'] {
     padding: var(--lr-space-s);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    background: var(--lr-color-surface);
+    background: var(--lr-table-surface, var(--lr-color-surface));
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
      -- the [part='header-cell'] inset-block-start pattern above, on the other axis. The box-shadow
@@ -594,7 +600,7 @@ export const styles = css`
      so a sticky body cell shows the same fill as the rest of its row instead of painting a flat
      surface over the state. */
   [part='cell'][data-sticky] {
-    background: var(--_lr-table-row-bg, var(--lr-color-surface));
+    background: var(--_lr-table-row-bg, var(--lr-table-surface, var(--lr-color-surface)));
   }
   /* Reads --_lr-table-header-bg, written only by the sorted-header rule above -- a sticky AND
      sorted column's <th> carries both [data-sticky] and [aria-sort] at once, so without this split
@@ -602,7 +608,7 @@ export const styles = css`
      own 'background' declaration (0,1,0), regardless of source order. A sticky header cell that is
      not sorted still falls back to the plain surface color, unchanged from before. */
   [part='header-cell'][data-sticky] {
-    background: var(--_lr-table-header-bg, var(--lr-color-surface));
+    background: var(--_lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface)));
   }
   [part='header-cell'][data-sticky='end'],
   [part='cell'][data-sticky='end'] {
@@ -626,7 +632,7 @@ export const styles = css`
   [part='foot'] {
     position: sticky;
     inset-block-end: 0;
-    background: var(--lr-color-surface);
+    background: var(--lr-table-surface, var(--lr-color-surface));
   }
   [part='footer-cell'] {
     /* Same tighter hook as [part='group-cell'] -- see the comment there. */

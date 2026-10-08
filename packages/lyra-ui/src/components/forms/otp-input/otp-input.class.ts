@@ -905,6 +905,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
           <input
             part="control"
             id="control"
+            name=${this.name || nothing}
             type="text"
             .value=${this.value}
             maxlength=${this.renderedSegmentCount}

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { skillInstallDirectories } from './agent-registry.mjs';
 import { isMainModule } from './is-main-module.mjs';
 
 import { execFileSync } from 'node:child_process';
@@ -14,6 +15,8 @@ const TEXT_FILE = /\.(?:cjs|css|cts|html|js|json|jsonc|jsx|md|mdx|mjs|mts|scss|s
 const POLICY_FIXTURE_FILES = new Set([
   'packages/lyra-ui/scripts/check-provenance.mjs',
   'packages/lyra-ui/scripts/check-provenance.test.mjs',
+  // The agent registry defines (and documents with their sources) every agent skill path.
+  'packages/lyra-ui/scripts/agent-registry.mjs',
 ]);
 const GENERATED_OR_MIRRORED_PATH =
   /^(?:packages\/lyra-ui\/(?:custom-elements\.json|design-tokens\.json|llms-full\.txt|llms\/components\/|vscode-(?:css|html)-data\.json|web-types\.json)|plugins\/lyra-ui\/skills\/lyra-ui\/references\/|\.storybook\/token-preview\.generated\.js|skills\/.*\.skill$)/;
@@ -43,8 +46,22 @@ const forbidden = [
   },
 ];
 
-const LOCAL_TOOLING_REFERENCE =
-  /(?:^|[^a-z0-9_.-])(?:\.superpowers(?:[/\\]|$)|docs[/\\]superpowers(?:[/\\]|$)|superpowers[/\\](?:plans|reviews|specs)(?:[/\\]|$)|\.playwright-mcp(?:[/\\]|$)|playwright-mcp(?:[/\\]|$)|\.claude(?:[/\\]|$)|\.codex(?:[/\\]|$)|lyra-ui-audit\.md\b)/i;
+// Agent-tooling directories are internal, except the project skill directories `lyra-ui init-agents`
+// installs into (documented in public docs and named in the CLI). They are derived from
+// scripts/agent-registry.mjs, so adding a registry agent is the only way to widen this.
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+function toolingRoot(root) {
+  const allowed = skillInstallDirectories()
+    .filter((directory) => directory.startsWith(`${root}/`))
+    .map((directory) => escapeRegExp(directory.slice(root.length + 1)));
+  const tail = allowed.length > 0 ? `(?!(?:${allowed.join('|')})(?:[/\\\\]|\\b))` : '';
+  return `${escapeRegExp(root)}(?:[/\\\\]${tail}|$)`;
+}
+const LOCAL_TOOLING_REFERENCE = new RegExp(
+  '(?:^|[^a-z0-9_.-])(?:\\.superpowers(?:[/\\\\]|$)|docs[/\\\\]superpowers(?:[/\\\\]|$)|superpowers[/\\\\](?:plans|reviews|specs)(?:[/\\\\]|$)|\\.playwright-mcp(?:[/\\\\]|$)|playwright-mcp(?:[/\\\\]|$)|'
+    + `${toolingRoot('.claude')}|${toolingRoot('.codex')}|lyra-ui-audit\\.md\\b)`,
+  'i',
+);
 const HASH = /(?<![a-f0-9#@/])[a-f0-9]{7,40}(?![a-f0-9])/gi;
 const HASH_CONTEXT =
   /\b(?:commit(?:ted)?|introduced|fixed|corrected|changed|regressed|regression|landed|added|removed|rewritten|implemented|before|after|since)\b/i;

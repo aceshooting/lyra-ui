@@ -776,6 +776,7 @@ describe("owner-window capture runtime", () => {
       resolvePermission(stream as unknown as MediaStream);
 
       expect(await startPromise).to.be.false;
+      // wait-reason: asserts a stale-realm permission resolution causes no state change
       await aTimeout(20);
       expect(el.state).to.equal("idle");
       expect(stream.getTracks()[0]?.stopped).to.be.true;
@@ -824,6 +825,7 @@ describe("owner-window capture runtime", () => {
       expect(el.state).to.equal('requesting');
 
       mainCapture.resolve(0);
+      // wait-reason: asserts a stale-realm resolution causes no state change
       await aTimeout(20);
       expect(mainCapture.streamAt(0).getTracks()[0]?.stopped).to.equal(true);
       expect(el.state).to.equal('requesting');
@@ -878,6 +880,7 @@ describe("owner-window capture runtime", () => {
       await el.updateComplete;
 
       mainCapture.reject(0, new Error('old realm rejection'));
+      // wait-reason: asserts a stale-realm rejection causes no state change
       await aTimeout(20);
       expect(el.state).to.equal('requesting');
       expect(cancels).to.equal(0);
@@ -1059,6 +1062,7 @@ describe("hold mode", () => {
           repeat: false,
         })
       );
+      // wait-reason: asserts a first Enter does not start twice before the repeat
       await aTimeout(20);
       btn.dispatchEvent(
         new KeyboardEvent("keydown", {
@@ -1067,13 +1071,14 @@ describe("hold mode", () => {
           repeat: true,
         })
       );
+      // wait-reason: asserts a repeated Enter does not restart
       await aTimeout(20);
       expect(starts).to.equal(1);
 
       btn.dispatchEvent(
         new KeyboardEvent("keyup", { key: "Enter", bubbles: true })
       );
-      await aTimeout(20);
+      await waitUntil(() => el.state === "idle", "keyup never ended the recording");
       expect(el.state).to.equal("idle");
     } finally {
       restore();
@@ -1570,6 +1575,7 @@ describe("toggle mode", () => {
       btn.dispatchEvent(
         new PointerEvent("pointerup", { bubbles: true, pointerId: 1 })
       );
+      // wait-reason: asserts a pointer tap does not fire the gated event
       await aTimeout(20);
       expect(fired).to.be.false;
     } finally {
@@ -1805,6 +1811,7 @@ it('treats a disabled pending permission rejection as one cancellation, never an
     el.disabled = true;
     await el.updateComplete;
     capture.reject(0, new Error('permission rejected after disablement'));
+    // wait-reason: asserts a late rejection after disablement causes no further event
     await aTimeout(20);
 
     expect(el.state).to.equal('idle');
@@ -1834,6 +1841,7 @@ it('stops a detached pending stream without delivering a stale terminal event', 
     await el.updateComplete;
     el.remove();
     capture.resolve(0);
+    // wait-reason: asserts a late resolution after removal causes no further event
     await aTimeout(20);
 
     expect(el.state).to.equal('idle');
@@ -2013,6 +2021,7 @@ it("emits no lr-level when level-events is unset (the default)", async () => {
     let fired = false;
     el.addEventListener("lr-level", () => (fired = true));
     await el.start();
+    // wait-reason: asserts no lr-level event fires without an analyser
     await aTimeout(50);
     expect(fired).to.be.false;
   } finally {
@@ -2202,6 +2211,7 @@ it("never schedules a max-duration-ms auto-stop for a NaN value", async () => {
     )) as LyraPushToTalk;
     nan.maxDurationMs = NaN;
     await nan.start();
+    // wait-reason: asserts a NaN max duration never auto-stops
     await aTimeout(30);
     expect(nan.state).to.equal("recording"); // never auto-stopped
     nan.cancel();
@@ -2218,6 +2228,7 @@ it("never schedules a max-duration-ms auto-stop for a negative value", async () 
     )) as LyraPushToTalk;
     negative.maxDurationMs = -100;
     await negative.start();
+    // wait-reason: asserts a negative max duration never auto-stops
     await aTimeout(30);
     expect(negative.state).to.equal("recording");
     negative.cancel();
@@ -2240,10 +2251,10 @@ it("announces start/stop/cancel via the internal live region", async () => {
       html`<lr-push-to-talk></lr-push-to-talk>`
     )) as LyraPushToTalk;
     await el.start();
-    await aTimeout(20);
+    await waitUntil(() => liveRegionText(el) === "Recording started", "the start announcement never appeared");
     expect(liveRegionText(el)).to.equal("Recording started");
     await el.stop();
-    await aTimeout(20);
+    await waitUntil(() => liveRegionText(el) === "Recording stopped", "the stop announcement never appeared");
     expect(liveRegionText(el)).to.equal("Recording stopped");
   } finally {
     restore();
@@ -2257,7 +2268,7 @@ it("announces permission and generic recording failures via the internal live re
       html`<lr-push-to-talk></lr-push-to-talk>`
     )) as LyraPushToTalk;
     await denied.start();
-    await aTimeout(20);
+    await waitUntil(() => liveRegionText(denied) === "Microphone access denied", "the denial announcement never appeared");
     expect(liveRegionText(denied)).to.equal("Microphone access denied");
   } finally {
     deniedRestore();
@@ -2269,7 +2280,7 @@ it("announces permission and generic recording failures via the internal live re
       html`<lr-push-to-talk></lr-push-to-talk>`
     )) as LyraPushToTalk;
     await failed.start();
-    await aTimeout(20);
+    await waitUntil(() => liveRegionText(failed) === "Recording failed", "the failure announcement never appeared");
     expect(liveRegionText(failed)).to.equal("Recording failed");
   } finally {
     errorRestore();

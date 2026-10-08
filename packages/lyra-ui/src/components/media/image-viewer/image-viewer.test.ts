@@ -2453,3 +2453,32 @@ it("registers one shared image renderer across every raster MIME type", async ()
   expect(viewer).to.exist;
   expect(viewer.name).to.equal("photo.png");
 });
+
+it('projects a host description onto the region', async function () {
+  if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="iv-help">Viewer help</p>
+    <lr-image-viewer src=${PNG_SRC} aria-describedby="iv-help"></lr-image-viewer>
+  </div>`);
+  const base = wrapper.querySelector<LyraImageViewer>('lr-image-viewer')!.shadowRoot!.querySelector<HTMLElement>('[part="base"][role="region"]')!;
+  const help = wrapper.querySelector<HTMLElement>('#iv-help')!;
+  await waitUntil(() =>
+    base.ariaDescribedByElements?.includes(help) === true ||
+    (base.getAttribute('aria-describedby')?.split(/\s+/).includes('iv-help') ?? false),
+  );
+});
+
+it('normalizes region highlights once across renders until the array is replaced', async () => {
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`);
+  await stubImageLoad(el);
+  const highlights: LyraHighlight[] = [{ id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
+  el.highlights = highlights;
+  await el.updateComplete;
+  const first = Reflect.get(el, 'canonicalRegionHighlights').call(el);
+  el.activeHighlightId = 'a';
+  await el.updateComplete;
+  expect(Reflect.get(el, 'canonicalRegionHighlights').call(el)).to.equal(first);
+  el.highlights = [...highlights];
+  await el.updateComplete;
+  expect(Reflect.get(el, 'canonicalRegionHighlights').call(el)).to.not.equal(first);
+});

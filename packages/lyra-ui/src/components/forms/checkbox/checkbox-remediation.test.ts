@@ -57,3 +57,22 @@ it('follows a host description element that is replaced under the same id', asyn
   wrapper.querySelector('#d')!.replaceWith(fresh);
   await waitUntil(() => base.ariaDescribedByElements?.[0] === fresh, 'the replacement is described');
 });
+
+it('reveals the hint region for with-hint before any hint content exists', async () => {
+  const el = await fixture<LyraCheckbox>('<lr-checkbox with-hint>Choice</lr-checkbox>');
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!.hidden).to.equal(false);
+  const plain = await fixture<LyraCheckbox>('<lr-checkbox>Choice</lr-checkbox>');
+  expect(plain.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!.hidden).to.equal(true);
+});
+
+it('ignores click() the moment an ancestor fieldset disables it', async () => {
+  const fieldset = await fixture<HTMLFieldSetElement>('<fieldset><lr-checkbox>Choice</lr-checkbox></fieldset>');
+  const el = fieldset.querySelector<LyraCheckbox>('lr-checkbox')!;
+  await el.updateComplete;
+  fieldset.disabled = true;
+  el.click();
+  expect(el.checked).to.equal(false);
+  fieldset.disabled = false;
+  el.click();
+  expect(el.checked).to.equal(true);
+});

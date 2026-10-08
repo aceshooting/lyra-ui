@@ -60,3 +60,47 @@ export function measureAdjacentRuns(
       : joinsAfter ? 'start' : 'standalone';
   });
 }
+
+/**
+ * Owns the scheduling half of run projection: one ResizeObserver over the host and its items,
+ * re-armed only when the item set changes, and one animation frame per burst of triggers.
+ */
+export class AdjacentRunScheduler {
+  private observer?: ResizeObserver;
+  private frame?: number;
+  private observed: readonly Element[] = [];
+
+  constructor(private readonly host: Element, private readonly measure: () => void) {}
+
+  schedule(): void {
+    const ownerWindow = this.host.ownerDocument?.defaultView;
+    if (!ownerWindow || !this.host.isConnected || this.frame !== undefined) return;
+    this.frame = ownerWindow.requestAnimationFrame(() => {
+      this.frame = undefined;
+      if (this.host.isConnected) this.measure();
+    });
+  }
+
+  /** A fresh observer reports every target once, so an unchanged item list keeps the old one. */
+  observe(items: readonly Element[]): void {
+    const ResizeObserverCtor = this.host.ownerDocument?.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor || !this.host.isConnected) return;
+    if (this.observer && items.length === this.observed.length && items.every((item, index) => this.observed[index] === item)) return;
+    this.observed = [...items];
+    this.observer?.disconnect();
+    const observer = new ResizeObserverCtor(() => {
+      if (this.observer === observer) this.schedule();
+    });
+    this.observer = observer;
+    observer.observe(this.host);
+    for (const item of items) observer.observe(item);
+  }
+
+  dispose(): void {
+    this.observer?.disconnect();
+    this.observer = undefined;
+    this.observed = [];
+    if (this.frame !== undefined) this.host.ownerDocument?.defaultView?.cancelAnimationFrame(this.frame);
+    this.frame = undefined;
+  }
+}

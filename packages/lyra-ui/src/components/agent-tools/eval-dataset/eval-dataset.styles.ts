@@ -1,4 +1,3 @@
-import { nativeSearchStyles } from '../../../internal/native-search.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -45,17 +44,10 @@ export const styles = css`
   }
   [part='search'] {
     display: block;
-    position: relative;
   }
-  [part='search'] {
-    --_search-height: var(--lr-eval-dataset-search-min-height, var(--lr-input-control-height, var(--lr-input-control-min-height, var(--lr-form-control-height, auto))));
-    --_search-padding-block: var(--lr-eval-dataset-search-padding-block, var(--lr-input-padding-block, var(--lr-form-control-padding-block, var(--lr-space-xs))));
-    --_search-padding-inline: var(--lr-eval-dataset-search-padding-inline, var(--lr-input-padding-inline, var(--lr-form-control-padding-inline, var(--lr-space-s))));
-    --_search-radius: var(--lr-eval-dataset-search-radius, var(--lr-input-radius, var(--lr-form-control-radius, var(--lr-radius))));
-    --_search-font-size: var(--lr-eval-dataset-search-font-size, var(--lr-input-font-size, var(--lr-form-control-font-size, inherit)));
+  [part='search-input'] {
+    inline-size: 100%;
   }
-  [part='search'] { --_search-end-padding: var(--lr-icon-button-size); }
-  ${nativeSearchStyles}
   [part='tag-filter'] {
     display: block;
   }

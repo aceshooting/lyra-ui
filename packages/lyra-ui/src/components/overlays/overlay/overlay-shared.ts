@@ -11,6 +11,7 @@
  */
 
 import type { VirtualAnchor } from '../../../internal/positioner.js';
+import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 
 /** One realm-bound delayed show/hide request, replaced or cancelled by the next interaction. */
 export class OverlayDelayTimer {
@@ -170,20 +171,14 @@ export function resolveOverlayAnchor(
 /** Watches structural and `id`-identity changes in the host's current root. Callers compare their
  * resolved anchor before doing any work, so unrelated mutations remain a cheap no-op. */
 export function observeOverlayAnchorIdentity(host: Node, callback: () => void): () => void {
-  const root = host.getRootNode() as Document | ShadowRoot;
-  const ownerDocument = root.nodeType === 9
-    ? root as Document
-    : (root as ShadowRoot).ownerDocument;
-  const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
-  if (!MutationObserverCtor) return () => undefined;
-  const observer = new MutationObserverCtor(callback);
-  observer.observe(root, {
-    attributes: true,
-    attributeFilter: ['id'],
+  const root = host.getRootNode();
+  const ownerDocument = root.nodeType === 9 ? root as Document : root.ownerDocument;
+  // One shared observer per root, however many overlays watch it.
+  return subscribeInheritedAttributes(root, ownerDocument?.defaultView?.MutationObserver, {
+    attributes: ['id'],
     childList: true,
-    subtree: true,
-  });
-  return () => observer.disconnect();
+    changed: () => callback(),
+  }) ?? (() => undefined);
 }
 
 /** Resolves a trigger id in the host's own root and checks its owning realm. */
@@ -210,4 +205,53 @@ export function observeOverlayAnchorRoots(
   }
   const cleanups = [...roots].map(root => observeOverlayAnchorIdentity(root, onIdentityChange));
   return () => { for (const cleanup of cleanups) cleanup(); };
+}
+
+/** The element a popover or tooltip binds interactions to: none for a virtual anchor, else the
+ *  slotted trigger, else the `for` target. */
+export function resolveOverlayInteractionTrigger(
+  host: Node,
+  virtualAnchor: unknown,
+  slotted: HTMLElement | undefined,
+  forId: string,
+): HTMLElement | undefined {
+  return virtualAnchor ? undefined : (slotted ?? resolveOverlayTriggerById(host, forId));
+}
+
+/** Tracks the direct `anchor` an open overlay is positioned against and reports its removal. */
+export class OverlayAnchorIdentity {
+  private observed?: Element;
+  private wasConnected = false;
+  private stopObserving?: () => void;
+
+  stop(): void {
+    this.stopObserving?.();
+    this.stopObserving = undefined;
+  }
+
+  /** Restarts observation. `onChange` receives whether the direct anchor was just removed. */
+  observe(
+    host: Element,
+    directAnchor: Element | undefined,
+    forId: string,
+    currentAnchor: () => Element | null,
+    onChange: (directAnchorRemoved: boolean) => void,
+  ): void {
+    this.stop();
+    this.observed = directAnchor;
+    this.wasConnected = directAnchor?.isConnected === true;
+    if (!host.isConnected || (!forId && !directAnchor)) return;
+    this.stopObserving = observeOverlayAnchorRoots(host, directAnchor, () => {
+      const removed =
+        currentAnchor() === this.observed && this.wasConnected && this.observed?.isConnected === false;
+      this.wasConnected = this.observed?.isConnected === true;
+      onChange(removed);
+    });
+  }
+
+  /** Whether an `anchor` property change dropped the connected anchor observed so far. */
+  lostAnchorProperty(changed: Map<PropertyKey, unknown>, current: Element | null): boolean {
+    return changed.has('anchor') && changed.get('anchor') === this.observed && this.wasConnected
+      && current?.isConnected !== true;
+  }
 }

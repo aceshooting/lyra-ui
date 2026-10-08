@@ -60,12 +60,9 @@
   and default-value types are printed verbatim into `custom-elements.json`, and
   `check:pinned-upstream-manifests` compares that printed text byte-for-byte against the pinned
   upstream Web Awesome/Shoelace manifest. A file mechanically reformatted to double quotes by a
-  different tool's defaults is therefore not a cosmetic regression — every mapped member whose type
-  or default changed quote style stops matching upstream's single-quoted text, silently
-  reclassifying an otherwise-identical mapping from `rewritten` to the strict-blocking `unsupported`
-  (a real incident: one pass of this reformatting reached ~300 files across the tree and
-  reclassified `wa-button`/`wa-rating`/`wa-select`/`wa-input`/`wa-textarea`/`sl-input`/
-  `sl-textarea`/`wa-date-input` before the rule existed). The rule's tokenizer mirrors
+  different tool's defaults is therefore not cosmetic: every mapped member whose type or default
+  changed quote style stops matching upstream's single-quoted text, silently reclassifying an
+  otherwise-identical mapping from `rewritten` to the strict-blocking `unsupported`. The rule's tokenizer mirrors
   `check-source-policy.mjs`'s own comment/string/template state machine, so it resumes scanning
   inside a Lit `${...}` interpolation — a `part=${cond ? "a" : "b"}` binding is still checked —
   rather than treating everything inside `` html`...` `` as opaque. A double-quoted literal whose
@@ -145,20 +142,14 @@
   render template produces — `node.parentElement` is `null`, and the idiomatic
   `node.parentElement?.insertBefore(other, node)` is a permanent silent no-op. Use `parentNode`,
   which resolves to the `ShadowRoot` itself and implements `insertBefore` like any `Node`.
-  `lr-app-rail`'s `placeToggle()` shipped the broken form: its open direction called
-  `panel.insertBefore(...)` on a real element and worked, so the failure presented as "closing is
-  broken" rather than "that line never executes." Grep shape: `parentElement?.` in any component
-  that moves its own template nodes.
+  Grep shape: `parentElement?.` in any component that moves its own template nodes.
 - **`insertBefore()` into a node's existing position still removes and re-inserts it.** The spec's
   pre-insert step removes the node from its current parent unconditionally, so "already in the
   right place" is not a no-op — and if that node is `document.activeElement`, focus is lost
   synchronously, with no yield the code could guard on. The dangerous shape is an idempotent-looking
   post-render catch-up call (`updated()` re-asserting DOM order), because it runs immediately after
   a close path has restored focus. Compare position first (`if (parent.firstChild !== node)`).
-  Discovered because fixing the `parentElement` bug above turned two previously-*passing* focus
-  tests red: the redundant call had been silently dead for the same reason, so the second bug only
-  became reachable once the first was fixed. A fix that reddens unrelated green tests is sometimes
-  the first honest measurement of a bug the first bug was masking — verify before assuming
+  A fix that reddens unrelated green tests may be unmasking a second bug: verify before assuming
   regression.
 - **Reconnect resets transient open-state.** A component owning floating-ui-positioned transient
   UI (open dropdown, hover preview, tooltip) resets the `@state()` boolean driving its visibility
@@ -253,7 +244,7 @@
   token's default starts from the fill of the state being painted.
 - **Watch for silently-inert CSS.** A declaration that never applies looks identical to one that
   works, and nothing in the toolchain flags it — not `tsc`, not the style policy, not a test that
-  greps stylesheet text. Four live instances were found in one pass: `:host(:has(> lr-x))`
+  greps stylesheet text. Known shapes: `:host(:has(> lr-x))`
   (`:has()` is invalid inside `:host()` — the whole rule drops); `[part='x']:empty` (Chromium's
   `:empty` doesn't ignore the whitespace-only text nodes Lit leaves in a part, so it never
   matches — load-bearing there, since the element it would have hidden is a focus target); a

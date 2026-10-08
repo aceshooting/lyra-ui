@@ -26,6 +26,11 @@ try {
   mkdirSync(componentsDir, { recursive: true });
   mkdirSync(internalDir, { recursive: true });
   copyFileSync(scriptPath, path.join(scriptsDir, 'check-numeric-guards.mjs'));
+  mkdirSync(path.join(scriptsDir, 'lib'), { recursive: true });
+  copyFileSync(
+    fileURLToPath(new URL('./lib/fs-walk.mjs', import.meta.url)),
+    path.join(scriptsDir, 'lib', 'fs-walk.mjs'),
+  );
   writeFileSync(
     path.join(internalDir, 'unguarded.ts'),
     [

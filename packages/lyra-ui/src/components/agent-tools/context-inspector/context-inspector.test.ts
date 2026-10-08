@@ -45,6 +45,24 @@ it('keeps a valid-id streaming segment whose text body has not arrived yet', asy
   expect((el.shadowRoot!.querySelector('lr-copy-button') as LyraCopyButton).value).to.equal('System prompt\n');
 });
 
+it('honors label="" instead of the localized default', async () => {
+  const el = (await fixture(html`<lr-context-inspector label="" .segments=${segments}></lr-context-inspector>`)) as LyraContextInspector;
+  expect((el.shadowRoot!.querySelector('lr-context-meter') as LyraContextMeter).label).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label') ?? '').to.equal('');
+});
+
+it('reuses the derived meter segments across renders until the segments change', async () => {
+  const el = (await fixture(html`<lr-context-inspector .segments=${segments}></lr-context-inspector>`)) as LyraContextInspector;
+  const meter = el.shadowRoot!.querySelector('lr-context-meter') as LyraContextMeter;
+  const first = meter.segments;
+  el.total = 500;
+  await el.updateComplete;
+  expect(meter.segments).to.equal(first);
+  el.segments = [...segments];
+  await el.updateComplete;
+  expect(meter.segments).to.not.equal(first);
+});
+
 it('maps segments/total/label onto the embedded lr-context-meter', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = segments;

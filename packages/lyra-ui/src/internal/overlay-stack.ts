@@ -1,7 +1,8 @@
 import { getActiveNativeModal } from './native-modal-context.js';
 import { takeOverlayOrder, type OverlayOrderReservation } from './overlay-order.js';
 import { deepActiveElementIn } from './active-element.js';
-import { flattenedParentElement } from './composed-tree.js';
+import { composedContains, flattenedParentElement } from './composed-tree.js';
+import { scheduleDeferredFocusReturn, cancelDeferredFocusReturn, type DeferredFocusReturnPass } from './deferred-focus-return.js';
 import {
   collectComposedAutofocusElements,
   collectComposedFocusTargets,
@@ -16,6 +17,8 @@ import {
 const STACK_PROPERTY = '--lr-overlay-stack-index';
 const STACK_BASE = 1000;
 const STACK_STEP = 2;
+
+type DeferredHost = Parameters<typeof scheduleDeferredFocusReturn>[0]['host'];
 
 type OverlayResourceRelease = () => void;
 
@@ -59,6 +62,10 @@ export interface OverlayStackActivationOptions {
     deferResourceRelease: boolean,
   ) => OverlayResourceRelease | undefined;
   onDeactivate?: () => void;
+  /** Resolved right after the synchronous focus return of a deactivation that restores focus: the
+   *  deferred pass for a target the host only re-shows afterward, or `undefined` to skip it. Any
+   *  pass still pending for the host is abandoned by every activation and deactivation. */
+  deferredReturn?: () => DeferredFocusReturnPass | undefined;
 }
 
 interface OverlayEntry {
@@ -124,14 +131,7 @@ export function deepActiveElement(
   return deepActiveElementIn(doc);
 }
 
-export function composedContains(container: Element, candidate: Element | null): boolean {
-  let current = candidate;
-  while (current) {
-    if (current === container) return true;
-    current = flattenedParentElement(current);
-  }
-  return false;
-}
+export { composedContains };
 
 /** Collects rendered focus targets through slots and nested open shadow roots in browser tab order. */
 export function collectFocusableElements(root: Element | ShadowRoot): HTMLElement[] {
@@ -496,6 +496,21 @@ function deactivateEntry(
   deferResourceRelease = false,
 ): (() => void) | undefined {
   if (!entry.active) return undefined;
+  const host = entry.options.host;
+  cancelDeferredFocusReturn(host);
+  const release = deactivateActiveEntry(entry, restoreFocus, deferResourceRelease);
+  if (restoreFocus) {
+    const pass = entry.options.deferredReturn?.();
+    if (pass) scheduleDeferredFocusReturn({ ...pass, host: host as DeferredHost });
+  }
+  return release;
+}
+
+function deactivateActiveEntry(
+  entry: OverlayEntry,
+  restoreFocus: boolean,
+  deferResourceRelease: boolean,
+): (() => void) | undefined {
   // Read before any cleanup: unregistering can run consumer hooks and DOM writes that move focus.
   const heldFocus = panelHoldsFocus(entry);
   rebaseReturnTargets(entry);
@@ -532,6 +547,7 @@ function panelHoldsFocus(entry: OverlayEntry): boolean {
  * visual stack depth, and focus return are recomputed as entries move.
  */
 export function activateOverlayStack(options: OverlayStackActivationOptions): OverlayStackHandle {
+  cancelDeferredFocusReturn(options.host);
   const previous = hostEntries.get(options.host);
   const inheritedReturnTarget = previous?.active ? previous.restoreFocusTo : undefined;
   if (previous?.active) previous.handle.deactivate({ restoreFocus: false });

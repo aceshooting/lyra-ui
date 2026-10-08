@@ -1,10 +1,9 @@
+import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
-import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -13,10 +12,8 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { syncValidityStates } from '../../../internal/custom-states.js';
 import { styles } from './model-select.styles.js';
-import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
-import { isBarredFromValidation } from '../../../internal/form-associated.js';
+import { autocorrectConverter, normalizeAutocorrect, spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -210,9 +207,6 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   static override styles = [LyraElement.styles, sizes, styles];
 
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    disabled: { type: Boolean, reflect: true, noAccessor: true },
-    required: { type: Boolean, reflect: true, noAccessor: true },
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
@@ -220,7 +214,6 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
       useDefault: true,
       noAccessor: true,
     },
-    name: { reflect: true, noAccessor: true },
   };
 
   /** Informational only — e.g. `'ollama'`. Rendered as a small leading badge for display grouping. */
@@ -254,14 +247,17 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
    *  the attribute (browser default). */
   @property() override autocapitalize = '';
-  /** Forwarded to the free-text mode's native `<input>`'s own `autocorrect` (Safari/WebKit-specific).
-   *  Empty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not
-   *  `autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a
-   *  `boolean`-typed `HTMLElement.autocorrect` IDL member, which conflicts with this string-typed
-   *  property of the same name -- same rename fix as `<lr-date-input>` (`<lr-textarea>` instead
-   *  keeps the native `autocorrect` name and overrides it as a boolean accessor). The explicit
-   *  attribute mapping preserves the lowercase wire name in generated component metadata. */
-  @property({ attribute: 'autocorrect' }) autoCorrect = '';
+  private autocorrectValue = true;
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectValue;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectValue = normalizeAutocorrect(next);
+    this.requestUpdate();
+  }
   /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
   @property() autocomplete = 'off';
   @property({ attribute: 'inputmode' }) override inputMode = '';
@@ -283,31 +279,17 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   // input is otherwise controlled by the committed value's label (see
   // `renderFreeText`), so this never needs resetting on commit/hide.
   private get query(): string { return this.catalogPicker.query; }
-  // Set on first blur; gates the `data-invalid` reflection below so
-  // validity styling never flashes on first render (matches lr-select).
-  @state() private touched = false;
   // `[part]:empty` never matches because each wrapper contains a literal slot. The shared
   // controller keeps label/hint/error presence hydration-safe and progressively visible in SSR.
   private readonly slotPresence = new SlotPresenceController(this);
 
-  private internals: ElementInternals;
-  private validityController: FormControlController;
-  /** Consumer-supplied validation message reflected through `custom-error`. */
-  declare customError: string | null;
   private listId = nextId('model-select-list');
   private controlId = nextId('model-select-control');
-  private _fieldsetDisabled = false;
-  private _name = '';
-  private _disabled = false;
-  private _required = false;
   // Replacing the currently focused trigger/input during a mode switch fires
   // `blur` synchronously while Lit is rendering. That structural blur must not
   // mutate reactive touched/open state from inside the active update cycle.
   protected get catalogEditing(): CatalogPickerController<LyraModelCatalogEntry> {
     return this.catalogPicker;
-  }
-  protected get formInternals(): ElementInternals {
-    return this.internals;
   }
   private readonly catalogPicker = new CatalogPickerController<LyraModelCatalogEntry>(this, {
     catalog: () => this.catalog,
@@ -334,22 +316,6 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     },
     forwardFreeInputClick: true,
   });
-
-  constructor() {
-    super();
-    this.validityController = new FormControlController(this, {
-      invalid: (init) => this.emit('lr-invalid', null, init),
-      interacted: this.markInteracted,
-      customError: () => this.validityController.customValidityMessage,
-    });
-    this.internals = this.validityController.formInternals;
-    new GlassScrollLayer(this, '[part="listbox"]', () => this.open);
-
-    // Native <input> always has a submission value ("") from construction —
-    // without this, a control whose `value` is never touched is entirely
-    // absent from FormData instead of present as "" (see form-associated.ts).
-    this.internals.setFormValue('');
-  }
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
@@ -409,88 +375,8 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     this.catalogPicker.defaultValue = next;
   }
 
-  /** The form submission key, reflected synchronously for native form APIs. */
-  get name(): string {
-    return this._name;
-  }
-  set name(next: string) {
-    const old = this._name;
-    this._name = next ?? '';
-    reflectFormName(this, this._name);
-    this.requestUpdate('name', old);
-  }
-
-  get disabled(): boolean {
-    return this._disabled;
-  }
-  set disabled(next: boolean) {
-    const old = this._disabled;
-    this._disabled = Boolean(next);
-    this.toggleAttribute('disabled', this._disabled);
-    this._fieldsetDisabled =
-      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
-    if (this._disabled) this.hide();
-    // Disabling bars constraint validation, so the intrinsic violation has to be dropped with it --
-    // synchronously, for the same reason the attribute is reflected synchronously.
-    this.updateValidity();
-    this.requestUpdate('disabled', old);
-  }
-
-  get required(): boolean {
-    return this._required;
-  }
-  set required(next: boolean) {
-    const old = this._required;
-    this._required = Boolean(next);
-    this.toggleAttribute('required', this._required);
-    this.updateValidity();
-    this.requestUpdate('required', old);
-  }
-
-  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
-  get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled;
-  }
-
-  /**
-   * Shared with every other form control: own `disabled`/`readonly` and a `<fieldset disabled>`
-   * ancestor bar constraint validation. A barred control matches
-   * neither `:valid` nor `:invalid` natively, so leaving `valueMissing` raised on a disabled
-   * required picker is what painted it red under the documented `:state(user-invalid)` rule.
-   */
-  private get barredFromValidation(): boolean {
-    return isBarredFromValidation(this, this.internals);
-  }
-
-  /** The `!this.value` check here is deliberately NOT the `''`-as-missing-value truthiness defect
-   *  `<lr-select>`/`<lr-combobox>` were corrected for. There, `''` was a legitimate option value
-   *  being misread as "no value". `value` here is `catalogPicker.value`, and `normalizeCatalog()`
-   *  rejects a blank `id` outright, so `''` can never name a row -- it is this control's one
-   *  "nothing committed" sentinel, exactly as documented on `withSyntheticCatalogValue()`. */
-  private updateValidity(): void {
-    if (this.barredFromValidation) {
-      this.validityController.setValidity({});
-    } else if (this.required && !this.value) {
-      this.validityController.setValidity({ valueMissing: true }, this.localize('modelSelectRequired'));
-    } else {
-      this.validityController.setValidity({});
-    }
-    this.publishValidityStates();
-  }
-
-  /** Republishes the six validity custom states. Driven from every place validity or interaction
-   *  can move -- {@linkcode updateValidity}, `reportValidity()`, and `updated()` for `touched` --
-   *  because this control drives `ElementInternals` directly rather than through the
-   *  `FormAssociated` mixin, which does this for the controls that do use it. `touched` is the
-   *  interaction flag: it flips on the trigger's/input's first blur, and on interactive validation
-   *  -- `reportValidity()` and a submission attempt alike, via `installInteractionOnInvalid()`. A
-   *  silent `checkValidity()` alone never counts. */
-  private publishValidityStates(): void {
-    syncValidityStates(this.internals, {
-      required: this.required,
-      hasInteracted: this.touched,
-      barred: this.barredFromValidation,
-    });
+  protected requiredMessage(): string {
+    return this.localize('modelSelectRequired');
   }
 
   formResetCallback(): void {
@@ -504,54 +390,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     this.catalogPicker.restoreState(state);
   }
   formDisabledCallback(disabled: boolean): void {
-    if (this.validityController?.reflectingDisabled) return;
-    const wasDisabled = this.effectiveDisabled;
-    this._fieldsetDisabled = disabled;
-    if (wasDisabled === this.effectiveDisabled) return;
-    if (disabled) this.hide();
-    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
-    this.updateValidity();
-    this.requestUpdate();
-  }
-  private markInteracted = (): void => {
-    if (this.touched) return;
-    this.touched = true;
-    this.publishValidityStates();
-  };
-  checkValidity(): boolean {
-    return this.validityController.checkValidity();
-  }
-  reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A reportValidity() call is what a submit attempt runs, and it is the moment native controls
-    // start matching :user-invalid -- so it counts as interaction here too. `touched` also gates
-    // the data-invalid/aria-invalid reflection, which is the point: after a rejected submit the
-    // control should read as invalid, not stay pristine. (A submission attempt itself never calls
-    // this method -- it drives `ElementInternals` directly -- which is what
-    // `installInteractionOnInvalid()` above covers.)
-    this.touched = true;
-    this.publishValidityStates();
-    return this.internals.reportValidity();
-  }
-
-  /**
-   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
-   * rejection ("that model was retired by the provider") that no client-side constraint can
-   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
-   * control fails `checkValidity()`, blocks submission, and matches `:state(invalid)`; `''` clears
-   * it.
-   *
-   * Clearing restores the control's own computed validity rather than forcing it valid: a
-   * `required` picker with no value stays `valueMissing`. The custom error also survives every
-   * intrinsic recomputation in between (each `value`/`required` change re-runs `updateValidity()`)
-   * and a `form.reset()` — matching a native control, where only another `setCustomValidity('')`
-   * clears it.
-   *
-   * The message is caller-supplied content, so it is used verbatim and never localized here.
-   */
-  setCustomValidity(message: string): void {
-    this.validityController.setCustomValidity(message ?? '');
-    this.publishValidityStates();
+    this.formDisabledChanged(disabled);
   }
 
   /** Closed-dropdown-with-listbox mode vs. free-text filterable mode — see class doc. */
@@ -786,7 +625,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
           autocomplete=${this.autocomplete || nothing}
           spellcheck=${this.spellcheck}
           autocapitalize=${this.autocapitalize || nothing}
-          autocorrect=${this.autoCorrect || nothing}
+          autocorrect=${nativeAutocorrectAttribute(this, this.autocorrect)}
           inputmode=${this.inputMode || nothing}
           enterkeyhint=${this.enterKeyHint || nothing}
           .value=${this.open ? this.query : this.labelFor(this.value)}

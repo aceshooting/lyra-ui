@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Volume ya mongongo',
   videoCaptions: 'Ba sous-titre',
   videoCaptionsOff: 'Boma',
-  videoPlaybackSpeed: 'Vitesse ya lecture',
   videoPictureInPicture: 'Fungola image na kati ya image',
   videoExitPictureInPicture: 'Longwa na image na kati ya image',
   videoEnterFullscreen: 'Fungola écran mobimba',

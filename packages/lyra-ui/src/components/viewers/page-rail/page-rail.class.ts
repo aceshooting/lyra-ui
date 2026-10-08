@@ -21,7 +21,7 @@ import type {
   LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 import type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
@@ -251,7 +251,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     }
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
       const list = this.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'));
-      const focused = activeElementIn(list?.shadowRoot);
+      const focused = list ? shadowFocusTarget(list) : null;
       const focusedRowIndex = focused?.closest('[data-row-index]')?.getAttribute('data-row-index');
       const focusedIndex = focusedRowIndex == null
         ? -1

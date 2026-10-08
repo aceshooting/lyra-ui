@@ -40,7 +40,8 @@ alert.addEventListener('lr-after-hide', (event) => {
 const afterHide: LyraAlertEventMap['lr-after-hide'] | undefined = undefined;
 void afterHide;
 
-// @ts-expect-error Shoelace's alert vocabulary uses primary, not Lyra's brand spelling.
+// Both the Shoelace spelling and Lyra's shared brand spelling are accepted.
 alert.variant = 'brand';
+alert.variant = 'primary';
 // @ts-expect-error Countdown accepts only the two documented physical directions.
 alert.countdown = 'inline-start';

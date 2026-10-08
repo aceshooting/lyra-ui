@@ -1261,7 +1261,7 @@ All stages land before v22.0.0, in this order.
 The initial v22 release also includes the roadmap's six design-option foundations: contrast,
 motion, typography, shape, elevation and chart palettes. Their usable inputs/presets, component
 integration and accessibility coverage precede publication; advanced editors follow in v23.
-See [v22 foundation acceptance criteria](../roadmap.md#six-design-option-foundations-required-before-v22-publication).
+See [style completion evidence](../roadmap.md#style-completion-evidence).
 
 **Related items.**
 

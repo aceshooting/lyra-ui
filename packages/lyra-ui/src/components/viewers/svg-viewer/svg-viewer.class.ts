@@ -9,9 +9,8 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { isAbortError, isResourceLimitError, LyraResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
@@ -20,48 +19,23 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
-import { renderRegionHighlightLayer } from '../region-highlight-layer.js';
+import { viewerFrameStyles } from '../viewer-frame.js';
+import {
+  regionHighlightLabel,
+  renderRegionHighlightActions,
+  renderRegionHighlightLayer,
+  sameRegionRect,
+} from '../region-highlight-layer.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
-  if (a.kind !== 'region' || b.kind !== 'region') return false;
-  return (
-    a.page === b.page &&
-    a.rect.x === b.rect.x &&
-    a.rect.y === b.rect.y &&
-    a.rect.width === b.rect.width &&
-    a.rect.height === b.rect.height
-  );
-}
-
-/** Elements that rendering may clone through `<use>` references before the SVG is refused. */
-const MAX_USE_CLONES = 100_000;
-
-/** Elements cloned by the `<use>` references within `scope` (itself included); Infinity for a
- *  reference cycle or past the ceiling. */
-function useClones(root: DocumentFragment, scope: Element | DocumentFragment, memo: Map<Element, number>): number {
-  const uses: Element[] = [...scope.querySelectorAll('use')];
-  if ('localName' in scope && scope.localName === 'use') uses.push(scope);
-  let total = 0;
-  for (const use of uses) {
-    const target = root.getElementById((use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').trim().slice(1));
-    if (!target) continue;
-    let clones = memo.get(target);
-    if (clones === undefined) {
-      memo.set(target, Infinity);
-      clones = 1 + target.querySelectorAll('*').length + useClones(root, target, memo);
-      memo.set(target, clones);
-    }
-    total += clones;
-    if (total > MAX_USE_CLONES) return Infinity;
-  }
-  return total;
+  return a.kind === 'region' && b.kind === 'region' && sameRegionRect(a, b);
 }
 
 /**
@@ -79,10 +53,6 @@ function sanitizeInlineSvg(
   template.innerHTML = markup;
   if (!template.content.querySelector('svg')) {
     throw new Error('SVG sanitizer did not return an SVG document.');
-  }
-  // Nested `<use>` fan-out multiplies rendering work exponentially in every engine.
-  if (useClones(template.content, template.content, new Map()) > MAX_USE_CLONES) {
-    throw new LyraResourceLimitError('The SVG expands too many <use> references.');
   }
   return markup;
 }
@@ -164,20 +134,31 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewTypeImage: LYRA_DEFAULT_documentPreviewTypeImage,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     documentViewerMissingSanitizer: LYRA_DEFAULT_documentViewerMissingSanitizer,
+    download: LYRA_DEFAULT_download,
     highlightOfTotal: LYRA_DEFAULT_highlightOfTotal,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
+    loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    popover: LYRA_DEFAULT_popover,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     svgViewerLabel: LYRA_DEFAULT_svgViewerLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, viewerLoadingStyles, srOnly];
+  static override styles = [LyraElement.styles, styles, viewerFrameStyles, viewerLoadingStyles, srOnly];
 
   /** URL to fetch and render as sanitized inline SVG. */
   @property() src = '';
@@ -336,14 +317,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     index: number,
     total: number,
   ): string {
-    if (highlight.label) {
-      return this.localize('highlightWithLabel', undefined, { label: highlight.label });
-    }
-    const numberFormat = getNumberFormat(this.effectiveLocale);
-    return this.localize('highlightOfTotal', undefined, {
-      index: numberFormat.format(index + 1),
-      total: numberFormat.format(total),
-    });
+    return regionHighlightLabel(highlight, index, total, this.effectiveLocale,
+      (key, values) => this.localize(key, undefined, values));
   }
 
   private renderHighlightLayer(
@@ -358,38 +333,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   private renderHighlightActions(
     regionHighlights: ResolvedRegionHighlight[],
   ): TemplateResult | typeof nothing {
-    if (regionHighlights.length < 2) return nothing;
-    return html`<div part="highlight-actions">
-      ${regionHighlights.map((highlight, index) => {
-        const label = this.highlightActionLabel(highlight, index, regionHighlights.length);
-        return html`
-        <button
-          part="region-highlight-action"
-          type="button"
-          data-highlight-id=${highlight.id}
-          aria-label=${label}
-          @click=${() => this.emit('lr-highlight-activate', { highlightId: highlight.id })}
-          @keydown=${(e: KeyboardEvent) => this.onHighlightActionKeyDown(e, index, regionHighlights.length)}
-        >
-          ${highlight.label || label}
-        </button>
-      `;
-      })}
-    </div>`;
-  }
-
-  private onHighlightActionKeyDown(e: KeyboardEvent, index: number, total: number): void {
-    const rtl = this.effectiveDirection === 'rtl';
-    const forward = e.key === 'ArrowDown' || (rtl ? e.key === 'ArrowLeft' : e.key === 'ArrowRight');
-    const backward = e.key === 'ArrowUp' || (rtl ? e.key === 'ArrowRight' : e.key === 'ArrowLeft');
-    let nextIndex: number | undefined;
-    if (forward) nextIndex = Math.min(total - 1, index + 1);
-    else if (backward) nextIndex = Math.max(0, index - 1);
-    else if (e.key === 'Home') nextIndex = 0;
-    else if (e.key === 'End') nextIndex = total - 1;
-    if (nextIndex === undefined || nextIndex === index) return;
-    e.preventDefault();
-    this.renderRoot.querySelectorAll<HTMLElement>('[part="region-highlight-action"]')[nextIndex]?.focus();
+    return renderRegionHighlightActions(regionHighlights,
+      (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
+      this.renderRoot, this.effectiveDirection === 'rtl',
+      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
   }
 
   /** Per-viewer hook for `DocumentAnchorTarget`: resolves a `region` anchor back to its owning
@@ -411,7 +358,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
     const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
-    region.scrollIntoView({ behavior, block: 'center', inline: 'center' });
+    region.scrollIntoView({ behavior, block: 'nearest', inline: 'nearest' });
     return true;
   }
 

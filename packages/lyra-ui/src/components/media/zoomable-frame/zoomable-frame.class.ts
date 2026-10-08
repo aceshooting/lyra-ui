@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -16,6 +16,45 @@ import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, L
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraZoomableFrameLoading = 'eager' | 'lazy';
+
+interface FocusBoundaryMember { onOwnerFocusBoundary(event: Event): void }
+interface FocusBoundaryHub { members: Set<FocusBoundaryMember>; dispose(): void }
+const focusBoundaryHubs = new WeakMap<Document, FocusBoundaryHub>();
+
+// One set of capture listeners per owner document, shared by every frame on the page.
+function joinFocusBoundaryHub(doc: Document, member: FocusBoundaryMember): () => void {
+  let hub = focusBoundaryHubs.get(doc);
+  if (!hub) {
+    const members = new Set<FocusBoundaryMember>();
+    const view = doc.defaultView;
+    const onEvent = (event: Event): void => { for (const m of [...members]) m.onOwnerFocusBoundary(event); };
+    doc.addEventListener('focusin', onEvent, true);
+    doc.addEventListener('focusout', onEvent, true);
+    doc.addEventListener('keydown', onEvent, true);
+    view?.addEventListener('focus', onEvent);
+    view?.addEventListener('blur', onEvent);
+    hub = {
+      members,
+      dispose: () => {
+        doc.removeEventListener('focusin', onEvent, true);
+        doc.removeEventListener('focusout', onEvent, true);
+        doc.removeEventListener('keydown', onEvent, true);
+        view?.removeEventListener('focus', onEvent);
+        view?.removeEventListener('blur', onEvent);
+      },
+    };
+    focusBoundaryHubs.set(doc, hub);
+  }
+  hub.members.add(member);
+  const joined = hub;
+  return () => {
+    joined.members.delete(member);
+    if (!joined.members.size && focusBoundaryHubs.get(doc) === joined) {
+      joined.dispose();
+      focusBoundaryHubs.delete(doc);
+    }
+  };
+}
 
 const DEFAULT_ZOOM_LEVELS = '25% 50% 75% 100% 125% 150% 175% 200%';
 const DEFAULT_IFRAME_SANDBOX = 'allow-same-origin';
@@ -294,7 +333,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   private frameIsActive(frame: HTMLIFrameElement | undefined = this.iframe): boolean {
     return Boolean(
       frame && this.isConnected &&
-      activeElementIn(this.shadowRoot) === frame,
+      shadowFocusTarget(this) === frame,
     );
   }
 
@@ -376,6 +415,19 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (event.key === 'Tab') this.scheduleFrameFocusReconciliation();
   };
 
+  /**
+   * Page-wide events only matter to a frame that holds focus or may be gaining it; Tab can reach
+   * the iframe without a focus event, so it always reconciles.
+   *
+   * @internal
+   */
+  onOwnerFocusBoundary(event: Event): void {
+    if (event.type === 'keydown') this.onFocusBoundaryKeyDown(event as KeyboardEvent);
+    else if (this.hasEmittedFocus || this.frameOwnsFocus()) this.scheduleFrameFocusReconciliation();
+  }
+
+  private leaveFocusBoundaryHub?: () => void;
+
   private resetFocusBoundaryDocument(): void {
     this.focusBoundaryDocument?.removeEventListener('keydown', this.onFocusBoundaryKeyDown, true);
     this.focusBoundaryDocument?.removeEventListener('pointerdown', this.scheduleFrameFocusReconciliation, true);
@@ -406,11 +458,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.ownerDocument.addEventListener('focusin', this.scheduleFrameFocusReconciliation, true);
-    this.ownerDocument.addEventListener('focusout', this.scheduleFrameFocusReconciliation, true);
-    this.ownerDocument.addEventListener('keydown', this.onFocusBoundaryKeyDown, true);
-    this.ownerDocument.defaultView?.addEventListener('focus', this.scheduleFrameFocusReconciliation);
-    this.ownerDocument.defaultView?.addEventListener('blur', this.scheduleFrameFocusReconciliation);
+    this.leaveFocusBoundaryHub?.();
+    this.leaveFocusBoundaryHub = joinFocusBoundaryHub(this.ownerDocument, this);
     if (this.needsReconnectFrame) {
       this.needsReconnectFrame = false;
       this.requestUpdate();
@@ -419,11 +468,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   override disconnectedCallback(): void {
     this.focusReconciliationGeneration++;
-    this.ownerDocument.removeEventListener('focusin', this.scheduleFrameFocusReconciliation, true);
-    this.ownerDocument.removeEventListener('focusout', this.scheduleFrameFocusReconciliation, true);
-    this.ownerDocument.removeEventListener('keydown', this.onFocusBoundaryKeyDown, true);
-    this.ownerDocument.defaultView?.removeEventListener('focus', this.scheduleFrameFocusReconciliation);
-    this.ownerDocument.defaultView?.removeEventListener('blur', this.scheduleFrameFocusReconciliation);
+    this.leaveFocusBoundaryHub?.();
+    this.leaveFocusBoundaryHub = undefined;
     this.navigationGeneration++;
     this.needsReconnectFrame = true;
     // Transient focus state, reset like every other open-state flag: a disconnected host is not
@@ -478,7 +524,14 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       // Theme observation is armed only once sync is first wanted.
       this.themeWatcher ??= new ThemeWatcher(this, () => this.syncTheme());
       this.syncTheme();
-    } else this.restoreTheme();
+    } else {
+      if (this.themeWatcher) {
+        this.themeWatcher.hostDisconnected();
+        this.removeController(this.themeWatcher);
+        this.themeWatcher = undefined;
+      }
+      this.restoreTheme();
+    }
   }
 
   /** Returns the current iframe window while connected. Cross-origin windows are still opaque. */

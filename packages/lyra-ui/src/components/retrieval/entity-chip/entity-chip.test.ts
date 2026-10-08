@@ -212,6 +212,7 @@ it('shows no popover/hover affordance when the default slot is empty', async () 
   el.dispatchEvent(
     new Event('pointerenter', { bubbles: true, composed: true })
   );
+  // wait-reason: negative assertion, a chip without preview content must not open its popover on hover
   await aTimeout(10);
   expect(
     (
@@ -414,7 +415,7 @@ describe('preview show/hide across pointer and focus', () => {
     await el.updateComplete;
     expect(hidden(el), 'still open during the grace delay').to.be.false;
 
-    await aTimeout(320);
+    await waitUntil(() => hidden(el), 'popover closes once the grace delay elapses', { timeout: 2000 });
     await el.updateComplete;
     expect(hidden(el), 'closes once the delay elapses').to.be.true;
   });
@@ -448,6 +449,7 @@ describe('preview show/hide across pointer and focus', () => {
     wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
     await el.updateComplete;
     wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
+    // wait-reason: negative assertion, focus must hold the preview open past the hide delay
     await aTimeout(320);
     await el.updateComplete;
     expect(hidden(el), 'focus still holds it open past the hide delay').to.be

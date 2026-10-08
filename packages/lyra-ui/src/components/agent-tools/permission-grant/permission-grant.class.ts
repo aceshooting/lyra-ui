@@ -3,10 +3,12 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import '../../forms/button/button.class.js';
 import { styles } from './permission-grant.styles.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_permissionGrantAllowOnce, LYRA_DEFAULT_permissionGrantAllowSession, LYRA_DEFAULT_permissionGrantLabel, LYRA_DEFAULT_permissionGrantScopeLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_permissionGrantAllowOnce, LYRA_DEFAULT_permissionGrantAllowSession, LYRA_DEFAULT_permissionGrantLabel, LYRA_DEFAULT_permissionGrantScopeLabel, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `granted` is an alias of the shared `approved` spelling. */
@@ -46,7 +48,9 @@ const DECISION_LABEL_KEY: Record<PermissionGrantDecision, string> = {
  * @csspart scope-row - The row grouping the scope label and requested scope text.
  * @csspart status - The localized controlled request status (`tabindex="-1"`).
  * @csspart actions - The decision button group, rendered only while pending.
- * @csspart decision - One native decision button, themed through the shared `--lr-button-*` tokens.
+ * @csspart decision - One decision `<lr-button>`, themed through the shared `--lr-button-*` tokens.
+ * @csspart decision-base - The decision button's internal control (forwarded from `<lr-button>`).
+ * @csspart decision-label - The decision button's label wrapper (forwarded from `<lr-button>`).
  * @status experimental
  * @since 22.0.0
  */
@@ -59,6 +63,7 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
     collapse: LYRA_DEFAULT_collapse,
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
+    date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
     details: LYRA_DEFAULT_details,
     map: LYRA_DEFAULT_map,
@@ -68,6 +73,7 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
     permissionGrantAllowSession: LYRA_DEFAULT_permissionGrantAllowSession,
     permissionGrantLabel: LYRA_DEFAULT_permissionGrantLabel,
     permissionGrantScopeLabel: LYRA_DEFAULT_permissionGrantScopeLabel,
+    progress: LYRA_DEFAULT_progress,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
   };
@@ -107,7 +113,7 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
     super.willUpdate(changed);
     // The decision buttons unmount once the status settles.
     this.settledWithFocus = changed.get('status') === 'pending' && this.status !== 'pending'
-      && Boolean(this.shadowRoot?.activeElement?.matches('[part~="decision"]'));
+      && Boolean(shadowFocusTarget(this)?.matches('[part~="decision"]'));
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -163,15 +169,18 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
         ${pending
           ? html`<div part="actions">
               ${(['allow-once', 'allow-session', 'deny'] as const).map((decision) => html`
-                <button
+                <lr-button
                   part="decision"
+                  variant="neutral"
+                  appearance="outlined"
                   type="button"
+                  exportparts="base:decision-base, label:decision-label"
                   data-decision=${decision}
                   ?disabled=${this.disabled || !identified}
                   @click=${() => {
                     if (requestId !== null) this.requestDecision(requestId, scope, decision);
                   }}
-                >${this.localize(DECISION_LABEL_KEY[decision])}</button>
+                >${this.localize(DECISION_LABEL_KEY[decision])}</lr-button>
               `)}
             </div>`
           : nothing}

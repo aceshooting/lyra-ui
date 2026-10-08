@@ -26,7 +26,8 @@ describe('lr-connector-manager', () => {
   it('keeps each action bound to its own connector when the host re-sorts rows', async () => {
     const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager style="--lr-button-radius: 7px" .connectors=${connectors}></lr-connector-manager>`);
     const filesAction = rowPart(el, 'files', 'action')!;
-    expect(getComputedStyle(filesAction).borderTopLeftRadius).to.equal('7px');
+    await (filesAction as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    expect(getComputedStyle(filesAction.shadowRoot!.querySelector('[part~="base"]')!).borderTopLeftRadius).to.equal('7px');
     el.connectors = [connectors[1]!, connectors[0]!, connectors[2]!, connectors[3]!];
     await el.updateComplete;
     expect(filesAction.getAttribute('aria-label')).to.equal('Connect Project files');

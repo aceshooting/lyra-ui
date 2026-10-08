@@ -18,7 +18,7 @@ it('retains every source index when the table fits the rendering budget', () => 
   expectWithinCellBudget(sample);
 });
 
-it('samples both axes deterministically with their endpoints intact', () => {
+it('samples deterministically with their endpoints intact', () => {
   const first = sampleChartTableIndexes(10_000, 10_000);
   const second = sampleChartTableIndexes(10_000, 10_000);
 
@@ -28,9 +28,20 @@ it('samples both axes deterministically with their endpoints intact', () => {
   expect(first.rowIndexes.at(-1)).to.equal(9_999);
   expect(first.seriesIndexes[0]).to.equal(0);
   expect(first.seriesIndexes.at(-1)).to.equal(9_999);
-  expect(first.rowIndexes.length).to.be.greaterThan(2);
-  expect(first.seriesIndexes.length).to.be.greaterThan(2);
+  expect(first.rowIndexes).to.have.length(2);
+  expect(first.seriesIndexes).to.have.length(500);
   expectWithinCellBudget(first);
+});
+
+it('keeps every series and thins only rows while the series count fits', () => {
+  for (const [rows, series] of [[600, 3], [1_000, 4], [1_000, 100]] as const) {
+    const sample = sampleChartTableIndexes(rows, series);
+    expect(sample.seriesIndexes).to.have.length(series);
+    expect(sample.rowIndexes).to.have.length(Math.floor(1_000 / series));
+    expect(sample.rowIndexes[0]).to.equal(0);
+    expect(sample.rowIndexes.at(-1)).to.equal(rows - 1);
+    expectWithinCellBudget(sample);
+  }
 });
 
 it('uses the budget along the large axis without dropping a small nontrivial axis', () => {

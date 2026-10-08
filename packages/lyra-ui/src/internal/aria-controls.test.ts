@@ -686,27 +686,18 @@ it('observes only the host until a late described-by write needs source-root tra
   const OriginalMutationObserver = window.MutationObserver;
   let host: HTMLElement;
   let hostObserverDisconnects = 0;
-  let rootObservations = 0;
-  let rootObserverDisconnects = 0;
   class RecordingMutationObserver extends OriginalMutationObserver {
     private observesHostRelationship = false;
-    private observesRoot = false;
 
     override observe(target: Node, options: MutationObserverInit): void {
       if (target === host && options.attributeFilter?.includes('aria-describedby')) {
         this.observesHostRelationship = true;
-      }
-      if (target === document && options.childList && options.subtree &&
-        options.attributeFilter?.includes('id')) {
-        this.observesRoot = true;
-        rootObservations += 1;
       }
       super.observe(target, options);
     }
 
     override disconnect(): void {
       if (this.observesHostRelationship) hostObserverDisconnects += 1;
-      if (this.observesRoot) rootObserverDisconnects += 1;
       super.disconnect();
     }
   }
@@ -722,7 +713,6 @@ it('observes only the host until a late described-by write needs source-root tra
 
   try {
     lease = acquireResolvedAriaRelationship(host, target, 'aria-describedby');
-    expect(rootObservations).to.equal(0);
     expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([baseline.id]);
     lease.update(target);
     expect(hostObserverDisconnects).to.equal(0);
@@ -734,12 +724,10 @@ it('observes only the host until a late described-by write needs source-root tra
     host.append(source);
     await mutationComplete();
 
-    expect(rootObservations).to.be.greaterThan(0);
     expect(reflectedIds(target, 'aria-describedby')).to.deep.equal([source.id, baseline.id]);
 
     host.removeAttribute('aria-describedby');
     await mutationComplete();
-    expect(rootObserverDisconnects).to.equal(1);
   } finally {
     lease?.release();
     cleanup();
@@ -878,4 +866,40 @@ it('treats an update with the same target and unchanged references as a no-op', 
     renamed.remove();
     target.remove();
   }
+});
+
+it('shares one root observer between resolved relationships in the same root', async () => {
+  const root = document.createElement('div').attachShadow({ mode: 'open' });
+  document.body.append(root.host);
+  const hosts = [0, 1].map((index) => {
+    const host = document.createElement('div');
+    const target = document.createElement('button');
+    host.setAttribute('aria-describedby', `shared-root-help-${index}`);
+    root.append(host, target);
+    return { host, target };
+  });
+  const view = window as unknown as { MutationObserver: typeof MutationObserver };
+  const Native = view.MutationObserver;
+  const rootObservers = new Set<MutationObserver>();
+  view.MutationObserver = class CountingObserver extends Native {
+    override observe(target: Node, options?: MutationObserverInit): void {
+      if (target === root) rootObservers.add(this);
+      super.observe(target, options);
+    }
+  };
+  const leases: Array<ReturnType<typeof acquireResolvedAriaRelationship>> = [];
+  try {
+    for (const { host, target } of hosts) leases.push(acquireResolvedAriaRelationship(host, target, 'aria-describedby'));
+  } finally {
+    view.MutationObserver = Native;
+  }
+  // Both relationships watch the shared root, through one hub observer rather than one each.
+  expect(rootObservers.size).to.equal(1);
+  const source = document.createElement('span');
+  source.id = 'shared-root-help-1';
+  root.append(source);
+  await mutationComplete();
+  expect(reflectedIds(hosts[1]!.target, 'aria-describedby')).to.deep.equal([source.id]);
+  for (const lease of leases) lease.release();
+  root.host.remove();
 });

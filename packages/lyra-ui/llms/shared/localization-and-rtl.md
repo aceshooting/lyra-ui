@@ -200,26 +200,26 @@ English-resolved locale, since falling through to `defaults` is simply how Engli
 Gotcha: `localize()`'s optional second argument is a fallback string. Passing a defined literal there
 silently defeats a registered catalog — omit it, or pass `undefined`.
 
-### Ready-made catalogs: `@aceshooting/lyra-ui/translations/<locale>.js`
+### Ready-made catalogs: `@aceshooting/lyra-translations/<locale>.js`
 
-Sixty-six full catalogs ship with the package, each covering every key in `LYRA_DEFAULT_STRINGS`.
+Sixty-six full catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
 The public `@aceshooting/lyra-ui/locales.json` manifest lists their canonical identities, authored
 source spellings, import paths, and structural coverage. It also distinguishes translation
 coverage from linguistic review tier. The catalogs are **side-effect-only modules**: import one
 bare, read nothing from it, and it calls `registerLyraLocale()` for you.
 
 ```ts
-import "@aceshooting/lyra-ui/translations/de.js";
-import "@aceshooting/lyra-ui/translations/de-CH.js"; // Swiss Standard German
-import "@aceshooting/lyra-ui/translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
-import "@aceshooting/lyra-ui/translations/fa.js"; // fa-IR falls back to this base catalog
-import "@aceshooting/lyra-ui/translations/he.js"; // he-IL falls back to this base catalog
-import "@aceshooting/lyra-ui/translations/it.js"; // Italian
-import "@aceshooting/lyra-ui/translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
-import "@aceshooting/lyra-ui/translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
-import "@aceshooting/lyra-ui/translations/ro.js"; // Romanian
-import "@aceshooting/lyra-ui/translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
-import "@aceshooting/lyra-ui/translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
+import "@aceshooting/lyra-translations/de.js";
+import "@aceshooting/lyra-translations/de-CH.js"; // Swiss Standard German
+import "@aceshooting/lyra-translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
+import "@aceshooting/lyra-translations/fa.js"; // fa-IR falls back to this base catalog
+import "@aceshooting/lyra-translations/he.js"; // he-IL falls back to this base catalog
+import "@aceshooting/lyra-translations/it.js"; // Italian
+import "@aceshooting/lyra-translations/pt-BR.js"; // Brazilian: serves pt and pt-BR
+import "@aceshooting/lyra-translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
+import "@aceshooting/lyra-translations/ro.js"; // Romanian
+import "@aceshooting/lyra-translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
+import "@aceshooting/lyra-translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -245,7 +245,7 @@ ones cost nothing. A catalog registered this way is merged like any other, so a 
 in `getRegisteredLyraLocales()`, and therefore in `<lr-locale-picker>`, so the set you import is the
 set a user can switch between.
 
-### Smaller catalogs: `@aceshooting/lyra-ui/translations/<locale>/<family>.js`
+### Smaller catalogs: `@aceshooting/lyra-translations/<locale>/<family>.js`
 
 Each locale above is also published as twelve smaller, side-effect-only **family slices** — one per
 component family (`agent-tools`, `charts`, `conversation`, `data`, `forms`, `layout`, `media`,
@@ -254,12 +254,12 @@ one family reaches (roving-focus/overlay/a11y strings like `collapse`, `open`, `
 the families the application actually renders instead of the whole-locale aggregate above:
 
 ```ts
-import "@aceshooting/lyra-ui/translations/fr/forms.js"; // lr-input, lr-select, lr-combobox, ...
-import "@aceshooting/lyra-ui/translations/fr/data.js"; // lr-table, lr-tree, lr-data-grid, ...
-import "@aceshooting/lyra-ui/translations/fr/shared.js"; // cross-cutting strings both families reach
+import "@aceshooting/lyra-translations/fr/forms.js"; // lr-input, lr-select, lr-combobox, ...
+import "@aceshooting/lyra-translations/fr/data.js"; // lr-table, lr-tree, lr-data-grid, ...
+import "@aceshooting/lyra-translations/fr/shared.js"; // cross-cutting strings both families reach
 ```
 
-`@aceshooting/lyra-ui/translations/fr.js` is unchanged: it is now a thin aggregate that imports every
+`@aceshooting/lyra-translations/fr.js` is unchanged: it is now a thin aggregate that imports every
 slice above, so the plain whole-locale import from the previous section keeps working exactly as
 before — this is a purely additive, opt-in way to shrink a non-English bundle, mirroring the
 per-component tree-shaking English defaults already get for free. A component's family is the

@@ -12,6 +12,7 @@ it('settles a toast removed before activation without announcing a stale show', 
   el.remove();
   await waitUntil(() => settled, 'removed pending toast did not settle');
   await completion;
+  // wait-reason: asserting that no stale lr-show is announced
   await aTimeout(30);
   expect(shows).to.equal(0);
   expect(el.open).to.equal(false);
@@ -27,6 +28,7 @@ it('retires a toast activation when the alert moves directly outside its owning 
   destination.append(el);
   await waitUntil(() => settled, 'reparented pending toast did not settle');
   await completion;
+  // wait-reason: asserting that no stale lr-show is announced
   await aTimeout(30);
   expect(el.parentElement === destination).to.equal(true);
   expect(shows).to.equal(0);

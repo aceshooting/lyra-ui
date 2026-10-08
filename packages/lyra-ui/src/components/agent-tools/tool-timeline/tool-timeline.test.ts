@@ -1,5 +1,6 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-timeline.js';
+import '../tool-approval-dialog/tool-approval-dialog.js';
 import type { LyraToolTimeline, ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
 import type { LyraToolCallChip } from '../tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultView } from '../tool-result-view/tool-result-view.class.js';

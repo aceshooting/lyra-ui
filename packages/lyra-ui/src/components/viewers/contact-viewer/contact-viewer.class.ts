@@ -263,6 +263,11 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     }
   }
 
+  /** Only the loaded content is searchable and quotable, never the empty-note, spinner or error text. */
+  protected override textContentRoot(): Element | null {
+    return this.fetchState.kind === 'loaded' ? super.textContentRoot() : null;
+  }
+
   override render(): TemplateResult {
     const maxHeight = sanitizeCssLength(this.maxHeight);
     return html`<div part="base" role=${viewerSemanticRole(this, 'region') ?? nothing} style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${viewerSemanticLabel(this, this.name || this.localize('contactViewerLabel')) ?? nothing} aria-busy=${this.fetchState.kind === 'loading' ? 'true' : 'false'}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;

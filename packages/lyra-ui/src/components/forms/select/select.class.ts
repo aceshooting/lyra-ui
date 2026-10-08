@@ -14,10 +14,9 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   deferredPlaceReady as place,
-  settlePopupTransition,
-  PopupTransitionWaiters,
   syncTopLayerRelease,
   topLayerPlacement,
   type DeferredOperationHandle,
@@ -39,7 +38,7 @@ import {
   VALIDITY_ANCHOR,
 } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
@@ -474,7 +473,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  */
 export class LyraSelect<
   Multiple extends boolean = boolean,
-> extends LyraElement<LyraSelectEventMap<Multiple>> {
+> extends LyraFormControlElement<LyraSelectEventMap<Multiple>> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -788,7 +787,12 @@ export class LyraSelect<
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private positionedDirection?: 'ltr' | 'rtl';
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({
+    host: this,
+    popup: () => this.renderRoot.querySelector('[part="listbox"]'),
+    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    onPointer: (event) => this.onDocPointer(event),
+  });
   @state() private listboxHidden = true;
   /** Rows mount on first open, so a closed picker with hundreds of options stays cheap. */
   @state() private listboxRendered = false;
@@ -803,8 +807,6 @@ export class LyraSelect<
   private openStateGeneration = 0;
   private pendingOpenTransitionStart?: boolean;
   private suppressedOpenLifecycleGeneration?: number;
-  private transitionToken = 0;
-  private readonly transitionWaiters = new PopupTransitionWaiters<'lr-after-show' | 'lr-after-hide'>();
   // The committed selection, always an array -- capped to one entry outside
   // `multiple` mode, where `value`'s getter unwraps it back to a plain string.
   private _selected: string[] = [];
@@ -914,22 +916,6 @@ export class LyraSelect<
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  /** Returns the browser-resolved form owner, including an external owner selected by `form`. */
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** @internal */
@@ -1052,9 +1038,7 @@ export class LyraSelect<
     // control that was already settled closed: it could be re-enabled and shown before this batch
     // renders.
     const isClosing = this._open || this.pendingOpenTransitionStart === true;
-    this.transitionToken++;
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
+    this.popupController.cancel();
     if (!this._open) {
       if (isClosing)
         this.suppressedOpenLifecycleGeneration = this.openStateGeneration;
@@ -1084,21 +1068,15 @@ export class LyraSelect<
     ) {
       return;
     }
-    const name = this.open ? 'lr-show' : 'lr-hide';
     // Removal cannot be vetoed -- the element is already gone -- so the disconnect-driven close
     // is announced without offering a veto nobody could honour.
     if (!this.isConnected) {
-      this.emit('lr-hide');
+      emitPopupEvent(this, 'lr-hide', false);
       return;
     }
-    if (!this.emit(name, null, { cancelable: true }).defaultPrevented) return;
-    this.openVetoed = true;
-    this.open = !this.open;
-    // `show()`/`hide()` already registered a waiter for the transition this veto just cancelled;
-    // without resolving it their returned promise would never settle.
-    this.transitionWaiters.resolve(
-      this.open ? 'lr-after-hide' : 'lr-after-show'
-    );
+    this.openVetoed = this.popupController.announce(this.open, () => {
+      this.open = !this.open;
+    });
   }
 
   /** Submission name.
@@ -1546,7 +1524,7 @@ export class LyraSelect<
     markVetoGuardWrite(this.selectionWriteGuard);
     this.listboxHidden = true;
     this.releaseExternalDescription();
-    this.transitionToken++;
+    this.popupController.cancel();
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -1554,9 +1532,7 @@ export class LyraSelect<
     this.typeBuffer.clear();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
+    this.popupController.unbindPointer();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -1568,9 +1544,7 @@ export class LyraSelect<
   override adoptedCallback(): void {
     markVetoGuardWrite(this.selectionWriteGuard);
     super.adoptedCallback();
-    this.transitionToken++;
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
+    this.popupController.cancel();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
     this.cleanup?.();
@@ -1578,7 +1552,7 @@ export class LyraSelect<
     this.positionedDirection = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.typeBuffer.clear();
     queueMicrotask(() => this.reconnectOpenPopup());
   }
@@ -2037,16 +2011,14 @@ export class LyraSelect<
   /** Opens the listbox and resolves after `lr-after-show`. */
   show(): Promise<void> {
     if (this.open || this.effectiveDisabled) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-hide');
-    const settled = this.transitionWaiters.wait('lr-after-show');
+    const settled = this.popupController.wait(true);
     this.open = true;
     return settled;
   }
   /** Closes the listbox and resolves after `lr-after-hide`. */
   hide(): Promise<void> {
     if (!this.open) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-show');
-    const settled = this.transitionWaiters.wait('lr-after-hide');
+    const settled = this.popupController.wait(false);
     this.open = false;
     return settled;
   }
@@ -2115,7 +2087,7 @@ export class LyraSelect<
       },
       restoreFocusTo: this.triggerElement ?? null,
     });
-    this.bindDocumentPointer();
+    this.popupController.bindPointer();
     this.positionListbox();
   }
 
@@ -2127,16 +2099,8 @@ export class LyraSelect<
     this.positionedDirection = undefined;
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.restoreFocusOnClose = true;
-  }
-
-  private bindDocumentPointer(): void {
-    if (this.isConnected) this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
   }
 
   private reconnectOpenPopup(): void {
@@ -2214,19 +2178,13 @@ export class LyraSelect<
     }
   }
 
-  private async settleTransition(
-    event: 'lr-after-show' | 'lr-after-hide'
-  ): Promise<void> {
-    const token = ++this.transitionToken;
-    await settlePopupTransition({
-      host: this,
-      popup: () => this.renderRoot.querySelector('[part="listbox"]'),
-      isCurrent: () => this.transitionToken === token,
-      waitForPosition: event === 'lr-after-show' ? async () => {
+  private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return this.popupController.settle(event, {
+      waitForPosition: async (stale) => {
         while (this.open) {
           const readiness = this.positioningReady;
           const positioned = await readiness;
-          if (this.transitionToken !== token) return false;
+          if (stale()) return false;
           if (positioned) break;
           if (readiness === this.positioningReady) {
             this.forceCloseOpenState();
@@ -2234,12 +2192,8 @@ export class LyraSelect<
           }
         }
         return true;
-      } : undefined,
-      conceal: event === 'lr-after-hide' ? () => { this.listboxHidden = true; } : undefined,
-      onSettled: () => {
-        this.emit(event);
-        this.transitionWaiters.resolve(event);
       },
+      conceal: () => { this.listboxHidden = true; },
     });
   }
 

@@ -619,7 +619,7 @@ it("picks up a tab added dynamically after connect", async () => {
   extraPanel.textContent = "Extra content";
   el.append(extraTab, extraPanel);
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   expect(tabButtons(el).map((b) => b.dataset["slot"])).to.deep.equal([
@@ -635,7 +635,7 @@ it("picks up a disabled attribute toggled on an already-rendered child", async (
   const child = el.querySelector('lr-tab[panel="preview"]')!;
   child.setAttribute("disabled", "");
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const buttons = tabButtons(el);
@@ -671,10 +671,12 @@ it("a mutation on a nested descendant (not a direct child) never forces a tabs r
   const nested = el.querySelector("button")!;
   nested.removeAttribute("disabled");
 
+  // wait-reason: negative assertion, no re-render may follow an unrelated nested mutation
   await aTimeout(50);
   expect(updateCount).to.equal(0);
 
   nested.firstChild!.textContent = "changed";
+  // wait-reason: negative assertion, no re-render may follow a text mutation
   await aTimeout(50);
   expect(updateCount).to.equal(0);
 });
@@ -684,7 +686,7 @@ it("reassigns active when the currently-active child is removed", async () => {
   expect(el.active).to.equal("input");
   el.querySelector('lr-tab[panel="input"]')!.remove();
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   expect(el.active).to.equal("preview");
@@ -696,7 +698,7 @@ it("rehomes focus when the focused active tab is removed", async () => {
   tabButtons(el)[0]!.focus();
   el.querySelector('lr-tab[panel="input"]')!.remove();
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const focused = el.shadowRoot!.activeElement as HTMLElement | null;
@@ -865,7 +867,7 @@ it("rehomes focus when the focused active tab becomes inert", async () => {
   tabButtons(el)[0]!.focus();
   (el.querySelector('lr-tab[panel="input"]') as HTMLElement).inert = true;
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const focused = el.shadowRoot!.activeElement as HTMLElement | null;
@@ -892,7 +894,7 @@ it("leaves selection and panels alone when an ancestor inerts the whole group", 
   // A modal inerting the page behind it must not blank every panel: uniform inertness needs no
   // per-tab handling, since focus cannot be inside the group at all.
   wrapper.inert = true;
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   expect(el.active).to.equal("input");
@@ -905,7 +907,7 @@ it("rehomes focus when the focused active tab becomes disabled", async () => {
   tabButtons(el)[0]!.focus();
   el.querySelector('lr-tab[panel="input"]')!.setAttribute("disabled", "");
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const focused = el.shadowRoot!.activeElement as HTMLElement | null;
@@ -923,7 +925,7 @@ it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed"
   expect(el.shadowRoot!.activeElement === tabButtons(el)[1]).to.equal(true);
 
   el.querySelector('lr-tab[panel="input"]')!.remove();
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const focused = el.shadowRoot!.activeElement as HTMLButtonElement | null;
@@ -969,7 +971,7 @@ it("does not steal focus by reassigning it when the invalid-active correction ha
 
   el.querySelector('lr-tab[panel="input"]')!.remove();
 
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   expect(el.active).to.equal("preview");
@@ -1378,24 +1380,24 @@ it("keeps rich <lr-tab> content inert while the outer tab retains its flattened 
   await expect(el).to.be.accessible();
 
   link.firstChild!.textContent = "Updated ";
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Updated tab Workspace"
   );
 
   content.inert = false;
-  await aTimeout(0);
+  await nextFrame();
   expect(content.inert).to.equal(true);
 
   content.slot = "released";
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(content.hasAttribute("inert")).to.equal(false);
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Workspace");
 
   content.removeAttribute("slot");
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(content.inert).to.equal(true);
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
@@ -1403,7 +1405,7 @@ it("keeps rich <lr-tab> content inert while the outer tab retains its flattened 
   );
 
   el.querySelector("lr-tab")!.remove();
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(content.hasAttribute("inert")).to.equal(false);
 });
@@ -1438,14 +1440,14 @@ it("derives a rich tab name from accessible default-slot content and observes vi
   await expect(el).to.be.accessible();
 
   alternate.removeAttribute("aria-hidden");
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Visible Alternate label"
   );
 
   visibleSuffix.removeAttribute("aria-hidden");
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Visible tab Alternate label"
@@ -1453,14 +1455,14 @@ it("derives a rich tab name from accessible default-slot content and observes vi
 
   visible.hidden = true;
   hidden.hidden = false;
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Ignored hidden Alternate label"
   );
 
   styledHidden.style.display = "";
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Ignored hidden Ignored CSS hidden Alternate label"
@@ -1485,7 +1487,7 @@ it("derives a rich tab name from aria-labelledby and image alternatives", async 
     "Settings diagram"
   );
   el.querySelector("img")!.alt = "Updated settings diagram";
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Updated settings diagram"
@@ -1516,7 +1518,7 @@ it("omits a rich label branch skipped by content-visibility:auto", async () => {
   );
 
   tab.classList.add("refresh-accessible-label");
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
@@ -1575,7 +1577,7 @@ it("omits closed <details> text from a rich tab name and restores it when opened
   await expect(el).to.be.accessible();
 
   details.open = true;
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Summary Hidden details"
@@ -1680,7 +1682,7 @@ it('omits an empty unpaneled descriptor instead of exposing its synthetic key as
   expect(el.active).to.equal('details');
 
   el.querySelector('lr-tab')!.textContent = 'Decorative only';
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tabButtons(el).map((button) => button.getAttribute('aria-label'))).to.deep.equal([
     'Decorative only',
@@ -1762,7 +1764,7 @@ it("resyncs post-mount element-model identity mutations through properties and a
     tabPanels[0]!.updateComplete,
     tabPanels[1]!.updateComplete,
   ]);
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
 
   const buttons = tabButtons(el);
@@ -1834,14 +1836,14 @@ it("restores each descriptor and panel's latest author-owned slot when it is rel
 
   tab.slot = "latest-tab";
   panel.slot = "latest-panel";
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tab.slot).to.equal("general-tab");
   expect(panel.slot).to.equal("general");
 
   tab.remove();
   panel.remove();
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tab.slot).to.equal("latest-tab");
   expect(panel.slot).to.equal("latest-panel");
@@ -1867,7 +1869,7 @@ it("restores author slot state on disconnect and safely reprojects it after reco
   expect(panel.slot).to.equal("panel-author");
 
   host.append(el);
-  await aTimeout(0);
+  await nextFrame();
   await el.updateComplete;
   expect(tab.slot).to.equal("general-tab");
   expect(panel.slot).to.equal("general");
@@ -1894,14 +1896,14 @@ it("preserves author slot ownership across reparenting into another tab group", 
   const tab = first.querySelector<LyraTab>("lr-tab")!;
   const panel = first.querySelector<LyraTabPanel>("lr-tab-panel")!;
   second.append(tab, panel);
-  await aTimeout(0);
+  await nextFrame();
   await Promise.all([first.updateComplete, second.updateComplete]);
   expect(tab.slot).to.equal("general-tab");
   expect(panel.slot).to.equal("general");
 
   tab.remove();
   panel.remove();
-  await aTimeout(0);
+  await nextFrame();
   await second.updateComplete;
   expect(tab.slot).to.equal("tab-author");
   expect(panel.slot).to.equal("panel-author");
@@ -2933,7 +2935,7 @@ describe("upstream tab surface", () => {
       locked.shadowRoot!.querySelector('[part~="close-button"]') as HTMLElement
     ).click();
     press(tabButtons(el)[1]!, "Delete");
-    await aTimeout(0);
+    await nextFrame();
 
     expect(closeRequests).to.equal(0);
     expect(el.active).to.equal("general");

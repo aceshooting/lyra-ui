@@ -47,4 +47,19 @@ describe('PPTX resource guard', () => {
     ));
     await expectResourceLimit(async () => assertPptxArchiveWithinLimits(await deck(1_000_000)));
   });
+
+  it('node-counts the parts the relationships resolve, whatever their names', async () => {
+    const relationship = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+    const rels = (type: string, target: string) => '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      + `<Relationship Id="rId1" Type="${relationship}${type}" Target="${target}"/></Relationships>`;
+    const deck = async (slideNodes: number) => assembleZip([
+      await zipEntry('_rels/.rels', rels('officeDocument', 'ppt/presentation.xml')),
+      await zipEntry('ppt/presentation.xml', '<p:presentation/>'),
+      await zipEntry('ppt/_rels/presentation.xml.rels', rels('slide', 'slides/slide1.dat')),
+      await zipEntry('ppt/slides/slide1.dat', '<p:sld>' + '<a:t/>'.repeat(slideNodes) + '</p:sld>', { deflate: true }),
+      await zipEntry('ppt/media/image1.png', '<a'.repeat(2_048)),
+    ]);
+    await assertPptxArchiveWithinLimits(await deck(5), { maxXmlNodes: 20 });
+    await expectResourceLimit(async () => assertPptxArchiveWithinLimits(await deck(30), { maxXmlNodes: 20 }));
+  });
 });

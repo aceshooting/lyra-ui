@@ -35,6 +35,11 @@ try {
     join(fixtureScripts, 'is-main-module.mjs'),
     readFileSync(join(scriptDir, 'is-main-module.mjs'), 'utf8'),
   );
+  mkdirSync(join(fixtureScripts, 'lib'), { recursive: true });
+  writeFileSync(
+    join(fixtureScripts, 'lib', 'fs-walk.mjs'),
+    readFileSync(join(scriptDir, 'lib', 'fs-walk.mjs'), 'utf8'),
+  );
   // A bare top-level call in a `.class.ts` module must NOT, by itself, pull the file into
   // discovery: its class export is always referenced by its sibling registration entry's
   // `defineElement()` call, so it is never independently tree-shaken away in practice -- the
@@ -143,7 +148,6 @@ try {
     './dist/styles/native.css',
     './dist/styles/utilities.css',
     './dist/theme.css',
-    './dist/translations/fr.js',
     './src/all.ts',
     './src/autoloader-cdn.ts',
     './src/components/forms/index.ts',

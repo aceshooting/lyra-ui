@@ -887,7 +887,7 @@ describe('collecting an already-slotted bare-geometry fallback without relying o
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange was intercepted');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all",
@@ -922,7 +922,7 @@ describe('collecting an already-slotted bare-geometry fallback without relying o
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the real initial slotchange fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation',

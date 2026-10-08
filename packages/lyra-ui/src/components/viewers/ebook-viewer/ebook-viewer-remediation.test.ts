@@ -121,7 +121,7 @@ async function requestedBeacons(markup: string, beacon: string): Promise<string[
     chapterDocument.open();
     chapterDocument.write(markup);
     chapterDocument.close();
-    // Real timers with a margin: give an unblocked request time to be recorded.
+    // wait-reason: real timers with a margin: give an unblocked request time to be recorded.
     await new Promise((resolve) => setTimeout(resolve, 500));
     return (frame.contentWindow!.performance.getEntriesByType('resource') as PerformanceResourceTiming[])
       .filter((entry) => entry.name.startsWith(beacon) && entry.responseStart > 0)

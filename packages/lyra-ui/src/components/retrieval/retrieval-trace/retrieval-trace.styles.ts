@@ -122,4 +122,15 @@ export const styles = css`
       grid-template-columns: 1fr;
     }
   }
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='evidence-toggle'] {
+    padding-block: var(--lr-space-2xs);
+  }
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='evidence-body'] {
+    padding: var(--lr-space-xs);
+    padding-block-start: 0;
+  }
+  :host([frame='plain']) [part='evidence-row'] {
+    border: 0;
+    border-radius: 0;
+  }
 `;

@@ -5,6 +5,7 @@ import '../radio/radio.js';
 import '../radio/radio-button.js';
 import '../radio/radio-group.js';
 import '../color-picker/color-picker.js';
+import '../slider/slider.js';
 
 type Host = HTMLElement & { updateComplete: Promise<unknown> };
 
@@ -18,6 +19,8 @@ const cases: ReadonlyArray<readonly [string, string, string]> = [
   ['lr-checkbox-group label', '<lr-checkbox-group label="Streaming enabled"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>', '[part~="form-control-label"]'],
   ['lr-checkbox-group hint', '<lr-checkbox-group label="L" hint="Streaming enabled"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>', '[part="hint"]'],
   ['lr-color-picker', '<lr-color-picker label="Streaming enabled"></lr-color-picker>', '[part~="form-control-label"]'],
+  ['lr-slider label', '<lr-slider label="Streaming enabled"></lr-slider>', '[part~="label"]'],
+  ['lr-slider hint', '<lr-slider label="L" hint="Streaming enabled"></lr-slider>', '[part~="hint"]'],
 ];
 
 const textHeight = async (wrapper: string, part: string): Promise<number> => {

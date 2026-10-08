@@ -127,6 +127,7 @@ it('anchors the flush deadline to the first call in a burst, not later calls', a
   });
 
   a.announce('a');
+  // wait-reason: a second announce must land inside the first call's throttle window
   await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS / 2));
   a.announce('b'); // still inside the first call's window
 
@@ -182,6 +183,7 @@ it('a forced flush cancels the scheduled trailing-edge flush so it never double-
 
   // Wait well past the original window; if the timer weren't cancelled,
   // a second (stale) flush of 'a' would land here.
+  // wait-reason: asserting no stale flush lands after the original window
   await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS * 2));
   expect(flushes).to.deep.equal(['b']);
 });
@@ -196,6 +198,7 @@ it('cancel() drops a pending announcement without flushing it', async () => {
   a.announce('a');
   a.cancel();
 
+  // wait-reason: asserting a cancelled announcement never flushes
   await new Promise((resolve) => setTimeout(resolve, THROTTLE_MS * 2));
   expect(flushes).to.deep.equal([]);
 });
@@ -250,6 +253,7 @@ it('changing throttleMs between bursts affects the next burst, not one already s
 
   a.announce('a');
   a.throttleMs = 5; // must not retroactively reschedule the in-flight timer
+  // wait-reason: asserting the in-flight timer is not rescheduled
   await new Promise((resolve) => setTimeout(resolve, 15));
   expect(flushes, 'the in-flight burst should still be waiting out its original window').to.deep.equal([]);
 
@@ -704,6 +708,7 @@ it('falls back to the default ttl for a NaN/negative messageTtlMs instead of swe
   const sink = acquireAnnouncementSink('polite', { messageTtlMs: NaN });
   try {
     sink.announce('sticky');
+    // wait-reason: asserting the message is not swept
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(sinkTexts('polite'), 'a NaN ttl must not clamp to a ~0ms sweep').to.deep.equal(['sticky']);
   } finally {

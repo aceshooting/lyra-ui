@@ -33,8 +33,8 @@ import type {
 } from '../../../ai/types.js';
 import { styles } from './grounding-summary.styles.js';
 import '../claim-evidence/claim-evidence.class.js';
-import type { LyraScoreThresholds } from '../graph/graph.class.js';
-export type { LyraScoreThresholds } from '../graph/graph.class.js';
+import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
+export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
@@ -482,7 +482,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   }
 
   private tone(value: number): LyraVariant {
-    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    const { high, medium } = resolveScoreTiers(DEFAULT_TIERS, this.thresholds);
     if (value >= high) return 'success';
     if (value >= medium) return 'warning';
     return 'danger';

@@ -1,60 +1,3 @@
-## Breaking changes in 10.0.0
-
-**`lr-virtual-list`:** the `lr-visible-range-changed` event is removed — listen for
-`lr-visible-range-change` instead. The detail (`LyraVirtualListRange`), the firing conditions and the
-gesture are all unchanged; only the name moved. The old spelling was the library's only past-tense
-`-changed` event among 58 members of the `-change` family, so a convention-driven `lr-${x}-change`
-listener silently missed it on a component embedded in ten viewers. It is removed outright rather
-than kept as a dual-emitting alias, because the library has no released consumers and an alias is a
-permanent tax paid to protect users who do not exist. Rename the listener; nothing else changes.
-
-Also corrected in 10.0.0 — not breaking, but visible. `<lr-dashboard-grid>`'s cell keeps a focus
-indicator while it is in a collision or drop state: the collision rule owns the outline channel by
-design, but the side effect was that the focus ring vanished entirely during exactly the drag or
-resize a keyboard user most needs it, so the ring is now re-expressed on a second channel. And
-`<lr-card>` honors a `hidden` slotted media child instead of painting it — the component's own
-`display` declaration is author-origin and was beating the UA stylesheet's `[hidden] { display: none }`.
-
-## Breaking changes in 9.0.0
-
-**`lr-app-rail`:** `mode`'s write side is removed: the accessor is now strictly read-only (always resolves to
-'full'/'icon-only'/'mobile', never 'auto'). A new `forceMode` property/attribute (`force-mode`, type
-`'full' | 'icon-only' | 'auto'`, unset by default) replaces it: assign 'full'/'icon-only' to pin that
-mode, 'auto' (or unset) to release the pin and resume automatic breakpoint tracking. Unlike the
-removed mode setter, 'mobile' can no longer be force-pinned — the mobile breakpoint is always tracked
-automatically regardless, mirroring `preferredMode`'s existing scope; if a consumer needs a
-guaranteed-mobile demo/test state, widen `mobile-breakpoint` instead. Whether the rail is currently
-pinned is now itself observable (`forceMode === 'auto'` or unset means auto-tracking). `dragging`
-loses its public setter — it's read-only; assigning it now throws (`el.dragging = true` ->
-TypeError), matching that this component has always owned every drag transition itself. Exported
-types renamed (TypeScript-only, no markup/runtime change): `AppRailMode` -> `LyraAppRailMode`,
-`AppRailModeInput` -> `LyraAppRailModeInput`, `AppRailPreferredMode` -> `LyraAppRailPreferredMode`,
-`AppRailPersistField` -> `LyraAppRailPersistField`, `AppRailModeChangeDetail` ->
-`LyraAppRailModeChangeDetail`, `AppRailToggleDetail` -> `LyraAppRailToggleDetail`,
-`AppRailResizeDetail` -> `LyraAppRailResizeDetail`.
-
-**`lr-tab-group`:** Exported types renamed, TypeScript-only: `TabGroupPlacement` ->
-`LyraTabGroupPlacement`, `TabGroupActivation` -> `LyraTabGroupActivation`.
-
-**`lr-virtual-list`:** Exported types renamed, TypeScript-only: `VirtualListRange` ->
-`LyraVirtualListRange`, `VirtualListGroup` -> `LyraVirtualListGroup`, `VirtualListItemRole` ->
-`LyraVirtualListItemRole`, `VirtualListRowHeight` -> `LyraVirtualListRowHeight`,
-`VirtualListIndexedSource` -> `LyraVirtualListIndexedSource`, `VirtualListSource` ->
-`LyraVirtualListSource`, `VirtualListScroll` -> `LyraVirtualListScroll`.
-
-**`lr-split-panel`:** Exported types renamed, TypeScript-only: `SplitPanelOrientation` ->
-`LyraSplitPanelOrientation`, `SplitPanelPrimary` -> `LyraSplitPanelPrimary`, `SnapFunctionParams` ->
-`LyraSplitPanelSnapFunctionParams`, `SnapFunction` -> `LyraSplitPanelSnapFunction`,
-`SplitPanelRepositionDetail` -> `LyraSplitPanelRepositionDetail`. The unused, undocumented
-`SplitPanelSnapFunction` compatibility alias (of what is now `LyraSplitPanelSnapFunction`) is deleted
-outright — import `LyraSplitPanelSnapFunction` directly. `SNAP_NONE` and the `<lr-split-panel>`
-tag/runtime API are unchanged.
-
-**`lr-widget`:** `LyraWidgetView.icon` widens from `TemplateResult` to `unknown`, matching
-`LyraSegmentedItem.icon`/`LyraStepItem.icon`. Purely additive: an existing `TemplateResult` icon
-value keeps working unchanged; a plain string, DOM node, or any other Lit-renderable value is now
-also accepted.
-
 ## `lr-multi-split`
 
 The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
@@ -4161,7 +4104,10 @@ count through the shared polite announcement sink; a query matching nothing anno
 
 **Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
 with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable
-`lr-close` with that same reason object after closing; `lr-select`
+`lr-hide` with that same reason object once the close is accepted (the veto is
+`lr-close-request`, so `lr-hide` is not cancelable here, unlike `lr-dialog`); non-cancelable
+`lr-close` with that same reason object after closing; no-detail `lr-after-show` / `lr-after-hide`
+once the palette has rendered open / closed (it has no transition to wait for); `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
 gains or loses focus. The `focus`/`blur` bridge is

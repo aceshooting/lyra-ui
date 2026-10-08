@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil, aTimeout, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion, setForcedColors } from '../../../../test/wtr-media.js';
@@ -81,7 +81,7 @@ describe('lr-menubar', () => {
     file.setAttribute('aria-label', 'Documents'); menu.setAttribute('label', 'Commands');
     await waitUntil(() => menu.shadowRoot!.querySelector('[role="menu"]')!.getAttribute('aria-label') === 'Commands');
     expect(file.getAttribute('aria-label')).to.equal('Documents');
-    file.firstChild!.textContent = 'Ignored'; await aTimeout(0);
+    file.firstChild!.textContent = 'Ignored'; await nextFrame();
     expect(file.getAttribute('aria-label')).to.equal('Documents');
   });
 
@@ -185,16 +185,16 @@ describe('lr-menubar', () => {
     const bar = await sample(); wrapper.querySelector('#scroll-bar')!.append(bar);
     const before = window.scrollY;
     try {
-      window.scrollTo(0, 100); await aTimeout(0);
+      window.scrollTo(0, 100); await nextFrame();
       for (const [press, value] of [['Space', ' '], ['ArrowDown', 'ArrowDown'], ['Home', 'Home'], ['End', 'End']]) {
         const file = item(bar, 'file'); file.focus({ preventScroll: true });
         const scroll = window.scrollY; let prevented = false;
         const listener = (event: KeyboardEvent): void => { if (event.key === value) prevented = event.defaultPrevented; };
         bar.addEventListener('keydown', listener);
-        await sendKeys({ press: press! }); await aTimeout(0);
+        await sendKeys({ press: press! }); await nextFrame();
         bar.removeEventListener('keydown', listener);
         expect(prevented).to.equal(true); expect(window.scrollY).to.equal(scroll);
-        if (file.menuOpen) { key(file, 'Escape'); await aTimeout(0); }
+        if (file.menuOpen) { key(file, 'Escape'); await nextFrame(); }
       }
     } finally { window.scrollTo(0, before); }
   });
@@ -202,11 +202,13 @@ describe('lr-menubar', () => {
   it('matches buffered, case-insensitive typeahead and carries the menu', async () => {
     const bar = await sample(); item(bar, 'file').focus();
     expect(key(item(bar, 'file'), 'E').defaultPrevented).to.equal(true); expect(active()).to.equal('edit');
+    // wait-reason: real type-ahead buffer expiry timing
     await aTimeout(700);
     item(bar, 'edit').click(); await opened(item(bar, 'edit'));
     expect(key(item(bar, 'edit'), 'v').defaultPrevented).to.equal(true);
     expect(key(item(bar, 'view'), 'i').defaultPrevented).to.equal(true);
     await opened(item(bar, 'view')); expect(active()).to.equal('view');
+    // wait-reason: real type-ahead buffer expiry timing
     await aTimeout(700);
     expect(key(item(bar, 'view'), 'x').defaultPrevented).to.equal(false);
   });
@@ -214,10 +216,10 @@ describe('lr-menubar', () => {
   it('skips every non-navigable state and preserves the stop on disabled pointer presses', async () => {
     const bar = await sample(); const file = item(bar, 'file');
     item(bar, 'edit').hidden = true; item(bar, 'view').setAttribute('aria-hidden', 'true');
-    const help = item(bar, 'help'); help.inert = true; await aTimeout(0); file.focus();
+    const help = item(bar, 'help'); help.inert = true; await nextFrame(); file.focus();
     key(file, 'ArrowRight'); expect(active()).to.equal('file');
     await click(item(bar, 'disabled')); expect(active()).to.equal('file'); expect(file.tabIndex).to.equal(0);
-    help.inert = false; await aTimeout(0); key(file, 'ArrowRight'); expect(active()).to.equal('help');
+    help.inert = false; await nextFrame(); key(file, 'ArrowRight'); expect(active()).to.equal('help');
     bar.inert = true; expect(key(help, 'ArrowLeft').defaultPrevented).to.equal(false);
   });
 
@@ -234,7 +236,7 @@ describe('lr-menubar', () => {
     file.click(); await opened(file);
     const row = bar.querySelector<LyraMenuItem>('#new')!;
     bar.addEventListener('lr-select', event => event.preventDefault());
-    row.click(); await aTimeout(0); expect(file.menuOpen).to.equal(true);
+    row.click(); await nextFrame(); expect(file.menuOpen).to.equal(true);
   });
 
   it('switches only enabled menu titles on non-touch hover, then toggles the hovered title', async () => {
@@ -273,7 +275,7 @@ describe('lr-menubar', () => {
   it('outside pointers and focus leaving collapse without stealing focus; blur alone does not', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div><button id="outside">Outside</button></div>`);
     const bar = await sample(); const file = item(bar, 'file'); file.click(); await opened(file);
-    file.blur(); await aTimeout(0); expect(file.menuOpen).to.equal(true);
+    file.blur(); await nextFrame(); expect(file.menuOpen).to.equal(true);
     wrapper.querySelector<HTMLButtonElement>('button')!.focus(); await waitUntil(() => !file.menuOpen); expect(active()).to.equal('outside');
     file.click(); await opened(file);
     document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -286,7 +288,7 @@ describe('lr-menubar', () => {
       const bar = await sample(); wrapper.querySelector('#bar-mount')!.append(bar);
       bar.style.removeProperty('--lr-transition-fast');
       bar.querySelector('#filter')!.remove();
-      await aTimeout(0);
+      await nextFrame();
       const lower = wrapper.querySelector<HTMLElement>('#lower')!; let lowerFocus = 0;
       const handle = activateNonmodalOverlay({ host: lower, panel: () => lower, onEscape: () => {} });
       lower.addEventListener('focusin', () => { lowerFocus++; });
@@ -308,11 +310,11 @@ describe('lr-menubar', () => {
 
   it('reconnects collapsed with the same roving stop and releases an item moved to another bar', async () => {
     const bar = await sample(); const edit = item(bar, 'edit'); edit.click(); await opened(edit);
-    const parent = bar.parentElement!; bar.remove(); parent.append(bar); await aTimeout(0);
+    const parent = bar.parentElement!; bar.remove(); parent.append(bar); await nextFrame();
     expect(edit.menuOpen).to.equal(false); expect(edit.tabIndex).to.equal(0); expect(key(edit, 'Escape').defaultPrevented).to.equal(false);
     await waitUntil(() => surface(edit).hidden);
     const other = await fixture<LyraMenubar>(html`<lr-menubar label="Other"></lr-menubar>`);
-    other.append(edit); await aTimeout(0); edit.click(); await opened(edit);
+    other.append(edit); await nextFrame(); edit.click(); await opened(edit);
     expect(other.querySelectorAll('[aria-expanded="true"]').length).to.equal(1);
     expect(bar.querySelectorAll('[aria-expanded="true"]').length).to.equal(0);
   });
@@ -320,12 +322,12 @@ describe('lr-menubar', () => {
   it('preserves active identity on insertion and rehomes removed or disabled focused items', async () => {
     const bar = await sample(); const edit = item(bar, 'edit'); edit.focus();
     const first = document.createElement('lr-menubar-item'); first.textContent = 'First';
-    bar.prepend(first); await aTimeout(0); expect(edit.tabIndex).to.equal(0);
+    bar.prepend(first); await nextFrame(); expect(edit.tabIndex).to.equal(0);
     edit.remove(); await waitUntil(() => active() === 'view');
     const view = item(bar, 'view'); view.click(); await opened(view); view.disabled = true;
     await waitUntil(() => !view.menuOpen && active() === 'help');
-    item(bar, 'help').remove(); await aTimeout(0); expect(first.tabIndex).to.equal(-1); expect(item(bar, 'file').tabIndex).to.equal(0);
-    bar.replaceChildren(); await aTimeout(0); expect(bar.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+    item(bar, 'help').remove(); await nextFrame(); expect(first.tabIndex).to.equal(-1); expect(item(bar, 'file').tabIndex).to.equal(0);
+    bar.replaceChildren(); await nextFrame(); expect(bar.querySelectorAll('[tabindex="0"]').length).to.equal(0);
   });
 
   it('attaches replacement menus and becomes an action when the menu is removed', async () => {
@@ -383,7 +385,7 @@ describe('lr-menubar', () => {
     const label = 'A very long application command with a complete accessible name';
     const wrapper = await fixture<HTMLDivElement>(html`<div style="width:320px"><lr-menubar label="App"><lr-menubar-item>File</lr-menubar-item><lr-menubar-item>Edit</lr-menubar-item><lr-menubar-item>View</lr-menubar-item><lr-menubar-item>Profiles</lr-menubar-item><lr-menubar-item>Help</lr-menubar-item><lr-menubar-item>${label}</lr-menubar-item></lr-menubar></div>`);
     const bar = wrapper.querySelector<LyraMenubar>('lr-menubar')!;
-    await aTimeout(0); expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    await nextFrame(); expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
     const bounds = bar.getBoundingClientRect();
     for (const child of Array.from(bar.children)) {
       const rect = child.getBoundingClientRect(); expect(rect.left).to.be.at.least(bounds.left); expect(rect.right).to.be.at.most(bounds.right);
@@ -481,7 +483,7 @@ describe('lr-menubar name, type-ahead and top-layer', () => {
       <lr-menubar-item id="zeta">Zeta</lr-menubar-item></lr-menubar>`);
     await waitUntil(() => item(bar, 't0').tabIndex === 0);
     item(bar, 't0').focus();
-    await aTimeout(50);
+    await nextFrame();
     const original = window.getComputedStyle;
     let reads = 0;
     window.getComputedStyle = ((element: Element, pseudo?: string | null) => {

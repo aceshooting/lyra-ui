@@ -1,6 +1,10 @@
 import { assertOptionalPeerSilent } from '../../../../test/contracts/optional-peer-loader.js';
 import { expect } from '@open-wc/testing';
 import { clearPdfJsCache, loadPdfJs, loadPdfJsDeps } from './pdf-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+// Tests below deliberately make the optional peer unavailable or malformed; the loader's one-time diagnostic is expected.
+expectDevWarning('lyra-pdf-viewer-pdfjs-unavailable');
 
 afterEach(() => clearPdfJsCache());
 

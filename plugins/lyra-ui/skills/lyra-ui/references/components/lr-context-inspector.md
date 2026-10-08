@@ -39,7 +39,7 @@ end: number; reason?: string }` marks character ranges within `text` that are re
   copy/export text rather than rejecting the render.
 - `total: number = 0` — the full token budget `segments` are measured against; passed straight to
   `lr-context-meter.total`
-- `label: string = ''` — accessible group name, and the embedded meter's visible caption (e.g.
+- `label?: string` — accessible group name (`''` is used verbatim), and the embedded meter's visible caption (e.g.
   "128K context window")
 - `exportFormats: readonly LyraExportFormatOption[] = ['json']` (attribute: false) — forwarded to the embedded
   `lr-export-button`; one id renders a plain button, more than one a format-choice menu

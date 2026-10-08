@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Äänenvoimakkuus',
   videoCaptions: 'Tekstitykset',
   videoCaptionsOff: 'Pois',
-  videoPlaybackSpeed: 'Toistonopeus',
   videoPictureInPicture: 'Siirry kuva kuvassa -tilaan',
   videoExitPictureInPicture: 'Poistu kuva kuvassa -tilasta',
   videoEnterFullscreen: 'Siirry koko näytön tilaan',

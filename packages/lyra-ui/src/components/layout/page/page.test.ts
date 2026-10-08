@@ -1,5 +1,4 @@
 import {
-  aTimeout,
   elementUpdated,
   nextFrame,
   expect,
@@ -694,7 +693,7 @@ it('synchronizes every assigned navigation-toggle and lets each available contro
   await page.updateComplete;
 
   secondary.slot = 'header';
-  await aTimeout(0);
+  await nextFrame();
   expect(secondary.getAttribute('aria-expanded')).to.equal('mixed');
   expect(secondary.getAttribute('aria-controls')).to.equal('author-panel');
 });
@@ -746,7 +745,7 @@ it('owns the real custom-toggle control and retargets focus restoration after re
   `)) as LyraPage;
   access(page).applyMeasuredInlineSize(320);
   await page.updateComplete;
-  await aTimeout(0);
+  await nextFrame();
   const first = page.querySelector(composedPageToggleTag) as HTMLElement;
   const firstControl = first.shadowRoot!.querySelector('button')!;
 
@@ -802,7 +801,7 @@ it('gives a custom navigation toggle a cross-shadow controls reference and clean
   }
 
   custom.slot = 'header';
-  await aTimeout(0);
+  await nextFrame();
   expect(custom.hasAttribute('aria-expanded')).to.equal(false);
   expect(custom.hasAttribute('aria-controls')).to.equal(false);
   expect(custom.hasAttribute('aria-label')).to.equal(false);
@@ -839,14 +838,14 @@ it('restores authored custom-toggle ARIA across replacement and preserves later 
   replacement.textContent = 'Replacement';
   custom.slot = 'header';
   page.append(replacement);
-  await aTimeout(0);
+  await nextFrame();
   expect(custom.getAttribute('aria-expanded')).to.equal('true');
   expect(custom.getAttribute('aria-controls')).to.equal('author-panel');
   expect(custom.getAttribute('aria-label')).to.equal('Author label');
 
   replacement.setAttribute('aria-controls', 'consumer-late-target');
   replacement.slot = 'header';
-  await aTimeout(0);
+  await nextFrame();
   expect(replacement.getAttribute('aria-controls')).to.equal(
     'consumer-late-target'
   );
@@ -867,7 +866,7 @@ it('keeps generated custom-toggle ARIA authoritative and restores late author st
   custom.setAttribute('aria-expanded', 'mixed');
   custom.setAttribute('aria-controls', 'author-navigation');
   custom.setAttribute('aria-label', 'Author navigation');
-  await aTimeout(0);
+  await nextFrame();
   page.showNavigation();
   await page.updateComplete;
 
@@ -915,7 +914,7 @@ it('releases generated custom-toggle ARIA on disconnect and reapplies it on reco
   expect(custom.hasAttribute('aria-label')).to.equal(false);
 
   wrapper.append(page);
-  await aTimeout(0);
+  await nextFrame();
   expect(custom.getAttribute('aria-expanded')).to.equal('false');
   expect(custom.getAttribute('aria-controls')).to.equal(page.id);
   expect(custom.hasAttribute('aria-label')).to.equal(true);
@@ -1057,7 +1056,7 @@ it('uses and tears down the window resize fallback when ResizeObserver is unavai
     page.remove();
     width = 900;
     window.dispatchEvent(new Event('resize'));
-    await aTimeout(0);
+    await nextFrame();
     expect(page.view).to.equal('mobile');
   } finally {
     Reflect.set(window, 'ResizeObserver', originalResizeObserver);
@@ -1656,7 +1655,7 @@ it('is accessible in populated desktop, mobile-closed, and mobile-open states', 
 
   page.showNavigation();
   await page.updateComplete;
-  await aTimeout(20);
+  await waitUntil(() => byPart(page, 'drawer').getAttribute('role') === 'dialog', 'drawer exposes dialog role');
   expect(byPart(page, 'drawer').getAttribute('role')).to.equal('dialog');
   await expect(page).to.be.accessible();
   page.hideNavigation();
@@ -1675,7 +1674,7 @@ it('reclassifies its allocation when the window resizes', async () => {
   el.style.inlineSize = '1200px';
   window.dispatchEvent(new Event('resize'));
   await elementUpdated(el);
-  await aTimeout(0);
+  await nextFrame();
   // The exact classification is asserted elsewhere; here the contract is that a window
   // resize re-measures at all rather than leaving the last observed allocation in place.
   expect(el.getBoundingClientRect().width).to.be.greaterThan(1000);
@@ -1995,7 +1994,7 @@ describe('Page state cssprops', () => {
       '[slot="navigation-toggle"]'
     )!;
     customToggle.scrollIntoView();
-    await aTimeout(0);
+    await nextFrame();
     expect(customPage.view).to.equal('mobile');
     expect(getComputedStyle(customToggle).display).to.not.equal('none');
     expect(

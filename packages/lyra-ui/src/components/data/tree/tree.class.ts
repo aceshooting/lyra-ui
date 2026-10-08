@@ -9,7 +9,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { tag } from '../../../internal/prefix.js';
-import { isRtl } from '../../../internal/rtl.js';
+import { resolveListMove } from '../../../internal/list-navigation.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import {
@@ -1643,27 +1643,25 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     if (e.altKey) return;
     // Expand/step-in and collapse/step-out are physical-direction actions --
     // swap which arrow key does which in RTL, matching split.ts/time-range.ts.
-    const rtl = isRtl(this);
+    const rtl = this.effectiveDirection === 'rtl';
     const expandKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const collapseKey = rtl ? 'ArrowRight' : 'ArrowLeft';
 
+    // Modifier keys keep navigating (documented), so the bare key is resolved.
+    const moved = resolveListMove(e.key, {
+      count: visible.length,
+      current: Math.max(currentIndex, 0),
+      orientation: 'vertical',
+      wrap: false,
+      clamp: true,
+    });
+    if (moved !== null) {
+      e.preventDefault();
+      this.focusNode(visible[moved]);
+      return;
+    }
+
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        this.focusNode(visible[Math.min(visible.length - 1, currentIndex + 1)]);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        this.focusNode(visible[Math.max(0, currentIndex - 1)]);
-        break;
-      case 'Home':
-        e.preventDefault();
-        this.focusNode(visible[0]);
-        break;
-      case 'End':
-        e.preventDefault();
-        this.focusNode(visible[visible.length - 1]);
-        break;
       case expandKey:
         e.preventDefault();
         if (!current.hasChildren) break;

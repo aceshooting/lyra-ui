@@ -1,19 +1,10 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { variants } from '../../../internal/variants.styles.js';
-import type { LyraProgressVariant } from './progress-bar.class.js';
-import {
-  formatProgressPercent,
-  joinAccessibleVisibleText,
-  normalizeProgressVariant,
-  progressPercent,
-  progressSafeMax,
-  progressSafeValue,
-  resolveProgressLabel,
-} from './progress-shared.js';
+import { LyraProgressBase } from './progress-base.js';
+import { joinAccessibleVisibleText } from './progress-shared.js';
 import { ringStyles } from './progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -69,7 +60,7 @@ import { LYRA_DEFAULT_progress } from '../../../internal/default-strings.generat
  * @status stable
  * @since 4.0.0
  */
-export class LyraProgressRing extends LyraElement {
+export class LyraProgressRing extends LyraProgressBase {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -80,20 +71,6 @@ export class LyraProgressRing extends LyraElement {
 
   static override styles = [LyraElement.styles, variants, ringStyles];
 
-  // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
-  @property({ type: Number, reflect: true }) value = 0;
-  // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
-  @property({ type: Number }) max = 100;
-  @property({ type: Boolean, reflect: true }) indeterminate = false;
-  /** Selects the indicator's semantic palette from the shared semantic grid, matching sibling
-   *  `<lr-progress-bar>`'s `variant`. */
-  @property({ reflect: true }) variant: LyraProgressVariant = 'brand';
-  /** Shows the formatted percentage as the default slot's fallback content while determinate.
-   *  `false` by default, matching sibling `<lr-progress-bar>`'s `withValue`/`with-value` exactly --
-   *  a determinate ring with no `with-value` renders no percentage text. Only the fallback is
-   *  gated: a consumer who slots their own content always sees that content instead, with or
-   *  without `with-value` (native `<slot>` projection semantics, unaffected by this property). */
-  @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
   /** Outer diameter of the ring, on the library's shared six-step size ladder. `'m'` (the default)
    *  is this component's pre-existing behaviour, unchanged: an unset ring still renders at
    *  `--lr-progress-ring-size`'s literal `2.5rem` default. Every other tier scales that same
@@ -102,44 +79,8 @@ export class LyraProgressRing extends LyraElement {
    *  sibling `<lr-progress-bar>`'s own `size`, this scales exactly one dimension — the track/
    *  indicator stroke width and the center label's font size are unaffected by the tier. */
   @property({ reflect: true }) size: LyraSize = 'm';
-  /** Mapped accessible-name property. */
-  @property() label = '';
-  /** The host `aria-label`: names the progressbar ahead of every other source, by presence, so an
-   *  explicitly empty value stays empty. */
-  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
-  // Assigned nodes do not exist in Lit's server DOM. Cache their accessible text only when the
-  // browser can sample it, before a client-only first paint or just after the hydration render.
-  private cachedVisibleLabelText = '';
-  private readonly labelTextObserver = new AccessibleTextController(
-    this, ['', 'label'], () => this.recomputeVisibleLabelText(),
-  );
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (changed.has('variant')) this.variant = normalizeProgressVariant(this.variant);
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.recomputeVisibleLabelText();
-    else this.seedFirstRenderState(() => this.recomputeVisibleLabelText());
-  }
-
-  /**
-   * `MutationObserver` instances are bound to the realm (`window`) that constructed them, not to
-   * the node they observe: one built from a stale `window.MutationObserver` keeps delivering
-   * through that window's microtask queue even after this element is adopted into a different
-   * document, instead of the adopted document's own. Adoption (`document.adoptNode()`, or an
-   * implicit cross-document `appendChild`) always runs `adoptedCallback()` -- while this element is
-   * momentarily disconnected, ahead of any later `connectedCallback()` -- so this rebuilds the
-   * observer here rather than only lazily on the next connect.
-   */
-  override adoptedCallback(): void {
-    super.adoptedCallback();
-    this.labelTextObserver.adopted();
-  }
-
-  private computeVisibleLabelText(): string {
+  protected override computeVisibleLabelText(): string {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const slots = renderRoot?.querySelectorAll<HTMLSlotElement>(
       'slot:not([name]), slot[name="label"]',
@@ -164,38 +105,13 @@ export class LyraProgressRing extends LyraElement {
     return joinAccessibleVisibleText(nodes);
   }
 
-  private recomputeVisibleLabelText(): void {
-    const next = this.computeVisibleLabelText();
-    if (next === this.cachedVisibleLabelText) return;
-    this.cachedVisibleLabelText = next;
-    this.requestUpdate();
-  }
-
-  // Value normalization, percent formatting and accessible-name precedence live in
-  // ./progress-shared.ts, so the ring and the bar can never disagree about the same numbers.
-  private get safeMax(): number {
-    return progressSafeMax(this.max);
-  }
-
-  private get safeValue(): number {
-    return progressSafeValue(this.value, this.safeMax);
-  }
-
-  private get percent(): number {
-    return progressPercent(this.safeValue, this.safeMax);
-  }
-
-  private get formattedPercent(): string {
-    return formatProgressPercent(this.effectiveLocale, this.percent);
-  }
-
   /** Live SVG indicator circle, or `null` before the render root is populated. */
-  get indicator(): SVGCircleElement | null {
+  override get indicator(): SVGCircleElement | null {
     return this.renderRoot.querySelector<SVGCircleElement>('[part="indicator"]');
   }
 
   /** Current normalized stroke offset used by the rendered indicator. */
-  get indicatorOffset(): number {
+  override get indicatorOffset(): number {
     const circumference = 2 * Math.PI * 42;
     return this.indeterminate ? circumference * 0.65 : circumference * (1 - this.percent / 100);
   }
@@ -204,15 +120,10 @@ export class LyraProgressRing extends LyraElement {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = this.indicatorOffset;
-    const label = resolveProgressLabel({
-      hostAriaLabel: this.hostAriaLabel,
-      label: this.label,
-      visibleText: this.cachedVisibleLabelText,
-      localizedFallback: this.localize('progress'),
-    });
+    const label = this.resolvedLabel;
     return html`<div part="base progress-ring" role="progressbar" aria-label=${label}
-      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
-      aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
+      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.progressValueNow}
+      aria-valuetext=${this.progressValueText}>
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <circle part="track" cx="50" cy="50" r=${radius} stroke-width="10"></circle>
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"

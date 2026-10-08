@@ -2676,3 +2676,15 @@ it('repairs a foreign format token written on a mounted standard pager', async (
   await el.updateComplete;
   expect(el.getAttribute('format')).to.equal('standard');
 });
+
+it('takes the summary noun from the plural `items` message by total, and `item-label` wins', async () => {
+  const el = await pagination(html`<lr-pagination total="1" page-size="10" with-summary .strings=${{ items: { one: 'record', other: 'records' } }}></lr-pagination>`);
+  const summary = () => el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim();
+  expect(summary()).to.equal('1–1 of 1 record');
+  el.total = 5;
+  await el.updateComplete;
+  expect(summary()).to.equal('1–5 of 5 records');
+  el.itemLabel = 'rows';
+  await el.updateComplete;
+  expect(summary()).to.equal('1–5 of 5 rows');
+});

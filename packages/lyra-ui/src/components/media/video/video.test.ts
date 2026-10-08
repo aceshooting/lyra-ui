@@ -1316,6 +1316,13 @@ describe('lr-video public contract', () => {
     expect(labels).to.deep.equal(['0.5-fach', '0.75-fach', '1-fach', '1.25-fach', '1.5-fach', '2-fach']);
   });
 
+  it('names the rate select from the shared playback-rate message', async () => {
+    const el = await fixture<LyraVideo>(html`
+      <lr-video controls="full" .strings=${{ avPlayerPlaybackRate: 'Vitesse' }}></lr-video>
+    `);
+    expect(el.shadowRoot!.querySelector('[data-control="rate"]')!.getAttribute('aria-label')).to.equal('Vitesse');
+  });
+
   it('renders caption and rate selects with themed decorative chevrons', async () => {
     const el = await fixture<LyraVideo>(html`
       <lr-video

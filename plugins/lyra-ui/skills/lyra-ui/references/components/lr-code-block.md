@@ -130,16 +130,6 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
 
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
-
 **Border reaches the composed copy control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
 into the copy control's private fallback tier — but that absence is not a gap. The public

@@ -1,9 +1,12 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
+  type AccessibleTextReferences,
   accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
+  releaseAccessibleTextReferences,
 } from './accessibility-visibility.js';
+import { assignedSlotOf } from './composed-tree.js';
 import { CustomElementUpgradeObserver } from './custom-element-upgrade-observer.js';
 import { OwnedFrame, OwnedTimeout } from './owned-timer.js';
 
@@ -14,6 +17,7 @@ export class AccessibleTextController implements ReactiveController {
   private readonly visibilityFrame: OwnedFrame;
   private readonly visibilityTimer: OwnedTimeout;
   private active = false;
+  private readonly references?: AccessibleTextReferences;
   private slotRoot?: ShadowRoot;
   private readonly onSlotChange = (event: Event): void => {
     // Forwarded slotchange events retain the forwarding slot as their target. Its name
@@ -31,7 +35,9 @@ export class AccessibleTextController implements ReactiveController {
     private readonly onChange: (records: readonly MutationRecord[]) => void,
     private readonly extraAttributes: readonly string[] = [],
     private enabled = true,
+    trackReferences = false,
   ) {
+    if (trackReferences) this.references = { releases: [], changed: () => this.changed() };
     this.visibilityFrame = new OwnedFrame(host);
     this.visibilityTimer = new OwnedTimeout(host);
     host.addController(this);
@@ -68,6 +74,7 @@ export class AccessibleTextController implements ReactiveController {
     this.observer?.disconnect();
     this.observer = undefined;
     this.upgrades.disconnect();
+    if (this.references) releaseAccessibleTextReferences(this.references);
   }
 
   /** A host's adoptedCallback calls this to replace the old realm's observer. */
@@ -89,12 +96,13 @@ export class AccessibleTextController implements ReactiveController {
       this.observer?.disconnect();
       this.observer = undefined;
       this.upgrades.disconnect();
+      if (this.references) releaseAccessibleTextReferences(this.references);
     }
   }
 
   /** Rebind after a render path or assigned content changes. */
   bind(): void {
-    bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades);
+    bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades, this.references);
   }
 
   /** Drains pending records for synchronous label getters. */
@@ -120,6 +128,7 @@ export class AccessibleTextController implements ReactiveController {
     this.cancelVisibilityRefresh();
     this.observer?.disconnect();
     this.upgrades.disconnect();
+    if (this.references) releaseAccessibleTextReferences(this.references);
     const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
     this.observer = Observer
       ? new Observer((records, observer) => {
@@ -149,8 +158,7 @@ export class AccessibleTextController implements ReactiveController {
           const name = node.nodeType === 1 ? (node as Element).getAttribute('slot') ?? '' : '';
           return this.slots.includes(name);
         }
-        node = (node as Node & { assignedSlot?: HTMLSlotElement | null }).assignedSlot ??
-          node.parentNode ?? (node as ShadowRoot).host ?? null;
+        node = assignedSlotOf(node) ?? node.parentNode ?? (node as ShadowRoot).host ?? null;
       }
       // Ancestor visibility changes and detached removed content still invalidate the label.
       return true;

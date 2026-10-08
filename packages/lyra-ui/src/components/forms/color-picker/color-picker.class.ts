@@ -25,7 +25,7 @@ import {
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { hasCustomState } from '../../../internal/custom-states.js';
 import { swatchKeyTarget } from '../swatch-picker/swatch-keys.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
@@ -864,7 +864,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   }
 
   override blur(): void {
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active && typeof (active as Partial<HTMLElement>).blur === 'function') {
       (active as HTMLElement).blur();
     }

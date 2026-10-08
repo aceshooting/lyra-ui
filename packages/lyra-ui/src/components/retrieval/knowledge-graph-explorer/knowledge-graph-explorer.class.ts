@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -52,7 +52,7 @@ import '../../forms/button/button.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Search results rendered at once; the match count still covers every match. */
@@ -231,6 +231,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   50 rows sharing one tab stop (ArrowUp/ArrowDown/Home/End); the announced count covers every match.
  * @csspart search-result - One search-match row (`role="listitem"`, wrapping a `<button>`).
  * @csspart search-empty - The "no matches" message, shown when `query` is non-empty but no node matches.
+ * @csspart details-limit - Localized shown/total notice when `entityDetails` holds more entries than the shared boundary keeps.
  * @csspart search-limit - Localized shown/total notice when search matches exceed the 50-row list.
  * @csspart pinned - The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty.
  * @csspart pinned-heading - The pinned-nodes row's leading label.
@@ -252,6 +253,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     graphExplorerFindPath: LYRA_DEFAULT_graphExplorerFindPath,
     graphExplorerLabel: LYRA_DEFAULT_graphExplorerLabel,
     graphExplorerPin: LYRA_DEFAULT_graphExplorerPin,
@@ -1081,6 +1083,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     );
     const groupRole = retrievalSemanticRole(this, 'group');
     const matches = this.matchingNodes();
+    const detailsLimit = publicCollectionTruncation(this, 'entityDetails');
     const model = this.graphModel;
     const pinnedNodeIds = this.canonicalPinnedNodeIds;
     const hiddenTypes = this.canonicalHiddenTypes;
@@ -1116,6 +1119,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
             @lr-visibility-change=${this.onVisibilityChange}
           ></lr-graph-legend>
         </div>
+        ${detailsLimit ? html`<p part="details-limit" role="note">${this.localize('graphDataListLimit', undefined, {
+          shown: getNumberFormat(this.effectiveLocale).format(detailsLimit.retained),
+          total: getNumberFormat(this.effectiveLocale).format(detailsLimit.source),
+        })}</p>` : nothing}
         ${matches
           ? html`
               <div

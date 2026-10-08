@@ -8,6 +8,7 @@ import { OwnedTimeout } from '../../../internal/owned-timer.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled, LYRA_DEFAULT_streamStatusConnecting, LYRA_DEFAULT_streamStatusIdle, LYRA_DEFAULT_streamStatusStalled } from '../../../internal/default-strings.generated.js';
@@ -222,7 +223,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.resumeFocused = this.shadowRoot?.activeElement?.getAttribute('part') === 'resume';
+    this.resumeFocused = shadowFocusTarget(this)?.getAttribute('part') === 'resume';
     if (!this.hasUpdated) {
       this.hasActionsSlot = this.hasSlotted('actions');
       this.hasMessageContent = Array.from(this.childNodes).some(

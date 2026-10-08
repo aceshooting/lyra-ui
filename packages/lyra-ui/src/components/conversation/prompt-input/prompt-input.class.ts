@@ -44,6 +44,8 @@ import type {
 } from '../../utility/mention-popover/mention-popover.class.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type {
+  ChatComposerActionsLayout,
+  ChatComposerFrame,
   ChatComposerSelectionDirection,
   ChatComposerStatus,
   ChatComposerWrap,
@@ -146,6 +148,7 @@ type LyraPromptInputCustomEventName = Exclude<
  * @slot controls - Replaces the data-driven model, voice, and source controls.
  * @slot start - Attachment-control content rendered before the textarea. Replaces the default
  *   attachment trigger.
+ * @slot toolbar - Content above the textarea, forwarded to the composed composer's `toolbar` slot.
  * @slot chips - Replaces the data-driven attachment chips.
  * @slot end - Custom send/stop action replacing the built-in composer action.
  * @slot footer - Content below the composer.
@@ -265,6 +268,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ type: Boolean, attribute: 'submit-disabled' }) submitDisabled = false;
   /** Forwarded to the composed composer: a busy composer shows a disabled Send instead of Stop. */
   @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;
+  /** Forwarded to the composed composer: `'plain'` removes its border, background and padding. */
+  @property() frame: ChatComposerFrame = 'card';
+  /** Forwarded to the composed composer: `'stacked'` arranges `start` above `end` beside the textarea. */
+  @property({ attribute: 'actions-layout' }) actionsLayout: ChatComposerActionsLayout = 'inline';
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
@@ -919,12 +926,17 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .withoutStop=${this.withoutStop}
         .minRows=${this.minRows}
         .maxRows=${this.maxRows}
+        .frame=${this.frame}
+        .actionsLayout=${this.actionsLayout}
         aria-label=${label}
         @lr-input=${this.onInput}
         @lr-change=${this.onChange}
         @lr-submit=${this.onSubmit}
         @lr-stop=${this.onStop}
       >
+        ${this.slotPresence.has('toolbar')
+          ? html`<slot name="toolbar" slot="toolbar"></slot>`
+          : nothing}
         <span slot="start" part="start">
           <slot name="start">${this.renderDefaultAttachmentTrigger()}</slot>
         </span>

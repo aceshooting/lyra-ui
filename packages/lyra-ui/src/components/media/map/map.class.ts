@@ -208,13 +208,6 @@ function boundedOwnArrayLength(value: unknown, limit: number): number | undefine
   return Math.min(descriptor.value, limit);
 }
 
-function ownDataValue(
-  value: object,
-  property: PropertyKey,
-): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
-
 function isUnsafeDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>,
 ): descriptor is typeof UNSAFE_OWN_DATA_DESCRIPTOR {
@@ -243,7 +236,7 @@ function normalizeMapLegendGradient(
     if (scanCount === undefined) return [];
     const usable: (readonly [number, string])[] = [];
     for (let index = 0; index < scanCount; index += 1) {
-      const stopDescriptor = ownDataValue(value as object, String(index));
+      const stopDescriptor = getOwnDataDescriptor(value as object, String(index));
       if (
         stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         isUnsafeDescriptor(stopDescriptor)
@@ -252,8 +245,8 @@ function normalizeMapLegendGradient(
       const stop = stopDescriptor.value;
       const stopLength = boundedOwnArrayLength(stop, 2);
       if (stopLength === undefined || stopLength < 2) continue;
-      const valueDescriptor = ownDataValue(stop as object, '0');
-      const colorDescriptor = ownDataValue(stop as object, '1');
+      const valueDescriptor = getOwnDataDescriptor(stop as object, '0');
+      const colorDescriptor = getOwnDataDescriptor(stop as object, '1');
       if (
         valueDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         colorDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -955,15 +948,15 @@ function mapTone(value: unknown): LyraMapGeoJsonDataLayer['tone'] {
 function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const sourceIdDescriptor = ownDataValue(value, 'sourceId');
-    const geojsonDescriptor = ownDataValue(value, 'geojson');
-    const toneDescriptor = ownDataValue(value, 'tone');
-    const colorDescriptor = ownDataValue(value, 'color');
-    const strokeColorDescriptor = ownDataValue(value, 'strokeColor');
-    const lineDescriptor = ownDataValue(value, 'line');
-    const kindDescriptor = ownDataValue(value, 'kind');
-    const heatmapDescriptor = ownDataValue(value, 'heatmap');
-    const clusterDescriptor = ownDataValue(value, 'cluster');
+    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
+    const geojsonDescriptor = getOwnDataDescriptor(value, 'geojson');
+    const toneDescriptor = getOwnDataDescriptor(value, 'tone');
+    const colorDescriptor = getOwnDataDescriptor(value, 'color');
+    const strokeColorDescriptor = getOwnDataDescriptor(value, 'strokeColor');
+    const lineDescriptor = getOwnDataDescriptor(value, 'line');
+    const kindDescriptor = getOwnDataDescriptor(value, 'kind');
+    const heatmapDescriptor = getOwnDataDescriptor(value, 'heatmap');
+    const clusterDescriptor = getOwnDataDescriptor(value, 'cluster');
     if (
       sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -998,7 +991,7 @@ function projectMapDataLayer(value: unknown): CanonicalMapDataLayer | undefined 
       color: typeof colorValue === 'string' ? colorValue : undefined,
       strokeColor: typeof strokeColorValue === 'string' ? strokeColorValue : undefined,
       line: kind === 'auto' ? projectLineOptions(optionalDescriptorValue(lineDescriptor)) : undefined,
-      point: kind === 'auto' ? projectPointOptions(optionalDescriptorValue(ownDataValue(value, 'point'))) : undefined,
+      point: kind === 'auto' ? projectPointOptions(optionalDescriptorValue(getOwnDataDescriptor(value, 'point'))) : undefined,
       kind,
       heatmap: kind === 'heatmap' ? projectHeatmapOptions(heatmapValue) : undefined,
       cluster: kind === 'auto' ? normalizedClusterOptions(clusterValue) : undefined,
@@ -1015,7 +1008,7 @@ function projectMapDataLayers(value: unknown): readonly CanonicalMapDataLayer[] 
     const output: CanonicalMapDataLayer[] = [];
     const seenSourceIds = new Set<string>();
     for (let index = 0; index < scanCount; index += 1) {
-      const descriptor = ownDataValue(value as object, String(index));
+      const descriptor = getOwnDataDescriptor(value as object, String(index));
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)) continue;
       const layer = projectMapDataLayer(descriptor.value);
       // Reserve a source id only after the full row is admitted. An invalid early duplicate can
@@ -1076,7 +1069,7 @@ function normalizedSteps<T>(
     if (scanCount === undefined) return Object.freeze([]);
     const usable: [number, T][] = [];
     for (let index = 0; index < scanCount; index += 1) {
-      const stopDescriptor = ownDataValue(value as object, String(index));
+      const stopDescriptor = getOwnDataDescriptor(value as object, String(index));
       if (
         stopDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         isUnsafeDescriptor(stopDescriptor)
@@ -1085,8 +1078,8 @@ function normalizedSteps<T>(
       const stop = stopDescriptor.value;
       const stopLength = boundedOwnArrayLength(stop, 2);
       if (stopLength === undefined || stopLength < 2) continue;
-      const thresholdDescriptor = ownDataValue(stop as object, '0');
-      const outputDescriptor = ownDataValue(stop as object, '1');
+      const thresholdDescriptor = getOwnDataDescriptor(stop as object, '0');
+      const outputDescriptor = getOwnDataDescriptor(stop as object, '1');
       if (
         thresholdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         outputDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -1153,15 +1146,15 @@ interface NormalizedClusterOptions {
 function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const radiusDescriptor = ownDataValue(value, 'radius');
-    const maxZoomDescriptor = ownDataValue(value, 'maxZoom');
-    const radiusStepsDescriptor = ownDataValue(value, 'radiusSteps');
-    const colorStepsDescriptor = ownDataValue(value, 'colorSteps');
-    const strokeColorDescriptor = ownDataValue(value, 'strokeColor');
-    const countFontDescriptor = ownDataValue(value, 'countFont');
-    const countColorDescriptor = ownDataValue(value, 'countColor');
-    const countHaloColorDescriptor = ownDataValue(value, 'countHaloColor');
-    const countHaloWidthDescriptor = ownDataValue(value, 'countHaloWidth');
+    const radiusDescriptor = getOwnDataDescriptor(value, 'radius');
+    const maxZoomDescriptor = getOwnDataDescriptor(value, 'maxZoom');
+    const radiusStepsDescriptor = getOwnDataDescriptor(value, 'radiusSteps');
+    const colorStepsDescriptor = getOwnDataDescriptor(value, 'colorSteps');
+    const strokeColorDescriptor = getOwnDataDescriptor(value, 'strokeColor');
+    const countFontDescriptor = getOwnDataDescriptor(value, 'countFont');
+    const countColorDescriptor = getOwnDataDescriptor(value, 'countColor');
+    const countHaloColorDescriptor = getOwnDataDescriptor(value, 'countHaloColor');
+    const countHaloWidthDescriptor = getOwnDataDescriptor(value, 'countHaloWidth');
     const radiusValue = optionalDescriptorValue(radiusDescriptor);
     const maxZoomValue = optionalDescriptorValue(maxZoomDescriptor);
     const radiusSteps = normalizedSteps(
@@ -1208,7 +1201,7 @@ function normalizedClusterFonts(value: unknown): readonly string[] {
     if (length === undefined) return Object.freeze([]);
     const fonts: string[] = [];
     for (let index = 0; index < length; index += 1) {
-      const descriptor = ownDataValue(value as object, String(index));
+      const descriptor = getOwnDataDescriptor(value as object, String(index));
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         isUnsafeDescriptor(descriptor) ||
@@ -1279,7 +1272,7 @@ const MAX_ICON_PATH_LENGTH = 8192;
  * a point keeps its circle, a legend row keeps its color swatch.
  */
 function projectIconPaint(row: object): CanonicalIconPaint | undefined {
-  const path = optionalDescriptorValue(ownDataValue(row, 'path'));
+  const path = optionalDescriptorValue(getOwnDataDescriptor(row, 'path'));
   if (
     typeof path !== 'string' ||
     path.length === 0 ||
@@ -1287,22 +1280,22 @@ function projectIconPaint(row: object): CanonicalIconPaint | undefined {
     !ICON_PATH_GRAMMAR.test(path)
   )
     return undefined;
-  const rawBox = optionalDescriptorValue(ownDataValue(row, 'viewBox'));
+  const rawBox = optionalDescriptorValue(getOwnDataDescriptor(row, 'viewBox'));
   const box: number[] = [];
   if (rawBox === undefined) box.push(...DEFAULT_ICON_VIEW_BOX);
   else {
     if (boundedOwnArrayLength(rawBox, 4) !== 4) return undefined;
     for (let index = 0; index < 4; index++) {
-      const coordinate = optionalDescriptorValue(ownDataValue(rawBox as object, String(index)));
+      const coordinate = optionalDescriptorValue(getOwnDataDescriptor(rawBox as object, String(index)));
       if (typeof coordinate !== 'number' || !Number.isFinite(coordinate) || Math.abs(coordinate) > 10_000) return undefined;
       box.push(coordinate);
     }
     if (box[2]! < 0.001 || box[3]! < 0.001) return undefined;
   }
-  const mode = optionalDescriptorValue(ownDataValue(row, 'mode'));
-  const strokeWidth = optionalDescriptorValue(ownDataValue(row, 'strokeWidth'));
-  const lineCap = optionalDescriptorValue(ownDataValue(row, 'lineCap'));
-  const lineJoin = optionalDescriptorValue(ownDataValue(row, 'lineJoin'));
+  const mode = optionalDescriptorValue(getOwnDataDescriptor(row, 'mode'));
+  const strokeWidth = optionalDescriptorValue(getOwnDataDescriptor(row, 'strokeWidth'));
+  const lineCap = optionalDescriptorValue(getOwnDataDescriptor(row, 'lineCap'));
+  const lineJoin = optionalDescriptorValue(getOwnDataDescriptor(row, 'lineJoin'));
   return Object.freeze({
     path,
     viewBox: Object.freeze(box) as unknown as CanonicalIconPaint['viewBox'],
@@ -1322,7 +1315,7 @@ type CanonicalPointRadius = MapDataLayerPointRadius;
 
 function projectPointRadius(value: unknown): number | CanonicalPointRadius {
   if (!isRuntimeRecord(value)) return finiteRange(typeof value === 'number' ? value : NaN, 5, 0, 200);
-  const read = (key: string): unknown => optionalDescriptorValue(ownDataValue(value, key));
+  const read = (key: string): unknown => optionalDescriptorValue(getOwnDataDescriptor(value, key));
   const field = read('field');
   const rawFallback = read('fallback');
   const fallback = finiteRange(typeof rawFallback === 'number' ? rawFallback : NaN, 5, 0, 200);
@@ -1335,7 +1328,7 @@ function projectPointRadius(value: unknown): number | CanonicalPointRadius {
 
 function projectPointOptions(value: unknown): CanonicalPointOptions | undefined {
   if (!isRuntimeRecord(value)) return undefined;
-  const read = (key: string): unknown => optionalDescriptorValue(ownDataValue(value, key));
+  const read = (key: string): unknown => optionalDescriptorValue(getOwnDataDescriptor(value, key));
   const string = (key: string): string | undefined => {
     const candidate = read(key);
     return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
@@ -1349,19 +1342,19 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
   const project = (input: unknown, accept: (row: object) => void): void => {
     const length = boundedOwnArrayLength(input, MAX_MAP_STEP_STOPS) ?? 0;
     for (let index = 0; index < length; index++) {
-      const row = optionalDescriptorValue(ownDataValue(input as object, String(index)));
+      const row = optionalDescriptorValue(getOwnDataDescriptor(input as object, String(index)));
       if (row !== null && typeof row === 'object') accept(row);
     }
   };
   project(read('colors'), (row) => {
-    const key = optionalDescriptorValue(ownDataValue(row, '0'));
-    const color = optionalDescriptorValue(ownDataValue(row, '1'));
+    const key = optionalDescriptorValue(getOwnDataDescriptor(row, '0'));
+    const color = optionalDescriptorValue(getOwnDataDescriptor(row, '1'));
     if (typeof key !== 'string' || typeof color !== 'string' || !sanitizeCssColor(color) ||
       colors.some(([existing]) => existing === key)) return;
     colors.push(Object.freeze([key, color]));
   });
   project(read('icons'), (row) => {
-    const key = optionalDescriptorValue(ownDataValue(row, 'value'));
+    const key = optionalDescriptorValue(getOwnDataDescriptor(row, 'value'));
     if (typeof key !== 'string' || icons.some((icon) => icon.value === key)) return;
     const paint = projectIconPaint(row);
     if (!paint) return;
@@ -1409,13 +1402,13 @@ function rasterPointIcon(host: Element, icon: CanonicalPointIcon, color: string)
 function projectLineOptions(value: unknown): CanonicalLineOptions | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const field = optionalDescriptorValue(ownDataValue(value, 'field'));
-    const width = optionalDescriptorValue(ownDataValue(value, 'width'));
-    const opacity = optionalDescriptorValue(ownDataValue(value, 'opacity'));
+    const field = optionalDescriptorValue(getOwnDataDescriptor(value, 'field'));
+    const width = optionalDescriptorValue(getOwnDataDescriptor(value, 'width'));
+    const opacity = optionalDescriptorValue(getOwnDataDescriptor(value, 'opacity'));
     return Object.freeze({
       field: typeof field === 'string' && field.trim() ? field.trim() : undefined,
       stops: Object.freeze(normalizeMapLegendGradient(
-        optionalDescriptorValue(ownDataValue(value, 'stops')),
+        optionalDescriptorValue(getOwnDataDescriptor(value, 'stops')),
       ).filter((stop, index, stops) => index === 0 || stop[0] > stops[index - 1]![0])
         .map((stop) => Object.freeze(stop))),
       width: typeof width === 'number' ? finiteRange(width, 2, 0, 200) : 2,
@@ -1440,8 +1433,8 @@ function projectedHeatmapRange(value: unknown): readonly [number, number] | unde
   try {
     const length = boundedOwnArrayLength(value, 2);
     if (length === undefined || length < 2) return undefined;
-    const minDescriptor = ownDataValue(value as object, '0');
-    const maxDescriptor = ownDataValue(value as object, '1');
+    const minDescriptor = getOwnDataDescriptor(value as object, '0');
+    const maxDescriptor = getOwnDataDescriptor(value as object, '1');
     if (
       minDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       maxDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -1474,12 +1467,12 @@ function projectedHeatmapZoomValue(
 function projectHeatmapOptions(value: unknown): CanonicalHeatmapOptions | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const weightFieldDescriptor = ownDataValue(value, 'weightField');
-    const weightRangeDescriptor = ownDataValue(value, 'weightRange');
-    const stopsDescriptor = ownDataValue(value, 'stops');
-    const radiusDescriptor = ownDataValue(value, 'radius');
-    const intensityDescriptor = ownDataValue(value, 'intensity');
-    const opacityDescriptor = ownDataValue(value, 'opacity');
+    const weightFieldDescriptor = getOwnDataDescriptor(value, 'weightField');
+    const weightRangeDescriptor = getOwnDataDescriptor(value, 'weightRange');
+    const stopsDescriptor = getOwnDataDescriptor(value, 'stops');
+    const radiusDescriptor = getOwnDataDescriptor(value, 'radius');
+    const intensityDescriptor = getOwnDataDescriptor(value, 'intensity');
+    const opacityDescriptor = getOwnDataDescriptor(value, 'opacity');
     const weightFieldValue = optionalDescriptorValue(weightFieldDescriptor);
     const opacityValue = optionalDescriptorValue(opacityDescriptor);
     return Object.freeze({
@@ -1530,12 +1523,12 @@ interface CanonicalMapChoropleth {
 function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const sourceIdDescriptor = ownDataValue(value, 'sourceId');
-    const geojsonDescriptor = ownDataValue(value, 'geojson');
-    const fieldDescriptor = ownDataValue(value, 'field');
-    const stopsDescriptor = ownDataValue(value, 'stops');
-    const interpolationDescriptor = ownDataValue(value, 'interpolation');
-    const stepBaseColorDescriptor = ownDataValue(value, 'stepBaseColor');
+    const sourceIdDescriptor = getOwnDataDescriptor(value, 'sourceId');
+    const geojsonDescriptor = getOwnDataDescriptor(value, 'geojson');
+    const fieldDescriptor = getOwnDataDescriptor(value, 'field');
+    const stopsDescriptor = getOwnDataDescriptor(value, 'stops');
+    const interpolationDescriptor = getOwnDataDescriptor(value, 'interpolation');
+    const stepBaseColorDescriptor = getOwnDataDescriptor(value, 'stepBaseColor');
     if (
       sourceIdDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       geojsonDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -1595,8 +1588,8 @@ function projectMarkerLngLat(value: unknown): readonly [number, number] | undefi
   try {
     const length = boundedOwnArrayLength(value, 2);
     if (length === undefined || length < 2) return undefined;
-    const lngDescriptor = ownDataValue(value as object, '0');
-    const latDescriptor = ownDataValue(value as object, '1');
+    const lngDescriptor = getOwnDataDescriptor(value as object, '0');
+    const latDescriptor = getOwnDataDescriptor(value as object, '1');
     if (
       lngDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       latDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -1619,11 +1612,11 @@ function projectMarkerLngLat(value: unknown): readonly [number, number] | undefi
 function projectMapMarker(value: unknown): CanonicalMapMarker | undefined {
   try {
     if (!isRuntimeRecord(value)) return undefined;
-    const idDescriptor = ownDataValue(value, 'id');
-    const lngLatDescriptor = ownDataValue(value, 'lngLat');
-    const colorDescriptor = ownDataValue(value, 'color');
-    const labelDescriptor = ownDataValue(value, 'label');
-    const unsafeHtmlDescriptor = ownDataValue(value, 'unsafeHtml');
+    const idDescriptor = getOwnDataDescriptor(value, 'id');
+    const lngLatDescriptor = getOwnDataDescriptor(value, 'lngLat');
+    const colorDescriptor = getOwnDataDescriptor(value, 'color');
+    const labelDescriptor = getOwnDataDescriptor(value, 'label');
+    const unsafeHtmlDescriptor = getOwnDataDescriptor(value, 'unsafeHtml');
     if (
       lngLatDescriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       isUnsafeDescriptor(idDescriptor) ||
@@ -1663,7 +1656,7 @@ function projectMapMarkers(value: unknown): readonly CanonicalMapMarker[] {
     const output: CanonicalMapMarker[] = [];
     const explicitIds = new Set<string>();
     for (let index = 0; index < scanCount; index += 1) {
-      const descriptor = ownDataValue(value as object, String(index));
+      const descriptor = getOwnDataDescriptor(value as object, String(index));
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)) continue;
       const marker = projectMapMarker(descriptor.value);
       if (!marker || (marker.id !== undefined && explicitIds.has(marker.id))) continue;

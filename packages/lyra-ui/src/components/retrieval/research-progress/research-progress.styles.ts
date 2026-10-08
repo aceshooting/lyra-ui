@@ -96,10 +96,17 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  [part='empty'],
   [part='limit'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
+  }
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='base'] {
+    padding: var(--lr-space-xs);
+  }
+  :host([frame='plain']) [part='base'] {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
   }
 `;

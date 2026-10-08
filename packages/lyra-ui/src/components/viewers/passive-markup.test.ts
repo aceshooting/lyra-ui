@@ -64,6 +64,14 @@ describe('sanitizePassiveMarkup', () => {
     expect(paragraph.textContent).to.equal('Ordinary content');
   });
 
+  it('refuses a passive SVG whose nested use references fan out past the clone ceiling', () => {
+    let defs = '<g id="g0"><rect width="1" height="1"/></g>';
+    for (let level = 1; level <= 5; level++) defs += `<g id="g${level}">${`<use href="#g${level - 1}"/>`.repeat(10)}</g>`;
+    const bomb = `<svg xmlns="http://www.w3.org/2000/svg"><defs>${defs}</defs><use href="#g5"/></svg>`;
+    expect(() => sanitizePassiveMarkup(DOMPurify, bomb, document, 'passive-svg')).to.throw('too many <use>');
+    expect(() => sanitizePassiveMarkup(DOMPurify, bomb.replace('#g5', '#g2'), document, 'passive-svg')).not.to.throw();
+  });
+
   it('retains only unescaped local SVG fragment references', () => {
     const clean = sanitizePassiveMarkup(DOMPurify, `
       <svg>

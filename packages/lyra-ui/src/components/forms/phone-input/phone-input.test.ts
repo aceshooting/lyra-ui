@@ -90,6 +90,20 @@ it("restores its nonempty native and validation defaults after attribute removal
   expect(el.inputmode).to.equal("tel");
 });
 
+it('shares the text-field native passthrough shape: boolean autocorrect, inputMode aliases, name', async () => {
+  const el = (await fixture(html`<lr-phone-input name="phone" autocorrect="off" inputmode="numeric"></lr-phone-input>`)) as LyraPhoneInput;
+  const native = () => el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement;
+  expect(el.autocorrect).to.equal(false);
+  expect(native().getAttribute('autocorrect')).to.equal('off');
+  expect(el.inputMode).to.equal('numeric');
+  el.inputmode = 'text';
+  el.enterkeyhint = 'go';
+  await el.updateComplete;
+  expect(el.inputMode).to.equal('text');
+  expect(native().getAttribute('enterkeyhint')).to.equal('go');
+  expect(native().getAttribute('name')).to.equal('phone');
+});
+
 it('normalizes live user input to an E.164 form value through an injected adapter', async () => {
   const form = (await fixture(html`
     <form>

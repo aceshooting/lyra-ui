@@ -1,6 +1,6 @@
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { testLegendVisibilityEvents } from '../../../../test/chart-legend-visibility.js';
-import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil, aTimeout, nextFrame, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render } from 'lit';
 import './chart.js';
@@ -2506,6 +2506,7 @@ it('keeps the user-set zoom range across data and locale updates while zoomed', 
 
   el.datasets = [{ label: 'x', data: [6, 5, 4, 3, 2, 1] }];
   await el.updateComplete;
+  // wait-reason: asserting the zoomed range is NOT reset by the dataset swap (no event to await)
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   const scale = (el as any).chart.scales.x;
@@ -2514,6 +2515,7 @@ it('keeps the user-set zoom range across data and locale updates while zoomed', 
 
   el.setAttribute('locale', 'en-US');
   await el.updateComplete;
+  // wait-reason: asserting the zoomed range is NOT reset by the locale change (no event to await)
   await new Promise((resolve) => setTimeout(resolve, 50));
   const localizedScale = (el as any).chart.scales.x;
   expect([localizedScale.min, localizedScale.max]).to.deep.equal([1, 3]);
@@ -3873,6 +3875,20 @@ it("row-samples every series' own data/color/pointRadius arrays to match the sam
   expect(config.data.datasets[1].data[probe]).to.equal(dataB[sourceIndexes[probe]!]);
 });
 
+it('keeps every series plotted and in the legend when rows are thinned', async () => {
+  const rowCount = 600;
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = Array.from({ length: rowCount }, (_, i) => String(i));
+  el.datasets = ['A', 'B', 'C'].map((label) => ({ label, data: Array.from({ length: rowCount }, (_, i) => i) }));
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const config = (el as any).buildConfig();
+  expect(config.data.datasets.map((d: { label: string }) => d.label)).to.deep.equal(['A', 'B', 'C']);
+  expect(config.data.labels.length).to.equal(333);
+  expect(el.shadowRoot!.querySelectorAll('[part~="legend-item"]').length).to.equal(3);
+});
+
 it('maps a click on a row-sampled chart back to its original source row index/value in the emitted detail', async () => {
   const rowCount = 1001;
   const labels = Array.from({ length: rowCount }, (_, i) => String(i));
@@ -5094,7 +5110,7 @@ describe('effective chart contract', () => {
       await el.updateComplete;
       await waitUntil(() => (el as any).chart != null);
       const chart = (el as any).chart;
-      await aTimeout(20);
+      await nextFrame();
       const data = chart.data;
       const originalUpdate = chart.update.bind(chart);
       let updateCount = 0;
@@ -5108,6 +5124,7 @@ describe('effective chart contract', () => {
         [{ contentRect: { width: 320 } } as unknown as ResizeObserverEntry],
         {} as ResizeObserver,
       );
+      // wait-reason: asserting a hidden chart does NOT redraw on resize (a frame-deferred redraw would land within the margin)
       await aTimeout(20);
       expect(chart.data).to.equal(data);
       expect(updateCount).to.equal(0);
@@ -5128,7 +5145,8 @@ describe('effective chart contract', () => {
         [{ contentRect: { width: 322 } } as unknown as ResizeObserverEntry],
         {} as ResizeObserver,
       );
-      await aTimeout(20);
+      await waitUntil(() => updateCount >= 1, 'the coalesced redraw never happened');
+      await nextFrame();
       expect(chart.data).to.not.equal(data);
       expect(updateCount).to.equal(1);
     } finally {
@@ -5427,7 +5445,8 @@ describe('collecting an already-slotted config script without relying on the ini
       // Give every real slotchange (queued around slot assignment, including one from the
       // loading -> loaded slot swap) time to arrive and be swallowed, so the assertions below
       // only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial slotchange never fired');
+      await nextFrame();
       expect(
         intercepted,
         "a real browser does fire a slot's initial slotchange -- this test suppresses every occurrence to reproduce happy-dom, which never fires any of them"
@@ -5462,7 +5481,8 @@ describe('collecting an already-slotted config script without relying on the ini
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
+      await nextFrame();
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -6923,6 +6943,7 @@ describe('bounded chart fallback paths', () => {
     (el as any).loadLibrary = () => import('chart.js');
     document.body.append(el);
     try {
+      // wait-reason: asserting the chart stays in the loading state (no chart is constructed) while the peer import is gated
       await aTimeout(20);
       expect((el as any).loading).to.be.true;
       expect((el as any).chart).to.equal(undefined);

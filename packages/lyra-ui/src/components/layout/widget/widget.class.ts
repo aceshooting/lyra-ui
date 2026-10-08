@@ -10,7 +10,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
-import { captureFocusReturnOpener, DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn, captureFocusReturnOpener } from '../../../internal/deferred-focus-return.js';
 import {
   activateOverlay,
   collectFocusableElements,
@@ -404,7 +404,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: false }) activeViewId = '';
 
   private readonly slotPresence = new SlotPresenceController(this);
-  @state() private hasLabelSlot = false;
   /** Text content of a slotted `label`, so the fullscreen dialog's accessible name can see rich
    *  slotted label content the same way it already sees the plain `label` property. */
   @state() private labelSlotText?: string;
@@ -419,7 +418,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   });
   private explicitTrigger?: HTMLElement;
   private fullscreenOpener?: HTMLElement | null;
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private readonly labelTextObserver = new AccessibleTextController(this, [], () => {
     const assigned = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]')
       ?.assignedElements({ flatten: true }) ?? [];
@@ -445,7 +443,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       const labelChildren = Array.from(this.children).filter(
         (el) => el.getAttribute('slot') === 'label'
       );
-      this.hasLabelSlot = labelChildren.length > 0;
       this.labelSlotText = this.readLabelSlotText(labelChildren);
       // Restore a persisted `collapsed` preference once, before the first render, so the restored
       // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
@@ -600,7 +597,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.nativeModal.hide();
     super.disconnectedCallback();
     this.overlayHandle?.suspend();
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     this.resetOwnerRealmWork();
   }
 
@@ -636,7 +633,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   private activateFullscreenOverlay(): void {
     this.nativeModal.prepare();
-    this.deferredFocusReturn.cancel();
     this.fullscreenOpener = this.explicitTrigger ?? captureFocusReturnOpener(this);
     this.overlayHandle = activateOverlay({
       host: this,
@@ -647,6 +643,11 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       restoreFocusTo: this.explicitTrigger,
       lockScroll: true,
       suspendWhenUnrendered: true,
+      // Covers an opener the host only re-shows after the exit.
+      deferredReturn: () => {
+        const opener = this.fullscreenOpener;
+        return opener ? { candidates: () => [opener], isCurrent: () => !this.fullscreen } : undefined;
+      },
     });
     this.explicitTrigger = undefined;
   }
@@ -656,16 +657,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;
-    // Covers an opener the host only re-shows after the exit.
-    const opener = this.fullscreenOpener;
     this.fullscreenOpener = undefined;
-    if (opener) {
-      this.deferredFocusReturn.schedule({
-        host: this,
-        candidates: () => [opener],
-        isCurrent: () => !this.fullscreen,
-      });
-    }
   }
 
   private onLabelSlotChange = (e: Event): void => {
@@ -676,7 +668,6 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
 
   private syncLabelSlot(assigned: Element[]): void {
-    this.hasLabelSlot = assigned.length > 0;
     this.labelSlotText = this.readLabelSlotText(assigned);
     this.labelTextObserver.setEnabled(assigned.length > 0);
     this.labelTextObserver.bind();
@@ -799,7 +790,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
               { part: 'icon', hidden: !this.slotPresence.has('start') && !this.slotPresence.has('icon') },
             )}
             <div part="label-group">
-              <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}
+              <span part="label" ?hidden=${!hasLabel && !this.slotPresence.has('label')}
                 ><slot name="label" @slotchange=${this.onLabelSlotChange}
                   >${this.label}</slot
                 ></span

@@ -13,6 +13,7 @@ it('announces only the latest character count after consecutive native keyboard 
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
   await focusByKeyboard(input);
   await sendKeys({ type: 'a' });
+  // wait-reason: lets the count-announcement debounce elapse so the next edit supersedes a fired announcement
   await aTimeout(120);
   await sendKeys({ type: 'bc' });
   await el.updateComplete;

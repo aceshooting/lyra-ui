@@ -21,14 +21,14 @@ import type {
   ToolCallBlockRenderErrorDetail,
   ToolCallBlockToggleDetail,
 } from '../../agent-tools/tool-call-block/tool-call-block.class.js';
-import { isToolCallStatus } from '../../agent-tools/tool-status.js';
+import { isToolCallStatus, type ToolStatus } from '../../agent-tools/tool-status.js';
 import {
   projectedRedactionFields,
   redactToolDetail,
   TOO_MANY_REDACTION_PATHS,
   type RedactedToolDetail,
 } from '../../agent-tools/tool-redaction.js';
-import type { LyraToolCallChipEventMap, ToolCallStatus } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
 import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
 import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
@@ -88,7 +88,7 @@ const TOOL_BLOCK_EXPORTPARTS =
 
 /** A block's status from its call and (optional) paired result part. `denied` and `incomplete` are
  *  outcomes the application declared on the call itself, so no paired result overrides them. */
-function resolveBlockStatus(invocation: ToolInvocation, result?: ToolResultMessagePart): ToolCallStatus {
+function resolveBlockStatus(invocation: ToolInvocation, result?: ToolResultMessagePart): ToolStatus {
   const status = isToolCallStatus(invocation.status) ? invocation.status : 'pending';
   if (status === 'denied' || status === 'incomplete') return status;
   if (status === 'error' || (result && 'error' in result)) return 'error';

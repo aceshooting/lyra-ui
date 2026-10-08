@@ -162,4 +162,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
+  :host(:is([size='2xs'], [size='xs'], [size='s'], [size='small'])) [part='item'] {
+    padding: var(--lr-space-xs);
+  }
+  :host([frame='plain']) [part='item'] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
 `;

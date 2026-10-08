@@ -26,6 +26,8 @@ import {
 import type { AccordionItemTransitionSource } from './accordion-types.js';
 import { styles } from './accordion.styles.js';
 
+const VISIBILITY_STYLE = /display|visibility|content-visibility/i;
+
 export type LyraAccordionMode = 'single' | 'single-collapsible' | 'multiple';
 export interface LyraAccordionEventDetail {
   readonly item: LyraAccordionItem;
@@ -385,7 +387,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (this.#availabilityObserver) return;
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
-    const observer = new MutationObserverCtor(() => {
+    const observer = new MutationObserverCtor((records) => {
       if (
         this.#availabilityObserver !== observer ||
         !this.isConnected ||
@@ -393,11 +395,23 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
       ) {
         return;
       }
+      // An inline-style write that touches no visibility declaration (scroll lock, positioner) cannot change availability.
+      const touchesVisibility = (value: string | null): boolean => !!value && VISIBILITY_STYLE.test(value);
+      if (
+        records.every(
+          (record) =>
+            record.attributeName === 'style' &&
+            record.target instanceof HTMLElement &&
+            !touchesVisibility(record.oldValue) &&
+            !touchesVisibility(record.target.getAttribute('style')),
+        )
+      ) return;
       this.#reconcileRovingFocus();
     });
     this.#availabilityObserver = observer;
     observer.observe(this, {
       attributes: true,
+      attributeOldValue: true,
       subtree: true,
       attributeFilter: [
         'disabled',
@@ -415,6 +429,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     ) {
       observer.observe(ancestor, {
         attributes: true,
+        attributeOldValue: true,
         attributeFilter: ['hidden', 'aria-hidden', 'inert', 'class', 'style'],
       });
     }

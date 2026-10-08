@@ -1051,6 +1051,7 @@ it('does not construct a Chart.js instance if disconnected before the lazy peer 
   el.datasets = [{ label: 'a', data: [{ min: 0, q1: 1, median: 2, q3: 3, max: 4 }] }];
   document.body.appendChild(el);
   el.remove();
+  // wait-reason: asserting no chart is ever constructed after the lazy import settles
   await aTimeout(100);
   // Boolean projection, not `.to.be.undefined` on the live instance -- see the
   // primitive-projection note above.

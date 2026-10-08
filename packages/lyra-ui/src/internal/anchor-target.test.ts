@@ -505,6 +505,7 @@ describe('DocumentAnchorTarget mixin', () => {
     (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
     (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 5000;
     const firstCall = el.scrollToAnchor({ kind: 'page', page: 1 });
+    // wait-reason: let the 5 ms retry loop run several real intervals before superseding it
     await aTimeout(20);
     el.applySucceedsAfter = 0; // the second call's applyAnchor will succeed immediately
     const secondCall = el.scrollToAnchor({ kind: 'page', page: 2 });
@@ -548,6 +549,7 @@ describe('DocumentAnchorTarget mixin', () => {
     el.anchor = anchor;
     el.anchor = el.anchor;
     await el.updateComplete;
+    // wait-reason: asserting no further jump happens
     await aTimeout(20);
     expect(results, 'the same object, or its retained copy, does not jump again').to.equal(1);
     expect(el.applyCallCount).to.equal(1);
@@ -562,6 +564,7 @@ describe('DocumentAnchorTarget mixin', () => {
     await byId;
     el.anchor = 'cite-1';
     await el.updateComplete;
+    // wait-reason: asserting no further jump happens
     await aTimeout(20);
     expect(results, 'an identical highlight id does not jump again either').to.equal(3);
   });
@@ -579,6 +582,7 @@ describe('DocumentAnchorTarget mixin', () => {
       await host.updateComplete;
       await viewer.updateComplete;
     }
+    // wait-reason: asserting no further jump happens
     await aTimeout(20);
     expect(results, 'each parent render re-commits the binding without a new jump').to.equal(1);
     expect(viewer.applyCallCount).to.equal(1);

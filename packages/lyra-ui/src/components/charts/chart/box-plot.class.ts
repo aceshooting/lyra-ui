@@ -6,7 +6,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { observeReducedMotion } from '../../../internal/motion-observer.js';
+import { createReducedMotionWatch } from './chart-surface-shared.js';
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { loadBoxPlotAndRegister, type BoxPlotModule } from './box-plot-loader.js';
 export { loadBoxPlotAndRegister } from './box-plot-loader.js';
@@ -68,11 +68,14 @@ import {
   chartChromeLegendPlacement,
   normalizeChartChromeLegendPosition,
   type LyraChartChromeLegendPosition,
-} from './chart-chrome.js';
+} from './chart-chrome.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+
+const DIRECT_PIXEL_NUMBER = new RegExp(`^(${CSS_NUMBER_SOURCE})(?:px)?$`, 'i');
 
 export interface LyraBoxPlotSummary {
   readonly min: number;
@@ -438,7 +441,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   @state() private keyboardDatumAnnouncement = '';
   private intersectionObserver?: IntersectionObserver;
   private intersectionGeneration = 0;
-  private stopReducedMotionWatch?: () => void;
+  private readonly reducedMotionWatch = createReducedMotionWatch(this, () => this.drawIfVisible());
 
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: BoxPlotChartRuntime;
@@ -550,20 +553,12 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.armReducedMotionWatcher();
   }
 
-  private readonly onReducedMotionChange = (): void => {
-    if (!this.isConnected) return;
-    this.drawIfVisible();
-  };
-
   private armReducedMotionWatcher(): void {
-    if (this.stopReducedMotionWatch) return;
-    this.disarmReducedMotionWatcher();
-    this.stopReducedMotionWatch = observeReducedMotion(this, this.onReducedMotionChange);
+    this.reducedMotionWatch.arm();
   }
 
   private disarmReducedMotionWatcher(): void {
-    this.stopReducedMotionWatch?.();
-    this.stopReducedMotionWatch = undefined;
+    this.reducedMotionWatch.disarm();
   }
 
   private get ownerWindow(): BrowserWindow | undefined {
@@ -759,7 +754,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     const value =
       cs.getPropertyValue(name).trim() ||
       (fallbackToken ? cs.getPropertyValue(fallbackToken).trim() : '');
-    const direct = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:px)?$/i.exec(value);
+    const direct = DIRECT_PIXEL_NUMBER.exec(value);
     if (direct) {
       const resolved = Number.parseFloat(direct[1]!);
       if (Number.isFinite(resolved) && resolved >= 0) return resolved;

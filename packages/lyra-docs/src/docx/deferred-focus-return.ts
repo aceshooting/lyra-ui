@@ -12,3 +12,17 @@ export function trackDeferredFocusReturn(doc: Document, onCancel: () => void): {
   doc.addEventListener('pointerdown', cancel, true);
   return { get cancelled() { return cancelled; }, cancel };
 }
+
+/** After `hidden` settles, runs `restore` only when the user has not claimed focus and `unchanged()` still holds. */
+export function returnFocusAfterHide(
+  hidden: Promise<unknown>,
+  focus: { readonly cancelled: boolean; cancel(): void },
+  unchanged: () => boolean,
+  restore: () => void,
+): void {
+  void hidden.then(() => {
+    const shouldFocus = !focus.cancelled && unchanged();
+    focus.cancel();
+    if (shouldFocus) restore();
+  }, focus.cancel);
+}

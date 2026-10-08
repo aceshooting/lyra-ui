@@ -18,7 +18,7 @@ import {
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { renderNativeSearch } from '../../../internal/native-search.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -493,7 +493,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
     const oldElements = this.itemElements();
     const focusedIndex = oldElements.indexOf(
-      activeElementIn(this.shadowRoot) as HTMLElement
+      shadowFocusTarget(this) as HTMLElement
     );
     const referenceIndex =
       focusedIndex >= 0

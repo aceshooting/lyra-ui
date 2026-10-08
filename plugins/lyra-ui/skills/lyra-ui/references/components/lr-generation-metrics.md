@@ -65,7 +65,7 @@ is unset and `status="running"`)
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (base readout and
 tokens/throughput text color), `--lr-color-text` (the elapsed segment's higher-contrast color,
 and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-icon-button-size`
-(stop-button minimum sizing; the full shared 40px-equivalent hit floor applies), `--lr-color-border`/`-surface`/`-brand`
+(stop-button minimum sizing; the full shared hit floor applies), `--lr-color-border`/`-surface`/`-brand`
 (stop-button border/background/hover), `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`.
 

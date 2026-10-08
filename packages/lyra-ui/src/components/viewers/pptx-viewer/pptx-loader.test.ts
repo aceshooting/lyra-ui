@@ -5,6 +5,10 @@ import {
   loadPptxRenderer,
   __setPptxRendererForTesting,
 } from './pptx-loader.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+
+// Tests below deliberately make the optional peer unavailable or malformed; the loader's one-time diagnostic is expected.
+expectDevWarning('lyra-pptx-viewer-renderer-unavailable');
 
 afterEach(() => __setPptxRendererForTesting(undefined));
 

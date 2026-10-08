@@ -3,7 +3,6 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { ToolCallStatus } from '../tool-call-chip/tool-call-chip.class.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -14,7 +13,7 @@ import {
   SCROLL_OVERFLOW_ATTRIBUTE,
 } from '../../../internal/scroll-overflow.js';
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
-import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
 import {
   projectedRedactionFields,
   redactToolDetail,
@@ -22,6 +21,7 @@ import {
   type RedactedToolDetail,
 } from '../tool-redaction.js';
 import { styles } from './tool-call-block.styles.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_toolCall, LYRA_DEFAULT_toolCallBlockArgumentsLabel, LYRA_DEFAULT_toolCallBlockErrorLabel, LYRA_DEFAULT_toolCallBlockHeaderDenied, LYRA_DEFAULT_toolCallBlockHeaderError, LYRA_DEFAULT_toolCallBlockHeaderIncomplete, LYRA_DEFAULT_toolCallBlockHeaderPending, LYRA_DEFAULT_toolCallBlockHeaderRunning, LYRA_DEFAULT_toolCallBlockHeaderSuccess, LYRA_DEFAULT_toolCallBlockResultLabel } from '../../../internal/default-strings.generated.js';
@@ -46,10 +46,10 @@ export interface LyraToolCallBlockEventMap extends LyraJsonViewerEventMap {
   'lr-render-error': CustomEvent<ToolCallBlockRenderErrorDetail>;
 }
 
-const TOOL_CALL_BLOCK_STATUS = literalSetConverter<ToolCallStatus>(TOOL_CALL_STATUSES, 'pending');
+const TOOL_CALL_BLOCK_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES, 'pending');
 
 /** Header verb for each status; the verb carries the state as text. */
-const HEADER_KEY: Readonly<Record<ToolCallStatus, string>> = {
+const HEADER_KEY: Readonly<Record<ToolStatus, string>> = {
   pending: 'toolCallBlockHeaderPending',
   running: 'toolCallBlockHeaderRunning',
   success: 'toolCallBlockHeaderSuccess',
@@ -188,16 +188,16 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
   /** Invocation id, echoed in `lr-toggle` and `lr-render-error` details. */
   @property({ attribute: 'call-id' }) callId = '';
 
-  private statusValue: ToolCallStatus = 'pending';
+  private statusValue: ToolStatus = 'pending';
 
   /** Call status. `incomplete` is a call that ended without a result (an interrupted stream, a
    *  cancelled run). Values outside `pending | running | success | error | denied | incomplete`
    *  normalize and reflect as `pending`. */
   @property({ reflect: true, converter: TOOL_CALL_BLOCK_STATUS })
-  get status(): ToolCallStatus {
+  get status(): ToolStatus {
     return this.statusValue;
   }
-  set status(next: ToolCallStatus) {
+  set status(next: ToolStatus) {
     const normalized = TOOL_CALL_BLOCK_STATUS.normalizeReflected(this, 'status', next);
     const old = this.statusValue;
     if (old === normalized) return;
@@ -254,10 +254,9 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
     // `expanded = false` is a field default, so the first update already looks like a collapse;
     // the `hasUpdated` guard keeps mounting (and server rendering) from touching the render root.
     if (this.hasUpdated && changed.get('expanded') === true && !this.expanded) {
-      const root = this.renderRoot as ShadowRoot | undefined;
-      this.restoreFocusToHeader = !!root
+      this.restoreFocusToHeader = !!this.renderRoot
         ?.querySelector('[part="body"]')
-        ?.contains(root.activeElement);
+        ?.contains(shadowFocusTarget(this));
     }
   }
 

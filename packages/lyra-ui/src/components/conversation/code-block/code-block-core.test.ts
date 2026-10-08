@@ -1062,7 +1062,7 @@ describe("copy button", () => {
       await el.updateComplete;
       expect(button.textContent!.trim()).to.equal("Copied!");
 
-      await aTimeout(1600);
+      await waitUntil(() => button.textContent!.trim() === "Copy", "the copied feedback never reverted", { timeout: 5000 });
       await el.updateComplete;
       expect(button.textContent!.trim()).to.equal("Copy");
     } finally {
@@ -1776,6 +1776,7 @@ describe('languages lazy grammar loaders', () => {
     // ensureShikiLanguageLoaded() memoizes per (core, key).
     el.code = 'alpha alpha';
     await el.updateComplete;
+    // wait-reason: asserts the memoized loader is not re-invoked by a later re-render
     await aTimeout(50);
     expect(calls, 'a later re-render must not re-invoke an already-resolved loader').to.equal(1);
   });

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,6 +40,8 @@ overrides the internal fieldset name.
 | `status` | Localized controlled request status (`tabindex="-1"`). |
 | `actions` | Decision buttons, shown only while pending. |
 | `decision` | One native decision button, themed through the shared `--lr-button-*` tokens. |
+| `decision-base` | A decision button's internal control (forwarded from `<lr-button>`). |
+| `decision-label` | A decision button's label wrapper (forwarded from `<lr-button>`). |
 
 
 **Events:** non-cancelable `lr-permission-decision` (`detail: { requestId, decision }`) reports the host’s authorization choice; the component does not authorize or persist the operation.

@@ -1,4 +1,4 @@
-import { aTimeout, elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { nextFrame, elementUpdated, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './split-panel.js';
 import { SNAP_NONE, type LyraSplitPanel, type LyraSplitPanelSnapFunction } from './split-panel.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -776,7 +776,7 @@ it('ends an in-flight drag when inherited direction changes', async () => {
   pointer(handle, 'pointerdown', 44, x);
   wrapper.dir = 'rtl';
   // Native input arrives in another task, after inherited-context observation has settled.
-  await aTimeout(0);
+  await nextFrame();
   await element.updateComplete;
   pointer(window, 'pointermove', 44, x + 40);
   pointer(window, 'pointerup', 44, x + 40);

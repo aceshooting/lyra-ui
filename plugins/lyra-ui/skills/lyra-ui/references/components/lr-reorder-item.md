@@ -6,7 +6,7 @@
 - **Class** `LyraReorderItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/reorder-list/reorder-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `6.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 5 custom properties — see `lr-reorder-list.md`

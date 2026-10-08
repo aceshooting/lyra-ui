@@ -625,10 +625,21 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * the better choice whenever that is the actual intent).
    */
   get scrollContainer(): HTMLElement | undefined {
-    const root = this.renderRoot as ParentNode | undefined;
-    return (
-      (root?.querySelector('[part="base"]') as HTMLElement | null) ?? undefined
-    );
+    return this.cachedPart('base');
+  }
+
+  private readonly partCache = new Map<string, HTMLElement>();
+
+  /** A shadow part looked up once and reused while it stays attached; a replaced node is re-queried. */
+  private cachedPart(name: 'base' | 'spacer'): HTMLElement | undefined {
+    let element = this.partCache.get(name);
+    if (!element?.isConnected) {
+      const root = this.renderRoot as ParentNode | undefined;
+      element = (root?.querySelector(`[part="${name}"]`) as HTMLElement | null) ?? undefined;
+      if (element) this.partCache.set(name, element);
+      else this.partCache.delete(name);
+    }
+    return element;
   }
 
   /**
@@ -681,10 +692,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  component's own scroll-coordinate space, and therefore the thing an external scroller's
    *  position has to be expressed relative to. */
   private get spacerElement(): HTMLElement | undefined {
-    const root = this.renderRoot as ParentNode | undefined;
-    return (
-      (root?.querySelector('[part="spacer"]') as HTMLElement | null) ?? undefined
-    );
+    return this.cachedPart('spacer');
   }
 
   /**

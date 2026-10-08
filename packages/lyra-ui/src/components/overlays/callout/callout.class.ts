@@ -28,6 +28,7 @@ import {
   contextualSizes,
   contextualVariants,
 } from '../../../internal/contextual-vocabulary.styles.js';
+import { effectiveSemanticVariant, semanticVariantConverter, type SemanticVariant } from '../../../internal/semantic-variant.js';
 import { styles } from './callout.styles.js';
 import {
   literalSetConverter,
@@ -39,7 +40,7 @@ import { LYRA_DEFAULT_calloutAnnouncementWithContext, LYRA_DEFAULT_close } from 
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */
-export type CalloutVariant = LyraVariant;
+export type CalloutVariant = SemanticVariant;
 /** The library's shared fill/border treatment vocabulary. */
 export type CalloutAppearance = LyraAppearance;
 /** The library's one size ladder, in either spelling. */
@@ -54,17 +55,7 @@ export interface LyraCalloutEventMap {
   'lr-close': CustomEvent<LyraCalloutCloseDetail>;
 }
 
-const CALLOUT_VARIANT = literalSetConverter<CalloutVariant>(
-  ['brand', 'neutral', 'success', 'warning', 'danger'],
-  'brand'
-);
-const CALLOUT_VARIANTS = new Set<CalloutVariant>([
-  'brand',
-  'neutral',
-  'success',
-  'warning',
-  'danger',
-]);
+const CALLOUT_VARIANT = semanticVariantConverter('brand');
 const CALLOUT_SIZE = literalSetConverter<CalloutSize>(
   ['2xs', 'xs', 's', 'm', 'l', 'xl', 'small', 'medium', 'large'],
   'm'
@@ -198,10 +189,11 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     return this._variant;
   }
   set variant(next: CalloutVariant) {
+    // `primary` is an alias: the callout stores and reflects the canonical `brand`.
     const normalized = CALLOUT_VARIANT.normalizeReflected(
       this,
       'variant',
-      next
+      next === 'primary' ? 'brand' : next
     );
     const old = this._variant;
     if (old === normalized) return;
@@ -549,14 +541,12 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   /** Resolve the same contextual tone that the inherited CSS vocabulary paints. An explicit local
    * attribute wins; otherwise the nearest composed semantic ancestor wins, with brand as the
    * standalone fallback. This remains live across moves, adoption, and reconnects. */
-  private get effectiveContextualVariant(): CalloutVariant {
-    if (this.hasAttribute('variant')) return this.variant;
+  private get effectiveContextualVariant(): LyraVariant {
+    if (this.hasAttribute('variant')) return effectiveSemanticVariant(this.variant);
     let ancestor = composedParentElement(this);
     while (ancestor) {
-      const candidate = ancestor.getAttribute(
-        'variant'
-      ) as CalloutVariant | null;
-      if (candidate && CALLOUT_VARIANTS.has(candidate)) return candidate;
+      const candidate = ancestor.getAttribute('variant');
+      if (candidate && CALLOUT_VARIANT.normalize(candidate) === candidate) return effectiveSemanticVariant(candidate);
       ancestor = composedParentElement(ancestor);
     }
     return 'brand';

@@ -6,7 +6,7 @@
 - **Class** `LyraMentionPopover`, also available unregistered from `@aceshooting/lyra-ui/components/utility/mention-popover/mention-popover.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -137,7 +137,7 @@ row), and `--lr-popover-viewport-clamp` (default `92vw`) — the shared narrow-v
 popup's max-inline-size is `min()`ed against, alongside its own `24rem` cap and the positioner's
 available space. See `lr-tour` for the shared-clamp note.
 
-The popup is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
+The popup is a floating surface and paints from the **shared overlay-surface family**:
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
@@ -146,7 +146,7 @@ The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather t
 decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
 value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
 
-`--lr-positioning-strategy` (16.0.0) — the popup reads this same cascading `absolute`/`fixed`
+`--lr-positioning-strategy` — the popup reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
 default when nothing is set. There is no per-instance `positioning-strategy` property on
 `<lr-mention-popover>`; set the custom property on `:root`, a theme, or one clipping ancestor to

@@ -177,7 +177,7 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
   under either mode**, so the legend keeps reading in real values instead of log units — no
   pre-transforming to log10 and hand-relabelling the legend back.
-  `'step'` (new in 11.0.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  `'step'` emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
   **discrete bands rather than a continuous ramp**. Use it whenever the legend advertises a fixed
   set of ranges with one swatch each: a ramp would put colours on the map that appear nowhere in the
   legend, and would render two regions in the same advertised band as visibly different colours
@@ -458,8 +458,6 @@ payload beside the map.
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
 `LyraMapStyleSpecification`, and `LyraMapInstance`.
-The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
-in v9 rather than retained as aliases.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and

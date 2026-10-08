@@ -11,6 +11,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { SeparatorDragController, separatorArrowDirection, separatorCoordinate } from '../../../internal/separator-drag.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
@@ -268,6 +269,20 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return parent;
   }
 
+  /** Focus lands on the collapse toggle, or on the host itself when the panel has no toggle. */
+  private relocateFocus(): void {
+    const toggle = this.renderRoot.querySelector<HTMLElement>('[part="collapse-toggle"]');
+    if (toggle) {
+      toggle.focus();
+      return;
+    }
+    if (!this.hasAttribute('tabindex')) {
+      this.tabIndex = -1;
+      this.addEventListener('blur', () => this.removeAttribute('tabindex'), { once: true });
+    }
+    this.focus();
+  }
+
   // Applied in willUpdate (before render), not updated (after render): the
   // handle's aria-valuenow is computed during render from the host's own
   // live getBoundingClientRect(), so the new inline-size/block-size has to
@@ -278,8 +293,8 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     if (
       this.hasUpdated &&
       ((changed.has('collapsed') && this.collapsed && this.matches(':focus-within')) ||
-        (changed.has('withoutResize') && this.withoutResize && (this.renderRoot as ShadowRoot).activeElement?.matches('[part="handle"]')))
-    ) this.renderRoot.querySelector<HTMLElement>('[part="collapse-toggle"]')?.focus();
+        (changed.has('withoutResize') && this.withoutResize && shadowFocusTarget(this)?.matches('[part="handle"]')))
+    ) this.relocateFocus();
     if (
       changed.has('extent') ||
       changed.has('minExtent') ||

@@ -11,7 +11,6 @@ import {
   isComposedFocusAvailable,
   repairComposedFocus,
 } from '../../../internal/focus-navigation.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
@@ -26,9 +25,10 @@ import {
   type ApprovalAction,
   type ApprovalDecision,
 } from '../approval-state.js';
+import { createWaitUntil, type ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ConfirmBarDecision = ApprovalDecision | null;
@@ -57,7 +57,7 @@ export type ConfirmBarReturnFocusTarget = HTMLElement | null | (() => HTMLElemen
  * finalizes the decision, a rejection restores the undecided state. Calling it more than once (from
  * one listener or several) waits for all of them.
  */
-export type ConfirmBarWaitUntil = (promise: Promise<unknown>) => void;
+export type ConfirmBarWaitUntil = ApprovalWaitUntil;
 
 export interface LyraConfirmBarEventMap {
   'lr-approve-request': CustomEvent<{ args: unknown; waitUntil: ConfirmBarWaitUntil }>;
@@ -258,6 +258,9 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -481,22 +484,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
       // is only meaningful while listeners are running. A reference captured and called later cannot
       // retroactively reopen a decision that already finalized, and silently pretending otherwise
       // would leave a bar stuck pending with nothing watching the promise.
-      const deferrals: Promise<unknown>[] = [];
-      let dispatching = true;
-      const waitUntil: ConfirmBarWaitUntil = (promise) => {
-        if (!dispatching) {
-          devWarnOnce(
-            'lyra-confirm-bar-wait-until-after-dispatch',
-            '<lr-confirm-bar>: waitUntil() was called after its lr-approve-request/lr-deny-request dispatch had ' +
-              'finished, so it did nothing. Call it synchronously from the listener; the promise it ' +
-              'receives may settle whenever it likes.',
-          );
-          return;
-        }
-        // Promise.resolve() rather than the argument as-is: a plain JS caller can hand over a
-        // thenable, or nothing at all, and neither may throw inside the component's own dispatch.
-        deferrals.push(Promise.resolve(promise));
-      };
+      const { waitUntil, deferrals, seal } = createWaitUntil('confirm-bar');
       // The guard above proves both are null right up to this point -- but `emit()` below dispatches
       // synchronously, so a listener can still write either one from inside it (e.g. it calls
       // preventDefault() and resolves the decision itself out of band, or bounces `pendingAction` back to
@@ -514,7 +502,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         next === 'approved'
           ? this.emitApproveRequest({ args: this.args, waitUntil })
           : this.emitDenyRequest({ waitUntil });
-      dispatching = false;
+      seal();
       const listenerResolvedItself = this.dispatchWriteGuard.touched;
       // `waitUntil()` is a veto in its own right -- it says "not yet" as plainly as preventDefault()
       // does -- so it takes the same branch without the listener having to call both.

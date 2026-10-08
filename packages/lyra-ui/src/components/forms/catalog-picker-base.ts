@@ -8,7 +8,7 @@ import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } f
 import { collectionSupport } from '../../internal/collection-snapshot.js';
 import { autocorrectConverter, spellcheckConverter } from '../../internal/converters.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../internal/native-event-relay.js';
-import { activeElementIn, deepActiveElementIn } from '../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../internal/active-element.js';
 import { submitOnEnter } from '../../internal/submit-on-enter.js';
 import { SlotPresenceController } from '../../internal/slot-presence-controller.js';
 import { tag } from '../../internal/prefix.js';
@@ -239,7 +239,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     const combobox = this.searchable && this.comboboxDefined;
     if (combobox !== this.usingCombobox && child) {
       this.replacingControl = child;
-      this.restoreFocus = activeElementIn(this.shadowRoot) === child || this.focusReplacement === child;
+      this.restoreFocus = shadowFocusTarget(this) === child || this.focusReplacement === child;
       this.focusReplacement = undefined;
       this.clearTransientState();
     }

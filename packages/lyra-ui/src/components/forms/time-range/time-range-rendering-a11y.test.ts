@@ -143,6 +143,22 @@ it("moves a drag handle’s painted fill on hover, and further again while it is
   }
 });
 
+it("fills a hovered preset from the shared hover-bg name", async () => {
+  const el = (await fixture(html`
+    <lr-time-range min="0" max="100" start="10" end="90"
+      style="--lr-transition-interactive: none; --lr-time-range-preset-hover-bg: rgb(1, 2, 3)"></lr-time-range>
+  `)) as LyraTimeRange;
+  el.presets = PRESETS;
+  await el.updateComplete;
+  const preset = el.shadowRoot!.querySelector('[part="preset-button"]') as HTMLElement;
+  try {
+    await hoverUntilMatched(preset, "the preset button never took the pointer");
+    await waitUntil(() => getComputedStyle(preset).backgroundColor === "rgb(1, 2, 3)", "hover-bg never applied");
+  } finally {
+    await resetMouse();
+  }
+});
+
 it("themes preset and handle hover/pressed paint through independent component hooks", async () => {
   const el = (await fixture(html`
     <lr-time-range

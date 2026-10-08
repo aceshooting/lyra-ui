@@ -13,10 +13,9 @@ import {
   LyraElement,
   type LyraEventDetailSnapshot,
 } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
   loadAnchoredOverlayRuntime,
-  settlePopupTransition,
-  PopupTransitionWaiters,
   syncTopLayerRelease,
   topLayerPlacement,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -31,7 +30,7 @@ import {
 } from '../../../internal/custom-states.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
-import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { revealRow } from '../../../internal/reveal-row.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -707,7 +706,7 @@ export type LyraComboboxSourceErrorEvent =
  */
 export class LyraCombobox<
   Multiple extends boolean = boolean,
-> extends LyraElement<LyraComboboxEventMap<Multiple>> {
+> extends LyraFormControlElement<LyraComboboxEventMap<Multiple>> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -1143,7 +1142,12 @@ export class LyraCombobox<
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
   private restoringOverlayFocus = false;
-  private readonly pointer = new DocumentPointerListener(this, (event) => this.onDocPointer(event));
+  private readonly popupController = new PopupController({
+    host: this,
+    popup: () => this.renderRoot.querySelector('[part="listbox"]'),
+    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    onPointer: (event) => this.onDocPointer(event),
+  });
   @state() private listboxHidden = true;
   /** Rows mount on first open, so a closed picker with hundreds of options stays cheap. */
   @state() private listboxRendered = false;
@@ -1155,8 +1159,6 @@ export class LyraCombobox<
   /** Set only by `hide()`. Cleanup is applied in `willUpdate()` after `lr-hide` accepts the close,
    * so a veto remains an atomic no-op for the query, active row, and async result set. */
   private closeCleanupPending = false;
-  private transitionToken = 0;
-  private readonly transitionWaiters = new PopupTransitionWaiters<'lr-after-show' | 'lr-after-hide'>();
   private _selected: string[] = [];
   private singleSelectedOption?: LyraOption;
   private readonly sourceOptionsByRow = new WeakMap<ComboboxSourceRow, LyraOption>();
@@ -1232,22 +1234,6 @@ export class LyraCombobox<
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  /** Returns the owning form, including an external owner selected by the `form` attribute. */
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** Native element used as the constraint-validation focus anchor. */
@@ -1402,16 +1388,14 @@ export class LyraCombobox<
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.transitionToken++;
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
+    this.popupController.cancel();
     this.releaseExternalDescription();
     if (this.hasUpdated) this.syncExternalDescription();
     this.listboxPositioned = false;
     this.invalidateListboxPositioning();
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.clearSourceTimer();
     this.sourceToken += 1;
     this.sourceAbort?.abort();
@@ -2081,7 +2065,7 @@ export class LyraCombobox<
   override disconnectedCallback(): void {
     this.listboxHidden = true;
     this.releaseExternalDescription();
-    this.transitionToken++;
+    this.popupController.cancel();
     this.listboxPositioned = false;
     this.disconnectValidatorAttributeObserver();
     super.disconnectedCallback();
@@ -2093,9 +2077,7 @@ export class LyraCombobox<
     this.sourceAbort = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
-    this.transitionWaiters.resolve('lr-after-show');
-    this.transitionWaiters.resolve('lr-after-hide');
+    this.popupController.unbindPointer();
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -2631,35 +2613,27 @@ export class LyraCombobox<
     const closeAfterPositioningFailure = !this.open && this.closeAfterPositioningFailure;
     this.closeAfterPositioningFailure = false;
     if (!changed.has('open') || this._isFirstUpdate || (!this.open && this.interactionBarred)) return;
-    const name = this.open ? 'lr-show' : 'lr-hide';
     // Removal and failed positioning cannot honour a veto: neither can keep a usable listbox open.
     if (!this.isConnected || closeAfterPositioningFailure) {
-      this.emit('lr-hide');
+      emitPopupEvent(this, 'lr-hide', false);
       return;
     }
-    if (!this.emit(name, null, { cancelable: true }).defaultPrevented) return;
-    this.openVetoed = true;
-    this.open = !this.open;
-    // `show()`/`hide()` already registered a waiter for the transition this veto just cancelled;
-    // without resolving it their returned promise would never settle.
-    this.transitionWaiters.resolve(
-      this.open ? 'lr-after-hide' : 'lr-after-show'
-    );
+    this.openVetoed = this.popupController.announce(this.open, () => {
+      this.open = !this.open;
+    });
   }
 
   /** Opens the listbox and resolves after `lr-after-show`. */
   show(): Promise<void> {
     if (this.open || this.interactionBarred) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-hide');
-    const settled = this.transitionWaiters.wait('lr-after-show');
+    const settled = this.popupController.wait(true);
     this.open = true;
     return settled;
   }
   /** Closes the listbox and resolves after `lr-after-hide`. */
   hide(): Promise<void> {
     if (!this.open) return Promise.resolve();
-    this.transitionWaiters.resolve('lr-after-show');
-    const settled = this.transitionWaiters.wait('lr-after-hide');
+    const settled = this.popupController.wait(false);
     this.closeCleanupPending = true;
     this.open = false;
     return settled;
@@ -2713,7 +2687,7 @@ export class LyraCombobox<
       },
       restoreFocusTo: this.inputEl ?? null,
     });
-    this.bindDocumentPointer();
+    this.popupController.bindPointer();
     this.beginListboxPositioning();
   }
 
@@ -2804,16 +2778,8 @@ export class LyraCombobox<
       this.restoringOverlayFocus = false;
     }
     this.overlayHandle = undefined;
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.restoreFocusOnClose = true;
-  }
-
-  private bindDocumentPointer(): void {
-    if (this.isConnected) this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
   }
 
   private reconnectOpenPopup(): void {
@@ -2894,8 +2860,7 @@ export class LyraCombobox<
       } else if (!this.open) {
         this.teardownListboxOverlay();
         if (this.interactionBarred) {
-          this.transitionToken++;
-          this.transitionWaiters.resolve('lr-after-hide');
+          this.popupController.cancel();
         } else if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-hide');
         }
@@ -2933,29 +2898,19 @@ export class LyraCombobox<
     }
   }
 
-  private async settleTransition(
-    event: 'lr-after-show' | 'lr-after-hide'
-  ): Promise<void> {
-    const token = ++this.transitionToken;
-    await settlePopupTransition({
-      host: this,
-      popup: () => this.renderRoot.querySelector('[part="listbox"]'),
-      isCurrent: () => this.transitionToken === token,
-      waitForPosition: event === 'lr-after-show' ? async () => {
+  private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return this.popupController.settle(event, {
+      waitForPosition: async (stale) => {
         while (this.open && !this.listboxPositioned) {
           const readiness = this.positioningReady;
           const positioned = await readiness;
-          if (this.transitionToken !== token) return false;
+          if (stale()) return false;
           if (positioned) break;
           if (readiness === this.positioningReady) return false;
         }
         return true;
-      } : undefined,
-      conceal: event === 'lr-after-hide' ? () => { this.listboxHidden = true; } : undefined,
-      onSettled: () => {
-        this.emit(event);
-        this.transitionWaiters.resolve(event);
       },
+      conceal: () => { this.listboxHidden = true; },
     });
   }
 

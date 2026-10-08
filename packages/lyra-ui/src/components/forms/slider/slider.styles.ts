@@ -18,7 +18,10 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-slider-gap, var(--lr-space-s));
     inline-size: 100%;
-    min-inline-size: 0;
+    /* As a flex item the control may shrink in a squeezed row, but its automatic minimum (the
+       longest label word, clamped by the max-inline-size below) keeps text wrapping at spaces
+       instead of inside a word; unbroken content still wraps at the container edge. */
+    min-inline-size: auto;
     max-inline-size: 100%;
   }
   [part~="base"] {
@@ -376,7 +379,7 @@ export const styles = css`
     flex: 1 0 100%;
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part~="label"] {
     font-weight: var(--lr-font-weight-semibold);
@@ -427,7 +430,7 @@ export const styles = css`
     flex: 0 1 auto;
     margin-inline-start: auto;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   [part="error"],
   [part~="hint"] {
@@ -436,7 +439,7 @@ export const styles = css`
     flex: 1 0 100%;
     min-inline-size: 0;
     max-inline-size: 100%;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }

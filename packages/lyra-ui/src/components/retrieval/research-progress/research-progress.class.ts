@@ -1,3 +1,4 @@
+import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { progressPercent, formatProgressPercent } from '../../../internal/progress-value.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -14,10 +15,11 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import '../../overlays/empty/empty.class.js';
 import { styles } from './research-progress.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_researchProgressEmpty, LYRA_DEFAULT_researchProgressLabel, LYRA_DEFAULT_researchProgressLimit, LYRA_DEFAULT_researchProgressSources, LYRA_DEFAULT_researchProgressStatusCompleted, LYRA_DEFAULT_researchProgressStatusFailed, LYRA_DEFAULT_researchProgressStatusPending, LYRA_DEFAULT_researchProgressStatusRunning, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'incomplete';
@@ -83,6 +85,7 @@ export class LyraResearchProgress extends LyraElement {
     collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
     details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
@@ -109,6 +112,10 @@ export class LyraResearchProgress extends LyraElement {
   @property({ attribute: false }) steps: readonly ResearchStep[] = [];
   /** Accessible group name and visible heading. */
   @property() label?: string;
+  /** Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens `[part="base"]` padding; `m` (the default) and larger keep the full padding. */
+  @property({ reflect: true }) size: LyraSize = 'm';
+  /** Container treatment, in the shared `LyraFrame` vocabulary. `'card'` (the default) keeps the panel's bordered box. `'plain'` removes the border, corner radius and padding from `[part="base"]`, for use inside an already-bordered container. */
+  @property({ reflect: true }) frame: LyraFrame = 'card';
   /** Semantic level of the heading; `none` keeps the visible text without heading semantics. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '2';
 
@@ -164,7 +171,7 @@ export class LyraResearchProgress extends LyraElement {
       <section part="base" role=${retrievalSemanticRole(this, 'group') ?? nothing} aria-label=${groupLabel ?? nothing}>
         <div part="label" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
         ${steps.length === 0
-          ? html`<p part="empty">${this.localize('researchProgressEmpty')}</p>`
+          ? html`<lr-empty part="empty" heading=${this.localize('researchProgressEmpty')}></lr-empty>`
           : html`
               <div
                 part="progress"

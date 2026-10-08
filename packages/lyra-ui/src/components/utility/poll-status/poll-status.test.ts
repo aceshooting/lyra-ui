@@ -71,6 +71,7 @@ describe('lr-poll-status', () => {
     expect(events[0]!.bubbles).to.be.true;
     expect(events[0]!.composed).to.be.true;
 
+    // wait-reason: real timer semantics, time must pass before the restart so the deadline is provably measured from the click
     await aTimeout(200);
     const restartedAt = performance.now();
     button.click();
@@ -83,6 +84,7 @@ describe('lr-poll-status', () => {
     );
     expect(events[2]!.detail).to.equal(null);
     expect(performance.now() - restartedAt).to.be.greaterThan(800);
+    // wait-reason: negative assertion, no extra automatic event may follow the restarted deadline
     await aTimeout(100);
     expect(events).to.have.length(3);
   });
@@ -132,6 +134,7 @@ describe('lr-poll-status', () => {
       'one zero-delay automatic event follows the manual event',
     );
     expect(details[1]).to.equal(null);
+    // wait-reason: negative assertion, no second zero-delay automatic event may follow
     await aTimeout(40);
     expect(details).to.have.length(2);
   });
@@ -151,6 +154,7 @@ describe('lr-poll-status', () => {
     expect(el.paused).to.be.true;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Paused');
+    // wait-reason: negative assertion, a manual refresh while paused must not arm an automatic tick (25ms deadline)
     await aTimeout(100);
     expect(dueCount).to.equal(1);
   });
@@ -165,6 +169,7 @@ describe('lr-poll-status', () => {
     let dueCount = 0;
     el.addEventListener('lr-poll-due', () => dueCount++);
     button.click();
+    // wait-reason: negative assertion, a disabled refresh button must not emit (25ms deadline)
     await aTimeout(100);
     expect(dueCount).to.equal(0);
   });
@@ -181,6 +186,7 @@ describe('lr-poll-status', () => {
 
     button.click();
     expect(detail).to.deep.equal({ manual: true });
+    // wait-reason: negative assertion, no timer may arm without a configured delay; outlives one 1000ms tick interval
     await aTimeout(1150);
     expect(dueCount).to.equal(1);
   });
@@ -242,6 +248,7 @@ describe('lr-poll-status', () => {
     await el.updateComplete;
     el.active = true;
     await el.updateComplete;
+    // wait-reason: negative assertion, toggling active must not re-arm a fired deadline; outlives one 1000ms tick interval
     await aTimeout(1150);
     expect(dueCount).to.equal(1);
   });
@@ -255,7 +262,7 @@ describe('lr-poll-status', () => {
     expect(event.detail).to.deep.equal({ paused: true });
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(el.paused).to.be.true;
-    await aTimeout(50);
+    await waitUntil(() => liveRegionText(el).includes('Paused'), 'paused announcement flushed', { timeout: 3000 });
     expect(liveRegionText(el)).to.include('Paused');
   });
 
@@ -263,6 +270,7 @@ describe('lr-poll-status', () => {
     const el = (await fixture(html`<lr-poll-status next-in-ms="40" paused></lr-poll-status>`)) as LyraPollStatus;
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
+    // wait-reason: negative assertion, a paused poll must not tick past its 40ms deadline
     await aTimeout(150);
     expect(fired).to.be.false;
   });
@@ -273,17 +281,21 @@ describe('lr-poll-status', () => {
     el.addEventListener('lr-poll-due', () => {
       dueCount += 1;
     });
+    // wait-reason: real timer semantics, elapsed time before pausing must be frozen out of the remaining 120ms
     await aTimeout(30);
     el.paused = true;
     await el.updateComplete;
+    // wait-reason: negative assertion, a paused poll must not fire past the 120ms deadline
     await aTimeout(160);
     expect(dueCount).to.equal(0);
 
     el.paused = false;
     await el.updateComplete;
+    // wait-reason: real timer semantics, elapsed running time between pauses must be frozen out of the remaining delay
     await aTimeout(25);
     el.paused = true;
     await el.updateComplete;
+    // wait-reason: negative assertion, a re-paused poll must not fire past the remaining delay
     await aTimeout(120);
     expect(dueCount).to.equal(0);
 
@@ -300,6 +312,7 @@ describe('lr-poll-status', () => {
 
   it('restart while paused replaces the frozen remainder with the configured full delay', async () => {
     const el = (await fixture(html`<lr-poll-status next-in-ms="90" paused></lr-poll-status>`)) as LyraPollStatus;
+    // wait-reason: real timer semantics, a paused poll must outlive its 90ms deadline before restart()
     await aTimeout(120);
     el.restart();
     const due = oneEvent(el, 'lr-poll-due');
@@ -329,6 +342,7 @@ describe('lr-poll-status', () => {
     const el = (await fixture(html`<lr-poll-status></lr-poll-status>`)) as LyraPollStatus;
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
+    // wait-reason: negative assertion, no countdown was started; outlives one 1000ms tick interval
     await aTimeout(1150); // outlives one full tick interval (1000ms)
     expect(fired, 'no countdown was ever started, so due can never legitimately be reached').to.be.false;
     expect(el.shadowRoot!.querySelector('[part="indicator"]')!.hasAttribute('data-due')).to.be.false;
@@ -364,6 +378,7 @@ describe('lr-poll-status', () => {
 
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
+    // wait-reason: negative assertion, a cleared deadline must not fire (40ms original deadline)
     await aTimeout(150);
     expect(fired, 'clearing next-in-ms should stop the ticker armed for the previous deadline').to.be.false;
     expect(el.shadowRoot!.querySelector('[part="indicator"]')!.hasAttribute('data-due')).to.be.false;
@@ -377,6 +392,7 @@ describe('lr-poll-status', () => {
 
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
+    // wait-reason: negative assertion, an inactive poll must not fire past its 40ms deadline
     await aTimeout(150); // outlives the original 40ms deadline
     expect(fired, 'no tick should run while inactive, so due can never be reached').to.be.false;
   });
@@ -459,6 +475,7 @@ describe('lr-poll-status', () => {
     let fired = false;
     el.addEventListener('lr-poll-due', () => (fired = true));
     el.remove();
+    // wait-reason: negative assertion, a removed element must not fire past its 40ms deadline
     await aTimeout(150);
     expect(fired, 'disarmTicker() should have run in disconnectedCallback').to.be.false;
   });
@@ -740,6 +757,7 @@ describe('poll-status timer and adoption hardening', () => {
     el.restart();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('');
+    // wait-reason: negative assertion, restart() with no configured delay must not arm a ticker
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(fired, 'restart() with no configured delay must not arm a ticker').to.be.false;
   });

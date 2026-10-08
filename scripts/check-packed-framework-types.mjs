@@ -206,14 +206,7 @@ for (const entry of typeEntries) {
   }
 }
 
-const manifest = await import('@aceshooting/lyra-ui/custom-elements.json', {
-  with: { type: 'json' },
-});
-if (!Array.isArray(manifest.default?.modules) || manifest.default.modules.length === 0) {
-  throw new Error('the exported Custom Elements Manifest has no modules');
-}
-
-console.log('Node framework and manifest exports passed.');
+console.log('Node framework exports passed.');
 `,
   );
 
@@ -273,7 +266,6 @@ console.log('Node framework and manifest exports passed.');
 export async function verifyInstalledArtifacts(fixtureDir) {
   const installed = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   for (const relativePath of [
-    'custom-elements.json',
     'dist/custom-elements-jsx.d.ts',
     'dist/custom-elements-jsx.js',
     'dist/svelte.d.ts',
@@ -285,11 +277,12 @@ export async function verifyInstalledArtifacts(fixtureDir) {
   }
 
   const packageManifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
+  // The manifest and IDE data ship in @aceshooting/lyra-ide, not in this package.
   if (
-    packageManifest.customElements !== 'custom-elements.json' ||
-    packageManifest.exports?.['./custom-elements.json'] !== './custom-elements.json'
+    packageManifest.customElements !== undefined ||
+    packageManifest.exports?.['./custom-elements.json'] !== undefined
   ) {
-    throw new Error('the packed manifest metadata does not resolve to custom-elements.json');
+    throw new Error('the packed package must not carry the custom-elements manifest metadata');
   }
 
   for (const runtimeFile of [

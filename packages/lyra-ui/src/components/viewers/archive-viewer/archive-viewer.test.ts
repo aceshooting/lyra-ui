@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
@@ -448,6 +449,7 @@ describe('lr-archive-viewer', () => {
       el.src = 'java\tscript:alert(1)';
       const event = (await Promise.race([
         eventPromise,
+        // wait-reason: bounds a hang when the error event never arrives.
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 100)),
       ])) as CustomEvent<{ error: unknown }> | null;
       expect(event).to.not.be.null;
@@ -509,7 +511,7 @@ describe('lr-archive-viewer', () => {
       const container = document.createElement('div');
       document.body.append(container);
       container.append(el); // a move: disconnect and reconnect within one task
-      await aTimeout(30);
+      await twoFrames();
       expect(fetchCount).to.equal(1);
       el.remove();
       await aTimeout(0); // a genuine disconnect
@@ -911,7 +913,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
       // fail, so the gap stays visible in the report instead of reading as a product defect.
       if (selection.rangeCount === 0) this.skip();
       name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
-      await aTimeout(30);
+      await twoFrames();
       expect(events).to.have.lengthOf(1);
       expect(events[0]!.detail.text).to.equal('README');
       expect(events[0]!.detail.anchor).to.deep.include({
@@ -980,7 +982,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
       selection.removeAllRanges();
       const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
       row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
-      await aTimeout(30);
+      await twoFrames();
       expect(events).to.have.lengthOf(0);
     } finally {
       restore();
@@ -1014,7 +1016,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
     try {
       row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
-      await aTimeout(30);
+      await twoFrames();
       expect(events).to.have.lengthOf(0);
     } finally {
       if (globalSelectionObj) {
@@ -1065,7 +1067,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
       // Same WebKit programmatic-selection gap noted above -- skip rather than fail.
       if (selection.rangeCount === 0) this.skip();
       name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
-      await aTimeout(30);
+      await twoFrames();
       expect(events).to.have.lengthOf(1);
       expect(events[0]!.detail.text).to.equal('README');
       selection.removeAllRanges();
@@ -1106,7 +1108,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     try {
       const row = vlistRoot.querySelector('[part~="entry"]') as HTMLElement;
       row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
-      await aTimeout(30);
+      await twoFrames();
       expect(events).to.have.lengthOf(0);
     } finally {
       delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;

@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./generation-metrics.js";
 import type { LyraGenerationMetrics } from "./generation-metrics.js";
 
@@ -250,7 +250,7 @@ it("the ticker keeps advancing the elapsed display roughly once per second while
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`
   )) as LyraGenerationMetrics;
   const before = parseElapsedSeconds(elapsedText(el));
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > before + 0.5, "ticker never advanced", { timeout: 5000 });
   const after = parseElapsedSeconds(elapsedText(el));
   expect(
     after,
@@ -262,12 +262,13 @@ it("freezes elapsed when status becomes complete, and stops ticking", async () =
   const el = (await fixture(
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`
   )) as LyraGenerationMetrics;
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > 0.5, "ticker never advanced", { timeout: 5000 });
   el.status = "complete";
   await el.updateComplete;
   const frozen = elapsedText(el);
   expect(parseElapsedSeconds(frozen)).to.be.greaterThan(0.5);
 
+  // wait-reason: asserts the display stays frozen for longer than one ticker interval
   await aTimeout(1150);
   expect(
     elapsedText(el),
@@ -304,7 +305,7 @@ it("never renders a NaN-containing elapsed string when started-at is a malformed
   expect(text).to.not.include("NaN");
   expect(parseElapsedSeconds(text)).to.be.closeTo(0, 0.3);
 
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > 0.5, "fallback ticker never advanced", { timeout: 5000 });
   const later = elapsedText(el);
   expect(
     later,
@@ -331,7 +332,7 @@ it("restarts the fallback clock from scratch on a fresh complete -> running tran
   const el = (await fixture(
     html`<lr-generation-metrics status="running"></lr-generation-metrics>`
   )) as LyraGenerationMetrics;
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > 0.5, "ticker never advanced", { timeout: 5000 });
   el.status = "complete";
   await el.updateComplete;
 
@@ -506,6 +507,7 @@ it("clears the ticker on disconnect so it cannot keep updating a detached elemen
   el.remove();
   // Purely a "must not throw" / no-leaked-timer-crash check -- there is
   // nothing externally observable left on a detached, un-rendered element.
+  // wait-reason: asserts a detached element survives a full ticker interval without throwing
   await aTimeout(1150);
   expect(el.isConnected).to.be.false;
 });
@@ -529,7 +531,7 @@ it("resumes the ticker after being disconnected and reconnected while still runn
   await el.updateComplete;
 
   const before = parseElapsedSeconds(elapsedText(el));
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > before + 0.5, "ticker never advanced after reconnect", { timeout: 5000 });
   const after = parseElapsedSeconds(elapsedText(el));
   expect(
     after,
@@ -688,7 +690,7 @@ it("preserves elapsed time and keeps ticking when a running valid startedAt beco
   const afterClear = parseElapsedSeconds(elapsedText(el));
   expect(afterClear).to.be.closeTo(before, 0.3);
 
-  await aTimeout(1150);
+  await waitUntil(() => parseElapsedSeconds(elapsedText(el)) > afterClear + 0.5, "ticker never resumed", { timeout: 5000 });
   expect(parseElapsedSeconds(elapsedText(el))).to.be.greaterThan(
     afterClear + 0.5
   );
@@ -705,8 +707,10 @@ it("wraps long localized metrics inside a 320px allocation while keeping Stop re
       token-count="999999999999"
       tokens-per-second="999999.9"
       .strings=${{
-        generationStatusTokensCount:
-          "AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}",
+        generationStatusTokens: {
+          one: "AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}",
+          other: "AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}",
+        },
         generationStatusThroughput:
           "AnExtremelyLongLocalizedThroughputDescriptionWithoutNaturalBreaks {rate}",
       }}
@@ -721,4 +725,19 @@ it("wraps long localized metrics inside a 320px allocation while keeping Stop re
   expect(stop.getBoundingClientRect().right).to.be.at.most(
     container.getBoundingClientRect().right + 1
   );
+});
+
+it("derives throughput from the live elapsed time between ticks, not the last whole-second tick", async () => {
+  const el = (await fixture(html`
+    <lr-generation-metrics
+      status="running"
+      token-count="100"
+      .startedAt=${Date.now() - 900}
+    ></lr-generation-metrics>
+  `)) as LyraGenerationMetrics;
+  expect(throughputText(el), "under one second: no derived rate yet").to.equal(null);
+  await waitUntil(() => Date.now() - (el.startedAt as number) > 1050);
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(throughputText(el), "past one live second, before the next tick").to.not.equal(null);
 });

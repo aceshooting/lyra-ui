@@ -43,8 +43,10 @@ export const Narrow320: Story = {
         token-count="999999999999"
         tokens-per-second="999999.9"
         .strings=${{
-          generationStatusTokensCount:
-            'AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}',
+          generationStatusTokens: {
+            one: 'AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}',
+            other: 'AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}',
+          },
           generationStatusThroughput:
             'AnExtremelyLongLocalizedThroughputDescriptionWithoutNaturalBreaks {rate}',
         }}

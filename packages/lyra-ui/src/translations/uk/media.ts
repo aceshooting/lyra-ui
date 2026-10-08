@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Гучність',
   videoCaptions: 'Субтитри',
   videoCaptionsOff: 'Вимкнено',
-  videoPlaybackSpeed: 'Швидкість відтворення',
   videoPictureInPicture: 'Увімкнути режим «картинка в картинці»',
   videoExitPictureInPicture: 'Вийти з режиму «картинка в картинці»',
   videoEnterFullscreen: 'Перейти в повноекранний режим',

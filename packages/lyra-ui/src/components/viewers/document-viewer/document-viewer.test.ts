@@ -1,4 +1,5 @@
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { twoFrames } from '../../../../test/frames.js';
+import { expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
 import "./document-viewer.js";
 import {
@@ -263,14 +264,14 @@ describe("registry dispatch", () => {
         src="https://example.test/report.pdf"
       ></lr-document-viewer>
     `)) as LyraDocumentViewer;
-    await aTimeout(20);
+    await twoFrames();
     expect(loads).to.equal(0);
     expect(
       el.shadowRoot!.querySelectorAll("lr-document-preview, #loaded").length
     ).to.equal(0);
 
     el.open = true;
-    await aTimeout(20);
+    await twoFrames();
     await el.updateComplete;
     expect(loads).to.equal(1);
     expect(el.shadowRoot!.querySelectorAll("#loaded").length).to.equal(1);
@@ -291,7 +292,7 @@ describe("registry dispatch", () => {
         src="https://example.test/report.pdf"
       ></lr-document-viewer>
     `)) as LyraDocumentViewer;
-    await aTimeout(20);
+    await twoFrames();
     await el.updateComplete;
     const lazy = el.shadowRoot!.querySelector('[part="body"] #lazy');
     expect(lazy != null).to.equal(true);
@@ -358,7 +359,7 @@ describe("registry dispatch", () => {
     el.addEventListener('lr-anchor-result', (event) => results.push((event as CustomEvent<{ found: boolean }>).detail.found));
     el.open = true;
     await waitUntil(() => el.shadowRoot!.querySelector('#lazy-anchor-target') !== null);
-    await aTimeout(50);
+    await twoFrames();
     // The declared-capable renderer owns the result; the shell must not answer `{ found: false }`.
     expect(results).to.deep.equal([]);
   });
@@ -447,7 +448,7 @@ describe("registry dispatch", () => {
     const priorAnnouncements = announcement?.childElementCount ?? 0;
 
     rejectOld(new Error('outdated loader failure'));
-    await aTimeout(20);
+    await twoFrames();
     expect(el.shadowRoot!.querySelector('#new-output')?.textContent).to.equal('Current preview');
     expect(el.shadowRoot!.querySelector('[part="body"]')?.textContent).to.not.include('Localized preview failure.');
     expect(announcement?.childElementCount).to.equal(priorAnnouncements);
@@ -490,7 +491,7 @@ describe("registry dispatch", () => {
           return html`<p id="deferred-output">${file.name}</p>`;
         },
       });
-      await aTimeout(20);
+      await twoFrames();
       expect(renderCalls).to.equal(0);
       document.body.append(el);
     } finally {
@@ -498,7 +499,7 @@ describe("registry dispatch", () => {
       for (const callback of pendingMicrotasks)
         originalQueueMicrotask(callback);
     }
-    await aTimeout(20);
+    await twoFrames();
     await el.updateComplete;
     expect(renderCalls).to.equal(1);
     expect(
@@ -705,7 +706,7 @@ describe("registry dispatch", () => {
 
       el.open = true;
       await el.updateComplete;
-      await aTimeout(30);
+      await twoFrames();
 
       expect(
         el.shadowRoot!.querySelector('[part="body"]')?.textContent
@@ -1152,7 +1153,7 @@ describe("anchor/highlights/alt widening", () => {
     });
     (el as unknown as { anchor: unknown }).anchor = { kind: "page", page: 1 };
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await twoFrames();
     // A capable renderer's own DocumentAnchorTarget mixin is responsible for this event, not the
     // shell (this stub renderer isn't a real adopting element, so nothing should fire at all).
     expect(fired).to.be.false;
@@ -1196,7 +1197,7 @@ describe("anchor/highlights/alt widening", () => {
     const rendersAfterAnchor = renders;
     el.anchor = anchor;
     await el.updateComplete;
-    await aTimeout(20);
+    await twoFrames();
     expect(results.length).to.equal(1);
     expect(renders).to.equal(rendersAfterAnchor);
 
@@ -1243,7 +1244,7 @@ describe("anchor/highlights/alt widening", () => {
     el.addEventListener("lr-anchor-result", () => {
       fired = true;
     });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await twoFrames();
     expect(fired).to.be.false; // no anchor was ever set, so the event contract remains inactive
   });
 });

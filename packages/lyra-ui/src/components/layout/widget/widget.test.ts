@@ -371,7 +371,10 @@ describe("rich label/sublabel", () => {
     span.slot = "label";
     span.textContent = "Runtime label";
     el.appendChild(span);
-    labelSlot.dispatchEvent(new Event("slotchange"));
+    // A real slotchange bubbles; the presence controller listens once on the render root.
+    labelSlot.dispatchEvent(new Event("slotchange", { bubbles: true }));
+    await el.updateComplete;
+    // The presence reconcile runs in a microtask and schedules the corrective update.
     await el.updateComplete;
 
     expect(labelPart.hasAttribute("hidden")).to.be.false;
@@ -397,7 +400,10 @@ describe("rich label/sublabel", () => {
 
     (el.querySelector('[slot="label"]') as HTMLElement).textContent =
       "Updated title";
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitUntil(
+      () => base.getAttribute("aria-label") === "Updated title",
+      "the slotted label observer renames the dialog"
+    );
     await el.updateComplete;
     expect(base.getAttribute("aria-label")).to.equal("Updated title");
   });
@@ -1866,7 +1872,10 @@ it("derives a rich slotted dialog name from aria-labelledby and image alternativ
 
   expect(base.getAttribute("aria-label")).to.equal("Energy diagram");
   el.querySelector("img")!.alt = "Updated energy diagram";
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await waitUntil(
+    () => base.getAttribute("aria-label") === "Updated energy diagram",
+    "the slotted alt observer renames the dialog"
+  );
   await el.updateComplete;
   expect(base.getAttribute("aria-label")).to.equal("Updated energy diagram");
 });

@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Ovoz balandligi',
   videoCaptions: 'Subtitrlar',
   videoCaptionsOff: 'Oʻchiq',
-  videoPlaybackSpeed: 'Ijro tezligi',
   videoPictureInPicture: 'Rasm ichida rasm rejimiga oʻtish',
   videoExitPictureInPicture: 'Rasm ichida rasm rejimidan chiqish',
   videoEnterFullscreen: 'Toʻliq ekranga oʻtish',

@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './timeline.js';
 import './timeline-item.js';
 import type { LyraTimeline } from './timeline.js';
@@ -13,10 +13,15 @@ for (const collision of ['overlap', 'stack'] as const) {
         <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}><div id="grow" style="block-size: 24px">Third</div></lr-timeline-item>
         <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}><div style="block-size: 24px">Last</div></lr-timeline-item>
       </lr-timeline>`);
-      await aTimeout(100);
       const base = element.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
       const items = [...element.querySelectorAll<HTMLElement>('lr-timeline-item')];
       const requiredHeight = () => Math.max(...items.filter((item) => item.isConnected).map((item) => item.offsetTop + item.offsetHeight));
+      await waitUntil(
+        () => base.clientHeight > 0
+          && base.clientHeight + 1 >= requiredHeight()
+          && (collision === 'stack' ? items[2]!.offsetTop > items[0]!.offsetTop : items[2]!.offsetTop === items[0]!.offsetTop),
+        'the timeline never allocated its live content height',
+      );
       expect(base.clientHeight).to.be.greaterThan(0);
       expect(base.clientHeight + 1).to.be.at.least(requiredHeight());
       expect(base.getBoundingClientRect().width).to.equal(320);
@@ -82,4 +87,12 @@ it('reserves room below a vertical time axis for its latest item', async () => {
   const last = wrapper.querySelectorAll('lr-timeline-item')[1]!;
   const after = wrapper.querySelector('p')!;
   await waitUntil(() => last.getBoundingClientRect().bottom <= after.getBoundingClientRect().top + 1, 'the latest item overlaps the following content');
+});
+
+it('does not schedule an update for an equal-instant Date assigned to rangeStart', async () => {
+  const element = await fixture<LyraTimeline>(html`<lr-timeline scale="time" .rangeStart=${new Date('2000-01-01T00:00:00Z')}></lr-timeline>`);
+  element.rangeStart = new Date('2000-01-01T00:00:00Z');
+  expect(element.isUpdatePending).to.equal(false);
+  element.rangeStart = new Date('2001-01-01T00:00:00Z');
+  expect(element.isUpdatePending).to.equal(true);
 });

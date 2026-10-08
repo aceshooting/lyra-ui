@@ -10,7 +10,7 @@ import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { styles } from './segmented.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 
 export interface LyraSegmentedItem {
   value: string;
@@ -292,7 +292,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     super.willUpdate(changed);
     if (
       changed.has('items') &&
-      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
+      shadowFocusTarget(this)?.getAttribute('part') ===
         'segment'
     ) {
       this.rehomeSegmentFocus = true;
@@ -324,7 +324,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
             'segment' &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
-    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const focused = shadowFocusTarget(this);
     const candidate =
       fromEvent ??
       (focused?.getAttribute('part') === 'segment'

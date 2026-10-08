@@ -38,6 +38,8 @@ record, and renders at most 100 steps. `label` sets the visible group heading an
 unless a non-empty host `aria-label` owns it; the progressbar is always named from the label (the
 localized default for an empty one). The `headingLevel` property and `heading-level` attribute
 (`'2'` by default; `'none'` keeps the text without heading semantics) set the heading's level.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `base` padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps the panel's bordered box; `'plain'` removes the border, corner radius and padding from `base`, for use inside an already-bordered container.
 
 **CSS parts:**
 

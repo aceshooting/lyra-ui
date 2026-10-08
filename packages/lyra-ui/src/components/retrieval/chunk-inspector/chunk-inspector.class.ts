@@ -23,13 +23,13 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import type { LyraScoreThresholds } from '../graph/graph.class.js';
+import { resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { LyraScoreThresholds } from '../graph/graph.class.js';
+export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 /** A local, non-exported structural copy of the `lr-document-viewer` `LyraAnchor` discriminated
  *  union, declared here (rather than imported) so this component has no build-time coupling to the
  *  viewer stack. Structurally identical to the real thing, so `chunk.anchor` interops with a
@@ -207,7 +207,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
    *  overall owner; an explicitly empty host label stays empty on the group. */
   @property() label?: string;
   /** Optional one-based position supplied by a containing result list. The standalone inspector
-   * uses each chunk's position in its own sorted list when this is unset. */
+   * uses each chunk's position in its own sorted list when this is unset. Setting it marks the
+   * inspector as one row of that list, so it renders without its own group, list or listitem
+   * semantics. */
   @property({ attribute: false }) ordinalIndex?: number;
   /** Logical result count paired with `ordinalIndex`. */
   @property({ attribute: false }) ordinalTotal?: number;
@@ -263,7 +265,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   private tier(score: number): Tier {
     const safeScore = this.safeScore(score);
-    const { high, medium } = { ...DEFAULT_TIERS, ...this.thresholds };
+    const { high, medium } = resolveScoreTiers(DEFAULT_TIERS, this.thresholds);
     if (safeScore >= high) return 'high';
     if (safeScore >= medium) return 'medium';
     return 'low';
@@ -399,7 +401,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   }
 
   private renderChunk = (item: unknown): TemplateResult =>
-    this.chunkTemplate(item as LyraChunk, false);
+    this.chunkTemplate(item as LyraChunk, this.ordinalIndex !== undefined);
 
   // `<lr-virtual-list>` already wraps every row it renders in its own `role="listitem"`; a second
   // one nested inside it would leave the inner listitem with a listitem (rather than list) parent,
@@ -427,7 +429,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       this,
       this.label == null ? this.localize('chunkInspectorLabel') : this.label
     );
-    const groupRole = retrievalSemanticRole(this, 'group');
+    const embedded = this.ordinalIndex !== undefined;
+    const groupRole = embedded ? undefined : retrievalSemanticRole(this, 'group');
     if (sorted.length === 0) {
       return html`<div part="base">
         <lr-empty
@@ -440,7 +443,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       <div
         part="base"
         role=${groupRole ?? nothing}
-        aria-label=${label ?? nothing}
+        aria-label=${embedded ? nothing : label ?? nothing}
       >
         ${sorted.length > this.effectiveVirtualizeAt
           ? html`<lr-virtual-list
@@ -452,7 +455,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
               @lr-virtual-scroll=${this.stopOwnedEvent}
               @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
-          : html`<div role="list">
+          : html`<div role=${embedded ? nothing : 'list'}>
               ${sorted.map((c) => this.renderChunk(c))}
             </div>`}
       </div>

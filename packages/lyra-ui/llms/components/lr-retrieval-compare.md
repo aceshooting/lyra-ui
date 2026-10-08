@@ -30,6 +30,8 @@ owner, while an explicitly empty host label stays empty on the region).
 trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 Each set's chunk buttons share one Tab stop and move with ArrowUp/ArrowDown/Home/End; the selected
 chunk remains controlled by `selectedChunkId`.
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the compared `chunk` buttons' padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each compared chunk's bordered, filled button; `'plain'` removes the border, background and corner radius from every `chunk`, for use inside an already-bordered container.
 
 Set ids and each set's nested chunk ids are canonicalized independently. Malformed/blank rows and
 later duplicates are omitted first-wins before empty state, overlap/count calculations, ranking,

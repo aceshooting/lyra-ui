@@ -1479,6 +1479,7 @@ describe("lr-swatch-picker", () => {
         });
         // Real timers (fake ones don't work under wtr): let the scale transition actually start
         // before sampling, with plenty of margin over --lr-transition-fast.
+        // wait-reason: real CSS transition must start before the transform is sampled; no event marks it
         await new Promise((resolve) => setTimeout(resolve, 300));
         return getComputedStyle(
           button.querySelector('[part="swatch-fill"]') as HTMLElement

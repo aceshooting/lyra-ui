@@ -104,7 +104,7 @@ it("honors coalesceMs reassigned after mount for a subsequent burst, not just th
   el.content = "abc";
   await el.updateComplete;
 
-  await aTimeout(150);
+  await waitUntil(() => plainText(el) === "abc", "the burst never flushed", { timeout: 3000 });
   expect(
     plainText(el),
     "the burst should flush using the newly-assigned coalesceMs, not the original 5000ms window"
@@ -232,7 +232,7 @@ describe("coalescing", () => {
       "nothing should have flushed yet -- still inside the coalesce window"
     ).to.equal("");
 
-    await aTimeout(250);
+    await waitUntil(() => plainText(el) === "abc", "the burst never flushed", { timeout: 3000 });
     expect(
       plainText(el),
       "only the latest value in the burst should ever land"
@@ -312,6 +312,7 @@ describe("coalescing", () => {
     ).to.equal("");
 
     el.remove();
+    // wait-reason: asserts a disconnected element never flushes after the 60ms coalesce window
     await aTimeout(120);
     expect(
       (el as unknown as Internals).displayedContent,
@@ -923,6 +924,7 @@ describe("lr-content-settled", () => {
     await pending;
     // The inner <lr-markdown> can settle more than once as its optional parser peers resolve --
     // give any further settle a chance to arrive before checking every observed origin.
+    // wait-reason: asserts no further settle origin differs; absence window for a possible extra settle
     await aTimeout(80);
     expect(origins.length, "at least one settle should have bubbled through").to.be.greaterThan(0);
     for (const origin of origins) {
@@ -1020,6 +1022,7 @@ describe('lr-streaming-text forwarded Markdown parts and code direction', () => 
     for (const chunk of chunks) {
       content += chunk;
       el.content = content;
+      // wait-reason: paces streamed chunks against the 30ms coalesce window
       await aTimeoutMs(10);
     }
     await waitUntil(() => Boolean(innerOf(el)?.shadowRoot?.querySelector('.fallback-code')), 'inner fallback never segmented', { timeout: 3000 });

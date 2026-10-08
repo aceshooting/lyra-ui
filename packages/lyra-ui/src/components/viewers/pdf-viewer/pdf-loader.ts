@@ -1,5 +1,4 @@
-import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 
 const PDF_JS_WARNING_KEY = 'lyra-pdf-viewer-pdfjs-unavailable';
 const PDF_JS_WARNING = '<lr-pdf-viewer> could not load its optional pdfjs-dist peer.';
@@ -65,7 +64,12 @@ function isPdfJsApi(value: unknown): value is PdfJsApi {
   );
 }
 
-let pdfjs: Promise<PdfJsApi | null> | undefined;
+const pdfjs = /* @__PURE__ */ createOptionalPeerLoader<PdfJsApi>({
+  load: () => import('pdfjs-dist'),
+  isCapability: isPdfJsApi,
+  warningKey: PDF_JS_WARNING_KEY,
+  warning: PDF_JS_WARNING,
+});
 
 type WorkerModuleResolver = (specifier: string) => string | null | undefined;
 
@@ -133,22 +137,13 @@ function configurePdfJsWorker(
 }
 
 export async function loadPdfJsDeps(
-  importPdfjs: () => Promise<unknown> = () => import('pdfjs-dist'),
+  importPdfjs?: () => Promise<unknown>,
   resolveWorkerModule: WorkerModuleResolver = defaultWorkerModuleResolver,
   workerSrc?: string | null,
 ): Promise<PdfJsApi | null> {
-  try {
-    const module = await importPdfjs();
-    const direct = isPdfJsApi(module) ? module : undefined;
-    const defaultExport = unwrapOptionalPeerDefault(module);
-    const pdfjsLib = direct ?? (isPdfJsApi(defaultExport) ? defaultExport : null);
-    if (!pdfjsLib) return null;
-    configurePdfJsWorker(pdfjsLib, workerSrc, resolveWorkerModule);
-    return pdfjsLib;
-  } catch {
-    devWarnOnce(PDF_JS_WARNING_KEY, PDF_JS_WARNING);
-    return null;
-  }
+  const pdfjsLib = await pdfjs.loadWith(importPdfjs);
+  if (pdfjsLib) configurePdfJsWorker(pdfjsLib, workerSrc, resolveWorkerModule);
+  return pdfjsLib;
 }
 
 /**
@@ -162,18 +157,13 @@ export async function loadPdfJsDeps(
  * viewer loads first configures the worker for the whole page, and a later or newly-assigned
  * `workerSrc` only takes effect while the singleton is still unconfigured.
  */
-export function loadPdfJs(workerSrc?: string | null): Promise<PdfJsApi | null> {
-  if (!pdfjs) {
-    pdfjs = loadPdfJsDeps(undefined, undefined, workerSrc);
-    return pdfjs;
-  }
-  return pdfjs.then((pdfjsLib) => {
-    if (pdfjsLib) configurePdfJsWorker(pdfjsLib, workerSrc, defaultWorkerModuleResolver);
-    return pdfjsLib;
-  });
+export async function loadPdfJs(workerSrc?: string | null): Promise<PdfJsApi | null> {
+  const pdfjsLib = await pdfjs.get();
+  if (pdfjsLib) configurePdfJsWorker(pdfjsLib, workerSrc, defaultWorkerModuleResolver);
+  return pdfjsLib;
 }
 
 /** @internal Test-only cache reset. */
 export function clearPdfJsCache(): void {
-  pdfjs = undefined;
+  pdfjs.clear();
 }

@@ -22,6 +22,19 @@ function beginChangedStartDrag(el: LyraTimeRange, pointerId: number): void {
   expect(el.start).to.equal(50);
 }
 
+/** Returns the start handle with pointer capture neutralized (synthetic PointerEvents have no real pointer). */
+function captureStartHandle(el: LyraTimeRange): HTMLElement {
+  const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle-start"]')!;
+  handle.setPointerCapture = () => {};
+  return handle;
+}
+
+/** Zero-width layout rect: valueAtPointer()'s division must fall back to ratio 0, never NaN. */
+function stubZeroWidthTrack(base: HTMLElement): void {
+  base.getBoundingClientRect = () =>
+    ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+}
+
 const PRESETS = [
   { label: "Last 7 days", start: 0, end: 7 },
   { label: "Last 30 days", start: 0, end: 30 },
@@ -291,10 +304,7 @@ it("removes the window pointermove/pointerup listeners on disconnect so a detach
       step="1"
     ></lr-time-range>`
   )) as LyraTimeRange;
-  const startHandle = el.shadowRoot!.querySelector(
-    '[part="handle-start"]'
-  ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
+  const startHandle = captureStartHandle(el);
 
   // Begin a drag (adds window-level pointermove/pointerup listeners), then
   // remove the element from the DOM without ever delivering a pointerup —
@@ -333,10 +343,7 @@ it("tears down the drag on pointercancel even though no pointerup ever arrives",
       step="1"
     ></lr-time-range>`
   )) as LyraTimeRange;
-  const startHandle = el.shadowRoot!.querySelector(
-    '[part="handle-start"]'
-  ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
+  const startHandle = captureStartHandle(el);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -375,10 +382,7 @@ it("tears down the drag on lostpointercapture even though no pointerup ever arri
       step="1"
     ></lr-time-range>`
   )) as LyraTimeRange;
-  const startHandle = el.shadowRoot!.querySelector(
-    '[part="handle-start"]'
-  ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
+  const startHandle = captureStartHandle(el);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", {
@@ -558,10 +562,7 @@ it('refuses to start a brand-new drag from a direct handle pointerdown while alr
       disabled
     ></lr-time-range>`
   )) as LyraTimeRange;
-  const startHandle = el.shadowRoot!.querySelector(
-    '[part="handle-start"]'
-  ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
+  const startHandle = captureStartHandle(el);
   // The handle's own pointerdown listener is unconditional -- only beginDrag() itself gates on
   // liveDisabled -- so this exercises that guard directly rather than onBasePointerDown's separate
   // top-of-function check (covered by the click-to-seek "ignores a track click while disabled" test).
@@ -771,27 +772,11 @@ it('maps a pointer position to the domain minimum instead of NaN when the track 
     ></lr-time-range>`
   )) as LyraTimeRange;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  const startHandle = el.shadowRoot!.querySelector(
-    '[part="handle-start"]'
-  ) as HTMLElement;
-  startHandle.setPointerCapture = () => {};
+  const startHandle = captureStartHandle(el);
   // A zero-width rect, snapshotted at drag start, makes valueAtPointer()'s
   // (clientX - rect.left) / rect.width divide by zero; it must fall back to a raw ratio of 0
   // (the domain minimum) rather than propagating NaN into start/end.
-  base.getBoundingClientRect = () =>
-    ({
-      left: 0,
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: 0,
-      height: 0,
-      x: 0,
-      y: 0,
-      toJSON() {
-        return {};
-      },
-    } as DOMRect);
+  stubZeroWidthTrack(base);
 
   startHandle.dispatchEvent(
     new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, clientX: 40 })
@@ -2062,26 +2047,10 @@ describe("click-to-seek on the track", () => {
    *  the drag tests above do, so a pointerdown's clientX maps to a known ratio. */
   function pinTrack(el: LyraTimeRange): HTMLElement {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    for (const part of ["handle-start", "handle-end"]) {
-      const handle = el.shadowRoot!.querySelector(
-        `[part="${part}"]`
-      ) as HTMLElement;
-      handle.setPointerCapture = () => {};
-    }
-    base.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        right: 200,
-        bottom: 0,
-        width: 200,
-        height: 0,
-        x: 0,
-        y: 0,
-        toJSON() {
-          return {};
-        },
-      } as DOMRect);
+    const handles = ["handle-start", "handle-end"].map(
+      (part) => el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement
+    );
+    stubTimeRangePointerGeometry(base, ...handles);
     return base;
   }
 
@@ -2279,20 +2248,7 @@ describe("click-to-seek on the track", () => {
     const track = el.shadowRoot!.querySelector(
       '[part="track"]'
     ) as HTMLElement;
-    base.getBoundingClientRect = () =>
-      ({
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: 0,
-        height: 0,
-        x: 0,
-        y: 0,
-        toJSON() {
-          return {};
-        },
-      } as DOMRect);
+    stubZeroWidthTrack(base);
     track.dispatchEvent(
       new PointerEvent("pointerdown", {
         bubbles: true,
@@ -2427,4 +2383,20 @@ describe("click-to-seek on the track", () => {
     expect(el.start).to.equal(50);
     window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
   });
+});
+
+it("relays host focus and blur once per entry and exit, not when focus moves between the handles", async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`
+  )) as LyraTimeRange;
+  const handle = (part: string) => el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+  const seen: string[] = [];
+  el.addEventListener("focus", () => seen.push("focus"));
+  el.addEventListener("blur", () => seen.push("blur"));
+  handle("handle-start").focus();
+  handle("handle-end").focus();
+  handle("handle-start").focus();
+  expect(seen.join(",")).to.equal("focus");
+  handle("handle-start").blur();
+  expect(seen.join(",")).to.equal("focus,blur");
 });

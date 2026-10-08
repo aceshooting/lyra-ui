@@ -123,7 +123,7 @@ const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
 const MESSAGE_STATUSES = new Set(['sending', 'sent', 'failed', 'streaming']);
 const PART_STATES = new Set(['streaming', 'complete', 'interrupted']);
-// Equal to TOOL_CALL_STATUSES in components/agent-tools/tool-status.ts (the `ToolCallStatus` union a
+// Equal to TOOL_CALL_STATUSES in components/agent-tools/tool-status.ts (the `ToolStatus` union a
 // `ToolInvocation` carries); kept local so this runtime layer imports nothing from the component tree.
 const TOOL_STATUSES = new Set(['pending', 'running', 'success', 'error', 'denied', 'incomplete']);
 

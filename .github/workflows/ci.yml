@@ -112,6 +112,8 @@ jobs:
           path: packages/lyra-ui/dist
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-docs lint
+      - run: pnpm --filter @aceshooting/lyra-ide lint
+      - run: pnpm --filter @aceshooting/lyra-translations lint
       # Knip discovers the package's explicit exports and runs a production graph before the
       # whole-workspace graph. A failure is therefore an orphaned file/export or an unused/unlisted
       # dependency, not a broad source-tree exemption.
@@ -125,7 +127,7 @@ jobs:
       # Other generated artifacts: lint's check:* forms and the attw package job's prepack + git diff.
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md plugins/lyra-ui/skills/lyra-ui/references/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md plugins/lyra-ui/skills/lyra-ui/references/ packages/lyra-ui/skills/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 
@@ -526,7 +528,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # lyra-flags and lyra-docs tarballs for the contract job (lyra-docs' prepack is this run's build plus its own).
+  # lyra-flags, lyra-docs, lyra-ide and lyra-translations tarballs for the contract job (the docs and translations
+  # prepacks are this run's build plus their own; lyra-ide's is a copy of lyra-ui's committed editor data).
   packed_consumer_companions:
     name: packed-consumer / companion packages
     runs-on: ubuntu-latest
@@ -545,18 +548,25 @@ jobs:
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
-      - name: Pack lyra-flags and lyra-docs
+      - name: Pack the companion packages
         run: |
           set -euo pipefail
           mkdir -p artifacts/packed-companions
           (cd packages/lyra-flags && pnpm pack --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-docs build
           (cd packages/lyra-docs && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
+          pnpm --filter @aceshooting/lyra-translations assemble
+          (cd packages/lyra-translations && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
+          pnpm --filter @aceshooting/lyra-ide sync
+          (cd packages/lyra-ide && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           git diff --exit-code
           cd artifacts/packed-companions
           tarballs=(*.tgz)
-          test "${#tarballs[@]}" -eq 2
+          test "${#tarballs[@]}" -eq 4
           sha256sum "${tarballs[@]}" > SHA256SUMS
+          cd ../..
+          node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-translations --tarball artifacts/packed-companions/aceshooting-lyra-translations-*.tgz
+          node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-ide --tarball artifacts/packed-companions/aceshooting-lyra-ide-*.tgz
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: packed-companion-tarballs
@@ -627,11 +637,16 @@ jobs:
           ui=(artifacts/packed-attw/aceshooting-lyra-ui-*.tgz)
           flags=(artifacts/packed-companions/aceshooting-lyra-flags-*.tgz)
           docs=(artifacts/packed-companions/aceshooting-lyra-docs-*.tgz)
+          translations=(artifacts/packed-companions/aceshooting-lyra-translations-*.tgz)
+          ide=(artifacts/packed-companions/aceshooting-lyra-ide-*.tgz)
           test "${#ui[@]}" -eq 1 && test "${#flags[@]}" -eq 1 && test "${#docs[@]}" -eq 1
+          test "${#translations[@]}" -eq 1 && test "${#ide[@]}" -eq 1
           {
             echo "LYRA_PACKED_UI_TARBALL=$PWD/${ui[0]}"
             echo "LYRA_PACKED_FLAGS_TARBALL=$PWD/${flags[0]}"
             echo "LYRA_PACKED_DOCS_TARBALL=$PWD/${docs[0]}"
+            echo "LYRA_PACKED_TRANSLATIONS_TARBALL=$PWD/${translations[0]}"
+            echo "LYRA_PACKED_IDE_TARBALL=$PWD/${ide[0]}"
           } >> "$GITHUB_ENV"
       # Includes a single-component (<lr-button>) gzip-size canary, gated far tighter than the
       # core-bundle budget, to catch a PR that silently drags something heavy into the eager

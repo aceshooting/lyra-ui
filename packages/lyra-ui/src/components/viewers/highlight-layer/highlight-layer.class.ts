@@ -8,7 +8,7 @@ import { styles } from './highlight-layer.styles.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -195,7 +195,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   }
 
   private hasFocusedAction(): boolean {
-    return (activeElementIn(this.shadowRoot) as HTMLElement | null)?.matches('[data-item-action]') ?? false;
+    return (shadowFocusTarget(this) as HTMLElement | null)?.matches('[data-item-action]') ?? false;
   }
 
   /** Whether the minimum-size hit areas (as `[part="rect-target"]` sizes them) of different

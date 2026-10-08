@@ -1,5 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { parseHotkey, hasNonShiftModifier, matchesHotkey, hotkeyAriaKeyShortcuts, isIgnorableKeyEvent, isEditableKeyEventTarget, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from './hotkey.js';
+import { parseHotkey, hasNonShiftModifier, matchesHotkey, hotkeyAriaKeyShortcuts, isIgnorableKeyEvent, isEditableKeyEventTarget, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner, keyEventOwnedByInnerControl } from './hotkey.js';
+import type { InnerControlKeyOptions } from './hotkey.js';
 
 describe('shared hotkeys', () => {
   it('parses valid chords and rejects ambiguous modifiers and invalid input', () => {
@@ -52,5 +53,45 @@ describe('shared hotkeys', () => {
       unregisterHotkeyOwner(window, palette); expect(resolveHotkeyOwner(window, event)).to.equal(undefined);
       registerHotkeyOwner(other, rail, () => true); expect(resolveHotkeyOwner(other, event)?.id).to.equal('rail');
     } finally { unregisterHotkeyOwner(window, rail); unregisterHotkeyOwner(window, palette); unregisterHotkeyOwner(other, rail); }
+  });
+});
+
+describe('keyEventOwnedByInnerControl', () => {
+  /** Dispatches a key from `selector` and evaluates ownership while the event is still in flight. */
+  async function probe(selector: string, markup: ReturnType<typeof html>) {
+    const container = await fixture<HTMLElement>(markup);
+    const target = selector === ':scope' ? container : container.querySelector<HTMLElement>(selector)!;
+    return {
+      container,
+      owned(extra: Omit<InnerControlKeyOptions, 'container'> = {}): boolean {
+        let result = false;
+        const listen = (event: Event): void => {
+          result = keyEventOwnedByInnerControl(event, { container, ...extra });
+        };
+        container.addEventListener('keydown', listen, { once: true });
+        target.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+        return result;
+      },
+    };
+  }
+
+  it('is owned by an inner editor or widget, and not by the container itself', async () => {
+    expect((await probe('input', html`<div><input /></div>`)).owned()).to.equal(true);
+    expect((await probe(':scope', html`<div></div>`)).owned()).to.equal(false);
+  });
+
+  it('treats buttons and links as owners only with ownsButtons', async () => {
+    const { owned } = await probe('button', html`<div><button>Go</button></div>`);
+    expect(owned()).to.equal(false);
+    expect(owned({ ownsButtons: true })).to.equal(true);
+  });
+
+  it('treats a custom element as an owner only with ownsCustomElements, unless ignored', async () => {
+    const { container, owned } = await probe('x-inner', html`<div><x-inner></x-inner></div>`);
+    const inner = container.querySelector('x-inner')!;
+    expect(owned()).to.equal(false);
+    expect(owned({ ownsCustomElements: true })).to.equal(true);
+    expect(owned({ ownsCustomElements: true, ignoreCustomElements: new Set([inner]) })).to.equal(false);
+    expect(owned({ ownerTag: 'x-inner' })).to.equal(true);
   });
 });

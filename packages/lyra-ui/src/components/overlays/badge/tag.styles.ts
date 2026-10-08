@@ -45,7 +45,7 @@ export const styles = css`
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part~='remove-button']:hover {
+  [part~='remove-button']:not(:disabled):hover {
     background: var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background));
   }
   /* Pressed deepens the hover's own scrim: currentColor mixed in again at the shared
@@ -56,11 +56,15 @@ export const styles = css`
      solid-appearance badge (light ink on a loud fill) points the opposite way: hovering would
      lighten while pressing darkened. Layering on the hover custom property also gives a retinted
      hover a matching press. */
-  [part~='remove-button']:active {
+  [part~='remove-button']:not(:disabled):active {
     background: color-mix(in srgb, currentColor var(--lr-color-mix-active), var(--lr-tag-remove-hover-bg, var(--_lr-tag-remove-hover-background)));
   }
   [part~='remove-button']:focus-visible {
     ${focusRing}
+  }
+  [part~='remove-button']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-opacity-disabled);
   }
   [part~='remove-button'] svg {
     display: block;

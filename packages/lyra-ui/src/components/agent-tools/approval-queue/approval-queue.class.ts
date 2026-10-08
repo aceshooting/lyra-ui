@@ -11,7 +11,7 @@ import type {
 } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
-import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { styles } from './approval-queue.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
@@ -248,7 +248,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
 
   /** Remembers the focused request (or the dialog's) and queues decided requests this update resolves. */
   private prepareRequestsUpdate(): void {
-    const active = this.shadowRoot?.activeElement as HTMLElement | null | undefined;
+    const active = shadowFocusTarget(this) as HTMLElement | null | undefined;
     this.focusAnchorId = active && active === this.dialogEl ? this.selectedInvocationId : active?.dataset['requestId'] ?? null;
     for (const id of this.decidedInvocationIds) {
       const request = this.normalizedRequests.find((candidate) => candidate.id === id);

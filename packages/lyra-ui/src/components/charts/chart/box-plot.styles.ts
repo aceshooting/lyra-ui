@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { chartLegendPositionStyles } from './chart-surface.styles.js';
 
 // Deliberately its own sheet rather than a wholesale re-export of
 // `chart.styles.ts`: unlike `lr-histogram`, `LyraBoxPlot` doesn't extend
@@ -36,46 +36,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
-  [part='base']:where([data-legend-position='top']) {
-    grid-template-areas:
-      'legend'
-      'plot'
-      'notice'
-      'table-toggle'
-      'table';
-  }
-  [part='base']:where([data-legend-position='inline-start']) {
-    grid-template-areas:
-      'legend plot'
-      'notice notice'
-      'table-toggle table-toggle'
-      'table table';
-    grid-template-columns:
-      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
-      minmax(0, 1fr);
-  }
-  [part='base']:where([data-legend-position='inline-end']) {
-    grid-template-areas:
-      'plot legend'
-      'notice notice'
-      'table-toggle table-toggle'
-      'table table';
-    grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
-  }
-  @container ${mediumContainerQuery} {
-    [part='base']:where([data-legend-position='inline-start']),
-    [part='base']:where([data-legend-position='inline-end']) {
-      grid-template-areas:
-        'plot'
-        'legend'
-        'notice'
-        'table-toggle'
-        'table';
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
+  ${chartLegendPositionStyles('notice')}
 
   [part='data-table-toggle']:hover {
     background: var(

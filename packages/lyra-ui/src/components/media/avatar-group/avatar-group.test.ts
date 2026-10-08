@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, html as litHtml } from 'lit';
 import './avatar-group.js';
 import '../avatar/avatar.js';
@@ -990,7 +990,7 @@ describe('collecting already-slotted avatars without relying on the initial slot
     );
     try {
       await group.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial slotchange never fired');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -1024,7 +1024,7 @@ describe('collecting already-slotted avatars without relying on the initial slot
     );
     try {
       await group.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'

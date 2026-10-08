@@ -5,6 +5,7 @@ import {
   FORM_CONTROL_LABEL_FACTORY,
   LyraElement,
 } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { installFormControlInternalsCapture } from '../../../internal/form-control-labels.js';
 import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import {
@@ -42,6 +43,7 @@ import {
 } from '../form-validator.js';
 import { findDefaultButton, isImplicitSubmission, submitFormImplicitly } from '../../../internal/submit-on-enter.js';
 import { createButtonExternalLabelController } from './button-external-label.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
@@ -293,7 +295,7 @@ export interface LyraButtonEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraButton extends LyraElement<LyraButtonEventMap> {
+export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -403,21 +405,6 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   constructor() {
@@ -911,7 +898,9 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     super.willUpdate(changed);
     // Rendering `loading` disables the focused native button, and the platform would then drop
     // focus to <body>; park it on the host until the button is enabled again.
-    if (changed.has('loading') && this.loading && this.shadowRoot?.activeElement === this.baseEl) {
+    // `null` (no focused control, or no DOM at all during SSR) must not match a missing base element.
+    const focusedControl = shadowFocusTarget(this);
+    if (changed.has('loading') && this.loading && focusedControl !== null && focusedControl === this.baseEl) {
       if (!this.hasAttribute('tabindex')) {
         this.tabIndex = -1;
         this.injectedHostTabIndex = true;
@@ -972,7 +961,7 @@ export class LyraButton extends LyraElement<LyraButtonEventMap> {
     super.updated(changed);
     if (changed.has('type')) this.syncImplicitSubmission();
     if (changed.has('loading') && !this.loading && this.injectedHostTabIndex) {
-      const parked = this.ownerDocument.activeElement === this && !this.shadowRoot?.activeElement;
+      const parked = this.ownerDocument.activeElement === this && !shadowFocusTarget(this);
       this.removeAttribute('tabindex');
       this.injectedHostTabIndex = false;
       if (parked) this.baseEl?.focus({ preventScroll: true });

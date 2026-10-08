@@ -551,7 +551,7 @@ describe('lr-trace-tree', () => {
         : span,
     );
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await waitUntil(() => live.shadowRoot!.querySelector('[part="region"]')!.textContent!.includes('Unknown'), 'live region announced');
 
     const row = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
     expect(row.querySelector('[part="icon"] svg') !== null).to.equal(true);
@@ -569,7 +569,7 @@ describe('lr-trace-tree', () => {
     await live.updateComplete;
     el.spans = [{ ...running[0]!, status: 'incomplete' }];
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await waitUntil(() => live.shadowRoot!.querySelector('[part="region"]')!.textContent!.includes('Incomplete'), 'live region announced');
     const row = el.shadowRoot!.querySelector('[data-id="t"]') as HTMLElement;
     const text = row.querySelector('[part="status-text"]') as HTMLElement;
     expect(text.getAttribute('data-status')).to.equal('incomplete');
@@ -726,7 +726,7 @@ describe('lr-trace-tree', () => {
     el.spans = SPANS.map((s) => (s.id === 'llm' ? { ...s, status: 'success' as const } : s));
     await el.updateComplete;
     // the live region's announcer flushes on a (zero-length) timeout
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    await waitUntil(() => live.shadowRoot!.querySelector('[part="region"]')!.textContent === 'Status Success for gpt-turbo', 'live region announced');
     const region = live.shadowRoot!.querySelector('[part="region"]')!;
     expect(region.textContent).to.equal('Status Success for gpt-turbo');
   });
@@ -741,6 +741,7 @@ describe('lr-trace-tree', () => {
       span.id === 'search' ? { ...span, status: 'error' as const } : span,
     );
     await el.updateComplete;
+    // wait-reason: asserting the hidden-descendant status is never announced; the zero-length flush timer must have had time to run
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.equal('');
   });

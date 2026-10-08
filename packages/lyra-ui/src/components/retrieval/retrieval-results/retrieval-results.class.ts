@@ -27,13 +27,13 @@ import {
 } from '../../../internal/announcer.js';
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraScoreThresholds } from '../graph/graph.class.js';
+import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueInvalid, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { LyraScoreThresholds } from '../graph/graph.class.js';
+export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 /** The deprecated `lr-select`'s detail: the complete updated selection, both as bare ids and as one
  *  deterministic canonical `RetrievalChunk` record per id (`lr-selection-change` carries the same as
  *  `selectedChunkIds`). This contract is independent of the visible `without-dedupe` projection:
@@ -379,7 +379,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   private deepActiveElement(): Element | null {
-    return deepActiveElementIn(this.shadowRoot);
+    return deepActiveElementIn(this.isConnected ? this.shadowRoot : null);
   }
 
   private chunkAnchor(start: Element | null): Element | null {
@@ -715,6 +715,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.reportSelection(this.selectedChunkIds as string[]);
   }
 
+  /** The inspector's `lr-toggle` twin of `lr-chunk-toggle` stays inside the list. */
+  private stopRowToggle = (event: Event): void => {
+    event.stopPropagation();
+  };
+
   private onChunkToggle = (
     event: CustomEvent<{ chunkId: string; expanded: boolean }>
   ): void => {
@@ -799,6 +804,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             this.emit('lr-chunk-open', e.detail);
           }}
           @lr-chunk-toggle=${this.onChunkToggle}
+          @lr-toggle=${this.stopRowToggle}
         ></lr-chunk-inspector>
         ${this.presentation === 'expanded'
           ? this.renderMetadata(chunk.metadata)

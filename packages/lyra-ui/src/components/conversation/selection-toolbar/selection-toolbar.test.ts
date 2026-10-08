@@ -1877,3 +1877,20 @@ it("ignores keys a slotted control already handled or that come from a text fiel
   expect(event.defaultPrevented).to.be.false;
   expect(document.activeElement === field).to.be.true;
 });
+
+it("resolves a host aria-describedby onto its toolbar owner", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="host-hint">Help text</p>
+    <lr-selection-toolbar aria-describedby="host-hint" open text="selected"></lr-selection-toolbar>
+  </div>`);
+  const host = wrapper.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>("lr-selection-toolbar")!;
+  await host.updateComplete;
+  const owner = () => host.shadowRoot!.querySelector<HTMLElement & { ariaDescribedByElements?: readonly Element[] | null }>('[part="toolbar"][role="toolbar"]')!;
+  const ids = (): string[] =>
+    Reflect.has(owner(), "ariaDescribedByElements")
+      ? Array.from(owner().ariaDescribedByElements ?? []).map((node) => node.id)
+      : owner().getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+  await waitUntil(() => ids().includes("host-hint"), "the host description reaches the role owner");
+  host.removeAttribute("aria-describedby");
+  await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
+});

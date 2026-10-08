@@ -14,13 +14,14 @@ import {
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './copy-button.styles.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** The mirrored upstream `feedback-duration` default, in milliseconds. */
-const DEFAULT_FEEDBACK_DURATION = 1000;
+/** The `feedback-duration` default, in milliseconds. */
+const DEFAULT_FEEDBACK_DURATION = COPY_FEEDBACK_MS;
 
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
@@ -256,7 +257,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** How long, in milliseconds, the copied confirmation or failure state remains visible. */
-  @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration = DEFAULT_FEEDBACK_DURATION;
+  @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration: number = DEFAULT_FEEDBACK_DURATION;
 
   @state() private status: CopyStatus = 'rest';
   /** Handle on the shared light-DOM live region outcomes actually announce through -- a region

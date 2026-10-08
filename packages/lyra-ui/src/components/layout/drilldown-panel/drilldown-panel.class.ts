@@ -2,7 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../../retrieval/entity-card/entity-card.class.js';
@@ -179,18 +180,6 @@ const registeredChildren = new Set<string>();
 const EMPTY_PATH: readonly LyraDrilldownNode[] = Object.freeze([]);
 const EMPTY_TYPES: readonly LyraNodeTypeStyle[] = Object.freeze([]);
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    return prototype === null || Object.getPrototypeOf(prototype) === null;
-  } catch {
-    return false;
-  }
-}
-
 function ownDataValue(record: Record<string, unknown>, key: string): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
@@ -267,7 +256,7 @@ function normalizeUniqueCollection<T>(
 function normalizeEvidence(
   candidate: unknown
 ): readonly [string, LyraDrilldownEvidenceItem] | undefined {
-  if (!isPlainRecord(candidate)) return undefined;
+  if (!isCrossRealmPlainRecord(candidate)) return undefined;
   const evidenceId = domainId(ownDataValue(candidate, 'evidenceId'));
   const title = boundedString(
     ownDataValue(candidate, 'title'),
@@ -300,7 +289,7 @@ function normalizeEvidence(
 function normalizeDocument(
   candidate: unknown
 ): readonly [string, LyraDrilldownDocument] | undefined {
-  if (!isPlainRecord(candidate)) return undefined;
+  if (!isCrossRealmPlainRecord(candidate)) return undefined;
   const documentId = domainId(ownDataValue(candidate, 'documentId'));
   const name = boundedString(ownDataValue(candidate, 'name'), MAX_LABEL_LENGTH);
   if (!documentId || name === undefined) return undefined;
@@ -323,7 +312,7 @@ function normalizeDocument(
 function normalizeProperties(
   value: unknown
 ): Readonly<Record<string, string | number>> | undefined {
-  if (!isPlainRecord(value)) return undefined;
+  if (!isCrossRealmPlainRecord(value)) return undefined;
   let keys: string[];
   try {
     keys = Object.getOwnPropertyNames(value).slice(0, MAX_ENTITY_PROPERTIES);
@@ -358,7 +347,7 @@ function normalizeProperties(
 function normalizeEntity(
   candidate: unknown
 ): readonly [string, LyraDrilldownEntity] | undefined {
-  if (!isPlainRecord(candidate)) return undefined;
+  if (!isCrossRealmPlainRecord(candidate)) return undefined;
   const entityId = domainId(ownDataValue(candidate, 'entityId'));
   const label = boundedString(
     ownDataValue(candidate, 'label'),
@@ -390,7 +379,7 @@ function normalizeEntity(
 }
 
 function normalizeNode(candidate: unknown): NormalizedNode | undefined {
-  if (!isPlainRecord(candidate)) return undefined;
+  if (!isCrossRealmPlainRecord(candidate)) return undefined;
   const nodeId = domainId(ownDataValue(candidate, 'nodeId'));
   const label = boundedString(
     ownDataValue(candidate, 'label'),
@@ -463,7 +452,7 @@ function normalizePath(value: unknown): NormalizedPath {
 function normalizeNodeType(
   candidate: unknown
 ): readonly [string, LyraNodeTypeStyle] | undefined {
-  if (!isPlainRecord(candidate)) return undefined;
+  if (!isCrossRealmPlainRecord(candidate)) return undefined;
   const id = domainId(ownDataValue(candidate, 'id'));
   const label = boundedString(
     ownDataValue(candidate, 'label'),
@@ -1036,7 +1025,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     // The pressed button disables itself on the first or last page: hand focus to its partner first.
     const [leaving, staying] = delta > 0 ? (['next', 'previous'] as const) : (['previous', 'next'] as const);
     const button = (side: string) => this.renderRoot.querySelector<HTMLElement>(`[part="${side}-button"]`);
-    if (page === (delta > 0 ? lastPage : 0) && activeElementIn(this.shadowRoot) === button(leaving)) button(staying)?.focus();
+    if (page === (delta > 0 ? lastPage : 0) && shadowFocusTarget(this) === button(leaving)) button(staying)?.focus();
     this.categoryPage = page;
     this.announcements.announcePolite(
       this.rangeSummary(page * ACTIVE_PAGE_SIZE + 1, Math.min(total, (page + 1) * ACTIVE_PAGE_SIZE), total, label)

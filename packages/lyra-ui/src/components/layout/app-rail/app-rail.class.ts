@@ -12,7 +12,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, collectFocusableElements, composedContains, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { optionalLiteralSetConverter } from '../../../internal/converters.js';
-import { DeferredFocusReturn } from '../../../internal/deferred-focus-return.js';
+import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -745,7 +745,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private overlayReturnIsExplicit = false;
   /** Cancelled by every open and close, so a deferred focus return that a later transition (or a
    *  disconnect) overtook never runs. */
-  private readonly deferredFocusReturn = new DeferredFocusReturn();
   private restoreFallbackTabIndex?: () => void;
   private triggerAria?: AriaOwnershipLease;
   // Repairs focus after a responsive mobile close or removal of a focused inline resizer.
@@ -1165,7 +1164,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.hotkeyWindow = undefined;
     }
     this.baseEl?.removeAttribute('data-sliding');
-    this.deferredFocusReturn.cancel();
+    cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
     this.restoreFallbackTabIndex?.();
     this.teardownMediaQueries();
@@ -1222,7 +1221,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // so reassigning `trigger`/`for` while the overlay is open retargets the return, as documented.
     const restoreFocusTo = explicitTrigger ?? this.resolveExternalTrigger() ?? undefined;
     this.overlayReturnIsExplicit = explicitTrigger !== undefined;
-    this.deferredFocusReturn.cancel();
     const active = deepActiveElement(this.ownerDocument);
     this.overlayOpener =
       active && typeof (active as HTMLElement).focus === 'function' && !composedContains(this, active)
@@ -1249,6 +1247,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       },
       lockScroll: true,
       suspendWhenUnrendered: true,
+      deferredReturn: this.deferredReturnPass,
     });
   }
 
@@ -1257,7 +1256,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.nativeModal.prepare(false);
     const handle = this.overlayHandle;
     this.overlayHandle = undefined;
-    this.deferredFocusReturn.cancel();
     if (handle && restoreFocus && !this.overlayReturnIsExplicit) {
       // `trigger`/`for` may have been reassigned while the overlay was open; the association as it
       // stands now wins. When it no longer resolves, the target resolved at open still applies.
@@ -1270,7 +1268,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // The synchronous attempt keeps the established timing whenever the return target can already
     // take focus; the deferred pass below covers a target the host only re-shows afterward.
     handle?.deactivate({ restoreFocus });
-    if (handle && restoreFocus) this.scheduleDeferredFocusReturn();
   }
 
   /** Finishes the close's focus return once the close has been published and the host has had a
@@ -1292,17 +1289,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  whether or not `trigger`/`for` is set -- only the trigger candidate
    *  depends on that association. A reopen, another close, or a disconnect before the frame
    *  arrives abandons the pass. */
-  private scheduleDeferredFocusReturn(): void {
+  private readonly deferredReturnPass = (): DeferredFocusReturnPass => {
     const candidates = [this.overlayReturnTarget, this.overlayOpener];
-    this.deferredFocusReturn.schedule({
-      host: this,
+    return {
       candidates: () => [...candidates, this.toggleEl],
       isCurrent: () => !this.overlayActive,
       fallback: () => {
         if (!this.focusHostFallback()) focusFirstAvailable([this.resolveFocusFallback()]);
       },
-    });
-  }
+    };
+  };
 
   /** Focuses this rail's host as the deferred return's last built-in target, giving it a temporary
    *  `tabindex="-1"` when it has no authored one. Returns whether focus landed on the host; when it

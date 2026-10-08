@@ -52,3 +52,8 @@ it('keeps generating its role and name after hydrating its own server-rendered a
   await el.updateComplete;
   expect([el.getAttribute('role'), el.getAttribute('aria-label')]).to.deep.equal(['img', 'Memory']);
 });
+
+it('keeps a sub-thousandth value readable instead of rounding it to zero', async () => {
+  const el = await fixture<LyraGauge>(html`<lr-gauge .value=${0.0004}></lr-gauge>`);
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('0.0004');
+});

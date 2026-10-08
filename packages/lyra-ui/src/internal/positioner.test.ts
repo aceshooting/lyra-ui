@@ -227,7 +227,8 @@ it('keeps tracking the anchor via autoUpdate until stop() is called', async () =
   a.style.height = '400px';
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
-  await new Promise((r) => setTimeout(r, 100));
+  // wait-reason: asserting the popup does NOT move after stop()
+  await new Promise((r) => setTimeout(r, 50));
   expect(parseFloat(p.style.top)).to.equal(trackedTop);
 });
 

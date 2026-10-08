@@ -2,20 +2,22 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { scrollOverflowFade } from './scroll-overflow.styles.js';
 import '../components/agent-tools/eval-dataset/eval-dataset.js';
 import '../components/retrieval/research-progress/research-progress.js';
+import type { LyraInput } from '../components/forms/input/input.class.js';
 import type { LyraEvalDataset } from '../components/agent-tools/eval-dataset/eval-dataset.class.js';
 import type { LyraResearchProgress } from '../components/retrieval/research-progress/research-progress.class.js';
 
-it('keeps a native dataset field surface and shared target floor themeable', async () => {
-  const dataset = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable style="--lr-icon-button-size: 47px; --lr-color-surface: rgb(12, 23, 34); --lr-color-border: rgb(34, 45, 56)"></lr-eval-dataset>`);
-  const input = dataset.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
-  expect(getComputedStyle(input).backgroundColor).to.equal('rgb(12, 23, 34)');
-  expect(getComputedStyle(input).borderTopColor).to.equal('rgb(34, 45, 56)');
-  input.value = 'query';
-  input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
-  await dataset.updateComplete;
-  const clear = dataset.shadowRoot!.querySelector<HTMLElement>('[part="search-clear"]')!;
-  expect(getComputedStyle(clear).minInlineSize).to.equal('47px');
-  expect(getComputedStyle(clear).minBlockSize).to.equal('47px');
+it('keeps the composed dataset search field surface and shared target floor themeable', async () => {
+  const dataset = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable style="--lr-theme-icon-button-size: 30px; --lr-input-fill: rgb(12, 23, 34); --lr-input-border-color: rgb(34, 45, 56)"></lr-eval-dataset>`);
+  const host = dataset.shadowRoot!.querySelector<LyraInput>('[part="search-input"]')!;
+  await host.updateComplete;
+  const field = host.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
+  expect(getComputedStyle(field).backgroundColor).to.equal('rgb(12, 23, 34)');
+  expect(getComputedStyle(field).borderTopColor).to.equal('rgb(34, 45, 56)');
+  host.value = 'query';
+  await host.updateComplete;
+  const clear = host.shadowRoot!.querySelector<HTMLElement>('[part="clear-button"]')!;
+  expect(getComputedStyle(clear).minInlineSize).to.equal('30px');
+  expect(getComputedStyle(clear).minBlockSize).to.equal('30px');
 });
 
 it('keeps research rows native and shares their bounded layout without changing public parts', async () => {

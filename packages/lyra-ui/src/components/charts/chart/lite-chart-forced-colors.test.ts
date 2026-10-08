@@ -1,4 +1,5 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
+import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 
@@ -11,22 +12,6 @@ async function mount(template: ReturnType<typeof html>): Promise<LyraLiteChart> 
   });
   await el.updateComplete;
   return el;
-}
-
-function forcedColorsMatchMedia(original: typeof window.matchMedia): typeof window.matchMedia {
-  return ((query: string) => {
-    if (query !== '(forced-colors: active)') return original(query);
-    return {
-      matches: true,
-      media: query,
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-      dispatchEvent: () => false,
-    };
-  }) as typeof window.matchMedia;
 }
 
 const eightSeries = () =>

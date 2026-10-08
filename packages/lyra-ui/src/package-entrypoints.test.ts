@@ -36,8 +36,8 @@ type PackageEntrypointImports = {
   importAll: EntrypointImport;
   importLocalization: EntrypointImport;
   importViewers: EntrypointImport;
-  importPersianLocale: EntrypointImport;
-  importHebrewLocale: EntrypointImport;
+  importExpandedPseudoLocale: EntrypointImport;
+  importBidiPseudoLocale: EntrypointImport;
   importEmpty: EntrypointImport;
   importEmptyClass: EntrypointImport;
   importCsv: EntrypointImport;
@@ -236,7 +236,7 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
   }
 });
 
-it('resolves Persian and Hebrew locale subpaths and executes their registration side effects', async () => {
+it('resolves the pseudo-locale subpaths and executes their registration side effects', async () => {
   // Keep package self-references in the server-served fixture: WTR's node-resolve plugin validates
   // the exports map there, while the build-independent strict test-type gate never needs dist/.
   const entrypointFixturePath: string = new URL(
@@ -245,21 +245,31 @@ it('resolves Persian and Hebrew locale subpaths and executes their registration 
   ).href;
   const entrypoints = (await import(entrypointFixturePath)) as unknown as PackageEntrypointImports;
   const localization = await entrypoints.importLocalization();
-  await entrypoints.importPersianLocale();
-  await entrypoints.importHebrewLocale();
+  await entrypoints.importExpandedPseudoLocale();
+  await entrypoints.importBidiPseudoLocale();
   const getRegisteredLyraLocales = localization['getRegisteredLyraLocales'];
   expect(typeof getRegisteredLyraLocales).to.equal('function');
   if (typeof getRegisteredLyraLocales !== 'function') {
     throw new Error('Missing getRegisteredLyraLocales export');
   }
-  expect(getRegisteredLyraLocales()).to.include('fa');
-  expect(getRegisteredLyraLocales()).to.include('he');
+  expect(getRegisteredLyraLocales()).to.include('en-XA');
+  expect(getRegisteredLyraLocales()).to.include('ar-XB');
 
   const packageManifestPath = '/package.json';
-  const manifest = (await import(packageManifestPath)) as unknown as { sideEffects: string[] };
-  for (const entry of ['./dist/translations/**/*.js', './src/translations/**/*.ts']) {
+  const manifest = (await import(packageManifestPath)) as unknown as {
+    sideEffects: string[];
+    exports: Record<string, unknown>;
+  };
+  for (const entry of [
+    './dist/translations/pseudo/en-XA.js',
+    './dist/translations/pseudo/ar-XB.js',
+    './src/translations/**/*.ts',
+  ]) {
     expect(manifest.sideEffects, entry).to.include(entry);
   }
+  // Real catalogs publish from @aceshooting/lyra-translations, not this package.
+  expect(manifest.exports['./translations/*']).to.equal(undefined);
+  expect(manifest.exports['./translations/fa.js']).to.equal(undefined);
 });
 
 it('does not publish src/internal as a deep-import subpath', async () => {

@@ -1133,7 +1133,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       } catch (error) {
         if (!this.isConnected || generation !== this.sanitizerGeneration) return;
         this.sanitizedOutputCache.set(cacheKey, null);
-        if (!this.sanitizerFailureReported) {
+        if (!this.sanitizerFailureReported && !isResourceLimitError(error)) {
           this.sanitizerFailureReported = true;
           this.announcements.announceAssertive(this.localize('documentViewerMissingSanitizer'));
         }

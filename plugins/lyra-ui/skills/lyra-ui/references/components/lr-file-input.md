@@ -30,8 +30,8 @@ enabled buttons retain pointer feedback.
 
 **Properties:**
 
-- `multiple: boolean = false` (reflected) — a plain HTML boolean like `wa-file-input`'s, so
-  `multiple="false"` is still true here; `lr-drop-zone` and `lr-attachment-trigger` read it as false
+- `multiple: boolean = false` (reflected) — `multiple="false"` reads as false, like
+  `lr-drop-zone` and `lr-attachment-trigger`; bare `multiple` opts into batches
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
@@ -104,9 +104,7 @@ enabled buttons retain pointer feedback.
   below); `s` and the steps below it give a denser dropzone for constrained spaces (a toolbar, a
   table cell).
 - `validators: LyraFileInputValidator[] = []` (attribute: false) — additional JavaScript
-  constraints, run after the intrinsic `required` check. **Fixed in 9.0.0:** the property was
-  previously declared (typed `unknown[]`) and read by nothing, so an assigned validator silently
-  never ran. It now implements the same contract as `lr-date-input`/`lr-combobox`:
+  constraints, run after the intrinsic `required` check. It implements the same contract as `lr-date-input`/`lr-combobox`:
   - a function `(files: File[], input: LyraFileInput) => void | boolean | string | ValidityStateFlags`
     — `undefined`/`true` passes, a string is the validation message (raising `customError`), `false`
     is a generic failure using the localized `valueInvalid` string, and a `ValidityStateFlags` object

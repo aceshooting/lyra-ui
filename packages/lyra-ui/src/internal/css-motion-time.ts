@@ -1,3 +1,4 @@
+import { CSS_NUMBER_SOURCE } from './css-number.js';
 /** Convert one computed CSS time to milliseconds. Keep parseFloat's permissive prefix parsing:
  * callers already accept it for strings ending in `ms` or `s`. Invalid and non-finite values
  * contribute zero to timing calculations. Negative delays remain negative for paired animations. */
@@ -64,7 +65,7 @@ export function waitForTransitionSettle(
   return { pending: true, finished, cancel: () => finish() };
 }
 
-const CSS_TIME_TOKEN = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(ms|s)(?:\s+(.*))?$/i;
+const CSS_TIME_TOKEN = new RegExp(`^(${CSS_NUMBER_SOURCE}(?:e[+-]?\\d+)?)(ms|s)(?:\\s+(.*))?$`, 'i');
 
 /** A leading CSS `<time>` token of an authored value: its finite milliseconds (sign, exponent and
  * either unit case allowed) and the trimmed text after it, or undefined when the value is not one.

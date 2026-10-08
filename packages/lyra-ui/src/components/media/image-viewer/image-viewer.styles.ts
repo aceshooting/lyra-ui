@@ -165,11 +165,6 @@ export const styles = css`
   :host([fit="actual"]) [part="image-wrapper"] {
     max-inline-size: none;
   }
-  @media (prefers-reduced-motion: reduce) {
-    [part="image-wrapper"] {
-      transition: none;
-    }
-  }
   /* 'contain' and 'width' center the image in a viewport-wide box; 'actual' keeps max-content. */
   :host([fit="contain"]) [part="frame"]::part(content),
   :host([fit="width"]) [part="frame"]::part(content) {

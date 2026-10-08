@@ -3,7 +3,7 @@ import { isMainModule } from './is-main-module.mjs';
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -3373,6 +3373,19 @@ export function acquirePublishedBaseline(
     if (!existsSync(path.join(root, 'package.json'))) {
       throw new Error('Published baseline tarball does not contain package/package.json.');
     }
+    // A baseline from the split onward has no manifest of its own: take the same version's from the IDE package.
+    if (packageName === '@aceshooting/lyra-ui' && !existsSync(path.join(root, 'custom-elements.json'))
+      && !readJson(path.join(root, 'package.json')).customElements) {
+      const ideDirectory = path.join(workingDirectory, 'ide');
+      mkdirSync(ideDirectory);
+      const ideTarball = path.join(ideDirectory, path.basename(parseNpmPackOutput(execute('npm', [
+        'pack', `@aceshooting/lyra-ide@${version}`, '--json', '--ignore-scripts', '--pack-destination', ideDirectory,
+      ]))));
+      validateTarEntries(execute('tar', ['-tzf', ideTarball]).split(/\r?\n/).filter(Boolean));
+      validateTarEntryTypes(execute('tar', ['-tvzf', ideTarball, '--numeric-owner']).split(/\r?\n/).filter(Boolean));
+      execute('tar', ['-xzf', ideTarball, '-C', ideDirectory, '--no-same-owner', '--no-same-permissions', 'package/custom-elements.json']);
+      copyFileSync(path.join(ideDirectory, 'package', 'custom-elements.json'), path.join(root, 'custom-elements.json'));
+    }
     return {
       root,
       version,
@@ -3394,7 +3407,9 @@ export function readPackageApi(root) {
   const packageJsonFile = path.join(root, 'package.json');
   if (!existsSync(packageJsonFile)) throw new Error(`Missing public API package metadata: ${packageJsonFile}`);
   const packageJson = readJson(packageJsonFile);
-  const manifestRelative = packageJson.customElements;
+  // Releases from 27.0.0 ship the manifest in @aceshooting/lyra-ide; a checkout keeps it beside the sources.
+  const manifestRelative = packageJson.customElements
+    ?? (existsSync(path.join(root, 'custom-elements.json')) ? 'custom-elements.json' : undefined);
   const manifestFile = typeof manifestRelative === 'string'
     ? path.join(root, manifestRelative)
     : undefined;

@@ -12,7 +12,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -180,8 +180,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * moves; the host applies the reordered `items` array. Non-record rows and rows without a nonempty
  * string id are omitted. Reordering additionally requires globally unique ids among every retained
  * top-level task and direct child; duplicate data stays visible but fails closed.
- * The visible header is a level-three heading by default; set `heading-level` from `1`–`6` to fit
- * the surrounding document outline, or `none` for a visual-only header.
+ * The visible header is not a document heading by default (`heading-level="none"`); set
+ * `heading-level` from `1`–`6` to expose it at that level in the surrounding document outline.
  * Status changes and confirmed moves are announced through an internal `<lr-live-region>`.
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
@@ -301,7 +301,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   /** Semantic level of the visible header. Use `none` to keep the visual header without exposing
    *  it to heading navigation. Invalid untyped values use level 3. */
   @property({ attribute: 'heading-level', reflect: true })
-  headingLevel: LyraHeadingLevel = '3';
+  headingLevel: LyraHeadingLevel = 'none';
 
   /** Hides the body (item list). The list starts shown -- this is a progress surface, not a
    *  details disclosure a reader opts into. */
@@ -537,7 +537,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private capturePendingReorderFocus(): void {
     const pending = this.pendingReorder;
     if (!pending) return;
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     this.pendingFocusId =
       active instanceof HTMLElement && active.getAttribute('part') === 'item' && active.dataset['id'] === pending.id
         ? pending.id

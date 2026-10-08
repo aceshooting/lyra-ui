@@ -158,3 +158,31 @@ it('ignores unrelated document mutations while closed', async () => {
   await new Promise((resolve) => requestAnimationFrame(resolve));
   expect(syncs).to.equal(0);
 });
+
+it('skips content inspection for an unrelated ancestor style write while closed, yet reacts to a visibility change', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div><button id="gated-trigger">Save</button><lr-tooltip for="gated-trigger">Tip</lr-tooltip></div>
+  `);
+  const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
+  await el.updateComplete;
+  const internals = el as unknown as { updateInteractiveContent(): void };
+  const original = internals.updateInteractiveContent;
+  let inspections = 0;
+  internals.updateInteractiveContent = function (this: LyraTooltip) {
+    inspections += 1;
+    original.call(this);
+  };
+  // The first batch always matters: it opts the observer in and its rebind records the baseline.
+  wrapper.style.setProperty('--prime', '1');
+  await waitUntil(() => inspections > 0, 'the first batch never inspected content');
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  inspections = 0;
+  // A custom-property or class write is part of the presentation key (a closed tooltip's hidden
+  // content cannot rule it out), so the unrelated write here is a plain inline style.
+  wrapper.style.color = 'red';
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(inspections, 'an ancestor style write that cannot change visibility inspected content').to.equal(0);
+  wrapper.style.display = 'none';
+  await waitUntil(() => inspections > 0);
+});

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { nothing } from 'lit';
 import './popup.js';
 import type { LyraPopup } from './popup.class.js';
@@ -58,9 +58,13 @@ it('exposes the positioned popup and consumes the mapped transition aliases', as
   expect(getComputedStyle(el.popup).transitionDuration).to.equal('0.234s, 0s');
   expect(getComputedStyle(el.popup).transitionDelay).to.equal('0s, 0.234s');
   expect(getComputedStyle(el.popup).pointerEvents).to.equal('none');
-  // Leave a real-timer margin above 234ms: under a parallel three-engine run Firefox can defer
-  // the transition's first sampled frame, so a 26ms margin is not enough to prove the end state.
-  await aTimeout(500);
+  // Poll for the end state: under a parallel three-engine run Firefox can defer the transition's
+  // first sampled frame, so a fixed margin above 234ms is not enough to prove it.
+  await waitUntil(
+    () => getComputedStyle(el.popup).opacity === '0' && getComputedStyle(el.popup).visibility === 'hidden',
+    'the hide transition reached its end state',
+    { timeout: 3000 },
+  );
   expect(getComputedStyle(el.popup).opacity).to.equal('0');
   expect(getComputedStyle(el.popup).visibility).to.equal('hidden');
 });
@@ -1090,12 +1094,12 @@ it('stops tracking when removed from the document', async () => {
   const el = await fixture<LyraPopup>(html`
     <lr-popup active><button slot="anchor">A</button><div>C</div></lr-popup>
   `);
-  await aTimeout(50);
+  await nextFrame();
   el.remove();
   // Nothing to assert beyond it not throwing: the contract is that autoUpdate's listeners are
   // released, and a leaked listener would fire against a detached tree on the next scroll.
   window.dispatchEvent(new Event('resize'));
-  await aTimeout(10);
+  await nextFrame();
   expect(el.isConnected).to.equal(false);
 });
 
@@ -1135,6 +1139,28 @@ it('settles deactivating in a single render, scheduling no follow-up update', as
 
   el.active = true;
   expect(await el.updateComplete, 'reactivating scheduled a second render').to.be.true;
+});
+
+it('does not reposition for its own paint-gating state, only for an input that can move it', async () => {
+  const el = await fixture<LyraPopup>(html`
+    <lr-popup active><button slot="anchor">Anchor</button><div>Content</div></lr-popup>
+  `);
+  await waitUntil(() => el.popup.hasAttribute('data-active'));
+  await settle(el);
+  const internals = el as unknown as { reposition(): void; requestUpdate(name: string, old: unknown): void };
+  const original = internals.reposition;
+  let repositions = 0;
+  internals.reposition = function (this: LyraPopup) {
+    repositions += 1;
+    return original.call(this);
+  };
+  internals.requestUpdate('popupHidden', false);
+  internals.requestUpdate('anchorPositioned', false);
+  await el.updateComplete;
+  expect(repositions, 'a paint-gating state change repositioned').to.equal(0);
+  el.placement = el.placement === 'top' ? 'bottom' : 'top';
+  await el.updateComplete;
+  expect(repositions, 'a placement change must reposition').to.be.greaterThan(0);
 });
 
 it('settles an anchor swap in a single render too', async () => {

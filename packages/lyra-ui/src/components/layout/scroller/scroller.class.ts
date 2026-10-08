@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './scroller.styles.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings.generated.js';
@@ -180,7 +181,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    const active = this.hasUpdated ? (this.renderRoot as ShadowRoot).activeElement : null;
+    const active = this.hasUpdated ? shadowFocusTarget(this) : null;
     if (active?.matches('[part~="previous"]') ? this.atStart : active?.matches('[part~="next"]') && this.atEnd)
       this.viewport?.focus();
   }

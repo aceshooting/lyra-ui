@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -241,8 +241,8 @@ it('opens from keyboard focus and lets Escape dismiss it without moving focus', 
 /** Lets a `show-delay="0"` tooltip act on a focus event before a "stays closed" assertion. */
 async function settle(el: LyraTooltip): Promise<void> {
   await el.updateComplete;
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await nextFrame();
+  await nextFrame();
 }
 
 function describesWithProxy(el: LyraTooltip, node: HTMLElement): boolean {
@@ -622,6 +622,7 @@ describe('keyboard-only focus activation', () => {
     await waitUntil(() => el.open, 'hover opens');
     await resetMouse();
     await focusAfterPointer(trigger);
+    // wait-reason: hide-delay (200ms) must elapse to prove pointer focus did not cancel the pending hide
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(el.open, 'pointer focus did not cancel the pending hide').to.equal(false);
 
@@ -630,6 +631,7 @@ describe('keyboard-only focus activation', () => {
     await waitUntil(() => el.open, 'hover opens');
     await resetMouse();
     await focusByKeyboard(trigger);
+    // wait-reason: wait past hide-delay (200ms) to prove keyboard focus holds it open
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(el.open, 'keyboard focus holds it open').to.equal(true);
   });
@@ -1277,6 +1279,7 @@ it('degrades open-content scheduling and observation gracefully after adoption i
   // A hide-delay timer has nothing to schedule against without an owner window, so the leave
   // interaction is dropped rather than throwing or eventually closing the tooltip.
   trigger.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  // wait-reason: asserting no hide timer ever closes the tooltip without an owner window
   await new Promise((resolve) => setTimeout(resolve, 150));
   expect(el.open).to.be.true;
 
@@ -1348,6 +1351,7 @@ it('keeps the tooltip open when the replacement trigger is itself under the poin
   fresh.style.blockSize = '60px';
   trigger.replaceWith(fresh);
 
+  // wait-reason: asserting the tooltip stays open past its hide delay
   await new Promise((resolve) => setTimeout(resolve, 250));
   expect(tooltip.open, 'the pointer still rests on the replacement, so it stays open').to.be.true;
 
@@ -1370,6 +1374,7 @@ it('leaves a focus-opened tooltip alone when its anchor moves, since no pointer 
   await waitUntil(() => tooltip.open, 'the tooltip opens on focus');
 
   wrapper.scrollTop = 400;
+  // wait-reason: asserting focus keeps the tooltip open past its hide delay
   await new Promise((resolve) => setTimeout(resolve, 200));
   expect(tooltip.open, 'focus still holds it open after the anchor moved').to.be.true;
 });
@@ -1406,4 +1411,31 @@ it('settles an anchor swap in a single render too', async () => {
 
   el.anchor = host.querySelector('#t2') as HTMLElement;
   expect(await el.updateComplete, 'swapping the anchor scheduled a second render').to.be.true;
+});
+
+it('does not re-inspect content for unrelated mutations in a label-reference root', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <span id="ref-label-quiet" hidden>Quiet label</span>
+      <lr-tooltip manual>
+        <button type="button" slot="trigger">Help</button>
+        <img id="ref-image-quiet" alt="Fallback" aria-labelledby="ref-label-quiet" />
+      </lr-tooltip>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
+  await waitUntil(() => descriptionProxy(el).textContent === 'Quiet label');
+  const internals = el as unknown as { updateInteractiveContent(): void };
+  const original = internals.updateInteractiveContent;
+  let inspections = 0;
+  internals.updateInteractiveContent = function (this: LyraTooltip) {
+    inspections += 1;
+    original.call(this);
+  };
+  wrapper.append(document.createElement('p'));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(inspections).to.equal(0);
+  const label = wrapper.querySelector('#ref-label-quiet')!;
+  label.removeAttribute('id');
+  await waitUntil(() => inspections > 0);
 });

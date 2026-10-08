@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './geojson-viewer.js';
 // Registers the shipped `ar` catalog slices the `lang="ar"` feature-count test resolves against,
@@ -1597,7 +1598,7 @@ describe('framing through the map', () => {
       )) as LyraGeoJsonViewer;
       await waitUntil(() => calls.length > 0, 'map was never asked to fit', { timeout: 3000 });
       await el.updateComplete;
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await twoFrames();
     } finally {
       LyraMap.prototype.fitBounds = original;
     }
@@ -1934,7 +1935,7 @@ describe('fetch lifecycle edge cases', () => {
         () => signals[0]?.aborted === true,
         'the first request should have been aborted'
       );
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await twoFrames();
       expect(
         renderErrorFired,
         'an aborted load must not surface as a render error'
@@ -1986,7 +1987,7 @@ describe('fetch lifecycle edge cases', () => {
       resolvers[0]!(
         new Response(JSON.stringify({ not: 'geojson' }), { status: 200 })
       );
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await twoFrames();
       expect(
         el.shadowRoot!.querySelector('[part="error"]') === null,
         'the stale response must not overwrite the newer loaded state with an error'
@@ -2030,7 +2031,7 @@ describe('fetch lifecycle edge cases', () => {
       resolveArrayBuffer!(
         new TextEncoder().encode(JSON.stringify(FEATURE_COLLECTION)).buffer
       );
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await twoFrames();
       expect(
         (el as unknown as { loadState: { kind: string } }).loadState.kind
       ).to.equal('idle');

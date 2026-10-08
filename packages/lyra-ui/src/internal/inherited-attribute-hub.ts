@@ -40,6 +40,15 @@ function configure(hub: RootHub): void {
   });
 }
 
+/** A hostile or torn-down owner realm may throw from any observer call; teardown must still finish. */
+function safely(run: () => void): void {
+  try {
+    run();
+  } catch {
+    // The hub is being discarded or the realm is gone; there is nothing left to release.
+  }
+}
+
 /** Returns undefined when the root has no live owner realm or cannot be observed. */
 export function subscribeInheritedAttributes(
   root: Node,
@@ -66,18 +75,21 @@ export function subscribeInheritedAttributes(
   } catch {
     hub.subscribers.delete(subscription);
     if (!hub.subscribers.size) {
-      hub.observer.disconnect();
+      const failed = hub;
+      safely(() => failed.observer.disconnect());
       hubs.delete(root);
     }
     return undefined;
   }
   return () => {
     if (!hub?.subscribers.delete(subscription)) return;
-    const pending = hub.observer.takeRecords();
-    if (pending.length) deliver(hub, pending);
-    if (hub.subscribers.size) configure(hub);
+    const owner = hub;
+    let pending: MutationRecord[] = [];
+    safely(() => { pending = owner.observer.takeRecords(); });
+    if (pending.length) deliver(owner, pending);
+    if (owner.subscribers.size) safely(() => configure(owner));
     else {
-      hub.observer.disconnect();
+      safely(() => owner.observer.disconnect());
       hubs.delete(root);
     }
   };

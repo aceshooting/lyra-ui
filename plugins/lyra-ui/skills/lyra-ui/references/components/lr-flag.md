@@ -50,8 +50,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   card/row sizes (~28–96px); `'detailed'` = the
   pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
 
-The v9 vocabulary replaces `round` with `shape="circle"` and `variant` with `fidelity`; exported
-authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
+Exported authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
 **Events:** none.
 

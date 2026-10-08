@@ -62,9 +62,10 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { ViewerSearchState } from '../../../internal/viewer-search.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_docxViewerLabel, LYRA_DEFAULT_docxViewerMissingConverter, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -251,6 +252,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     docxViewerMissingConverter: LYRA_DEFAULT_docxViewerMissingConverter,
     highlightWithLabel: LYRA_DEFAULT_highlightWithLabel,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
+    viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -270,9 +274,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   override readonly anchorKinds = ['fragment', 'text-quote'] as const;
 
   @state() private fetchState: FetchState = { kind: 'idle' };
-  @state() private searchMatches: TextQuoteMatches = emptyTextQuoteMatches();
-  private searchMatchCountExact = true;
-  @state() private searchActiveIndex = -1;
+  private readonly searchState = new ViewerSearchState<TextQuoteMatches>(
+    emptyTextQuoteMatches,
+    (detail) => this.emit('lr-search-change', detail),
+    () => this.requestUpdate(),
+  );
   @state() private resolvedHighlightActions: LyraHighlight[] = [];
 
   private generation = 0;
@@ -294,7 +300,6 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private pendingResolvedHighlightActions: LyraHighlight[] = [];
   private resolvedHighlightActionSyncPending = false;
 
-  private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
 
   /** Bounded normalized corpus plus reusable occurrence cache for the current loaded document. */
@@ -378,8 +383,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     ) {
       this.repaintHighlights();
     }
-    if (localeChanged && this.searchQuery.trim()) {
-      this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); });
+    if (localeChanged && this.searchState.query.trim()) {
+      this.scheduleAfterUpdate(() => { void this.search(this.searchState.query); });
     }
   }
 
@@ -388,20 +393,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private resetSearchForContentChange(): void {
-    const shouldEmit = this.searchQuery !== '' || this.searchMatches.length > 0 || this.searchActiveIndex !== -1;
-    this.searchQuery = '';
-    this.searchMatches = emptyTextQuoteMatches();
-    this.searchMatchCountExact = true;
-    this.searchActiveIndex = -1;
+    const shouldEmit = this.searchState.dirty;
+    this.searchState.reset();
     this.clearSearchPaint();
-    if (shouldEmit) {
-      this.emit('lr-search-change', {
-        query: '',
-        matchCount: 0,
-        matchCountExact: true,
-        activeIndex: -1,
-      });
-    }
+    if (shouldEmit) this.searchState.emit();
   }
 
   private async load(): Promise<void> {
@@ -838,61 +833,41 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     // searches without scheduling a render pass to invalidate LyraElement's per-update locale
     // memo. A search is itself a fresh locale-sensitive operation.
     invalidateLyraLocaleCache(this);
-    this.searchQuery = query;
+    this.searchState.query = query;
     if (!boundedViewerSearchQuery(query, this.effectiveLocale).accepted) {
-      this.searchMatches = emptyTextQuoteMatches();
-      this.searchMatchCountExact = false;
-      this.searchActiveIndex = -1;
       this.clearSearchPaint();
-      this.emitSearchChange();
+      this.searchState.publish(undefined, false);
       return 0;
     }
     const root = this.contentRoot();
-    if (!root) {
-      this.searchMatches = emptyTextQuoteMatches();
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
-      this.clearSearchPaint();
-      this.emitSearchChange();
-      return 0;
-    }
     const trimmed = query.trim();
-    if (!trimmed) {
-      this.searchMatches = emptyTextQuoteMatches();
-      this.searchMatchCountExact = true;
-      this.searchActiveIndex = -1;
+    if (!root || !trimmed) {
       this.clearSearchPaint();
-      this.emitSearchChange();
+      this.searchState.publish();
       return 0;
     }
     const { index } = this.getTextIndex(root);
     const matches = index.search(trimmed, index.createWorkBudget());
-    this.searchMatches = matches;
-    this.searchMatchCountExact = matches.matchCountExact;
-    this.searchActiveIndex = matches.length > 0 ? 0 : -1;
-    this.emitSearchChange();
+    this.searchState.publish(matches, matches.matchCountExact);
     this.paintSearchMatches();
-    if (this.searchActiveIndex >= 0) this.scrollToActiveSearchMatch();
+    if (this.searchState.activeIndex >= 0) this.scrollToActiveSearchMatch();
     return matches.length;
   }
 
   /** Advances to the next match, wrapping to the first after the last. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchNext(): Promise<boolean> {
-    if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
-    this.emitSearchChange();
-    this.paintSearchMatches();
-    this.scrollToActiveSearchMatch();
-    return true;
+    return this.stepSearch(1);
   }
 
   /** Moves to the previous match, wrapping to the last before the first. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchPrevious(): Promise<boolean> {
-    if (!this.searchMatches.length) return false;
-    this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
-    this.emitSearchChange();
+    return this.stepSearch(-1);
+  }
+
+  private stepSearch(direction: 1 | -1): boolean {
+    if (!this.searchState.step(direction)) return false;
     this.paintSearchMatches();
     this.scrollToActiveSearchMatch();
     return true;
@@ -901,21 +876,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   /** Clears the query, matches, and any painted marks, and resets `lr-search-change` to a
    *  0-match/no-active-index state. */
   clearSearch(): void {
-    this.searchQuery = '';
-    this.searchMatches = emptyTextQuoteMatches();
-    this.searchMatchCountExact = true;
-    this.searchActiveIndex = -1;
     this.clearSearchPaint();
-    this.emit('lr-search-change', { query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
-  }
-
-  private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.searchQuery,
-      matchCount: this.searchMatches.length,
-      matchCountExact: this.searchMatchCountExact,
-      activeIndex: this.searchActiveIndex,
-    });
+    this.searchState.clear();
   }
 
   private scrollToActiveSearchMatch(): void {
@@ -940,13 +902,13 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private paintSearchMatches(): void {
     this.clearSearchPaint();
     const root = this.contentRoot();
-    if (!root || this.searchMatches.length === 0) return;
+    if (!root || this.searchState.matches.length === 0) return;
     const { scope } = this.currentTextIndex(root);
     const marks: HTMLElement[] = [];
-    const count = Math.min(this.searchMatches.length, MAX_DOCX_PAINTED_SEARCH_MATCHES);
+    const count = Math.min(this.searchState.matches.length, MAX_DOCX_PAINTED_SEARCH_MATCHES);
     const half = MAX_DOCX_PAINTED_SEARCH_MATCHES >> 1;
-    const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
-    const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - count));
+    const centre = this.searchState.activeIndex < 0 ? 0 : this.searchState.activeIndex;
+    const start = Math.max(0, Math.min(centre - half, this.searchState.matches.length - count));
     const budget: TextMarkPaintBudget = {
       traversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes,
       codeUnits: TEXT_QUOTE_LIMITS.maxCorpusCodeUnits,
@@ -954,7 +916,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     };
     const window: Array<{ index: number; match: TextQuoteMatch }> = [];
     for (let i = start + count - 1; i >= start; i--) {
-      const match = this.searchMatches.at(i);
+      const match = this.searchState.matches.at(i);
       if (!match) continue;
       window.push({ index: i, match });
     }
@@ -966,7 +928,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       ranges.push({ index: window[position]!.index, range });
     }
     for (const { index, range } of ranges) {
-      const part = index === this.searchActiveIndex ? 'search-match search-match-active' : 'search-match';
+      const part = index === this.searchState.activeIndex ? 'search-match search-match-active' : 'search-match';
       marks.push(...wrapRangeInSearchMarks(range, part, budget));
     }
     this.paintedSearchMarks = marks;

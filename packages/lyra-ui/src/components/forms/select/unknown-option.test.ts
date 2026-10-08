@@ -251,6 +251,7 @@ describe('lr-combobox out-of-list value', () => {
     );
     el.source = async () => [{ value: 'a', label: 'Alpha' }];
     await waitUntil(() => rows(el).length >= 2, 'the async rows arrive');
+    // wait-reason: asserting no later render drops the synthetic row (negative assertion)
     await aTimeout(10);
     expect(unknownRows(el).length).to.equal(1, 'the committed unknown value keeps its row');
   });

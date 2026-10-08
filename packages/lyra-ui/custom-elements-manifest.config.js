@@ -105,7 +105,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-copy-button',
     {
-      feedbackDuration: { default: '1000', attribute: 'feedback-duration' },
+      feedbackDuration: { default: '1500', attribute: 'feedback-duration' },
     },
   ],
   [
@@ -694,7 +694,7 @@ export default {
   // the caller's working directory rather than the explicit analysis cwd, while this package owns
   // both of its manifest metadata paths itself.
   packagejson: false,
-  globs: ['src/components/**/*.ts', 'src/internal/lyra-element.ts'],
+  globs: ['src/components/**/*.ts', 'src/internal/lyra-element.ts', 'src/internal/form-control-element.ts', 'src/internal/text-viewer-target.ts'],
   exclude: ['**/*.test.ts', '**/*.styles.ts', '**/*.stories.ts'],
   outdir: '.',
   litelement: true,
@@ -787,6 +787,13 @@ export default {
         );
         const decl = mod?.declarations?.find((d) => d.name === 'LyraElement');
         if (decl) delete decl.customElement;
+
+        // `src/internal/text-viewer-target.ts` is analyzed only so `applyInheritancePlugin` copies the
+        // mixin's public search/anchor members onto each adopting viewer; its own overloaded mixin
+        // declarations are not public API, so drop the module once the members are copied.
+        customElementsManifest.modules = (customElementsManifest.modules ?? []).filter(
+          (m) => m.path !== 'src/internal/text-viewer-target.ts'
+        );
 
         sortManifest(customElementsManifest);
       },

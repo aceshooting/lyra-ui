@@ -2201,7 +2201,7 @@ describe('lr-input debounce', () => {
     expect(rawInputs).to.deep.equal(['a', 'ab', 'abc']);
     expect(settled).to.have.length(0);
 
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await waitUntil(() => settled.length === 1, 'debounced settle fires once');
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'abc' });
     expect(settled[0]!.cancelable).to.be.false;
@@ -2224,7 +2224,8 @@ describe('lr-input debounce', () => {
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'zz' });
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // wait-reason: asserting no settle fires after the 40 ms debounce window (negative assertion)
+    await new Promise((resolve) => setTimeout(resolve, 70));
     expect(settled).to.have.length(1);
   });
 
@@ -2273,7 +2274,7 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
 
     expect(settled, 'a same-value rebind must not cancel the pending settle').to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitUntil(() => settled.length === 1, 'same-value rebind settle fires');
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: 'typed' });
   });
@@ -2292,7 +2293,8 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
 
     expect(settled, 'a null write matching an already-empty pending value must not cancel').to.have.length(0);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // wait-reason: asserting no settle fires after the 40 ms debounce window (negative assertion)
+    await new Promise((resolve) => setTimeout(resolve, 70));
     expect(settled).to.have.length(1);
     expect(settled[0]!.detail).to.deep.equal({ value: '' });
   });
@@ -2310,7 +2312,8 @@ describe('lr-input debounce', () => {
     el.value = 'x';
     await el.updateComplete;
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // wait-reason: asserting no settle fires after the 40 ms debounce window (negative assertion)
+    await new Promise((resolve) => setTimeout(resolve, 70));
     expect(settled).to.have.length(0);
     expect(el.value).to.equal('x');
   });
@@ -2326,7 +2329,8 @@ describe('lr-input debounce', () => {
     await el.updateComplete;
     (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
     await el.updateComplete;
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // wait-reason: asserting no settle fires after the 40 ms debounce window (negative assertion)
+    await new Promise((resolve) => setTimeout(resolve, 70));
     expect(settled).to.have.length(0);
 
     const second = (await fixture(html`<lr-input debounce="40" aria-label="Search"></lr-input>`)) as LyraInput;
@@ -2336,7 +2340,8 @@ describe('lr-input debounce', () => {
     secondInput.dispatchEvent(new Event('input', { bubbles: true }));
     await second.updateComplete;
     second.remove();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // wait-reason: asserting no settle fires after the 40 ms debounce window (negative assertion)
+    await new Promise((resolve) => setTimeout(resolve, 70));
     expect(settled).to.have.length(0);
   });
 
@@ -2357,7 +2362,8 @@ describe('lr-input debounce', () => {
       await el.updateComplete;
       expect(rawInputs).to.deep.equal(['abc']);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // wait-reason: asserting no settle ever fires with debounce unset or 0 (negative assertion)
+      await new Promise((resolve) => setTimeout(resolve, 70));
       expect(settled).to.have.length(0);
     }
   });

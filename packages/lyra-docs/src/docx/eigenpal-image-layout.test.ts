@@ -79,11 +79,11 @@ test('image layout charges pending blocks and nested row cell budgets before acc
     const oversized = new Array(20_001);
     Object.defineProperty(oversized, 0, { get() { throw Error('nested oversized array was read'); } });
     const page: Record<string, unknown> = { fragments: [] };
-    if (key === 'rows') page.fragments = [{ kind: 'table', rows: oversized }];
-    if (key === 'cells') page.fragments = [{ kind: 'table', rows: [{ cells: oversized }] }];
-    if (key === 'blocks') page.fragments = [{ kind: 'table', rows: [{ cells: [{ blocks: oversized }] }] }];
-    if (key === 'notes') page.footnotes = { notes: oversized };
-    if (key === 'anchoredDrawings') page.anchoredDrawings = oversized;
+    if (key === 'rows') page['fragments'] = [{ kind: 'table', rows: oversized }];
+    if (key === 'cells') page['fragments'] = [{ kind: 'table', rows: [{ cells: oversized }] }];
+    if (key === 'blocks') page['fragments'] = [{ kind: 'table', rows: [{ cells: [{ blocks: oversized }] }] }];
+    if (key === 'notes') page['footnotes'] = { notes: oversized };
+    if (key === 'anchoredDrawings') page['anchoredDrawings'] = oversized;
     assert.deepEqual(qualifyImageLayout({ pages: [page] } as unknown as SemanticLayout, target), { ok: false, code: 'resource-limit' });
   }
 });

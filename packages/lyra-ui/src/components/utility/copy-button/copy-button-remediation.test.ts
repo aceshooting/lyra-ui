@@ -70,6 +70,7 @@ it('keeps the actual refused-write demo effective after a held native pointer pr
     // when the synthesized command completes, so the original window could elapse with the
     // pointerdown still in flight and an empty `outcomes` proved nothing.
     await waitUntil(pressLanded, 'the native press never reached the document');
+    // wait-reason: negative assertion, a held native press must not resolve a copy outcome before release
     await aTimeout(150);
     expect(outcomes).to.deep.equal([]);
     await sendMouse({ type: 'up' });
@@ -116,6 +117,7 @@ for (const cancellation of ['release outside', 'disconnect'] as const) {
       const releaseLanded = nativeEventLanded('mouseup');
       await sendMouse({ type: 'up' });
       await waitUntil(releaseLanded, 'the native release never reached the document');
+      // wait-reason: negative assertion, a release outside the button must not produce a copy outcome
       await aTimeout(50);
       expect(outcomes).to.deep.equal([]);
       const restored = Object.getOwnPropertyDescriptor(navigator, 'clipboard');

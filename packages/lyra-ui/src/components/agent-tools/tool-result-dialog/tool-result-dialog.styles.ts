@@ -1,3 +1,4 @@
+import { toolStatusKeyframes } from '../tool-status.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
@@ -200,7 +201,7 @@ export const styles = css`
     );
   }
   :host([status="running"]) [part="status"] svg {
-    animation: var(--_lr-motion-animation, lr-tool-result-dialog-spin
+    animation: var(--_lr-motion-animation, lr-tool-status-spin
       var(--lr-tool-result-dialog-spin, var(--_lr-tool-result-dialog-spin))
       infinite);
   }
@@ -268,11 +269,6 @@ export const styles = css`
   [part="footer"][hidden] {
     display: none;
   }
-  @keyframes lr-tool-result-dialog-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
     [part="panel"] {
       transition: none !important;
@@ -281,4 +277,5 @@ export const styles = css`
       animation: none !important;
     }
   }
+  ${toolStatusKeyframes}
 `;

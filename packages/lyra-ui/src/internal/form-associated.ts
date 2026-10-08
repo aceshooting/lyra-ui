@@ -334,6 +334,8 @@ export declare class FormAssociatedSubclassInterface<TValue = string> {
     readonly value: TValue;
     readonly dirty: boolean;
   }): void;
+  protected commitFormValue(value: TValue): void;
+  protected isMissingValue(): boolean;
 }
 
 /**
@@ -462,7 +464,8 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       this.addEventListener('input', markInteracted);
       this.addEventListener('change', markInteracted);
       this.addEventListener('focusout', () => {
-        if (this.effectiveDisabled) return;
+        // A fieldset force-blur fires before `formDisabledCallback()`, so `:disabled` leads `effectiveDisabled`.
+        if (this.effectiveDisabled || this.matches(':disabled')) return;
         markInteracted();
       });
       this.syncValidityStates();
@@ -593,7 +596,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * `undefined` as a second argument is NOT the same as omitting it (it erases the state), so the
      * call is branched rather than parameterised.
      */
-    private commitFormValue(value: TValue): void {
+    protected commitFormValue(value: TValue): void {
       const submitted = adapter.toFormValue(value);
       if (adapter.toFormState) this.internals.setFormValue(submitted, adapter.toFormState(value));
       else this.internals.setFormValue(submitted);
@@ -735,6 +738,10 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      * every disabled required field. Subclasses that override this must start with the same guard;
      * `isBarredFromValidation()` is shared for exactly that reason.
      */
+    protected isMissingValue(): boolean {
+      return adapter.isEmpty(this._value);
+    }
+
     protected updateValidity(): void {
       if (this.isBarredFromValidation()) {
         this[SET_ANCHORED_VALIDITY]({});
@@ -742,7 +749,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       }
       // Emptiness is the adapter's answer, never `=== ''`: a `[]`, a `null` date and a `0` rating
       // are each "missing" for their own control and none of them is the empty string.
-      if (this.required && adapter.isEmpty(this._value)) {
+      if (this.required && this.isMissingValue()) {
         const overrides = (this as unknown as { strings?: LyraLocaleStrings }).strings;
         const message = resolveLyraString(
           this,
@@ -885,4 +892,109 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
 
   return FormAssociatedElement as unknown as T &
     Constructor<FormAssociatedInterface<TValue> & FormAssociatedSubclassInterface<TValue>>;
+}
+
+/** Public surface `CheckedFormAssociated` adds: the live and reset-default checked state. */
+export interface CheckedFormAssociatedInterface {
+  checked: boolean;
+  /** Reset default on read; reflects the `checked` attribute. */
+  get defaultChecked(): boolean;
+  set defaultChecked(next: boolean);
+}
+
+/**
+ * `FormAssociated` for checkbox, switch and radio shaped controls: the string `value` is submitted
+ * only while `checked`, `checked` has native dirty/default semantics, reset and restore round-trip
+ * it, and `required` means "must be checked".
+ */
+export function CheckedFormAssociated<T extends Constructor<LitElement>>(
+  Base: T,
+): T &
+  Constructor<
+    FormAssociatedInterface &
+      FormAssociatedSubclassInterface &
+      CheckedFormAssociatedInterface
+  > {
+  class CheckedElement extends FormAssociated(Base) {
+    static properties = {
+      checked: { attribute: false, noAccessor: true },
+      defaultChecked: { attribute: 'checked', type: Boolean, reflect: true, noAccessor: true },
+    };
+
+    private _checked = false;
+    private _defaultChecked = false;
+    private _checkedDirty = false;
+    private settingDefaultChecked = false;
+    private reflectingDefaultChecked = false;
+
+    get checked(): boolean {
+      return this._checked;
+    }
+
+    set checked(next: boolean) {
+      const old = this._checked;
+      if (!this.settingDefaultChecked) this._checkedDirty = true;
+      this._checked = Boolean(next);
+      this.commitFormValue(this.value);
+      (this as unknown as { updateValidity(): void }).updateValidity();
+      this.requestUpdate('checked', old);
+    }
+
+    get defaultChecked(): boolean {
+      return this._defaultChecked;
+    }
+
+    set defaultChecked(next: boolean) {
+      if (this.reflectingDefaultChecked) return;
+      const old = this._defaultChecked;
+      this._defaultChecked = Boolean(next);
+      this.reflectingDefaultChecked = true;
+      try {
+        this.toggleAttribute('checked', this._defaultChecked);
+      } finally {
+        this.reflectingDefaultChecked = false;
+      }
+      if (!this._checkedDirty) this.restoreCheckedFromDefault();
+      this.requestUpdate('defaultChecked', old, { reflect: false });
+    }
+
+    protected override commitFormValue(value: string): void {
+      const checked = Boolean(this._checked);
+      this.internals.setFormValue(checked ? value : null, checked ? 'checked' : 'unchecked');
+    }
+
+    protected override isMissingValue(): boolean {
+      return !this._checked;
+    }
+
+    private restoreCheckedFromDefault(): void {
+      this.settingDefaultChecked = true;
+      try {
+        this.checked = this._defaultChecked;
+      } finally {
+        this.settingDefaultChecked = false;
+      }
+      this._checkedDirty = false;
+    }
+
+    override formResetCallback(): void {
+      super.formResetCallback();
+      this.restoreCheckedFromDefault();
+    }
+
+    override formStateRestoreCallback(
+      state: FormSubmissionValue,
+      reason: 'autocomplete' | 'restore',
+    ): void {
+      void reason;
+      this.checked = state === 'checked';
+    }
+  }
+
+  return CheckedElement as unknown as T &
+    Constructor<
+      FormAssociatedInterface &
+        FormAssociatedSubclassInterface &
+        CheckedFormAssociatedInterface
+    >;
 }

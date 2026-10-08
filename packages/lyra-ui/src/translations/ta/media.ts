@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'ஒலியளவு',
   videoCaptions: 'வசனங்கள்',
   videoCaptionsOff: 'முடக்கு',
-  videoPlaybackSpeed: 'இயக்க வேகம்',
   videoPictureInPicture: 'படத்தில் படம் முறைக்கு மாறு',
   videoExitPictureInPicture: 'படத்தில் படம் முறையிலிருந்து வெளியேறு',
   videoEnterFullscreen: 'முழுத்திரைக்குச் செல்',

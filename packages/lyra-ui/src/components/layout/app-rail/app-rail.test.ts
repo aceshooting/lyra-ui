@@ -1,6 +1,7 @@
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { toRgba } from '../../../../test/color-contrast.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./app-rail.js";
 import {
@@ -273,23 +274,6 @@ it("paints mobile panel elevation only while open in LTR and RTL", async () => {
       .to.equal("none");
   }
 });
-
-// Resolves what `declaration` computes to *inside this element's shadow root*, where the
-// --lr-* design tokens the component's own hooks fall back to are declared -- used to assert an
-// unset hook's rendered output byte-for-byte against the token it falls back to, mirroring
-// lr-conversation-item's identical `resolvedInShadow` helper.
-function resolvedInShadow(
-  el: LyraAppRail,
-  declaration: string,
-  property: string
-): string {
-  const probe = document.createElement("span");
-  probe.setAttribute("style", declaration);
-  el.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return property.endsWith("color") ? normalizeColor(value) : value;
-}
 
 // -- computeAppRailMode (pure) -----------------------------------------
 
@@ -3272,7 +3256,7 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(normalizeColor(getComputedStyle(base).backgroundColor)).to.equal(
-      resolvedInShadow(el, "background: var(--lr-color-surface)", "background-color")
+      normalizeColor(resolvedInShadow(el, "background: var(--lr-color-surface)", "background-color"))
     );
 
     fireMobileChange(el, true);
@@ -3281,11 +3265,11 @@ describe("panel/backdrop inset, radius, overflow, and background hooks", () => {
     await el.updateComplete;
     const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
     expect(normalizeColor(getComputedStyle(panel).backgroundColor)).to.equal(
-      resolvedInShadow(
+      normalizeColor(resolvedInShadow(
         el,
         "background: var(--lr-color-surface-overlay)",
         "background-color"
-      )
+      ))
     );
   });
 

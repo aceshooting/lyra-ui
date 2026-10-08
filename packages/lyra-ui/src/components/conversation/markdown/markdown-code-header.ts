@@ -1,10 +1,11 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { writeClipboardText, type LyraClipboardWriteSuccess, type LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { acquireAnnouncementSink } from '../../../internal/announcer.js';
 
 export const MARKDOWN_CODE_HEADER_MAX = 200;
 // Matches the standalone code block's confirmation window.
-const MARKDOWN_CODE_COPY_CONFIRM_MS = 1500;
+const MARKDOWN_CODE_COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 export interface MarkdownCodeBlockRecord { language: string; source: string; ordinal: number }
 type Status = 'rest' | 'success' | 'error';
 type HeaderHost = HTMLElement & ReactiveControllerHost;

@@ -541,3 +541,20 @@ it('consumes navigation keys when every suggestion is disabled without claiming 
   expect(chips.every((chip) => chip.disabled)).to.equal(true);
   expect(selections).to.equal(0);
 });
+
+it("resolves a host aria-describedby onto its group owner", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="host-hint">Help text</p>
+    <lr-suggestion-chips aria-describedby="host-hint" .suggestions=${[{ suggestionId: "a", label: "A" }]}></lr-suggestion-chips>
+  </div>`);
+  const host = wrapper.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>("lr-suggestion-chips")!;
+  await host.updateComplete;
+  const owner = () => host.shadowRoot!.querySelector<HTMLElement & { ariaDescribedByElements?: readonly Element[] | null }>('[part="base"][role="group"]')!;
+  const ids = (): string[] =>
+    Reflect.has(owner(), "ariaDescribedByElements")
+      ? Array.from(owner().ariaDescribedByElements ?? []).map((node) => node.id)
+      : owner().getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+  await waitUntil(() => ids().includes("host-hint"), "the host description reaches the role owner");
+  host.removeAttribute("aria-describedby");
+  await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
+});

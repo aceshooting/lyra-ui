@@ -9,15 +9,11 @@ import { sideEffectsCover } from './side-effects-patterns.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pkg = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
-const translationPattern = pkg.exports?.['./translations/*'];
-const target = typeof translationPattern === 'string' ? translationPattern : translationPattern?.default;
-
-assert.equal(target, './dist/translations/*');
+// The real catalogs publish from @aceshooting/lyra-translations; only the pseudo-locales (which need
+// private runtime helpers) stay in this package, as exact subpath exports.
+assert.equal(pkg.exports?.['./translations/*'], undefined);
 for (const name of ['en-XA', 'ar-XB']) {
-  const publicSubpath = `./translations/pseudo/${name}.js`;
-  const wildcard = publicSubpath.slice('./translations/'.length);
-  assert.equal(target.replaceAll('*', wildcard), `./dist/translations/pseudo/${name}.js`);
-  assert.equal(pkg.exports[publicSubpath], `./dist/translations/pseudo/${name}.js`);
+  assert.equal(pkg.exports[`./translations/pseudo/${name}.js`], `./dist/translations/pseudo/${name}.js`);
 }
 
 assert.equal(pkg.exports['./design-tokens.json'], './design-tokens.json');

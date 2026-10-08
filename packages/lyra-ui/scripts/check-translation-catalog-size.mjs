@@ -5,7 +5,7 @@ import { isMainModule } from './is-main-module.mjs';
 // categories -- but nothing guards its SIZE. A slice that accidentally embeds a duplicated block, a
 // pasted-in blob, or one key whose translated value is wildly longer than any legitimate human
 // translation would produce inflates every consumer's per-locale bundle
-// (`@aceshooting/lyra-ui/translations/<tag>/<family>`) with no other gate noticing:
+// (`@aceshooting/lyra-translations/<tag>/<family>`) with no other gate noticing:
 // `scripts/package-budgets.json`'s ceiling is a single whole-tarball number that a few extra
 // kilobytes in one obscure locale/family slice cannot meaningfully move, and
 // `scripts/generate-component-quality.mjs`'s per-component gzip measurement never reads

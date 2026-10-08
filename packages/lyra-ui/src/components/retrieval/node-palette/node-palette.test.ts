@@ -941,6 +941,7 @@ it('never announces the initial item count on mount, but does announce a later f
   // Real timer, margined past the Announcer's default 500ms throttle -- long enough for a
   // regression that re-introduces an unguarded mount announcement to actually flush and fail
   // this assertion, per this repo's "no fake timers under wtr" testing convention.
+  // wait-reason: negative assertion, margined past the Announcer 500ms throttle so an unguarded mount announcement would flush and fail
   await new Promise((r) => setTimeout(r, 600));
   expect(liveRegionText()).to.equal('');
 
@@ -948,7 +949,7 @@ it('never announces the initial item count on mount, but does announce a later f
   input.value = 'API';
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await el.updateComplete;
-  await new Promise((r) => setTimeout(r, 600));
+  await waitUntil(() => liveRegionText().includes('1'), 'filtered-result announcement flushed', { timeout: 3000 });
   expect(liveRegionText()).to.include('1');
   expect(sinkTexts().at(-1)).to.include('1');
 });
@@ -972,7 +973,11 @@ it('localizes the whole filtered-result announcement and formats its count with 
   input.value = 'Data';
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await el.updateComplete;
-  await new Promise((r) => setTimeout(r, 600));
+  await waitUntil(
+    () => (el.shadowRoot!.querySelector('[part="live-region"]')!.textContent?.trim() ?? '') !== '',
+    'filtered-result announcement flushed',
+    { timeout: 3000 }
+  );
 
   expect(
     el.shadowRoot!.querySelector('[part="live-region"]')!.textContent?.trim()
@@ -1018,7 +1023,11 @@ it("adoptedCallback re-arms the announcer's timer host in the new owner window",
     input.value = 'API';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await el.updateComplete;
-    await new Promise((r) => setTimeout(r, 600));
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="live-region"]')!.textContent?.trim().includes('1') === true,
+      'announcement flushed after adoption',
+      { timeout: 3000 }
+    );
 
     const mirror = el.shadowRoot!.querySelector('[part="live-region"]')!;
     expect(mirror.textContent?.trim()).to.include('1');
@@ -1384,6 +1393,7 @@ describe('reorderable', () => {
     // rather than reporting a bogus position.
     el.items = items.filter((item) => item.type !== 'http-request');
     await el.updateComplete;
+    // wait-reason: negative assertion, margined past the 500ms Announcer throttle so a bogus reorder confirmation would flush and be counted
     await new Promise((r) => setTimeout(r, 600));
 
     // Exactly one announcement fires -- the ordinary filtered-result-count one from the items

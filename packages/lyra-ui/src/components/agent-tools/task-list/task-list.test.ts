@@ -49,8 +49,8 @@ it('defaults to items=[], a localized Tasks heading, collapsed=false, withoutCol
   expect(el.collapsed).to.be.false;
   expect(el.hasAttribute('collapsed')).to.be.false;
   expect(el.withoutCollapse).to.be.false;
-  const heading = el.shadowRoot!.querySelector<HTMLElement>('[role="heading"]')!;
-  expect(heading.getAttribute('aria-level')).to.equal('3');
+  expect(el.headingLevel).to.equal('none');
+  expect(el.shadowRoot!.querySelectorAll('[role="heading"]')).to.have.lengthOf(0);
 });
 
 it('renders one [part="item"] row per top-level item, carrying data-status/data-id/data-depth', async () => {
@@ -252,7 +252,7 @@ it('wraps either header shape in the configured heading level and supports the e
   const defaultList = (await fixture(
     html`<lr-task-list .items=${items}></lr-task-list>`,
   )) as LyraTaskList;
-  expect(defaultList.shadowRoot!.querySelector('[role="heading"]')!.getAttribute('aria-level')).to.equal('3');
+  expect(defaultList.shadowRoot!.querySelectorAll('[role="heading"]')).to.have.lengthOf(0);
 
   const collapsible = (await fixture(
     html`<lr-task-list heading-level="2" .items=${items}></lr-task-list>`,

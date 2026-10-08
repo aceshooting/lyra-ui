@@ -730,8 +730,8 @@ describe('<lr-tool-call-block>', () => {
         (block) => block.shadowRoot!.querySelector('[part="icon"] svg')!,
       );
       expect(glyphs.map((glyph) => getComputedStyle(glyph).animationName)).to.deep.equal([
-        'lr-tool-call-block-spin',
-        'lr-tool-call-block-pulse',
+        'lr-tool-status-spin',
+        'lr-tool-status-pulse',
       ]);
       await setReducedMotion('reduce');
       expect(glyphs.map((glyph) => getComputedStyle(glyph).animationName)).to.deep.equal(['none', 'none']);

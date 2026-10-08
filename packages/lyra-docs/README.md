@@ -450,7 +450,8 @@ and search are demand-driven and do not run for ordinary typing.
 this prevents capability reads from committing queued typing. It otherwise validates the actual proposed edit, including that a paragraph style
 exists in the current document and that a link meets the safe URL policy.
 Links may target HTTP(S) without credentials, `mailto:`, or a same-document fragment, and
-destinations are never fetched. Family names are limited to 64
+destinations are never fetched. Admission polices relationship targets only: a `HYPERLINK` field-code target is
+not refused by this package, and the engine renders schemes other than HTTP(S), `mailto:`, `tel:` and `ftp:` inert. Family names are limited to 64
 Unicode code points; font size is 1–1638 points in half-point steps; colors
 are `#RRGGBB` or `auto`; style ids are limited to 128 code units; link URLs to
 2048 and link/replacement text to 4096 code units. Catalogs cap at 256 styles
@@ -531,48 +532,6 @@ external word-processor round trips, and retained-memory behavior remain open.
 Performance runs record a fixed fixture and environment for comparison; they
 do not support a general speed claim. Measurements, environment and bundle details are in the
 [qualification record](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
-
-## Development checks
-
-Run builds, tests, and browser checks on the repository's test host with its
-pinned toolchain (`.nvmrc` and the root `packageManager`), after
-`pnpm exec playwright install chromium firefox webkit`. From the repository root, build
-Lyra UI before the companion package:
-
-```sh
-pnpm --filter @aceshooting/lyra-ui build
-pnpm --filter @aceshooting/lyra-docs build
-pnpm --filter @aceshooting/lyra-docs lint
-pnpm --filter @aceshooting/lyra-docs test
-DOCX_BROWSERS=chromium,firefox,webkit pnpm --filter @aceshooting/lyra-docs test:browser
-pnpm --filter @aceshooting/lyra-docs test:coverage
-```
-
-The coverage command combines Node and Chromium native V8 ranges, remaps them
-to TypeScript, and inventories all emitted executable source files, including
-files that were not loaded (those receive zero line coverage). It writes
-`coverage/coverage-summary.json`, `coverage/coverage-metadata.json`,
-`coverage/coverage-gaps.json`, `coverage/lcov.info`, and `coverage/index.html`.
-The metadata marks coverage complete only when both the unit and browser suites
-pass; an incomplete run cannot qualify a coverage result. V8 cannot enumerate
-functions or branches in unloaded modules, and the report flags those metrics
-as incomplete. Its statement count is based on V8 line counters, so statements
-and lines share that denominator. Every emitted runtime module, including
-styles, belongs to the coverage inventory. The generated reports record the
-executed suite counts and measured coverage for that run. CI enforces a
-lines/statements floor; branch coverage is reported separately and has no floor.
-
-The browser command runs the three engines serially and writes browser evidence
-under `packages/lyra-docs/.browser-output/`. To include the Chromium performance
-fixture and diagnostic timing samples, run:
-
-```sh
-DOCX_BROWSERS=chromium,firefox,webkit DOCX_PERFORMANCE=1 pnpm --filter @aceshooting/lyra-docs test:browser
-```
-
-The performance report records hardware, browser, fixture size, and timing
-samples. Timings include browser startup and rendering work and are not latency
-guarantees.
 
 The package is public and independently versioned through Changesets.
 See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and

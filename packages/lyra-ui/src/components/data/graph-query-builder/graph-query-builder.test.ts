@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './graph-query-builder.js';
 import type {
   LyraGraphQueryBuilder,
@@ -2014,7 +2014,7 @@ describe('collecting already-slotted hint/error content without relying on the i
       await el.updateComplete;
       // Give the real initial slotchange events (queued around slot assignment) time to arrive and
       // be swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted >= 2, 'the initial slotchange events never arrived');
       expect(
         intercepted,
         'a real browser does fire each populated named slot\'s own initial slotchange -- this test suppresses both of them to reproduce happy-dom, which never fires either'
@@ -2046,7 +2046,7 @@ describe('collecting already-slotted hint/error content without relying on the i
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange events never arrived');
       expect(
         realSlotchangeCount,
         'the real initial slotchange events must actually have fired for this to prove anything about double-invocation'

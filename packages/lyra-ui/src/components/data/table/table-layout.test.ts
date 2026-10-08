@@ -1566,10 +1566,19 @@ describe('scrollMode', () => {
     const el = await tableWith('page');
     expect(el.scrollMode).to.equal('page');
     const style = getComputedStyle(base(el));
-    expect(style.overflowY, 'a visible overflow leaves the page as the scrollport').to.equal(
-      'visible'
-    );
+    expect(style.overflowY, 'fitting content clips without becoming a scroll container').to.equal('clip');
     expect(style.maxBlockSize).to.equal('none');
+  });
+
+  it("scroll-mode='page' stays visible when the table overflows its host", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 200px"><lr-table scroll-mode="page" aria-label="Accounts"></lr-table></div>
+    `);
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = [{ key: 'name', label: 'Name', width: '400px', cell: (r) => r.name }];
+    el.rows = rows;
+    await el.updateComplete;
+    await waitUntil(() => getComputedStyle(base(el)).overflowX === 'visible', 'an overflowing page-mode table never became visible');
   });
 
   it("scroll-mode='page' ignores a height cap rather than half-applying it", async () => {
@@ -1604,9 +1613,71 @@ describe('scrollMode', () => {
     await waitUntil(() => scrollport.scrollWidth <= scrollport.clientWidth + 1);
 
     const style = getComputedStyle(scrollport);
-    expect(style.overflowX).to.equal('visible');
-    expect(style.overflowY).to.equal('visible');
+    expect(style.overflowX).to.equal('clip');
+    expect(style.overflowY).to.equal('clip');
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth + 1);
+  });
+
+  it("scroll-mode='auto' clips to the radius token without a scroll container and keeps the header sticky", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="inline-size: 960px; --lr-table-radius: 21px;">
+        <lr-table scroll-mode="auto" aria-label="Accounts"></lr-table>
+        <div style="block-size: 3000px"></div>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = [...rows, ...rows, ...rows, ...rows, ...rows, ...rows];
+    await el.updateComplete;
+    const frame = base(el);
+    await waitUntil(() => frame.scrollWidth <= frame.clientWidth + 1);
+    expect(getComputedStyle(frame).borderTopLeftRadius).to.equal('21px');
+    expect(getComputedStyle(frame).overflowX).to.equal('clip');
+    const header = el.shadowRoot!.querySelector('[part="header-cell"]') as HTMLElement;
+    el.scrollIntoView({ block: 'start' });
+    window.scrollBy(0, 40);
+    await waitUntil(() => Math.abs(header.getBoundingClientRect().top) < 1.5, 'the header did not pin to the page');
+    window.scrollTo(0, 0);
+  });
+
+  it('defaults the frame radius to the container radius token', async () => {
+    const el = await tableWith();
+    const probe = document.createElement('div');
+    probe.style.borderTopLeftRadius = 'var(--lr-radius-container)';
+    // Inside the table's own tree, where the container-radius token resolves like it does for the frame.
+    el.shadowRoot!.append(probe);
+    const expected = getComputedStyle(probe).borderTopLeftRadius;
+    probe.remove();
+    expect(getComputedStyle(base(el)).borderTopLeftRadius).to.equal(expected);
+  });
+
+  it('paints the frame, resting, striped, hovered, selected rows and sticky cells from --lr-table-surface', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-table-surface: rgb(10, 20, 30)">
+        <lr-table aria-label="Accounts"></lr-table>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    el.columns = [{ key: 'name', label: 'Name', sticky: 'start', cell: (r) => r.name }, ...columns.slice(1)];
+    el.rows = rows;
+    await el.updateComplete;
+    const bg = (node: Element) => getComputedStyle(node).backgroundColor;
+    const surface = 'rgb(10, 20, 30)';
+    expect(bg(base(el))).to.equal(surface);
+    expect(bg(el.shadowRoot!.querySelector('[part="header-cell"][data-sticky]')!)).to.equal(surface);
+    const [striped, row] = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'));
+    expect(striped.hasAttribute('data-stripe') && !row.hasAttribute('data-stripe')).to.equal(true);
+    const stripedSticky = striped.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+    const stickyCell = row.querySelector('[part="cell"][data-sticky]') as HTMLElement;
+    expect(bg(stripedSticky), 'striped sticky cell').to.equal(surface);
+    expect(bg(stickyCell), 'resting sticky cell').to.equal(surface);
+    row.setAttribute('aria-selected', 'true');
+    expect(bg(stickyCell), 'selected sticky cell paints its own fill').to.equal(bg(row));
+    expect(bg(stickyCell)).to.not.equal(surface);
+    row.removeAttribute('aria-selected');
+    await hoverUntilMatched(row, 'the row never matched :hover');
+    await waitUntil(() => bg(stickyCell) === bg(row) && bg(stickyCell) !== surface, 'hover fill never reached the sticky cell');
+    await resetMouse();
   });
 
   it("scroll-mode='auto' contains actual horizontal overflow inside a 320px allocation", async () => {
@@ -1624,7 +1695,7 @@ describe('scrollMode', () => {
   it("scroll-mode='auto' re-evaluates when its allocation moves between desktop and 320px", async () => {
     const { wrapper, el } = await responsiveTable(960);
     const scrollport = base(el);
-    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'visible');
+    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'clip');
 
     wrapper.style.inlineSize = '320px';
     await waitUntil(
@@ -1635,7 +1706,7 @@ describe('scrollMode', () => {
 
     wrapper.style.inlineSize = '960px';
     await waitUntil(
-      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'visible',
+      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'clip',
       'the table never returned to page flow after its content fit again'
     );
   });
@@ -1644,7 +1715,7 @@ describe('scrollMode', () => {
     const { wrapper, el } = await responsiveTable(960);
     const scrollport = base(el);
     const table = el.shadowRoot!.querySelector('[part="table"]') as HTMLTableElement;
-    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'visible');
+    await waitUntil(() => getComputedStyle(scrollport).overflowX === 'clip');
 
     table.style.minInlineSize = '1200px';
     await waitUntil(
@@ -1655,7 +1726,7 @@ describe('scrollMode', () => {
 
     table.style.removeProperty('min-inline-size');
     await waitUntil(
-      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'visible',
+      () => scrollport.scrollWidth <= scrollport.clientWidth + 1 && getComputedStyle(scrollport).overflowX === 'clip',
       'intrinsic table shrinkage never restored page flow'
     );
   });

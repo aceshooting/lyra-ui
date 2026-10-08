@@ -19,16 +19,3 @@ export function localeDeclarationModules(packageDir) {
   visit(root);
   return modules.sort();
 }
-
-export function deriveLocaleDeclarationExports(packageDir) {
-  const exports = {};
-  for (const module of localeDeclarationModules(packageDir)) {
-    for (const extension of ['.js', '.d.ts']) {
-      exports[`./translations/${module}${extension}`] = {
-        types: EMPTY_DECLARATION,
-        default: extension === '.d.ts' ? EMPTY_DECLARATION : `./dist/translations/${module}${extension}`,
-      };
-    }
-  }
-  return exports;
-}

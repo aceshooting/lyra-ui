@@ -51,6 +51,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
   explicit empty string clears it. An authored host `aria-label` independently names the trace and is
   not cloned onto the timeline; explicit-empty/dynamic host changes preserve that single-owner
   distinction
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens the `evidence-toggle` and `evidence-body` padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
 Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was

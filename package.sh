@@ -16,6 +16,11 @@
 # changelog is trimmed to its current major (trimStandaloneChangelog in
 # scripts/skill-reference-context.mjs) instead of copied whole, and standalone-only link rewrites
 # remove promises that would require bundling llms-full.txt.
+#
+# The same run also generates packages/lyra-ui/skills/ (scripts/build-skill-bundle.mjs): the two skills
+# and the commands as shipped inside the npm package for `npx lyra-ui init-agents`. plugins/lyra-ui
+# stays the single authored source; the bundle's references point at the package's own llms/
+# (node_modules/@aceshooting/lyra-ui/llms/) instead of a copy.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,6 +60,9 @@ cp -r "${LLMS_DIR}/shared" "${REFERENCES_DIR}/shared"
 cp -r "${LLMS_DIR}/components" "${REFERENCES_DIR}/components"
 node "${ROOT_DIR}/scripts/skill-reference-context.mjs" "${REFERENCES_DIR}" \
   "${ROOT_DIR}/packages/lyra-ui/CHANGELOG.md"
+
+echo "Generating packages/lyra-ui/skills/ (the skills bundled in the npm package) from plugins/lyra-ui..."
+node "${ROOT_DIR}/scripts/build-skill-bundle.mjs"
 
 mkdir -p "${OUTPUT_DIR}"
 TMP_DIR="$(mktemp -d)"

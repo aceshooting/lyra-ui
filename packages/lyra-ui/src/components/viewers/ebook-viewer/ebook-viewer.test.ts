@@ -1,3 +1,5 @@
+import { twoFrames } from '../../../../test/frames.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import {
   aTimeout,
   expect,
@@ -348,7 +350,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
       ) as HTMLButtonElement;
@@ -437,7 +439,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
       ) as HTMLButtonElement;
@@ -458,10 +460,31 @@ describe("lr-ebook-viewer", () => {
 
       // The reconnect re-arms the load, so the book comes back rather than the
       // viewer staying permanently blank.
-      await aTimeout(20);
+      await twoFrames();
       expect(next.disabled, "a reconnect must reload the book").to.be.false;
 
       otherContainer.remove();
+    } finally {
+      restore();
+    }
+  });
+
+  it("moves focus to the book mount when a focused chapter button disables on a source change", async () => {
+    const fake = fakeBook();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      const next = () => el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+      await waitUntil(() => !next().disabled);
+      await focusByKeyboard(next());
+      expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("next-button");
+      (el as unknown as { ebookState: unknown }).ebookState = { kind: "loading" };
+      await el.updateComplete;
+      expect(next().disabled).to.equal(true);
+      expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal("mount");
     } finally {
       restore();
     }
@@ -562,13 +585,13 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/first.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(10);
+      await twoFrames();
       let renderErrorFired = false;
       el.addEventListener("lr-render-error", () => {
         renderErrorFired = true;
       });
       el.src = "https://example.test/second.epub"; // aborts the first fetch via beginAbortableLoad()
-      await aTimeout(20);
+      await twoFrames();
       expect(
         signals[0]?.aborted,
         "the first request should have been aborted"
@@ -655,12 +678,12 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/first.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20); // let the first load reach `await book.ready` and suspend there
+      await twoFrames(); // let the first load reach `await book.ready` and suspend there
 
       const fresh = fakeBook();
       __setEpubJsForTesting(fresh.factory as never);
       el.src = "https://example.test/second.epub"; // supersedes the first load's generation
-      await aTimeout(20);
+      await twoFrames();
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
       ) as HTMLButtonElement;
@@ -670,7 +693,7 @@ describe("lr-ebook-viewer", () => {
       ).to.be.false;
 
       stale.resolveReady(); // now let the superseded first load finish opening
-      await aTimeout(20);
+      await twoFrames();
       expect(
         stale.calls.destroy,
         "a superseded load must destroy the book it finished creating instead of assigning it live"
@@ -782,7 +805,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
 
       let events = 0;
       el.addEventListener("lr-text-select", () => {
@@ -793,7 +816,7 @@ describe("lr-ebook-viewer", () => {
           getSelection: () => ({ toString: () => "   ", rangeCount: 0 }),
         },
       });
-      await aTimeout(10);
+      await twoFrames();
       expect(
         events,
         "a collapsed/whitespace-only selection must not emit"
@@ -847,7 +870,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const node = document.createTextNode(
         "x".repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits + 1)
       );
@@ -928,7 +951,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
 
       const mapThroughFrame = (
         rect: { x: number; y: number; width: number; height: number },
@@ -1002,7 +1025,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const rect = { x: 0, y: 0, width: 10, height: 10 } as DOMRect;
       const node = document.createTextNode("world");
       const range = document.createRange();
@@ -1039,7 +1062,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const rect = new sourceWindow.DOMRect(0, 0, 10, 10);
       const node = sourceWindow.document.createTextNode("world");
       sourceWindow.document.body.append(node);
@@ -1092,7 +1115,7 @@ describe("lr-ebook-viewer", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
       ) as HTMLButtonElement;
@@ -1118,7 +1141,7 @@ describe("getToc", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.getToc()).to.deep.equal([
         { id: "ch1", label: "Chapter 1", href: "ch1.xhtml", level: 1 },
         {
@@ -1151,7 +1174,7 @@ describe("getToc", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.getToc()).to.deep.equal([]);
     } finally {
       restore();
@@ -1223,7 +1246,7 @@ describe("getToc", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.getToc()).to.deep.equal([
         { id: "ch3.xhtml", label: "", href: "ch3.xhtml", level: 1 },
       ]);
@@ -1309,7 +1332,7 @@ describe("getToc", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.getToc()).to.deep.equal([
         { id: "cycle", label: "Cycle", href: "cycle.xhtml", level: 1 },
       ]);
@@ -1331,7 +1354,7 @@ describe("location", () => {
           location="epubcfi(/6/4!)"
         ></lr-ebook-viewer>`
       );
-      await aTimeout(20);
+      await twoFrames();
       expect(fake.displayedCfis).to.include("epubcfi(/6/4!)");
     } finally {
       restore();
@@ -1348,12 +1371,12 @@ describe("location", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const before = fake.displayedCfis.length;
       fake.relocate({ start: { cfi: "epubcfi(/6/2!)", href: "ch1.xhtml" } });
       expect(el.location).to.equal("epubcfi(/6/2!)");
       expect(fake.displayedCfis.length).to.equal(before); // relocated updates the property without re-displaying
-      await aTimeout(20); // the guard must also hold once the deferred update actually runs
+      await twoFrames(); // the guard must also hold once the deferred update actually runs
       expect(fake.displayedCfis.length).to.equal(before);
     } finally {
       restore();
@@ -1370,7 +1393,7 @@ describe("location", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const listener = oneEvent(el, "lr-location-change");
       fake.relocate({ start: { cfi: "epubcfi(/6/2!)", href: "ch1.xhtml" } });
       const event = (await listener) as CustomEvent<{
@@ -1396,12 +1419,12 @@ describe("location", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.addEventListener("lr-location-change", () => {
         el.location = "epubcfi(/6/10!)";
       });
       fake.relocate({ start: { cfi: "epubcfi(/6/2!)", href: "ch1.xhtml" } });
-      await aTimeout(20);
+      await twoFrames();
       expect(el.location).to.equal("epubcfi(/6/10!)");
       expect(fake.displayedCfis).to.include("epubcfi(/6/10!)");
     } finally {
@@ -1419,9 +1442,9 @@ describe("location", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.location = "epubcfi(/6/10!)";
-      await aTimeout(20);
+      await twoFrames();
       expect(fake.displayedCfis).to.include("epubcfi(/6/10!)");
     } finally {
       restore();
@@ -1443,7 +1466,7 @@ describe("location", () => {
           .strings=${{ ebookViewerLoadError: "Localized location failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const errorPromise = oneEvent(el, "lr-render-error");
       el.location = "epubcfi(/6/reject!)";
       await errorPromise;
@@ -1471,7 +1494,7 @@ describe("rendition actions", () => {
           .strings=${{ ebookViewerLoadError: "Localized navigation failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       let errorCount = 0;
       el.addEventListener("lr-render-error", () => {
         errorCount++;
@@ -1511,7 +1534,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const count = await el.search("treasure");
       expect(count).to.equal(1);
       expect(await el.searchNext()).to.be.true;
@@ -1536,7 +1559,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       let detail: { matchCount: number; matchCountExact: boolean } | undefined;
       el.addEventListener("lr-search-change", (event) => {
         detail = event.detail;
@@ -1633,7 +1656,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const changed = oneEvent(el, "lr-search-change");
       const query = "x".repeat(VIEWER_SEARCH_QUERY_LIMIT + 1);
 
@@ -1683,7 +1706,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("anything")).to.equal(0);
       expect(unloads).to.equal(1);
     } finally {
@@ -1704,7 +1727,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const stale = el.search("apple");
       const fresh = await el.search("banana");
       await stale;
@@ -1727,7 +1750,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const listener = oneEvent(el, "lr-search-change");
       await el.search("treasure");
       const event = (await listener) as CustomEvent<{
@@ -1763,7 +1786,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       await el.search("treasure");
       const listener = oneEvent(el, "lr-search-change");
       el.clearSearch();
@@ -1801,7 +1824,7 @@ describe("lr-ebook-viewer search", () => {
           .strings=${{ ebookViewerLoadError: 'Localized annotation removal failure.' }}
         ></lr-ebook-viewer>
       `);
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search('needle')).to.equal(1);
 
       throwOnRemove = true;
@@ -1840,7 +1863,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("   ")).to.equal(0); // whitespace-only query
     } finally {
       restore();
@@ -1857,7 +1880,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("zzzznotfound")).to.equal(0);
     } finally {
       restore();
@@ -1874,7 +1897,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("anything")).to.equal(0);
     } finally {
       restore();
@@ -1891,7 +1914,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("anything")).to.equal(0);
       expect(fake.loadArgs).to.have.lengthOf(1);
       expect(typeof fake.loadArgs[0]).to.equal("function"); // book.load was bound and forwarded
@@ -1916,7 +1939,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("banana")).to.equal(1);
     } finally {
       restore();
@@ -1933,7 +1956,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const stale = el.search("apple");
       el.clearSearch(); // bumps the search generation synchronously while `stale` is suspended mid-scan
       expect(await stale).to.equal(0); // the post-loop generation guard discards the stale scan's own result
@@ -1961,7 +1984,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const stale = el.search("apple");
       await waitUntil(() =>
         fake.displayedCfis.some((cfi) => cfi.includes("ch1.xhtml"))
@@ -1988,7 +2011,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.searchNext()).to.be.false;
       expect(await el.searchPrevious()).to.be.false;
     } finally {
@@ -2009,7 +2032,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const count = await el.search("apple");
       expect(count).to.equal(2);
       fake.highlightCalls.length = 0;
@@ -2035,7 +2058,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       await el.search("apple");
       await (
         el as unknown as { showSearchMatch: (i: number) => Promise<void> }
@@ -2053,7 +2076,7 @@ describe("lr-ebook-viewer search", () => {
       const el = (await fixture(
         html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const sink = document.querySelector(
         `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`
       );
@@ -2091,7 +2114,7 @@ describe("lr-ebook-viewer search", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.search("treasure")).to.equal(1);
       const callsBefore = findCalls;
 
@@ -2119,7 +2142,7 @@ describe("lr-ebook-viewer search", () => {
           .strings=${{ ebookViewerLoadError: "Localized search-display failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const errorPromise = oneEvent(el, "lr-render-error");
       expect(await el.search("treasure")).to.equal(1);
       await errorPromise;
@@ -2147,7 +2170,7 @@ describe("lr-ebook-viewer search", () => {
           .strings=${{ ebookViewerLoadError: "Localized annotation failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const errorPromise = oneEvent(el, "lr-render-error");
       expect(await el.search("treasure")).to.equal(1);
       await errorPromise;
@@ -2191,7 +2214,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (
         el as unknown as { anchorRetryIntervalMs: number }
@@ -2212,7 +2235,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.scrollToAnchor({ kind: "cfi", cfi: "epubcfi(/6/8!)" })).to
         .be.true;
       expect(fake.displayedCfis).to.include("epubcfi(/6/8!)");
@@ -2233,7 +2256,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const stale = el.scrollToAnchor({
         kind: "text-quote",
         quote: "old quote",
@@ -2327,7 +2350,7 @@ describe("scrollToAnchor (ebook)", () => {
           .strings=${{ ebookViewerLoadError: "Localized ebook failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       let resultCount = 0;
       let found: boolean | undefined;
       el.addEventListener("lr-anchor-result", (event) => {
@@ -2365,7 +2388,7 @@ describe("scrollToAnchor (ebook)", () => {
           .strings=${{ ebookViewerLoadError: "Localized ebook failure." }}
         ></lr-ebook-viewer>
       `)) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const proto = Object.getPrototypeOf(el) as {
         applyAnchor: (anchor: { kind: string }) => Promise<boolean>;
       };
@@ -2409,7 +2432,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (
         el as unknown as { anchorRetryIntervalMs: number }
@@ -2435,7 +2458,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.scrollToAnchor({ kind: "text-quote", quote: "world" })).to
         .be.true;
       expect(fake.displayedCfis).to.include("epubcfi(/6/2!/4/ch1.xhtml)");
@@ -2463,7 +2486,7 @@ describe("scrollToAnchor (ebook)", () => {
       const el = (await fixture(
         html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.scrollToAnchor({
         kind: "text-quote",
         quote: " the total was 42 ",
@@ -2496,7 +2519,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       expect(await el.scrollToAnchor({ kind: "text-quote", quote: "banana" }))
         .to.be.true;
     } finally {
@@ -2514,7 +2537,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (
         el as unknown as { anchorRetryIntervalMs: number }
@@ -2537,7 +2560,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (
         el as unknown as { anchorRetryIntervalMs: number }
@@ -2559,7 +2582,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
       (
         el as unknown as { anchorRetryIntervalMs: number }
@@ -2591,7 +2614,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         { id: "quote-hl", anchor: { kind: "text-quote", quote: "world" } },
         { id: "cfi-hl", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" } },
@@ -2614,7 +2637,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         { id: "h1", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" } },
       ];
@@ -2646,7 +2669,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         { id: "h1", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" } },
       ];
@@ -2658,7 +2681,7 @@ describe("scrollToAnchor (ebook)", () => {
       const otherContainer = document.createElement("div");
       document.body.appendChild(otherContainer);
       otherContainer.appendChild(el); // disconnect + reconnect synchronously, same instance
-      await aTimeout(20);
+      await twoFrames();
       expect(fake.highlightCalls.some((call) => call.cfi === "epubcfi(/6/6!)"))
         .to.be.true;
       otherContainer.remove();
@@ -2677,7 +2700,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         { id: " citation-1 ", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" } },
       ];
@@ -2762,7 +2785,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         {
           id: "h1",
@@ -2800,7 +2823,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         {
           id: "h1",
@@ -2850,7 +2873,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       fake.highlightCalls.length = 0;
       el.highlights = Array.from({ length: 1_001 }, (_unused, index) => ({
         id: `h${index}`,
@@ -2890,7 +2913,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         { id: "h1", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" } },
       ];
@@ -2919,7 +2942,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
 
       window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
         if (target === el) calls++;
@@ -2959,7 +2982,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       el.highlights = [
         {
           id: "h1",
@@ -2973,7 +2996,7 @@ describe("scrollToAnchor (ebook)", () => {
       const removeCount = fake.removeCalls.length;
       el.style.setProperty("--lr-color-success-quiet", "rgb(1, 2, 3)");
       el.style.setProperty("--lr-color-warning", "rgb(4, 5, 6)");
-      await aTimeout(20);
+      await twoFrames();
       const highlight = fake.highlightCalls
         .filter((call) => call.cfi === "epubcfi(/6/6!)")
         .at(-1)!;
@@ -2998,7 +3021,7 @@ describe("scrollToAnchor (ebook)", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       await el.search("world");
       const searchCall = fake.highlightCalls.find(
         (call) => call.className === "lr-ebook-search"
@@ -3021,7 +3044,7 @@ describe("back-compat", () => {
           src="https://example.test/book.epub"
         ></lr-ebook-viewer>`
       )) as LyraEbookViewer;
-      await aTimeout(20);
+      await twoFrames();
       const next = el.shadowRoot!.querySelector(
         '[part="next-button"]'
       ) as HTMLButtonElement;
@@ -3460,9 +3483,9 @@ describe("DOM moves", () => {
     try {
       const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
       await waitUntil(() => opened === 1);
-      await aTimeout(20);
+      await twoFrames();
       (host as unknown as { moveBefore(node: Node, child: Node | null): void }).moveBefore(el, null);
-      await aTimeout(30);
+      await twoFrames();
       expect(fake.calls.destroy).to.equal(0);
       expect(opened).to.equal(1);
     } finally {

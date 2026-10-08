@@ -1678,3 +1678,22 @@ describe('retired lr-chip-select alias', () => {
     expect(warnings).to.have.length(0);
   });
 });
+
+describe('with-remove', () => {
+  it('is the lr-tag spelling of removable and emits lr-remove from a localized remove button', async () => {
+    const el = (await fixture(html`<lr-chip with-remove value="a">Alpha</lr-chip>`)) as LyraChip;
+    expect(el.removable).to.equal(true);
+    expect(el.withRemove).to.equal(true);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+    expect(button.getAttribute('aria-label')).to.equal('Remove Alpha');
+    const pending = oneEvent(el, 'lr-remove');
+    button.click();
+    const event = (await pending) as CustomEvent<{ value?: string }>;
+    expect(event.detail.value).to.equal('a');
+    el.withRemove = false;
+    await el.updateComplete;
+    expect(el.removable).to.equal(false);
+    expect(el.hasAttribute('with-remove')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="remove-button"]') === null).to.equal(true);
+  });
+});

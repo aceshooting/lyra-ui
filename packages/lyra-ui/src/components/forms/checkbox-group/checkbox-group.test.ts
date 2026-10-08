@@ -320,7 +320,6 @@ it('releases and reacquires host descriptions through the adopted owner realm', 
   const disconnectedSourceRelationshipObservers = new Set<MutationObserver>();
   class SourceMutationObserver extends originalSourceMutationObserver {
     private observesHostRelationship = false;
-    private observesSourceRoot = false;
 
     override observe(target: Node, options: MutationObserverInit): void {
       super.observe(target, options);
@@ -330,24 +329,12 @@ it('releases and reacquires host descriptions through the adopted owner realm', 
         options.attributeFilter?.includes('aria-describedby')
       ) {
         this.observesHostRelationship = true;
-      }
-      if (
-        target === document &&
-        options.childList &&
-        options.subtree &&
-        options.attributeFilter?.includes('id')
-      ) {
-        this.observesSourceRoot = true;
-      }
-      if (this.observesHostRelationship && this.observesSourceRoot) {
         sourceRelationshipObserver = this;
       }
     }
 
     override disconnect(): void {
-      if (this.observesHostRelationship && this.observesSourceRoot) {
-        disconnectedSourceRelationshipObservers.add(this);
-      }
+      if (this.observesHostRelationship) disconnectedSourceRelationshipObservers.add(this);
       super.disconnect();
     }
   }
@@ -407,7 +394,7 @@ it('releases and reacquires host descriptions through the adopted owner realm', 
           relationshipObservations += 1;
         }
         if (
-          target === frameDocument &&
+          (target === frameDocument || target === frameDocument.documentElement) &&
           options.childList &&
           options.subtree &&
           options.attributeFilter?.includes('id')
@@ -2263,6 +2250,28 @@ it('reconciles a bulk of direct child writes without re-querying the catalog per
   expect(queries).to.be.lessThan(boxes.length);
 });
 
+it('coalesces the render-driven child syncs of one task into one reconciliation', async () => {
+  const el = (await fixture(html`<lr-checkbox-group></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  const boxes = Array.from({ length: 40 }, (_, index) => {
+    const box = document.createElement('lr-checkbox') as LyraCheckbox;
+    box.value = String(index);
+    return box;
+  });
+  el.append(...boxes);
+  await Promise.all(boxes.map((box) => box.updateComplete));
+  await el.updateComplete;
+  await new Promise((resolve) => queueMicrotask(() => resolve(null)));
+
+  let syncs = 0;
+  const host = el as unknown as { sync(): void };
+  const original = host.sync;
+  host.sync = function () { syncs++; original.call(this); };
+  boxes.forEach((box) => box.requestUpdate());
+  await Promise.all(boxes.map((box) => box.updateComplete));
+  await new Promise((resolve) => queueMicrotask(() => resolve(null)));
+  expect(syncs).to.be.lessThan(3);
+});
+
 it('renders the hint and error props alongside slotted hint and error content', async () => {
   const el = (await fixture(html`
     <lr-checkbox-group hint="Plain hint" error-text="Plain error">
@@ -2292,4 +2301,12 @@ it('exposes invalidity as soon as a toggle leaves a required group empty', async
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('fieldset')!.getAttribute('aria-invalid')).to.equal('true');
   expect(el.hasAttribute('data-invalid')).to.be.true;
+});
+
+it('renders the hint prop and slot together', async () => {
+  const el = (await fixture(html`<lr-checkbox-group label="L" hint="Prop hint" disabled><span slot="hint">Slot hint</span><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>`)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  const hint = el.shadowRoot!.querySelector<HTMLElement>('[part~="hint"]')!;
+  expect(hint.textContent).to.contain('Prop hint');
+  expect(hint.querySelector<HTMLSlotElement>('slot[name="hint"]')).to.not.equal(null);
 });

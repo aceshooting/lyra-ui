@@ -58,7 +58,7 @@ Those nested detail fields are separate from deprecated event names and are not 
   import type {} from "@aceshooting/lyra-ui/vue";
   import type {} from "@aceshooting/lyra-ui/svelte";
   ```
-  All three are generated from `custom-elements.json` and type the documented properties,
+  All three are generated from the Custom Elements Manifest and type the documented properties,
   attribute aliases, events, element refs, and CSS custom properties. Their emitted JavaScript is
   empty: they are declaration merging, not runtime wrappers, and they do not register any tag.
 - **Delegated, `document` and `window` listeners: `@aceshooting/lyra-ui/events`.** Component events
@@ -1576,6 +1576,9 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
+  `installHappyDomShadowFocusShim(): unknown`
+  `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
+  `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.

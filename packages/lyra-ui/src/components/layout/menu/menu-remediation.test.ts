@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './menu.js';
 import './menu-item.js';
@@ -83,11 +83,14 @@ describe('menu type-ahead reset debounce', () => {
     const el = await menuFixture();
     typeAhead(el, 'd');
     expect(bufferOf(el)).to.equal('d');
+    // wait-reason: real type-ahead reset timing; the buffer resets on its own schedule
     await aTimeout(300);
     typeAhead(el, 'e');
     expect(bufferOf(el), 'a second keystroke extends the buffer').to.equal('de');
+    // wait-reason: real type-ahead reset timing; negative assertion that the superseded reset does not fire
     await aTimeout(350);
     expect(bufferOf(el), 'the superseded reset must not clear it').to.equal('de');
+    // wait-reason: real type-ahead reset timing; the surviving reset fires on its own schedule
     await aTimeout(400);
     expect(bufferOf(el), 'the surviving reset still fires on its own schedule').to.equal('');
   });
@@ -103,6 +106,7 @@ describe('menu type-ahead reset debounce', () => {
     await el.updateComplete;
     typeAhead(el, 'e');
     expect(bufferOf(el), 'a reconnected menu still accumulates').to.equal('e');
+    // wait-reason: real type-ahead reset timing after reconnect
     await aTimeout(700);
     expect(bufferOf(el), 'and its reset still fires').to.equal('');
   });
@@ -144,7 +148,7 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     }
     expect(document.activeElement?.id, 'the press leaves focus where it was').to.equal('a');
     b!.focus();
-    await aTimeout(0);
+    await nextFrame();
     expect([a!.tabIndex, b!.tabIndex, c!.tabIndex]).to.deep.equal([0, -1, -1]);
     a!.focus();
     press(a!, 'ArrowDown');
@@ -159,7 +163,7 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     const first = root.querySelector<LyraMenuItem>('#i0')!;
     first.focus();
     await waitUntil(() => first.tabIndex === 0);
-    await aTimeout(50);
+    await nextFrame();
     const original = window.getComputedStyle;
     let reads = 0;
     window.getComputedStyle = ((element: Element, pseudo?: string | null) => {
@@ -180,7 +184,7 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     const item = wrap.querySelector<LyraMenuItem>('#item')!;
     await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
     wrap.style.width = '10px';
-    await aTimeout(50);
+    await nextFrame();
     const access = item as unknown as { readSlottedLabel: (...args: unknown[]) => string };
     const read = access.readSlottedLabel.bind(item);
     let reads = 0;
@@ -191,6 +195,7 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     wrap.style.left = '12px';
     wrap.style.top = '4px';
     wrap.className = 'moved';
+    // wait-reason: negative assertion; ancestor writes must not trigger a label re-read
     await aTimeout(50);
     expect(reads).to.equal(0);
     wrap.style.setProperty('--menu-test-label-display', 'none');
@@ -201,5 +206,35 @@ describe('menu keys, disabled press, type-ahead and label observation', () => {
     await waitUntil(() => !item.hasAttribute('aria-label'));
     wrap.style.display = '';
     await waitUntil(() => item.getAttribute('aria-label') === 'Beta');
+  });
+});
+
+describe('submenu pointer handling', () => {
+  it('handles one pointerover once inside an open submenu', async () => {
+    const menu = await fixture<LyraMenu>(html`<lr-menu label="Actions">
+      <lr-menu-item id="share">Share
+        <lr-menu slot="submenu" id="share-menu"><lr-menu-item id="email">Email</lr-menu-item></lr-menu>
+      </lr-menu-item>
+    </lr-menu>`);
+    const share = menu.querySelector<LyraMenuItem>('#share')!;
+    const child = menu.querySelector<LyraMenu>('#share-menu')!;
+    const email = child.querySelector<HTMLElement>('#email')!;
+    share.focus();
+    share.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
+    await waitUntil(() => share.submenuOpen, 'the submenu did not open');
+    await child.updateComplete;
+    const internals = child as unknown as { openSubmenuItem: () => unknown };
+    const original = internals.openSubmenuItem;
+    let calls = 0;
+    internals.openSubmenuItem = function (this: unknown) {
+      calls += 1;
+      return original.call(this);
+    };
+    try {
+      email.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+    } finally {
+      internals.openSubmenuItem = original;
+    }
+    expect(calls).to.equal(1);
   });
 });

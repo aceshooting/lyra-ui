@@ -11,7 +11,7 @@ import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-
 import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
 import { TypeAheadBuffer } from './type-ahead-buffer.js';
 import { resolveListMove } from './list-navigation.js';
-import { DocumentPointerListener } from './document-pointer.js';
+import { PopupController } from './popup-controller.js';
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {
@@ -47,6 +47,18 @@ function ownDataValue(target: object, key: PropertyKey): unknown {
   return typeof descriptor === 'symbol' ? undefined : descriptor.value;
 }
 
+/** A frozen copy of a row's own enumerable data properties; accessors are skipped, never run. */
+function ownDataCopy(entry: object): object {
+  const copy: Record<string, unknown> = {};
+  let keys: string[] = [];
+  try { keys = Object.keys(entry); } catch { /* an exotic row keeps only the fields read below */ }
+  for (const key of keys) {
+    const descriptor = getOwnDataDescriptor(entry, key);
+    if (typeof descriptor !== 'symbol') copy[key] = descriptor.value;
+  }
+  return Object.freeze(copy);
+}
+
 /**
  * The same boundary the international selectors use (`snapshotSelectionCatalog()`): at most
  * {@link CATALOG_ROW_LIMIT} source rows, read only through own data properties so a caller
@@ -76,7 +88,7 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
       record = { id: entry, label: entry } as T;
       id = label = entry;
     } else if (entry !== null && typeof entry === 'object') {
-      record = entry as T;
+      record = ownDataCopy(entry) as T;
       id = ownDataValue(entry, 'id');
       label = ownDataValue(entry, 'label');
     } else {
@@ -174,7 +186,7 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
 export class CatalogPickerController<T extends LyraCatalogEntry> {
   private readonly popupPosition: AnchoredPopoverController;
   private overlay?: OverlayHandle;
-  private readonly pointer: DocumentPointerListener;
+  private readonly popupController: PopupController;
   private _activeIndex = -1;
   private revealPending = false;
   private _query = '';
@@ -200,8 +212,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     private readonly options: CatalogPickerControllerOptions<T>,
   ) {
     this.typeBuffer = new TypeAheadBuffer(host);
-    this.pointer = new DocumentPointerListener(host, (event) => {
-      if (!event.composedPath().includes(host)) this.overlay?.dismissBackdrop();
+    this.popupController = new PopupController({
+      host,
+      onPointer: (event) => {
+        if (!event.composedPath().includes(host)) this.overlay?.dismissBackdrop();
+      },
     });
     this.popupPosition = new AnchoredPopoverController((anchor, popup) =>
       deferredPlace(anchor, popup, {
@@ -789,7 +804,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   adopted(): void {
     this.typeBuffer.clear();
     this.popupPosition.disconnect();
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
     this.overlay?.suspend();
     if (this._open) queueMicrotask(() => this.syncPopup());
   }
@@ -805,14 +820,6 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     if (!target || typeof (target as Node).nodeType !== 'number') return false;
     const node = target as Node;
     return this.host.renderRoot.contains(node) || this.host.contains(node);
-  }
-
-  private bindDocumentPointer(): void {
-    if (this.host.isConnected) this.pointer.bind();
-  }
-
-  private unbindDocumentPointer(): void {
-    this.pointer.unbind();
   }
 
   private activatePopupOverlay(): void {
@@ -832,7 +839,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     const overlay = this.overlay;
     this.overlay = undefined;
     overlay?.deactivate({ restoreFocus });
-    this.unbindDocumentPointer();
+    this.popupController.unbindPointer();
   }
 
   private dismissFromEscape(): void {
@@ -849,7 +856,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       return;
     }
     this.activatePopupOverlay();
-    this.bindDocumentPointer();
+    this.popupController.bindPointer();
     const anchor = this.host.renderRoot.querySelector<HTMLElement>(
       this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
     );

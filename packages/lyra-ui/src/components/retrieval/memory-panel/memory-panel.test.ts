@@ -1864,3 +1864,18 @@ describe('lr-memory-panel heading level', () => {
     expect([heading().getAttribute('role'), heading().getAttribute('aria-level')]).to.deep.equal([null, null]);
   });
 });
+
+it('lr-memory-panel drops its card chrome under frame="plain" and tightens padding under a dense size', async () => {
+  const el = (await fixture(html`<lr-memory-panel .shortTerm=${shortTermItems}></lr-memory-panel>`)) as LyraMemoryPanel;
+  await el.updateComplete;
+  const target = () => el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+  expect(el.frame).to.equal('card');
+  expect(getComputedStyle(target()).borderTopWidth).to.not.equal('0px');
+  const padding = getComputedStyle(target()).paddingTop;
+  el.size = 's';
+  await el.updateComplete;
+  expect(getComputedStyle(target()).paddingTop).to.not.equal(padding);
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
+});

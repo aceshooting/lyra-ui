@@ -1,27 +1,3 @@
-## Breaking changes in 10.0.0
-
-`<lr-calendar>`'s `firstDayOfWeek`/`first-day-of-week` drops the bare `0`–`6` integer form and stops
-defaulting to a hardcoded Monday. The type is now exactly `LyraCalendarFirstDayOfWeek`
-(`'auto'|'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat'`, default `'auto'`), so there is one way to
-express a week start instead of two that had to be sanitized and wrapped against each other, and
-`'auto'` resolves through the same `resolveFirstDayOfWeek()` contract `<lr-date-picker>`/
-`<lr-date-input>` already use. An unset `<lr-calendar>` and an unset `<lr-date-picker>` on the same
-page therefore agree at last — Sunday-first under `en-US`, Monday-first under `fr-FR` — where the
-calendar previously rendered Monday-first everywhere while already formatting its weekday *labels*
-from the locale. Replace `first-day-of-week="1"` with `first-day-of-week="mon"`: a leftover numeric
-value is not mapped or clamped, it is simply an unrecognized token and falls through to Sunday. If
-the locale-independent Monday start was deliberate, keep it by writing `"mon"` explicitly instead of
-relying on the default. There is no `wa-calendar`, so no upstream mirror is affected.
-
-Also corrected in 10.0.0 — not breaking, but visible. A specificity sweep found rules that were
-meant to win yet were losing to another rule in the same shadow stylesheet, so their declarations
-never applied at all. In this family: `<lr-calendar>`'s today cell has a focus ring again (its
-`[data-today]` outline was swallowing it, leaving today's cell pixel-identical focused and at rest)
-and its adjacent-month cells take selection and pointer feedback again; `<lr-table>`'s header cell
-that is both sticky and sortable, `<lr-pagination>`'s page input, `<lr-sequence-strip>`'s selected
-cell and `<lr-flow-canvas>`'s selected edge regain hover/press/focus feedback; and
-`<lr-flow-controls>` honors a `hidden` slotted action button instead of painting it.
-
 ## `lr-sparkline`
 
 Zero-dependency inline SVG trend chart (mirrors `<wa-sparkline>`). Its default allocation is one
@@ -1165,7 +1141,7 @@ the padding of a header cell, a body cell, and the row-total cell; `--lr-table-c
 footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
 outright — two hooks instead of one preserve that distinction. `--lr-table-font-size` (default
 `inherit`) sets the `<table>` element's font size; the rest of the font shorthand (family,
-weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-max-height` (default `none`; controls the scrollable
+weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-surface` (default `var(--lr-color-surface)`) is the one surface the frame, resting/striped rows, sticky header and sticky columns, expanded rows and footer all paint, so recolouring a raised panel needs one declaration; `--lr-table-radius` (default `var(--lr-radius-container)`) is the frame radius, and the frame clips painted content to it (`overflow: clip` while `scroll-mode="auto"` content fits, so no scroll container appears and the sticky header still pins to the page; `page` mode clips the same way while content fits and falls back to `overflow: visible` only when the table is wider than its host, so it still overflows the page). `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;
@@ -3512,7 +3488,7 @@ latest viewport-change text).
 `--lr-flow-status-denied-color`.
 `--lr-flow-minimap-viewport-color` (default `var(--lr-color-brand)`) colors `[part="viewport"]`'s
 fill (mixed 15% into transparent) and stroke, independent of every per-status node fill above.
-`--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 40px) floors
+`--lr-flow-minimap-viewport-min-size` (default `var(--lr-icon-button-size)`, normally 36px) floors
 only the transparent `viewport-hit-area` along each axis. The visible `viewport` remains the exact
 viewport-to-content ratio. The token inherits from ancestors; set it to `0` to opt out.
 

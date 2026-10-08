@@ -4,7 +4,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -356,7 +356,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('items') && !changed.has('readonly') && !changed.has('disabled')) return;
-    const focusedControl = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const focusedControl = shadowFocusTarget(this) as HTMLElement | null;
     const action = focusedControl?.getAttribute('data-action') ?? undefined;
     const editorFocused = focusedControl?.getAttribute('part') === 'editor';
     if (!action && !editorFocused) return;
@@ -392,7 +392,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const pending = this.pendingRemovalFocus;
     if (!pending) return;
     this.pendingRemovalFocus = undefined;
-    const internalActive = activeElementIn(this.shadowRoot);
+    const internalActive = shadowFocusTarget(this);
     const documentActive = activeElementIn(this.ownerDocument);
     if (
       (internalActive !== null && internalActive !== pending.origin) ||

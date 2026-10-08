@@ -194,7 +194,7 @@ function emitSlice(tag, family, entries, categories, meta) {
       : `strings owned exclusively by \`src/components/${family}/**\``;
   return `// The \`${family}\` slice of the ${tag} translation catalog for @aceshooting/lyra-ui: ${familyProse}.
 // A side-effect-only module: a consumer writes a bare
-// \`import '@aceshooting/lyra-ui/translations/${tag}/${family}';\` and reads nothing from it. Keep the
+// \`import '@aceshooting/lyra-translations/${tag}/${family}';\` and reads nothing from it. Keep the
 // keys in DEFAULT_STRINGS order -- \`scripts/check-translations.mjs\` enforces coverage, order,
 // placeholder names and the plural-category set for this slice, and a catalog that cannot be
 // diffed against another line-for-line is a catalog nobody will review.
@@ -216,7 +216,7 @@ function emitAggregate(tag, sliceNames) {
 //
 // Back-compat aggregate: importing this file registers every family slice below. An application
 // that only uses a handful of components can import the family slice(s) it actually needs instead
-// -- e.g. \`@aceshooting/lyra-ui/translations/${tag}/forms\` -- for a smaller bundle. To translate,
+// -- e.g. \`@aceshooting/lyra-translations/${tag}/forms\` -- for a smaller bundle. To translate,
 // edit the slice file under \`./${tag}/\`, never this file.
 ${imports}
 `;

@@ -10,13 +10,14 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
-import { activeElementIn, deepActiveElementIn } from '../../../internal/active-element.js';
+import { deepActiveElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import {
@@ -386,7 +387,7 @@ export interface LyraGraphQueryBuilderEventMap {
  * @status stable
  * @since 4.1.0
  */
-export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEventMap> {
+export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQueryBuilderEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -581,21 +582,6 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
   set form(owner: FormOwnerValue) {
     setFormOwner(this, owner);
-  }
-  getForm(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  get labels(): NodeList {
-    return this.internals.labels;
-  }
-  get validity(): ValidityState {
-    return this.internals.validity;
-  }
-  get validationMessage(): string {
-    return this.internals.validationMessage;
-  }
-  get willValidate(): boolean {
-    return this.internals.willValidate;
   }
 
   /** The complete controlled query model, detached and deeply frozen with at most 500 relationship
@@ -851,7 +837,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   /** Blurs whichever nested editing owner currently holds focus. */
   override blur(): void {
-    const active = deepActiveElementIn(this.shadowRoot);
+    const active = deepActiveElementIn(this.isConnected ? this.shadowRoot : null);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -908,7 +894,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
 
   private captureChipRemovalFocus(group: 'relationship' | 'node-type', value: string, selected: readonly string[]): void {
-    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     const expectedPart = group === 'relationship' ? 'relationship-chips' : 'node-type-chips';
     if (
       active?.localName !== tag('chip') ||
@@ -979,7 +965,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     super.willUpdate(changed);
     if (!this.hasUpdated) this.captureDefaultValue();
     if (!changed.has('savedQueries')) return;
-    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
+    const active = shadowFocusTarget(this) as HTMLElement | null;
     if (active?.getAttribute('part') !== 'saved-delete-button') return;
     const focusedId = active.closest<HTMLElement>('[data-query-id]')?.dataset['queryId'];
     if (!focusedId || this.savedQueries.some((item) => item.id === focusedId)) return;

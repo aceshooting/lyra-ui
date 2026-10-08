@@ -688,7 +688,10 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     expect(el.pending).to.equal(true);
     expect(el.finalizePendingSubmit(submissionId)).to.be.true;
     await el.updateComplete;
-    await aTimeout(20);
+    await waitUntil(
+      () => !el.pending && !el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute("data-open"),
+      "the pending submit never settled and closed the panel"
+    );
     expect(el.pending).to.equal(false);
     expect(
       el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute("data-open")

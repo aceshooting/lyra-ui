@@ -2,14 +2,14 @@
 
 # Optional peer dependencies
 
-All 29 peers are **optional**: nothing here is needed to install or use the library,
+All 30 peers are **optional**: nothing here is needed to install or use the library,
 but they have two deliberately different roles.
 
 **Framework declaration peers (3).** React, Svelte, and Vue are compile-time peers
 only when a project imports their matching opt-in declaration entry. Those entry points emit empty
 JavaScript, no component imports these frameworks, and Lyra ships no runtime wrapper.
 
-**Component-loaded peers (26).** No component imports one eagerly. Install a
+**Component-loaded peers (27).** No component imports one eagerly. Install a
 peer only when you use a component that needs it.
 
 **How they load.** Most component-loaded peers resolve through a dynamic `import()` on first use.
@@ -38,6 +38,7 @@ for the page.
 | Peer | Range | Needed by |
 |---|---|---|
 | `@aceshooting/lyra-flags` | `^2.3.0` | _(loaded by a shared internal module)_ |
+| `@aceshooting/lyra-translations` | `^26.0.0` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.3.0` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |

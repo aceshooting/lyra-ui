@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
-import { css } from 'lit';
+import { css, unsafeCSS, type CSSResult } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
 
 export const chartSurfaceStyles = css`
@@ -162,3 +163,54 @@ export const chartSurfaceStyles = css`
     ${focusRing}
   }
 `;
+
+/** Legend-position grid areas shared by the grid-based chart surfaces; `noticeArea` names the notice row. */
+export function chartLegendPositionStyles(noticeArea: 'notice' | 'warning'): CSSResult {
+  const area = unsafeCSS(noticeArea);
+  return css`
+  [part='base']:where([data-legend-position='top']) {
+    grid-template-areas:
+      'legend'
+      'plot'
+      '${area}'
+      'table-toggle'
+      'table';
+  }
+  /* Column 1 vs column 2, not physical left vs right: a grid numbers columns along the inline axis,
+     so this pair mirrors itself under dir=rtl. The host resolves every legend-position value
+     (logical alias, physical edge, or auto) into the column that lands on the intended physical
+     edge after that mirror -- see legendGridPlacement(). */
+  [part='base']:where([data-legend-position='inline-start']) {
+    grid-template-areas:
+      'legend plot'
+      '${area} ${area}'
+      'table-toggle table-toggle'
+      'table table';
+    grid-template-columns:
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))))
+      minmax(0, 1fr);
+  }
+  [part='base']:where([data-legend-position='inline-end']) {
+    grid-template-areas:
+      'plot legend'
+      '${area} ${area}'
+      'table-toggle table-toggle'
+      'table table';
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, min(33cqi, var(--lr-chart-legend-side-max, var(--lr-size-15rem))));
+  }
+  @container ${mediumContainerQuery} {
+    [part='base']:where([data-legend-position='inline-start']),
+    [part='base']:where([data-legend-position='inline-end']) {
+      grid-template-areas:
+        'plot'
+        'legend'
+        '${area}'
+        'table-toggle'
+        'table';
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+`;
+}

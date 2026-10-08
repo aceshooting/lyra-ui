@@ -16,7 +16,7 @@
 //   llms/migration.md         wa-*/sl-* classification and codemod table
 // A component section is assigned to a family by the src/components/<family>/ directory its tag is
 // declared in, so the docs can never drift from the source tree's own grouping.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -36,6 +36,7 @@ import { projectRenameLedger } from './lyra-rename-ledger.mjs';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
 import { SHARED_COMPAT_ORDER, SHARED_TOPICS } from './shared-topics.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 export { SHARED_TOPICS } from './shared-topics.mjs';
 
@@ -451,6 +452,14 @@ function publishablePeerRange(peer, range) {
   }
   if (!range.startsWith('workspace:')) return range;
   const publishable = range.slice('workspace:'.length);
+  if (publishable === '^' || publishable === '~') {
+    // pnpm publishes a bare `workspace:^` as `^<sibling version>`; read that sibling's version.
+    const sibling = path.join(packageDir, '..', peer.split('/').at(-1), 'package.json');
+    if (existsSync(sibling)) {
+      const { version } = JSON.parse(readFileSync(sibling, 'utf8'));
+      if (typeof version === 'string' && version) return `${publishable}${version}`;
+    }
+  }
   if (!publishable || publishable === '*' || publishable === '^' || publishable === '~') {
     throw new Error(
       `${peer}: cannot derive published peer guidance from unresolved workspace range ${range}`,
@@ -481,21 +490,15 @@ export function buildPeers(tagFacts) {
   }
   // Peers reached only from a non-component module (e.g. a shared loader) still get a row.
   const walkAll = new Set();
-  const walk = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.ts$/.test(entry.name) && !/\.(test|stories)\.ts$/.test(entry.name)) {
-        const text = readFileSync(full, 'utf8');
-        for (const specifier of runtimeModuleSpecifiers(text, full)) {
-          for (const peer of componentPeers) {
-            if (specifier === peer || specifier.startsWith(`${peer}/`)) walkAll.add(peer);
-          }
-        }
+  for (const full of walk(srcRoot)) {
+    if (!/\.ts$/.test(full) || /\.(test|stories)\.ts$/.test(full)) continue;
+    const text = readFileSync(full, 'utf8');
+    for (const specifier of runtimeModuleSpecifiers(text, full)) {
+      for (const peer of componentPeers) {
+        if (specifier === peer || specifier.startsWith(`${peer}/`)) walkAll.add(peer);
       }
     }
-  };
-  walk(srcRoot);
+  }
 
   const rows = peers.map((peer) => ({
     peer,

@@ -32,7 +32,7 @@ import '../../data/stat/stat.class.js';
 import '../../layout/tab-group/tab-group.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
-import type { LyraScoreThresholds } from '../graph/graph.class.js';
+import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_provenancePanelLabel, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';

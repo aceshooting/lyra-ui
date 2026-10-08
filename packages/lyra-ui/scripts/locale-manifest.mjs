@@ -5,6 +5,7 @@ import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural
 import { readTranslationCatalogInventory } from './check-translations.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
 import { readTranslationReviews } from './translation-review-source.mjs';
+import { TRANSLATIONS_PACKAGE } from './translations-companion.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -29,7 +30,7 @@ function localeScript(locale) {
 }
 
 function packageSpecifier(relativeModulePath) {
-  return `@aceshooting/lyra-ui/${relativeModulePath.replace(/^\.\//u, '')}`;
+  return `${TRANSLATIONS_PACKAGE}/${relativeModulePath.replace(/^\.\//u, '').replace(/^translations\//u, '')}`;
 }
 
 export function countCoverage({ locale, ownKeys, sourceKeys, parent, parentKeys }) {

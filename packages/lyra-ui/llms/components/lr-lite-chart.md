@@ -45,8 +45,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
-  readonly color?: string }`. The legacy `LiteSeries` name was removed in 9.0.0 — import
-  `LyraLiteChartSeries` instead.
+  readonly color?: string }`.
   `color` accepts a valid CSS `color`, while invalid values,
   declaration-breaking input, and `url()` paint servers fall back to the built-in palette. A
   runtime entry whose required `data` member is not an array is dropped while valid siblings
@@ -89,7 +88,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `withDataTable: boolean = false` (attribute `with-data-table`) — makes the generated accessible
   table visible rather than screen-reader-only. Same meaning as `lr-chart`'s property of the same
   name.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.1.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`, with `aria-expanded` and
   `aria-controls`) above the table, so a *sighted* reader can reveal the numbers on demand;
   `withDataTable` then becomes the disclosure's **initial** state rather than its whole behavior.
@@ -295,7 +294,7 @@ mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra pe
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
 points — single-series only), `data-table` (the generated/slotted alternative container),
-`data-table-toggle` (the `dataTableToggle` disclosure button — new in 11.1.0), `table`
+`data-table-toggle` (the `dataTableToggle` disclosure button), `table`
 (the generated semantic category×series table rendered when there is more than one dataset), and
 `data-truncation` (the
 visible/announced sampling notice).

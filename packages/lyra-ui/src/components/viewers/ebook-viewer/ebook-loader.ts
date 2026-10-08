@@ -1,4 +1,4 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
 
 interface EpubNavigationItem {
   id?: string;
@@ -61,25 +61,25 @@ function isEpubFactory(value: unknown): value is EpubFactory {
   return typeof value === 'function';
 }
 
-let epubModule: Promise<EpubFactory | null> | undefined;
+let override: Promise<EpubFactory | null> | undefined;
 
-export async function loadEpubJs(
-  importEpub: () => Promise<unknown> = () => import('epubjs'),
-): Promise<EpubFactory | null> {
-  try {
-    return resolveOptionalPeerCapability(await importEpub(), isEpubFactory);
-  } catch (error) {
-    console.warn('The optional `epubjs` peer is required to render EPUB files.', error);
-    return null;
-  }
+const epub = /* @__PURE__ */ createOptionalPeerLoader<EpubFactory>({
+  load: () => import('epubjs'),
+  isCapability: isEpubFactory,
+  warningKey: 'lyra-ebook-viewer-epubjs-unavailable',
+  warning: '<lr-ebook-viewer> could not load its optional epubjs peer.',
+});
+
+export function loadEpubJs(importEpub?: () => Promise<unknown>): Promise<EpubFactory | null> {
+  return epub.loadWith(importEpub);
 }
 
 export function getEpubJs(): Promise<EpubFactory | null> {
-  if (!epubModule) epubModule = loadEpubJs();
-  return epubModule;
+  return override ?? epub.get();
 }
 
 /** @internal */
 export function __setEpubJsForTesting(factory: EpubFactory | null | undefined): void {
-  epubModule = factory === undefined ? undefined : Promise.resolve(factory);
+  override = factory === undefined ? undefined : Promise.resolve(factory);
+  epub.clear();
 }

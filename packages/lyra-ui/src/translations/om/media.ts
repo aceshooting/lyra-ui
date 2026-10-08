@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Sagalee',
   videoCaptions: 'Barreeffama',
   videoCaptionsOff: 'Cufaa',
-  videoPlaybackSpeed: 'Saffisa taphannaa',
   videoPictureInPicture: 'Suuraa suuraa keessa seeni',
   videoExitPictureInPicture: 'Suuraa suuraa keessaa ba\'i',
   videoEnterFullscreen: 'Iskiriinii guutuu seeni',

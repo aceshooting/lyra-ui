@@ -11,7 +11,7 @@ import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   linearAlpha,
   linearBucket,
@@ -1858,7 +1858,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       changed.has('data') || changed.has('cellInteractive');
     const activeRenderedControl =
       collectionChanged || accessibleModeChanged
-        ? (activeElementIn(this.shadowRoot) as HTMLElement | null)
+        ? (shadowFocusTarget(this) as HTMLElement | null)
         : null;
     const activeAccessibleCell = activeRenderedControl?.matches('[part="cell"]')
       ? activeRenderedControl
@@ -2364,7 +2364,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         if (generation !== this.accessibleFocusGeneration || !this.isConnected)
           return;
         if (origin) {
-          const internalActive = activeElementIn(this.shadowRoot);
+          const internalActive = shadowFocusTarget(this);
           const documentActive = activeElementIn(this.ownerDocument);
           const focusStayedAtOrigin = internalActive === origin;
           const originWasRemovedWithoutReplacement =

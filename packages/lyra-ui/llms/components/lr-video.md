@@ -53,8 +53,7 @@ control-bar play toggle is hidden until the poster is dismissed.
 
 **Methods:** `getState(): VideoState` returns a fresh synchronous
 `{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot. `VideoState` is the
-canonical upstream-compatible authoring type; the redundant `LyraVideoState` alias is removed in
-v9;
+canonical upstream-compatible authoring type.
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
 `togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy

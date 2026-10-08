@@ -12,6 +12,8 @@ describe('composed-tree walkers', () => {
       const inner = root.appendChild(document.createElement('em'));
 
       expect(assignedSlotOf(child) === slot).to.equal(true);
+      const text = shell.appendChild(document.createTextNode('t'));
+      expect(assignedSlotOf(text) === slot, 'a text node reports its slot too').to.equal(true);
       expect(flattenedParentElement(child) === slot).to.equal(true);
       expect(domParentElement(child) === shell).to.equal(true);
       expect(flattenedParentElement(slot) === wrapper).to.equal(true);

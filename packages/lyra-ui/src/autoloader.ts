@@ -5,6 +5,7 @@ import { registryForRoot } from './internal/definition-registry.js';
 import {
   collectRenderedTree,
   isElement,
+  nativeGetter,
   nativeElementLocalName,
   nativeNodeType,
   openShadowRoot,
@@ -368,7 +369,7 @@ function nativeParentNode(node: Node): Node | null {
   try {
     const ownerWindow = ownerDocumentFor(node)?.defaultView;
     const NodeConstructor = ownerWindow?.Node ?? (typeof Node === 'undefined' ? undefined : Node);
-    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'parentNode')?.get;
+    const getter = NodeConstructor && nativeGetter(NodeConstructor.prototype, 'parentNode');
     return (getter?.call(node) as Node | null | undefined) ?? null;
   } catch {
     return null;
@@ -384,7 +385,7 @@ function parentAcrossOpenShadowBoundary(node: Node): Node | null {
     const ShadowRootConstructor =
       ownerWindow?.ShadowRoot ?? (typeof ShadowRoot === 'undefined' ? undefined : ShadowRoot);
     const getter =
-      ShadowRootConstructor && Object.getOwnPropertyDescriptor(ShadowRootConstructor.prototype, 'host')?.get;
+      ShadowRootConstructor && nativeGetter(ShadowRootConstructor.prototype, 'host');
     const host = (getter?.call(node) as Element | undefined) ?? undefined;
     return host && isElement(host) ? host : null;
   } catch {

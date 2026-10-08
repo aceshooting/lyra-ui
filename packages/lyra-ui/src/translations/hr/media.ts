@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Glasnoća',
   videoCaptions: 'Titlovi',
   videoCaptionsOff: 'Isključeno',
-  videoPlaybackSpeed: 'Brzina reprodukcije',
   videoPictureInPicture: 'Uključi sliku u slici',
   videoExitPictureInPicture: 'Isključi sliku u slici',
   videoEnterFullscreen: 'Uključi prikaz preko cijelog zaslona',

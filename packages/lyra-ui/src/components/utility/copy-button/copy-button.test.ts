@@ -203,13 +203,13 @@ describe('lr-copy-button', () => {
     `)) as LyraCopyButton;
     const tip = tooltip(el);
     await focusByKeyboard(baseButton(el));
-    await aTimeout(250);
+    await waitUntil(() => tip.open, 'tooltip opened from keyboard focus', { timeout: 2000 });
     await tip.updateComplete;
     expect(tip.open).to.be.true;
     expect(tooltipText(tip)).to.equal('Copy greeting');
 
     baseButton(el).blur();
-    await aTimeout(50);
+    await waitUntil(() => !tip.open, 'tooltip closed on blur', { timeout: 2000 });
     await tip.updateComplete;
     expect(tip.open).to.be.false;
   });
@@ -226,6 +226,7 @@ describe('lr-copy-button', () => {
       || (button.getAttribute('aria-describedby') ?? '').split(/\s+/).includes(proxy.id);
 
     await focusAfterPointer(button);
+    // wait-reason: negative assertion, the tooltip must not open after pointer-then-script focus once its show delay has elapsed
     await aTimeout(250);
     await tip.updateComplete;
     expect(tip.open, 'pointer-then-script focus does not open').to.be.false;
@@ -625,7 +626,7 @@ describe('lr-copy-button', () => {
         await el.updateComplete;
         // Give a real initial slotchange (queued around slot assignment) time to arrive and be
         // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-        await aTimeout(50);
+        await waitUntil(() => intercepted > 0, 'initial slotchange arrived');
         expect(
           intercepted,
           "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -667,7 +668,7 @@ describe('lr-copy-button', () => {
       );
       try {
         await el.updateComplete;
-        await aTimeout(50);
+        await waitUntil(() => realSlotchangeCount > 0, 'initial slotchange arrived');
         expect(
           realSlotchangeCount,
           'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -845,7 +846,7 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     baseButton(el).click();
     await settle(el);
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
-    await aTimeout(1600);
+    await waitUntil(() => baseButton(el).getAttribute('aria-label') === 'Copy', 'confirmation reverted', { timeout: 4000 });
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
     expect(feedbackText(el)).to.equal('');
@@ -978,7 +979,7 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     await settle(el);
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
 
-    await aTimeout(50);
+    await waitUntil(() => baseButton(el).getAttribute('aria-label') === 'Copy', 'confirmation reverted', { timeout: 2000 });
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
   });
@@ -991,8 +992,9 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     await settle(el);
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
 
-    // NaN self-heals to the DEFAULT_FEEDBACK_DURATION (1000ms), not 0/never -- a short wait must
+    // NaN self-heals to the shared copy feedback duration (1500ms), not 0/never -- a short wait must
     // NOT have already reverted it.
+    // wait-reason: negative assertion, a NaN duration self-heals to 1500ms so a short wait must not have reverted the confirmation
     await aTimeout(50);
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
@@ -1001,7 +1003,7 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     baseButton(el).click();
     await settle(el);
     // A negative duration clamps to 0, reverting on the very next tick.
-    await aTimeout(10);
+    await waitUntil(() => baseButton(el).getAttribute('aria-label') === 'Copy', 'confirmation reverted', { timeout: 2000 });
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy');
   });
@@ -1154,7 +1156,7 @@ describe('lr-copy-button clipboard failure', () => {
       await settle(el);
       expect(partTokens(baseButton(el))).to.include.members(['base', 'button', 'base-error']);
 
-      await aTimeout(60);
+      await waitUntil(() => !partTokens(baseButton(el)).includes('base-error'), 'error state reverted', { timeout: 2000 });
       await el.updateComplete;
       expect(partTokens(baseButton(el))).to.include.members(['base', 'button']);
       expect(partTokens(baseButton(el))).to.not.include('base-error');

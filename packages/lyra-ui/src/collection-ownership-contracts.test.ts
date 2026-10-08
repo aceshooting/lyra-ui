@@ -593,9 +593,12 @@ describe('original component collection ownership contracts', () => {
     expect(Object.isFrozen(snapshot)).to.equal(true);
     expect(Object.isFrozen(snapshot[0])).to.equal(true);
 
+    // The accessor is the shared public-collection snapshot; the 1,024-row admission is the
+    // picker's render boundary (see voice-picker.test.ts), not the accessor's.
+    expectDevWarning(collectionTruncationWarningKey('lr-voice-picker', 'catalog'));
     element.catalog = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index));
-    expect(element.catalog!.length).to.equal(1_024);
-    expect(element.catalog!.at(-1)).to.equal('1023');
+    expect(element.catalog!.length).to.equal(COLLECTION_LIMIT);
+    expect(element.catalog!.at(-1)).to.equal(String(COLLECTION_LIMIT - 1));
   });
 
   it('detaches and recursively freezes schema records and arrays in emitted details', async () => {
@@ -621,7 +624,9 @@ describe('original component collection ownership contracts', () => {
 
     expect(event.detail.schemaPath).to.equal('/properties/query');
     expect(event.detail.schema.type).to.deep.equal(['string', 'null']);
-    expect(event.detail.schema).not.to.equal(element.schema!.properties!['query']);
+    // The node already belongs to the element's frozen snapshot, so the event carries it by identity
+    // (still detached from the caller's mutated source above).
+    expect(event.detail.schema === element.schema!.properties!['query']).to.equal(true);
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(Object.isFrozen(event.detail.schema)).to.equal(true);
     expect(Object.isFrozen(event.detail.schema.type)).to.equal(true);

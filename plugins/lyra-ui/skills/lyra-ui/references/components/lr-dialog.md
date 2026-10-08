@@ -37,11 +37,9 @@ read, and neither is deprecated.
 
 **Properties:**
 
-- `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
-  `show()`/`hide()` pair, and assigning `open` runs exactly the same lifecycle as calling them, so
+- `open: boolean = false` (reflected) — assigning `open` runs exactly the same lifecycle as calling `show()`/`hide()`, so
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
-  therefore emits the full close lifecycle and can be vetoed, where it used to be a silent state
-  flip. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
+  therefore emits the full close lifecycle and can be vetoed. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
@@ -53,7 +51,7 @@ read, and neither is deprecated.
   localized close (X) button, which renders by default.
 - `noHeader: boolean = false` (attribute `no-header`, reflected) — Shoelace's spelling
   (`sl-dialog`'s `no-header`), which suppresses the entire header row
-- `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
+- `withoutHeader: boolean = false` (attribute `without-header`, reflected) —
   Web Awesome's spelling (`wa-dialog`'s `without-header`) for the same header suppression. Both
   names are current upstream spellings, both are read, and neither is deprecated or removable
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
@@ -64,10 +62,7 @@ read, and neither is deprecated.
   (`l`/`large`), `48rem` (`xl`) — each value feeds `--lr-dialog-max-width`'s private default. An
   explicit `--lr-dialog-width`/`--lr-dialog-max-width` still wins over every tier.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
-  the dialog; Escape and explicit `close()`/`hide()` calls remain available. **Changed in 8.0.0:**
-  this was previously spelled `no-light-dismiss`, an opt-_out_ whose default left backdrop dismissal
-  on. The polarity now matches `wa-dialog` exactly, so a mechanical rename no longer flips what the
-  markup does.
+  the dialog; Escape and explicit `close()`/`hide()` calls remain available.
 - `modal: LyraDialogModalController` (writable, property only) — `activateExternal()` temporarily
   yields focus/Escape ownership to a third-party modal; balanced `deactivateExternal()` resumes it
   without changing `open`
@@ -122,13 +117,7 @@ The two `lr-after-*` events are never cancelable.
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
 direct close sequence is `lr-hide` → `lr-close-request` → state change → `lr-close` → `lr-after-hide`.
 A built-in dismissal prepends `lr-request-close`. **Both state pre-events fire _before_ the state changes**, so reading
-`el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value — this is the polarity
-`wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
-`lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
-as of 8.0.0 that is finally true for these four names: `wa-show`/`wa-after-show`/`wa-hide`/
-`wa-after-hide` map to `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide` with matching timing and
-matching cancelability. Code written against Lyra 7.x that read `el.open` in a handler, or assumed
-the events were informational rather than vetoable, has to be re-read.
+`el.open` inside an `lr-show`/`lr-hide` handler returns the _old_ value.
 
 `lr-after-show`/`lr-after-hide` settle after the public registry animations `dialog.show` /
 `dialog.hide` (panel) and `dialog.overlay.show` / `dialog.overlay.hide` (backdrop). Per-element
@@ -160,7 +149,7 @@ rendered inside `[part="heading"]` and used as the panel's accessible name, winn
 plain-string `label` and legacy `heading` properties), `header-actions` (extra header controls,
 rendered in the header row _before_
 the built-in close button), `footer` (action buttons, rendered in a bottom row, hidden entirely when
-empty). The `label` and `header-actions` slots are new in 8.0.0.
+empty).
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
 `header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
@@ -188,16 +177,6 @@ It never steals initial focus from real content: an `[autofocus]` element wins, 
 focusable control _inside_ the body, and the body itself is used only when there is nothing else to
 focus. So a dialog full of form controls behaves exactly as before, and a dialog full of text is now
 scrollable with the arrow keys, Page Up/Down and Home/End once Tab reaches it.
-
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Border reaches the composed close control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
@@ -372,8 +351,7 @@ if (ok) deleteConversation();
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
-backdrop-click branch survives 8.0.0's flip of that property's own default to `false`, and
-`withoutCloseButton = true`, so it renders no header close button. Mounts a
+backdrop-click branch works, and `withoutCloseButton = true`, so it renders no header close button. Mounts a
 transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it after its exit animation, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
@@ -381,8 +359,7 @@ of the call and removes it after its exit animation, rather than reusing a persi
 stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
 own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
 a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
-instead of `--lr-color-brand`, for destructive actions. The deprecated `tone` option that preceded
-`variant` was removed in 10.0.0. Confirm/cancel actions deliberately use native
+instead of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
 inline-styled `<button>` elements so this helper does not register or import the broader button
 component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
 states as every other control in the library: a hover/pressed fill mixed toward

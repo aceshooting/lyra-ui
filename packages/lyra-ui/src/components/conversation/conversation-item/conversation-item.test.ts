@@ -1797,3 +1797,20 @@ describe("menu-open state", () => {
     await dropdown.hide({ focusTrigger: false });
   });
 });
+
+it("resolves a host aria-describedby onto its button owner", async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <p id="host-hint">Help text</p>
+    <lr-conversation-item aria-describedby="host-hint" label="A"></lr-conversation-item>
+  </div>`);
+  const host = wrapper.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>("lr-conversation-item")!;
+  await host.updateComplete;
+  const owner = () => host.shadowRoot!.querySelector<HTMLElement & { ariaDescribedByElements?: readonly Element[] | null }>('[part~="select-button"][role="button"]')!;
+  const ids = (): string[] =>
+    Reflect.has(owner(), "ariaDescribedByElements")
+      ? Array.from(owner().ariaDescribedByElements ?? []).map((node) => node.id)
+      : owner().getAttribute("aria-describedby")?.match(/\S+/g) ?? [];
+  await waitUntil(() => ids().includes("host-hint"), "the host description reaches the role owner");
+  host.removeAttribute("aria-describedby");
+  await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
+});

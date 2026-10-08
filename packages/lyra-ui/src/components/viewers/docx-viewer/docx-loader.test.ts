@@ -8,6 +8,23 @@ import {
 
 afterEach(() => clearDocxDepsCache());
 
+function captureDevWarnings(): { calls: unknown[][]; restore: () => void } {
+  const originalWarn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const originalIssuedWarnings = runtime.litIssuedWarnings;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  runtime.litIssuedWarnings = new Set();
+  return {
+    calls,
+    restore() {
+      console.warn = originalWarn;
+      if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
+      else runtime.litIssuedWarnings = originalIssuedWarnings;
+    },
+  };
+}
+
 describe('loadMammothAndSanitizer()', () => {
   it('loads both peers independently', async () => {
     const deps = await loadMammothAndSanitizer(
@@ -51,11 +68,9 @@ describe('loadMammothAndSanitizer()', () => {
     expect(deps.DOMPurify).to.equal(callableSanitizer);
   });
 
-  it('keeps DOMPurify available when mammoth fails', async () => {
+  it('keeps DOMPurify available when mammoth fails, and warns once without the import error', async () => {
     const error = new Error('mammoth boom');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
+    const { calls, restore } = captureDevWarnings();
     try {
       const deps = await loadMammothAndSanitizer(
         () => Promise.reject(error),
@@ -63,42 +78,24 @@ describe('loadMammothAndSanitizer()', () => {
       );
       expect(deps.mammoth).to.be.undefined;
       expect(deps.DOMPurify).to.exist;
-      expect(calls.flat()).to.contain(error);
+      expect(calls.flat().map(String).join(' ')).to.equal('<lr-docx-viewer> could not load its optional mammoth peer.');
     } finally {
-      console.warn = originalWarn;
+      restore();
     }
   });
 
   it('keeps mammoth available when DOMPurify fails', async () => {
-    const error = new Error('dompurify boom');
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
+    const { calls, restore } = captureDevWarnings();
     try {
       const deps = await loadMammothAndSanitizer(
         () => Promise.resolve({ default: { convertToHtml: () => Promise.resolve({ value: '', messages: [] }) } }),
-        () => Promise.reject(error),
+        () => Promise.reject(new Error('dompurify boom')),
       );
       expect(deps.mammoth).to.exist;
       expect(deps.DOMPurify).to.be.undefined;
-      expect(calls.flat()).to.contain(error);
+      expect(calls.flat().map(String).join(' ')).to.equal('A lyra-ui component could not load its optional dompurify peer.');
     } finally {
-      console.warn = originalWarn;
-    }
-  });
-
-  it('names the component and install fixes in warnings', async () => {
-    const originalWarn = console.warn;
-    const calls: unknown[][] = [];
-    console.warn = (...args: unknown[]) => calls.push(args);
-    try {
-      await loadMammothAndSanitizer(() => Promise.reject(new Error('boom')), () => Promise.reject(new Error('boom')));
-      const message = calls.flat().filter((value): value is string => typeof value === 'string').join(' ');
-      expect(message).to.contain('lr-docx-viewer');
-      expect(message).to.contain('pnpm add mammoth');
-      expect(message).to.contain('pnpm add dompurify');
-    } finally {
-      console.warn = originalWarn;
+      restore();
     }
   });
 });

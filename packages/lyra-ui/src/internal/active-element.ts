@@ -34,6 +34,14 @@ export function activeElementIn(root: DocumentOrShadowRoot | null | undefined): 
 }
 
 /**
+ * Returns the element focused inside `host`'s own shadow root, or `null` when the host is
+ * disconnected (a detached host cannot hold focus, and some DOMs throw on that read) or has no root.
+ */
+export function shadowFocusTarget(host: Element): Element | null {
+  return host.isConnected ? activeElementIn(host.shadowRoot) : null;
+}
+
+/**
  * Walks the `activeElement` chain down through nested shadow roots to the innermost focused node.
  *
  * `document.activeElement` (and any given root's) reports only the outermost element in *its* tree
@@ -57,6 +65,48 @@ export function deepActiveElementIn(
     active = inner;
   }
   return active;
+}
+
+/** Browser active-element getters are typed as Element but partial DOMs can return structural
+ * lookalikes. Brand-check before focus repair or composed containment traverses a candidate. */
+export function isUsableActiveElement(value: unknown): value is Element {
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null)
+    return false;
+  try {
+    const candidate = value as Node;
+    if (candidate.nodeType !== 1) return false;
+    const NodeConstructor =
+      candidate.ownerDocument?.defaultView?.Node ??
+      (typeof Node === 'undefined' ? undefined : Node);
+    if (!NodeConstructor) return false;
+    NodeConstructor.prototype.getRootNode.call(candidate);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Descends only across genuine active-element values; an invalid nested answer makes focus
+ * ownership unknowable, so cluster repair fails closed instead of forwarding it to shared walks. */
+export function safeDeepActiveElement(
+  root: Document | ShadowRoot | null | undefined,
+): Element | null {
+  const initial: unknown = activeElementIn(root);
+  if (!isUsableActiveElement(initial)) return null;
+  let active: Element = initial;
+  while (true) {
+    let shadowRoot: ShadowRoot | null;
+    try {
+      shadowRoot = active.shadowRoot;
+    } catch {
+      return null;
+    }
+    if (!shadowRoot) return active;
+    const nested: unknown = activeElementIn(shadowRoot);
+    if (nested === null) return active;
+    if (!isUsableActiveElement(nested)) return null;
+    active = nested;
+  }
 }
 
 /** Returns an element's composed parent, crossing assigned slots and shadow-root hosts. */

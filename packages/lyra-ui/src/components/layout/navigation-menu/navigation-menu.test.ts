@@ -323,13 +323,14 @@ describe('<lr-navigation-menu> structure and ARIA', () => {
       await menuFixture(
         html`<lr-navigation-menu><a href="#logo">Logo</a>${items()}</lr-navigation-menu>`,
       );
-      await aTimeout(20);
+      await nextFrame();
       const own = calls.filter((message) => message.includes('lr-navigation-menu'));
       expect(own).to.have.length(1);
       expect(own[0]).to.contain('<a>');
       await menuFixture(
         html`<lr-navigation-menu><span>Search</span>${items('w-')}</lr-navigation-menu>`,
       );
+      // wait-reason: negative assertion, no second warning may be issued
       await aTimeout(20);
       expect(calls.filter((message) => message.includes('lr-navigation-menu'))).to.have.length(1);
     } finally {
@@ -426,7 +427,7 @@ describe('<lr-navigation-menu> click and keyboard', () => {
     const events = recordToggles(menu);
     base(resources).click();
     await settle(menu);
-    await aTimeout(10);
+    await nextFrame();
     expect(events).to.deep.equal([
       { id: 'products', expanded: false, source: 'peer' },
       { id: 'resources', expanded: true, source: 'user' },
@@ -642,6 +643,7 @@ describe('<lr-navigation-menu> hover', () => {
     );
     const products = item(menu, 'products');
     hoverSynthetic(products);
+    // wait-reason: negative assertion, the hover must not open before show-delay elapses
     await aTimeout(50);
     expect(products.open).to.equal(false);
     await waitUntil(() => products.open, 'delayed hover never opened');
@@ -669,6 +671,7 @@ describe('<lr-navigation-menu> hover', () => {
     await waitUntil(() => products.open, 'hover did not open');
     await clickAt(base(products));
     await sendMouse({ type: 'move', position: farPoint() });
+    // wait-reason: negative assertion, a pinned panel must not close on pointer leave
     await aTimeout(200);
     expect(products.open, 'a pinned panel closed on leave').to.equal(true);
     await clickAt(base(products));
@@ -679,6 +682,7 @@ describe('<lr-navigation-menu> hover', () => {
     await waitPlaced(resources);
     hoverSynthetic(resources);
     leaveSynthetic(resources);
+    // wait-reason: negative assertion, pointer-leave must not close a programmatic panel
     await aTimeout(100);
     expect(resources.open, 'pointer-leave closed a programmatic panel').to.equal(true);
     base(resources).click();
@@ -704,6 +708,7 @@ describe('<lr-navigation-menu> hover', () => {
     await sendMouse({ type: 'move', position: [x, Math.round(list.bottom + 10)] });
     await sendMouse({ type: 'move', position: [x, Math.round(list.bottom + 30)] });
     await sendMouse({ type: 'move', position: [Math.round(surface.left + 10), Math.round(surface.top + 10)] });
+    // wait-reason: negative assertion, the panel must stay open while the pointer crosses the hover bridge
     await aTimeout(100);
     expect(products.open).to.equal(true);
   });
@@ -717,6 +722,7 @@ describe('<lr-navigation-menu> hover', () => {
     await waitPlaced(products);
     menu.querySelector<HTMLElement>('#products-a')!.focus();
     leaveSynthetic(products);
+    // wait-reason: negative assertion, leaving must not close a panel that holds focus
     await aTimeout(100);
     expect(products.open).to.equal(true);
   });
@@ -729,6 +735,7 @@ describe('<lr-navigation-menu> hover', () => {
     await waitPlaced(products);
     menu.querySelector<HTMLElement>('#products-a')!.focus();
     await hoverUntilMatched(base(resources), 'pointer never reached resources');
+    // wait-reason: negative assertion, hover must not switch away from a focused panel
     await aTimeout(350);
     expect(products.open).to.equal(true);
     expect(resources.open).to.equal(false);
@@ -742,6 +749,7 @@ describe('<lr-navigation-menu> hover', () => {
     const products = item(menu, 'products');
     pointer(base(products), 'pointerover', { pointerType: 'touch' });
     pointer(base(products), 'pointerover', { pointerType: 'pen' });
+    // wait-reason: negative assertion, touch and pen pointerover must never open
     await aTimeout(50);
     expect(products.open).to.equal(false);
   });
@@ -756,12 +764,15 @@ describe('<lr-navigation-menu> hover', () => {
     await waitUntil(() => products.open, 'first hover never opened');
     leaveSynthetic(products);
     expect(products.open).to.equal(false);
+    // wait-reason: real timing semantics, stay inside the skip-delay grace window
     await aTimeout(50);
     hoverSynthetic(resources);
     expect(resources.open, 'a hover inside the grace window waited').to.equal(true);
     leaveSynthetic(resources);
+    // wait-reason: real timing semantics, skip-delay grace window
     await aTimeout(500);
     hoverSynthetic(products);
+    // wait-reason: negative assertion, a hover after the grace window must not open early
     await aTimeout(100);
     expect(products.open, 'a hover after the grace window opened early').to.equal(false);
     leaveSynthetic(products);
@@ -772,6 +783,7 @@ describe('<lr-navigation-menu> hover', () => {
     await waitUntil(() => products.open, 'hover never opened');
     leaveSynthetic(products);
     hoverSynthetic(resources);
+    // wait-reason: negative assertion, skip-delay=0 must not skip the show delay
     await aTimeout(100);
     expect(resources.open, 'skip-delay=0 still skipped the delay').to.equal(false);
   });
@@ -793,6 +805,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     await waitPlaced(products);
     pointer(base(item(menu, 'resources')), 'pointerdown');
     pointer(document.body, 'pointerup');
+    // wait-reason: negative assertion, a press on another trigger must not light-dismiss
     await aTimeout(10);
     expect(products.open, 'a press on another trigger light-dismissed').to.equal(true);
     pointer(container.querySelector('#outside')!, 'pointerdown');
@@ -869,7 +882,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     menu.querySelector<HTMLElement>('#products-a')!.focus();
     await clickAt(base(resources));
     await settle(menu);
-    await aTimeout(10);
+    await nextFrame();
     expect(resources.open).to.equal(true);
     expect(events.filter((event) => event.id === 'products').at(-1)).to.deep.equal({
       id: 'products',
@@ -883,6 +896,7 @@ describe('<lr-navigation-menu> dismissal', () => {
     inside.focus();
     pointer(inside, 'pointerdown');
     pointer(document.body, 'pointercancel');
+    // wait-reason: negative assertion, pointercancel must not close the panel
     await aTimeout(10);
     expect(products.open).to.equal(true);
     await sendKeys({ press: 'Tab' });
@@ -1095,6 +1109,7 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
     const menu = await menuFixture(html`
       <div style="inline-size: 320px"><lr-navigation-menu>${items()}</lr-navigation-menu></div>
     `);
+    // wait-reason: negative assertion, no indicator may render under unset defaults
     await aTimeout(50);
     expect(part(menu, 'indicator') === null).to.equal(true);
     expect(menu.panelAnchor).to.equal('menu');
@@ -1148,6 +1163,7 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
         if (value === '-1') {
           expect(target.open, 'show-delay=-1 did not behave like 0').to.equal(true);
         } else {
+          // wait-reason: negative assertion, the hover must not open before the invalid show-delay falls back to the default
           await aTimeout(50);
           expect(target.open, `show-delay=${value} did not behave like the default`).to.equal(false);
           await waitUntil(() => target.open, `show-delay=${value} never opened`);
@@ -1162,6 +1178,7 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       hoverSynthetic(first!);
       expect(first!.open).to.equal(true);
       leaveSynthetic(first!);
+      // wait-reason: negative assertion, an invalid hide-delay must not close before the default delay
       await aTimeout(50);
       expect(first!.open, `hide-delay=${value} did not behave like the default`).to.equal(true);
       await waitUntil(() => !first!.open, `hide-delay=${value} never closed`);
@@ -1247,7 +1264,7 @@ describe('<lr-navigation-menu> motion', () => {
     const resources = item(menu, 'resources');
     base(products).click();
     await waitPlaced(products);
-    await aTimeout(250);
+    await waitUntil(() => [panel(products), content(products)].every((element) => element.getAnimations().every((animation) => animation.playState === 'finished')), 'the show animation never finished');
     base(resources).click();
     await waitUntil(
       () => [panel(resources), content(resources)].some((element) => element.getAnimations().length > 0),
@@ -1279,6 +1296,7 @@ describe('<lr-navigation-menu> motion', () => {
       await waitPlaced(products);
       base(resources).click();
       await waitPlaced(resources);
+      // wait-reason: negative assertion, no inline size may be set after the switch
       await aTimeout(50);
       expect(panel(resources).style.inlineSize).to.equal('');
       expect(panel(resources).style.blockSize).to.equal('');
@@ -1312,9 +1330,10 @@ describe('<lr-navigation-menu> motion', () => {
     const resources = item(menu, 'resources');
     base(products).click();
     await waitPlaced(products);
-    await aTimeout(250);
+    await waitUntil(() => [panel(products), content(products)].every((element) => element.getAnimations().every((animation) => animation.playState === 'finished')), 'the show animation never finished');
     base(resources).click();
     await waitUntil(() => panel(resources).style.inlineSize !== '', 'the resize never started');
+    // wait-reason: real timing semantics, the resize must still be running within the token duration
     await aTimeout(150);
     expect(panel(resources).style.inlineSize, 'the resize ended before the token duration').to.not.equal('');
     await waitUntil(() => panel(resources).style.inlineSize === '', 'the resize never cleaned up', {
@@ -1331,6 +1350,7 @@ describe('<lr-navigation-menu> motion', () => {
       const events = recordToggles(menu);
       base(products).click();
       await waitPlaced(products);
+      // wait-reason: negative assertion, no animation may run when show is disabled
       await aTimeout(20);
       expect(panel(products).getAnimations().length).to.equal(0);
       expect(events).to.deep.equal([{ id: 'products', expanded: true, source: 'user' }]);
@@ -1368,6 +1388,7 @@ describe('<lr-navigation-menu> collapse', () => {
     const wider = await menuFixture(html`
       <div style="inline-size: 401px"><lr-navigation-menu mobile-breakpoint="400px">${items('w-')}</lr-navigation-menu></div>
     `);
+    // wait-reason: negative assertion, a wider allocation must not collapse
     await aTimeout(50);
     expect(wider.collapsed).to.equal(false);
   });
@@ -1406,6 +1427,7 @@ describe('<lr-navigation-menu> collapse', () => {
     expect(getComputedStyle(panel(products)).position).to.equal('static');
     const resources = item(menu, 'resources');
     hoverSynthetic(resources);
+    // wait-reason: negative assertion, hover must not open an item in collapsed mode
     await aTimeout(30);
     expect(resources.open).to.equal(false);
   });
@@ -1493,6 +1515,7 @@ describe('<lr-navigation-menu> collapse', () => {
         <lr-navigation-menu mobile-breakpoint="banana">${items()}</lr-navigation-menu>
       </div>
     `);
+    // wait-reason: negative assertion, an unresolvable breakpoint must not collapse
     await aTimeout(50);
     expect(menu.collapsed).to.equal(false);
     expect(part(menu, 'toggle') === null).to.equal(true);
@@ -1508,6 +1531,7 @@ describe('<lr-navigation-menu> collapse', () => {
     `);
     const menu = header.querySelector<LyraNavigationMenu>('lr-navigation-menu')!;
     await settle(menu);
+    // wait-reason: negative assertion, a wide header must not collapse
     await aTimeout(30);
     expect(menu.collapsed).to.equal(false);
     header.style.inlineSize = '400px';
@@ -1576,6 +1600,7 @@ describe('<lr-navigation-menu> lifecycle', () => {
     try {
       pointer(document.body, 'pointerdown');
       pointer(document.body, 'pointerup');
+      // wait-reason: negative assertion, no error may be raised by the pointer events
       await aTimeout(10);
     } finally {
       window.removeEventListener('error', onError);
@@ -1604,12 +1629,13 @@ describe('<lr-navigation-menu> lifecycle', () => {
     base(products).click();
     await waitPlaced(products);
     products.remove();
-    await aTimeout(10);
+    await nextFrame();
     menu.insertBefore(products, next);
     await settle(menu);
     expect(products.open).to.equal(true);
     await waitPlaced(products);
     leaveSynthetic(products);
+    // wait-reason: negative assertion, pointer-leave must not close a reattached panel
     await aTimeout(50);
     expect(products.open, 'pointer-leave closed a reattached panel').to.equal(true);
     base(products).click();
@@ -1657,6 +1683,7 @@ describe('<lr-navigation-menu> lifecycle', () => {
     await waitPlaced(item(menu, 'first'));
     expect(item(menu, 'second').open).to.equal(false);
     expect(panel(item(menu, 'second')).hidden).to.equal(true);
+    // wait-reason: negative assertion, no toggle event may fire for the repaired open items
     await aTimeout(20);
     expect(events).to.have.length(0);
   });

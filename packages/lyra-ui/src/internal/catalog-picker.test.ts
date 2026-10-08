@@ -322,9 +322,11 @@ describe('closed-mode type-ahead', () => {
     const { controller, type } = closedPicker(['Beta', 'Bistro', 'Bravo'], ['Bistro']);
     type('b');
     expect(controller.value).to.equal('beta');
+    // wait-reason: typeahead quiet window is a real-time semantic (must outlast it)
     await new Promise((resolve) => setTimeout(resolve, 600));
     type('b');
     expect(controller.value).to.equal('bravo');
+    // wait-reason: typeahead quiet window is a real-time semantic (must outlast it)
     await new Promise((resolve) => setTimeout(resolve, 600));
     type('b');
     expect(controller.value, 'wraps past the end').to.equal('beta');
@@ -360,4 +362,13 @@ describe('closed-mode type-ahead', () => {
     controller.handleTriggerKeyDown(new KeyboardEvent('keydown', { key: 'b', isComposing: true, cancelable: true }));
     expect(controller.value).to.equal('');
   });
+});
+
+it('returns frozen row copies, so a later caller mutation never reaches the picker', () => {
+  const source = { id: 'a', label: 'Alpha' };
+  const [row] = normalizeCatalog([source]);
+  source.label = 'Changed';
+  expect(row!.label).to.equal('Alpha');
+  expect(Object.isFrozen(row)).to.equal(true);
+  expect(row).to.not.equal(source);
 });

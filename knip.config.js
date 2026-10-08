@@ -46,6 +46,8 @@ export default {
         // Maintainer CLIs invoked from shell/docs rather than a package.json script.
         'scripts/llms-gap-report.mjs',
         'scripts/scaffold-translation.mjs',
+        // The published `lyra-ui` bin: build copies it to dist/cli, and init-agents.test.mjs spawns it.
+        'scripts/lyra-ui.mjs',
         'scripts/fixtures/migrate-wa/*.{svelte,vue}',
         '*.config.js',
       ],
@@ -63,6 +65,15 @@ export default {
     },
     'packages/lyra-flags': {
       project: ['scripts/**/*.mjs', '*.js'],
+    },
+    // Companion packages assembled from lyra-ui's build output; the peer is resolved by pnpm, never imported.
+    'packages/lyra-ide': {
+      project: ['scripts/**/*.mjs'],
+      ignoreDependencies: ['@aceshooting/lyra-ui'],
+    },
+    'packages/lyra-translations': {
+      project: ['scripts/**/*.mjs'],
+      ignoreDependencies: ['@aceshooting/lyra-ui'],
     },
   },
 };

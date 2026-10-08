@@ -74,7 +74,7 @@ their structural parameter and result types are available through the function's
   `max`) plus the hovered box's source `datasetIndex`, `index`, `label` and `seriesLabel`.
 - `withDataTable: boolean = false` (attribute `with-data-table`) — reveals the accessible data
   table.
-- `dataTableToggle: boolean = false` (attribute `data-table-toggle`, new in 11.0.0) — renders a
+- `dataTableToggle: boolean = false` (attribute `data-table-toggle`) — renders a
   localized disclosure button (`part="data-table-toggle"`) above the data table so a *sighted*
   reader can reveal the numbers on demand. `withDataTable` alone is all-or-nothing, which left
   consumers wrapping a duplicated table in their own `<details>`. With the toggle on,

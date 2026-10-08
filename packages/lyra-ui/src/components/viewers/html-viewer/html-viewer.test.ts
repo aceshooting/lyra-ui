@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './html-viewer.js';
 import type { LyraHtmlViewer } from './html-viewer.js';
@@ -8,6 +9,13 @@ import type { LyraHighlight } from '../document-viewer/anchors.js';
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response; }
 
 describe('lr-html-viewer', () => {
+  it('does not search its own empty-state text', async () => {
+    const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer></lr-html-viewer>`);
+    const note = el.shadowRoot!.querySelector('[part="body"]')!.textContent!.trim();
+    expect(note.length).to.be.greaterThan(0);
+    expect(await el.search(note.split(' ')[0]!)).to.equal(0);
+  });
+
   afterEach(() => __setHtmlSanitizerForTesting(undefined));
 
   it('renders an empty localized state by default', async () => {
@@ -144,7 +152,7 @@ describe('lr-html-viewer', () => {
       const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer src="https://example.test/a.html"></lr-html-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
       el.parentElement!.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="html"]') !== null).to.be.true;
     } finally {
@@ -167,7 +175,7 @@ describe('lr-html-viewer', () => {
       el.remove();
       await aTimeout(0);
       parent.append(el);
-      await aTimeout(20);
+      await twoFrames();
       expect(fetchCount).to.equal(2);
       expect(el.shadowRoot!.querySelector('[part="html"]')!.textContent).to.equal('load 2');
     } finally {

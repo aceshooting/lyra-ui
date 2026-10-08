@@ -104,9 +104,9 @@ while doing something else. The vocabulary rules apply to every component, mirro
   an internal module, a migrating consumer has nothing to rename to and reimplements it by hand —
   the parity gap is real even though the code exists. When a mirrored family's implementation is
   already factored into `src/internal/`, ship the thin public element or exported helper over it
-  too, from a granular subpath, and add the mirror row. Since 8.0.0 that subpath is `./utilities/*`:
-  `./internal/*` is no longer exported at all, so pointing a consumer — or a check fixture — at an
-  `internal/` specifier does not merely document an unstable path, it fails to resolve outright.
+  too, from a granular subpath, and add the mirror row. That subpath is `./utilities/*`:
+  `./internal/*` is not exported, so an `internal/` specifier in a consumer example or check fixture
+  fails to resolve.
   Reaching for `internal/` is the signal that a `src/utilities/` re-export is missing.
 
 - **Re-verify against upstream without vendoring it.** `scripts/fixtures/upstream-tags.json` is a
@@ -175,29 +175,21 @@ while doing something else. The vocabulary rules apply to every component, mirro
   concept `leading`. Where a component already shipped the other name, add the convention name as an
   accepted alias and keep the original documented.
 
-- **A mirrored surface change is done when six artifacts agree.** The class JSDoc sits directly
-  above `export class Lyra*` and declares the new `@slot`/`@csspart`/`@cssprop`/`@event` alongside
-  the `@property` itself (`cem` feeds `custom-elements.json`;
-  `manifest:check` + `manifest:coverage`); a test asserts the rendered result; a story renders it;
-  the authored `llms/<family>.md` documents it (`llms-freshness` + `llms:check`, `./package.sh`
-  regenerating `llms-full.txt`, `llms/index.md`, `llms/components/<tag>.md`, `llms/migration.md`);
-  the manifest and the editor data derived from it are regenerated in order — `pnpm manifest` →
-  `generate-editor-data` → `./package.sh` — and committed together; and for a mirrored member the
-  README row and the `upstream-tags.json` entry move in the same change
-  (`check-migration-coverage.mjs`). Member-specific gates cover the rest: `check:event-contracts` +
-  `check:event-barrel` + `check:event-types` for a new event, `check-part-reachability.mjs` for a
-  new part, `check:form-associated` for a new form-associated control, `check:hit-area` for a new
-  interactive part. What is **not** gated is the granularity that matters most here:
+- **A mirrored surface change lands with the whole synchronized surface** described in
+  [a11y-responsive-motion.md](a11y-responsive-motion.md#public-api-documentation--one-change-one-synchronized-surface)
+  (JSDoc, test, story, `llms/<family>.md`, manifest, editor data, `./package.sh`), and for a mirrored
+  member the README `Mirrors` row and the `upstream-tags.json` entry move in the same change
+  (`check-migration-coverage.mjs`). Member-specific gates: `check:event-contracts` +
+  `check:event-barrel` + `check:event-types` (event), `check-part-reachability.mjs` (part),
+  `check:form-associated` (form control), `check:hit-area` (interactive part).
   `scripts/check-component-coverage.mjs` proves each *tag* has a story, a behavior test and a family
-  accessibility assertion — nothing proves a newly added *attribute, slot, part or event* has any of
-  the three. Verify that leg by hand, and verify every parity or count claim in prose against the
-  fixture rather than against memory.
+  accessibility assertion, but nothing proves a newly added *attribute, slot, part or event* has any
+  of them: verify that by hand, and verify every parity or count claim against the fixture.
 
 - **A property's documented default is gated.** `check:llms-defaults` cross-checks every
   `` `name: type = default` `` and `` `name?: type` `` claim in the authored `llms/<family>.md`
   against `custom-elements.json`, in both directions. Changing `foo = ''` to `foo?: string` (or
   back) without editing the prose now fails `pnpm lint`. It matters because `label: string = ''`
   promises an unset read of `''` — so `el.label.trim()` is safe and `?? fallback` is dead code —
-  when the real readback is `undefined`. Nothing checked this before, which is how one review found
-  the same class twice and a sweep then found eleven more instances unreported. A deliberate
+  when the real readback is `undefined`. A deliberate
   exception opts out with `<!-- llms-default-exempt: reason -->`.

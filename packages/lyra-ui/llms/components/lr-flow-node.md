@@ -6,7 +6,7 @@
 - **Class** `LyraFlowNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated slot** `icon` since `26.0.0`; use slot `slot="start"`; removal not before `28.0.0` — The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below

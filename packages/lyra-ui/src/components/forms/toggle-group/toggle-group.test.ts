@@ -516,6 +516,7 @@ describe('<lr-toggle-group>', () => {
     outside.focus();
     byValue('e').remove();
     await settle();
+    // wait-reason: asserting focus is not stolen back after the removal settles
     await aTimeout(20);
     expect(deepActive()?.id).to.equal('outside');
   });

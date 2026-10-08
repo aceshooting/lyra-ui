@@ -121,6 +121,7 @@ describe('lr-qr-code', () => {
       return Promise.resolve(null);
     };
     await el.updateComplete;
+    // wait-reason: asserting no peer load / no state change happens after the empty render
     await aTimeout(20);
     const empty = el.shadowRoot!.querySelector('[part="empty"]');
     expect((empty) != null).to.equal(true);
@@ -302,6 +303,7 @@ describe('lr-qr-code', () => {
     await waitForPart(el, 'loading');
     el.remove();
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    // wait-reason: asserting a detached element ignores the late load result (nothing to await)
     await aTimeout(20);
     expect(el.isConnected).to.be.false;
     expect(el.canvas.hidden).to.equal(true);
@@ -323,6 +325,7 @@ describe('lr-qr-code', () => {
     };
     el.value = 'hello';
     await el.updateComplete;
+    // wait-reason: asserting create() is never called while the loader is pending
     await aTimeout(20);
     expect(createCalls).to.equal(0);
     expect(el.shadowRoot!.querySelector('[part="loading"]')).to.exist;
@@ -342,6 +345,7 @@ describe('lr-qr-code', () => {
     );
     el.value = 'hello';
     await el.updateComplete;
+    // wait-reason: asserting a stale-generation result is discarded (nothing observable to await)
     await aTimeout(20);
     expect(el.canvas.hidden).to.equal(true);
   });
@@ -357,6 +361,7 @@ describe('lr-qr-code', () => {
     );
     el.value = 'hello';
     await el.updateComplete;
+    // wait-reason: asserting a discarded error result never renders
     await aTimeout(20);
     expect(el.shadowRoot!.querySelector('[part="error"]') == null).to.be.true;
   });
@@ -378,6 +383,7 @@ describe('lr-qr-code', () => {
 
     el.remove();
     resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    // wait-reason: asserting a detached element ignores the late load result (nothing to await)
     await aTimeout(20);
     expect(el.canvas.hidden).to.equal(true);
 
@@ -748,6 +754,7 @@ describe('lr-qr-code', () => {
     // A burst of watched-attribute writes must coalesce to a single refresh.
     el.setAttribute('data-theme', 'a');
     el.setAttribute('data-color-scheme', 'b');
+    // wait-reason: asserting a burst of attribute writes coalesces to one refresh (no further refresh arrives)
     await aTimeout(20);
     expect(refreshCalls).to.equal(1);
   });
@@ -974,6 +981,7 @@ describe('lr-qr-code', () => {
     installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
     el.value = 'hello';
     await waitForPart(el, 'canvas');
+    // wait-reason: asserting the unsafe image never loads after the symbol rendered
     await aTimeout(20);
     expect((el.shadowRoot!.querySelector('canvas')) != null).to.equal(true);
     expect(((el as unknown as { loadState: { image?: HTMLImageElement } }).loadState.image) === (undefined)).to.equal(true);
@@ -1640,5 +1648,17 @@ describe('lr-qr-code', () => {
     await waitForPart(el, 'canvas');
     const rect = el.getBoundingClientRect();
     expect(rect.width).to.be.lessThan(320);
+  });
+  it('mounts its announcement regions only once it has a value to encode', async () => {
+    const assertive = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+    const polite = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`;
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-qr-code></lr-qr-code></div>`);
+    const el = wrapper.querySelector('lr-qr-code') as LyraQrCode;
+    await el.updateComplete;
+    await aTimeout(50);
+    expect(document.querySelector(assertive) === null && document.querySelector(polite) === null, 'an empty code never announces').to.be.true;
+    el.value = 'https://example.test/x';
+    await waitUntil(() => document.querySelector(assertive) !== null && document.querySelector(polite) !== null, 'both regions mount when encoding starts');
+    el.remove();
   });
 });

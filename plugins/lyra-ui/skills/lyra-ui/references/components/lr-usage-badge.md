@@ -37,9 +37,7 @@ pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. `latencyMs?: number` (a
 algorithm (which has no minutes/hours tier) in both the visible strip and the tooltip row; mirrors
 `lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
-shows full grouped figures. This badge has no density mode: the old `compact` spelling of this
-property was removed in 9.0.0 (it collided with `compact`'s density meaning everywhere else in the
-library) — rename `compact` to `abbreviate`; a stale `compact` attribute is inert. `summary: string =
+shows full grouped figures. This badge has no density mode: use `abbreviate` for compact counts; a `compact` attribute is inert. `summary: string =
 ''` supplies visible fallback text when no built-in segment is present.
 
 **Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the

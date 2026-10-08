@@ -234,6 +234,7 @@ CHANGED_PATHS=(
   plugins/lyra-ui/.codex-plugin/plugin.json
   plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md
   plugins/lyra-ui/skills/lyra-ui/references/
+  packages/lyra-ui/skills/
   skills/lyra-ui.skill
   skills/compose-lyra-interfaces.skill
   packages/lyra-ui/scripts/bundle-stats.json

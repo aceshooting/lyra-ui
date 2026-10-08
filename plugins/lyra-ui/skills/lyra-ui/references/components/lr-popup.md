@@ -17,9 +17,7 @@
 ## `lr-popup`
 
 The low-level anchored-positioning primitive `lr-popover`, `lr-dropdown` and `lr-tooltip` are built
-on. Mirrors `wa-popup` / `sl-popup`. **New in 8.0.0** — the positioning logic already existed as an
-internal module, but a migrating consumer had no public element to rename `wa-popup`/`sl-popup` to
-and had to reimplement it by hand.
+on. Mirrors `wa-popup` / `sl-popup`.
 
 It positions its default slot against an anchor and keeps the two aligned through scroll, resize and
 layout change — and does nothing else. **No dismiss behaviour, no focus management, no ARIA

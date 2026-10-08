@@ -6,10 +6,10 @@
 - **Class** `LyraTable`, also available unregistered from `@aceshooting/lyra-ui/components/data/table/table.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [data](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/data.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -568,7 +568,7 @@ the padding of a header cell, a body cell, and the row-total cell; `--lr-table-c
 footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
 outright — two hooks instead of one preserve that distinction. `--lr-table-font-size` (default
 `inherit`) sets the `<table>` element's font size; the rest of the font shorthand (family,
-weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-max-height` (default `none`; controls the scrollable
+weight, etc.) keeps inheriting from the host regardless of this override. `--lr-table-surface` (default `var(--lr-color-surface)`) is the one surface the frame, resting/striped rows, sticky header and sticky columns, expanded rows and footer all paint, so recolouring a raised panel needs one declaration; `--lr-table-radius` (default `var(--lr-radius-container)`) is the frame radius, and the frame clips painted content to it (`overflow: clip` while `scroll-mode="auto"` content fits, so no scroll container appears and the sticky header still pins to the page; `page` mode clips the same way while content fits and falls back to `overflow: visible` only when the table is wider than its host, so it still overflows the page). `--lr-table-max-height` (default `none`; controls the scrollable
 body's `max-block-size`). `--lr-table-heat-tint-lo` (default `var(--lr-color-brand-quiet)`) and
 `--lr-table-heat-tint-hi` (default `var(--lr-color-brand)`) — the `color-mix()` ramp endpoints
 for heat-tint mode's per-cell background, consulted only on columns/rows that define `heatValue`;

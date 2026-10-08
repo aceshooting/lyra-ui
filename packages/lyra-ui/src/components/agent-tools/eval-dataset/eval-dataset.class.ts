@@ -1,4 +1,6 @@
-import { renderNativeSearch } from '../../../internal/native-search.js';
+import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import '../../forms/input/input.class.js';
+import type { LyraInput } from '../../forms/input/input.class.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -16,7 +18,7 @@ import { firstByIdentity } from '../collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -116,42 +118,17 @@ export interface LyraEvalDatasetEventMap {
  *   are the localized `evalDatasetImportLabel`.
  * @csspart export - The internal `<lr-export-button>`.
  * @csspart search - The search field's wrapper. Only rendered while `searchable`.
- * @csspart search-input - The `<input type="search">`. Only rendered while `searchable`.
- * @csspart search-clear - The clear-search button, replacing the native search-cancel glyph the
- *   component resets. Only rendered while the field has text.
+ * @csspart search-input - The composed `<lr-input type="search">`. Only rendered while `searchable`.
+ * @csspart search-input-field - The native `<input>` inside the search field (forwarded from `<lr-input>`).
+ * @csspart search-clear - The search field's clear button (forwarded from `<lr-input>`). Only rendered
+ *   while the field has text.
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
  * @csspart grid - The internal `<lr-table>`.
  * @csspart limit - Visible notice when the collection boundary retained only the first examples.
- * Search geometry honors shared input and form-control tokens before its default values; the
- * component-specific search tokens take precedence. Clear actions honor icon-button paint tokens.
+ * The search field is a composed `<lr-input>`, so it is themed through the shared `--lr-input-*` and
+ * `--lr-form-control-*` tokens.
  *
- * @cssprop [--lr-eval-dataset-search-min-height=auto] - Minimum row height of the search field,
- *   for matching it to a themed search field of a chosen density tier. Point it at
- *   `--lr-form-control-height-s` (or any tier of that ladder) to line this field up with the rest
- *   of an application's controls.
- * @cssprop [--lr-eval-dataset-search-font-size=inherit] - Text size of the search field.
- * @cssprop [--lr-eval-dataset-search-padding-inline=var(--lr-space-s)] - Leading gutter of the
- *   search field. The trailing gutter is reserved for the overlaid clear button.
- * @cssprop [--lr-eval-dataset-search-padding-block=var(--lr-space-xs)] - Block gutter of the search
- *   field.
- * @cssprop [--lr-eval-dataset-search-radius=var(--lr-radius)] - Corner radius of the search field.
- * @cssprop --lr-icon-button-bg - Icon action background in the resting state.
- * @cssprop --lr-icon-button-bg-active - Icon action background in the pressed state.
- * @cssprop --lr-icon-button-bg-hover - Icon action background in the hover state.
- * @cssprop --lr-icon-button-border - Icon action border in the resting state.
- * @cssprop --lr-icon-button-border-active - Icon action border in the pressed state.
- * @cssprop --lr-icon-button-border-hover - Icon action border in the hover state.
- * @cssprop --lr-icon-button-color - Icon action foreground color in the resting state.
- * @cssprop --lr-icon-button-color-active - Icon action foreground color in the pressed state.
- * @cssprop --lr-icon-button-color-hover - Icon action foreground color in the hover state.
- * @cssprop --lr-icon-button-radius - Icon action corner radius in the resting state.
- * @cssprop --lr-input-action-color - Search field action and placeholder fallback color.
- * @cssprop --lr-input-action-hover-color - Search clear action hover color.
- * @cssprop --lr-input-border-color - Search field border color.
- * @cssprop --lr-input-fill - Search field background.
- * @cssprop --lr-input-focus-border-color - Search field hover border color.
- * @cssprop --lr-input-placeholder-color - Search placeholder color.
  * @status stable
  * @since 4.1.0
  */
@@ -160,7 +137,6 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    clear: LYRA_DEFAULT_clear,
     evalDatasetAddExample: LYRA_DEFAULT_evalDatasetAddExample,
     evalDatasetColumnExpectedOutput: LYRA_DEFAULT_evalDatasetColumnExpectedOutput,
     evalDatasetColumnInput: LYRA_DEFAULT_evalDatasetColumnInput,
@@ -173,6 +149,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetRemoveExample: LYRA_DEFAULT_evalDatasetRemoveExample,
     evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -345,25 +322,47 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     });
   }
 
+  private columnsCache?: { key: string; columns: TableColumn<EvalExample>[] };
+  private selectedKeysCache?: { id: string | null; keys: Set<string> };
+
+  /** Rebuilt only when a localized header changes, so the table keeps a stable `columns` reference. */
   private buildColumns(): TableColumn<EvalExample>[] {
+    const labels: readonly [string, string, string] = [
+      this.localize('evalDatasetColumnInput'),
+      this.localize('evalDatasetColumnExpectedOutput'),
+      this.localize('evalDatasetColumnTags'),
+    ];
+    const key = labels.join('\u0000');
+    if (this.columnsCache?.key !== key) this.columnsCache = { key, columns: this.createColumns(labels) };
+    return this.columnsCache.columns;
+  }
+
+  private selectedKeys(): Set<string> {
+    if (this.selectedKeysCache?.id !== this.selectedId) {
+      this.selectedKeysCache = { id: this.selectedId, keys: this.selectedId === null ? new Set() : new Set([this.selectedId]) };
+    }
+    return this.selectedKeysCache.keys;
+  }
+
+  private createColumns([inputLabel, expectedLabel, tagsLabel]: readonly [string, string, string]): TableColumn<EvalExample>[] {
     return [
       {
         key: 'input',
-        label: this.localize('evalDatasetColumnInput'),
+        label: inputLabel,
         sortable: true,
         sortValue: (row) => row.input,
         cell: (row) => row.input,
       },
       {
         key: 'expectedOutput',
-        label: this.localize('evalDatasetColumnExpectedOutput'),
+        label: expectedLabel,
         sortable: true,
         sortValue: (row) => row.expectedOutput ?? '',
         cell: (row) => row.expectedOutput ?? '',
       },
       {
         key: 'tags',
-        label: this.localize('evalDatasetColumnTags'),
+        label: tagsLabel,
         sortable: true,
         sortValue: (row) => (row.tags ?? []).join(', '),
         cell: (row) => (row.tags ?? []).join(', '),
@@ -467,19 +466,52 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private renderSearch(): TemplateResult {
     const label = this.localize('evalDatasetSearchLabel');
+    const relayFocus = (event: FocusEvent): void => {
+      event.stopPropagation();
+      relayNativeEvent(this, event);
+    };
+    const contain = (event: Event): void => event.stopPropagation();
     return html`
       <div part="search">
-        ${renderNativeSearch({
-          host: this, part: 'search-input', value: this.searchText, label, placeholder: label,
-          clearLabel: this.localize('clear'), disabled: () => this.disabled, containInput: true,
-          autocomplete: this.autocomplete, spellcheck: this.spellcheck,
-          autocapitalize: this.autocapitalize, autocorrect: this.autoCorrect,
-          inputmode: this.inputMode, enterkeyhint: this.enterKeyHint,
-          onValue: (value) => { this.searchText = value; },
-        })}
+        <lr-input
+          part="search-input"
+          exportparts="input:search-input-field, clear-button:search-clear"
+          type="search"
+          clearable
+          aria-label=${label}
+          placeholder=${label}
+          .value=${this.searchText}
+          ?disabled=${this.disabled}
+          autocomplete=${this.autocomplete || nothing}
+          spellcheck=${String(this.spellcheck)}
+          autocapitalize=${this.autocapitalize || nothing}
+          autocorrect=${this.autoCorrect || nothing}
+          inputmode=${this.inputMode || nothing}
+          enterkeyhint=${this.enterKeyHint || nothing}
+          @lr-input=${(event: Event) => {
+            event.stopPropagation();
+            if (!this.disabled) this.searchText = (event.currentTarget as LyraInput).value;
+          }}
+          @input=${contain}
+          @change=${contain}
+          @lr-change=${contain}
+          @lr-clear=${contain}
+          @click=${this.gateDisabledClear}
+          @focus=${relayFocus}
+          @blur=${relayFocus}
+        ></lr-input>
       </div>
     `;
   }
+
+  /** `disabled` can change in the same task as a click on the composed field's clear button, before
+   *  the field itself re-renders disabled; the capture-phase gate keeps that click from clearing it. */
+  private readonly gateDisabledClear = {
+    handleEvent: (event: Event): void => {
+      if (this.disabled) event.stopPropagation();
+    },
+    capture: true,
+  };
 
   private renderTagFilter(tags: string[]): TemplateResult {
     return html`
@@ -529,7 +561,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .rows=${visible}
           .pageSize=${MAX_RENDERED_EXAMPLES}
           .rowKey=${rowKey}
-          .selectedRowKeys=${this.selectedId === null ? new Set() : new Set([this.selectedId])}
+          .selectedRowKeys=${this.selectedKeys()}
           .emptyHeading=${emptyText}
           @input=${this.stopOwnedEvent}
           @change=${this.stopOwnedEvent}

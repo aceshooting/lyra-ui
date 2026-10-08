@@ -6,10 +6,10 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [forms](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 38 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -296,8 +296,10 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
 
 Lyra retains additive native-wrapper and form-chrome properties: `placeholder`, `locale`,
 `errorText`, `accessibleLabel` (attribute `aria-label`), `clearLabel`, `openLabel`, `dialogLabel`,
-`spellcheck`, `autocapitalize`, `autoCorrect` (attribute `autocorrect`), `inputMode: string = ''`
-(attribute `inputmode`), `enterKeyHint: string = ''` (attribute `enterkeyhint`), and the reflected
+`spellcheck`, `autocapitalize`, boolean `autocorrect` (the string `autoCorrect` is removed; attribute `autocorrect="on|off"`),
+`inputMode: string = ''` (attribute `inputmode`, lowercase `inputmode` property alias),
+`enterKeyHint: string = ''` (attribute `enterkeyhint`, lowercase `enterkeyhint` property alias), the host `name`, which is also
+forwarded to the internal text input (as it is on `lr-otp-input`), and the reflected
 `customError: string | null` (attribute `custom-error`). `withLabel` and `withHint` are SSR hints:
 they force those slot wrappers into the first render so server output and hydration have the same
 structure even before assigned-slot state is observable. The shared Lyra FACE contract also
@@ -500,6 +502,11 @@ and `dateTimeFormat(locale, options)`.
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its
   background.
+- `--lr-date-picker-preset-hover-border-color` (default `var(--lr-color-brand)`),
+  `--lr-date-picker-preset-pressed-border-color` (default an active-state mix of
+  `var(--lr-color-brand)`) and `--lr-date-picker-preset-selected-border-color` (default
+  `var(--lr-color-brand)`; wins over `--lr-date-picker-preset-selected-border`) — the border color of
+  a hovered, pressed and selected quick-range button.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
   hover/press paint and pressed shape; defaults to brand, brand, brand-quiet, and

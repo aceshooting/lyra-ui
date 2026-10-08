@@ -1,4 +1,5 @@
-import { assertHighlightedCellActivation, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
+import { twoFrames } from '../../../../test/frames.js';
+import { assertHighlightedCellActivation, describeCellHighlightStyling, highlightedCellAction } from '../../../../test/contracts/viewer-cell-highlight.js';
 import {
   aTimeout,
   expect,
@@ -11,8 +12,7 @@ import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import './spreadsheet-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer.js';
-import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { assertScrollFrameFollowsAdoption, shrinkAnchorRetry } from '../../../../test/viewer-scroll-test-support.js';
 import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 
 // Numeric formatting and case-folding need these locales; their UI text is fixture data.
@@ -72,128 +72,6 @@ const GRID_WORKBOOK = {
     ['Ada', 'Programmer'],
   ],
 };
-/** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()` call
- *  resolves in milliseconds instead of waiting out the real 5s default timeout. */
-function shrinkAnchorRetry(el: LyraSpreadsheetViewer): void {
-  (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
-  (
-    el as unknown as { anchorRetryIntervalMs: number }
-  ).anchorRetryIntervalMs = 5;
-}
-
-async function assertScrollFrameFollowsAdoption(
-  el: HTMLElement & { updateComplete: Promise<unknown> },
-  scrollColumnIntoView: () => Promise<void>
-): Promise<void> {
-  const frame = document.createElement('iframe');
-  document.body.append(frame);
-  const frameWindow = frame.contentWindow;
-  const frameDocument = frame.contentDocument;
-  if (!frameWindow || !frameDocument) {
-    frame.remove();
-    throw new Error('The iframe realm was unavailable.');
-  }
-
-  const originalRequest = window.requestAnimationFrame;
-  const originalCancel = window.cancelAnimationFrame;
-  const originalFrameRequest = frameWindow.requestAnimationFrame;
-  const originalFrameCancel = frameWindow.cancelAnimationFrame;
-  const originalMatchMedia = window.matchMedia;
-  const originalFrameMatchMedia = frameWindow.matchMedia;
-  const renderRoot = el.shadowRoot!;
-  const originalQuerySelector = renderRoot.querySelector.bind(renderRoot);
-  const queued = new Map<number, FrameRequestCallback>();
-  const cancelled: number[] = [];
-  const scrollBehaviors: ScrollBehavior[] = [];
-  let nextHandle = 0;
-  let topRequests = 0;
-  let frameRequests = 0;
-  let topMotionQueries = 0;
-  let frameMotionQueries = 0;
-
-  const target = {
-    scrollIntoView: (options: ScrollIntoViewOptions) => {
-      if (options.behavior) scrollBehaviors.push(options.behavior);
-    },
-  };
-  const row = { querySelectorAll: () => [target, target] };
-  const list = {
-    get isConnected(): boolean { return el.isConnected; },
-    updateComplete: Promise.resolve(),
-    shadowRoot: { querySelector: () => row },
-  };
-  renderRoot.querySelector = ((selector: string) =>
-    selector.startsWith('lr-virtual-list')
-      ? list
-      : originalQuerySelector(selector)) as typeof renderRoot.querySelector;
-  window.matchMedia = (() => {
-    topMotionQueries++;
-    return { matches: false } as MediaQueryList;
-  }) as typeof window.matchMedia;
-  frameWindow.matchMedia = (() => {
-    frameMotionQueries++;
-    return { matches: true } as MediaQueryList;
-  }) as typeof frameWindow.matchMedia;
-
-  window.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
-    topRequests++;
-    const handle = ++nextHandle;
-    queued.set(handle, callback);
-    return handle;
-  }) as typeof window.requestAnimationFrame;
-  window.cancelAnimationFrame = ((handle: number): void => {
-    cancelled.push(handle);
-    queued.delete(handle);
-  }) as typeof window.cancelAnimationFrame;
-  frameWindow.requestAnimationFrame = ((
-    callback: FrameRequestCallback
-  ): number => {
-    frameRequests++;
-    const handle = ++nextHandle;
-    queueMicrotask(() => callback(0));
-    return handle;
-  }) as typeof frameWindow.requestAnimationFrame;
-  frameWindow.cancelAnimationFrame =
-    (() => {}) as typeof frameWindow.cancelAnimationFrame;
-
-  try {
-    const staleScroll = scrollColumnIntoView();
-    await waitUntil(() => topRequests === 1);
-    frameDocument.body.append(el);
-    await el.updateComplete;
-    for (const [handle, callback] of [...queued]) {
-      queued.delete(handle);
-      callback(0);
-    }
-    await staleScroll;
-
-    const currentScroll = scrollColumnIntoView();
-    await waitUntil(() => frameRequests === 1 || topRequests === 2);
-    for (const [handle, callback] of [...queued]) {
-      queued.delete(handle);
-      callback(0);
-    }
-    await currentScroll;
-
-    expect(el.ownerDocument === frameDocument).to.be.true;
-    expect(topRequests).to.equal(1);
-    expect(cancelled).to.deep.equal([1]);
-    expect(frameRequests).to.equal(1);
-    expect(topMotionQueries).to.equal(0);
-    expect(frameMotionQueries).to.equal(1);
-    expect(scrollBehaviors).to.deep.equal(['auto']);
-  } finally {
-    window.requestAnimationFrame = originalRequest;
-    window.cancelAnimationFrame = originalCancel;
-    frameWindow.requestAnimationFrame = originalFrameRequest;
-    frameWindow.cancelAnimationFrame = originalFrameCancel;
-    window.matchMedia = originalMatchMedia;
-    frameWindow.matchMedia = originalFrameMatchMedia;
-    renderRoot.querySelector =
-      originalQuerySelector as typeof renderRoot.querySelector;
-    frame.remove();
-  }
-}
 
 describe('lr-spreadsheet-viewer', () => {
   it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
@@ -602,6 +480,23 @@ describe('lr-spreadsheet-viewer', () => {
     );
     await expect(el).to.be.accessible();
   });
+  it('is accessible once a workbook has loaded', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+    )) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(
+      buffer({ Sheet1: [['Name'], ['Ada']], Sheet2: [['Name'], ['Grace']] })
+    );
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('lr-tab-group') !== null
+      );
+      await expect(el).to.be.accessible();
+    } finally {
+      restore();
+    }
+  });
   it('uses name as the accessible name, falling back to a localized default', async () => {
     const named = (await fixture(
       html`<lr-spreadsheet-viewer
@@ -916,7 +811,7 @@ describe('lr-spreadsheet-viewer', () => {
       expect(await el.search('ada')).to.equal(2);
       const parent = el.parentElement!;
       parent.append(document.createElement('span'), el);
-      await aTimeout(50);
+      await twoFrames();
       expect(calls).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="header-row"]') !== null).to.be.true;
       el.remove();
@@ -1050,14 +945,14 @@ describe('lr-spreadsheet-viewer', () => {
     const firstRestore = fetchBuffer(buffer({ Sheet1: [['First'], ['A']] }));
     try {
       el.src = 'https://example.test/first.xlsx';
-      await aTimeout(20); // let load() reach `await this.loadLibrary()` and suspend there
+      await twoFrames(); // let load() reach `await this.loadLibrary()` and suspend there
       firstRestore();
       const secondRestore = fetchBuffer(
         buffer({ Sheet1: [['Second'], ['B']] })
       );
       try {
         el.src = 'https://example.test/second.xlsx'; // bumps generation, superseding the first load
-        await aTimeout(20); // let the second load also reach and suspend on the same shared import
+        await twoFrames(); // let the second load also reach and suspend on the same shared import
         lib.resolve(XLSX); // release both suspended loads together
         // The stale first load's library import now resolves late; it must bail silently instead of
         // clobbering the second (current) document.
@@ -1426,7 +1321,7 @@ describe('lr-spreadsheet-viewer', () => {
             cancelable: true,
           })
         );
-        await aTimeout(10);
+        await twoFrames();
         expect(activated).to.be.false;
       } finally {
         restore();
@@ -1705,7 +1600,7 @@ describe('lr-spreadsheet-viewer', () => {
       });
       expect(await el.search('hit')).to.equal(1_000);
       expect(
-        (el as unknown as { searchMatches: unknown[] }).searchMatches
+        (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
       ).to.have.lengthOf(1_000);
       expect(cappedDetail).to.deep.include({
         matchCount: 1_000,
@@ -1758,7 +1653,7 @@ describe('lr-spreadsheet-viewer', () => {
         await el.updateComplete;
         await aTimeout(0);
         expect(
-          (el as unknown as { searchMatches: unknown[] }).searchMatches
+          (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
         ).to.have.lengthOf(2);
       } finally {
         restore();
@@ -1875,235 +1770,12 @@ describe('lr-spreadsheet-viewer', () => {
     });
   });
 
-  describe('cell-highlight styling', () => {
-    const injected: HTMLStyleElement[] = [];
-    function injectStyle(cssText: string): void {
-      const style = document.createElement('style');
-      style.textContent = cssText;
-      document.head.append(style);
-      injected.push(style);
-    }
-    afterEach(() => {
-      for (const style of injected.splice(0)) style.remove();
-    });
-
-    /** Loads GRID_WORKBOOK, highlights A2, and resolves the highlighted cell alongside a plain one
-     *  -- both live inside <lr-virtual-list>'s own shadow root, one hop in from this component's. */
-    async function mountHighlighted(
-      el: LyraSpreadsheetViewer,
-      activeId: string | null = null
-    ): Promise<{
-      highlighted: HTMLElement;
-      plain: HTMLElement;
-      dataRow: HTMLElement;
-    }> {
-      el.src = 'https://example.test/book.xlsx';
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('lr-virtual-list') !== null
-      );
-      el.highlights = [
-        {
-          id: 'h1',
-          anchor: { kind: 'cell-range', range: 'A2' },
-          label: 'First result',
-        },
-      ];
-      el.activeHighlightId = activeId;
-      await el.updateComplete;
-      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-      await waitUntil(
-        () =>
-          list.shadowRoot!.querySelector('[part~="cell-highlight"]') !== null
-      );
-      return {
-        highlighted: list.shadowRoot!.querySelector(
-          '[part~="cell-highlight"]'
-        ) as HTMLElement,
-        plain: list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement,
-        dataRow: list.shadowRoot!.querySelector(
-          '[part="data-row"]'
-        ) as HTMLElement,
-      };
-    }
-
-    it('paints a highlighted cell with an outline no plain cell has', async () => {
-      injectStyle(
-        'lr-spreadsheet-viewer { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); }'
-      );
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted, plain } = await mountHighlighted(el);
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLElement;
-        const style = getComputedStyle(highlighted);
-        expect(style.outlineStyle).to.equal('solid');
-        expect(style.outlineWidth).to.not.equal('0px');
-        expect(style.outlineColor).to.equal('rgb(1, 2, 3)');
-        expect(getComputedStyle(action).cursor).to.equal('pointer');
-        expect(getComputedStyle(plain).outlineStyle).to.equal('none');
-      } finally {
-        restore();
-      }
-    });
-
-    it('lets --lr-spreadsheet-viewer-highlight-outline-offset override the default outline offset', async () => {
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer
-          style="--lr-spreadsheet-viewer-highlight-outline-offset: 4px;"
-        ></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el);
-        expect(getComputedStyle(highlighted).outlineOffset).to.equal('4px');
-      } finally {
-        restore();
-      }
-    });
-
-    it('tints the active highlight apart from an inactive one', async () => {
-      injectStyle(
-        'lr-spreadsheet-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
-      );
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(4, 5, 6)'
-        );
-      } finally {
-        restore();
-      }
-    });
-
-    it('keeps inherited and direct highlight-color inputs authoritative for the active cell', async () => {
-      const wrapper = await fixture<HTMLElement>(html`
-        <div style="--lr-spreadsheet-viewer-highlight-color: rgb(7, 8, 9)">
-          <lr-spreadsheet-viewer></lr-spreadsheet-viewer>
-        </div>
-      `);
-      const el = wrapper.querySelector(
-        'lr-spreadsheet-viewer'
-      ) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(7, 8, 9)'
-        );
-        el.style.setProperty(
-          '--lr-spreadsheet-viewer-highlight-color',
-          'rgb(10, 11, 12)'
-        );
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(10, 11, 12)'
-        );
-      } finally {
-        restore();
-      }
-    });
-
-    it('shows the shared focus ring while the nested highlight action is focused', async () => {
-      injectStyle(
-        'lr-spreadsheet-viewer { --lr-theme-color-focus: rgb(1, 2, 3); --lr-theme-color-warning-fill-loud: rgb(4, 5, 6); }'
-      );
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el, 'h1');
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLElement;
-        expect(getComputedStyle(highlighted).outlineColor).to.equal(
-          'rgb(4, 5, 6)'
-        );
-        await focusByKeyboard(action);
-        expect(getComputedStyle(action).outlineStyle).to.equal('solid');
-        expect(getComputedStyle(action).outlineWidth).to.equal('3px');
-        expect(getComputedStyle(action).outlineColor).to.equal('rgb(1, 2, 3)');
-      } finally {
-        restore();
-      }
-    });
-
-    it('changes the rendered cell-highlight action under real pointer hover', async () => {
-      const el = await fixture<LyraSpreadsheetViewer>(html`
-        <lr-spreadsheet-viewer
-          style="--lr-color-brand-quiet: rgb(1, 2, 3)"
-        ></lr-spreadsheet-viewer>
-      `);
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el);
-        const action = highlighted.querySelector(
-          '[part="cell-highlight-action"]'
-        ) as HTMLElement;
-        const resting = getComputedStyle(action).backgroundColor;
-        const box = action.getBoundingClientRect();
-        await resetMouse();
-        await sendMouse({
-          type: 'move',
-          position: [
-            Math.round(box.left + box.width / 2),
-            Math.round(box.top + box.height / 2),
-          ],
-        });
-        await waitUntil(
-          () => getComputedStyle(action).backgroundColor !== resting,
-          'the spreadsheet highlight action never entered its rendered hover state'
-        );
-        expect(getComputedStyle(action).backgroundColor).to.not.equal(resting);
-      } finally {
-        await resetMouse();
-        restore();
-      }
-    });
-
-    it('exports data-row, cell, and cell-highlight to a consumer stylesheet', async () => {
-      injectStyle(`
-        lr-spreadsheet-viewer::part(data-row) { opacity: 0.75; }
-        lr-spreadsheet-viewer::part(cell) { padding-block-start: 3px; }
-        lr-spreadsheet-viewer::part(cell-highlight) { padding-block-start: 5px; }
-      `);
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted, plain, dataRow } = await mountHighlighted(el);
-        expect(getComputedStyle(dataRow).opacity).to.equal('0.75');
-        expect(getComputedStyle(plain).paddingBlockStart).to.equal('3px');
-        expect(getComputedStyle(highlighted).paddingBlockStart).to.equal('5px');
-      } finally {
-        restore();
-      }
-    });
-
-    it('is accessible with a highlighted cell rendered', async () => {
-      const el = (await fixture(
-        html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
-      )) as LyraSpreadsheetViewer;
-      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
-      try {
-        const { highlighted } = await mountHighlighted(el);
-        expect(highlighted.getAttribute('role')).to.equal('cell');
-        expect(
-          highlighted.querySelector('[part="cell-highlight-action"]')?.localName
-        ).to.equal('button');
-        await expect(el).to.be.accessible();
-      } finally {
-        restore();
-      }
-    });
+  describeCellHighlightStyling({
+    tag: 'lr-spreadsheet-viewer',
+    src: 'https://example.test/book.xlsx',
+    install: () => fetchBuffer(buffer(GRID_WORKBOOK)),
+    outlineOffsetHook: true,
+    cellCursor: false,
   });
 
   describe('back-compat', () => {

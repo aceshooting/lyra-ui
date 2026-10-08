@@ -39,4 +39,19 @@ describe('EPUB resource guard', () => {
     expect(aborted).to.be.instanceOf(DOMException);
     expect((aborted as DOMException).name).to.equal('AbortError');
   });
+
+  it('node-counts the package and content documents the container and manifest name, whatever their extensions', async () => {
+    const build = async (chapterParagraphs: number) => {
+      const zip = new JSZip();
+      zip.file('META-INF/container.xml', '<container><rootfiles><rootfile full-path="OEBPS/book.dat"/></rootfiles></container>');
+      zip.file('OEBPS/book.dat', '<package><manifest>'
+        + '<item id="c1" href="text/ch%31.dat" media-type="application/xhtml+xml"/>'
+        + '<item id="i1" href="images/cover.png" media-type="image/png"/></manifest></package>');
+      zip.file('OEBPS/text/ch1.dat', '<html><body>' + '<p/>'.repeat(chapterParagraphs) + '</body></html>');
+      zip.file('OEBPS/images/cover.png', '<a'.repeat(2_048));
+      return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+    };
+    await assertEpubArchiveWithinLimits(await build(5), 10, 100_000, { maxXmlNodes: 30 });
+    await expectResourceLimit(async () => assertEpubArchiveWithinLimits(await build(100), 10, 100_000, { maxXmlNodes: 30 }));
+  });
 });

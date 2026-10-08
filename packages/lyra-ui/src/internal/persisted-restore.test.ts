@@ -3,11 +3,10 @@ import { html, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { tag } from './prefix.js';
-import { writePersistedState } from './persisted-state.js';
+import { readPersistedState, writePersistedState } from './persisted-state.js';
 import {
   definePersistedProperty,
   isPersistedPropertyExplicitlySet,
-  restoreFromStorage,
 } from './persisted-restore.js';
 
 const STORAGE_PREFIX = 'lr-test:persisted-restore';
@@ -79,11 +78,9 @@ class PersistedProbe extends LyraElement {
     // exists to isolate the explicitly-set flag, so the flag is the only thing standing between
     // this call and a fresh restore on every later update. `GatedProbe` below carries the
     // documented shape, and the pair of "late storage" cases contrasts them.
-    const restored = restoreFromStorage<boolean>(
-      this.storageFullKey,
-      isPersistedPropertyExplicitlySet(this, 'open'),
-      isRestorableOpenRecord,
-    );
+    const restored = isPersistedPropertyExplicitlySet(this, 'open')
+      ? undefined
+      : readPersistedState(this.storageFullKey, isRestorableOpenRecord)?.value;
     if (restored !== undefined) {
       this.restoreCount += 1;
       this.open = restored;
@@ -130,11 +127,9 @@ class GatedPersistedProbe extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
-      const restored = restoreFromStorage<boolean>(
-        this.storageFullKey,
-        isPersistedPropertyExplicitlySet(this, 'open'),
-        isRestorableOpenRecord,
-      );
+      const restored = isPersistedPropertyExplicitlySet(this, 'open')
+        ? undefined
+        : readPersistedState(this.storageFullKey, isRestorableOpenRecord)?.value;
       if (restored !== undefined) {
         this.restoreCount += 1;
         this.open = restored;
@@ -396,34 +391,5 @@ describe('persisted-restore', () => {
     await el.updateComplete;
     expect(el.code).to.equal('XYZ');
     expect(isPersistedPropertyExplicitlySet(el, 'code')).to.equal(true);
-  });
-
-  describe('restoreFromStorage', () => {
-    it('returns the stored value for an unset property', () => {
-      writePersistedState(storageKeyFor('unit'), { value: true });
-      expect(restoreFromStorage(storageKeyFor('unit'), false, isRestorableOpenRecord)).to.equal(
-        true,
-      );
-    });
-
-    it('returns undefined for an explicitly set property, stored value or not', () => {
-      writePersistedState(storageKeyFor('unit'), { value: true });
-      expect(restoreFromStorage(storageKeyFor('unit'), true, isRestorableOpenRecord)).to.equal(
-        undefined,
-      );
-    });
-
-    it('returns undefined for a record that fails the validator', () => {
-      writePersistedState(storageKeyFor('unit'), { value: 'not a boolean' });
-      expect(restoreFromStorage(storageKeyFor('unit'), false, isRestorableOpenRecord)).to.equal(
-        undefined,
-      );
-    });
-
-    it('returns undefined for an unset storage key without touching storage', () => {
-      const before = localStorage.length;
-      expect(restoreFromStorage(undefined, false, isRestorableOpenRecord)).to.equal(undefined);
-      expect(localStorage.length).to.equal(before);
-    });
   });
 });

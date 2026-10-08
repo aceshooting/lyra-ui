@@ -2,9 +2,8 @@
 
 > Detail behind the "Optional peers and remote content" digest in [AGENTS.md](../../AGENTS.md).
 
-Every current viewer already follows all of this (it was never written down before, so a new one
-had no guidance). Skipping any of it reopens a real SSRF/XSS/DoS/race surface that no automated
-gate catches.
+Every viewer follows all of this. Skipping any of it reopens an SSRF/XSS/DoS/race surface that no
+automated gate catches.
 
 - **Fetching and injecting a consumer-supplied `src`:** (1) gate the URL through `safeFetchUrl()`
   (`src/internal/safe-url.ts`) before ever calling `fetch()` — never a naive

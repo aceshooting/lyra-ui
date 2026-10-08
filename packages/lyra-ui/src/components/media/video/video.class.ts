@@ -24,7 +24,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlaybackSpeed, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
@@ -221,6 +221,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     pause: LYRA_DEFAULT_pause,
@@ -233,7 +234,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     videoExitPictureInPicture: LYRA_DEFAULT_videoExitPictureInPicture,
     videoMute: LYRA_DEFAULT_videoMute,
     videoPictureInPicture: LYRA_DEFAULT_videoPictureInPicture,
-    videoPlaybackSpeed: LYRA_DEFAULT_videoPlaybackSpeed,
     videoPlayerLabel: LYRA_DEFAULT_videoPlayerLabel,
     videoUnmute: LYRA_DEFAULT_videoUnmute,
     videoVolume: LYRA_DEFAULT_videoVolume,
@@ -1095,7 +1095,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
             ? html`<span class="select-control">
                 <select
                   data-control="rate"
-                  aria-label=${this.localize('videoPlaybackSpeed')}
+                  aria-label=${this.localize('avPlayerPlaybackRate')}
                   @change=${this.onRateChange}
                 >
                   ${this.renderRateOptions()}

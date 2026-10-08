@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Lakas ng tunog',
   videoCaptions: 'Mga caption',
   videoCaptionsOff: 'Naka-off',
-  videoPlaybackSpeed: 'Bilis ng playback',
   videoPictureInPicture: 'Pumasok sa picture in picture',
   videoExitPictureInPicture: 'Lumabas sa picture in picture',
   videoEnterFullscreen: 'Pumasok sa fullscreen',

@@ -1,3 +1,4 @@
+import { nextFrame, twoFrames } from '../../../../test/frames.js';
 import * as graphSupport from '../../../../test/graph-test-support.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
@@ -223,7 +224,8 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    await aTimeout(50);
+    await graphSupport.waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
+    await nextFrame();
     type Internals = {
       hostResizeObserver?: ResizeObserver;
       canvasScene?: unknown;
@@ -256,7 +258,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
       ></lr-graph>`
     )) as LyraGraph;
     await graphSupport.readyGraphPair(el, 'canvas');
-    await aTimeout(50);
+    await graphSupport.waitForCanvasBackingStore(el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const target = el.simNodes[0]!;
     const rect = canvas.getBoundingClientRect();
@@ -275,6 +277,7 @@ describe('coverage: canvas lifecycle (reconnect/disconnect edge cases)', () => {
     expect((el as unknown as { hoverRafId?: number }).hoverRafId).to.be
       .undefined;
     // The canceled frame must never fire and resurrect state on a now-detached instance.
+    // wait-reason: negative assertion, the canceled hover frame must never fire on the detached instance
     await aTimeout(50);
   });
 });
@@ -308,7 +311,7 @@ describe('canvas visibility gating (perf)', () => {
       expect(io.observedTargets).to.include(el);
       const latest = io.instances[io.instances.length - 1]!;
 
-      type Internals = { drawCanvas(): void; markCanvasDirty(): void };
+      type Internals = { drawCanvas(): void; markCanvasDirty(): void; canvasDrawRafId?: number; viewportChangeRafId?: number };
       const internals = el as unknown as Internals;
       const originalDraw = internals.drawCanvas.bind(internals);
       let drawCalls = 0;
@@ -316,7 +319,13 @@ describe('canvas visibility gating (perf)', () => {
         drawCalls++;
         originalDraw();
       };
-      await aTimeout(50); // let the settle's single deferred draw fire and its rAF resolve
+      await twoFrames();
+      // Let every in-flight frame (the settle's deferred draw, a viewport change) run to completion.
+      await waitUntil(
+        () => internals.canvasDrawRafId === undefined && internals.viewportChangeRafId === undefined,
+        'in-flight canvas frames drained'
+      );
+      await twoFrames();
       drawCalls = 0;
 
       // Report off-screen, then request a redraw the way a drag/resize would.
@@ -325,6 +334,7 @@ describe('canvas visibility gating (perf)', () => {
         latest as unknown as IntersectionObserver
       );
       internals.markCanvasDirty();
+      // wait-reason: negative assertion, no redraw may happen while off-screen across several animation frames
       await aTimeout(100); // several animation frames' worth of headroom
       expect(drawCalls, 'no redraw should happen while off-screen').to.equal(0);
 
@@ -333,7 +343,7 @@ describe('canvas visibility gating (perf)', () => {
         [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
         latest as unknown as IntersectionObserver
       );
-      await aTimeout(100);
+      await waitUntil(() => drawCalls > 0, 'deferred draw issued once visible again');
       expect(
         drawCalls,
         'becoming visible again must issue the deferred draw'

@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { Announcer } from './announcer.js';
-import { advanceViewerSearchIndex, announceSearchResult, sameViewerSearchDetail, viewerSearchDetail } from './viewer-search.js';
+import { advanceViewerSearchIndex, announceSearchResult, sameViewerSearchDetail, ViewerSearchState, viewerSearchDetail } from './viewer-search.js';
 
 /**
  * Mirrors `resolveLyraString()` closely enough to prove which key
@@ -98,5 +98,55 @@ describe('viewer search state', () => {
     expect(advanceViewerSearchIndex(-1, 0, 1)).to.equal(-1);
     expect(sameViewerSearchDetail(initial, viewerSearchDetail('term', 3, false, 0))).to.equal(true);
     expect(sameViewerSearchDetail(initial, viewerSearchDetail('term', 3, true, 0))).to.equal(false);
+  });
+});
+
+describe('ViewerSearchState', () => {
+  const make = () => {
+    const events: unknown[] = [];
+    let changes = 0;
+    const state = new ViewerSearchState<number[]>(() => [], (detail) => events.push(detail), () => changes++);
+    return { state, events, changes: () => changes };
+  };
+
+  it('publishes a result with the first match active and emits the canonical detail', () => {
+    const { state, events } = make();
+    state.query = 'a';
+    state.publish([4, 9], false);
+    expect(state.activeIndex).to.equal(0);
+    expect(events).to.deep.equal([{ query: 'a', matchCount: 2, matchCountExact: false, activeIndex: 0 }]);
+  });
+
+  it('publishes an empty result with no active match', () => {
+    const { state, events } = make();
+    state.query = 'zz';
+    state.publish();
+    expect(events).to.deep.equal([{ query: 'zz', matchCount: 0, matchCountExact: true, activeIndex: -1 }]);
+  });
+
+  it('steps with wrap-around, emitting only when there are matches', () => {
+    const { state, events } = make();
+    expect(state.step(1)).to.equal(false);
+    state.publish([1, 2, 3]);
+    expect(state.step(-1)).to.equal(true);
+    expect(state.activeIndex).to.equal(2);
+    expect(state.step(1)).to.equal(true);
+    expect(state.activeIndex).to.equal(0);
+    expect(events).to.have.lengthOf(3);
+  });
+
+  it('tracks dirtiness, resets silently and clears with an event', () => {
+    const { state, events, changes } = make();
+    expect(state.dirty).to.equal(false);
+    state.query = 'q';
+    state.publish([1], false);
+    expect(state.dirty).to.equal(true);
+    state.reset();
+    expect(state.dirty).to.equal(false);
+    expect(events).to.have.lengthOf(1);
+    state.query = 'q';
+    state.clear();
+    expect(events.at(-1)).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+    expect(changes()).to.be.greaterThan(2);
   });
 });

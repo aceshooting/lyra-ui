@@ -16,17 +16,7 @@ canonical request and activation events described in each component section.
 
 ## Breaking changes and fixes in 9.0.0
 
-Fixed: `<lr-markdown>`/`<lr-markdown-core>`'s renderer overrides (heading, paragraph, code-block,
-table, link, image, inline/block math) previously emitted HTML with mismatched open/close
-attribute-quote characters, which could corrupt the parsed DOM for real documents containing those
-constructs. Output is now well-formed HTML for every renderer override, using matched single-quote
-attribute delimiters; no public API changed.
-
-Breaking (v9): `<lr-model-select>`, `<lr-voice-picker>`, `<lr-prompt-input>`, and `<lr-chat-composer>`
-no longer emit the v8 `lr-focus`/`lr-blur` compatibility-alias events. Listen for the native-named
-`focus`/`blur` events instead. Also fixed as part of the same change: `<lr-prompt-input>`'s `focus`/
-`blur` now relay only from its own primary textarea; a descendant control's own focus/blur no longer
-leaks through as the composite element's own focus/blur.
+Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
 
 ## `lr-markdown`
 
@@ -1420,10 +1410,8 @@ focus move.
   honored — matches `<lr-textarea>`/`<lr-date-input>`).
 - `autocapitalize: string = ''` — forwarded to the free-text mode's native `<input>`; empty omits
   the attribute.
-- `autoCorrect: string = ''` (attribute `autocorrect`) — forwarded to the free-text mode's native
-  `<input>`'s own `autocorrect` (Safari/WebKit-specific); empty omits the attribute. Named
-  `autoCorrect` in JS purely to dodge a `lib.dom.d.ts` typing collision — the wire attribute is
-  still plain `autocorrect`.
+- `autocorrect: boolean = true` — forwarded to the free-text mode's native `<input>` as
+  `autocorrect="on"|"off"`; the attribute is omitted until `autocorrect` is written or set.
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`), and
   `enterKeyHint: string = ''` (attribute `enterkeyhint`) — forwarded to the free-text input;
   they have no effect in closed-dropdown mode
@@ -1975,7 +1963,7 @@ is unset and `status="running"`)
 **Themeable custom properties:** shared tokens only — `--lr-color-text-quiet` (base readout and
 tokens/throughput text color), `--lr-color-text` (the elapsed segment's higher-contrast color,
 and the stop-button's icon color), `--lr-space-s` (stop-button margin), `--lr-icon-button-size`
-(stop-button minimum sizing; the full shared 40px-equivalent hit floor applies), `--lr-color-border`/`-surface`/`-brand`
+(stop-button minimum sizing; the full shared hit floor applies), `--lr-color-border`/`-surface`/`-brand`
 (stop-button border/background/hover), `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`.
 
@@ -2146,16 +2134,6 @@ header gap — a rule that sets `display` on it must qualify itself with `:not([
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
-
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
 
 **Border reaches the composed copy control the same way background/color/radius do.** This
 component paints no resting border of its own, so it relays no `--_lr-icon-button-border-default`
@@ -2666,23 +2644,13 @@ toolbar's roving tab stop is leased on the native control rather than the host),
 embedded `lr-message-feedback`).
 
 The toolbar has no `size`/`compact` property: every built-in's hit area is `<lr-icon-button>`'s
-shared `--lr-icon-button-size` floor (2.5rem/40px), same as everywhere else in the library. For a
+shared `--lr-icon-button-size` floor (2.25rem/36px), same as everywhere else in the library. For a
 dense action row, lower `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every
 `LyraElement` re-declares on its own `:host` and so never reaches a composed child) on this element
 or an ancestor, or reach a built-in's composed native control directly through
 `::part(regenerate-button-control)` / `::part(edit-button-control)`. A coarse-pointer/no-hover
 media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
 override lowered it, so the shrink is safe on a touch device.
-
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only actions are composed
-`<lr-icon-button>`s, so a part naming one of them now names the composed child's HOST, which paints
-nothing. A `border`, `background` or `border-radius` set on it is silently dead — only `color` still
-appears to work, because it inherits, which makes such a rule look half-alive rather than broken.
-Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their `-hover`/`-active`
-variants) on this element or an ancestor instead: the composed control reads those public tokens
-ahead of any default this component supplies. For SIZE use `--lr-theme-icon-button-size`, not
-`--lr-icon-button-size` — every `LyraElement` re-declares the latter on its own `:host`, so it never
-reaches a composed child (see `llms/tokens.md`).
 
 ## `lr-message-feedback`
 
@@ -3461,9 +3429,7 @@ pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. `latencyMs?: number` (a
 algorithm (which has no minutes/hours tier) in both the visible strip and the tooltip row; mirrors
 `lr-activity-feed`'s `formatTimestamp` convention. `abbreviate: boolean = false` (reflected) — token
 counts render via `Intl.NumberFormat` `notation: 'compact'` (`12345 -> "12K"`); the tooltip always
-shows full grouped figures. This badge has no density mode: the old `compact` spelling of this
-property was removed in 9.0.0 (it collided with `compact`'s density meaning everywhere else in the
-library) — rename `compact` to `abbreviate`; a stale `compact` attribute is inert. `summary: string =
+shows full grouped figures. This badge has no density mode: use `abbreviate` for compact counts; a `compact` attribute is inert. `summary: string =
 ''` supplies visible fallback text when no built-in segment is present.
 
 **Slots:** `summary` — visible summary when no built-in segment is set (takes precedence over the
@@ -3758,7 +3724,7 @@ become bounded clone-owned frozen snapshots; create and reassign a new array aft
 affordances at all. `label: string = ''`,
 `hint: string = ''`, `errorText: string = ''` (attribute `error-text`), `placeholder: string = ''`,
 `spellcheck: boolean = true` (string-aware converter, same as `lr-model-select`), `autocapitalize:
-string = ''`, `autoCorrect: string = ''` (attribute `autocorrect`), `autocomplete: string = 'off'`,
+string = ''`, `autocorrect: boolean = true`, `autocomplete: string = 'off'`,
 `inputMode: string = ''` (attribute `inputmode`), `enterKeyHint: string = ''` (attribute
 `enterkeyhint`), and `open: boolean = false` (reflected) — all mirror `lr-model-select`'s
 identically-named properties. `size: LyraSize = 'm'` (reflected) selects the shared
@@ -4223,7 +4189,7 @@ events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`
 `lr-highlight-activate`, `lr-link-activate`, `lr-preview-request`, `lr-remove`, `lr-render-error`, `lr-retry`,
 `lr-search-change`, `lr-text-select`, `lr-toggle` (from reasoning panels and tool-call blocks),
 `lr-tool-call-chip-select`, `lr-widget-action`,
-and `lr-widget-state-change`. The `lr-tool-chip-select` alias passthrough was removed in 9.0.0.
+and `lr-widget-state-change`.
 In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, callId }`) and
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
@@ -4272,8 +4238,7 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-copy-error` event — Passthrough from rendered JSON content or a Markdown code-block header.
 - `lr-highlight-activate` event — Passthrough from rendered Markdown.
 - `lr-link-activate` event — Passthrough from rendered Markdown.
-- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable as of 10.0.0:
-  `<lr-attachment-chip>` dropped the flag, since it owns no preview default action to veto.
+- `lr-preview-request` event — Passthrough from a rendered attachment. Not cancelable.
 - `lr-remove` event — Passthrough from a rendered attachment.
 - `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content, or
   tool-call block (`callId` included).
@@ -4281,8 +4246,7 @@ import "@aceshooting/lyra-ui/components/lr-message-parts.js";
 - `lr-search-change` event — Passthrough from rendered JSON content.
 - `lr-text-select` event — Passthrough from rendered Markdown.
 - `lr-toggle` event — Passthrough from a rendered reasoning panel or tool-call block.
-- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip. The
-  `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
 - `lr-widget-action` event — Passthrough from a rendered declarative widget.
 - `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
 
@@ -4310,7 +4274,9 @@ their corresponding data can be supplied. The default entry registers all childr
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
 `submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
 (attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
-(attribute `max-rows`) forward to the composed `lr-chat-composer` with its semantics;
+(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' = 'inline'`
+(attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics, and a slotted
+`toolbar` child is forwarded to the composer's `toolbar` slot;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,

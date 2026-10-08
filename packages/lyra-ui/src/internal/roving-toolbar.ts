@@ -60,3 +60,27 @@ export function leaseTabIndex(): TabIndexLease {
     },
   };
 }
+
+/** Options for observing every attribute and subtree change that can add or remove a toolbar stop. */
+export function observeStopChanges(): MutationObserverInit {
+  return {
+    attributes: true,
+    attributeOldValue: true,
+    attributeFilter: [
+      'aria-disabled',
+      'aria-hidden',
+      'contenteditable',
+      'controls',
+      'disabled',
+      'hidden',
+      'href',
+      'inert',
+      'open',
+      'role',
+      'tabindex',
+      'type',
+    ],
+    childList: true,
+    subtree: true,
+  };
+}

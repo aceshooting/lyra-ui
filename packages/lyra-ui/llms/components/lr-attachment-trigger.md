@@ -83,16 +83,6 @@ painted surface sits one boundary deeper),
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
 
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
-
 **An ancestor's public border wins over this component's own relayed default, not just its
 absence.** Unlike most composing components, the `outlined`/`filled-outlined` appearances here DO
 relay a non-zero `--_lr-icon-button-border-default` (a themed edge) into the trigger's private

@@ -3,10 +3,11 @@ import { isMainModule } from './is-main-module.mjs';
 // Regenerates package.json#sideEffects from the same required-entries derivation
 // scripts/check-side-effects.mjs verifies against, so the array is a generated artifact instead
 // of 500+ hand-maintained lines. Run after any component add/move/remove, then commit the diff.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
+import { walk } from './lib/fs-walk.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -16,16 +17,6 @@ export const CURATED_PUBLIC_SIDE_EFFECT_ENTRIES = Object.freeze([
   { source: 'src/autoloader-cdn.ts', exportPath: './autoloader-cdn.js' },
   { source: 'src/hydration.ts', exportPath: './hydration.js' },
 ]);
-
-function walk(directory) {
-  const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(entryPath));
-    else files.push(entryPath);
-  }
-  return files;
-}
 
 /** Unwraps `void x()` / `await x()` down to the call it wraps, the two shapes a bare top-level
  * side-effecting statement is written in across this package (`void registerLyraFlagPeer();`,
@@ -199,14 +190,14 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
     required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
   }
 
-  // Locale modules register themselves with the global locale registry at import time. Both the
-  // source paths used by repository-local bundlers and the compiled paths shipped to consumers
-  // therefore need explicit retention.
+  // Locale modules register themselves with the global locale registry at import time, so the
+  // source paths used by repository-local bundlers need explicit retention.
   for (const file of walk(translationsRoot)) {
     if (!file.endsWith('.ts') || file.endsWith('.d.ts') || file.endsWith('.test.ts')) continue;
     const relPath = relative(sourceRoot, file).replaceAll('\\', '/');
     required.add(`./src/${relPath}`);
-    required.add(`./dist/${relPath.replace(/\.ts$/, '.js')}`);
+    // Real catalogs publish from @aceshooting/lyra-translations; only pseudo-locales stay in dist.
+    if (relPath.startsWith('translations/pseudo/')) required.add(`./dist/${relPath.replace(/\.ts$/, '.js')}`);
   }
 
   // A bare CSS import exists solely for its style side effect. Derive every shipped source CSS
@@ -224,7 +215,6 @@ export function deriveSideEffects(packageDir = defaultPackageDir) {
   // fixtures retain exact entries so their missing-file behavior remains easy to inspect.
   const groups = [
     { pattern: './src/translations/**/*.ts', match: /^\.\/src\/translations\/.*\.ts$/u },
-    { pattern: './dist/translations/**/*.js', match: /^\.\/dist\/translations\/.*\.js$/u },
     { pattern: './src/components/lr-*.ts', match: /^\.\/src\/components\/lr-[^/]+\.ts$/u },
     { pattern: './dist/components/lr-*.js', match: /^\.\/dist\/components\/lr-[^/]+\.js$/u },
   ];

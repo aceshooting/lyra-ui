@@ -5,6 +5,8 @@ import { DebounceController, type DebounceTimerHost } from './debounce-controlle
 // uses a delay short enough to keep the suite fast and a wait margin generous enough (at least
 // 3x the delay, plus a fixed floor) to absorb scheduler jitter without ever asserting an exact
 // timing.
+// wait-reason: every aTimeout below tests real debounce timing (settle = must outlast the delay;
+// never-fires = asserting nothing happens), so fixed waits are the subject, not a settle hack.
 const DELAY_MS = 30;
 const SETTLE_WAIT_MS = 150;
 const NEVER_FIRES_WAIT_MS = 150;

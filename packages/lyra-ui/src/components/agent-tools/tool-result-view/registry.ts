@@ -10,17 +10,9 @@
  * reliably know the tool name at all.
  */
 
-/**
- * `ToolResultStatus` lives on `<lr-tool-result-dialog>` (`tool-result-dialog.class.ts`) and is
- * re-exported here rather than duplicated -- this module's cycle analysis (see
- * `scripts/check-import-cycles.mjs`, run as part of `contract-policy`) confirmed
- * `tool-result-dialog.class.ts` and everything *it* imports (`LyraElement`, `scroll-lock`,
- * `overlay-manager`, `a11y`, `icons`, `numbers`) has zero path back into this `tool-result-view/`
- * directory, so importing the type here creates no circular import; `verbatimModuleSyntax` erases
- * the `import type` at build time regardless, so this costs nothing at runtime either way.
- */
-import type { ToolResultStatus } from '../tool-result-dialog/tool-result-dialog.class.js';
-export type { ToolResultStatus };
+/** The shared tool-call status union (`../tool-status.ts`), re-exported for renderers. */
+import type { ToolStatus } from '../tool-status.js';
+export type { ToolStatus };
 
 /**
  * Handed to a renderer's `render()` as an optional 3rd positional argument (see
@@ -41,7 +33,7 @@ export interface ToolRenderContext {
    * default, `'success'`. Calls from a renderer that throws, or after a later render has started,
    * are ignored.
    */
-  reportStatus: (status: ToolResultStatus) => void;
+  reportStatus: (status: ToolStatus) => void;
 }
 
 interface ToolRendererDefinitionBase {
@@ -62,7 +54,7 @@ export interface DirectToolRendererDefinition extends ToolRendererDefinitionBase
    * it's the last positional parameter, so every pre-existing 2-arg `render(result, args)`
    * function stays assignable unchanged. Direct callers can omit it; use
    * `context?.reportStatus()` to signal a non-throwing
-   * failure (or any other `ToolResultStatus`) while still rendering real content, instead of
+   * failure (or any other `ToolStatus`) while still rendering real content, instead of
    * throwing and losing that content to the `<lr-json-viewer>` fallback.
    */
   readonly render: (result: unknown, args: unknown, context?: ToolRenderContext) => unknown;

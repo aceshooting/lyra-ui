@@ -1,0 +1,67 @@
+{
+  "name": "@aceshooting/lyra-ide",
+  "version": "26.0.0",
+  "description": "Editor data for @aceshooting/lyra-ui: the Custom Elements Manifest, JetBrains web-types and VS Code HTML/CSS custom data.",
+  "keywords": [
+    "lyra-ui",
+    "custom-elements-manifest",
+    "web-types",
+    "vscode",
+    "jetbrains",
+    "autocomplete",
+    "web-components"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-ide"
+  },
+  "homepage": "https://www.lyra-ui.com/",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "sideEffects": false,
+  "customElements": "custom-elements.json",
+  "web-types": "web-types.json",
+  "exports": {
+    "./custom-elements.json": "./custom-elements.json",
+    "./web-types.json": "./web-types.json",
+    "./vscode-html-data.json": "./vscode-html-data.json",
+    "./vscode-css-data.json": "./vscode-css-data.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "custom-elements.json",
+    "web-types.json",
+    "vscode-html-data.json",
+    "vscode-css-data.json",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "prepack": "node scripts/sync.mjs",
+    "lint": "node scripts/check-package.mjs",
+    "test": "node --test scripts/package.test.mjs"
+  },
+  "peerDependencies": {
+    "@aceshooting/lyra-ui": "workspace:^"
+  },
+  "devDependencies": {
+    "@aceshooting/lyra-ui": "workspace:*"
+  }
+}

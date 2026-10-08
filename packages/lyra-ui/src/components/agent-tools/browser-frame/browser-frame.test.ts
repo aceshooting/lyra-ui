@@ -1,5 +1,5 @@
 import { sinkTexts } from '../../../../test/announcements.js';
-import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './browser-frame.js';
@@ -649,7 +649,7 @@ describe('collecting already-slotted default content without relying on the init
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'initial slotchange arrived');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all",
@@ -680,7 +680,7 @@ describe('collecting already-slotted default content without relying on the init
     el.renderRoot!.addEventListener('slotchange', () => realSlotchangeCount++, { capture: true });
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'initial slotchange arrived');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation',

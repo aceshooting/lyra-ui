@@ -12,7 +12,7 @@ import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './tab-group.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraTab } from './tab.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -783,7 +783,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     if (!changed.has('tabs') && !changed.has('active')) return;
     // Manual activation can focus an unselected occurrence: its removal needs focus repair even
     // while the selected tab remains valid. Inspect the old button before keyed rendering removes it.
-    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const focused = shadowFocusTarget(this);
     const focusedSlot = focused?.getAttribute('part') === 'tab'
       ? focused.getAttribute('data-slot')
       : null;
@@ -908,7 +908,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           (candidate as Partial<Element>).getAttribute?.('part') === 'tab' &&
           (candidate as Element).getRootNode() === this.renderRoot
       );
-    const focused = activeElementIn(this.renderRoot as ShadowRoot);
+    const focused = shadowFocusTarget(this);
     const button =
       eventButton ??
       (focused?.getAttribute('part') === 'tab'

@@ -1,3 +1,4 @@
+import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
 import './docx-viewer.js';
@@ -442,7 +443,7 @@ describe('lr-docx-viewer', () => {
       const parent = el.parentElement!;
       el.remove();
       parent.append(el); // a move: disconnect and reconnect within one task
-      await aTimeout(30);
+      await twoFrames();
       expect(calls).to.equal(1);
       const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
       expect(content.textContent).to.include('Ready');
@@ -582,7 +583,7 @@ describe('lr-docx-viewer', () => {
         mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Too late</p>', messages: [] }) },
         DOMPurify: { sanitize: (value: string) => value },
       });
-      await aTimeout(20);
+      await twoFrames();
       expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
       expect((el.shadowRoot!.querySelector('[part="error"]')) == null).to.be.true;
     } finally {
@@ -609,7 +610,7 @@ describe('lr-docx-viewer', () => {
       await waitUntil(() => convertCalled);
       el.remove();
       resolveConvert({ value: '<p>Too late</p>', messages: [] });
-      await aTimeout(20);
+      await twoFrames();
       expect((el.shadowRoot!.querySelector('[part="content"]')) == null).to.be.true;
     } finally {
       restore();
@@ -638,7 +639,7 @@ describe('lr-docx-viewer', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Fresh');
       resolveStaleConvert({ value: '<p>Stale</p>', messages: [] });
-      await aTimeout(20);
+      await twoFrames();
       expect(el.shadowRoot!.querySelector('[part="content"]')!.textContent!.trim()).to.equal('Fresh');
     } finally {
       restore();
@@ -1363,7 +1364,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
           bubbles: true,
           composed: true,
         }));
-        await aTimeout(30);
+        await twoFrames();
         expect(events).to.have.lengthOf(1);
         expect(events[0]!.detail.text).to.equal('brown');
       } finally {
@@ -1769,7 +1770,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       });
       const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
       paragraph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: -9999, clientY: -9999 }));
-      await aTimeout(10);
+      await twoFrames();
       expect(activated).to.be.false;
     } finally {
       restore();

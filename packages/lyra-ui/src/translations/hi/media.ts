@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'आवाज़',
   videoCaptions: 'कैप्शन',
   videoCaptionsOff: 'बंद',
-  videoPlaybackSpeed: 'प्लेबैक गति',
   videoPictureInPicture: 'पिक्चर-इन-पिक्चर चालू करें',
   videoExitPictureInPicture: 'पिक्चर-इन-पिक्चर बंद करें',
   videoEnterFullscreen: 'पूर्ण स्क्रीन करें',

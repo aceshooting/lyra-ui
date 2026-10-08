@@ -32,14 +32,12 @@ values restore the image or fallback name.
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
   loads successfully, falling back to them on a load
-  error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
-  used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
-  initials instead.
+  error. Matches `wa-avatar`'s `image`.
 - `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins.
   The same resolved name reaches the image `alt` and every fallback tier.
 - host `aria-label` — overrides `label` as the image/fallback accessible name without changing the
   visible initials or image
-- `loading: 'eager' | 'lazy' = 'eager'` (new in 8.0.0) — passthrough to the rendered `<img>`'s
+- `loading: 'eager' | 'lazy' = 'eager'` — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
@@ -51,13 +49,11 @@ values restore the image or fallback name.
   normalize to `medium`.
 - `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
   `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
-  **`rounded` is new in 8.0.0.**
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   recolors the initials-fallback background/text on the library's one semantic-tone vocabulary;
-  `neutral` (the default) reads as a plain, unaccented circle. **Renamed from `tone` in 8.0.0**,
-  with no alias: `tone="brand"` is an unknown attribute now and renders the neutral circle.
+  `neutral` (the default) reads as a plain, unaccented circle.
 
-**Events:** `lr-error` (`detail: { image: string }`, new in 8.0.0) — the image failed to load;
+**Events:** `lr-error` (`detail: { image: string }`) — the image failed to load;
 `detail.image` carries the URL that failed, so a consumer can retry or report it. Bubbling,
 composed, non-cancelable, and purely informational: by the time it fires the avatar has already
 fallen back to the `icon` slot or the initials on its own. It never fires for an avatar with no

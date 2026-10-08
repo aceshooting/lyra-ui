@@ -6,7 +6,7 @@
 - **Class** `LyraCommandPalette`, also available unregistered from `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [layout](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/layout.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -77,7 +77,10 @@ count through the shared polite announcement sink; a query matching nothing anno
 
 **Events:** cancelable `lr-show` (`detail: null`) before opening; cancelable `lr-close-request`
 with `{ reason: 'api' | 'escape' | 'backdrop' | 'select' }` before dismissal; non-cancelable
-`lr-close` with that same reason object after closing; `lr-select`
+`lr-hide` with that same reason object once the close is accepted (the veto is
+`lr-close-request`, so `lr-hide` is not cancelable here, unlike `lr-dialog`); non-cancelable
+`lr-close` with that same reason object after closing; no-detail `lr-after-show` / `lr-after-hide`
+once the palette has rendered open / closed (it has no transition to wait for); `lr-select`
 (`detail: { command }`, fired before the command's own `onSelect` runs and before the palette
 closes), and no-detail `focus`/`blur` events re-dispatched from the host whenever the search input
 gains or loses focus. The `focus`/`blur` bridge is

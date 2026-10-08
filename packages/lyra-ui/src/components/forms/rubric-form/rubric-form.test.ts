@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { render } from "lit";
 import { sendKeys } from '@web/test-runner-commands';
 import "./rubric-form.js";
@@ -2946,7 +2946,7 @@ describe("collecting an already-slotted aggregate label/hint/error without relyi
       await el.updateComplete;
       // Give a real initial slotchange (queued around slot assignment) time to arrive and be
       // swallowed, so the assertions below only see whatever `firstUpdated()` alone collected.
-      await aTimeout(50);
+      await waitUntil(() => intercepted === 1, 'the initial slotchange was intercepted');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -2988,7 +2988,7 @@ describe("collecting an already-slotted aggregate label/hint/error without relyi
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the real initial slotchange fired');
       expect(
         realSlotchangeCount,
         "the real initial slotchange must actually have fired for this to prove anything about double-invocation"

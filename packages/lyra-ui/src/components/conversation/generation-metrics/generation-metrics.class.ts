@@ -7,6 +7,7 @@ import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js
 import { styles } from './generation-metrics.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { OwnedInterval } from '../../../internal/owned-timer.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_elapsedMinutesSecondsTemplate, LYRA_DEFAULT_generationStatusElapsedSeconds, LYRA_DEFAULT_generationStatusThroughput, LYRA_DEFAULT_generationStatusTokens, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings.generated.js';
@@ -291,7 +292,7 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
   // first-update special case needed.
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.stopFocused = this.shadowRoot?.activeElement?.getAttribute('part') === 'stop-button';
+    this.stopFocused = shadowFocusTarget(this)?.getAttribute('part') === 'stop-button';
     if (changed.has('status')) {
       if (this.status === 'running') {
         if (this.validStartedAt == null) this.fallbackStartMs = Date.now();

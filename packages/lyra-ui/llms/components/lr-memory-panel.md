@@ -42,6 +42,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded
 - `label?: string` — fallback name for the stable overall group; omission uses the localized memory
   panel label. A non-empty host `aria-label` makes the host the sole overall owner; an explicitly
   empty host label stays empty
+- `size: LyraSize = 'm'` (reflected) — density on the shared size scale. `s` (and the smaller `xs`/`2xs`) tightens each `item`'s padding; `m` and larger keep the full padding.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each memory item's bordered, filled box; `'plain'` removes the border, background and corner radius from every `item`, for use inside an already-bordered container.
 
 Each memory list is canonicalized independently by nonblank `id`. Malformed rows and later
 duplicates are omitted first-wins before empty state, focus/disclosure state, confirmations, counts,

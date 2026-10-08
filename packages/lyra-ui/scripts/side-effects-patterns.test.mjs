@@ -3,15 +3,12 @@ import { sideEffectsCover, sideEffectPatternHasSource } from './side-effects-pat
 
 const patterns = new Set([
   './src/translations/**/*.ts',
-  './dist/translations/**/*.js',
   './src/components/lr-*.ts',
   './dist/components/lr-*.js',
 ]);
 for (const entry of [
   './src/translations/fr.ts',
   './src/translations/fr/forms.ts',
-  './dist/translations/fr.js',
-  './dist/translations/fr/forms.js',
   './src/components/lr-button.ts',
   './dist/components/lr-button.js',
 ]) assert.equal(sideEffectsCover(patterns, entry), true, entry);

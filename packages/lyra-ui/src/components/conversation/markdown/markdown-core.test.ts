@@ -722,6 +722,7 @@ describe("languages (build-lean shiki, no full-bundle fallback)", () => {
     el.languages = {};
     el.content = "```ts\nconst x = 1;\n```";
     await el.updateComplete;
+    // wait-reason: asserts no highlighting ever appears for an absent language
     await aTimeout(500);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null).to
       .be.true;
@@ -740,6 +741,7 @@ describe("languages (build-lean shiki, no full-bundle fallback)", () => {
     el.languages = { typescript: tsLang.default };
     el.content = "```typescript\nconst x = 1;\n```";
     await el.updateComplete;
+    // wait-reason: asserts no highlighting appears while streaming
     await aTimeout(300);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null).to
       .be.true;
@@ -753,6 +755,7 @@ describe("languages (build-lean shiki, no full-bundle fallback)", () => {
     el.languages = {};
     el.content = "```ts\nconst x = 1;\n```";
     await el.updateComplete;
+    // wait-reason: asserts no highlighting appears when syntax highlighting is disabled
     await aTimeout(500);
     expect(el.shadowRoot!.querySelector('[part="code-block"] span') == null).to
       .be.true;
@@ -875,7 +878,11 @@ describe("languages lazy grammar loaders", () => {
       el.languages = { typescript: () => Promise.reject(new Error("network down")) };
       el.content = "```typescript\nconst x = 1;\n```";
       await el.updateComplete;
-      await aTimeout(500);
+      await waitUntil(
+        () => warnings.some((w) => String(w[0]).includes("could not load a lazy `languages` grammar loader")),
+        "the lazy grammar loader failure was never warned",
+        { timeout: 5000 }
+      );
     } finally {
       console.warn = originalWarn;
     }
@@ -1029,6 +1036,7 @@ describe("streaming raf scheduling / renderMarkdown guards", () => {
       document.body.appendChild(document.adoptNode(el));
       const updateSettled = await Promise.race([
         pendingUpdate.then(() => true),
+        // wait-reason: bounded guard so a hung updateComplete fails the test instead of hanging
         aTimeout(100).then(() => false),
       ]);
       expect(foreignCancellations).to.deep.equal([947]);
@@ -1846,7 +1854,11 @@ describe("fine-grained highlighter build failure (languages, no default fallback
       el.languages = { bogus: { not: "a real shiki grammar" } as never };
       el.content = "```bogus\nhello\n```";
       await el.updateComplete;
-      await aTimeout(1500);
+      await waitUntil(
+        () => warnings.some((w) => String(w[0]).includes("failed to build a fine-grained shiki highlighter")),
+        "the highlighter build failure was never warned",
+        { timeout: 5000 }
+      );
     } finally {
       console.warn = originalWarn;
     }

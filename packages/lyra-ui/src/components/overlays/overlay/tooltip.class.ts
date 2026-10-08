@@ -47,21 +47,22 @@ import {
   type OverlayHandle,
 } from '../../../internal/nonmodal-overlay-manager.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
+import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 import {
   accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
+  labelReferenceRecordsMatter,
   composedAccessibilityTextResult,
   type AccessibilityElementState,
 } from '../../../internal/accessibility-visibility.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
-  observeOverlayAnchorIdentity,
-  observeOverlayAnchorRoots,
+  OverlayAnchorIdentity,
   OverlayDelayTimer,
   OverlayTransitionGate,
   resolveOverlayAnchor,
-  resolveOverlayTriggerById,
+  resolveOverlayInteractionTrigger,
   settleOverlayTransition,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
@@ -116,6 +117,8 @@ type TooltipContentSnapshot = {
   assigned: boolean;
   awaitingShadowRoot: boolean;
   labelReferenceRoots: Set<Document | ShadowRoot>;
+  labelReferenceIds: Set<string>;
+  referencedElements: Set<Element>;
   text: string;
   externalRoots: Set<Node>;
   shadowRoots: Set<ShadowRoot>;
@@ -408,9 +411,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
   private directionChanged = false;
-  private observedDirectAnchor?: Element;
-  private observedDirectAnchorWasConnected = false;
-  private stopAnchorIdentityObservation?: () => void;
+  private readonly anchorIdentity = new OverlayAnchorIdentity();
   private triggerAria?: AriaOwnershipLease;
   private accessibleTriggerAria?: AriaOwnershipLease;
   /** The virtual anchor set by `showAt()`, taking priority over `for`/`trigger` for positioning
@@ -515,12 +516,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         else this.applyOpenState(false);
       }
     }
-    const lostDirectAnchorProperty =
-      changed.has('anchor')
-      && changed.get('anchor') === this.observedDirectAnchor
-      && this.observedDirectAnchorWasConnected
-      && this.anchor?.isConnected !== true;
-    if (lostDirectAnchorProperty && this.open && !this.resolveAnchor()) {
+    if (this.anchorIdentity.lostAnchorProperty(changed, this.anchor) && this.open && !this.resolveAnchor()) {
       void this.forceClose();
     }
     if (changed.has('showDelay') && this.delayTimer.pendingDirection === 'show') this.requestTransition(true);
@@ -662,8 +658,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   }
   override disconnectedCallback(): void {
     this.triggerSyncGeneration++;
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     this.cancelPendingTransition();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -691,8 +686,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.triggerSyncGeneration++;
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     // Every asynchronous primitive is paired with the Window that created it. Adoption normally
     // brackets this callback with disconnect/connect, but clearing the old realm here as well
     // keeps an explicitly adopted, still-detached instance from retaining observers or timers.
@@ -706,22 +700,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.releaseTriggerA11y();
   }
   private syncAnchorIdentityObservation(): void {
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     const directAnchor = this.open ? (this.anchor ?? undefined) : undefined;
-    this.observedDirectAnchor = directAnchor;
-    this.observedDirectAnchorWasConnected = directAnchor?.isConnected === true;
-    if (!this.isConnected || (!this.for && !directAnchor)) return;
-
-    const onIdentityChange = (): void => {
-      const directAnchorRemoved =
-        this.anchor === this.observedDirectAnchor
-        && this.observedDirectAnchorWasConnected
-        && this.observedDirectAnchor?.isConnected === false;
-      this.observedDirectAnchorWasConnected = this.observedDirectAnchor?.isConnected === true;
+    this.anchorIdentity.observe(this, directAnchor, this.for, () => this.anchor, (directAnchorRemoved) => {
       // A closed tooltip contributes nothing to its unchanged trigger, so unrelated mutations stay cheap.
-      const next = this.virtualAnchor ? undefined : (this.slottedTriggerElement ?? this.resolveForTrigger());
-      if (next !== this.triggerElement || this.open || this.focusDescribesTrigger) this.syncInteractionTrigger();
+      if (this.resolveInteractionTrigger() !== this.triggerElement || this.open || this.focusDescribesTrigger) {
+        this.syncInteractionTrigger();
+      }
       if (!this.open) return;
       const nextAnchor = this.resolveAnchor();
       if (directAnchorRemoved && !nextAnchor) {
@@ -729,16 +714,15 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         return;
       }
       if (nextAnchor !== this.positionedAnchor) this.position();
-    };
-    this.stopAnchorIdentityObservation = observeOverlayAnchorRoots(this, directAnchor, onIdentityChange);
+    });
   }
 
-  private resolveForTrigger(): HTMLElement | undefined {
-    return resolveOverlayTriggerById(this, this.for);
+  private resolveInteractionTrigger(): HTMLElement | undefined {
+    return resolveOverlayInteractionTrigger(this, this.virtualAnchor, this.slottedTriggerElement, this.for);
   }
 
   private syncInteractionTrigger(): void {
-    const next = this.virtualAnchor ? undefined : (this.slottedTriggerElement ?? this.resolveForTrigger());
+    const next = this.resolveInteractionTrigger();
     this.adoptTrigger(next);
   }
   /** Registers a virtual-anchor or actionable tooltip with the shared overlay manager
@@ -1242,6 +1226,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       assigned: false,
       awaitingShadowRoot: false,
       labelReferenceRoots: new Set<Document | ShadowRoot>(),
+      labelReferenceIds: new Set<string>(),
+      referencedElements: new Set<Element>(),
       text: '',
       externalRoots: new Set<Node>(),
       shadowRoots: new Set<ShadowRoot>(),
@@ -1328,7 +1314,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       for (const root of accessibilityText.labelReferenceRoots) {
         snapshot.labelReferenceRoots.add(root);
       }
+      for (const id of accessibilityText.labelReferenceIds) snapshot.labelReferenceIds.add(id);
       for (const reference of accessibilityText.referencedElements) {
+        snapshot.referencedElements.add(reference);
         snapshot.externalRoots.add(reference);
       }
     } finally {
@@ -1381,10 +1369,21 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.stopLabelReferenceIdentityObservation?.();
     this.stopLabelReferenceIdentityObservation = undefined;
     if (this.isConnected && snapshot.labelReferenceRoots.size > 0) {
+      const Observer = this.ownerDocument.defaultView?.MutationObserver;
+      // Only a record touching a referenced id or element can change the name; anything else in
+      // the root is ignored without rerunning the content inspection.
       const cleanups = [...snapshot.labelReferenceRoots].map((root) =>
-        observeOverlayAnchorIdentity(root, () => this.updateInteractiveContent()));
+        subscribeInheritedAttributes(root, Observer, {
+          attributes: ['id'],
+          childList: true,
+          changed: (records) => {
+            if (labelReferenceRecordsMatter(records, snapshot.labelReferenceIds, snapshot.referencedElements)) {
+              this.updateInteractiveContent();
+            }
+          },
+        }));
       this.stopLabelReferenceIdentityObservation = () => {
-        for (const cleanup of cleanups) cleanup();
+        for (const cleanup of cleanups) cleanup?.();
       };
     }
     if (!this.contentObserver) return;

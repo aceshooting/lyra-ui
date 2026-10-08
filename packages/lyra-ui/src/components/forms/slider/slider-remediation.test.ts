@@ -358,3 +358,14 @@ describe('slider tooltip placement', () => {
     }
   }
 });
+
+describe('slider visible error chrome', () => {
+  it('exposes error-text and the error slot as aria-invalid on the thumb', async () => {
+    const text = await fixture<LyraSlider>(html`<lr-slider aria-label="Level" error-text="Too high"></lr-slider>`);
+    expect(thumb(text).getAttribute('aria-invalid')).to.equal('true');
+    const slotted = await fixture<LyraSlider>(html`<lr-slider aria-label="Level"><span slot="error">Too high</span></lr-slider>`);
+    await waitUntil(() => thumb(slotted).getAttribute('aria-invalid') === 'true');
+    const clean = await fixture<LyraSlider>(html`<lr-slider aria-label="Level"></lr-slider>`);
+    expect(thumb(clean).getAttribute('aria-invalid')).to.equal('false');
+  });
+});

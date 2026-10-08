@@ -47,10 +47,8 @@ a test. Derive the complete name with the exported
 segments; isolated UTF-16 surrogates, which that built-in rejects, use deterministic uppercase
 `%uXXXX` code-unit escapes. It renders after the plain `message` once expanded (for example, suite
 `unit` and test `same` use `slot="detail-unit:same"`). This is the only detail slot the component
-reads, and exactly one is mounted per row. The legacy `detail-{suiteId}-{testId}` and
-`detail-{testId}` spellings were removed in 9.0.0 — content assigned to either is never slotted and
-never makes a row expandable; migrate by deriving the name with
-`testResultDetailSlotName(suiteId, testId)`. Slot listeners remain mounted while detail is absent,
+reads, and exactly one is mounted per row. Derive the slot name with
+`testResultDetailSlotName(suiteId, testId)`; other `detail-*` spellings are never slotted. Slot listeners remain mounted while detail is absent,
 so appending matching slotted content after the component's first render immediately enables the
 row's disclosure.
 

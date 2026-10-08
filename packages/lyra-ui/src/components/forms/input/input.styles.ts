@@ -3,6 +3,7 @@ import { css } from 'lit';
 import {
   formControlTextWrap,
   formControlChrome,
+  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -31,40 +32,14 @@ export const styles = css`
     --_lr-input-radius-default: var(--lr-form-control-radius);
     /* Fill/border pair swapped per appearance below; the default is outlined, so an element whose
        appearance attribute has not reflected yet still paints the correct border-only box. */
-    --_lr-input-fill-default: var(--lr-color-surface);
-    --_lr-input-border-color-default: var(--lr-color-border);
+    --_lr-input-fill-default: var(--_lr-form-control-fill);
+    --_lr-input-border-color-default: var(--_lr-form-control-border-color);
     /* The shared field focus halo (internal/form-control.styles.ts). Only this private copy is
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this field. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
-  :host([appearance='filled-outlined']) {
-    --_lr-input-fill-default: var(--lr-color-surface-raised);
-    --_lr-input-border-color-default: var(--lr-color-border);
-  }
-  :host([appearance='outlined']) {
-    --_lr-input-fill-default: var(--lr-color-surface);
-    --_lr-input-border-color-default: var(--lr-color-border);
-  }
-  :host([appearance='filled']) {
-    --_lr-input-fill-default: var(--lr-color-surface-raised);
-    --_lr-input-border-color-default: transparent;
-  }
-  :host([filled]) {
-    --_lr-input-fill-default: var(--lr-color-surface-raised);
-    --_lr-input-border-color-default: transparent;
-  }
-  :host([appearance='plain']) {
-    --_lr-input-fill-default: transparent;
-    --_lr-input-border-color-default: transparent;
-  }
-  /* The loudest tier must still read as an editable text surface: *quiet* brand tint as the fill,
-     loud brand on the border only -- a loud fill puts user text on a saturated background at an
-     unpredictable contrast ratio. */
-  :host([appearance='accent']) {
-    --_lr-input-fill-default: var(--lr-color-brand-quiet);
-    --_lr-input-border-color-default: var(--lr-color-brand);
-  }
+  ${formControlAppearance}
   :host([pill]) {
     --_lr-input-radius-default: var(--lr-radius-pill);
   }

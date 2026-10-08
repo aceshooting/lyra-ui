@@ -450,3 +450,30 @@ it('leaves a drop on a nested lr-file-input to that input and still ends its own
   expect(zone.dragging).to.equal(false);
   expect(input.files.map((file) => file.name)).to.deep.equal(['a.txt']);
 });
+
+it('applies exact MIME allow and deny lists like lr-file-input', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple></lr-drop-zone>`);
+  el.allowedMimeTypes = ['text/plain', 'image/png'];
+  el.forbiddenMimeTypes = ['image/png'];
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('a.txt'), makeFile('b.png', 'image/png'), makeFile('c.pdf', 'application/pdf')]);
+  const detail = (await result).detail as LyraDropZoneFilesDetail;
+  expect(detail.files.map((f) => f.name)).to.deep.equal(['a.txt']);
+  expect(detail.rejected.map((r) => `${r.file.name}:${r.reason}`)).to.deep.equal(['b.png:type', 'c.pdf:type']);
+});
+
+it('uses caller-owned accepted and rejected message overrides', async () => {
+  const el = await fixture<LyraDropZone>(
+    html`<lr-drop-zone multiple accept=".txt" accepted-message="{count} added" rejected-message="{count} refused"></lr-drop-zone>`,
+  );
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('a.txt'), makeFile('b.png', 'image/png')]);
+  await result;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('1 added 1 refused');
+});
+
+it('treats multiple="false" as false on lr-file-input like on lr-drop-zone', async () => {
+  const input = await fixture<LyraFileInput>(html`<lr-file-input multiple="false"></lr-file-input>`);
+  expect(input.multiple).to.equal(false);
+});

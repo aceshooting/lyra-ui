@@ -17,6 +17,7 @@ import {
 } from './normalize-mixin-declarations.mjs';
 import { stripCssComments } from './strip-css-comments.mjs';
 import { generateThemeBootstrapAsset } from './generate-theme-bootstrap.mjs';
+import { retargetLocaleLoaders } from './translations-companion.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -124,6 +125,7 @@ const migrationCliDir = join(packageDir, 'dist', 'cli');
 copyMigrationRuntimeModules(join(packageDir, 'scripts'), migrationCliDir);
 await writeFile(join(migrationCliDir, 'migration-contract.json'), await migrationContract, 'utf8');
 await chmod(join(migrationCliDir, 'migrate-wa.mjs'), 0o755);
+await chmod(join(migrationCliDir, 'lyra-ui.mjs'), 0o755);
 
 const compactedMigrationCli = await compactBuildJavaScript(migrationCliDir);
 console.log(
@@ -142,3 +144,11 @@ console.log('Unbundled localization slice imports and public fallback catalog ve
 
 await checkTranslationSlices(packageDir);
 console.log('Per-family translation catalog slices and unchanged aggregate imports verified.');
+
+// The real catalogs publish from @aceshooting/lyra-translations (assembled from dist/translations,
+// which package.json#files excludes), so the shipped lazy loaders must import them from there.
+const localeLoadersFile = join(packageDir, 'dist', 'internal', 'locale-loaders.generated.js');
+const localeLoaders = retargetLocaleLoaders(await readFile(localeLoadersFile, 'utf8'));
+if (localeLoaders.includes('../translations/')) throw new Error('locale loaders still import catalogs relative to lyra-ui.');
+await writeFile(localeLoadersFile, localeLoaders);
+console.log('Locale loaders retargeted at @aceshooting/lyra-translations.');

@@ -71,7 +71,7 @@ async function buildFixture() {
 const fixture = await buildFixture();
 try {
   // RED: before generation, no `src/translations/xx/` slice directory exists at all -- a consumer
-  // writing `import '@aceshooting/lyra-ui/translations/xx/forms';` would resolve nothing. Confirm
+  // writing `import '@aceshooting/lyra-translations/xx/forms';` would resolve nothing. Confirm
   // the generator itself reports every slice + the aggregate as pending (not yet written), which is
   // the same signal a `--write`-less CI run would surface as a stale-slices failure.
   const before = await generateTranslationSlices({ packageDir: fixture, write: false, exclusions: {} });

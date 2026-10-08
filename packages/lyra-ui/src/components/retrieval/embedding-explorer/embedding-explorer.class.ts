@@ -18,7 +18,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { styles } from './embedding-explorer.styles.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit } from '../../../internal/default-strings.generated.js';
@@ -208,7 +208,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       ].sort();
     }
     if (!changed.has('points')) return;
-    const active = activeElementIn(this.shadowRoot) ?? null;
+    const active = shadowFocusTarget(this) ?? null;
     const focusedId = active?.getAttribute('data-id');
     const points = this.renderedPoints;
     const matchingIndex = focusedId

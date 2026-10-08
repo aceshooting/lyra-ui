@@ -13,12 +13,15 @@ import {
   DropSessionController,
   type DropSessionState,
 } from '../../../internal/drop-session-controller.js';
-import { classifyFiles, freezeDetail, handleDrop, type FileIntakeResult } from '../file-input/file-intake.js';
+import {
+  classifyFiles, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, outcomeText, snapshotMimeTypes,
+  type FileIntakeResult,
+} from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraDropZoneRejectedFile {
@@ -114,6 +117,9 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
     dropzoneRejectedType: LYRA_DEFAULT_dropzoneRejectedType,
     dropzoneReleaseToAdd: LYRA_DEFAULT_dropzoneReleaseToAdd,
     fileInputAcceptedMany: LYRA_DEFAULT_fileInputAcceptedMany,
@@ -128,6 +134,12 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     fileInputRejectedRead: LYRA_DEFAULT_fileInputRejectedRead,
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = eventCollectionSupport;
@@ -146,6 +158,16 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** Native-`accept`-style allowlist (`".csv,.xlsx"`, `"image/*"`, comma-separated mixes) --
    *  identical parsing to `lr-file-input`'s `accept`, via the same `matchesAccept()`. */
   @property() accept = '';
+  /** Exact MIME allowlist, identical to `lr-file-input`'s; read as a bounded snapshot on each drop. */
+  @property({ attribute: false }) allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
+  /** Exact MIME denylist, evaluated before `allowedMimeTypes`. */
+  @property({ attribute: false }) forbiddenMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
+  /** Message announced after an accepted drop; `{count}` becomes the accepted-file count.
+   *  `undefined` uses the localized default; any supplied string, including `''`, is caller-owned. */
+  @property({ attribute: 'accepted-message' }) acceptedMessage?: string;
+  /** Message announced after rejected files; `{count}` becomes the rejected-file count.
+   *  `undefined` uses the localized default; any supplied string, including `''`, is caller-owned. */
+  @property({ attribute: 'rejected-message' }) rejectedMessage?: string;
   /** Largest accepted file size in bytes. `0` (the default) disables the check -- identical
    *  contract to `lr-file-input`'s `maxFileSize`, including its invalid-override fallback. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
@@ -258,7 +280,10 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   }
 
   private classify(fileList: File[], isPreview = false): FileIntakeResult {
-    return classifyFiles(this, fileList, this.multiple, [], isPreview);
+    return classifyFiles(
+      this, fileList, this.multiple, [], isPreview,
+      mimeTypeFilter(snapshotMimeTypes(this.allowedMimeTypes), snapshotMimeTypes(this.forbiddenMimeTypes)),
+    );
   }
 
   private rejectionMessage(rejected: LyraDropZoneRejectedFile): string {
@@ -290,22 +315,14 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     const messages: string[] = [];
     const numberFormat = getNumberFormat(this.effectiveLocale);
     if (files.length) {
-      messages.push(
-        this.localize(
-          files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany',
-          undefined,
-          { count: numberFormat.format(files.length) },
-        ),
-      );
+      const count = numberFormat.format(files.length);
+      const key = files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany';
+      messages.push(outcomeText(this.acceptedMessage, () => this.localize(key, undefined, { count }), count));
     }
     if (rejected.length) {
-      messages.push(
-        this.localize(
-          rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany',
-          undefined,
-          { count: numberFormat.format(rejected.length) },
-        ),
-      );
+      const count = numberFormat.format(rejected.length);
+      const key = rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany';
+      messages.push(outcomeText(this.rejectedMessage, () => this.localize(key, undefined, { count }), count));
     }
     this.resultStatus = messages.filter((message) => message.length > 0).join(' ');
     this.emit('lr-files', detail);

@@ -29,8 +29,7 @@ treat a gap in any of them as a bug, not a missing feature.
   `this.localize('close')`. Passing `this.someProp` unconditionally has the same bug as a literal —
   it always short-circuits the registry unless the prop happens to be `undefined`, and it gives
   `.strings` priority over a defined property override. Resolve public copy properties before
-  calling `localize()` as described in the next bullet. This is the single easiest-to-introduce
-  regression in the library. `scripts/check-source-policy.mjs` greps for the
+  calling `localize()` as described in the next bullet. This is the easiest regression to introduce. `scripts/check-source-policy.mjs` greps for the
   `this.localize('key', 'literal'` shape and fails on it, but it's a pattern-matcher, not a
   semantic check — a fallback that *looks* conditional but is actually unconditional (e.g.
   `this.someProp` passed straight through), or any variant the grep can't see, still slips past.
@@ -65,7 +64,7 @@ treat a gap in any of them as a bug, not a missing feature.
   caches in `src/internal/intl-cache.ts`, or a `Date.prototype.toLocaleString`-family call —
   never a hardcoded literal tag (e.g. `'en'`) and never an unconditional bare `undefined`, which
   silently falls back to the runtime/OS default instead of the page's resolved Lyra locale.
-  Second-most independently rediscovered defect shape in this library's history; no automated
+  No automated
   gate checks it (`check-source-policy.mjs`'s `intl-outside-cache` rule only catches a formatter
   constructed outside the shared cache, not a wrong locale value passed into it) — review by
   hand.
@@ -164,13 +163,9 @@ category fixture defines structural requirements without claiming linguistic qua
 
 ## Theming — design tokens only
 
-See "Design tokens only" in [coding-conventions.md](coding-conventions.md) — every component value
-references a centralized `--lr-*` property. Themeable base tokens bridge to `--lr-theme-*` with a
-built-in fallback; aliases, computed/ramp tokens, environment values, and fixed contract constants
-can resolve within the internal layer instead. This also makes i18n and RTL "just work" visually:
-token-driven spacing and sizing hardcode no text direction or font width, so longer/shorter
-translated strings and mirrored RTL layouts reflow correctly without component-specific
-overrides.
+The token rules are under "Design tokens only" in [coding-conventions.md](coding-conventions.md).
+Token-driven spacing and sizing hardcode no text direction or font width, so longer or shorter
+translations and mirrored RTL layouts reflow without component-specific overrides.
 
 ### The dark palette has three parallel routes — keep all of them in sync
 
@@ -185,9 +180,7 @@ ancestor does. So for `<lr-badge data-lr-theme="dark">` in Chromium the winning 
 Firefox and WebKit do not implement `:host-context()` at all, so there the attribute block governs.
 
 Consequence: **a defect introduced into only one of the two blocks is invisible in one engine.**
-Verified empirically (2026-08-12) while tracing the badge/callout quiet-tier chain — injecting a
-light-mode literal into just one block left the tests green in the other engine; both had to be
-corrupted before a Chromium test went red. When you touch that file, change every route, and when
+A literal injected into just one block leaves tests green in the other engine. When you touch that file, change every route, and when
 you write a dark-mode regression test remember that passing locally on one engine proves less than
 it looks. `check:palette-freshness` covers generation, not cross-route agreement.
 

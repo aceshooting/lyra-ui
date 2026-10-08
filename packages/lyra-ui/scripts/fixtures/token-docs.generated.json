@@ -2440,9 +2440,8 @@
       "evidence": [
         "src/components/agent-tools/tool-call-chip/tool-call-chip.styles.ts",
         "src/components/agent-tools/tool-select-dialog/tool-select-dialog.styles.ts",
-        "src/components/conversation/model-select/model-select.styles.ts",
+        "src/components/conversation/catalog-picker-trigger.styles.ts",
         "src/components/conversation/model-settings-panel/model-settings-panel.styles.ts",
-        "src/components/conversation/voice-picker/voice-picker.styles.ts",
         "src/components/data/stat/stat.styles.ts",
         "src/components/forms/combobox/combobox.styles.ts",
         "src/components/forms/select/select.styles.ts",

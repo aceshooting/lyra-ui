@@ -5,6 +5,7 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
+  formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
 } from '../../../internal/form-control.styles.js';
@@ -14,8 +15,8 @@ export const styles = css`
     display: block;
     container-type: inline-size;
     contain-intrinsic-inline-size: var(--lr-size-12rem);
-    --_lr-time-input-border-color-default: var(--lr-color-border);
-    --_lr-time-input-fill-default: var(--lr-color-surface);
+    --_lr-time-input-border-color-default: var(--_lr-form-control-border-color);
+    --_lr-time-input-fill-default: var(--_lr-form-control-fill);
     --_lr-time-input-color-default: var(--lr-color-text);
     --_lr-time-input-control-min-height-default: var(--lr-form-control-height);
     /* --lr-time-input-control-height is deliberately NOT declared here: it is read only through
@@ -67,21 +68,7 @@ export const styles = css`
     font: inherit;
     font-size: var(--lr-form-control-font-size);
   }
-  :host([appearance='filled']) {
-    --_lr-time-input-border-color-default: transparent;
-    --_lr-time-input-fill-default: var(--lr-color-surface-raised);
-  }
-  :host([appearance='filled-outlined']) {
-    --_lr-time-input-fill-default: var(--lr-color-surface-raised);
-  }
-  :host([appearance='plain']) {
-    --_lr-time-input-border-color-default: transparent;
-    --_lr-time-input-fill-default: transparent;
-  }
-  :host([appearance='accent']) {
-    --_lr-time-input-border-color-default: var(--lr-color-brand);
-    --_lr-time-input-fill-default: var(--lr-color-brand-quiet);
-  }
+  ${formControlAppearance}
   :host([pill]) [part~='time-input'] {
     border-radius: var(--lr-time-input-radius, var(--lr-radius-pill));
   }

@@ -78,23 +78,14 @@ import { isMainModule } from './is-main-module.mjs';
 // A component that extends the shared `FormAssociated` mixin directly and never redeclares
 // name/required/disabled gets all of the above for free and is not flagged.
 // Self-test: `node scripts/check-form-associated.test.mjs`.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walk } from './lib/fs-walk.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 const srcRoot = join(packageDir, 'src');
 const componentsRoot = join(srcRoot, 'components');
-
-function walk(directory) {
-  const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...walk(entryPath));
-    else files.push(entryPath);
-  }
-  return files;
-}
 
 /** Returns the substring from `source[openBraceIndex]` (which must be `'{'`) through its matching
  *  closing brace, inclusive -- a small hand-rolled balanced-brace scan, since `static properties =

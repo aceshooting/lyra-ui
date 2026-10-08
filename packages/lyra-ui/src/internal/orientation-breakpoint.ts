@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { resolveCssLength } from './css-length.js';
+import { CSS_NUMBER_SOURCE } from './css-number.js';
 
 /**
  * Which box a responsive breakpoint is compared against — the component's own measured allocation
@@ -18,14 +19,14 @@ export type BreakpointBasis = 'container' | 'viewport';
 /** A bare CSS `<number>` with no unit — mirrors css-length.ts's `CSS_LENGTH_RE` numeric
  *  part. `matchMedia()`, unlike `resolveCssLength`, has no unitless default, so this is what the
  *  raw value must match before `arm()` appends `px` to it. */
-const BARE_NUMBER_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/;
+const BARE_NUMBER_RE = new RegExp(`^${CSS_NUMBER_SOURCE}$`);
 
 /** The grammar a raw value must satisfy to be a usable `'viewport'`-basis breakpoint: the same
  *  signed CSS `<number>` as `BARE_NUMBER_RE`, plus an optional `px`/`rem`/`em` unit — mirrors
  *  css-length.ts's `CSS_LENGTH_RE` subset accepted by this controller. This only decides whether `arm()` is worth calling
  *  `matchMedia()` at all; it is not consulted for the actual crossing comparison, which the
  *  browser owns under viewport basis. */
-const VIEWPORT_LENGTH_RE = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em)?$/i;
+const VIEWPORT_LENGTH_RE = new RegExp(`^${CSS_NUMBER_SOURCE}(?:px|rem|em)?$`, 'i');
 
 /** Resolves only the breakpoint vocabulary these controllers have always published. The shared
  * CSS-length resolver additionally supports percentages and viewport units for callers with an

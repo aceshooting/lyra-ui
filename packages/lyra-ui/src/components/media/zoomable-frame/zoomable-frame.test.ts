@@ -4,6 +4,7 @@ import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
 import * as classModule from './zoomable-frame.class.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 
 const INLINE_DOCUMENT = '<!doctype html><html><body><p>Inline preview</p></body></html>';
 
@@ -25,9 +26,7 @@ async function eventually(condition: () => boolean): Promise<void> {
   // observed to exceed a 1000ms deadline deep inside the full multi-hundred-file engine suite,
   // though never in an isolated run of this file alone. 3000ms keeps the same poll shape with
   // headroom for that queue depth.
-  const deadline = Date.now() + 3000;
-  while (!condition() && Date.now() < deadline) await aTimeout(10);
-  expect(condition()).to.be.true;
+  await waitUntil(condition, 'condition never became true', { timeout: 3000 });
 }
 
 describe('mapped iframe surface', () => {
@@ -305,14 +304,6 @@ describe('zoom controls and interaction', () => {
     // Resolve the default hover token to a concrete color so the poll below waits for the exact
     // painted value: "differs from resting" is satisfied by the FIRST interpolated frame of the
     // --lr-transition-fast ease, which proves nothing about where the hover rule lands.
-    const resolvedInShadow = (host: LyraZoomableFrame, declaration: string, property: string): string => {
-      const probe = document.createElement('span');
-      probe.setAttribute('style', declaration);
-      host.shadowRoot!.append(probe);
-      const value = getComputedStyle(probe).getPropertyValue(property);
-      probe.remove();
-      return value;
-    };
     const defaultHoverBackground = resolvedInShadow(
       defaults,
       'background: var(--lr-color-brand-quiet)',
@@ -1008,6 +999,7 @@ it('tracks sequential Tab/Shift+Tab and pointer entry at the browsing-context bo
       await sendMouse({ type: 'click', position });
       const deadline = Date.now() + 1000;
       while (!el.hasAttribute('data-frame-focused') && Date.now() < deadline) {
+        // wait-reason: poll interval inside a bounded per-attempt retry loop (waitUntil would throw)
         await aTimeout(10);
       }
       focused = el.hasAttribute('data-frame-focused');

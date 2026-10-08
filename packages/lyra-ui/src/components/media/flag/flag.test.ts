@@ -99,6 +99,7 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   // Give the original 'fr' resolution every chance to land. A correctly
   // token-guarded implementation recognizes it as superseded and no-ops; a
   // buggy one overwrites the cleared state with the stale flag.
+  // wait-reason: asserting a stale resolver result is ignored (no state change to await)
   await aTimeout(200);
   expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
@@ -367,6 +368,7 @@ it('rejects a path-traversal-shaped country value instead of passing it to the f
   // an un-validated `country` would resolve to a live <img> pointing outside
   // the intended flags/ directory; a validated one is treated as unknown and
   // never calls the resolver at all, so no <img> ever appears.
+  // wait-reason: asserting a traversal-shaped country never reaches the resolver (no img ever appears)
   await aTimeout(50);
   expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
@@ -377,6 +379,7 @@ it('rejects a path-traversal-shaped language region subtag instead of passing it
   // Same escape as the country test above, reached via `language`'s region
   // subtag instead: an un-validated region would resolve to a live <img>
   // pointing outside the intended flags/ directory.
+  // wait-reason: asserting a traversal-shaped region never reaches the resolver (no img ever appears)
   await aTimeout(50);
   expect((el.shadowRoot!.querySelector('img')) == null).to.equal(true);
   expect(el.getAttribute('aria-busy')).to.equal('false');
@@ -674,6 +677,7 @@ describe('live resolver registration', () => {
     setFlagUrlResolver(async () => TEST_FLAG_SRC_REPLACEMENT);
     expect((await img(el)).getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
     settleOld!(TEST_FLAG_SRC);
+    // wait-reason: asserting a stale resolver result does not overwrite the replacement src
     await aTimeout(20);
     expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(
       TEST_FLAG_SRC_REPLACEMENT,
@@ -746,6 +750,7 @@ describe('connection-scoped source transactions', () => {
     const parent = el.parentElement!;
     el.remove();
     resolvers[0]!(TEST_FLAG_SRC);
+    // wait-reason: asserting a detached element ignores a late resolver result
     await aTimeout(20);
     expect(el.shadowRoot!.querySelector('img') === null).to.be.true;
 
@@ -961,6 +966,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     try {
       el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
       // Give the rejection every chance to surface as an unhandled rejection before asserting.
+      // wait-reason: asserting no unhandledrejection surfaces after the failed resolve
       await aTimeout(50);
     } finally {
       window.removeEventListener('unhandledrejection', onUnhandled);
@@ -1090,13 +1096,14 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
       // Reject the stale 'fr' call first: the guard must recognize it as superseded and no-op,
       // leaving the still-in-flight 'de' call's loading state untouched.
       rejecters[0]!(new Error('stale fr failure'));
+      // wait-reason: asserting a stale rejection leaves loading untouched
       await aTimeout(20);
       expect(el.loading, 'the stale rejection must not touch loading').to.be.true;
 
       // Now reject the current 'de' call: its own .catch() branch (token === resolveToken) must
       // still fire and recover to loading=false.
       rejecters[1]!(new Error('de failure'));
-      await aTimeout(20);
+      await waitUntil(() => !el.loading, 'the current rejection never cleared loading');
     } finally {
       window.removeEventListener('unhandledrejection', onUnhandled);
       console.warn = originalWarn;
@@ -1348,6 +1355,7 @@ describe('missing-resolver diagnostic', () => {
       html`<lr-flag src=${TEST_FLAG_SRC} label="Test"></lr-flag>`,
     );
     await el.updateComplete;
+    // wait-reason: asserting no warning is ever emitted
     await aTimeout(20);
 
     expect(warnings, 'src bypasses the resolver entirely').to.deep.equal([]);
@@ -1357,6 +1365,7 @@ describe('missing-resolver diagnostic', () => {
     setFlagUrlResolver(null);
     const el = await fixture<LyraFlag>(html`<lr-flag country="ZZZ"></lr-flag>`);
     await el.updateComplete;
+    // wait-reason: asserting no warning is ever emitted
     await aTimeout(20);
 
     expect(el.hasAttribute('data-unresolved'), 'still reflects the unresolved state').to.be.true;
@@ -1431,4 +1440,16 @@ describe('peer capability diagnostics', () => {
     expect(String(outdated.calls[0]![0])).to.contain('flagUrl');
     expect(String(outdated.calls[0]![0])).to.not.contain('install it with');
   });
+});
+
+it('mounts its assertive announcement sink only once it starts loading a flag', async () => {
+  const selector = `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`;
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-flag></lr-flag></div>`);
+  const el = wrapper.querySelector('lr-flag') as LyraFlag;
+  await el.updateComplete;
+  await aTimeout(50);
+  expect(document.querySelector(selector) === null, 'an empty flag can never announce').to.be.true;
+  el.country = 'LB';
+  await waitUntil(() => document.querySelector(selector) !== null, 'the sink mounts when the load starts');
+  el.remove();
 });

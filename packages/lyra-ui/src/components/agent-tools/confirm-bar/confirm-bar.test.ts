@@ -1305,6 +1305,7 @@ describe('waitUntil (deferred decisions)', () => {
       work.reject(new Error('dropped deferral'));
       // `unhandledrejection` is only reported once the microtask queue has drained, so a macrotask
       // turn is the earliest point at which its absence is evidence rather than timing.
+      // wait-reason: asserting no unhandledrejection is reported (see above)
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(unhandled, 'the dropped promise is absorbed, not leaked').to.deep.equal([]);
       expect(el.decision).to.equal('approved');

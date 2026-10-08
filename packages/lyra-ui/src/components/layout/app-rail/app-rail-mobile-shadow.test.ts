@@ -1,5 +1,6 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraAppRail } from './app-rail.class.js';
 import './app-rail.js';
@@ -8,16 +9,6 @@ function mobile(rail: LyraAppRail, matches = true): void {
   (rail as unknown as { onMobileChange(event: { matches: boolean }): void }).onMobileChange({ matches });
 }
 function panel(rail: LyraAppRail): HTMLElement { return rail.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!; }
-/** What `declaration` computes to inside the rail's shadow root, where the `--lr-*` tokens its
- *  hooks fall back to are declared, so a rendered value is compared exactly, not by substring. */
-function resolvedInShadow(rail: LyraAppRail, declaration: string, property: string): string {
-  const probe = document.createElement('span');
-  probe.setAttribute('style', declaration);
-  rail.shadowRoot!.appendChild(probe);
-  const value = getComputedStyle(probe).getPropertyValue(property);
-  probe.remove();
-  return value;
-}
 const openElevation = (rail: LyraAppRail): string => resolvedInShadow(rail, 'box-shadow: var(--lr-shadow-l)', 'box-shadow');
 function sliding(element: HTMLElement): boolean {
   return element.getAnimations().some(animation => 'transitionProperty' in animation && animation.transitionProperty === 'transform' && animation.playState === 'running');

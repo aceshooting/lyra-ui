@@ -5,7 +5,7 @@ import { isMainModule } from './is-main-module.mjs';
 // Resolve real TypeScript types when possible and conservatively recognize DOM-producing syntax
 // when TypeScript 7 reports a selector expression as `any`/`unknown`/error. Tests must compare a
 // boolean or stable primitive projection instead of handing Chai a live node.
-import { readdirSync } from 'node:fs';
+import { walk } from './lib/fs-walk.mjs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -22,8 +22,16 @@ import {
   isIdentifier,
   isNonNullExpression,
   isNullLiteral,
+  isBigIntLiteral,
+  isFalseLiteral,
+  isNoSubstitutionTemplateLiteral,
+  isNumericLiteral,
   isParenthesizedExpression,
   isPropertyAccessExpression,
+  isRegularExpressionLiteral,
+  isStringLiteral,
+  isTemplateExpression,
+  isTrueLiteral,
   isSatisfiesExpression,
   isTypeAssertion,
   isVariableDeclaration,
@@ -243,6 +251,7 @@ function isDefinitelyNullish(checker, node, counters) {
   const current = unwrapExpression(node);
   if (isNullLiteral(current) || isVoidExpression(current)) return true;
   if (isIdentifier(current) && current.text === 'undefined') return true;
+  if (isPrimitiveLiteral(current)) return false;
   try {
     const type = checker.getTypeAtLocation(current);
     if (!type || type.isErrorType()) return false;
@@ -458,7 +467,23 @@ function assertionPolarity(expectCall, assertionNode) {
   return 'positive';
 }
 
+/** A primitive literal can never be a DOM node, so it needs no checker round trip. */
+function isPrimitiveLiteral(node) {
+  const current = unwrapExpression(node);
+  return (
+    isStringLiteral(current) ||
+    isNumericLiteral(current) ||
+    isBigIntLiteral(current) ||
+    isRegularExpressionLiteral(current) ||
+    isNoSubstitutionTemplateLiteral(current) ||
+    isTemplateExpression(current) ||
+    isTrueLiteral(current) ||
+    isFalseLiteral(current)
+  );
+}
+
 function checkPayload(checker, node, targetType, counters) {
+  if (isPrimitiveLiteral(node)) return { isDom: false, via: 'literal' };
   const result = isDomType(checker, node, targetType);
   // A syntax classification can preserve useful diagnostics after a checker operation failed,
   // but it must never turn that operational failure into a green policy result.
@@ -585,19 +610,10 @@ export function defaultTestFileFilter(fileName) {
 
 /** Every component test file on disk, found independently of the TypeScript program. */
 export function discoverComponentTestFiles(cwd = packageDir) {
-  const files = [];
-  const walk = (directory) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const file = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(file);
-      else if (entry.isFile()) {
-        const fileName = file.split(path.sep).join('/');
-        if (defaultTestFileFilter(fileName)) files.push(fileName);
-      }
-    }
-  };
-  walk(path.join(cwd, 'src', 'components'));
-  return files.sort();
+  return walk(path.join(cwd, 'src', 'components'))
+    .map((file) => file.split(path.sep).join('/'))
+    .filter(defaultTestFileFilter)
+    .sort();
 }
 
 /** `expected`: the discovered file names (the scanned set must equal them) or, for fixtures, a count. */

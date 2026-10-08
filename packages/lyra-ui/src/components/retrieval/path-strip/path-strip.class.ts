@@ -14,7 +14,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -144,7 +144,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     super.willUpdate(changed);
     if (!changed.has('path')) return;
     this.restoreFocusAfterPathChange =
-      activeElementIn(this.shadowRoot)?.matches(
+      shadowFocusTarget(this)?.matches(
         '[part="node"], [part="relation"]'
       ) ?? false;
     this.activeIndex = Math.min(

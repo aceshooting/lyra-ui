@@ -7,10 +7,12 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { styles } from './connector-manager.styles.js';
+import '../../forms/button/button.class.js';
 import { firstByIdentity } from '../collection-identity.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type AgentConnectorKind = 'mcp' | 'connector';
@@ -78,7 +80,9 @@ const ACTION_ACCESSIBLE_LABEL_KEY: Record<ConnectorAction, string> = {
  * @csspart description - Optional host-supplied description.
  * @csspart status - The localized controlled connection status (`tabindex="-1"`).
  * @csspart error - Optional host-localized error text.
- * @csspart action - The native action button, themed through the shared `--lr-button-*` tokens.
+ * @csspart action - The action `<lr-button>`, themed through the shared `--lr-button-*` tokens.
+ * @csspart action-base - The action button's internal control (forwarded from `<lr-button>`).
+ * @csspart action-label - The action button's label wrapper (forwarded from `<lr-button>`).
  * @csspart empty - The empty state.
  * @csspart limit - Localized notice shown when more than 100 valid connectors are supplied.
  * @status experimental
@@ -104,11 +108,13 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     connectorManagerStatusConnecting: LYRA_DEFAULT_connectorManagerStatusConnecting,
     connectorManagerStatusDisconnected: LYRA_DEFAULT_connectorManagerStatusDisconnected,
     copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -156,7 +162,7 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated || !changed.has('connectors')) return;
-    this.focusedRowId = this.shadowRoot?.activeElement?.closest<HTMLElement>('[part~="connector"]')?.dataset['connectorId'] ?? null;
+    this.focusedRowId = shadowFocusTarget(this)?.closest<HTMLElement>('[part~="connector"]')?.dataset['connectorId'] ?? null;
     const acted = this.actedConnectorId;
     if (acted === null) return;
     const previous = this.normalizedConnectorsFrom(changed.get('connectors')).find((item) => item.id === acted);
@@ -174,9 +180,19 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
     this.focusedRowId = null;
     if (id !== null) {
       const status = this.rowPart(id, 'status');
-      const active = this.shadowRoot?.activeElement;
-      const action = this.rowPart(id, 'action') as HTMLButtonElement | null;
-      if (!active || active === status) (action && !action.disabled ? action : status)?.focus();
+      const active = shadowFocusTarget(this);
+      const action = this.rowPart(id, 'action') as (HTMLElement & { disabled: boolean; updateComplete?: Promise<unknown> }) | null;
+      if (!active || active === status) {
+        const target = action && !action.disabled ? action : status;
+        // A just-created `<lr-button>` renders its native control on its own first update, and focus
+        // cannot land before that control exists.
+        const moveFocus = (): void => {
+          const current = shadowFocusTarget(this);
+          if (this.isConnected && (!current || current === status)) target?.focus();
+        };
+        if (target === action && action?.updateComplete) void action.updateComplete.then(moveFocus);
+        else moveFocus();
+      }
     }
     if (this.pendingAnnouncement) {
       this.sink?.announce(this.pendingAnnouncement);
@@ -237,13 +253,16 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
         <div part="connector-controls">
           <span part="status" tabindex="-1" data-status=${connector.status}>${this.localize(STATUS_LABEL_KEY[connector.status])}</span>
           ${action
-            ? html`<button
+            ? html`<lr-button
                 part="action"
+                variant="neutral"
+                appearance="outlined"
                 type="button"
+                exportparts="base:action-base, label:action-label"
                 aria-label=${this.localize(ACTION_ACCESSIBLE_LABEL_KEY[action], undefined, { name: connector.name })}
                 ?disabled=${this.disabled}
                 @click=${() => this.requestAction(connector, action)}
-              >${this.localize(ACTION_LABEL_KEY[action])}</button>`
+              >${this.localize(ACTION_LABEL_KEY[action])}</lr-button>`
             : nothing}
         </div>
       </div>

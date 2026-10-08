@@ -9,6 +9,9 @@ package receives security fixes.
 | ------------------------ | ------------------- |
 | `@aceshooting/lyra-ui`    | Latest release only |
 | `@aceshooting/lyra-flags` | Latest release only |
+| `@aceshooting/lyra-docs`  | Latest release only |
+| `@aceshooting/lyra-ide`   | Latest release only |
+| `@aceshooting/lyra-translations` | Latest release only |
 
 Older versions will not receive backported patches. Please upgrade to the latest release before
 reporting an issue.

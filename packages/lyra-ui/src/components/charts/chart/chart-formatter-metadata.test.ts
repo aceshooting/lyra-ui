@@ -182,11 +182,12 @@ describe('lr-chart formatter metadata', () => {
   });
 
   it('reports SOURCE series indexes on a legend whose series were sampled away', async () => {
-    // Past the shared 1000-cell budget the legend renders one entry per SAMPLED series, and those
+    // Past the shared 1000-cell budget (series are thinned only when there are too many to leave two
+    // rows each, i.e. more than 500) the legend renders one entry per SAMPLED series, and those
     // entries are built from `dataTableSample()`, whose indexes are already source indexes. Mapping
     // them through the visual tables a second time renumbers each entry onto a different series, so
     // an entry would report the label and index of a series other than the one its swatch paints.
-    const seriesCount = 40;
+    const seriesCount = 600;
     const rowCount = 30;
     const el = await fixture<LyraChart>(html`<lr-chart
       type="line"

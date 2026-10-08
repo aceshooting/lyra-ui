@@ -917,7 +917,7 @@ it("renders a localized, non-live error row and announces each async source fail
       throw new Error("private server detail");
     };
     await el.updateComplete;
-    await aTimeout(20);
+    await waitUntil(() => el.shadowRoot!.querySelector('.source-error') !== null, 'the source failure renders');
     await el.updateComplete;
     const error = el.shadowRoot!.querySelector(".source-error") as HTMLElement;
     // The copy now lives on the shared state renderer's composed <lr-empty>, whose heading is in
@@ -940,7 +940,7 @@ it("renders a localized, non-live error row and announces each async source fail
       throw new Error("different private detail");
     };
     await el.updateComplete;
-    await aTimeout(20);
+    await waitUntil(() => assertiveAnnouncements().length === 2, 'the second failure is announced');
     await el.updateComplete;
     expect(assertiveAnnouncements()).to.deep.equal([
       "Options unavailable",

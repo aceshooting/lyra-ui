@@ -401,6 +401,20 @@ it('emits lr-point-activate on Enter and Space while a bar is focused, not on ot
   expect(count).to.equal(2);
 });
 
+it('does not rebuild the data-list sentences when an arrow key only moves the active mark', async () => {
+  const labels = Array.from({ length: 40 }, (_, index) => `L${index}`);
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${labels} .datasets=${[{ label: 'A', data: labels.map((_, index) => index + 1) }]}></lr-lite-chart>`);
+  const original = (el as any).localize.bind(el);
+  let summaries = 0;
+  (el as any).localize = (key: string, ...rest: unknown[]) => {
+    if (key === 'liteChartMarkSummary') summaries += 1;
+    return original(key, ...rest);
+  };
+  el.shadowRoot!.querySelector('[part="bar"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+  expect(summaries).to.be.lessThan(10);
+});
+
 it('uses one roving tab stop, arrow/Home/End navigation, and a data-table alternative for multi-series', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"

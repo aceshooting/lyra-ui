@@ -19,6 +19,10 @@ test('detects internal identifiers, tooling references, and process labels in tr
   assert.deepEqual(labels('notes.md', 'See docs/superpowers/plans/widget.md.'), [
     'local-only tooling reference',
   ]);
+  assert.deepEqual(labels('README.md', 'Skills install into .claude/skills/ and .agents/skills/.'), []);
+  assert.deepEqual(labels('notes.md', 'See .claude/settings.json and .claude/commands/x.md.'), [
+    'local-only tooling reference',
+  ]);
   assert.deepEqual(labels('notes.md', 'The earlier audit finding required this workaround.'), [
     'internal audit or review process',
   ]);

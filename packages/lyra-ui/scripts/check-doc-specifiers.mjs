@@ -15,10 +15,11 @@
 // The lesson both share is that a naming convention over the SOURCE tree cannot see a promise made
 // in prose. This check reads the promises instead: it starts from what is written down, not from
 // what the file tree happens to look like, so it catches the next one whatever it is called.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
+import { walk } from './lib/fs-walk.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -26,6 +27,8 @@ const defaultWorkspacePackageDirs = Object.freeze([
   defaultPackageDir,
   join(dirname(defaultPackageDir), 'lyra-flags'),
   join(dirname(defaultPackageDir), 'lyra-docs'),
+  join(dirname(defaultPackageDir), 'lyra-ide'),
+  join(dirname(defaultPackageDir), 'lyra-translations'),
 ]);
 
 /**
@@ -68,15 +71,6 @@ function concreteModulePattern(packageName) {
   );
 }
 
-function walkFiles(directory, out = []) {
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) walkFiles(entryPath, out);
-    else out.push(entryPath);
-  }
-  return out;
-}
-
 function scannedFiles(packageDir) {
   const files = [];
   for (const name of SCANNED_FILES) {
@@ -94,7 +88,7 @@ function scannedFiles(packageDir) {
     } catch {
       continue;
     }
-    for (const file of walkFiles(path)) {
+    for (const file of walk(path)) {
       if (file.endsWith('.test.ts') || file.endsWith('.stories.ts')) continue;
       if (file.endsWith('.md') || file.endsWith('.ts') || file.endsWith('.txt')) files.push(file);
     }

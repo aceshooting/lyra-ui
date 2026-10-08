@@ -1,4 +1,4 @@
-import { twoFrames as nextFrames } from '../../../../test/frames.js';
+import { twoFrames, twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1825,7 +1825,7 @@ describe('DOM moves', () => {
       const el = (await fixture(html`<lr-xml-viewer src="https://example.test/a.xml"></lr-xml-viewer>`)) as LyraXmlViewer;
       await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="tag"]').length > 0);
       host.append(el); // a move: disconnect and reconnect within one task
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await twoFrames();
       expect(fetches).to.equal(1);
       expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
       el.remove();

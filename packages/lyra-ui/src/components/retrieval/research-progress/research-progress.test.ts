@@ -142,6 +142,13 @@ describe('lr-research-progress', () => {
     expect(el.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal('Research progress');
   });
 
+  it('renders the shared empty state when there are no steps', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress></lr-research-progress>`);
+    const empty = el.shadowRoot!.querySelector('[part="empty"]')!;
+    expect(empty.localName).to.equal('lr-empty');
+    expect(empty.getAttribute('heading')).to.equal('No research steps are available.');
+  });
+
   it('is accessible empty and fits long data inside a narrow RTL allocation', async () => {
     const empty = await fixture<LyraResearchProgress>(html`<lr-research-progress></lr-research-progress>`);
     await expect(empty).to.be.accessible();
@@ -191,4 +198,19 @@ it('shares progress paint hooks and the locale-formatted accessible percentage',
     el.shadowRoot!.querySelector('[part="progress-label"]')!.textContent
   );
   expect(progress.getAttribute('aria-valuenow')).to.equal('25');
+});
+
+it('lr-research-progress drops its card chrome under frame="plain" and tightens padding under a dense size', async () => {
+  const el = await fixture<LyraResearchProgress>(html`<lr-research-progress .steps=${steps}></lr-research-progress>`);
+  await el.updateComplete;
+  const target = () => el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(el.frame).to.equal('card');
+  expect(getComputedStyle(target()).borderTopWidth).to.not.equal('0px');
+  const padding = getComputedStyle(target()).paddingTop;
+  el.size = 's';
+  await el.updateComplete;
+  expect(getComputedStyle(target()).paddingTop).to.not.equal(padding);
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
 });

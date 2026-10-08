@@ -6,7 +6,7 @@
 - **Class** `LyraMutationObserver`, also available unregistered from `@aceshooting/lyra-ui/components/utility/mutation-observer/mutation-observer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
-- **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [utility](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/utility.md)
+- **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
@@ -41,7 +41,7 @@ malformed or accessor-backed entries are skipped, a valid prefix remains active,
 unusable value falls back to an empty filter. A new array with the same names does not rebuild the
 observer.
 
-**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen.
+**Events:** `lr-mutation`; its detail and bounded readonly record sequence are frozen. Changing the observed options delivers any records already queued under the old options first.
 `detail.records` and mapped `detail.mutationList` reference the same sequence, while each native
 `MutationRecord` retains identity.
 

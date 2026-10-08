@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -9,6 +9,8 @@ import {
   findBareGlobalIsNaNCalls,
 } from '../../lyra-ui/scripts/check-source-policy.mjs';
 import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
+import { filesUnderSync as files } from './lib/static-files.mjs';
+import { renderedControlTags } from './lib/editor-tags.mjs';
 import { findBuildArtifactFindings } from '../../lyra-ui/scripts/check-build-artifacts.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -62,12 +64,6 @@ for (const [shipped, upstream] of [['Apache-2.0.txt', 'LICENSE'], ['THIRD_PARTY_
 }
 assert(!JSON.parse(read('.changeset/config.json')).ignore.includes(manifest.name));
 const forbidden = /@aceshooting\/lyra-docs|@docx-editor\.dev\/|(?:\.\.\/)+lyra-docs\//u;
-function files(directory) {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const file = path.join(directory, entry.name);
-    return entry.isDirectory() ? files(file) : [file];
-  });
-}
 const coreManifest = JSON.parse(read('packages/lyra-ui/package.json'));
 for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']) {
   for (const name of Object.keys(coreManifest[field] ?? {})) assert(!forbidden.test(name));
@@ -127,8 +123,7 @@ for (const file of files(path.join(packageRoot, 'src'))) {
 }
 const editorClassSource = read('packages/lyra-docs/src/docx/docx-editor.class.ts');
 const editorEntrySource = read('packages/lyra-docs/src/docx/editor.ts');
-const controlTags = [...editorClassSource.matchAll(/\bunsafeStatic\(tag\('([a-z][a-z0-9-]*)'\)\)/gu)]
-  .map((match) => match[1]);
+const controlTags = renderedControlTags(editorClassSource);
 const registrationTags = [...editorEntrySource.matchAll(/\bimport\s*\(?'@aceshooting\/lyra-ui\/components\/lr-([a-z][a-z0-9-]*)\.js'/gu)]
   .map((match) => match[1]);
 assert(controlTags.length > 0, 'Editor class has no Lyra control tag inventory');

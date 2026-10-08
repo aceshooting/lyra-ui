@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 14 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,7 +146,7 @@ pin toggle; no effect while `details` is overridden.
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
-shown/total notice when more than 50 nodes match), `pinned` (only while
+shown/total notice when more than 50 nodes match), `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 

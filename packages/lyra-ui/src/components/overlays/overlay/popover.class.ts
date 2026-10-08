@@ -49,11 +49,11 @@ import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
   normalizeVirtualRect,
-  observeOverlayAnchorRoots,
+  OverlayAnchorIdentity,
   OverlayDelayTimer,
   OverlayTransitionGate,
   resolveOverlayAnchor,
-  resolveOverlayTriggerById,
+  resolveOverlayInteractionTrigger,
   settleOverlayTransition,
   type OverlayVirtualRect,
 } from './overlay-shared.js';
@@ -555,9 +555,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private positionedAnchor?: Element | VirtualAnchor;
   private positioningDirection?: 'ltr' | 'rtl';
   private directionChanged = false;
-  private observedDirectAnchor?: Element;
-  private observedDirectAnchorWasConnected = false;
-  private stopAnchorIdentityObservation?: () => void;
+  private readonly anchorIdentity = new OverlayAnchorIdentity();
   private accessibleTriggerAria?: AriaOwnershipLease;
   private accessibleTriggerObserver?: MutationObserver;
   private readonly triggerUpgrades = new CustomElementUpgradeObserver(() => {
@@ -719,12 +717,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const direction = this.effectiveDirection;
     this.directionChanged = direction !== this.positioningDirection;
     this.positioningDirection = direction;
-    const lostDirectAnchorProperty =
-      changed.has('anchor')
-      && changed.get('anchor') === this.observedDirectAnchor
-      && this.observedDirectAnchorWasConnected
-      && this.anchor?.isConnected !== true;
-    if (lostDirectAnchorProperty && this.open && !this.resolveAnchor()) {
+    if (this.anchorIdentity.lostAnchorProperty(changed, this.anchor) && this.open && !this.resolveAnchor()) {
       void this.forceClose({ focusTrigger: false });
     }
     // `anchorPositioned` gates `?data-hidden`, keeping the popup invisible until Floating UI has
@@ -885,8 +878,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private teardownOnDisconnect(): void {
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     this.invalidatePositioning();
     this.stopLightDismiss();
     this.resetHostIdObserver();
@@ -913,31 +905,19 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
 
   override adoptedCallback(): void {
     super.adoptedCallback();
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     this.resetHostIdObserver();
     this.releaseTriggerA11y();
   }
   private syncAnchorIdentityObservation(): void {
-    this.stopAnchorIdentityObservation?.();
-    this.stopAnchorIdentityObservation = undefined;
+    this.anchorIdentity.stop();
     // A `for` target can be inserted or replaced while closed and owns interaction, so it remains
     // observable. A direct anchor has no interaction contract and only needs structural tracking
     // while an open surface is actively positioned against it. Slotted triggers use slotchange.
     const directAnchor = this.open ? (this.anchor ?? undefined) : undefined;
-    this.observedDirectAnchor = directAnchor;
-    this.observedDirectAnchorWasConnected = directAnchor?.isConnected === true;
-    if (!this.isConnected || (!this.for && !directAnchor)) return;
-
-    const onIdentityChange = (): void => {
-      const directAnchorRemoved =
-        this.anchor === this.observedDirectAnchor
-        && this.observedDirectAnchorWasConnected
-        && this.observedDirectAnchor?.isConnected === false;
-      this.observedDirectAnchorWasConnected = this.observedDirectAnchor?.isConnected === true;
+    this.anchorIdentity.observe(this, directAnchor, this.for, () => this.anchor, (directAnchorRemoved) => {
       // The trigger's own subtree and upgrade observers re-sync an unchanged trigger.
-      const next = this.virtualAnchor ? undefined : (this.slottedTrigger ?? this.resolveForTrigger());
-      if (next !== this.triggerElement) this.syncInteractionTrigger();
+      if (this.resolveInteractionTrigger() !== this.triggerElement) this.syncInteractionTrigger();
       if (!this.open) return;
       const nextAnchor = this.resolveAnchor();
       if (directAnchorRemoved && !nextAnchor) {
@@ -945,16 +925,15 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
         return;
       }
       if (nextAnchor !== this.positionedAnchor) this.positionPopup();
-    };
-    this.stopAnchorIdentityObservation = observeOverlayAnchorRoots(this, directAnchor, onIdentityChange);
+    });
   }
 
-  private resolveForTrigger(): HTMLElement | undefined {
-    return resolveOverlayTriggerById(this, this.for);
+  private resolveInteractionTrigger(): HTMLElement | undefined {
+    return resolveOverlayInteractionTrigger(this, this.virtualAnchor, this.slottedTrigger, this.for);
   }
 
   private syncInteractionTrigger(): void {
-    const next = this.virtualAnchor ? undefined : (this.slottedTrigger ?? this.resolveForTrigger());
+    const next = this.resolveInteractionTrigger();
     if (next === this.triggerElement) {
       // Re-resolve a custom trigger's real focus target after late upgrade without interpreting an
       // unrelated root mutation as the loss of an initially undistributed declarative trigger.

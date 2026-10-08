@@ -1144,3 +1144,19 @@ describe("review fixes", () => {
     expect(Math.max(...lengths)).to.be.lessThan(500);
   });
 });
+
+it('lr-retrieval-trace drops evidence-row chrome under frame="plain" and tightens the toggle under a dense size', async () => {
+  const stages: RetrievalStage[] = [{ id: 'm', kind: 'embed', startMs: 0, status: 'success', evidence: { metadata: { a: 1 } } }];
+  const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+  const row = () => el.shadowRoot!.querySelector<HTMLElement>('[part="evidence-row"]')!;
+  const toggle = () => el.shadowRoot!.querySelector<HTMLElement>('[part="evidence-toggle"]')!;
+  expect(el.frame).to.equal('card');
+  expect(getComputedStyle(row()).borderTopWidth).to.not.equal('0px');
+  const padding = getComputedStyle(toggle()).paddingTop;
+  el.size = 's';
+  await el.updateComplete;
+  expect(getComputedStyle(toggle()).paddingTop).to.not.equal(padding);
+  el.frame = 'plain';
+  await el.updateComplete;
+  expect(getComputedStyle(row()).borderTopWidth).to.equal('0px');
+});

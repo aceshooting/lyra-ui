@@ -28,44 +28,17 @@ function evenlySpacedIndexes(sourceCount: number, sampleCount: number): number[]
 }
 
 function sampleCounts(rowCount: number, seriesCount: number): ChartTableSampleCounts {
-  const minimumRows = endpointSampleMinimum(rowCount);
-  const minimumSeries = endpointSampleMinimum(seriesCount);
-  const sourceAspect = Math.log(rowCount / seriesCount);
-  let best: ChartTableSampleCounts = { rows: minimumRows, series: minimumSeries };
-  let bestAspectError = Number.POSITIVE_INFINITY;
-  let bestCellCount = 0;
-
-  for (
-    let series = minimumSeries;
-    series <= Math.min(seriesCount, MAX_RENDERED_CHART_RECORDS);
-    series++
-  ) {
-    // Divide the fixed cap by the bounded candidate before choosing rows. This avoids evaluating
-    // the untrusted source-dimension product while proving the bounded product below is safe.
-    const rows = Math.min(rowCount, Math.floor(MAX_RENDERED_CHART_RECORDS / series));
-    if (rows < minimumRows) continue;
-
-    const aspectError = Math.abs(Math.log(rows / series) - sourceAspect);
-    const cellCount = rows * series;
-    if (
-      aspectError < bestAspectError ||
-      (aspectError === bestAspectError && cellCount > bestCellCount)
-    ) {
-      best = { rows, series };
-      bestAspectError = aspectError;
-      bestCellCount = cellCount;
-    }
-  }
-
-  return best;
+  // Series are never thinned below the budget that still leaves both row endpoints; rows absorb the cap.
+  const series = Math.min(seriesCount, Math.floor(MAX_RENDERED_CHART_RECORDS / endpointSampleMinimum(rowCount)));
+  const rows = Math.min(rowCount, Math.floor(MAX_RENDERED_CHART_RECORDS / series));
+  return { rows, series };
 }
 
 /**
  * Selects evenly distributed chart-table row and series indexes within the fixed rendering budget.
  *
- * Both endpoints remain represented for any source axis with two or more entries. The planner
- * selects the attainable pair closest to the source aspect ratio, then favors the pair using more
- * of the bounded cell budget. It never evaluates `rowCount * seriesCount` for source dimensions.
+ * Every series is kept unless there are too many to leave two rows each; rows are thinned to first,
+ * last and evenly spaced entries. It never evaluates `rowCount * seriesCount` for source dimensions.
  */
 export function sampleChartTableIndexes(
   rowCount: number,

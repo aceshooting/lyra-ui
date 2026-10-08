@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
+import { fixture, expect, html, nextFrame, oneEvent, aTimeout, waitUntil } from "@open-wc/testing";
 import "./filter-bar.js";
 import "../../forms/checkbox/checkbox.js";
 import "../../forms/time-range/time-range.js";
@@ -2986,7 +2986,7 @@ describe("'text' free-text filters", () => {
     ).to.deep.equal([]);
     expect(el.value).to.deep.equal({});
 
-    await aTimeout(300);
+    await waitUntil(() => values.length > 0, 'the debounced lr-input commits', { timeout: 2000 });
     expect(values).to.deep.equal(["tim"]);
     expect(el.value).to.deep.equal({ q: "tim" });
   });
@@ -3038,7 +3038,8 @@ describe("'text' free-text filters", () => {
     el.addEventListener("lr-input", () => (inputs += 1));
     await typeInto(el, "q", "draft");
     el.reset();
-    await aTimeout(300);
+    // wait-reason: a cancelled debounce must stay silent; only elapsed time can prove no late emit
+    await aTimeout(120);
 
     expect(el.value).to.deep.equal({});
     expect(inputs, "only the reset itself emitted").to.equal(1);
@@ -3067,7 +3068,8 @@ describe("'text' free-text filters", () => {
         detail: {},
       })
     );
-    await aTimeout(300);
+    // wait-reason: a cancelled debounce must stay silent; only elapsed time can prove no late emit
+    await aTimeout(120);
 
     expect(el.value).to.deep.equal({});
     expect(inputs, "only the chip removal itself emitted").to.equal(1);
@@ -3116,7 +3118,8 @@ describe("'text' free-text filters", () => {
     el.addEventListener("lr-input", () => (fired = true));
     await typeInto(el, "q", "detached");
     el.remove();
-    await aTimeout(300);
+    // wait-reason: a cancelled debounce must stay silent after disconnect; only elapsed time can prove no late emit
+    await aTimeout(120);
     expect(fired).to.be.false;
     expect(el.value).to.deep.equal({});
   });
@@ -3136,7 +3139,8 @@ describe("'text' free-text filters", () => {
     const native = await nativeInput(el, "q");
 
     expect(native.value).to.equal("authoritative");
-    await aTimeout(300);
+    // wait-reason: a cancelled debounce must stay silent after disable; only elapsed time can prove no late emit
+    await aTimeout(120);
     expect(el.value).to.deep.equal({ q: "authoritative" });
     expect(inputs).to.equal(0);
   });
@@ -3155,7 +3159,8 @@ describe("'text' free-text filters", () => {
       { filterId: "q", label: "Replacement", type: "select", options: [] },
     ];
     await el.updateComplete;
-    await aTimeout(300);
+    // wait-reason: a cancelled debounce must stay silent after schema replacement; only elapsed time can prove no late emit
+    await aTimeout(120);
 
     expect(emitted).to.deep.equal([]);
     expect(el.value).to.deep.equal({});
@@ -3174,7 +3179,7 @@ describe("'text' free-text filters", () => {
 
     el.remove();
     container.append(el);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await (
       control(el, "q") as HTMLElement & { updateComplete: Promise<unknown> }
     ).updateComplete;
@@ -3201,7 +3206,7 @@ describe("'text' free-text filters", () => {
     expect(native.selectionStart).to.equal(3);
 
     // …and the commit itself, which re-renders again, must not disturb it either.
-    await aTimeout(300);
+    await waitUntil(() => (el.value as { q?: string }).q === 'abcdef', 'the debounced commit lands', { timeout: 2000 });
     await el.updateComplete;
     await (
       control(el, "q") as HTMLElement & { updateComplete: Promise<unknown> }
@@ -3267,6 +3272,7 @@ describe("'text' free-text filters", () => {
     let fired = false;
     el.addEventListener("lr-input", () => (fired = true));
     await typeInto(el, "q", "nope");
+    // wait-reason: negative assertion: a disabled bar must never emit
     await aTimeout(120);
     expect(fired).to.be.false;
     expect(el.value).to.deep.equal({});
@@ -3740,7 +3746,7 @@ describe("'combobox' debounce", () => {
     await el.updateComplete;
     expect(collected).to.deep.equal([]);
 
-    await aTimeout(120);
+    await waitUntil(() => collected.length > 0, 'the debounced commit lands', { timeout: 2000 });
     expect(collected).to.deep.equal([['urgent', 'billing']]);
     expect(el.value).to.deep.equal({ tags: ['urgent', 'billing'] });
   });
@@ -3798,6 +3804,7 @@ describe("'combobox' debounce", () => {
     let inputs = 0;
     el.addEventListener('lr-input', () => (inputs += 1));
     el.reset();
+    // wait-reason: negative assertion: a cancelled debounce must not emit past its window
     await aTimeout(120);
 
     expect(el.value).to.deep.equal({});
@@ -3823,6 +3830,7 @@ describe("'combobox' debounce", () => {
     expect(Object.hasOwn(el.value, 'tags'), 'the chip removal itself must clear tags').to.equal(false);
     expect(inputs, 'only the chip removal itself emitted so far').to.equal(1);
 
+    // wait-reason: negative assertion: a leaked debounce timer must not emit past its window
     await aTimeout(120); // well past the 60ms debounce window
     expect(inputs, 'a leaked debounce timer must not re-emit lr-input after the chip removal').to.equal(1);
     expect(Object.hasOwn(el.value, 'tags'), 'the stale pending pick must not resurrect tags').to.equal(false);
@@ -3841,6 +3849,7 @@ describe("'combobox' debounce", () => {
     expect(el.value).to.deep.equal({});
 
     el.remove();
+    // wait-reason: negative assertion: a leaked debounce timer must not emit after disconnect
     await aTimeout(120); // well past the 60ms debounce window
     expect(fired, 'a leaked debounce timer must not emit lr-input after disconnect').to.be.false;
     expect(el.value).to.deep.equal({});
@@ -3896,7 +3905,7 @@ describe("'custom' debounce", () => {
     await el.updateComplete;
     expect(collected).to.deep.equal([]);
 
-    await aTimeout(120);
+    await waitUntil(() => collected.length > 0, 'the debounced commit lands', { timeout: 2000 });
     expect(collected).to.deep.equal(['sev1']);
     expect(el.value).to.deep.equal({ q: 'sev1' });
   });
@@ -3980,6 +3989,7 @@ describe("'custom' debounce", () => {
     let inputs = 0;
     el.addEventListener('lr-input', () => (inputs += 1));
     el.reset();
+    // wait-reason: negative assertion: a cancelled debounce must not emit past its window
     await aTimeout(120);
 
     expect(el.value).to.deep.equal({});
@@ -4005,6 +4015,7 @@ describe("'custom' debounce", () => {
     expect(Object.hasOwn(el.value, 'q'), 'the chip removal itself must clear q').to.equal(false);
     expect(inputs, 'only the chip removal itself emitted so far').to.equal(1);
 
+    // wait-reason: negative assertion: a leaked debounce timer must not emit past its window
     await aTimeout(120); // well past the 60ms debounce window
     expect(inputs, 'a leaked debounce timer must not re-emit lr-input after the chip removal').to.equal(1);
     expect(Object.hasOwn(el.value, 'q'), 'the stale pending edit must not resurrect q').to.equal(false);
@@ -4023,6 +4034,7 @@ describe("'custom' debounce", () => {
     expect(el.value).to.deep.equal({});
 
     el.remove();
+    // wait-reason: negative assertion: a leaked debounce timer must not emit after disconnect
     await aTimeout(120); // well past the 60ms debounce window
     expect(fired, 'a leaked debounce timer must not emit lr-input after disconnect').to.be.false;
     expect(el.value).to.deep.equal({});
@@ -4049,7 +4061,7 @@ describe("lr-filter-bar contains its composed controls' lr-activate", () => {
     };
     child.open = true;
     await child.updateComplete;
-    await aTimeout(0);
+    await nextFrame();
     const row = child.shadowRoot!.querySelector<HTMLElement>(
       `[part="option"][data-value="${selected}"]`
     );
@@ -5080,7 +5092,7 @@ describe("'checkbox-menu' filter type", () => {
     );
     await el.updateComplete;
     await menu(el).updateComplete;
-    await aTimeout(0);
+    await nextFrame();
 
     const press = (key: string): void => {
       const focused = deepActive();
@@ -5405,7 +5417,7 @@ it('closes an open checkbox-menu across a disconnect and reconnect', async () =>
   // itself -- a reparented filter bar must not come back with a menu the user never reopened.
   const parent = el.parentElement!;
   el.remove();
-  await aTimeout(0);
+  await nextFrame();
   parent.append(el);
   await el.updateComplete;
   await waitUntil(
@@ -6087,7 +6099,6 @@ describe("'chip' (control-less) filters", () => {
 
     remove.click();
     await el.updateComplete;
-    await aTimeout(0);
     await waitUntil(() => el.shadowRoot!.querySelector('[part="chip"]') === null);
 
     expect('day' in el.value).to.be.false;

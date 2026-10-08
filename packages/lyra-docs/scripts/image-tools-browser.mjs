@@ -631,8 +631,9 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
         return [scrollX, scrollY, consumer.scrollLeft, consumer.scrollTop, viewport.scrollLeft, viewport.scrollTop];
       });
       const previous = await outer(); await page.keyboard.press('Tab');
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      const bounds = await part(page, id, 'image-description').evaluate(host => {
+      // Firefox scrolls the focused field into the popover's clip a frame or more after Tab; poll for
+      // the settled geometry instead of assuming a fixed number of frames, then assert it strictly.
+      const measure = () => part(page, id, 'image-description').evaluate(host => {
         const native = host.shadowRoot.activeElement;
         const popover = host.closest('[part="image-description-popover"]');
         const content = popover.shadowRoot.querySelector('[part~="content"]');
@@ -640,6 +641,11 @@ export async function runImageTools(page, check, { createEditor, saveEditor, ass
         return { hostHeight: host.getBoundingClientRect().height, nativeHeight: box.height, clipHeight: clip.height,
           top: box.top, bottom: box.bottom, clipTop: clip.top, clipBottom: clip.bottom, focused: native.matches(':focus-visible') };
       });
+      let bounds = await measure();
+      for (let frame = 0; frame < 120 && !(bounds.top >= bounds.clipTop - 2 && bounds.bottom <= bounds.clipBottom + 2); frame++) {
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+        bounds = await measure();
+      }
       assert.ok(bounds.hostHeight > bounds.clipHeight && bounds.nativeHeight < bounds.clipHeight, JSON.stringify(bounds));
       assert.equal(bounds.focused, true); assert.ok(bounds.top >= bounds.clipTop - 2 && bounds.bottom <= bounds.clipBottom + 2, JSON.stringify(bounds));
       assert.deepEqual(await outer(), previous); assert.deepEqual(await editor(page, id).evaluate(element => element.snapshot()), snapshot);

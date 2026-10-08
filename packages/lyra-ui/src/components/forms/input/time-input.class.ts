@@ -17,12 +17,13 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   deferredPlaceReady as place,
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { PopupController, emitPopupEvent } from '../../../internal/popup-controller.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import {
@@ -429,9 +430,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private restoringSegmentFocus = false;
   private cleanupPositioner?: DeferredOperationHandle;
   private overlayHandle?: OverlayHandle;
-  private lightDismissDocument?: Document;
   private restoreFocusOnClose = true;
-  private transitionToken = 0;
+  private readonly popupController = new PopupController({
+    host: this,
+    popup: () => this.renderRoot.querySelector('[part="popup"]'),
+    emit: (name, cancelable) => emitPopupEvent(this, name, cancelable),
+    onPointer: (event) => this.onDocumentPointerDown(event),
+  });
   private visibilityPromise: Promise<void> = Promise.resolve();
   private segmentOrderKey = '';
   private segmentModelCache?: TimeSegmentModel;
@@ -1010,7 +1015,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override blur(): void {
-    const active = activeElementIn(this.shadowRoot);
+    const active = shadowFocusTarget(this);
     if (active && typeof (active as HTMLElement).blur === 'function') {
       (active as HTMLElement).blur();
     }
@@ -1069,42 +1074,21 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.setOpen(false);
   }
 
-  private async settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
-    const token = ++this.transitionToken;
-    await this.updateComplete;
-    if (this.transitionToken !== token) return;
-    if (event === 'lr-after-show') {
-      const positioned = await waitForDeferredPlacement(
-        () => this.cleanupPositioner,
-      );
-      if (this.transitionToken !== token || !this.open) return;
-      if (!positioned) {
-        this.forceClose(false);
-        return;
-      }
-      // `waitForDeferredPlacement` also resolves `true` when there was never an active
-      // positioner to wait for (e.g. a host that reports disconnected at update-flush time, so
-      // `positionPopup()`'s own hook below never ran) -- treat that the same as a real placement
-      // so `[data-hidden]` still clears and the popup renders open.
-      this.popupPositioned = true;
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    if (this.isConnected) {
-      const view = this.ownerDocument.defaultView;
-      if (view) await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
-      if (this.transitionToken !== token) return;
-      const popup = this.renderRoot.querySelector('[part="popup"]');
-      const animations = popup?.getAnimations({ subtree: true }) ?? [];
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
-      if (this.transitionToken !== token) return;
-    }
-    if (event === 'lr-after-hide') {
-      this.popupHidden = true;
-      await this.updateComplete;
-      if (this.transitionToken !== token) return;
-    }
-    this.emit(event);
+  private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
+    return this.popupController.settle(event, {
+      waitForPosition: async (stale) => {
+        const positioned = await waitForDeferredPlacement(() => this.cleanupPositioner);
+        if (stale() || !this.open) return false;
+        if (!positioned) {
+          this.forceClose(false);
+          return false;
+        }
+        // No active positioner to wait for also resolves `true`; the popup still renders open.
+        this.popupPositioned = true;
+        return true;
+      },
+      conceal: () => { this.popupHidden = true; },
+    });
   }
 
   private positionPopup(): void {
@@ -1136,8 +1120,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       onEscape: () => void this.hide(),
       restoreFocusTo: this.segmentElement(this.activeSegment),
     });
-    this.lightDismissDocument = this.ownerDocument;
-    this.lightDismissDocument.addEventListener('pointerdown', this.onDocumentPointerDown, true);
+    this.popupController.bindPointer();
     this.updateComplete.then(() => {
       // Scroll only the column; scrollIntoView() would also move ancestor scrollers.
       const option = this.renderRoot.querySelector<HTMLElement>('[part~="column-item-selected"]');
@@ -1153,8 +1136,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.cleanupPositioner = undefined;
     this.overlayHandle?.deactivate({ restoreFocus: this.restoreFocusOnClose });
     this.overlayHandle = undefined;
-    this.lightDismissDocument?.removeEventListener('pointerdown', this.onDocumentPointerDown, true);
-    this.lightDismissDocument = undefined;
+    this.popupController.unbindPointer();
     this.restoreFocusOnClose = true;
   }
 
@@ -1308,7 +1290,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     const order = this.segmentOrder;
     const orderKey = order.join('|');
     const orderChanged = orderKey !== this.segmentOrderKey;
-    const focused = orderChanged ? activeElementIn(this.shadowRoot) : null;
+    const focused = orderChanged ? shadowFocusTarget(this) : null;
     const focusedSegment = typeof focused?.getAttribute === 'function'
       ? (focused.getAttribute('data-segment') as SegmentName | null)
       : null;
@@ -1360,7 +1342,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   override disconnectedCallback(): void {
     this.popupHidden = true;
-    this.transitionToken++;
+    this.popupController.cancel();
     this.forceClose(false);
     this.teardownPopup();
     this.syncOpenAttribute();

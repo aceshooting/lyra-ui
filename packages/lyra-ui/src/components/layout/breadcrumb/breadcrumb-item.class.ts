@@ -1,6 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -89,7 +89,7 @@ export class LyraBreadcrumbItem extends LyraElement {
     if (!previous) return;
     const nextKind = this.current ? 'span' : safeLinkHref(this.href) ? 'a' : 'button';
     this.semanticFocusOrigin =
-      previous.localName !== nextKind && activeElementIn(this.shadowRoot) === previous
+      previous.localName !== nextKind && shadowFocusTarget(this) === previous
         ? previous
         : undefined;
   }
@@ -100,7 +100,7 @@ export class LyraBreadcrumbItem extends LyraElement {
     this.semanticFocusOrigin = undefined;
     if (!focusOrigin) return;
     this.scheduleAfterUpdate(() => {
-      const internalActive = activeElementIn(this.shadowRoot);
+      const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       if (
         (internalActive !== null && internalActive !== focusOrigin) ||

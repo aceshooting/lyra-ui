@@ -1,5 +1,8 @@
 import { focusFirstAvailable } from './focus-navigation.js';
-import { composedContains, deepActiveElement } from './overlay-manager.js';
+import { composedContains } from './composed-tree.js';
+import { deepActiveElementIn } from './active-element.js';
+
+const deepActiveElement = (doc: Document): Element | null => deepActiveElementIn(doc);
 
 type FocusReturnCandidate = HTMLElement | null | undefined;
 
@@ -61,7 +64,7 @@ export interface DeferredFocusReturnRequest {
  * `cancel()` -- and a later `schedule()` -- abandons a pending pass. Call it when the overlay
  * reopens, closes again, or the component disconnects.
  */
-export class DeferredFocusReturn {
+class DeferredFocusReturn {
   private generation = 0;
 
   /** Abandons any pending pass. */
@@ -108,4 +111,21 @@ export class DeferredFocusReturn {
       else run();
     })();
   }
+}
+
+/** A deferred pass minus its host, as an overlay supplies it through `deferredReturn`. */
+export type DeferredFocusReturnPass = Omit<DeferredFocusReturnRequest, 'host'>;
+
+const passes = new WeakMap<HTMLElement, DeferredFocusReturn>();
+
+/** Schedules the host's deferred pass, replacing the one still pending for that host. */
+export function scheduleDeferredFocusReturn(request: DeferredFocusReturnRequest): void {
+  let pass = passes.get(request.host);
+  if (!pass) passes.set(request.host, (pass = new DeferredFocusReturn()));
+  pass.schedule(request);
+}
+
+/** Abandons the host's pending deferred pass: call on reopen and disconnect. */
+export function cancelDeferredFocusReturn(host: HTMLElement): void {
+  passes.get(host)?.cancel();
 }

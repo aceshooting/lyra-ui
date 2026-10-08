@@ -365,6 +365,7 @@ describe('lr-streaming-text-core forwarded Markdown parts and code direction', (
     for (const chunk of chunks) {
       content += chunk;
       el.content = content;
+      // wait-reason: paces streamed chunks against the 30ms coalesce window
       await aTimeoutMs(10);
     }
     await waitUntil(() => Boolean(innerOf(el)?.shadowRoot?.querySelector('.fallback-code')), 'inner fallback never segmented', { timeout: 3000 });

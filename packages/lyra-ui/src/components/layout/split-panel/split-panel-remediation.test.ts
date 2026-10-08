@@ -58,3 +58,14 @@ describe('split-panel divider keyboard and paint', () => {
     await waitUntil(() => getComputedStyle(divider).backgroundColor === 'rgb(70, 80, 90)', 'focus-visible divider paint');
   });
 });
+
+describe('split-panel divider keyboard focus', () => {
+  it('paints the hover color on keyboard focus', async () => {
+    const element = await fixture<LyraSplitPanel>(html`<lr-split-panel style="inline-size:400px;block-size:100px;--lr-split-panel-divider-hover-color: rgb(10, 20, 30)"></lr-split-panel>`);
+    const divider = element.shadowRoot!.querySelector<HTMLElement>('[part~="divider"]')!;
+    const resting = getComputedStyle(divider).backgroundColor;
+    await focusByKeyboard(divider);
+    await waitUntil(() => getComputedStyle(divider).backgroundColor === 'rgb(10, 20, 30)', 'the focused divider did not take the hover color');
+    expect(resting).to.not.equal('rgb(10, 20, 30)');
+  });
+});

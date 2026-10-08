@@ -102,6 +102,7 @@ describe('<lr-navigation-menu-item>', () => {
     await settle(el);
     expect(el.open).to.equal(false);
     expect(el.hasAttribute('open')).to.equal(false);
+    // wait-reason: negative assertion, no toggle event may fire for the ignored open state
     await aTimeout(20);
     expect(events).to.have.length(0);
   });
@@ -196,6 +197,7 @@ describe('<lr-navigation-menu-item>', () => {
     const events = recordToggles(el);
     try {
       await hoverUntilMatched(base(el), 'the pointer never reached the unowned trigger');
+      // wait-reason: negative assertion, an unowned item must not open on hover after the hover delay
       await aTimeout(300);
       expect(el.open, 'an unowned item never opens on hover').to.equal(false);
     } finally {
@@ -278,6 +280,7 @@ describe('<lr-navigation-menu-item>', () => {
     await settle(el);
     expect(el.open).to.equal(true);
     expect(panel(el).hidden).to.equal(false);
+    // wait-reason: negative assertion, no toggle event may fire after the initial open attribute
     await aTimeout(20);
     expect(events).to.have.length(0);
     el.open = false;

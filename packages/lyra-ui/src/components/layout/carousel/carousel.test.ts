@@ -1,6 +1,6 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
+import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import "./carousel.js";
@@ -169,7 +169,7 @@ describe("Web Awesome carousel surface", () => {
     await el.updateComplete;
     wrapper.querySelector<HTMLElement>('#removed-action')!.focus();
     wrapper.querySelector<HTMLElement>('#focused-slide')!.remove();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container') === true, 'focus never fell back to the scroll container');
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement?.getAttribute('part')?.includes('scroll-container')).to.equal(true);
 
@@ -401,7 +401,7 @@ describe("Web Awesome carousel surface", () => {
     const added = document.createElement("lr-carousel-item");
     added.textContent = "Four";
     el.addSlide(added);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await waitUntil(() => el.slides === 4, 'the added slide was never counted');
     await el.updateComplete;
     expect(el.lastElementChild === added).to.equal(true);
     expect(el.slides).to.equal(4);
@@ -410,7 +410,7 @@ describe("Web Awesome carousel surface", () => {
     await el.updateComplete;
     expect(el.currentSlide).to.equal(3);
     el.removeSlide(3);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await waitUntil(() => el.slides === 3, 'the removed slide was never dropped');
     await el.updateComplete;
     expect(added.isConnected).to.be.false;
     expect(el.slides).to.equal(3);
@@ -439,7 +439,7 @@ describe("Web Awesome carousel surface", () => {
     ).to.equal("Go to slide 4");
 
     el.lastElementChild?.remove();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await el.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -527,7 +527,7 @@ describe("Web Awesome carousel surface", () => {
     );
 
     el.lastElementChild?.remove();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await el.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -553,7 +553,7 @@ describe("Web Awesome carousel surface", () => {
       .focus();
 
     el.lastElementChild?.remove();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await el.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -590,7 +590,7 @@ describe("Web Awesome carousel surface", () => {
     indicator.focus();
     el.lastElementChild?.remove();
     outside.focus();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     await el.updateComplete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -739,6 +739,7 @@ describe("Web Awesome carousel surface", () => {
     try {
       const viewport = el.shadowRoot!.querySelector('[part~="scroll-container"]') as HTMLElement;
       viewport.dispatchEvent(new FocusEvent("focusout", { bubbles: true, composed: true }));
+      // wait-reason: negative assertion, focusout without focus-within must not leave a timer armed
       await aTimeout(20);
       expect(timer()).to.be.undefined;
     } finally {
@@ -1194,7 +1195,7 @@ it("clamps invalid indices in the current update without scheduling a follow-up 
   console.warn = (...args: unknown[]) => calls.push(args);
   try {
     const el = await carousel();
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await nextFrame();
     el.currentSlide = NaN;
     expect(await el.updateComplete).to.be.true;
     el.currentSlide = 999;
@@ -1270,6 +1271,7 @@ it("disables autoplay under prefers-reduced-motion", async () => {
       "the light-DOM sink is mounted before any change"
     ).to.be.true;
     expect(sink!.childElementCount).to.equal(0);
+    // wait-reason: negative assertion, reduced-motion autoplay must not advance the slide
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(el.currentSlide).to.equal(0);
   } finally {
@@ -2433,6 +2435,7 @@ describe("touch scrolling and scroll-snap", () => {
     const changed = oneEvent(el, "lr-slide-change");
     viewport.scrollBy({ left: delta, behavior: "instant" });
     const event = await changed;
+    // wait-reason: real timing semantics, scroll-settle debounce; exactly one change must follow
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
     expect(event.detail.index).to.equal(1);
@@ -2453,6 +2456,7 @@ describe("touch scrolling and scroll-snap", () => {
     for (let tick = 0; tick < 6; tick += 1) {
       viewport.dispatchEvent(new Event("scroll"));
     }
+    // wait-reason: real timing semantics, scroll-settle debounce collapses one gesture into one change
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
     expect(el.currentSlide).to.equal(2);
@@ -2491,6 +2495,7 @@ describe("touch scrolling and scroll-snap", () => {
       return (original as (...a: unknown[]) => void)(...args);
     }) as typeof viewport.scrollBy;
     try {
+      // wait-reason: negative assertion, adopting a scrolled slide must not re-drive the scroller
       await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
       expect(calls.length, "adopting a scrolled slide must not re-drive the scroller").to.equal(0);
     } finally {
@@ -2581,7 +2586,7 @@ describe("touch scrolling and scroll-snap", () => {
 
     viewportOf(el).dispatchEvent(new Event("scroll"));
     expect(armed(), "a reconnected carousel can still arm one").to.be.true;
-    await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
+    await waitUntil(() => !armed(), 'the settle stayed armed forever');
     expect(armed(), "and it settles rather than staying armed forever").to.be.false;
   });
 
@@ -2594,6 +2599,7 @@ describe("touch scrolling and scroll-snap", () => {
 
     viewport.scrollBy({ left: inlineDelta(el, slidesOf(el)[1]!), behavior: "instant" });
     el.remove();
+    // wait-reason: negative assertion, a disconnected carousel must not emit a settled change
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
     expect(changes).to.equal(0);
@@ -2716,6 +2722,7 @@ describe("touch scrolling and scroll-snap", () => {
     const delta = inlineDelta(el, beforeClone);
 
     viewport.scrollBy({ left: delta, behavior: "instant" });
+    // wait-reason: negative assertion, resting on a clone of the active slide emits no event
     await new Promise<void>((resolve) => setTimeout(resolve, SETTLE_WAIT));
 
     expect(el.currentSlide, "the index does not change -- it was already 2").to.equal(2);
@@ -3199,6 +3206,7 @@ describe("carousel drag completion", () => {
     // one's timer fires -- the second drag's cleanup must cancel it rather than leak it.
     drag(140);
     drag(141);
+    // wait-reason: negative assertion, the 0ms suppression timer must be cancelled rather than leaked
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect((el as unknown as { suppressClick: boolean }).suppressClick).to.be.false;
   });
@@ -3294,11 +3302,11 @@ it("exposes slides as a readonly live composition count", async () => {
   expect(el.slides).to.equal(3);
 
   el.append(document.createElement('div'));
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await waitUntil(() => el.slides === 4, 'the appended slide was never counted');
   await el.updateComplete;
   expect(el.slides).to.equal(4);
   el.lastElementChild!.remove();
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await waitUntil(() => el.slides === 3, 'the removed slide was never dropped');
   await el.updateComplete;
   expect(el.slides).to.equal(3);
 });
@@ -3327,14 +3335,14 @@ it("ignores addSlide/removeSlide calls with invalid slide references or out-of-r
   el.addSlide(document.createTextNode("not an element") as unknown as LyraCarouselItem);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   el.addSlide(svg as unknown as LyraCarouselItem);
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
   await el.updateComplete;
   expect(el.slides, "invalid slide references are never appended").to.equal(before);
 
   el.removeSlide(Number.NaN);
   el.removeSlide(Number.POSITIVE_INFINITY);
   el.removeSlide(999);
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await nextFrame();
   await el.updateComplete;
   expect(el.slides, "non-finite or out-of-range indices remove nothing").to.equal(before);
 });
@@ -3388,7 +3396,7 @@ it("pauses autoplay while the viewport holds focus and resumes once it blurs", a
   expect((el as unknown as { timer?: number }).timer, "focus pauses autoplay").to.be.undefined;
 
   viewport.blur();
-  await new Promise<void>((resolve) => setTimeout(resolve, 20));
+  await waitUntil(() => (el as unknown as { timer?: number }).timer !== undefined, 'blurring never resumed autoplay');
   expect((el as unknown as { timer?: number }).timer, "blurring resumes autoplay").to.not.be
     .undefined;
 });
@@ -3426,6 +3434,7 @@ it("no-ops the announcement and scroll-settle paths when the carousel has no sli
     '[part~="scroll-container"]'
   ) as HTMLElement;
   viewport.dispatchEvent(new Event("scroll"));
+  // wait-reason: negative assertion, an empty carousel must tolerate a scroll settle
   await new Promise<void>((resolve) => setTimeout(resolve, 200));
   expect(el.currentSlide, "an empty carousel tolerates a scroll settle without crashing").to.equal(
     0
@@ -3864,7 +3873,7 @@ describe('collecting already-slotted slides without relying on the initial slotc
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => intercepted > 0, 'the initial slotchange never fired');
       expect(
         intercepted,
         "a real browser does fire the slot's initial slotchange -- this test suppresses it to reproduce happy-dom, which never fires it at all"
@@ -3894,7 +3903,7 @@ describe('collecting already-slotted slides without relying on the initial slotc
     );
     try {
       await el.updateComplete;
-      await aTimeout(50);
+      await waitUntil(() => realSlotchangeCount > 0, 'the initial slotchange never fired');
       expect(
         realSlotchangeCount,
         'the real initial slotchange must actually have fired for this to prove anything about double-invocation'
@@ -3943,6 +3952,7 @@ describe('lr-carousel: focus, observation and listeners', () => {
     observer.observe(slide, { attributes: true });
     clock.setAttribute('data-tick', '1');
     clock.textContent = '1';
+    // wait-reason: negative assertion, a slotted clock mutation must not write attributes to the slide
     await aTimeout(50);
     observer.disconnect();
     expect(writes).to.equal(0);

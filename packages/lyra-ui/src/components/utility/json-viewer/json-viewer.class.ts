@@ -10,6 +10,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { viewerSearchDetail } from '../../../internal/viewer-search.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -22,9 +23,10 @@ import {
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
+import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_viewerSearchActiveMatch } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type JsonPathSegment = string | number;
@@ -52,7 +54,7 @@ interface RenderBudget {
   truncated: boolean;
 }
 
-const COPY_CONFIRM_MS = 1500;
+const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
 const MAX_JSON_NODES = 5000;
 const MAX_JSON_DEPTH = 100;
 // Reflection is independently bounded, but has headroom for opaque/non-enumerable own names so
@@ -394,6 +396,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     jsonValue: LYRA_DEFAULT_jsonValue,
     jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
+    viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
+    viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -914,12 +918,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   private emitSearchChange(): void {
-    this.emit('lr-search-change', {
-      query: this.query,
-      matchCount: this.searchState.orderedMatches.length,
-      matchCountExact: !this.searchState.truncated,
-      activeIndex: this.activeSearchIndex,
-    });
+    this.emit('lr-search-change', viewerSearchDetail(
+      this.query,
+      this.searchState.orderedMatches.length,
+      !this.searchState.truncated,
+      this.activeSearchIndex,
+    ));
   }
 
   private revealActiveMatch(): void {

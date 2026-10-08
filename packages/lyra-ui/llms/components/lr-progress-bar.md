@@ -20,7 +20,8 @@ A determinate or indeterminate progress bar with an independently visible label 
 formatted percentage.
 
 **Properties:** `value` (reflected), `max`, `indeterminate`, `variant`, `withValue` (`with-value`),
-`label` (mapped accessible-name property), and `size: LyraSize = 'm'` (reflected) —
+`label` (mapped accessible-name property), the read-only `indicator` element and `indicatorOffset` (the unfilled
+percentage of the track; `65` while indeterminate), shared with the ring, and `size: LyraSize = 'm'` (reflected) —
 `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
 'large'`. Track/indicator thickness tier, on the shared six-step ladder: `0.25rem` (`2xs`),
 `0.375rem` (`xs`), `0.625rem` (`s`/`small`), `1rem` (`m`/`medium`, unchanged from before this

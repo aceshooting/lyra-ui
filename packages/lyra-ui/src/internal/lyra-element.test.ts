@@ -1,7 +1,7 @@
 import { collectionSupport, collectionTruncationWarningKey } from './collection-snapshot.js';
 import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 import { expectLocaleFallback } from '../../test/expected-locale-fallbacks.js';
-import { fixture, expect, html } from "@open-wc/testing";
+import { fixture, expect, html, waitUntil } from "@open-wc/testing";
 import { LitElement, css, nothing, type PropertyValues } from "lit";
 import { property } from "lit/decorators.js";
 import {
@@ -2262,7 +2262,7 @@ it('defers every seedFirstRenderState seed past a hydrating first render, then c
   // The corrective render is scheduled from a task queued after updateComplete resolves, not
   // another microtask -- give it a generously margined real timeout rather than reaching for
   // fake timers.
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await waitUntil(() => el.secondSeedRan, 'corrective render ran', { timeout: 2000 });
   await el.updateComplete;
 
   expect(

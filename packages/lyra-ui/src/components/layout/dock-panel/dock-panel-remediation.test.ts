@@ -57,6 +57,19 @@ describe('dock-panel focus', () => {
   });
 });
 
+describe('dock-panel focus without a collapse toggle', () => {
+  it('keeps focus on the panel when content collapses it', async () => {
+    const panel = await docked();
+    const close = document.createElement('button');
+    close.textContent = 'close';
+    panel.append(close);
+    await focusByKeyboard(close);
+    panel.collapsed = true;
+    await panel.updateComplete;
+    expect(document.activeElement === panel).to.equal(true);
+  });
+});
+
 describe('dock-panel handle keyboard', () => {
   it('leaves modified arrows to the browser', async () => {
     const panel = await docked('extent="300px" min-extent="100px" max-extent="500px"');
@@ -95,4 +108,17 @@ describe('dock-panel pointer capture', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 100 }));
     expect(inputs, 'a later drag still starts').to.equal(1);
   });
+});
+
+describe('dock-panel handle hit area', () => {
+  for (const [placement, property] of [['end', 'width'], ['start', 'width'], ['top', 'height'], ['bottom', 'height']] as const) {
+    it(`reaches the minimum hit size across the ${placement} handle`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(`<div style="display: flex; flex-direction: ${placement === 'top' || placement === 'bottom' ? 'column' : 'row'}; block-size: 20rem; inline-size: 30rem; --lr-theme-icon-button-size: 44px">
+        <lr-dock-panel placement="${placement}" extent="200px"></lr-dock-panel></div>`);
+      const panel = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
+      await panel.updateComplete;
+      const size = parseFloat(getComputedStyle(handleOf(panel), '::before').getPropertyValue(property));
+      expect(size).to.be.at.least(44);
+    });
+  }
 });

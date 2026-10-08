@@ -34,10 +34,8 @@ a missing feature.
   field, and `[part='field'][data-required] [part='label']::after` for a composite form rendering
   many fields in one host (`lr-tool-param-form`). Never re-declare the three
   `content`/`color`/`margin-inline-start` lines locally and never render a literal `<span>*</span>`
-  in the template: the copy-pasted version had already drifted (several `required`-accepting
-  controls shipped no marker at all), and the hardcoded `content: ' *'` gave a consumer no way to
-  mark *optional* fields instead, to substitute a localized word, or to retune the colour without
-  moving every other danger-coloured surface on the page. The three escape hatches
+  in the template: copies drift, and a hardcoded `content: ' *'` gives a consumer no way to mark
+  *optional* fields instead, substitute a localized word, or retune the colour. The three escape hatches
   (`--lr-form-control-required-content`, `-color`, `-offset`) are consumer-supplied content and are
   therefore never localized by the component.
 - **`formResetCallback()` restores the default value; it does not blank the field.** Native reset
@@ -75,8 +73,7 @@ a missing feature.
   matches the component's own attribute. A component that computes `effectiveDisabled` in JS but
   styles `:host([disabled])` goes functionally inert inside a `<fieldset disabled>` while still
   rendering at full opacity with a normal cursor — reads as "this control is broken". Grep your
-  `*.styles.ts` for `\[disabled\]` before shipping. `lr-checkbox`/`lr-switch`/`lr-select` are
-  correct; several others are not.
+  `*.styles.ts` for `\[disabled\]` before shipping.
 - **`click()` forwarding.** Any component rendering its own clickable control in shadow DOM — in
   practice, anything already overriding `focus()`/`blur()` — also overrides host `click()` to
   forward to that internal control, as `lr-button` does. `HTMLElement.prototype.click()` on a

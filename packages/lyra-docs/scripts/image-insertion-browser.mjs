@@ -185,6 +185,9 @@ export async function runImageInsertion(page, check, { createEditor, saveEditor 
       window.__insertionSession = created.value; const opened = await created.value.open({ kind: 'blank' }); if (!opened.ok) throw new Error(opened.code);
     });
     await page.locator('#insert-direct .docx-pages').click(); await page.keyboard.type('alpha'); await page.keyboard.press('ArrowLeft');
+    // The engine mirrors the caret asynchronously after the key presses above and reads `parentNode`
+    // while doing so; let that pass finish so every read recorded below belongs to the insertion.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const observed = await page.evaluate(async mutation => {
       const session = window.__insertionSession, mount = document.getElementById('insert-direct'), reads = []; let reflectionReads = -1;
       if (mutation === 'overridden-accessors') for (const key of ['isConnected', 'ownerDocument', 'parentNode']) Object.defineProperty(mount, key, { configurable: true, get() { reads.push({ key, stack: new Error().stack }); throw new Error('author accessor'); } });

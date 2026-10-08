@@ -3,7 +3,10 @@ import type { OoxmlElement, OoxmlNode, OoxmlPackage, OoxmlPart } from '@docx-edi
 import { imageCandidatesInPackage } from './eigenpal-images.js';
 import { inspectDocxImage } from './image-bytes.js';
 import { isDocxXmlText } from './xml-text.js';
-import { CONTENT_TYPE_NS as CT, OFFICE_REL_NS as R, PACKAGE_REL_NS as REL, WORD_NS as W } from './ooxml.js';
+import {
+  CONTENT_TYPE_NS as CT, DRAWING_MAIN_NS as A, DRAWING_PICTURE_NS as PIC, OFFICE_REL_NS as R, PACKAGE_REL_NS as REL,
+  WORD_DRAWING_NS as WP, WORD_ML_2010_NS as W14, WORD_NS as W, XML_NS as XML,
+} from './ooxml.js';
 import type { DocxRefusalCode, DocxResult } from './types.js';
 
 export interface ImageInsertionProfileDependencies {
@@ -17,11 +20,6 @@ interface ImageInsertionBudget {
   readonly titleLength: number;
   readonly descriptionLength: number;
 }
-const W14 = 'http://schemas.microsoft.com/office/word/2010/wordml';
-const XML = 'http://www.w3.org/XML/1998/namespace';
-const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
-const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
-const PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
 const MAIN = '/word/document.xml', STYLES = '/word/styles.xml', TYPES = '/[Content_Types].xml';
 const ROOT_RELS = '/_rels/.rels', MAIN_RELS = '/word/_rels/document.xml.rels';
 const MAIN_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml';

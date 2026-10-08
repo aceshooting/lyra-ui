@@ -59,8 +59,7 @@ library's shared container-frame vocabulary and behaving exactly as it does on `
 `lr-commit-card`, `lr-result-card`, `lr-task-list`, `lr-terminal` and `lr-thinking-panel`:
 `'plain'` removes the border, background, padding and corner radius so a bar nested inside a
 container that already draws a border doesn't double it, and wins over the dense `size` tier when
-both are set. Before 9.0.0 the density knob alone did both jobs; a bar that relied on that now needs
-`size="s" frame="plain"`. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
+both are set. `ConfirmBarDecision = ApprovalDecision | null` names the final-state type.
 `pendingAction: ApprovalAction | null = null` (attribute `pending-action`, reflected) — which action
 is awaiting host resolution while an `lr-approve-request`/`lr-deny-request` listener has called `preventDefault()` on
 the now-cancelable event; the pending button shows `loading`, the other is `disabled`. Set
@@ -124,9 +123,9 @@ then writing `pendingAction` and later `decision` by hand — still works unchan
 resolves the decision itself synchronously, by writing `decision` or `pendingAction` during the dispatch,
 wins outright over both: the bar applies no bookkeeping of its own, `waitUntil()`'s included.
 
-`waitUntil` is this component's alone: `<lr-tool-approval-dialog>` emits the same `lr-approve-request`/
-`lr-deny-request` names without it, so a listener bound to the shared name rather than to one component
-must narrow on `event.target` — see that component's Events section.
+`<lr-tool-approval-dialog>` emits the same `lr-approve-request`/`lr-deny-request` names with the same
+`waitUntil`, so a listener bound to the shared name rather than to one component should still narrow on
+`event.target` — see that component's Events section.
 
 `lr-decision-settled` fires after the decided `[part="status"]` has rendered and its live-region
 announcement has been made, on every path that reaches a decision — the bar's own, a `waitUntil()`
@@ -135,11 +134,8 @@ awaiting a single `updateComplete` after your own promise resolves is not enough
 promise chain and Lit's update queue interleave. A `decision` present in the initial markup
 announces and settles nothing — it never transitioned.
 
-**16.0.0 — breaking detail change.** `lr-deny`'s detail changed from `null` to `{ waitUntil }` and
-`lr-approve`'s from `{ args }` to `{ args, waitUntil }`. The canonical request events use those same
-detail shapes. A listener that compared the whole detail
-object (`detail === null`, or a deep-equality check against `{ args }`) must read the fields it uses
-instead.
+`lr-deny`'s detail is `{ waitUntil }` and `lr-approve`'s is `{ args, waitUntil }`; the canonical
+request events use the same shapes. Read the fields rather than comparing the whole detail object.
 
 
 **CSS parts:** `base` (`role="group"`), `heading`/`tool-name`, `body`, `args` (the
@@ -161,9 +157,7 @@ scoped to `[part="base"]` while `size` is `s` or smaller: `--lr-confirm-bar-comp
 `--lr-confirm-bar-compact-gap` (default `var(--lr-space-s)`, the gap between the row's items). They
 are inline `var()` fallbacks at their point of use rather than `:host` declarations, so either can
 be set on the element _or on any ancestor_, which is what makes "tighten every dense confirm bar
-in this panel" a one-rule change on the panel. The dense tier's former chrome-removing border,
-fill and radius properties were removed in 9.0.0 along with its chrome behavior: chrome is now
-`frame`'s job, so keep the default `frame="card"` (and restyle via `::part(base)`) instead of
+in this panel" a one-rule change on the panel. Chrome is `frame`'s job, so keep the default `frame="card"` (and restyle via `::part(base)`) instead of
 re-chroming a chrome-less dense bar.
 
 Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default

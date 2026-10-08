@@ -78,6 +78,15 @@ export const ThemedScrollbar: Story = {
   `,
 };
 
+/** One surface and radius token recolour and round the whole table, sticky column included. */
+export const SurfaceAndRadius: Story = {
+  render: () => html`
+    <div style="--lr-table-surface: var(--lr-color-surface-raised); --lr-table-radius: 1rem; inline-size: 16rem">
+      <lr-table scroll-mode="auto" .columns=${[{ ...columns[0], sticky: 'start' as const }, ...columns.slice(1)]} .rows=${rows}></lr-table>
+    </div>
+  `,
+};
+
 export const ResizableColumns: Story = {
   parameters: {
     docs: {

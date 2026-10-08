@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Hangerő',
   videoCaptions: 'Feliratok',
   videoCaptionsOff: 'Ki',
-  videoPlaybackSpeed: 'Lejátszási sebesség',
   videoPictureInPicture: 'Kép a képben mód bekapcsolása',
   videoExitPictureInPicture: 'Kilépés a kép a képben módból',
   videoEnterFullscreen: 'Váltás teljes képernyőre',

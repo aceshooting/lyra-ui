@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { activeElementIn, deepActiveElementIn } from './active-element.js';
+import { activeElementIn, deepActiveElementIn, safeDeepActiveElement, shadowFocusTarget } from './active-element.js';
 
 /** Replaces one root's `activeElement` with a getter that throws, exactly as happy-dom's does when
  *  the document has no active element. Returns a restore function: deleting the own property
@@ -76,4 +76,68 @@ describe('deepActiveElementIn', () => {
       restore();
     }
   });
+});
+
+describe('shadowFocusTarget', () => {
+  it('returns the element focused inside the connected host own shadow root', async () => {
+    const host = (await fixture(html`<div></div>`)) as HTMLElement;
+    const root = host.attachShadow({ mode: 'open' });
+    const button = document.createElement('button');
+    root.append(button);
+    button.focus();
+    expect(shadowFocusTarget(host) === button).to.equal(true);
+  });
+
+  it('reports the nested host, not the inner control, for a focus in a nested root', async () => {
+    const host = (await fixture(html`<div></div>`)) as HTMLElement;
+    const outer = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    outer.append(inner);
+    const input = document.createElement('input');
+    inner.attachShadow({ mode: 'open' }).append(input);
+    input.focus();
+    expect(shadowFocusTarget(host) === inner).to.equal(true);
+  });
+
+  it('returns null when nothing in the root is focused or there is no root', async () => {
+    const host = (await fixture(html`<div></div>`)) as HTMLElement;
+    expect(shadowFocusTarget(host)).to.equal(null);
+    host.attachShadow({ mode: 'open' }).append(document.createElement('button'));
+    expect(shadowFocusTarget(host)).to.equal(null);
+  });
+
+  it('returns null for a detached host without reading activeElement', () => {
+    const host = document.createElement('div');
+    const root = host.attachShadow({ mode: 'open' });
+    let reads = 0;
+    Object.defineProperty(root, 'activeElement', {
+      configurable: true,
+      get(): never {
+        reads += 1;
+        throw new TypeError('detached read');
+      },
+    });
+    try {
+      expect(shadowFocusTarget(host)).to.equal(null);
+      expect(reads).to.equal(0);
+    } finally {
+      delete (root as unknown as Record<string, unknown>)['activeElement'];
+    }
+  });
+});
+
+it('safeDeepActiveElement descends nested shadow roots and fails closed on a lookalike', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  const root = host.attachShadow({ mode: 'open' });
+  const button = document.createElement('button');
+  root.append(button);
+  button.focus();
+  expect(safeDeepActiveElement(document) === button).to.equal(true);
+  const restore = breakActiveElement(root);
+  try {
+    expect(safeDeepActiveElement(document) === host).to.equal(true);
+  } finally {
+    restore();
+  }
+  expect(safeDeepActiveElement(null)).to.equal(null);
 });

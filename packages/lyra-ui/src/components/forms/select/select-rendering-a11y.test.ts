@@ -1121,11 +1121,12 @@ describe("row state feedback on the already-selected option", () => {
         <lr-option value="c">Cherry</lr-option>
       </lr-select>
     `)) as LyraSelect;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
     // The listbox is placed by the Floating UI positioner a tick after the open render, so a
     // getBoundingClientRect() taken before that points the pointer at the pre-placement box.
-    await aTimeout(50);
+    await shown;
     return el;
   };
 
@@ -1182,9 +1183,10 @@ describe("row state feedback on the already-selected option", () => {
         <lr-option value="enabled">Enabled</lr-option>
       </lr-select>
     `)) as LyraSelect;
+    const shown = oneEvent(el, 'lr-after-show');
     el.open = true;
     await el.updateComplete;
-    await aTimeout(50);
+    await shown;
     const row = el.shadowRoot!.querySelector<HTMLElement>(
       '[part="option"][aria-disabled="true"]'
     )!;
@@ -1198,6 +1200,7 @@ describe("row state feedback on the already-selected option", () => {
       expect(getComputedStyle(row).backgroundColor, 'disabled hover').to.equal(resting);
 
       await sendMouse({ type: 'down' });
+      // wait-reason: a press that must change nothing has no observable to poll
       await aTimeout(20);
       // A press that must change nothing cannot be polled for; settle first so the read is real.
       await settlePointer();
@@ -1222,6 +1225,7 @@ describe("lr-select filled (Shoelace compatibility alias)", () => {
   const settle = async (holds: () => boolean): Promise<boolean> => {
     for (let attempt = 0; attempt < 25; attempt++) {
       if (holds()) return true;
+      // wait-reason: poll interval of the settle() retry loop
       await aTimeout(20);
     }
     return holds();

@@ -26,3 +26,8 @@ export function loadDompurify(importer?: () => Promise<unknown>): Promise<HtmlSa
 export function clearDompurifyCache(): void {
   dompurify.clear();
 }
+
+/** Test seam, stripped from the published build: makes the shared DOMPurify import fail (or resolve) like a missing peer. */
+export function __setDompurifyImporterForTesting(importer?: () => Promise<unknown>): void {
+  dompurify.override(importer);
+}

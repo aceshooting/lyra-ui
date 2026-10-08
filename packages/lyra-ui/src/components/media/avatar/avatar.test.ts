@@ -1,4 +1,4 @@
-import { fixture, expect, html, aTimeout, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './avatar.js';
 import type { LyraAvatar } from './avatar.js';
 
@@ -125,7 +125,10 @@ describe('lr-avatar', () => {
 
   it('prefers a loaded image over initials', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB" image="data:image/gif;base64,R0lGODlhAQABAAAAACw=" label="A. Bee"></lr-avatar>`)) as LyraAvatar;
-    await aTimeout(50);
+    await el.updateComplete;
+    const pending = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement | null;
+    if (pending) await waitUntil(() => pending.complete, 'the avatar image never finished loading');
+    await el.updateComplete;
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement | null;
     if (img) {
       expect(img.getAttribute('alt')).to.equal('A. Bee');
@@ -759,4 +762,24 @@ it('defaults its Lyra size extension to m and keeps the medium spelling', async 
   el.size = 'medium';
   await el.updateComplete;
   expect(el.getBoundingClientRect().width).to.equal(initialWidth);
+});
+
+it('accepts every shared size, variant and avatar-shape literal without normalizing it away', async () => {
+  const { LYRA_SIZE_VALUES, LYRA_VARIANT_VALUES, LYRA_AVATAR_SHAPE_VALUES } = await import('../../../internal/variant-values.js');
+  const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
+  for (const size of LYRA_SIZE_VALUES) {
+    el.size = size;
+    await el.updateComplete;
+    expect(el.size, `size ${size}`).to.equal(size);
+  }
+  for (const variant of LYRA_VARIANT_VALUES) {
+    el.variant = variant;
+    await el.updateComplete;
+    expect(el.variant, `variant ${variant}`).to.equal(variant);
+  }
+  for (const shape of LYRA_AVATAR_SHAPE_VALUES) {
+    el.shape = shape;
+    await el.updateComplete;
+    expect(el.shape, `shape ${shape}`).to.equal(shape);
+  }
 });

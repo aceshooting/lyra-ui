@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Sauti',
   videoCaptions: 'Manukuu',
   videoCaptionsOff: 'Zima',
-  videoPlaybackSpeed: 'Kasi ya uchezaji',
   videoPictureInPicture: 'Washa picha ndani ya picha',
   videoExitPictureInPicture: 'Toka kwenye picha ndani ya picha',
   videoEnterFullscreen: 'Washa skrini nzima',

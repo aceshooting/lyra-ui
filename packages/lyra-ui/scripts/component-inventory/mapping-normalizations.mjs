@@ -3230,6 +3230,7 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'sl-copy-button',
     {
+      defaultEquivalences: [reviewedPropertyDefaultEquivalence('feedbackDuration', 1000, 1500)],
       derivedDefaultEquivalences: [
         { memberKind: 'attribute', member: 'copy-label', upstream: '', target: 'localized copy label' },
         { memberKind: 'attribute', member: 'success-label', upstream: '', target: 'localized success label' },
@@ -3438,6 +3439,7 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'wa-copy-button',
     {
+      defaultEquivalences: [reviewedPropertyDefaultEquivalence('feedbackDuration', 1000, 1500)],
       derivedDefaultEquivalences: [
         { memberKind: 'attribute', member: 'copy-label', upstream: '', target: 'localized copy label' },
         { memberKind: 'attribute', member: 'success-label', upstream: '', target: 'localized success label' },

@@ -94,7 +94,7 @@ it('never schedules a post-update reschedule when a dialog autofocuses a control
     await el.updateComplete;
     await Promise.resolve();
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await nextFrame();
 
     const username = el.querySelector('lr-input')!;
     expect(
@@ -117,7 +117,8 @@ it('never schedules a post-update reschedule when a dialog autofocuses a control
     await Promise.resolve();
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
     await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await nextFrame();
+    await nextFrame();
   } finally {
     console.warn = originalWarn;
     el?.close('api');

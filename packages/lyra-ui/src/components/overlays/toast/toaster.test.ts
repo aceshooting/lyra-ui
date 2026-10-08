@@ -56,6 +56,7 @@ describe('toast() failure containment and stacking', () => {
     try {
       const handle = toast({ message: 'Saved', ownerDocument: frame.contentDocument! });
       handle.dismiss();
+      // wait-reason: asserting no unhandled rejection surfaces after dismissing a failed toast
       await aTimeout(50);
       expect(unhandled.length).to.equal(0);
       expect(await handle.item.then(() => 'resolved', () => 'rejected')).to.equal('rejected');
@@ -179,7 +180,7 @@ describe('toast() inside native modal dialogs', () => {
     dialog.close();
     dialog.showModal();
     const freshItem = await toast({ message: 'Fresh session', duration: 0 }).item;
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await waitUntil(() => !oldItem.isConnected, 'the previous session item was removed');
     expect(oldItem.isConnected).to.equal(false);
     expect(freshItem.isConnected).to.equal(true);
     expect(dialog.contains(freshItem)).to.equal(true);

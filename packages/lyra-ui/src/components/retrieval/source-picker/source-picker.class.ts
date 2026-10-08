@@ -17,7 +17,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { activeElementIn } from '../../../internal/active-element.js';
+import { shadowFocusTarget } from '../../../internal/active-element.js';
 import {
   acquireAnnouncementSink,
   type AnnouncementSink,
@@ -450,7 +450,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]')
     );
     const focusedIndex = renderedRows.indexOf(
-      activeElementIn(this.shadowRoot) as HTMLElement
+      shadowFocusTarget(this) as HTMLElement
     );
     const rows = this.visibleRows();
     const retainedIndex = rows.findIndex(

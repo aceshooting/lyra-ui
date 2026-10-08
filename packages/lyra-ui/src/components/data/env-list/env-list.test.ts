@@ -597,3 +597,10 @@ it('deepens a masked reveal button while it is pressed', async () => {
     await resetMouse();
   }
 });
+
+it('does not schedule an update when the same entries array is re-assigned', async () => {
+  const entries = [{ name: 'A', value: '1' }];
+  const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
+  el.entries = entries;
+  expect(el.isUpdatePending).to.equal(false);
+});

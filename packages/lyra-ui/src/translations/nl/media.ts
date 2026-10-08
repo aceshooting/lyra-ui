@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Geluidsvolume',
   videoCaptions: 'Ondertiteling',
   videoCaptionsOff: 'Uit',
-  videoPlaybackSpeed: 'Afspeelsnelheid',
   videoPictureInPicture: 'Beeld-in-beeld inschakelen',
   videoExitPictureInPicture: 'Beeld-in-beeld sluiten',
   videoEnterFullscreen: 'Volledig scherm inschakelen',

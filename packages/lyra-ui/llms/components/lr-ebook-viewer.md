@@ -75,9 +75,7 @@ non-live shadow content and later loading transitions use the shared document-le
 assertive sink), plus `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
 anchor-jump message; the spoken copy is appended to the shared document-level polite sink only
 while the viewer and its composed ancestors are exposed to the accessibility tree). Search results
-are appended to the shared document-level polite sink, which lives in the host's light DOM; the
-empty `announcer` shadow mirror that used to carry a part of that name was removed in 9.0.0 (it had
-no styling of its own and never held any text).
+are appended to the shared document-level polite sink, which lives in the host's light DOM.
 
 **Themeable custom properties:** `--lr-ebook-viewer-max-height` (default `none`) — maximum block
 size of `[part="mount"]` before it scrolls internally; also settable via the `max-height` property,
@@ -86,6 +84,9 @@ which writes this token inline.
 The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
 `ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
 unambiguous beside other previous/next controls and are overridable through `.strings`.
+
+**Reparenting:** a synchronous same-task reparent (`append()` of the connected element) reloads the book,
+because it destroys the chapter iframes epub.js renders into; use `moveBefore()` to keep the book and its position.
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],

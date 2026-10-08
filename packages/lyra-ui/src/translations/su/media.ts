@@ -73,7 +73,6 @@ const strings: LyraLocaleStrings = {
   videoVolume: 'Volume',
   videoCaptions: 'Takarir',
   videoCaptionsOff: 'Pareum',
-  videoPlaybackSpeed: 'Laju playback',
   videoPictureInPicture: 'Asup kana gambar-dina-gambar',
   videoExitPictureInPicture: 'Kaluar tina gambar-dina-gambar',
   videoEnterFullscreen: 'Asup kana salayar',

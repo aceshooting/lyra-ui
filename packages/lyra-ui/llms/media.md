@@ -1,41 +1,10 @@
 ## Breaking changes in 10.0.0
 
-`<lr-media-card>`'s `alt` becomes optional (`alt?: string`, was `alt: string = ''`), so a decorative
-image is expressible at last. The image render used to fall through `alt`, then `filename`, then a
-localized generic description with `||`, which made an explicit `alt=""` indistinguishable from an
-absent one and published it as `alt="Image attachment"` — there was no way to mark the image
-decorative, which is the one thing
-`alt=""` means in HTML. It now reads `??`, matching `<lr-image-viewer>` and `<lr-document-preview>`,
-which already documented that contract. Omitting `alt` is unchanged; only the value read back from
-an unset property differs (`''` becomes `undefined`), so a consumer comparing `el.alt === ''` should
-read `el.alt ?? ''`. The nested `<video controls>` label deliberately does **not** follow: an empty
-`alt` there would leave an interactive player with no accessible name, and "decorative" is not a
-state a media control can be in, so the video path still falls through to `filename` and the generic
-description.
-
-`<lr-attachment-chip>`'s `lr-preview-request` is no longer cancelable. It was advertised as a veto
-point, but the chip never read `defaultPrevented` and owns no preview default action to cancel — it
-never registers or owns a viewer or overlay, by its own documented contract — so `preventDefault()`
-was a no-op. The flag is removed rather than left as a promise the component cannot keep: a host that
-was calling `preventDefault()` can drop the call, and one that believed the call was suppressing
-something was never being served. `<lr-voice-picker>`'s same-named event belongs to a different
-component, owns a real internal default action, and stays cancelable.
-
-Also corrected in 10.0.0 — not breaking, but visible. `<lr-flag>` no longer paints a full-size
-undecoded image beside its own skeleton while loading; `<lr-video>` no longer keeps a second,
-duplicate controls play button both painted and focusable behind a poster, and it now keeps captions
-for a `<track>` with no `kind` attribute, whose HTML missing-value default is `subtitles`; and
-`<lr-avatar>` and `<lr-image-comparer>` honor a consumer's `hidden` slotted child. In each case the
-component's own author-origin declaration was beating the UA stylesheet's `[hidden] { display: none }`
-regardless of specificity.
+Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
 
 ## Breaking changes in 9.0.0
 
-`<lr-media-card>`'s `accessibleLabel` property now defaults to `null` instead of `''`
-(`string | null`, matching `<lr-pan-zoom>`/`<lr-zoomable-frame>`). Behavior is unchanged: an explicit
-empty string and the unset default both still fall through to the generated purpose-specific action
-name — only the value read back from an unset property differs. A consumer comparing against `''`
-should switch to `== null` / `?? ''`.
+Per-release history for this family is in `CHANGELOG.md`; the component sections document only the current API.
 
 ## `lr-flag`
 
@@ -73,8 +42,7 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
   card/row sizes (~28–96px); `'detailed'` = the
   pristine full-fidelity vector for hero-scale display. No effect when `src` is set.)
 
-The v9 vocabulary replaces `round` with `shape="circle"` and `variant` with `fidelity`; exported
-authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
+Exported authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
 **Events:** none.
 
@@ -317,8 +285,7 @@ internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEve
 composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
-`LyraSequencePlaybackStepDetail`. The former generic `LyraPlayback`, `<lr-playback>`, `length`,
-`index`, and `lr-step` names are removed in v9 rather than retained as ambiguous aliases.
+`LyraSequencePlaybackStepDetail`.
 
 **Slots:** `play-icon`, `pause-icon` — decorative glyphs for the paused and playing states; an empty
 slot keeps the built-in glyph. Assigned content renders in an inert, `aria-hidden` layer inside the
@@ -544,7 +511,7 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   the documented way to weight a ramp toward the low end). **`stops` stay in the data's own units
   under either mode**, so the legend keeps reading in real values instead of log units — no
   pre-transforming to log10 and hand-relabelling the legend back.
-  `'step'` (new in 11.0.0) emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
+  `'step'` emits maplibre's `['step', …]` instead of `['interpolate', …]`, giving
   **discrete bands rather than a continuous ramp**. Use it whenever the legend advertises a fixed
   set of ranges with one swatch each: a ramp would put colours on the map that appear nowhere in the
   legend, and would render two regions in the same advertised band as visibly different colours
@@ -825,8 +792,6 @@ payload beside the map.
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
 `LyraMapStyleSpecification`, and `LyraMapInstance`.
-The former `LegendEntry`, `ChoroplethLayer`, `GeoJsonDataLayer`, and `MapMarker` names are removed
-in v9 rather than retained as aliases.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -1218,6 +1183,10 @@ reimplemented.
   `heldFileCount`/`heldTotalSize`: `0` (the default) means "nothing held" and reproduces prior
   behavior exactly, and a negative, `NaN`, or `Infinity` override is normalized to `0` via
   `finiteCount` rather than corrupting every later comparison.
+- `allowedMimeTypes` / `forbiddenMimeTypes: readonly string[] = []` (property only) — exact MIME
+  allow/deny lists, identical to `lr-file-input`'s (denylist first); a mismatch rejects with `'type'`.
+- `acceptedMessage` / `rejectedMessage: string` (attributes `accepted-message` / `rejected-message`) —
+  caller-owned outcome copy with `{count}`; unset uses the localized default.
 - `readonly dragging: boolean` — `true` during an active drag session
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
@@ -1312,8 +1281,8 @@ enabled buttons retain pointer feedback.
 
 **Properties:**
 
-- `multiple: boolean = false` (reflected) — a plain HTML boolean like `wa-file-input`'s, so
-  `multiple="false"` is still true here; `lr-drop-zone` and `lr-attachment-trigger` read it as false
+- `multiple: boolean = false` (reflected) — `multiple="false"` reads as false, like
+  `lr-drop-zone` and `lr-attachment-trigger`; bare `multiple` opts into batches
 - `disabled: boolean = false` (reflected)
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
@@ -1386,9 +1355,7 @@ enabled buttons retain pointer feedback.
   below); `s` and the steps below it give a denser dropzone for constrained spaces (a toolbar, a
   table cell).
 - `validators: LyraFileInputValidator[] = []` (attribute: false) — additional JavaScript
-  constraints, run after the intrinsic `required` check. **Fixed in 9.0.0:** the property was
-  previously declared (typed `unknown[]`) and read by nothing, so an assigned validator silently
-  never ran. It now implements the same contract as `lr-date-input`/`lr-combobox`:
+  constraints, run after the intrinsic `required` check. It implements the same contract as `lr-date-input`/`lr-combobox`:
   - a function `(files: File[], input: LyraFileInput) => void | boolean | string | ValidityStateFlags`
     — `undefined`/`true` passes, a string is the validation message (raising `customError`), `false`
     is a generic failure using the localized `valueInvalid` string, and a `ValidityStateFlags` object
@@ -1720,12 +1687,7 @@ a focused zoom control.
   `contentDocument: Document | null`. Both content accessors return `null` while detached;
   `contentDocument` also returns `null` across an origin boundary.
 
-**Authoring type:** `LyraZoomableFrameLoading`. The former unprefixed
-`ZoomableFrameLoading` name is removed in v9 rather than retained as an alias.
-The former deep-class-module implementation exports `DEFAULT_ZOOM_LEVELS`,
-`DEFAULT_IFRAME_SANDBOX`, `safeZoomableFrameSrc()`, and `safeZoomableFrameSandbox()` are also
-removed in v9. They were never part of the registration, root, or documented component surface;
-configure the corresponding public properties instead of depending on sink-policy internals.
+**Authoring type:** `LyraZoomableFrameLoading`.
 
 **Methods:** `zoomIn()` selects the nearest configured level above the current value;
 `zoomOut()` selects the nearest below it. The control group also accepts `+`/`=` and `-`/`_` while one
@@ -1833,9 +1795,7 @@ relayed exactly once as owner-realm native `FocusEvent`s (bubbling and composed,
 action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
-and the read-only `--lr-pan-zoom-zoom`. The former `--lr-zoomable-frame-min-block-size` and
-`--lr-zoomable-frame-zoom` compatibility names were removed in v9; migrate them to the two
-`--lr-pan-zoom-*` names. Scaling
+and the read-only `--lr-pan-zoom-zoom`. Scaling
 uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
@@ -1927,12 +1887,6 @@ coalesce into one update.
   neither `file` nor `name` supplies a name. Omitting it reads back `undefined` and uses the
   localized default (`'Untitled file'` in English)
 
-**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size` (same rename as
-`lr-file-icon`'s). In this library `size` names a tier on the shared size ladder, and a numeric byte
-count answering to the same property name is a collision a consumer only discovers at runtime. A
-leftover `size="245000"` is not a byte count: it is an unsupported tier, so it normalizes to unset
-and is removed, `bytes` stays omitted and the `size` part renders nothing.
-
 The component identifies _which_ attachment an action event is about through `attachmentId`. Set
 `attachment-id="..."` when you have a stable server-side identity; when unset or whitespace-only
 and `file` is set, a stable attachment id is
@@ -1943,10 +1897,7 @@ generated internal id is used as a last resort.
 `without-remove-button` is set), `lr-retry`
 (`detail: { attachmentId }`, only rendered while `status="error"`), and
 `lr-preview-request` (`detail: { attachmentId, name, mimeType, src }`) — a plain, non-cancelable
-notification that the preview action was activated. **Breaking in 10.0.0:** this event was
-advertised as cancelable, but the chip never read `defaultPrevented` and owns no preview default
-action to veto (it never registers or owns a viewer/overlay), so `preventDefault()` was a no-op.
-The flag is gone rather than left as a promise the component cannot keep.
+notification that the preview action was activated.
 
 **Slots:** none.
 
@@ -2078,11 +2029,6 @@ next to the label in `mode="label"`; `0`, the default, renders no size), `label`
 registry). A host `aria-label` wins over the computed localized file-type/size name. `decorative`
 changes the semantic owner to presentation and renders `aria-hidden="true"` explicitly.
 
-**Renamed in 8.0.0 — breaking:** the byte count is `bytes`, not `size`. Everywhere else in this
-library `size` names a tier on the shared size ladder, and a numeric byte count answering to the
-same property name is a collision a consumer only discovers at runtime. A leftover `size="245000"`
-is an unknown attribute now: `bytes` stays `0` and the badge silently renders without a size.
-
 **CSS parts:** `base`, `icon`, `label`, `description` (consumer-authored registry metadata in label
 mode), and `size` (the part keeps its name — it is the rendered size _text_, and renaming a part
 would break shipped `::part()` rules for no gain).
@@ -2188,15 +2134,8 @@ and later MIME values restore detection.
   'date' | 'time' | 'true' | 'false'` and reaches every kind, anchor included. Anything outside
   those sets is dropped rather than passed through.
 
-**Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
-"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
-this property was always the second. There is no alias — `appearance` on `<lr-media-card>` is simply
-an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
-chrome again.
-
 **Authoring types:** `LyraMediaCardKind` and `LyraMediaCardOpenDetail`; `frame` uses the shared
-`LyraFrame` directly. The former `MediaCardKind`, `MediaCardOpenDetail`, and `MediaCardFrame`
-names are removed in v9 rather than retained as aliases. URL validators are implementation details,
+`LyraFrame` directly. URL validators are implementation details,
 not exports from the component entry.
 
 **Events:** `lr-media-open` (`detail: LyraMediaCardOpenDetail { src: string; filename: string }`,
@@ -2207,8 +2146,6 @@ cancelable only for a safe file anchor immediately before its native download/op
 `preventDefault()` there suppresses that exact default. `detail.src` is whichever internally
 validated safe-URL sink actually rendered, not necessarily the raw `src` property verbatim — a
 whitespace-padded value is trimmed, so it matches the rendered sink.
-The former generic `lr-open` event is removed in v9: notification and veto phases now have distinct,
-truthful names.
 Native `focus` and `blur` are each relayed once from the current primary action as bubbling,
 composed `FocusEvent`s whose target is the `lr-media-card` host.
 
@@ -2363,16 +2300,6 @@ painted surface sits one boundary deeper),
 hidden via CSS by default, exposed as a part only so a consumer can override that with
 `::part(hidden-input)` in the unlikely case their integration needs to).
 
-**Migrating a pre-16.0.0 `::part()` rule.** This component's icon-only action is a composed
-`<lr-icon-button>`, so the part naming that action now names the composed child's HOST, which
-paints nothing. A `border`, `background` or `border-radius` set on it is silently dead — only
-`color` still appears to work, because it inherits, which makes such a rule look half-alive rather
-than broken. Set `--lr-icon-button-bg`/`-color`/`-border`/`-radius` (and their
-`-hover`/`-active` variants) on this element or an ancestor instead: the composed control reads
-those public tokens ahead of any default this component supplies. For SIZE use
-`--lr-theme-icon-button-size`, not `--lr-icon-button-size` — every `LyraElement` re-declares the
-latter on its own `:host`, so it never reaches a composed child (see `llms/tokens.md`).
-
 **An ancestor's public border wins over this component's own relayed default, not just its
 absence.** Unlike most composing components, the `outlined`/`filled-outlined` appearances here DO
 relay a non-zero `--_lr-icon-button-border-default` (a themed edge) into the trigger's private
@@ -2437,14 +2364,12 @@ values restore the image or fallback name.
   image is set, or the image fails to load and no `icon` slot content is provided.
 - `image: string = ''` — image URL; takes priority over the `icon` slot and `initials` when set and
   loads successfully, falling back to them on a load
-  error. **Renamed from `src` in 8.0.0** to match `wa-avatar`: a mechanical `wa-` → `lr-` rename
-  used to leave the property unset, so a migrated avatar silently dropped its photo and rendered
-  initials instead.
+  error. Matches `wa-avatar`'s `image`.
 - `label: string = ''` — upstream-compatible accessible description. A host `aria-label` wins.
   The same resolved name reaches the image `alt` and every fallback tier.
 - host `aria-label` — overrides `label` as the image/fallback accessible name without changing the
   visible initials or image
-- `loading: 'eager' | 'lazy' = 'eager'` (new in 8.0.0) — passthrough to the rendered `<img>`'s
+- `loading: 'eager' | 'lazy' = 'eager'` — passthrough to the rendered `<img>`'s
   native `loading` attribute. `'lazy'` defers the request until the avatar approaches the viewport,
   which is worth setting for avatars far down a long list and never for one above the fold. It only
   reaches the DOM while the image tier is the one rendering; the default matches the native default,
@@ -2456,13 +2381,11 @@ values restore the image or fallback name.
   normalize to `medium`.
 - `shape: 'circle' | 'rounded' | 'square' = 'circle'` (reflected) — three distinct corner radii:
   `circle` (the pill radius), `rounded` (the shared `--lr-radius`), `square` (no radius at all).
-  **`rounded` is new in 8.0.0.**
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected) —
   recolors the initials-fallback background/text on the library's one semantic-tone vocabulary;
-  `neutral` (the default) reads as a plain, unaccented circle. **Renamed from `tone` in 8.0.0**,
-  with no alias: `tone="brand"` is an unknown attribute now and renders the neutral circle.
+  `neutral` (the default) reads as a plain, unaccented circle.
 
-**Events:** `lr-error` (`detail: { image: string }`, new in 8.0.0) — the image failed to load;
+**Events:** `lr-error` (`detail: { image: string }`) — the image failed to load;
 `detail.image` carries the URL that failed, so a consumer can retry or report it. Bubbling,
 composed, non-cancelable, and purely informational: by the time it fires the avatar has already
 fallen back to the `icon` slot or the initials on its own. It never fires for an avatar with no
@@ -3297,8 +3220,7 @@ control-bar play toggle is hidden until the poster is dismissed.
 
 **Methods:** `getState(): VideoState` returns a fresh synchronous
 `{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot. `VideoState` is the
-canonical upstream-compatible authoring type; the redundant `LyraVideoState` alias is removed in
-v9;
+canonical upstream-compatible authoring type.
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
 `play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
 `togglePlay()`, `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy

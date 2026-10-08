@@ -1,5 +1,5 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { toast } from './toaster.js';
 import './toast.js';
@@ -238,7 +238,7 @@ it('publishes the visible custom state exactly while the stack contains a toast 
   await waitUntil(() => region.matches(':state(visible)'));
 
   item.remove();
-  await aTimeout(0);
+  await nextFrame();
   expect(region.matches(':state(visible)')).to.equal(false);
 });
 
@@ -442,6 +442,7 @@ it('rejects create() deterministically while the region is detached', async () =
   const region = document.createElement('lr-toast') as LyraToast;
   const outcome = await Promise.race([
     region.create('detached').then(() => 'resolved', (error) => String(error)),
+    // wait-reason: failure-detection guard only; never reached when create() rejects
     aTimeout(100).then(() => 'timed out'),
   ]);
   expect(outcome).to.include('must be connected');
@@ -575,7 +576,7 @@ it('prunes a synchronously removed queued member before deciding that a replacem
 
   items[3]!.remove();
   const replacement = await region.create('real replacement', { duration: 0 });
-  await aTimeout(0);
+  await nextFrame();
 
   expect(overflowCount, 'a stale, already-absent member is free capacity rather than lost work').to.equal(0);
   expect(items[4]!.isConnected, 'the next live queued item must not be discarded').to.equal(true);
@@ -596,7 +597,7 @@ it('restores focus inside an active toast item when it is reparented to another 
   expect(item.shadowRoot!.activeElement === close).to.equal(true);
 
   second.append(item);
-  await aTimeout(0);
+  await nextFrame();
 
   expect(item.hasAttribute('data-toast-queued')).to.equal(false);
   expect(
@@ -626,7 +627,7 @@ it('does not steal newer external focus while deactivating a reparented toast it
   moving.remove();
   newer.focus();
   region.append(moving);
-  await aTimeout(0);
+  await nextFrame();
 
   expect(moving.hasAttribute('data-toast-queued')).to.equal(true);
   expect(
@@ -650,7 +651,7 @@ it('reasserts the current owner when an item ping-pongs B to A before either reg
   second.append(moving);
   expect(moving.hasAttribute('data-toast-queued'), 'region B is full').to.equal(true);
   first.append(moving);
-  await aTimeout(0);
+  await nextFrame();
 
   const surface = moving.shadowRoot!.querySelector<HTMLElement>('[part="toast-item"]')!;
   expect(moving.parentElement === first).to.equal(true);
@@ -666,6 +667,7 @@ it('bounds a synchronous burst, settles every create() promise, and evicts only 
   );
   const settled = await Promise.race([
     Promise.all(creations),
+    // wait-reason: failure-detection guard only; never reached when the promises settle
     aTimeout(500).then(() => null),
   ]);
   expect(settled, 'queue eviction must not strand create() promises').to.not.equal(null);
@@ -787,6 +789,7 @@ it('deactivates a visible standalone item reparented into a full region and resu
   close.focus();
   expect(standalone.shadowRoot!.activeElement === close).to.equal(true);
 
+  // wait-reason: real elapsed time on the visible auto-hide timer before it is queued
   await aTimeout(45);
   region.append(standalone);
   await standalone.updateComplete;
@@ -803,6 +806,7 @@ it('deactivates a visible standalone item reparented into a full region and resu
     'focus moves to the nearest active notification control instead of falling to the document',
   ).to.equal(true);
 
+  // wait-reason: asserting the paused timer does not dismiss the toast across the queued interval
   await aTimeout(220);
   expect(standalone.isConnected, 'the visible timer remains paused for the entire queued interval').to.equal(true);
   active[0]!.style.setProperty('--lr-toast-hide-duration', '0ms');
@@ -828,11 +832,13 @@ it('keeps a queued finite toast progress ring aligned with its remaining 1000ms 
   standalone.textContent = 'finite queued progress';
   document.body.append(standalone);
   await waitUntil(() => standalone.hasAttribute('data-visible'));
+  // wait-reason: real elapsed countdown time before the toast is queued
   await aTimeout(250);
 
   region.append(standalone);
   await standalone.updateComplete;
   expect(standalone.hasAttribute('data-toast-queued')).to.equal(true);
+  // wait-reason: asserting queue time does not consume the remaining countdown
   await aTimeout(250);
   expect(standalone.isConnected, 'queue time does not consume the remaining countdown').to.equal(true);
 
@@ -840,6 +846,7 @@ it('keeps a queued finite toast progress ring aligned with its remaining 1000ms 
   const promotedAt = performance.now();
   await active[0]!.hide();
   await waitUntil(() => !standalone.hasAttribute('data-toast-queued'), 'the finite toast should promote');
+  // wait-reason: let the resumed progress ring advance by real time
   await aTimeout(50);
 
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -850,6 +857,7 @@ it('keeps a queued finite toast progress ring aligned with its remaining 1000ms 
     expect(progress, 'promotion resumes the ring at the elapsed countdown fraction').to.be.at.least(0.18);
   }
 
+  // wait-reason: real remaining countdown must not be exhausted early
   await aTimeout(350);
   expect(standalone.isConnected, 'the preserved remainder is not exhausted early').to.equal(true);
   await waitUntil(() => !standalone.isConnected, 'the preserved remainder dismisses the toast', {
@@ -905,7 +913,7 @@ it('keeps long visible toasts inside a scrollable safe-area stack and reveals fo
 
   const lastClose = items[2]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
   lastClose.focus();
-  await aTimeout(0);
+  await nextFrame();
   const stackRect = stack.getBoundingClientRect();
   const closeRect = lastClose.getBoundingClientRect();
   expect(closeRect.top).to.be.at.least(stackRect.top - 1);

@@ -120,11 +120,14 @@ describe('locale-picker type-ahead reset debounce', () => {
     await settle(el);
     typeAhead(el, 'e');
     expect(bufferOf(el)).to.equal('e');
+    // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
     await aTimeout(300);
     typeAhead(el, 'n');
     expect(bufferOf(el), 'a second keystroke extends the buffer').to.equal('en');
+    // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
     await aTimeout(350);
     expect(bufferOf(el), 'the superseded reset must not clear it').to.equal('en');
+    // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
     await aTimeout(400);
     expect(bufferOf(el), 'the surviving reset still fires on its own schedule').to.equal('');
   });
@@ -141,6 +144,7 @@ describe('locale-picker type-ahead reset debounce', () => {
     await settle(el);
     typeAhead(el, 'f');
     expect(bufferOf(el), 'a reconnected picker still accumulates').to.equal('f');
+    // wait-reason: the type-ahead buffer reset (~500 ms real timer) is the behavior under test
     await aTimeout(700);
     expect(bufferOf(el), 'and its reset still fires').to.equal('');
   });

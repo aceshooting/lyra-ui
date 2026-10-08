@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { sendMouse } from '../../../../test/wtr-mouse.js';
 import { deepActiveElement } from '../../../internal/overlay-manager.js';
@@ -442,7 +442,7 @@ describe('native modal interoperability', () => {
       await click(action);
       expect(clicks, 'the later native carrier accepts pointer input').to.equal(1);
       expect(deepActiveElement(document) === action, 'focus reaches the retried dialog action').to.equal(true);
-      await aTimeout(50);
+      await waitUntil(() => expectedConsoleErrors.length >= expectedRejections.length * 2, 'injected runner errors were reported');
       expect(expectedConsoleErrors, 'each generic runner warning belongs to the injected error')
         .to.deep.equal(expectedRejections.flatMap(() => [runnerWarning, injectedDetail]));
     } finally {

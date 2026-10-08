@@ -1,8 +1,8 @@
 import type { ChatMessageRole, ChatMessageStatus } from '../components/conversation/chat-message/chat-message.class.js';
-import type { ToolCallStatus } from '../components/agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { ToolStatus } from '../components/agent-tools/tool-status.js';
 import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 
-export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
+export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolStatus };
 
 /**
  * Provider-neutral shared type surface for the agentic AI component layer built on top of this
@@ -15,7 +15,7 @@ export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
  * Every shape below is deliberately structurally compatible with -- never a divergent duplicate
  * of -- the prop/event shapes those existing components already expose. Where a type reuses an
  * existing component's own exported type outright (`ChatMessageRole`, `ChatMessageStatus`,
- * `ToolCallStatus`), it is imported and re-exported here rather than redefined. See each
+ * `ToolStatus`), it is imported and re-exported here rather than redefined. See each
  * interface's own doc comment below for the specific existing component(s) it composes with.
  * The package's no-emit `type-tests/ai-contracts.ts` program asserts this compatibility at
  * compile time so contract assertions never become importable runtime modules.
@@ -28,7 +28,7 @@ export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
 
 /**
  * Coarse lifecycle state for a whole agent run or a single step within one. Broader than any
- * single existing component's own status vocabulary (e.g. `ToolCallStatus`'s `'pending' |
+ * single existing component's own status vocabulary (e.g. `ToolStatus`'s `'pending' |
  * 'running' | 'success' | 'error' | 'denied' | 'incomplete'`, reused as-is by `ToolInvocation`
  * below) because a run/step can also be waiting on the user (`'waiting-input'`), waiting on an
  * approval gate (`'waiting-approval'`), or user-cancelled (`'cancelled'`) -- a single tool call
@@ -110,7 +110,7 @@ export interface ChatMessage {
 
 /**
  * One tool/function call an agent made -- the same concept `<lr-tool-call-chip>` and
- * `<lr-tool-result-view>` already render. `status` reuses `ToolCallStatus` (not the broader
+ * `<lr-tool-result-view>` already render. `status` reuses `ToolStatus` (not the broader
  * `AgentStatus` above) so a `ToolInvocation` assigns directly onto `<lr-tool-call-chip>`'s own
  * `status` property with no adapter; that component's own `callId`/`name` properties correspond
  * to `id`/`name` here. `args`/`result` widen (never narrow) `<lr-tool-result-view>`'s own
@@ -128,7 +128,7 @@ export interface ToolInvocation {
   args: Record<string, unknown>;
   /** `'incomplete'` marks a call that ended without a result (an interrupted stream, a cancelled
    *  run). */
-  status: ToolCallStatus;
+  status: ToolStatus;
   result?: unknown;
   error?: string;
   /** Epoch milliseconds the call started. */

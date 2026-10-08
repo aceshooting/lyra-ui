@@ -36,16 +36,15 @@ consume it for this contract. Links accept
 HTTPS, `mailto:`, and fragment-only targets; HTTP is refused. The current browser evidence for
 these actions is recorded below, alongside the earlier first-increment results. The
 [public core 2.25 source reference](https://github.com/eigenpal/docx-editor/tree/42c6c267) is
-read-only reference material; the runtime is the published 2.25.0 package, not that source checkout
+read-only reference material; the runtime is the published package at the exact peer version, not that source checkout
 or an implementation source. Current license
 texts and attribution are documented in
 [`packages/lyra-docs/THIRD_PARTY_NOTICES.md`](../../packages/lyra-docs/THIRD_PARTY_NOTICES.md).
 
-## Earlier feasibility prototype (archived evidence)
+## Earlier feasibility prototype (archived)
 
-Before the current package implementation, a separate Lit prototype compared three approaches.
-The comparison used public core `2.24.0`, Lit `3.3.3` and Lyra `25.3.1`; it explains the current
-engine direction but does not qualify the current component.
+A separate Lit prototype (public core `2.24.0`, Lit `3.3.3`) chose the engine direction; it does not
+qualify the current component. Three approaches were compared:
 
 | Approach | Benefit | Cost and limitation |
 | --- | --- | --- |
@@ -53,65 +52,21 @@ engine direction but does not qualify the current component.
 | Selected core subpaths or copied modules | Public subpaths may omit unrelated modules | Editing still needs a coherent model, layout and serializer; copying transfers maintenance to Lyra without a demonstrated size advantage |
 | Independent ProseMirror editor | Maintained foundation for schema-defined rich text and transactions | HTML/JSON editing is a different contract; preserving DOCX parts, relationships and Word layout would become separate work |
 
-The published 2.24 core's [source commit](https://github.com/eigenpal/docx-editor/tree/7267e125c0b7ddede8c6bc51cd8634bd0108aae7)
-preceded the originally inspected [source snapshot](https://github.com/eigenpal/docx-editor/tree/0bc6d8fa8ec5a35bb267ac171e10102617a68535)
-by one documentation/baseline commit; core and font source did not change between them.
-ProseMirror's official development moved from GitHub to
-[its current hosting service](https://github.com/ProseMirror/prosemirror); its archived GitHub
-repositories did not imply abandonment.
+Findings that still shape the design:
 
-The prototype mounted the public core in a stable light-DOM subtree with Lyra formatting buttons.
-Chromium 153, Firefox 155 and WebKit 26.6 passed basic typing, selection, formatting, undo/redo,
-save/reopen, stable Lit updates and two-instance checks. A shadow-DOM prototype failed in Firefox:
-ordinary typed text saved in reverse order, and range selection did not reach the formatting
-command. Basic typing in the other two browsers did not establish portable shadow support. No
-browser-global patch was used. The prototype's Alt+F10 then Enter path activated toolbar controls
-in all three light-DOM cases; it was a narrow keyboard result.
-
-The public core exposed `replaceMatch`, but both `can` and `exec` returned `unsupported` in that
-configuration. Public `selectMatch` followed by native typing produced the requested edit. A
-declared command name therefore did not establish availability. Its public
-[editor contract](https://github.com/eigenpal/docx-editor/blob/7267e125c0b7ddede8c6bc51cd8634bd0108aae7/packages/core/src/contracts/editor.ts)
-also described detach/reattach as recreating the session; undo history and caret retention were
-not established.
-
-The prototype corpus had 15 original synthetic inputs: seven accepted documents and eight refused
-containers. Accepted cases included lists, tables, an embedded image, headers/footers, RTL text,
-unknown OPC parts, unsupported content and a 2,000-paragraph document. Refused cases included
-non-ZIP/truncated input, missing and duplicate parts, traversal names, excessive compression,
-malformed XML and DTD declarations. Refusal came from a separate bounded preflight prototype,
-not from the engine's own safety contract.
-
-The seven accepted documents were edited, saved and reopened through public selection and native
-input in all three browsers. Selected checks for seven targeted edits and an unchanged save of the
-unsupported-content fixture preserved protected payload hashes, relationship targets, text,
-control/revision metadata and namespace bindings; 32 output comparisons covered first saves and
-saves after reopening. Initial strict XML comparisons found added paragraph tracking IDs and
-removal of redundant `xml:space` attributes. Those differences were reviewed separately while
-whitespace-sensitive and content-loss checks remained. Modeled XML can be normalized, so ZIP byte
-equality was not the fidelity criterion. This small synthetic set did not establish general
-unsupported-content preservation or Word/LibreOffice interoperability.
-
-The prototype build emitted 3,872,134 bytes, or 1,166,118 bytes with each artifact gzipped at level
-6. Its lazily requested editor chunks accounted for 3,021,198 raw and 880,369 gzipped bytes,
-including editor CSS loaded as a JavaScript string. An emitted 426,620-byte HarfBuzz WASM file was
-not requested in sampled cases. No font package or font assets were configured. These are archived
-build-artifact figures, not current package sizes or measured compressed HTTP transfer.
-
-On an Intel Xeon Gold 6226R Linux host with **eight assigned logical CPUs**, one headless Chromium
-sample opened the large fixture in 2.02 seconds, saved an edit in 130 milliseconds and reopened it
-in 1.33 seconds. Opening included lazy module loading, layout and two animation frames. Automated
-typing wall time included driver overhead and was not input-to-paint latency. These samples cannot
-be compared as a speedup or slowdown with the current run, whose process saw 60 logical CPUs and
-no cgroup CPU quota.
-
-Retained memory was inconclusive. After one warmup, three image-document mount/destroy cycles in
-each browser emptied the mount, released four host subscriptions and revoked each observed live
-image blob URL. No dedicated engine worker was created. Chromium's post-GC page-level DOM and
-listener counts stayed constant, while used JavaScript heap was about 0.73, 1.50 and 1.64 MB above
-the warmed baseline after successive cycles. Those differences did not establish their cause or
-leak freedom. Comparable native counters were unavailable for Firefox/WebKit, and font/shaping
-resources were not covered.
+- A stable light-DOM mount passed typing, selection, formatting, undo/redo, save/reopen and
+  two-instance checks in Chromium, Firefox and WebKit; a shadow-DOM mount failed in Firefox
+  (typed text saved in reverse order, range selection did not reach the command), so shadow mounts
+  are refused. No browser global is patched.
+- A declared engine command name did not establish availability (`replaceMatch` reported
+  `unsupported`); availability is always read, never assumed. Detach/reattach recreates the session,
+  so undo history and caret do not survive it.
+- Seven synthetic documents round-tripped with protected payload hashes, relationships, text and
+  namespace bindings preserved; modeled XML is normalized, so ZIP byte equality is not the fidelity
+  criterion. Eight malformed containers were refused by a separate bounded preflight, not by the
+  engine. This small set does not establish general preservation or Word/LibreOffice interoperability.
+- Prototype build-artifact sizes, single-run timings and retained-memory samples were inconclusive
+  and are superseded by the current figures below; none is a performance claim.
 
 ## Dependency and asset boundaries
 

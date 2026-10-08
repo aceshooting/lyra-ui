@@ -31,8 +31,8 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { composedParentElement } from '../../../internal/active-element.js';
-import { isEditableKeyEventTarget } from '../../../internal/hotkey.js';
-import { RovingToolbarController, leaseTabIndex } from '../../../internal/roving-toolbar.js';
+import { isEditableKeyEventTarget, keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
+import { RovingToolbarController, leaseTabIndex, observeStopChanges } from '../../../internal/roving-toolbar.js';
 import { SlottedOverlayController } from '../../../internal/slotted-overlay-controller.js';
 import type {
   LyraClipboardWriteFailure,
@@ -742,26 +742,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     }
     const observer = new Observer(this.onStopMutations);
     const roots = new Set<Node>([base, ...this.actionRoots()]);
-    const options: MutationObserverInit = {
-      attributes: true,
-      attributeOldValue: true,
-      attributeFilter: [
-        'aria-disabled',
-        'aria-hidden',
-        'contenteditable',
-        'controls',
-        'disabled',
-        'hidden',
-        'href',
-        'inert',
-        'open',
-        'role',
-        'tabindex',
-        'type',
-      ],
-      childList: true,
-      subtree: true,
-    };
+    const options = observeStopChanges();
     for (const root of roots) observer.observe(root, options);
     this.stopObserver = observer;
   }
@@ -841,7 +822,8 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   };
 
   private onToolbarKeyDown = (e: KeyboardEvent): void => {
-    if (e.defaultPrevented || isEditableKeyEventTarget(e)) return;
+    // A slotted text field or open menu owns its own arrow/Home/End keys.
+    if (e.defaultPrevented || isEditableKeyEventTarget(e) || keyEventOwnedByInnerControl(e, { container: this })) return;
     const stops = this.logicalActions();
     if (stops.length === 0) return;
     const path = e.composedPath();

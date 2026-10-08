@@ -17750,7 +17750,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "highlights",
@@ -24809,6 +24809,15 @@
             "hasDefault": false
           },
           {
+            "name": "with-remove",
+            "property": "withRemove",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "wrap",
             "property": "wrap",
             "type": "boolean",
@@ -24904,6 +24913,15 @@
             "type": "ChipVariant",
             "readonly": false,
             "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "withRemove",
+            "attribute": "with-remove",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": false
           },
@@ -31733,6 +31751,18 @@
             "bubbles": true
           },
           {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-close",
             "type": "CustomEvent<LyraCommandPaletteCloseDetail>",
             "cancelable": "never",
@@ -31742,6 +31772,12 @@
             "name": "lr-close-request",
             "type": "CustomEvent<LyraCommandPaletteCloseDetail>",
             "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<LyraCommandPaletteCloseDetail>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -33679,7 +33715,9 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-button"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -33769,6 +33807,14 @@
         "parts": [
           {
             "name": "action",
+            "deprecated": null
+          },
+          {
+            "name": "action-base",
+            "deprecated": null
+          },
+          {
+            "name": "action-label",
             "deprecated": null
           },
           {
@@ -33966,7 +34012,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "headingLevel",
@@ -34249,12 +34295,11 @@
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -34301,12 +34346,11 @@
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -35842,7 +35886,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 1000
+            "default": 1500
           },
           {
             "name": "from",
@@ -35961,7 +36005,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 1000
+            "default": 1500
           },
           {
             "name": "from",
@@ -40841,13 +40885,12 @@
           },
           {
             "name": "autocorrect",
-            "property": "autoCorrect",
-            "type": "string",
+            "property": "autocorrect",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "clear-label",
@@ -41341,14 +41384,13 @@
             "default": ""
           },
           {
-            "name": "autoCorrect",
+            "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "string",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "clearable",
@@ -41470,6 +41512,15 @@
             "default": 0
           },
           {
+            "name": "enterkeyhint",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "enterKeyHint",
             "attribute": "enterkeyhint",
             "type": "string",
@@ -41524,6 +41575,15 @@
             "attribute": null,
             "type": "HTMLInputElement | undefined",
             "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "inputmode",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
@@ -43592,7 +43652,18 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-date-picker-preset-hover-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-date-picker-preset-pressed-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-date-picker-preset-pressed-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -43604,6 +43675,12 @@
           },
           {
             "name": "--lr-date-picker-preset-selected-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-date-picker-preset-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -50176,6 +50253,15 @@
             "default": ""
           },
           {
+            "name": "accepted-message",
+            "property": "acceptedMessage",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -50256,6 +50342,15 @@
             "default": false
           },
           {
+            "name": "rejected-message",
+            "property": "rejectedMessage",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "size",
             "property": "size",
             "type": "LyraSize",
@@ -50278,6 +50373,25 @@
             "default": ""
           },
           {
+            "name": "acceptedMessage",
+            "attribute": "accepted-message",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "allowedMimeTypes",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "EMPTY_MIME_TYPES"
+          },
+          {
             "name": "disabled",
             "attribute": "disabled",
             "type": "boolean",
@@ -50296,6 +50410,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "forbiddenMimeTypes",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "EMPTY_MIME_TYPES"
           },
           {
             "name": "heldFileCount",
@@ -50366,6 +50490,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "rejectedMessage",
+            "attribute": "rejected-message",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "size",
@@ -52347,7 +52480,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "foldQuotes",
@@ -55119,6 +55252,7 @@
           "lr-chip-group",
           "lr-export-button",
           "lr-file-input",
+          "lr-input",
           "lr-table"
         ],
         "transitive": [
@@ -55468,6 +55602,10 @@
             "deprecated": null
           },
           {
+            "name": "search-input-field",
+            "deprecated": null
+          },
+          {
             "name": "tag-filter",
             "deprecated": null
           },
@@ -55476,118 +55614,7 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [
-          {
-            "name": "--lr-eval-dataset-search-font-size",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "inherit"
-          },
-          {
-            "name": "--lr-eval-dataset-search-min-height",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "auto"
-          },
-          {
-            "name": "--lr-eval-dataset-search-padding-block",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
-            "name": "--lr-eval-dataset-search-padding-inline",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-s)"
-          },
-          {
-            "name": "--lr-eval-dataset-search-radius",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-radius)"
-          },
-          {
-            "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-color-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-color-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-radius",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-action-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-action-hover-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-fill",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-focus-border-color",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-input-placeholder-color",
-            "deprecated": null,
-            "hasDefault": false
-          }
-        ],
+        "cssProperties": [],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -62874,7 +62901,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "highlights",
@@ -67724,7 +67751,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "highlights",
@@ -70251,7 +70278,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "[]"
+            "default": "['text-quote', 'fragment']"
           },
           {
             "name": "highlights",
@@ -74468,6 +74495,10 @@
           },
           {
             "name": "detail-popover",
+            "deprecated": null
+          },
+          {
+            "name": "details-limit",
             "deprecated": null
           },
           {
@@ -82136,6 +82167,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "heading-level",
             "property": "headingLevel",
             "type": "LyraHeadingLevel",
@@ -82163,9 +82204,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           }
         ],
         "properties": [
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "headingLevel",
             "attribute": "heading-level",
@@ -82214,6 +82275,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "thresholds",
@@ -85511,13 +85582,12 @@
           },
           {
             "name": "autocorrect",
-            "property": "autoCorrect",
-            "type": "string",
+            "property": "autocorrect",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "custom-error",
@@ -85726,14 +85796,13 @@
             "default": "off"
           },
           {
-            "name": "autoCorrect",
+            "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "string",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "catalog",
@@ -97329,7 +97398,9 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-button"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
@@ -97495,6 +97566,14 @@
           },
           {
             "name": "decision",
+            "deprecated": null
+          },
+          {
+            "name": "decision-base",
+            "deprecated": null
+          },
+          {
+            "name": "decision-label",
             "deprecated": null
           },
           {
@@ -97818,13 +97897,12 @@
           },
           {
             "name": "autocorrect",
-            "property": "autoCorrect",
-            "type": "string",
+            "property": "autocorrect",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -97887,7 +97965,7 @@
           },
           {
             "name": "enterkeyhint",
-            "property": "enterkeyhint",
+            "property": "enterKeyHint",
             "type": "string",
             "reflects": false,
             "inferred": false,
@@ -97947,8 +98025,8 @@
           },
           {
             "name": "inputmode",
-            "property": "inputmode",
-            "type": "'tel' | 'numeric' | 'text'",
+            "property": "inputMode",
+            "type": "string",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -98147,14 +98225,13 @@
             "default": "tel"
           },
           {
-            "name": "autoCorrect",
+            "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "string",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "autofocus",
@@ -98236,6 +98313,15 @@
           },
           {
             "name": "enterkeyhint",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "enterKeyHint",
             "attribute": "enterkeyhint",
             "type": "string",
             "readonly": false,
@@ -98305,8 +98391,17 @@
           },
           {
             "name": "inputmode",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "inputMode",
             "attribute": "inputmode",
-            "type": "'tel' | 'numeric' | 'text'",
+            "type": "string",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -103878,24 +103973,6 @@
             "default": false
           },
           {
-            "name": "indicator",
-            "attribute": null,
-            "type": "SVGCircleElement | null",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "indicatorOffset",
-            "attribute": null,
-            "type": "number",
-            "readonly": true,
-            "reflects": false,
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "label",
             "attribute": "label",
             "type": "string",
@@ -104157,6 +104234,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "actions-layout",
+            "property": "actionsLayout",
+            "type": "ChatComposerActionsLayout",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inline"
+          },
+          {
             "name": "aria-label",
             "property": "accessibleLabel",
             "type": "string | null",
@@ -104214,6 +104301,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "frame",
+            "property": "frame",
+            "type": "ChatComposerFrame",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "inputmode",
@@ -104403,6 +104500,16 @@
             "default": null
           },
           {
+            "name": "actionsLayout",
+            "attribute": "actions-layout",
+            "type": "ChatComposerActionsLayout",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inline"
+          },
+          {
             "name": "attachmentCapabilities",
             "attribute": null,
             "type": "readonly LyraAttachmentCapability[]",
@@ -104480,6 +104587,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "ChatComposerFrame",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "input",
@@ -104770,6 +104887,10 @@
           },
           {
             "name": "start",
+            "deprecated": null
+          },
+          {
+            "name": "toolbar",
             "deprecated": null
           }
         ],
@@ -105451,17 +105572,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "2"
+            "default": "none"
           },
           {
             "name": "label",
             "property": "label",
-            "type": "string",
+            "type": "string | undefined",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -105572,17 +105692,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "2"
+            "default": "none"
           },
           {
             "name": "label",
             "attribute": "label",
-            "type": "string",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -113389,13 +113508,25 @@
         "ledger": "scripts/fixtures/component-qualification.json"
       },
       "dependencies": {
-        "direct": [],
+        "direct": [
+          "lr-empty"
+        ],
         "transitive": [],
         "ledger": "scripts/fixtures/component-integration.json"
       },
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "heading-level",
             "property": "headingLevel",
@@ -113424,9 +113555,29 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           }
         ],
         "properties": [
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "headingLevel",
             "attribute": "heading-level",
@@ -113455,6 +113606,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "steps",
@@ -114476,6 +114637,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "heading-level",
             "property": "headingLevel",
             "type": "LyraHeadingLevel",
@@ -114515,6 +114686,16 @@
             "default": ""
           },
           {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
+          },
+          {
             "name": "top-k",
             "property": "topK",
             "type": "number",
@@ -114526,6 +114707,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
           {
             "name": "headingLevel",
             "attribute": "heading-level",
@@ -114574,6 +114765,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "topK",
@@ -115664,6 +115865,16 @@
             "default": null
           },
           {
+            "name": "frame",
+            "property": "frame",
+            "type": "LyraFrame",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -115681,6 +115892,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           }
         ],
         "properties": [
@@ -115693,6 +115914,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "frame",
+            "attribute": "frame",
+            "type": "LyraFrame",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "card"
           },
           {
             "name": "label",
@@ -115712,6 +115943,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "m"
           },
           {
             "name": "stages",
@@ -132395,6 +132636,12 @@
             "default": "none"
           },
           {
+            "name": "--lr-table-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-container)"
+          },
+          {
             "name": "--lr-table-resize-handle-active-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -132457,6 +132704,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-table-surface",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -132634,6 +132887,16 @@
             "default": "none"
           },
           {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -132733,6 +132996,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -133055,6 +133328,7 @@
         "form": {
           "associated": false,
           "properties": [
+            "disabled",
             "value"
           ],
           "methods": []
@@ -133141,7 +133415,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": "3"
+            "default": "none"
           },
           {
             "name": "locale",
@@ -133222,7 +133496,7 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": true,
-            "default": "3"
+            "default": "none"
           },
           {
             "name": "items",
@@ -138712,6 +138986,12 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-time-range-preset-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
             "name": "--lr-time-range-preset-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -142978,7 +143258,7 @@
           },
           {
             "name": "lr-approve-request",
-            "type": "CustomEvent<{ args: unknown }>",
+            "type": "CustomEvent<{ args: unknown; waitUntil: ToolApprovalDialogWaitUntil }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -142989,8 +143269,14 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-decision-settled",
+            "type": "CustomEvent<{ decision: ApprovalDecision }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-deny-request",
-            "type": "CustomEvent<null>",
+            "type": "CustomEvent<{ waitUntil: ToolApprovalDialogWaitUntil }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -143302,7 +143588,7 @@
           {
             "name": "status",
             "property": "status",
-            "type": "ToolCallStatus",
+            "type": "ToolStatus",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -143417,7 +143703,7 @@
           {
             "name": "status",
             "attribute": "status",
-            "type": "ToolCallStatus",
+            "type": "ToolStatus",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -143698,7 +143984,7 @@
           {
             "name": "status",
             "property": "status",
-            "type": "ToolCallStatus",
+            "type": "ToolStatus",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -143787,7 +144073,7 @@
           {
             "name": "status",
             "attribute": "status",
-            "type": "ToolCallStatus",
+            "type": "ToolStatus",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -144619,7 +144905,7 @@
           {
             "name": "status",
             "property": "status",
-            "type": "ToolResultStatus",
+            "type": "ToolStatus",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -144699,7 +144985,7 @@
           {
             "name": "status",
             "attribute": "status",
-            "type": "ToolResultStatus",
+            "type": "ToolStatus",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -145013,7 +145299,7 @@
           {
             "name": "status",
             "property": "status",
-            "type": "ToolResultStatus",
+            "type": "ToolStatus",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -145091,7 +145377,7 @@
           {
             "name": "status",
             "attribute": "status",
-            "type": "ToolResultStatus",
+            "type": "ToolStatus",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -151933,13 +152219,12 @@
           },
           {
             "name": "autocorrect",
-            "property": "autoCorrect",
-            "type": "string",
+            "property": "autocorrect",
+            "type": "boolean",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "custom-error",
@@ -152158,14 +152443,13 @@
             "default": "off"
           },
           {
-            "name": "autoCorrect",
+            "name": "autocorrect",
             "attribute": "autocorrect",
-            "type": "string",
+            "type": "boolean",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": true,
-            "default": ""
+            "hasDefault": false
           },
           {
             "name": "catalog",
@@ -205780,7 +206064,14 @@
         "parts": [],
         "cssProperties": [],
         "methods": [],
-        "defaults": []
+        "defaults": [
+          {
+            "memberKind": "attribute",
+            "member": "feedback-duration",
+            "action": "insert-if-absent",
+            "value": 1000
+          }
+        ]
       },
       "normalizations": {
         "typeEquivalences": [
@@ -205793,7 +206084,14 @@
         ],
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
-        "defaultEquivalences": [],
+        "defaultEquivalences": [
+          {
+            "memberKind": "property",
+            "member": "feedbackDuration",
+            "upstream": 1000,
+            "target": 1500
+          }
+        ],
         "derivedDefaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -212663,7 +212961,14 @@
         "parts": [],
         "cssProperties": [],
         "methods": [],
-        "defaults": []
+        "defaults": [
+          {
+            "memberKind": "attribute",
+            "member": "feedback-duration",
+            "action": "insert-if-absent",
+            "value": 1000
+          }
+        ]
       },
       "normalizations": {
         "typeEquivalences": [
@@ -212682,7 +212987,14 @@
         ],
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
-        "defaultEquivalences": [],
+        "defaultEquivalences": [
+          {
+            "memberKind": "property",
+            "member": "feedbackDuration",
+            "upstream": 1000,
+            "target": 1500
+          }
+        ],
         "derivedDefaultEquivalences": [
           {
             "memberKind": "attribute",

@@ -159,3 +159,35 @@ it('routes native forwarding slot changes through the slot owned by the label ho
     wrapper.remove();
   }
 });
+
+it('wakes on a referenced label target only when reference tracking is requested', async () => {
+  const container = document.createElement('div');
+  const target = document.createElement('span');
+  target.id = 'tracked-reference-label';
+  target.textContent = 'Initial';
+  let lifecycle: ReactiveController | undefined;
+  const host = controllerHost((controller) => { lifecycle = controller; });
+  const candidate = document.createElement('span');
+  candidate.setAttribute('aria-labelledby', target.id);
+  host.append(candidate);
+  container.append(target, host);
+  document.body.append(container);
+  let changes = 0;
+  new AccessibleTextController(host, [''], () => { changes += 1; }, [], true, true);
+  try {
+    lifecycle?.hostConnected?.();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    changes = 0;
+    target.textContent = 'Updated';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(changes).to.be.greaterThan(0);
+    lifecycle?.hostDisconnected?.();
+    changes = 0;
+    target.textContent = 'After disconnect';
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(changes).to.equal(0);
+  } finally {
+    container.remove();
+  }
+});

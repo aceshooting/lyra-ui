@@ -50,7 +50,8 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   sole overall owner; an explicitly empty host label stays empty
 - `ordinalIndex?: number` / `ordinalTotal?: number` (attribute: false) — optional one-based result
   position and count supplied by a containing results list. Standalone rows use their position in
-  the sorted inspector list. The open-button name includes this ordinal, title, and score tier.
+  the sorted inspector list. The open-button name includes this ordinal, title, and score tier. Setting it marks the inspector as one row of that list, so it renders without its own
+  group, list or listitem semantics.
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and

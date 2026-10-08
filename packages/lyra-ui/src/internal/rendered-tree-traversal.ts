@@ -94,10 +94,25 @@ interface ElementWork {
   readonly depth: number;
 }
 
+let nativeGetters = new WeakMap<object, Map<string, ((this: unknown) => unknown) | undefined>>();
+
+/** @internal Drops the memoized accessors, so a test can stage a different descriptor. */
+export function resetNativeGetterCache(): void {
+  nativeGetters = new WeakMap();
+}
+
+/** A prototype's native accessor, looked up once per prototype and name. */
+export function nativeGetter(prototype: object, name: string): ((this: unknown) => unknown) | undefined {
+  let byName = nativeGetters.get(prototype);
+  if (!byName) nativeGetters.set(prototype, byName = new Map());
+  if (!byName.has(name)) byName.set(name, Object.getOwnPropertyDescriptor(prototype, name)?.get);
+  return byName.get(name);
+}
+
 export function nativeNodeType(node: Node): number | undefined {
   try {
     const NodeConstructor = typeof Node === 'undefined' ? undefined : Node;
-    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'nodeType')?.get;
+    const getter = NodeConstructor && nativeGetter(NodeConstructor.prototype, 'nodeType');
     return (getter?.call(node) as number | undefined) ?? node.nodeType;
   } catch {
     return undefined;
@@ -112,7 +127,7 @@ export function ownerDocumentFor(node: Node): Document | undefined {
   if (nativeNodeType(node) === 9) return node as Document;
   try {
     const ambientGetter =
-      typeof Node === 'undefined' ? undefined : Object.getOwnPropertyDescriptor(Node.prototype, 'ownerDocument')?.get;
+      typeof Node === 'undefined' ? undefined : nativeGetter(Node.prototype, 'ownerDocument');
     return (ambientGetter?.call(node) as Document | null | undefined) ?? node.ownerDocument ?? undefined;
   } catch {
     return undefined;
@@ -125,7 +140,7 @@ export function nativeElementLocalName(element: Element): string | undefined {
     const ownerWindow = ownerDocumentFor(element)?.defaultView;
     const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
     const getter =
-      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'localName')?.get;
+      ElementConstructor && nativeGetter(ElementConstructor.prototype, 'localName');
     const localName = getter?.call(element) as unknown;
     return typeof localName === 'string' ? localName : undefined;
   } catch {
@@ -138,7 +153,7 @@ function childElements(node: Node): readonly Element[] {
   try {
     const ownerWindow = ownerDocumentFor(node)?.defaultView;
     const NodeConstructor = ownerWindow?.Node ?? (typeof Node === 'undefined' ? undefined : Node);
-    const getter = NodeConstructor && Object.getOwnPropertyDescriptor(NodeConstructor.prototype, 'childNodes')?.get;
+    const getter = NodeConstructor && nativeGetter(NodeConstructor.prototype, 'childNodes');
     const childNodes = (getter?.call(node) ?? node.childNodes) as NodeListOf<ChildNode>;
     const elements: Element[] = [];
     for (let index = 0; index < childNodes.length; index += 1) {
@@ -157,7 +172,7 @@ export function openShadowRoot(element: Element): ShadowRoot | undefined {
     const ownerWindow = ownerDocumentFor(element)?.defaultView;
     const ElementConstructor = ownerWindow?.Element ?? (typeof Element === 'undefined' ? undefined : Element);
     const getter =
-      ElementConstructor && Object.getOwnPropertyDescriptor(ElementConstructor.prototype, 'shadowRoot')?.get;
+      ElementConstructor && nativeGetter(ElementConstructor.prototype, 'shadowRoot');
     return (getter?.call(element) as ShadowRoot | null | undefined) ?? undefined;
   } catch {
     return undefined;

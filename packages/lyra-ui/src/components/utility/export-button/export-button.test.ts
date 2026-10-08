@@ -131,6 +131,7 @@ it('suppresses the built-in download when lr-export-request is cancelled', async
   el.addEventListener('lr-export-complete', () => (completed = true));
   const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
   btn.click();
+  // wait-reason: negative assertion, a cancelled lr-export-request must not complete the export
   await new Promise((r) => setTimeout(r, 10));
   expect(completed).to.be.false;
 });

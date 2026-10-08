@@ -534,6 +534,7 @@ it("does not let a closed disable-enable batch suppress or strand a same-task sh
   const shown = el.show();
   const settled = await Promise.race([
     shown.then(() => true),
+    // wait-reason: upper bound on a promise that must resolve; failure path only
     aTimeout(5000).then(() => false),
   ]);
   await el.updateComplete;

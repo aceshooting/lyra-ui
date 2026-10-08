@@ -303,3 +303,12 @@ export const ExactHeight: Story = {
     </div>
   `,
 };
+
+export const WithRemove: Story = {
+  name: 'With remove button',
+  render: () => html`
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <lr-chip with-remove @lr-remove=${(event: Event) => (event.target as HTMLElement).remove()}>Removable</lr-chip>
+    </div>
+  `,
+};
