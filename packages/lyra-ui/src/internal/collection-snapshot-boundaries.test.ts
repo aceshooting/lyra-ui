@@ -146,6 +146,87 @@ describe('public collection truncation is reported and can keep the newest rows'
 });
 
 describe('public collection snapshots at hostile input boundaries', () => {
+  it('exposes repeatable Map entry iterators over detached keys and values', () => {
+    const key = { id: 'original' };
+    const value = { count: 1 };
+    const source = new Map([[key, value]]);
+    const snapshot = snapshotPublicCollection(source) as ReadonlyMap<typeof key, typeof value>;
+    key.id = 'changed';
+    value.count = 2;
+    source.clear();
+    const first = [...snapshot.entries()];
+    const second = [...snapshot.entries()];
+    expect(first).to.deep.equal([[{ id: 'original' }, { count: 1 }]]);
+    expect(second).to.deep.equal(first);
+    expect(first[0]![0] === key).to.equal(false);
+    expect(first[0]![1] === value).to.equal(false);
+    expect(Object.isFrozen(first[0]![0])).to.equal(true);
+    expect(Object.isFrozen(first[0]![1])).to.equal(true);
+  });
+
+  it('reports omitted own data keys without dropping the surrounding record', () => {
+    const source = { kept: { value: 1 }, rejected: new URL('https://example.test/') };
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const losses: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection(source, undefined, {
+      recordKey: (key) => key === 'rejected' ? 'omit' : 'copy',
+      onResult: (result) => results.push(result),
+      onTruncate: (loss) => losses.push(loss),
+    }) as { kept: { value: number } };
+    expect(snapshot).to.deep.equal({ kept: { value: 1 } });
+    expect(snapshot.kept === source.kept).to.equal(false);
+    expect(Object.isFrozen(snapshot.kept)).to.equal(true);
+    expect(results).to.deep.equal([{ invalid: true, truncated: false }]);
+    expect(losses).to.deep.equal([]);
+  });
+
+  it('rejects a row whose prototype becomes unreadable after classification and retains later rows', () => {
+    let prototypeReads = 0;
+    const hostile = new Proxy({ label: 'unreadable' }, {
+      getPrototypeOf(target) {
+        prototypeReads += 1;
+        if (prototypeReads > 1) throw new Error('prototype access revoked');
+        return Reflect.getPrototypeOf(target);
+      },
+    });
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const losses: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection([hostile, { label: 'safe' }], undefined, {
+      onResult: (result) => results.push(result),
+      onTruncate: (loss) => losses.push(loss),
+    }) as unknown[];
+    expect(prototypeReads).to.equal(2);
+    expect(snapshot.length).to.equal(2);
+    expect(0 in snapshot).to.equal(false);
+    expect(snapshot[1]).to.deep.equal({ label: 'safe' });
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(results).to.deep.equal([{ invalid: true, truncated: true }]);
+    expect(losses).to.deep.equal([{ kept: 'oldest', retained: 1, source: 2 }]);
+  });
+
+  it('contains failed loss-count enumeration after a root record exhausts its node allowance', () => {
+    let enumerations = 0;
+    const source = new Proxy({ first: 1, second: 2 }, {
+      ownKeys(target) {
+        enumerations += 1;
+        if (enumerations > 1) throw new Error('enumeration access revoked');
+        return Reflect.ownKeys(target);
+      },
+    });
+    const results: Array<{ invalid: boolean; truncated: boolean }> = [];
+    const losses: CollectionTruncation[] = [];
+    const snapshot = snapshotPublicCollection(source, undefined, {
+      limits: { nodes: 1 },
+      onResult: (result) => results.push(result),
+      onTruncate: (loss) => losses.push(loss),
+    });
+    expect(enumerations).to.equal(2);
+    expect(snapshot).to.deep.equal({});
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(results).to.deep.equal([{ invalid: false, truncated: true }]);
+    expect(losses, 'an unavailable source count must not produce a guessed loss report').to.deep.equal([]);
+  });
+
   it('keeps a bounded nested prefix only for callers that opt in', () => {
     const source = [{ data: Array.from({ length: 5 }, (_, index) => index) }, { data: [9] }];
     const ordinary = snapshotPublicCollection(source, undefined, { limits: { entries: 3 } }) as unknown[];

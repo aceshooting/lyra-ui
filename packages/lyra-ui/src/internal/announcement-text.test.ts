@@ -113,23 +113,32 @@ it('uses owner-realm styles and lets visibility-visible descendants re-enter hid
 
 it('walks a deeply nested composed label iteratively without overflowing the call stack', async () => {
   const root = await fixture<HTMLDivElement>(html`<div></div>`);
-  let parent: Element = root;
-  for (let index = 0; index < 5_000; index += 1) {
-    const child = root.ownerDocument.createElement('span');
-    parent.append(child);
-    parent = child;
+  const descendants: Element[] = [];
+  try {
+    let parent: Element = root;
+    for (let index = 0; index < 5_000; index += 1) {
+      const child = root.ownerDocument.createElement('span');
+      descendants.push(child);
+      parent.append(child);
+      parent = child;
+    }
+    parent.textContent = 'deep label';
+
+    const result = composedAccessibilityTextResult(root, {
+      maxCharacters: 128,
+      maxDepth: 128,
+      maxNodes: 512,
+    });
+
+    expect(result.truncated).to.equal(true);
+    expect(result.truncationReasons).to.include('depth');
+    expect(result.visitedNodes).to.be.at.most(512);
+  } finally {
+    // Flatten the connected tree before native layout or fixture removal can recurse through it.
+    for (let index = descendants.length - 1; index >= 0; index -= 1) {
+      descendants[index].remove();
+    }
   }
-  parent.textContent = 'deep label';
-
-  const result = composedAccessibilityTextResult(root, {
-    maxCharacters: 128,
-    maxDepth: 128,
-    maxNodes: 512,
-  });
-
-  expect(result.truncated).to.equal(true);
-  expect(result.truncationReasons).to.include('depth');
-  expect(result.visitedNodes).to.be.at.most(512);
 });
 
 it('shares one node and character budget across every supplied root', async () => {

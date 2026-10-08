@@ -29,11 +29,11 @@ test('caps the packed core raw sum at the reviewed core measurement plus unchang
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 4_897_862,
+    reviewedCoreMeasurementBytes: 4_977_154,
     selectedRegressionHeadroomBytes: 16_000,
   });
   const ceiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
-  assert.equal(ceiling, 4_913_862);
+  assert.equal(ceiling, 4_993_154);
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
     'the existing raw regression headroom must remain below 0.5%');
   assert.match(

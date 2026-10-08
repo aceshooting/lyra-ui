@@ -3254,6 +3254,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.announcements.announceAssertive(this.failureMessage(reason));
   }
 
+  private scheduleStyleRequiredFailure(): void {
+    const generation = this._connectGeneration;
+    const module = this._maplibreModule;
+    this.scheduleAfterUpdate(() => {
+      if (!this.isConnected || generation !== this._connectGeneration || module !== this._maplibreModule || hasMapStyle(this.mapStyle)) return;
+      this.failInitialization('style-required');
+    }, 'map-style-required');
+  }
+
   private disposeMap(): void {
     this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
@@ -3305,7 +3314,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       !this.isConnected
     ) return;
     if (!hasMapStyle(this.mapStyle)) {
-      this.failInitialization('style-required');
+      this.scheduleStyleRequiredFailure();
       return;
     }
     // supportsWebGL2() is already checked before `this._maplibreModule` is ever set (see the
@@ -3473,12 +3482,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('mapStyle')) this._styleGeneration += 1;
 
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
-      const generation = this._connectGeneration;
-      const module = this._maplibreModule;
-      this.scheduleAfterUpdate(() => {
-        if (!this.isConnected || generation !== this._connectGeneration || module !== this._maplibreModule || hasMapStyle(this.mapStyle)) return;
-        this.failInitialization('style-required');
-      }, 'map-style-required');
+      this.scheduleStyleRequiredFailure();
     } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
       this.tryConstructMap();
     } else if (changed.has('mapStyle') && this._map) {

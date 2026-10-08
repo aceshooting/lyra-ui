@@ -933,6 +933,17 @@ previously failing direct bundles. Only those five ceilings advance to their nex
 with paired exact measurements; passing limits, component aggregates, routes, CSS and exclusions
 remain unchanged.
 
+The installed `all.js` consumer measures 4,977,154 raw bytes and 1,220,933 gzip bytes
+across all 49 emitted files with Vite 8.1.5. A paired measurement of published 25.5.0 is
+4,897,936 raw bytes and 1,179,415 gzip bytes across 15 files, so the complete graph grows
+1.62% raw and 3.52% gzip. The signature-pad registration, shared accessibility and data
+ownership, tree focus, and document resource guards account for the required runtime additions;
+retained third-party module routes are unchanged. The core raw ceiling is 4,993,154 bytes:
+the reviewed candidate measurement plus the existing 16,000-byte allowance (0.322%). The
+fixture, complete emitted-file sum, optional-peer exclusions and other profiles remain fixed.
+The historical reviewed baseline of 4,897,862 raw bytes differs by 74 bytes from the paired
+published-package measurement and is not claimed as a byte-identical reproduction.
+
 Absolute loader routes retain their callable exports while excluding deferred chunks. Their
 reviewed initial gzip measurements are 13,059 bytes for the CDN entry, 12,878 for the autoloader,
 1,469 for the locale loader and 11,201 for the scoped-registry loader. Their hard ceilings also use

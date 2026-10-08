@@ -836,3 +836,35 @@ it('gates the shared search clear action immediately when disabled changes', asy
   expect(field.value).to.equal('pending');
   expect(clear.disabled).to.equal(true);
 });
+
+
+it('announces newly truncated example ownership in the adopted document and stays quiet on an unchanged render', async () => {
+  expectDevWarning(collectionTruncationWarningKey('lr-eval-dataset', 'examples'));
+  const el = await fixture<LyraEvalDataset>(html`
+    <lr-eval-dataset lang="en" .examples=${examples()} .strings=${{ evalDatasetLimit: 'Dataset window {count}' }}></lr-eval-dataset>
+  `);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const destination = frame.contentDocument!;
+  const message = 'Dataset window ' + new Intl.NumberFormat(el.lang).format(10_000);
+  const count = (owner: Document) => [...owner.querySelectorAll('[data-lr-live-region="polite"] > div')]
+    .filter((node) => node.textContent === message).length;
+  try {
+    destination.body.append(destination.adoptNode(el));
+    await el.updateComplete;
+    el.examples = Array.from({ length: 10_001 }, (_, index) => ({ id: `example-${index}`, input: `Input ${index}` }));
+    await el.updateComplete;
+    expect(el.ownerDocument === destination).to.equal(true);
+    expect(el.examples.length).to.equal(10_000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(message);
+    expect(count(destination)).to.equal(1);
+    expect(count(document)).to.equal(0);
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(count(destination)).to.equal(1);
+  } finally {
+    document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});

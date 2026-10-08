@@ -1,3 +1,4 @@
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './suggestion-chips.js';
 import type { LyraSuggestionChips } from './suggestion-chips.js';
@@ -492,4 +493,51 @@ it('dims a disabled chip with the theme disabled opacity', async () => {
   const chip = el.shadowRoot!.querySelector<HTMLElement>('[part~="chip"]')!;
   expect(getComputedStyle(chip).opacity).to.equal('0.38');
   expect(getComputedStyle(chip).cursor).to.equal('not-allowed');
+});
+
+
+it('retains later valid suggestions when an immutable platform row has a throwing identity getter', async () => {
+  let reads = 0;
+  const malformed = Object.defineProperty(new Blob(['opaque suggestion']), 'suggestionId', {
+    get() { reads += 1; throw new Error('identity is unavailable'); },
+  });
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips .suggestions=${[malformed, { suggestionId: 'safe', label: 'Safe suggestion' }]}></lr-suggestion-chips>
+  `);
+  expect(reads).to.be.greaterThan(0);
+  expect([...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')].map((chip) => chip.dataset['suggestionId'])).to.deep.equal(['safe']);
+  const pending = oneEvent(el, 'lr-suggestion-select');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="chip"]')!.click();
+  expect((await pending).detail).to.deep.equal({ suggestionId: 'safe', label: 'Safe suggestion' });
+});
+
+it('moves the resting tab stop backward when the active suggestion and its successors become disabled', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`);
+  const last = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-suggestion-id="c"]')!;
+  await focusByKeyboard(last);
+  await el.updateComplete;
+  expect(last.tabIndex).to.equal(0);
+  el.suggestions = [suggestions[0]!, { ...suggestions[1]!, disabled: true }, { ...suggestions[2]!, disabled: true }];
+  await el.updateComplete;
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  expect(chips.map((chip) => chip.tabIndex)).to.deep.equal([0, -1, -1]);
+  expect(chips.map((chip) => chip.disabled)).to.deep.equal([false, true, true]);
+});
+
+it('consumes navigation keys when every suggestion is disabled without claiming ordinary keys or selecting a row', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips .suggestions=${suggestions.map((suggestion) => ({ ...suggestion, disabled: true }))}></lr-suggestion-chips>
+  `);
+  let selections = 0;
+  el.addEventListener('lr-suggestion-select', () => { selections += 1; });
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Tab', 'Enter']) {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
+    base.dispatchEvent(event);
+    expect(event.defaultPrevented, key).to.equal(['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key));
+  }
+  expect(chips.map((chip) => chip.tabIndex)).to.deep.equal([-1, -1, -1]);
+  expect(chips.every((chip) => chip.disabled)).to.equal(true);
+  expect(selections).to.equal(0);
 });

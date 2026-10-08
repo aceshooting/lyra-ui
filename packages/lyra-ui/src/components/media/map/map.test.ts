@@ -404,6 +404,114 @@ it('resizes only the current connected map when its allocated container changes'
   }
 });
 
+it('keeps a constructed map usable when allocation observation throws and ignores its queued delivery', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  const observers: Array<{ callback: ResizeObserverCallback; instance: ResizeObserver; disconnected: number; target?: Element }> = [];
+  class ThrowingResizeObserver {
+    readonly record: typeof observers[number];
+    constructor(callback: ResizeObserverCallback) {
+      this.record = { callback, instance: this as unknown as ResizeObserver, disconnected: 0 };
+      observers.push(this.record);
+    }
+    observe(target: Element): void {
+      this.record.target = target;
+      if (target.getAttribute('part') === 'container') throw new Error('allocation observation failed');
+    }
+    unobserve(): void {}
+    disconnect(): void { this.record.disconnected += 1; }
+  }
+  let resizes = 0;
+  let removals = 0;
+  class AllocationMap {
+    private readonly canvas = document.createElement('canvas');
+    on(): this { return this; }
+    getCanvas(): HTMLCanvasElement { return this.canvas; }
+    resize(): void { resizes += 1; }
+    remove(): void { removals += 1; }
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({ Map: AllocationMap });
+  el.mapStyle = LOCAL_STYLE;
+  try {
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: ThrowingResizeObserver });
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+    setCanvasGetContext(HTMLCanvasElement.prototype, function (contextId, ...rest) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    });
+    document.body.append(el);
+    await waitUntil(() => el.map != null, 'map did not survive the observer registration failure');
+    await el.updateComplete;
+    const container = el.shadowRoot!.querySelector('[part="container"]');
+    const observer = observers.find((record) => record.target === container);
+    if (!observer) throw new Error('The map allocation observer was not registered.');
+    expect(observer.disconnected).to.equal(1);
+    observer.callback([], observer.instance);
+    expect(resizes, 'delivery from the rejected observer stays inert').to.equal(0);
+    el.map!.resize();
+    expect(resizes).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    el.remove();
+    expect(removals).to.equal(1);
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: OriginalResizeObserver });
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: OriginalIntersectionObserver });
+  }
+});
+
+it('requires an explicit style when an offscreen map becomes visible in the same update that removes its style', async () => {
+  const OriginalIntersectionObserver = window.IntersectionObserver;
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  let intersection: IntersectionObserverCallback | undefined;
+  let observer: IntersectionObserver | undefined;
+  class ControlledIntersectionObserver {
+    constructor(callback: IntersectionObserverCallback) {
+      intersection = callback;
+      observer = this as unknown as IntersectionObserver;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+  }
+  let constructions = 0;
+  class OffscreenMap {
+    constructor() { constructions += 1; }
+    on(): this { return this; }
+    remove(): void {}
+  }
+  const el = document.createElement('lr-map') as LyraMap;
+  (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({ Map: OffscreenMap });
+  el.mapStyle = LOCAL_STYLE;
+  el.strings = { mapStyleRequired: 'Choose a style before opening the map' };
+  try {
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: ControlledIntersectionObserver });
+    setCanvasGetContext(HTMLCanvasElement.prototype, function (contextId, ...rest) {
+      if (contextId === 'webgl2') return {};
+      return originalGetContext.call(this, contextId as never, ...(rest as []));
+    });
+    document.body.append(el);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="container"]') != null, 'offscreen container never rendered');
+    await el.updateComplete;
+    expect(constructions).to.equal(0);
+    el.mapStyle = undefined;
+    if (!intersection || !observer) throw new Error('The visibility observer was not installed.');
+    intersection([{ isIntersecting: true } as IntersectionObserverEntry], observer);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') != null, 'missing style never reached its error state');
+    expect(constructions).to.equal(0);
+    expect(el.map).to.equal(undefined);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal('Choose a style before opening the map');
+  } finally {
+    el.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: OriginalIntersectionObserver });
+  }
+});
+
 it('coalesces peer-control size deliveries and cancels stale work across disconnect and adoption', async () => {
   const { el } = await connectedMapWithoutMaplibre();
   const base = document.createElement('div');
@@ -5363,6 +5471,34 @@ it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-f
   expect(el.map!.getZoom()).to.be.closeTo(zoomBefore, 0.001);
 });
 
+it('restores the saved camera even when dropping rejected maxBounds also throws', async () => {
+  const { el } = await connectedMapWithoutMaplibre();
+  const boundsCalls: unknown[] = [];
+  const centers: unknown[] = [];
+  const zooms: number[] = [];
+  const map = {
+    getZoom: () => 3,
+    getCenter: () => ({ lng: 1, lat: 2 }),
+    setMaxBounds: (bounds: unknown): never => {
+      boundsCalls.push(bounds);
+      throw new Error('peer constraint mutation failed');
+    },
+    setZoom: (zoom: number) => { zooms.push(zoom); },
+    setCenter: (center: unknown) => { centers.push(center); },
+    remove(): void {},
+  };
+  (el as unknown as { _map: unknown })._map = map;
+  const warnings = await captureMaxBoundsWarnings(async () => {
+    el.maxBounds = [[-10, -10], [10, 10]];
+    await el.updateComplete;
+  });
+  expect(boundsCalls).to.deep.equal([[[-10, -10], [10, 10]], null]);
+  expect(zooms).to.deep.equal([3]);
+  expect(centers).to.deep.equal([[1, 2]]);
+  expect(warnings.length).to.equal(1);
+  expect((el.map as unknown) === map).to.equal(true);
+});
+
 it('contains failures from both defensive camera snapshot reads', async () => {
   const failures: string[] = [];
   const revertCalls: Record<'getZoom' | 'getCenter', unknown[]> = {
@@ -6161,6 +6297,82 @@ describe('dataLayers clustering and heatmap', () => {
       25,
       '#222222',
     ]);
+  });
+
+  it('uses declared glyphs when the peer cannot report its live style and omits counts when neither can', async () => {
+    for (const declaredGlyphs of [undefined, 'https://example.invalid/{range}.pbf']) {
+      const { el } = await connectedMapWithoutMaplibre();
+      el.mapStyle = { ...LOCAL_STYLE, ...(declaredGlyphs ? { glyphs: declaredGlyphs } : {}) };
+      await el.updateComplete;
+      const { layers } = stubMaplibreMap(el);
+      (el.map as unknown as { getStyle(): unknown }).getStyle = () => { throw new Error('live style is unavailable'); };
+      el.dataLayers = entry({ cluster: {} });
+      await el.updateComplete;
+      const sourceId = dataLayerResourceId(el, 'pins');
+      expect(layers.has(`${sourceId}-cluster`)).to.equal(true);
+      expect(layers.has(`${sourceId}-cluster-count`)).to.equal(Boolean(declaredGlyphs));
+    }
+  });
+
+  it('keeps geometry layers usable when point-icon raster readback throws and retries after re-adding the layer', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { layers, images } = stubMaplibreMap(el);
+    const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+    const point = { field: 'category', icons: [{ value: 'home', path: 'M0 0H24V24H0Z' }] };
+    let failures = 0;
+    try {
+      CanvasRenderingContext2D.prototype.getImageData = function (...args: Parameters<CanvasRenderingContext2D['getImageData']>): ImageData {
+        if (this.canvas.width === 64 && this.canvas.height === 64) {
+          failures += 1;
+          throw new Error('atlas readback failed');
+        }
+        return originalGetImageData.apply(this, args);
+      };
+      el.dataLayers = entry({ point });
+      await el.updateComplete;
+      const sourceId = dataLayerResourceId(el, 'pins');
+      expect(failures).to.be.greaterThan(0);
+      expect(images.size).to.equal(0);
+      expect(layers.has(`${sourceId}-circle`)).to.equal(true);
+      expect(layers.has(`${sourceId}-point-icon`)).to.equal(false);
+    } finally {
+      CanvasRenderingContext2D.prototype.getImageData = originalGetImageData;
+    }
+    el.dataLayers = [];
+    await el.updateComplete;
+    el.dataLayers = entry({ point });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    expect(images.size).to.equal(1);
+    expect(layers.has(`${sourceId}-point-icon`)).to.equal(true);
+  });
+
+  it('preserves the concrete theme fallback when explicit modern-color conversion throws', async () => {
+    const { el } = await connectedMapWithoutMaplibre();
+    const { layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ tone: 'success' });
+    await el.updateComplete;
+    const sourceId = dataLayerResourceId(el, 'pins');
+    const themeColor = layers.get(`${sourceId}-circle`)!.paint!['circle-color'];
+    expect(typeof themeColor).to.equal('string');
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    let failures = 0;
+    try {
+      setCanvasGetContext(HTMLCanvasElement.prototype, function (contextId, ...rest) {
+        if (contextId === '2d' && this.width === 1 && this.height === 1) {
+          failures += 1;
+          throw new Error('color conversion failed');
+        }
+        return originalGetContext.call(this, contextId as never, ...(rest as []));
+      });
+      el.dataLayers = entry({ tone: 'success', color: 'color(srgb 0.7 0.6 0.5)' });
+      await el.updateComplete;
+      expect(failures).to.be.greaterThan(0);
+      expect(layers.get(`${sourceId}-fill`)!.paint!['fill-color']).to.equal(themeColor);
+      expect(layers.get(`${sourceId}-circle`)!.paint!['circle-color']).to.equal(themeColor);
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
   });
 
   it('omits the cluster count layer when the style provides no glyphs', async () => {
@@ -8673,6 +8885,18 @@ describe('fitBounds and lr-map-view-change', () => {
       expect(engine.fitCalls.map((call) => call.bounds), 'the queued fit survived').to.deep.equal([
         [[2, 48], [3, 49]],
       ]);
+      expect(el.center).to.deep.equal([2.5, 48.5]);
+    });
+
+    it('keeps a queued fit when an unchanged malformed center attribute is normalized at construction', async () => {
+      const { el, load } = await connectScriptedMap();
+      el.setAttribute('center', 'null');
+      await el.updateComplete;
+      expect(el.fitBounds([[2, 48], [3, 49]])).to.equal(true);
+      const engine = await load();
+      await waitUntil(() => engine.fitCalls.length === 1, 'the fit was discarded for an unchanged malformed center');
+      await el.updateComplete;
+      expect(engine.fitCalls[0]!.bounds).to.deep.equal([[2, 48], [3, 49]]);
       expect(el.center).to.deep.equal([2.5, 48.5]);
     });
 

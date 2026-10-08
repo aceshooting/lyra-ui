@@ -12,8 +12,15 @@ function getMountedDialog(): LyraDialog {
   return dialog;
 }
 
-const removed = (): Promise<void> =>
-  waitUntil(() => !document.querySelector('lr-dialog'), 'the confirmation outlived its exit animation');
+async function removed(): Promise<void> {
+  const dialogs = [...document.querySelectorAll<LyraDialog>('lr-dialog')];
+  await Promise.all(dialogs.map(async (dialog) => {
+    if (!dialog.isConnected) return;
+    await oneEvent(dialog, 'lr-after-hide');
+    expect(dialog.isConnected, 'confirmation is removed when its exit lifecycle completes').to.equal(false);
+  }));
+  expect(document.querySelectorAll('lr-dialog').length).to.equal(0);
+}
 
 afterEach(removed);
 
@@ -83,6 +90,20 @@ it('plays the exit animation and emits lr-after-hide before removing the dialog'
   await afterHide;
   await removed();
 });
+
+for (const duration of ['0ms', '1200ms']) {
+  it(`removes a confirmation after its configured ${duration} exit animation`, async () => {
+    const result = confirm({ title: 'Proceed?' });
+    const dialog = getMountedDialog();
+    dialog.style.setProperty('--hide-duration', duration);
+    await dialog.updateComplete;
+    const removal = removed();
+    footerButtons(dialog)[1].click();
+    expect(await result).to.equal(true);
+    await removal;
+    await removed();
+  });
+}
 
 it('renders no header close control, so every action is a registered native button', async () => {
   const promise = confirm({ title: 'Proceed?' });
@@ -367,7 +388,7 @@ it('accepts a body-mounted confirmation above a native modal using the native po
     await waitUntil(() => settled !== undefined);
     expect(settled).to.equal(true);
     expect(native.open).to.equal(true);
-    await waitUntil(() => !dialog.isConnected, 'the confirmation outlived its exit animation');
+    await removed();
   } finally {
     dialog.remove();
     native.close();
@@ -391,7 +412,7 @@ it('dismisses only the confirmation on native Escape and removes its transient h
     await waitUntil(() => settled !== undefined);
     expect(settled).to.equal(false);
     expect(native.open).to.equal(true);
-    await waitUntil(() => !dialog.isConnected, 'the confirmation outlived its exit animation');
+    await removed();
   } finally {
     dialog.remove();
     native.close();

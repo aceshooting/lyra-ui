@@ -2,6 +2,7 @@ import { expect, waitUntil } from '@open-wc/testing';
 import {
   observeOverlayAnchorRoots,
   OverlayDelayTimer,
+  OverlayTransitionGate,
   resolveOverlayTriggerById,
   settleOverlayTransition,
 } from './overlay-shared.js';
@@ -103,4 +104,23 @@ it('observes replacement and removal of a direct anchor beside the host', async 
     stop();
     shell.remove();
   }
+});
+
+it('rejects synchronous transition failures and allows a later request in the same direction', async () => {
+  const gate = new OverlayTransitionGate();
+  const failure = new Error('transition failed');
+  const request = gate.request(true, () => { throw failure; });
+  let rejected: unknown;
+  try {
+    await request;
+  } catch (error) {
+    rejected = error;
+  }
+  expect(rejected === failure).to.equal(true);
+  let reopened = false;
+  await gate.request(true, () => { reopened = true; });
+  expect(reopened).to.equal(true);
+  let closed = false;
+  await gate.request(false, () => { closed = true; });
+  expect(closed).to.equal(true);
 });

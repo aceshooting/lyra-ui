@@ -935,3 +935,47 @@ it('lets a host veto a header toggle through lr-toggle-request', async () => {
   expect(el.collapsed).to.equal(false);
   expect(toggles).to.equal(0);
 });
+
+
+it('routes post-adoption task-window announcements to the destination document once', async () => {
+  const message = 'Task window 500';
+  const count = (owner: Document) => [...owner.querySelectorAll('[data-lr-live-region="polite"] > div')]
+    .filter((node) => node.textContent === message).length;
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .strings=${{ taskListLimit: 'Task window {count}' }}></lr-task-list>
+  `);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const destination = frame.contentDocument!;
+  try {
+    destination.body.append(destination.adoptNode(el));
+    await el.updateComplete;
+    el.items = Array.from({ length: 501 }, (_, index) => ({ id: `task-${index}`, label: `Task ${index}`, status: 'pending' as const }));
+    await el.updateComplete;
+    expect(el.ownerDocument === destination).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part="item"]').length).to.equal(500);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(message);
+    expect(count(destination)).to.equal(1);
+    expect(count(document)).to.equal(0);
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(count(destination)).to.equal(1);
+  } finally {
+    document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
+
+it('drops an immutable platform row whose identity getter throws and retains the later valid task', async () => {
+  let reads = 0;
+  const malformed = Object.defineProperty(new Blob(['opaque task']), 'id', {
+    get() { reads += 1; throw new Error('identity is unavailable'); },
+  });
+  const el = await fixture<LyraTaskList>(html`
+    <lr-task-list .items=${[malformed, { id: 'safe-task', label: 'Safe task', status: 'pending' }]}></lr-task-list>
+  `);
+  expect(reads).to.be.greaterThan(0);
+  expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].map((row) => row.dataset['id'])).to.deep.equal(['safe-task']);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')?.textContent?.trim()).to.equal('0 of 1 completed');
+});

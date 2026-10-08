@@ -14,6 +14,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { walk } from './lib/fs-walk.mjs';
+import { statementAlwaysStopsFollowingStatements } from './lib/ast.mjs';
 import { parseSync, visitorKeys } from 'oxc-parser';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -57,27 +58,6 @@ function childNodes(node) {
   });
 }
 
-function statementAlwaysStopsFollowingStatements(statement) {
-  if (
-    statement.type === 'ReturnStatement' ||
-    statement.type === 'ThrowStatement' ||
-    statement.type === 'BreakStatement' ||
-    statement.type === 'ContinueStatement'
-  ) {
-    return true;
-  }
-  if (statement.type === 'BlockStatement') {
-    return statement.body.some((child) => statementAlwaysStopsFollowingStatements(child));
-  }
-  if (statement.type === 'TryStatement') {
-    // A completing finally controls whether execution can continue after the try statement. When
-    // it falls through, an abrupt try still stays abrupt unless a catch can handle the throw. A
-    // return cannot be caught; conservatively treat every abrupt try body with no catch as final.
-    if (statement.finalizer && statementAlwaysStopsFollowingStatements(statement.finalizer)) return true;
-    return !statement.handler && statementAlwaysStopsFollowingStatements(statement.block);
-  }
-  return false;
-}
 
 function statementsCallReachableSuper(statements, hook) {
   for (const statement of statements) {

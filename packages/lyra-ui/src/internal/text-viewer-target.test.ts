@@ -369,6 +369,45 @@ describe('TextViewerTarget mixin', () => {
       expect(scrolls).to.equal(2);
     });
 
+    it('cancels quote navigation safely when its scroll callback disconnects a fallback-highlight viewer', async () => {
+      const originalHighlight = Object.getOwnPropertyDescriptor(window, 'Highlight');
+      let el: StubTextViewer | undefined;
+      let paragraph: HTMLElement | undefined;
+      let originalScrollIntoView: HTMLElement['scrollIntoView'] | undefined;
+      try {
+        Object.defineProperty(window, 'Highlight', { configurable: true, value: undefined });
+        el = await stubFixture();
+        await el.search('fox');
+        const parent = el.parentElement!;
+        const viewer = el;
+        paragraph = el.shadowRoot!.querySelector<HTMLElement>('#section-one')!;
+        originalScrollIntoView = paragraph.scrollIntoView;
+        let scrolls = 0;
+        let results = 0;
+        paragraph.scrollIntoView = () => {
+          scrolls += 1;
+          viewer.remove();
+        };
+        el.addEventListener('lr-anchor-result', () => { results += 1; });
+
+        expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'quick brown' })).to.equal(false);
+        expect(scrolls).to.equal(1);
+        expect(el.isConnected).to.equal(false);
+        expect(results, 'a disconnected navigation must not report a stale result').to.equal(0);
+        expect(el.shadowRoot!.querySelectorAll('mark').length).to.equal(0);
+
+        paragraph.scrollIntoView = originalScrollIntoView;
+        parent.append(el);
+        await el.updateComplete;
+        expect(await el.search('fox')).to.equal(2);
+      } finally {
+        if (paragraph && originalScrollIntoView) paragraph.scrollIntoView = originalScrollIntoView;
+        el?.remove();
+        if (originalHighlight) Object.defineProperty(window, 'Highlight', originalHighlight);
+        else Reflect.deleteProperty(window, 'Highlight');
+      }
+    });
+
     it('text-quote: resolves false when the quote cannot be found', async () => {
       const el = await stubFixture();
       shrinkAnchorTimeouts(el);

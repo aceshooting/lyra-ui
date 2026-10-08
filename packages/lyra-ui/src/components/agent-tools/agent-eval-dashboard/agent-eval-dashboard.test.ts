@@ -499,3 +499,34 @@ describe('lr-agent-eval-dashboard metric requests', () => {
     expect(seen).to.deep.equal(['lr-metric-change-request:a', 'lr-metric-change:a']);
   });
 });
+
+
+it('announces a newly bounded history in the adopted document without repeating it on a stable render', async () => {
+  const message = 'Run window 2';
+  const count = (owner: Document) => [...owner.querySelectorAll('[data-lr-live-region="polite"] > div')]
+    .filter((node) => node.textContent === message).length;
+  const el = await fixture<LyraAgentEvalDashboard>(html`
+    <lr-agent-eval-dashboard without-chart .maxRenderedRuns=${2} .strings=${{ ragEvalDashboardRunsLimit: 'Run window {count}' }}></lr-agent-eval-dashboard>
+  `);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const destination = frame.contentDocument!;
+  try {
+    destination.body.append(destination.adoptNode(el));
+    await el.updateComplete;
+    el.runs = Array.from({ length: 3 }, (_, index) => ({ id: `run-${index}`, label: `Run ${index}`, status: 'done' as const }));
+    await el.updateComplete;
+    expect(el.ownerDocument === destination).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(2);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(message);
+    expect(count(destination)).to.equal(1);
+    expect(count(document)).to.equal(0);
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(count(destination)).to.equal(1);
+  } finally {
+    document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});

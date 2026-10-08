@@ -828,3 +828,49 @@ it('paints its file rows, copy button and per-file counts from theme tokens', as
   expect([color('[part="file"]'), color('[part="copy-button"]'), color('[part="file-additions"]'), color('[part="file-deletions"]')])
     .to.deep.equal(['rgb(1, 2, 3)', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)', 'rgb(7, 8, 9)']);
 });
+
+
+it('announces the file window when an already mounted card first exceeds its render cap', async () => {
+  const message = 'File window 500';
+  const announcements = () => [...document.querySelectorAll('[data-lr-live-region="polite"] > div')]
+    .filter((node) => node.textContent === message).length;
+  const el = await fixture<LyraCommitCard>(html`
+    <lr-commit-card files-expanded .strings=${{ commitCardFilesLimit: 'File window {count}' }}></lr-commit-card>
+  `);
+  expect(announcements()).to.equal(0);
+  el.files = Array.from({ length: 501 }, (_, index) => ({ path: `file-${index}.ts`, additions: 1, deletions: 0 }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="file"]').length).to.equal(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(message);
+  expect(announcements()).to.equal(1);
+  el.requestUpdate();
+  await el.updateComplete;
+  expect(announcements(), 'unchanged truncation does not repeat the announcement').to.equal(1);
+});
+
+it('returns successful clipboard feedback to its resting text and accessible name after its real timeout', async () => {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.resolve() },
+  });
+  try {
+    const el = await fixture<LyraCommitCard>(html`
+      <lr-commit-card hash="abcdef1234567890" .strings=${{ copied: 'Hash copied', copy: 'Copy hash', commitCardCopyHash: 'Copy complete hash' }}></lr-commit-card>
+    `);
+    const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="copy-button"]')!;
+    const pending = oneEvent(el, 'lr-copy');
+    button.click();
+    await pending;
+    await el.updateComplete;
+    expect(button.dataset['copyStatus']).to.equal('success');
+    expect(button.textContent?.trim()).to.equal('Hash copied');
+    expect(button.getAttribute('aria-label')).to.equal('Hash copied');
+    await waitUntil(() => button.dataset['copyStatus'] === 'rest', 'Clipboard feedback timeout resets the rendered state', { timeout: 5_000 });
+    expect(button.textContent?.trim()).to.equal('Copy hash');
+    expect(button.getAttribute('aria-label')).to.equal('Copy complete hash');
+  } finally {
+    if (original) Object.defineProperty(navigator, 'clipboard', original);
+    else Reflect.deleteProperty(navigator, 'clipboard');
+  }
+});

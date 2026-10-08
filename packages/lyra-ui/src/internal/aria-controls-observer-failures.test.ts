@@ -93,3 +93,70 @@ it('omits unresolvable descriptions when reflection rejects reads and writes and
     Reflect.deleteProperty(target, 'ariaDescribedByElements');
   }
 });
+
+for (const disconnectThrows of [false, true]) {
+  it(`releases a description during observer construction and discards the candidate${disconnectThrows ? ' even when cleanup throws' : ''}`, async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const doc = frame.contentDocument!;
+    const view = frame.contentWindow!;
+    const original = Object.getOwnPropertyDescriptor(view, 'MutationObserver');
+    const NativeObserver = Reflect.get(view, 'MutationObserver') as typeof MutationObserver;
+    doc.body.innerHTML = '<button aria-describedby="author">Control</button><span id="author"></span><span id="first"></span><span id="next"></span>';
+    const target = doc.querySelector<HTMLButtonElement>('button')!;
+    const first = doc.getElementById('first')!;
+    const next = doc.getElementById('next')!;
+    const lease = acquireAriaDescription(target, [first]);
+    let candidates = 0;
+    let disconnects = 0;
+    class ReleasingObserver extends NativeObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        candidates += 1;
+        lease.release();
+      }
+      override disconnect(): void {
+        super.disconnect();
+        disconnects += 1;
+        if (disconnectThrows) throw new TypeError('observer cleanup unavailable');
+      }
+    }
+    try {
+      Object.defineProperty(view, 'MutationObserver', { configurable: true, value: ReleasingObserver });
+      lease.update([next]);
+      expect(candidates).to.equal(1);
+      expect(disconnects).to.equal(1);
+      expect(target.getAttribute('aria-describedby')).to.equal('author');
+      next.id = 'renamed-after-release';
+      await new Promise<void>((resolve) => queueMicrotask(resolve));
+      expect(target.getAttribute('aria-describedby')).to.equal('author');
+      lease.update([first]);
+      expect(target.getAttribute('aria-describedby')).to.equal('author');
+    } finally {
+      lease.release();
+      if (original) Object.defineProperty(view, 'MutationObserver', original);
+      else Reflect.deleteProperty(view, 'MutationObserver');
+    }
+  });
+}
+
+it('omits an unresolved description when element-reference reflection cannot be written', async () => {
+  const root = await fixture<HTMLElement>(html`<div><button>Control</button><div></div></div>`);
+  const target = root.querySelector<HTMLButtonElement>('button')!;
+  const shadow = root.querySelector('div')!.attachShadow({ mode: 'open' });
+  const description = document.createElement('span');
+  description.id = 'unreachable-description';
+  shadow.append(description);
+  Object.defineProperty(target, 'ariaDescribedByElements', { configurable: true, value: null, writable: false });
+  const lease = acquireAriaDescription(target, [description]);
+  try {
+    expect(target.hasAttribute('aria-describedby')).to.equal(false);
+    root.append(description);
+    lease.update([description]);
+    expect(target.getAttribute('aria-describedby')).to.equal(description.id);
+    lease.release();
+    expect(target.hasAttribute('aria-describedby')).to.equal(false);
+  } finally {
+    lease.release();
+    Reflect.deleteProperty(target, 'ariaDescribedByElements');
+  }
+});

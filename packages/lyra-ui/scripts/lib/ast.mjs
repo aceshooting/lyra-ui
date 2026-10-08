@@ -23,3 +23,26 @@ export function visitAst(node, visitor) {
     }
   }
 }
+
+/** Whether an abrupt statement prevents later statements in its sequence from running. */
+export function statementAlwaysStopsFollowingStatements(statement) {
+  if (
+    statement.type === 'ReturnStatement' ||
+    statement.type === 'ThrowStatement' ||
+    statement.type === 'BreakStatement' ||
+    statement.type === 'ContinueStatement'
+  ) {
+    return true;
+  }
+  if (statement.type === 'BlockStatement') {
+    return statement.body.some((child) => statementAlwaysStopsFollowingStatements(child));
+  }
+  if (statement.type === 'TryStatement') {
+    // A completing finally controls whether execution can continue after the try statement. When
+    // it falls through, an abrupt try still stays abrupt unless a catch can handle the throw. A
+    // return cannot be caught; conservatively treat every abrupt try body with no catch as final.
+    if (statement.finalizer && statementAlwaysStopsFollowingStatements(statement.finalizer)) return true;
+    return !statement.handler && statementAlwaysStopsFollowingStatements(statement.block);
+  }
+  return false;
+}

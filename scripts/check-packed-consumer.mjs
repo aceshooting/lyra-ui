@@ -140,15 +140,16 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js measured 4,897,862 raw bytes and 1,179,387 gzip bytes across
-// all 15 emitted files after adding country, currency, time-zone, and unit pickers and shared
-// selection fixes. The all.js registration contract covers all 292 expected tags.
-// Retain the existing 16,000-byte regression headroom (less than 0.5%); this adjusts only
-// the core raw entry, without changing peer exclusions, other profiles, or measurement.
-// The prior 4,860,094-byte reviewed baseline and allowance chronology are preserved at:
-// https://github.com/aceshooting/lyra-ui/blob/0d81d0fa219a264212e3b97c2fd325424c7c4a66/scripts/check-packed-consumer.mjs#L141-L156
+// Packed core/all.js measures 4,977,154 raw bytes and 1,220,933 gzip bytes across
+// all 49 emitted files, including signature-pad and shared accessibility, data ownership,
+// tree-focus, and document resource guards. The same Vite 8.1.5 measurement of published
+// 25.5.0 is 4,897,936 raw bytes; the prior reviewed measurement was 4,897,862 bytes.
+// Retain the existing 16,000-byte regression headroom (less than 0.5%); only the core
+// raw baseline changes. Peer exclusions, other profiles, and the complete file sum stay fixed.
+// Prior reviewed baseline and allowance:
+// https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  reviewedCoreMeasurementBytes: 4_897_862,
+  reviewedCoreMeasurementBytes: 4_977_154,
   selectedRegressionHeadroomBytes: 16_000,
 };
 

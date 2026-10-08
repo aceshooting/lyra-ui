@@ -577,3 +577,17 @@ it('keeps a surviving control owner active when a peer releases', async function
     root.remove();
   }
 });
+
+it('preserves a synchronous same-value author write when an attribute owner releases before observer delivery', async () => {
+  const target = await fixture<HTMLButtonElement>(html`<button>Expand</button>`);
+  const lease = acquireAriaOwnership(target, { attributes: { 'aria-expanded': 'false' } });
+  try {
+    target.setAttribute('aria-expanded', 'false');
+    lease.release();
+    expect(target.getAttribute('aria-expanded')).to.equal('false');
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(target.getAttribute('aria-expanded')).to.equal('false');
+  } finally {
+    lease.release();
+  }
+});

@@ -135,7 +135,7 @@ export async function compactBuildJavaScript(directory) {
   const files = await javascriptFiles(directory);
   let beforeBytes = 0;
   let afterBytes = 0;
-  await Promise.all(files.map(async (file) => {
+  const results = await Promise.allSettled(files.map(async (file) => {
     const source = await readFile(file, 'utf8');
     beforeBytes += Buffer.byteLength(source);
     // Validate before syntax folding can turn a spread or computed key into an inert-looking
@@ -168,6 +168,9 @@ export async function compactBuildJavaScript(directory) {
     afterBytes += Buffer.byteLength(code);
     await writeFile(file, code);
   }));
+  // Finish every sibling write before reporting an error so callers can safely clean up.
+  const failure = results.find(result => result.status === 'rejected');
+  if (failure) throw failure.reason;
   return { files: files.length, beforeBytes, afterBytes };
 }
 

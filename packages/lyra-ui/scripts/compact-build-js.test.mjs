@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { createRequire } from 'node:module';
+import { createRequire, syncBuiltinESMExports } from 'node:module';
+import fs from 'node:fs';
+import { setImmediate } from 'node:timers/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from './compact-build-js.mjs';
@@ -238,6 +240,57 @@ try {
   }
 } finally {
   await rm(collectionFixture, { recursive: true, force: true });
+}
+
+// A rejected initializer must drain sibling writes before a caller can remove the build tree.
+const failedWriteFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-failed-write-'));
+const originalReadFile = fs.promises.readFile;
+const originalWriteFile = fs.promises.writeFile;
+let releaseWrite;
+let beginWrite;
+let finishWrite;
+const writeStarted = new Promise(resolve => { beginWrite = resolve; });
+const writeReleased = new Promise(resolve => { releaseWrite = resolve; });
+const writeFinished = new Promise(resolve => { finishWrite = resolve; });
+let compaction;
+try {
+  const invalid = path.join(failedWriteFixture, 'internal/collection-snapshot.js');
+  const sibling = path.join(failedWriteFixture, 'sibling.js');
+  await mkdir(path.dirname(invalid));
+  await writeFile(invalid, 'export const changedInitializer = true;');
+  await writeFile(sibling, 'export const siblingValue = 1;');
+  fs.promises.readFile = async (file, ...args) => {
+    const source = await originalReadFile(file, ...args);
+    if (file === invalid) await writeStarted;
+    return source;
+  };
+  fs.promises.writeFile = async (file, ...args) => {
+    if (file !== sibling) return originalWriteFile(file, ...args);
+    beginWrite();
+    await writeReleased;
+    try { return await originalWriteFile(file, ...args); }
+    finally { finishWrite(); }
+  };
+  syncBuiltinESMExports();
+  let settled = false;
+  compaction = compactBuildJavaScript(failedWriteFixture);
+  compaction.then(() => { settled = true; }, () => { settled = true; });
+  await writeStarted;
+  await setImmediate();
+  assert.equal(settled, false, 'compaction waits for the outstanding sibling write before rejecting');
+  releaseWrite();
+  await assert.rejects(compaction, /pure initializer inventory changed/u);
+  await writeFinished;
+} finally {
+  releaseWrite();
+  if (compaction) {
+    await compaction.catch(() => {});
+    await writeFinished;
+  }
+  fs.promises.readFile = originalReadFile;
+  fs.promises.writeFile = originalWriteFile;
+  syncBuiltinESMExports();
+  await rm(failedWriteFixture, { recursive: true, force: true });
 }
 
 // Only unreachable private module markers are removable; declarations and every runtime route stay.
