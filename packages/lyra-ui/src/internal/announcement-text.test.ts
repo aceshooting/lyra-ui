@@ -136,7 +136,7 @@ it('walks a deeply nested composed label iteratively without overflowing the cal
   } finally {
     // Flatten the connected tree before native layout or fixture removal can recurse through it.
     for (let index = descendants.length - 1; index >= 0; index -= 1) {
-      descendants[index].remove();
+      descendants[index]!.remove();
     }
   }
 });
