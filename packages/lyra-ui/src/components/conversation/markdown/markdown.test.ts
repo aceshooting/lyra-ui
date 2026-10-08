@@ -3215,6 +3215,7 @@ describe("shiki dark-theme signal", () => {
     const content = el.shadowRoot!.querySelector('[part="content"]')!;
     expect(content.hasAttribute("data-dark-theme")).to.equal(false);
 
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
     wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
     await waitUntil(() => content.getAttribute("data-dark-theme") === "true");

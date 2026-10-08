@@ -1510,6 +1510,7 @@ describe('invalid-border cssprop indirection', () => {
     el.style.setProperty('--lr-known-date-invalid-border-color', 'rgb(10, 20, 30)');
     // The invalid-field border now eases over --lr-transition-fast instead of snapping; zero it so
     // this token/override assertion reads the settled colour, not a mid-interpolation sample.
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-transition-fast', '0s');
     const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
     day.focus();

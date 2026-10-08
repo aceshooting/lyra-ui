@@ -43,6 +43,7 @@ describe('the semantic grid is live, not inert', () => {
     const before = read(el, '--lr-color-brand-fill-loud');
     el.style.setProperty('--lr-ramp-brand-50', 'rgb(1, 2, 3)');
     expect(read(el, '--lr-color-brand-fill-loud')).to.equal(before);
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-brand-fill-loud', 'rgb(4, 5, 6)');
     expect(read(el, '--lr-color-brand-fill-loud')).to.equal('rgb(4, 5, 6)');
     expect(read(el, '--lr-color-brand')).to.equal('rgb(4, 5, 6)');
@@ -92,6 +93,7 @@ describe('dark mode reaches the grid by every documented route', () => {
 
   it('lets a consumer retheme one slot without forking the ramp', async () => {
     const el = await probe();
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-brand-fill-loud', 'rgb(4, 5, 6)');
     expect(read(el, '--lr-color-brand-fill-loud')).to.equal('rgb(4, 5, 6)');
     expect(read(el, '--lr-color-brand')).to.equal('rgb(4, 5, 6)');

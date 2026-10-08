@@ -21,6 +21,7 @@ it('uses an optional inherited container radius while preserving local card radi
   const cards = [...wrapper.querySelectorAll<LyraCard>('lr-card')];
   await Promise.all(cards.map(card => card.updateComplete));
   expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('7px');
+  wrapper.setAttribute('data-lr-theme-scope', '');
   wrapper.style.setProperty('--lr-theme-border-radius-container', '23px');
   expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('23px');
   expect(getComputedStyle(base(cards[1]!)).borderTopLeftRadius).to.equal('23px');
@@ -1071,6 +1072,7 @@ it('inherits independent appearance and interactive-state paint from an ancestor
   expect(getComputedStyle(base(cards[2]!)).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
 
   const target = base(cards[3]!);
+  cards[3]!.setAttribute('data-lr-theme-scope', '');
   cards[3]!.style.setProperty('--lr-transition-fast', '0ms');
   try {
     await hoverUntilMatched(target, 'the interactive card never reported :hover');

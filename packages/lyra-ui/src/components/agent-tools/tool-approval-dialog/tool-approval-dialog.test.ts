@@ -323,6 +323,7 @@ describe('editing', () => {
       html`<lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>`,
     )) as LyraToolApprovalDialog;
     el.style.setProperty('--lr-tool-approval-dialog-invalid-border-color', 'rgb(10, 20, 30)');
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-border', 'rgb(40, 50, 60)');
     editButton(el).click();
     await el.updateComplete;

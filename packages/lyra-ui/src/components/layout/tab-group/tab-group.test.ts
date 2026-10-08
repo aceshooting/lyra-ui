@@ -194,6 +194,7 @@ it('lets a consumer ::part(tab):hover color win in the rendered cascade', async 
     </div>
   `);
   const el = wrapper.querySelector('lr-tab-group') as LyraTabGroup;
+  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-transition-fast', '0ms');
   const target = tabButtons(el)[1]!;
   try {
@@ -986,6 +987,7 @@ describe("selected/hover cssprops", () => {
       html`<div style=${style}>${basic()}</div>`
     )) as HTMLElement;
     const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty("--lr-transition-fast", "0ms");
     await el.updateComplete;
     return el;
@@ -1232,6 +1234,7 @@ describe('lr-tab host color inheritance from the themed tab button', () => {
         <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
       </lr-tab-group>
     `)) as LyraTabGroup;
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty("--lr-transition-fast", "0ms");
     const tabs = [...el.querySelectorAll("lr-tab")] as LyraTab[];
     const unselectedTab = tabs[1]!;
@@ -2275,6 +2278,7 @@ async function crowded(style = ""): Promise<LyraTabGroup> {
     </div>
   `)) as LyraTabGroup;
   const group = el.querySelector("lr-tab-group") as LyraTabGroup;
+  group.setAttribute('data-lr-theme-scope', '');
   group.style.setProperty("--lr-transition-fast", "0ms");
   await nextFrames();
   await group.updateComplete;

@@ -7,10 +7,16 @@
       // theme=0 omits theme.css (zero-configuration page). design-tokens.css has no :root default, so
       // loading it only affects its own .lr-token-* / [data-lr-design-token-mode] scopes.
       const params = new URLSearchParams(location.search);
-      if (params.get('theme') !== '0') document.write('<link rel="stylesheet" href="/dist-a/theme.css" />');
-      // shadcn=1 adds the deprecated fixed shadcn look, which answers to .light and .dark anywhere.
-      if (params.get('shadcn') === '1') document.write('<link rel="stylesheet" href="/dist-a/themes/shadcn.css" />');
-      document.write('<link rel="stylesheet" href="/dist-a/styles/design-tokens.css" />');
+      // Each variant loads its own stylesheets (27.0.0 dropped the focus-ring composite from theme.css).
+      const variantDist = `/dist-${params.get('variant') ?? 'a'}`;
+      if (params.get('theme') !== '0') document.write(`<link rel="stylesheet" href="${variantDist}/theme.css" />`);
+      // shadcn=1 adds the shadcn look on the root. Since v24 the fixed themes/shadcn.css is gone; the
+      // switchable look answers to .light and .dark only inside its [data-lr-look] boundary.
+      if (params.get('shadcn') === '1') {
+        document.write(`<link rel="stylesheet" href="${variantDist}/looks/shadcn.css" />`);
+        document.documentElement.setAttribute('data-lr-look', 'shadcn');
+      }
+      document.write(`<link rel="stylesheet" href="${variantDist}/styles/design-tokens.css" />`);
       // app=motion|color: unlayered application CSS retuning published outputs on :root.
       const APP = {
         motion: ':root{--lr-duration-fast:400ms;--lr-duration-base:400ms;--lr-transition-fast:400ms ease;--lr-transition-base:400ms ease;--lr-transition-interactive:background-color 400ms ease,color 400ms ease,border-color 400ms ease}',

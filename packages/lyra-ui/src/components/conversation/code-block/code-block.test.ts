@@ -2013,6 +2013,7 @@ describe("shiki dark-theme signal", () => {
     const el = wrapper.querySelector("lr-code-block") as LyraCodeBlock;
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.hasAttribute("data-dark-theme")).to.be.false;
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
     wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
     await waitUntil(() => body.getAttribute("data-dark-theme") === "true");

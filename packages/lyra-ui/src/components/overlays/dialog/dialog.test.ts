@@ -22,6 +22,7 @@ it('inherits heading fonts across a component boundary without changing body fon
   const heading = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
   try {
     expect(getComputedStyle(heading).fontFamily).to.equal('monospace');
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-font-family-heading', 'serif');
     expect(getComputedStyle(heading).fontFamily).to.equal('serif');
     expect(getComputedStyle(dialog).fontFamily).to.equal('monospace');

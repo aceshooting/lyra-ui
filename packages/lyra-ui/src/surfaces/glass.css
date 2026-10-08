@@ -109,6 +109,11 @@
           var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
       }
+      @media (forced-colors: none) {
+        :where(.lr-surface-chrome) {
+          --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color)); --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+        }
+      }
       :where(.lr-surface-chrome) {
         isolation: var(--_lr-surface-isolation, isolate);
         --_lr-glass-effective-opacity: var(--_lr-preference-glass-opacity, max(var(--_lr-glass-parent-opacity, 0), clamp(var(--_lr-surface-min-opacity, 0), var(--lr-theme-surface-opacity, 0.6), 1)));

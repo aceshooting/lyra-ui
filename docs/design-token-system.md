@@ -26,11 +26,24 @@ Generation is deterministic and produces:
 - `.storybook/token-preview.generated.js`, the grouped data used by Storybook token previews.
 - `scripts/fixtures/token-docs.generated.json` and `token-editor.generated.json`, stable inputs for
   authored-reference and editor-data generation. Those consumers never have to parse TypeScript.
+- **The document token layer** (RFC 0002, since 27.0.0): `src/internal/document-tokens.generated.ts`
+  and `src/styles/tokens-root.css`, whose body is byte-identical to the adopted text. The layer
+  declares every shared output once on `:root` and re-derives it at the closed list of theme scopes,
+  with mode carried by the inherited `--_lr-dark-on` / `--_lr-light-on` switches. The same module
+  carries the per-host remainder (`HOST_TOKEN_CSS`: host-local names and the preference arms with
+  their derived sets), the specialist palettes on the switches, the scope vocabulary, and a content
+  hash declared as the layer's sentinel. `scripts/document-token-layer.mjs` holds the pure builder;
+  it fails generation when a layer output reads a host-declared token (make it host-local) or a name
+  the layer neither declares nor allows.
+- `scripts/theme-scope-vocabulary.generated.mjs`, the consumed-input / output vocabulary the
+  `theme-scopes` migration rule embeds.
 
-The generator also compares every canonical name and mode value with the actual token styles and
-fails on either an undocumented runtime token or metadata with no implementation. Update the JSON
-first, regenerate, then make the runtime implementation agree. Generated files are never edited by
-hand.
+The generator also compares every canonical name and mode value with the per-mode token records
+(`tokens.styles.ts`, `tokens/palette.styles.ts`, `specialist-tokens.styles.ts`) that the palette and
+contrast tooling read, and checks that their names partition exactly into the layer, the host-local
+set and the specialist palettes. It fails on either an undocumented token or metadata with no
+implementation. Update the JSON first, regenerate, then make the records agree. Generated files are
+never edited by hand.
 
 ## Portable look definitions
 

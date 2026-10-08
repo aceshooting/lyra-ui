@@ -502,6 +502,7 @@ for (const direction of ['ltr', 'rtl']) {
     await waitUntil(fits);
     const before = titles.map((title) => title.textContent!.length);
     const allocation = el.shadowRoot!.querySelector('svg')!.getBoundingClientRect();
+    parent.setAttribute('data-lr-theme-scope', '');
     parent.style.setProperty('--lr-theme-font-size-xs', '24px');
     await waitUntil(() => titles.every((title, index) => title.textContent!.length < before[index]!) && fits());
     const after = el.shadowRoot!.querySelector('svg')!.getBoundingClientRect();

@@ -42,6 +42,7 @@ it('keeps each row-size baseline and measures the same minimum after inherited d
   expect(state.measurementRowHeight!).to.be.closeTo(minimum(), 0.05);
   expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
 
+  scope.setAttribute('data-lr-theme-scope', '');
   scope.style.setProperty('--lr-theme-table-row-height', '80px');
   state.measureRenderedItems();
   expect(minimum()).to.be.closeTo(68, 0.05);

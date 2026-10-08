@@ -669,6 +669,7 @@ describe("data mode", () => {
     await el.updateComplete;
     await nextFrame();
     const list = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    list.setAttribute('data-lr-theme-scope', '');
     list.style.setProperty('--lr-color-surface-raised', 'rgb(1, 2, 3)');
     await waitUntil(() => list.shadowRoot!.querySelector('[part~="group-toggle"]') != null);
     const toggle = list.shadowRoot!.querySelector<HTMLElement>('[part~="group-toggle"]')!;
@@ -4456,6 +4457,7 @@ describe("row-action overlays escape the virtual viewport", () => {
     const row = dataRow(el, "r0");
     const timestamp = row.shadowRoot!.querySelector<HTMLElement>('[part="timestamp"]')!;
     await expect(el).to.be.accessible();
+    row.setAttribute('data-lr-theme-scope', '');
     row.style.setProperty("--lr-color-text", "rgb(0, 0, 0)");
     expect(getComputedStyle(timestamp).color).to.equal("rgb(0, 0, 0)");
     await dropdown.hide({ focusTrigger: false });

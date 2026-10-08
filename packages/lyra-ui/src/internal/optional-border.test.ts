@@ -38,8 +38,10 @@ describe('optional decorative border fallback', () => {
       expect(await border(card)).to.deep.equal(toRgba(shadcn));
       scope.setAttribute('data-lr-look', 'lyra');
       expect(await border(card)).to.deep.equal(toRgba(lyra));
+      card.setAttribute('data-lr-theme-scope', '');
       card.style.setProperty('--lr-color-border', 'rgb(12 34 56)');
       expect(await border(card)).to.deep.equal([12, 34, 56, 255]);
+      scope.setAttribute('data-lr-theme-scope', '');
       scope.style.setProperty('--lr-theme-color-surface-border-subtle', 'rgb(78 90 123 / 0.6)');
       expect(await border(card)).to.deep.equal(toRgba('rgb(78 90 123 / 0.6)'));
       scope.style.setProperty('--lr-theme-color-surface-border-subtle', 'initial');

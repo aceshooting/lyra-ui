@@ -2381,6 +2381,7 @@ describe('waveform', () => {
 
   it('uses the --lr-color-brand custom property for the waveform fill when the host defines it', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>`)) as LyraAvPlayer;
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
     enableWaveformPainting(el);
     window.dispatchEvent(new Event('resize'));
@@ -2416,6 +2417,7 @@ describe('waveform', () => {
     enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
     window.dispatchEvent(new Event('resize'));
     const prior = ctx.fillStyle;

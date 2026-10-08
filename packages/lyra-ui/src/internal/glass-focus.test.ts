@@ -45,6 +45,7 @@ describe('glass surface keyboard focus paint', () => {
         if (treatment !== 'unset') host.setAttribute('data-lr-surface', treatment);
         if (shorthand) host.style.setProperty('--lr-focus-ring', '5px dashed rgb(1, 2, 3)');
         else {
+          host.setAttribute('data-lr-theme-scope', '');
           host.style.setProperty('--lr-focus-ring-color', 'rgb(1, 2, 3)');
           host.style.setProperty('--lr-focus-ring-width', '6px');
         }

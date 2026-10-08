@@ -337,7 +337,9 @@ describe('ambient duration token', () => {
   it('drops a cached duration on reconnect so a new theme scope takes effect', async () => {
     const firstScope = document.createElement('div');
     const secondScope = document.createElement('div');
+    firstScope.setAttribute('data-lr-theme-scope', '');
     firstScope.style.setProperty('--lr-theme-duration-slow', '800ms');
+    secondScope.setAttribute('data-lr-theme-scope', '');
     secondScope.style.setProperty('--lr-theme-duration-slow', '1.2s');
     document.body.append(firstScope, secondScope);
     const el = document.createElement('lr-audio-visualizer') as LyraAudioVisualizer;
@@ -828,6 +830,7 @@ describe('media-query change handlers', () => {
     ambientAmplitudes(el, 0, false);
     expect(priv.ambientDurationMs).to.equal(800);
     el.style.setProperty('--visualizer-probe', 'rgb(4, 5, 6)');
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-duration-slow', '1.2s');
     el.setAttribute('data-theme', 'dark');
     await aTimeout(0); // let the ThemeWatcher's coalesced microtask run

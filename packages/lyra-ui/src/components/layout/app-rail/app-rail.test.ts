@@ -205,6 +205,7 @@ it("inherits independent toggle and resizer hover/pressed paint from an ancestor
     </div>
   `);
   const full = fullWrapper.querySelector("lr-app-rail") as LyraAppRail;
+  full.setAttribute('data-lr-theme-scope', '');
   full.style.setProperty("--lr-transition-fast", "0ms");
   const resizer =
     full.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;

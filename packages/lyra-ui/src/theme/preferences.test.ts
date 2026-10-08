@@ -87,6 +87,7 @@ describe('independent accessibility preferences', () => {
           expect(getComputedStyle(quiet).color).to.equal(getComputedStyle(normal).color);
           expect(getComputedStyle(control).borderTopColor).to.equal(getComputedStyle(normal).color);
           expect(Number.parseFloat(getComputedStyle(control).outlineWidth)).to.be.at.least(3);
+          probe.setAttribute('data-lr-theme-scope', '');
           probe.style.setProperty('--lr-theme-focus-ring-width', '5px');
           expect(getComputedStyle(control).outlineWidth).to.equal('5px');
           probe.style.removeProperty('--lr-theme-focus-ring-width');

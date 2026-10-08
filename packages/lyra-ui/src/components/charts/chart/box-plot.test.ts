@@ -1437,6 +1437,7 @@ describe('box-plot robustness regressions', () => {
       refreshes++;
       refreshTheme();
     };
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-color-surface-default', 'rgb(31, 41, 51)');
     await aTimeout(0);
 

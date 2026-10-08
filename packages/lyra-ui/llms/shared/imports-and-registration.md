@@ -188,8 +188,9 @@ The entry points, then:
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
   `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
   [The shadcn look](./styles-and-tokens.md#the-shadcn-look--looksshadcncss)),
-  `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
-  so your own components can read them),
+  `@aceshooting/lyra-ui/tokens-root.css` (the document token layer as a static file: link it for
+  server-rendered pages and for application elements that paint before the first Lyra element
+  connects),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text/typography utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency style runtime),

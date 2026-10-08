@@ -51,6 +51,23 @@ browser-bundle argument for excluding them does not apply to a server render. Us
   template; the component renders when its definition upgrades in the browser. Use this for initial
   renders that require light-DOM traversal, layout, canvas, observers, media, or other browser APIs.
 
+**Link the token layer in `<head>`.** Since 27.0.0 declarative shadow roots no longer carry the
+shared `--lr-*` layer (one server-rendered `lr-button` is about 34 KB smaller); the browser adopts it
+on the first connect, which for server-rendered markup is hydration. For a correct first paint
+before hydration, link the static copy after the no-flash bootstrap and with `theme.css`:
+
+```html
+<link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/theme.css" />
+<link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/styles/tokens-root.css" />
+```
+
+Hydration then skips the constructed copy. An application's **own** declarative shadow roots that
+contain theme scopes (for example a `.lr-dark` region or a `data-lr-theme-scope` wrapper) include the
+same `<link rel="stylesheet" href="…/tokens-root.css">` inside their template: document styles do not
+reach into a shadow root until hydration adopts the layer there. Without any link and without
+JavaScript, server-rendered components paint without resolved tokens, as a page without Lyra's styles
+always did.
+
 Server setup (the fallback must precede Lit's renderer):
 
 ```ts

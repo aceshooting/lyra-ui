@@ -17,6 +17,7 @@ for (const { name, text, surface, inheritedColor, dark } of [
 ] as const) {
   it(`classifies rendered ${name} syntax colors`, async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
+    host.setAttribute('data-lr-theme-scope', '');
     host.style.setProperty('--lr-color-text', text);
     host.style.setProperty('--lr-color-surface', surface);
     if (inheritedColor) host.style.color = inheritedColor;

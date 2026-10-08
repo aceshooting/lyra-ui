@@ -9,7 +9,7 @@ import {
 import { lockChartType } from './chart-type-lock.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
+import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import {
   normalizeHistogramBinCount,
   type HistogramBucket,

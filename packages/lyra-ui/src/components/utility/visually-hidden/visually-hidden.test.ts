@@ -42,6 +42,7 @@ it('sizes its hidden box from the shared --lr-size-1px token, not the unrelated 
   }
 
   // The correct hook does reach it.
+  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-theme-size-1px', '3px');
   const sized = getComputedStyle(el);
   expect(sized.inlineSize).to.equal('3px');

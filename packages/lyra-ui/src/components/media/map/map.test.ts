@@ -2370,6 +2370,7 @@ it('paints a theme-aware compact attribution glyph while preserving native discl
   attribution.style.setProperty('--lr-icon-button-size', '24px');
   expect(summary.getBoundingClientRect().width).to.be.at.least(24);
   expect(summary.getBoundingClientRect().height).to.be.at.least(24);
+  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-text', 'rgb(221, 238, 255)');
   el.style.setProperty('--lr-color-surface', 'rgb(17, 34, 51)');
   expect(getComputedStyle(summary, '::before').backgroundColor).to.equal('rgb(221, 238, 255)');
@@ -2799,6 +2800,7 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
 
     wrapper.setAttribute('data-theme', 'dark');
     wrapper.style.setProperty('--lr-map-choropleth-fill-opacity', '0.42');
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await aTimeout(0);
 
@@ -4463,6 +4465,7 @@ it('rebuilds default-coloured markers when the theme changes the brand token', a
     'rgb(4, 5, 6)',
   ]);
 
+  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
   await waitUntil(() => constructedOptions.length === 3, 'the default pin never followed the theme');
   expect(constructedOptions[2]?.color, 'only the default pin is rebuilt').to.equal('rgb(1, 2, 3)');
@@ -5813,6 +5816,7 @@ describe('dataLayers clustering and heatmap', () => {
     expect(pixel(ids[1]!, 32, 32)[3]).to.equal(0);
     expect(pixel(ids[2]!, 32, 32)).to.deep.equal([1, 2, 3, 255]);
     const source = sources.get(dataLayerResourceId(el, 'pins'));
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => pixel(ids[0]!, 32, 32)[0] === 4);
     expect(pixel(ids[0]!, 32, 32)).to.deep.equal([4, 5, 6, 255]);
@@ -5917,6 +5921,7 @@ describe('dataLayers clustering and heatmap', () => {
     const symbols = layers.get(`${sourceId}-point-icon`)!;
     const imageId = [...images.keys()][0]!;
     expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([1, 2, 3, 255]);
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
     expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([4, 5, 6, 255]);
@@ -6009,6 +6014,7 @@ describe('dataLayers clustering and heatmap', () => {
     const layer = layers.get(`${sourceId}-line`)!;
     expect(JSON.stringify(layer.paint!['line-color'])).to.include('rgb(1, 2, 3)');
     expect(layer.paint!['line-opacity']).to.equal(0.9);
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(layer.paint!['line-color']).includes('rgb(4, 5, 6)'));
     expect(sources.get(sourceId) === source).to.equal(true);
@@ -6164,6 +6170,7 @@ describe('dataLayers clustering and heatmap', () => {
     const id = `${dataLayerResourceId(el, 'pins')}-cluster-count`;
     expect(added.get(id)!['text-color']).to.equal('rgb(1, 2, 3)');
     expect(added.get(id)!['text-halo-color']).to.equal('rgb(4, 5, 6)');
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-danger', 'rgb(7, 8, 9)');
     el.style.setProperty('--lr-color-brand', 'rgb(10, 11, 12)');
     (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
@@ -6719,6 +6726,7 @@ describe('dataLayers clustering and heatmap', () => {
       'the paint-only half resolves the same way',
     ).to.deep.equal(resolved);
 
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(7, 8, 9)');
     (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
     expect(
@@ -7077,6 +7085,7 @@ describe('dataLayers clustering and heatmap', () => {
     await el.updateComplete;
     const circle = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!;
 
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
     expect(circle.paint!['circle-opacity']).to.deep.equal([

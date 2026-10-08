@@ -1,5 +1,11 @@
 import { css } from 'lit';
 
+// PER-MODE TOKEN RECORD (since 27.0.0). No component adopts this sheet: the shared layer is the
+// generated document token layer (document-tokens.generated.ts, host-tokens.styles.ts), built from
+// tokens/canonical-tokens.json. This file remains the readable per-mode mirror that the palette,
+// contrast, interaction-state and style-axes tooling read and rewrite, and generate-design-tokens.mjs
+// checks it against canonical data. The prose below describes each token's contract.
+
 // Component styles consume centralized --lr-* tokens. Themeable base tokens read supported
 // --lr-theme-* inputs with built-in fallbacks; aliases, computed tokens, colour ramps,
 // environment-backed values, and fixed contract constants may instead resolve within the

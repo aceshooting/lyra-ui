@@ -178,6 +178,7 @@ describe('typography role classes', () => {
     `);
     expect(style(wrapper, 'h2').fontFamily).to.equal('monospace');
     expect(style(wrapper, '.lr-heading-2').fontFamily).to.equal('monospace');
+    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-font-family-heading', 'serif');
     expect(style(wrapper, 'h2').fontFamily).to.equal('serif');
     expect(style(wrapper, '.lr-heading-2').fontFamily).to.equal('serif');

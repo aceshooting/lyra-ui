@@ -329,6 +329,7 @@ it('keeps native text, measurement and gutter on the live monospace family token
     computedGutter.borderInlineStartWidth, computedGutter.borderInlineEndWidth]
     .reduce((width, value) => width + Number.parseFloat(value), 0);
   expect(gutter.getBoundingClientRect().width).to.be.closeTo(digitWidth + gutterChrome, 1);
+  wrapper.setAttribute('data-lr-theme-scope', '');
   wrapper.style.setProperty('--lr-theme-font-family-mono', 'serif');
   expectFamily('serif');
   el.style.setProperty('--lr-font-mono', 'monospace');

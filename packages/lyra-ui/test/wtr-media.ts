@@ -1,5 +1,6 @@
 export type ReducedMotionPreference = 'reduce' | 'no-preference';
 export type ForcedColorsPreference = 'active' | 'none';
+export type ColorSchemePreference = 'light' | 'dark' | 'no-preference';
 
 interface CommandResponse {
   executed: boolean;
@@ -42,4 +43,9 @@ export async function setReducedMotion(preference: ReducedMotionPreference): Pro
 
 export async function setForcedColors(preference: ForcedColorsPreference): Promise<void> {
   await setMediaPreference('set-forced-colors', preference);
+}
+
+/** Emulates the operating-system colour scheme (`prefers-color-scheme`) for the whole page. */
+export async function setColorScheme(preference: ColorSchemePreference): Promise<void> {
+  await setMediaPreference('set-color-scheme', preference);
 }
