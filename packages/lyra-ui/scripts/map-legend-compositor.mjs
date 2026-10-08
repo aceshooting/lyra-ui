@@ -84,7 +84,10 @@ try {
 
       async function capture(name) {
         // Wait for a fresh map frame and its subsequent compositor frames, not just Lit's update.
-        await map.evaluate(element => new Promise((resolveFrame, rejectFrame) => {
+        // Linux headless WebKit can present the previous WebGL buffer on the first render even
+        // after the style is loaded. Two explicit repaint cycles prime the buffer deterministically
+        // without changing the map's rendering options or pixel thresholds.
+        for (let draw = 0; draw < 2; draw++) await map.evaluate(element => new Promise((resolveFrame, rejectFrame) => {
           const timeout = setTimeout(() => rejectFrame(new Error('Map compositor frame timed out after 10 seconds')), 10_000);
           element.map.once('render', () => requestAnimationFrame(() => requestAnimationFrame(() => {
             clearTimeout(timeout);

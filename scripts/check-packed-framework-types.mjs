@@ -1,4 +1,5 @@
 import { run } from './lib/process.mjs';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 import {
   access,
   mkdir,
@@ -19,18 +20,27 @@ const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
 
-async function pack(destination) {
+export async function pack(destination, { packageDir = uiPackage, environment = process.env } = {}) {
   const supplied = await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.ui, {
-    packageDir: uiPackage,
+    packageDir,
+    environment,
     destination,
     compareExports: true,
   });
   if (supplied) return supplied;
+  for (const relativePath of [
+    'dist/custom-elements-jsx.d.ts', 'dist/custom-elements-jsx.js',
+    'dist/svelte.d.ts', 'dist/svelte.js', 'dist/vue.d.ts', 'dist/vue.js',
+  ]) {
+    try { await access(join(packageDir, relativePath)); } catch {
+      throw new Error(`${relativePath} is missing; run \`pnpm --filter @aceshooting/lyra-ui build\` before this check`);
+    }
+  }
   const before = new Set((await readdir(destination)).filter((entry) => entry.endsWith('.tgz')));
   await run(
     pnpm,
     ['--config.ignore-scripts=true', 'pack', '--json', '--pack-destination', destination],
-    uiPackage,
+    packageDir,
     'framework declaration package pack',
     { capture: true },
   );
@@ -260,7 +270,7 @@ console.log('Node framework and manifest exports passed.');
   );
 }
 
-async function verifyInstalledArtifacts(fixtureDir) {
+export async function verifyInstalledArtifacts(fixtureDir) {
   const installed = join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui');
   for (const relativePath of [
     'custom-elements.json',
@@ -296,23 +306,6 @@ async function verifyInstalledArtifacts(fixtureDir) {
 }
 
 async function main() {
-  for (const relativePath of [
-    'dist/custom-elements-jsx.d.ts',
-    'dist/custom-elements-jsx.js',
-    'dist/svelte.d.ts',
-    'dist/svelte.js',
-    'dist/vue.d.ts',
-    'dist/vue.js',
-  ]) {
-    try {
-      await access(join(uiPackage, relativePath));
-    } catch {
-      throw new Error(
-        `${relativePath} is missing; run \`pnpm --filter @aceshooting/lyra-ui build\` before this check`,
-      );
-    }
-  }
-
   const workspace = await mkdtemp(join(tmpdir(), 'lr-packed-framework-types-'));
   try {
     const packagesDir = join(workspace, 'packages');
@@ -369,7 +362,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+if (isMainModule(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}
