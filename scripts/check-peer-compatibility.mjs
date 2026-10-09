@@ -1189,6 +1189,13 @@ export function synchronizeAuthorityCurrentVersions({ authority, packageManifest
       pnpm: pnpmVersionFromRootManifest(rootManifest),
     };
   }
+  // Fixture installs use these exact versions; keep them on the workspace's own dev ranges so a
+  // dependency upgrade cannot leave a fixture on browser builds the CI image no longer carries.
+  const toolSources = { ...rootManifest?.devDependencies, ...packageManifest?.devDependencies };
+  for (const name of Object.keys(synchronized.toolchain ?? {})) {
+    const base = /^[~^]?(\d+\.\d+\.\d+)$/.exec(String(toolSources[name] ?? ''))?.[1];
+    if (base) synchronized.toolchain = { ...synchronized.toolchain, [name]: base };
+  }
   resolvePeerProfiles(synchronized);
   return synchronized;
 }
