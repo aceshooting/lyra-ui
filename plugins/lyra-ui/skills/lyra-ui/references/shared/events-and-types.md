@@ -1593,11 +1593,32 @@ These named interfaces and helper signatures are available to typed integrations
   `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
+- **`testing-jsdom-shims-contracts`** — Shared utility contracts.
+  `JsdomAdoptedStyleSheetsTargets {
+  documentPrototype?: object;
+  shadowRootPrototype?: object;
+  styleSheetPrototype?: object;
+  isJsdom?: () => boolean;
+}`
+  `installJsdomAdoptedStyleSheetsShim(targets?: JsdomAdoptedStyleSheetsTargets): () => void`
+  `installJsdomShims(): () => void`
+  See "jsdom: `installJsdomShims()`" above for the full contract.
+
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.
   `chooseOption(/* public names: owner, value */): unknown`
   `submitConfirmDecision(/* public names: owner, decision */): unknown`
   `toggleSwitch(/* public names: switchEl */): unknown`
   `activateStep(/* public names: stepper, target */): unknown`
+  `chooseSwatch(/* public names: picker, value */): unknown`
+  `chooseCurrency(/* public names: picker, code */): unknown`
+  `PopoverDriverOptions {
+  timeoutMs: unknown;
+}`
+  `ClosePopoverOptions {
+  via: unknown;
+}`
+  `openPopover(/* public names: popover, options */): unknown`
+  `closePopover(/* public names: popover, options */): unknown`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
 
 - **`testing-wait-for-mount-contracts`** — Shared utility contracts.
@@ -1694,6 +1715,7 @@ These named interfaces and helper signatures are available to typed integrations
   `parseLyraStyleRecord(value: unknown): Readonly<LyraStyle>`
   `resetLyraStyle(fields?: readonly LyraStyleField[]): Readonly<LyraStyle>`
   `setLyraStyle(choices: LyraStyleChoices): Readonly<LyraStyle>`
+  `startLyraStyle(): Readonly<LyraStyle>`
 
 - **`vue-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.

@@ -6289,6 +6289,7 @@ export interface LyraComponentTypeMap {
       | '--lr-icon-button-color'
       | '--lr-icon-button-color-active'
       | '--lr-icon-button-color-hover'
+      | '--lr-icon-button-padding-inline'
       | '--lr-icon-button-radius'
       | '--lr-icon-button-size';
     attributeAliases: {

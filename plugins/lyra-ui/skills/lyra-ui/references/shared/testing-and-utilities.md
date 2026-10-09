@@ -36,6 +36,37 @@ a no-op in every browser and without a `CSSStyleSheet` global; it installs once 
 function that restores the original methods. Install it before any stylesheet is parsed (in the
 same `setupFiles` entry): a sheet parsed earlier keeps the rules it dropped.
 
+### jsdom: `installJsdomShims()`
+
+jsdom implements no `adoptedStyleSheets`, so Lit renders one `<style>` element per component
+shadow root. jsdom registers each of those sheets on the document, not the shadow root, and every
+`getComputedStyle()` call then matches the element against every rule of every sheet. With a few
+hundred Lyra elements on the page a single computed-style read can take over 100 ms, and Lyra
+reads computed style to decide which slotted text is visible, so whole tests slow to a crawl.
+
+`installJsdomShims()` (currently `installJsdomAdoptedStyleSheetsShim()`) adds an inert
+`adoptedStyleSheets` to `Document` and `ShadowRoot`, so Lit adopts each component's constructed
+stylesheet instead of appending `<style>` elements. Adopted sheets are stored and read back (the
+same array until reassigned, so `push()` persists) but never applied; jsdom could not cascade them
+per shadow root anyway. `getComputedStyle()` then sees only the document's own sheets and inline
+styles, so assert behaviour and DOM rather than component styling. A jsdom release without
+`CSSStyleSheet.prototype.replace()`/`replaceSync()`, which Lit also requires, gets inert versions
+that record the text. The shim installs only when `navigator.userAgent` carries jsdom's
+`jsdom/<version>` signature and `adoptedStyleSheets` is missing, so it is a no-op in browsers,
+under Happy DOM and in plain Node projects. It installs once and returns a function that removes
+what it added.
+
+Lit decides whether it can adopt stylesheets when its module is first evaluated, so call the shim
+in a `setupFiles` entry before anything imports Lit or a Lyra component. Importing
+`@aceshooting/lyra-ui/testing` does not load Lit:
+
+```ts
+// vitest.setup.ts (environment: 'jsdom')
+import { installJsdomShims } from '@aceshooting/lyra-ui/testing';
+
+installJsdomShims();
+```
+
 ## Constructing a validated test event: `createLyraEvent()`
 
 `@aceshooting/lyra-ui/testing` also exports
@@ -68,8 +99,9 @@ semantics of their own that this factory does not model.
 
 ## Driving a component's real activation path: interaction drivers
 
-For the exact gap `createLyraEvent()` leaves open — choosing an option, submitting a confirm
-decision, toggling a switch, activating a step — `@aceshooting/lyra-ui/testing` exports a small
+For the exact gap `createLyraEvent()` leaves open — choosing an option, a swatch or a currency,
+submitting a confirm decision, toggling a switch, activating a step, opening and closing a
+popover — `@aceshooting/lyra-ui/testing` exports a small
 set of typed interaction drivers, one per interaction, that go through the real component's own
 activation path (its own shadow-part lookup and `.click()`, the same as its own tests) instead of
 a downstream suite reverse-engineering internal detail shapes or shadow-part selectors itself:
@@ -77,16 +109,42 @@ a downstream suite reverse-engineering internal detail shapes or shadow-part sel
 ```ts
 import {
   chooseOption,
+  chooseSwatch,
+  chooseCurrency,
+  openPopover,
+  closePopover,
   submitConfirmDecision,
   toggleSwitch,
   activateStep,
 } from '@aceshooting/lyra-ui/testing';
 
 await chooseOption(combobox, 'banana'); // opens the listbox, clicks the matching [part="option"] row
+await chooseSwatch(swatchPicker, 'ruby'); // clicks the matching swatch radio
+await chooseCurrency(currencyPicker, 'EUR'); // opens the composed listbox, clicks the EUR option
+await openPopover(popover); // clicks the slotted (or `for`) trigger, waits for lr-after-show
+await closePopover(popover); // presses Escape, waits for lr-after-hide; { via: 'trigger' } clicks instead
 await submitConfirmDecision(confirmBar, 'approved'); // clicks [part="approve-button"]
 await toggleSwitch(switchEl); // calls switchEl.click(), lr-switch's own activation path
 await activateStep(stepper, 'review'); // clicks the [part="step"] button for that stepId (or pass an index)
 ```
+
+`chooseSwatch(picker, value)` clicks the `<lr-swatch-picker>` radio whose value matches (the first
+enabled one when values repeat). When it resolves, `lr-change` (only if the selection moved) and
+`lr-activate` have fired. `chooseCurrency(picker, code)` drives the select, or the lazily loaded
+combobox of a `searchable` picker, that `<lr-currency-picker>` composes. The code must match the
+catalog exactly (`"EUR"`). When it resolves, the picker has emitted `input`, `lr-input`, `change`
+and `lr-change` once if the value changed.
+
+`openPopover(popover, { timeoutMs? })` clicks the `<lr-popover>` interaction trigger (the slotted
+`trigger` element, else its `for` target) and resolves after `lr-show` and `lr-after-show`. A
+`hover`/`focus` popover opens and pins, as for a user's click. `closePopover(popover, { via?,
+timeoutMs? })` presses Escape on the focused element by default, which closes the topmost overlay,
+or clicks the trigger again with `via: 'trigger'`. It resolves after `lr-hide` and `lr-after-hide`,
+with focus back on the trigger. Both resolve at once when the popover is already in the requested
+state. They throw when the interaction is refused: an `lr-show`/`lr-hide` veto, a disabled popover
+or trigger, `trigger="manual"`, no trigger, or Escape going to a newer overlay. Use `show()`/`hide()`
+for manual and `showAt()` popovers. A missing `lr-after-*` event rejects after `timeoutMs`
+(default 2000).
 
 `chooseOption()` accepts any of `<lr-combobox>`, `<lr-select>`, `<lr-model-select>`,
 `<lr-locale-picker>` and `<lr-voice-picker>` — every component that independently implements the
@@ -103,13 +161,14 @@ immediately after it see the render reached by that interaction. Host-driven asy
 still need their own completion check. Each driver also throws a plain `Error` — never a
 silent no-op — when the requested interaction cannot actually happen: the target is disabled, the
 option owner/stepper is read-only or has no matching row/step currently rendered, or the confirm
-bar is already decided. That is the exact failure mode a hand-rolled event misses (for example
+bar is already decided, or a popover's lifecycle event was vetoed. That is the exact failure mode a hand-rolled event misses (for example
 dispatching a confirm event without `cancelable`, which makes a `preventDefault()`-based
 pending-state handler a silent no-op that still looks tested) — these drivers exercise the
 component for real, so a precondition that blocks the interaction is surfaced as a thrown error
 instead of quietly doing nothing.
 
-Pure DOM operations only (`Element.click()`, shadow-part queries, public properties) — no
+Pure DOM operations only (`Element.click()`, an Escape `KeyboardEvent`, shadow-part queries,
+public properties) — no
 `@web/test-runner`/CDP-only helper, so they also run under a downstream suite's own
 happy-dom/jsdom environment, not only a real browser.
 

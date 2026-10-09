@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 3 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -165,6 +165,18 @@ it inherits normally from an ancestor even through an intervening component; it 
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
 counterpart to it. The internal control sets `font: inherit`, so an `em`-sized slotted glyph takes
 the surrounding text's font-size rather than the native button's UA default.
+
+`--lr-icon-button-padding-inline` (default `0`) is the logical inline padding of the
+`[part='button']` control, for a compact trigger that shows a short text value (a currency, unit or
+locale code) instead of a square glyph. It inherits from an ancestor like the radius. The default
+keeps an icon-only button at exactly its `--lr-icon-button-size` floor; padding adds to the
+content, so a label grows the button and the hit-area floor still applies. Block padding stays 0.
+
+```html
+<lr-icon-button aria-label="Currency: euro" style="--lr-icon-button-padding-inline: var(--lr-space-s)">
+  <span>€ EUR</span>
+</lr-icon-button>
+```
 
 The rest come in resting/hover/pressed triples, each falling through to the next-quieter state so
 setting only one still behaves:

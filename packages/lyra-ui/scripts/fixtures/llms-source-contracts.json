@@ -14123,7 +14123,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "d136a855d62765ea9f8b",
+      "fingerprint": "f3a0821231508e2e4521",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15748,7 +15748,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "c86a2336af6da650727f",
+      "fingerprint": "4b1582138be8839c187b",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15764,7 +15764,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "c883de4888c74360576e",
+      "fingerprint": "56a3d49641e29f2aee56",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16324,7 +16324,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "3a8806878b4f606d8334",
+      "fingerprint": "bd23460c90f5e4da192b",
       "routes": [
         "src/vue.ts"
       ],
@@ -16733,7 +16733,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "797e2ee7185aa27a3a23",
+      "fingerprint": "8b0302bd32472069cbff",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17928,6 +17928,166 @@
         "kind": "utility",
         "name": "testing-happy-dom-shims-contracts",
         "declaration": "installHappyDomCascadeLayerShim"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "chooseSwatch",
+      "kind": "function",
+      "fingerprint": "db4da7875b98cda851b7",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "chooseSwatch"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "chooseCurrency",
+      "kind": "function",
+      "fingerprint": "99009e3746a3b804e9b1",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "chooseCurrency"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "openPopover",
+      "kind": "function",
+      "fingerprint": "55589651f1784b53db60",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "openPopover"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "closePopover",
+      "kind": "function",
+      "fingerprint": "e3e91a782f140bf14289",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "closePopover"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "PopoverDriverOptions",
+      "kind": "interface",
+      "fingerprint": "7ad5a058db967d8bdf2c",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "PopoverDriverOptions"
+      }
+    },
+    {
+      "module": "src/testing/interaction-drivers.ts",
+      "exportName": "ClosePopoverOptions",
+      "kind": "interface",
+      "fingerprint": "c9250d2659d282352e1e",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-interaction-drivers-contracts",
+        "declaration": "ClosePopoverOptions"
+      }
+    },
+    {
+      "module": "src/testing/jsdom-shims.ts",
+      "exportName": "installJsdomAdoptedStyleSheetsShim",
+      "kind": "function",
+      "fingerprint": "93e66bfe923ec8ce2cf5",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-jsdom-shims-contracts",
+        "declaration": "installJsdomAdoptedStyleSheetsShim"
+      }
+    },
+    {
+      "module": "src/testing/jsdom-shims.ts",
+      "exportName": "installJsdomShims",
+      "kind": "function",
+      "fingerprint": "5e51896e439fbf51e67a",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-jsdom-shims-contracts",
+        "declaration": "installJsdomShims"
+      }
+    },
+    {
+      "module": "src/testing/jsdom-shims.ts",
+      "exportName": "JsdomAdoptedStyleSheetsTargets",
+      "kind": "interface",
+      "fingerprint": "25b658e9698ab7c079a7",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-jsdom-shims-contracts",
+        "declaration": "JsdomAdoptedStyleSheetsTargets"
+      }
+    },
+    {
+      "module": "src/theme/theme.ts",
+      "exportName": "startLyraStyle",
+      "kind": "function",
+      "fingerprint": "21d303e65048a3a646d9",
+      "routes": [
+        "src/theme/theme.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "theme-theme-contracts",
+        "declaration": "startLyraStyle"
       }
     }
   ],

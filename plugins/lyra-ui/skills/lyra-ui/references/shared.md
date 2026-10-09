@@ -1460,6 +1460,13 @@ first statement the browser sees is appended at the end, so an older four-name s
 `lr-theme-preset`) would rank an imported look preset above `lr-overrides` and your own layer. Every Lyra stylesheet that declares an order repeats the same five names for exactly this
 reason.
 
+The same rule decides application **fallback fills**. A page that keeps plain `background` rules
+for dialogs or panels (so it also renders without the component bundle) and uses an unlayered rule
+on an `.lr-surface-chrome` element overrides the Glass fill; declare a low-priority layer before
+Lyra's names (`@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;`)
+for those fallbacks, or set `--lr-surface-background`. See
+[Application fallback fills and cascade layers](native-styles-and-utilities.md#application-fallback-fills-and-cascade-layers).
+
 <a id="the-shadcn-look--themesshadcncss"></a>
 
 ### The shadcn look — looks/shadcn.css
@@ -1689,7 +1696,10 @@ import {
   getLyraStyle,
   resetLyraStyle,
   setLyraStyle,
+  startLyraStyle,
 } from "@aceshooting/lyra-ui/theme.js";
+
+startLyraStyle(); // adopt the saved style and follow the OS without writing storage
 
 setLyraStyle({ mode: "dark" }); // unspecified axes keep their current value
 setLyraStyle({ accent: "sapphire" }); // named palette accent
@@ -1760,6 +1770,27 @@ selection unset and clears the configured resolved-mode attributes. The bootstra
 initial snapshot; it does not install a live system-mode listener. This option configures only
 the bootstrap. Later runtime calls such as `setLyraStyle()` follow their own style and persistence
 policy, so choose that policy explicitly if the application initializes the runtime afterward.
+
+**Starting the runtime after the bootstrap — `startLyraStyle()`.** A page that inlines only the
+bootstrap and loads `theme.js` later in a deferred bundle calls `startLyraStyle()` once. It adopts
+the saved style (the defaults when nothing is saved) on the document root and, while the mode is
+System, attaches the live `prefers-color-scheme` listener. It never writes storage: no record is
+created, a v1 record is not migrated, and an operating-system flip afterwards repaints without
+saving. Repeated calls do not stack listeners. The call emits no `lr-style-change`; a later
+operating-system flip emits `changed: ["resolvedMode"]`. The first `setLyraStyle()` takes over the
+same listener. Do not call `setLyraStyle({})` for this: it persists the current record.
+
+~~~ts
+// deferred bundle, after <script>lyraThemeBootstrap</script> in <head>
+import { startLyraStyle } from "@aceshooting/lyra-ui/theme.js";
+
+startLyraStyle(); // adopts the saved style, follows the OS while mode is System, never writes
+~~~
+
+`startLyraStyle()` always reads the runtime's own `localStorage['lyra-theme']` record and applies
+the whole profile in it. A page whose bootstrap uses `data-lr-theme-restore="mode"` or an
+application-owned storage key does not pair with it: the start would apply axes or a record the
+bootstrap deliberately ignored. Such pages call `setLyraStyle()` with the policy they want.
 
 **Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
 
@@ -2164,6 +2195,40 @@ contrast and forced colors retain opaque fills. Load `preferences.css` for expli
 contrast/motion choices. Nested chrome suppresses repeated blur; independently presented top-layer
 surfaces begin their own material root. Keep cards, data tables, charts, map layers and editing
 fields outside the automatic chrome class.
+
+#### Application fallback fills and cascade layers
+
+Lyra paints the `.lr-surface-chrome` fill from a rule inside its cascade layers
+(`lr-theme-preset.surface`). An **unlayered** application rule that sets `background` on the same
+element — a generic `dialog { background: … }`, a `.panel` class — beats every layered rule
+whatever its specificity, so the element keeps the application's opaque fill and the Glass
+treatment disappears without a warning. No `revert-layer` workaround is needed; put the
+application's fallback where it ranks below Lyra:
+
+```css
+/* 1. A low-priority application layer named before Lyra's. This order statement must be the first
+      the browser sees: put it at the top of the entry stylesheet, before the theme.css import. */
+@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@import "@aceshooting/lyra-ui/theme.css";
+
+@layer app-base {
+  dialog,
+  .panel {
+    background: #fff; /* still paints when the Lyra stylesheets are absent */
+  }
+}
+
+/* 2. Or choose the chrome's base fill through its token; Glass mixes it at the surface opacity. */
+.panel.lr-surface-chrome {
+  --lr-surface-background: #fff;
+}
+```
+
+An application layer declared after Lyra's (or unnamed until after `theme.css` loads) ranks above
+the surface layer and disables Glass in the same way as an unlayered rule. Keep unlayered
+`background` rules off `.lr-surface-chrome` elements, or exclude them with
+`:not(.lr-surface-chrome)`. See [Cascade layers](styles-and-tokens.md#cascade-layers) for the full
+order.
 
 ## Localization: `locale`, `strings`, and the locale runtime
 
@@ -2797,6 +2862,37 @@ a no-op in every browser and without a `CSSStyleSheet` global; it installs once 
 function that restores the original methods. Install it before any stylesheet is parsed (in the
 same `setupFiles` entry): a sheet parsed earlier keeps the rules it dropped.
 
+### jsdom: `installJsdomShims()`
+
+jsdom implements no `adoptedStyleSheets`, so Lit renders one `<style>` element per component
+shadow root. jsdom registers each of those sheets on the document, not the shadow root, and every
+`getComputedStyle()` call then matches the element against every rule of every sheet. With a few
+hundred Lyra elements on the page a single computed-style read can take over 100 ms, and Lyra
+reads computed style to decide which slotted text is visible, so whole tests slow to a crawl.
+
+`installJsdomShims()` (currently `installJsdomAdoptedStyleSheetsShim()`) adds an inert
+`adoptedStyleSheets` to `Document` and `ShadowRoot`, so Lit adopts each component's constructed
+stylesheet instead of appending `<style>` elements. Adopted sheets are stored and read back (the
+same array until reassigned, so `push()` persists) but never applied; jsdom could not cascade them
+per shadow root anyway. `getComputedStyle()` then sees only the document's own sheets and inline
+styles, so assert behaviour and DOM rather than component styling. A jsdom release without
+`CSSStyleSheet.prototype.replace()`/`replaceSync()`, which Lit also requires, gets inert versions
+that record the text. The shim installs only when `navigator.userAgent` carries jsdom's
+`jsdom/<version>` signature and `adoptedStyleSheets` is missing, so it is a no-op in browsers,
+under Happy DOM and in plain Node projects. It installs once and returns a function that removes
+what it added.
+
+Lit decides whether it can adopt stylesheets when its module is first evaluated, so call the shim
+in a `setupFiles` entry before anything imports Lit or a Lyra component. Importing
+`@aceshooting/lyra-ui/testing` does not load Lit:
+
+```ts
+// vitest.setup.ts (environment: 'jsdom')
+import { installJsdomShims } from '@aceshooting/lyra-ui/testing';
+
+installJsdomShims();
+```
+
 ## Constructing a validated test event: `createLyraEvent()`
 
 `@aceshooting/lyra-ui/testing` also exports
@@ -2829,8 +2925,9 @@ semantics of their own that this factory does not model.
 
 ## Driving a component's real activation path: interaction drivers
 
-For the exact gap `createLyraEvent()` leaves open — choosing an option, submitting a confirm
-decision, toggling a switch, activating a step — `@aceshooting/lyra-ui/testing` exports a small
+For the exact gap `createLyraEvent()` leaves open — choosing an option, a swatch or a currency,
+submitting a confirm decision, toggling a switch, activating a step, opening and closing a
+popover — `@aceshooting/lyra-ui/testing` exports a small
 set of typed interaction drivers, one per interaction, that go through the real component's own
 activation path (its own shadow-part lookup and `.click()`, the same as its own tests) instead of
 a downstream suite reverse-engineering internal detail shapes or shadow-part selectors itself:
@@ -2838,16 +2935,42 @@ a downstream suite reverse-engineering internal detail shapes or shadow-part sel
 ```ts
 import {
   chooseOption,
+  chooseSwatch,
+  chooseCurrency,
+  openPopover,
+  closePopover,
   submitConfirmDecision,
   toggleSwitch,
   activateStep,
 } from '@aceshooting/lyra-ui/testing';
 
 await chooseOption(combobox, 'banana'); // opens the listbox, clicks the matching [part="option"] row
+await chooseSwatch(swatchPicker, 'ruby'); // clicks the matching swatch radio
+await chooseCurrency(currencyPicker, 'EUR'); // opens the composed listbox, clicks the EUR option
+await openPopover(popover); // clicks the slotted (or `for`) trigger, waits for lr-after-show
+await closePopover(popover); // presses Escape, waits for lr-after-hide; { via: 'trigger' } clicks instead
 await submitConfirmDecision(confirmBar, 'approved'); // clicks [part="approve-button"]
 await toggleSwitch(switchEl); // calls switchEl.click(), lr-switch's own activation path
 await activateStep(stepper, 'review'); // clicks the [part="step"] button for that stepId (or pass an index)
 ```
+
+`chooseSwatch(picker, value)` clicks the `<lr-swatch-picker>` radio whose value matches (the first
+enabled one when values repeat). When it resolves, `lr-change` (only if the selection moved) and
+`lr-activate` have fired. `chooseCurrency(picker, code)` drives the select, or the lazily loaded
+combobox of a `searchable` picker, that `<lr-currency-picker>` composes. The code must match the
+catalog exactly (`"EUR"`). When it resolves, the picker has emitted `input`, `lr-input`, `change`
+and `lr-change` once if the value changed.
+
+`openPopover(popover, { timeoutMs? })` clicks the `<lr-popover>` interaction trigger (the slotted
+`trigger` element, else its `for` target) and resolves after `lr-show` and `lr-after-show`. A
+`hover`/`focus` popover opens and pins, as for a user's click. `closePopover(popover, { via?,
+timeoutMs? })` presses Escape on the focused element by default, which closes the topmost overlay,
+or clicks the trigger again with `via: 'trigger'`. It resolves after `lr-hide` and `lr-after-hide`,
+with focus back on the trigger. Both resolve at once when the popover is already in the requested
+state. They throw when the interaction is refused: an `lr-show`/`lr-hide` veto, a disabled popover
+or trigger, `trigger="manual"`, no trigger, or Escape going to a newer overlay. Use `show()`/`hide()`
+for manual and `showAt()` popovers. A missing `lr-after-*` event rejects after `timeoutMs`
+(default 2000).
 
 `chooseOption()` accepts any of `<lr-combobox>`, `<lr-select>`, `<lr-model-select>`,
 `<lr-locale-picker>` and `<lr-voice-picker>` — every component that independently implements the
@@ -2864,13 +2987,14 @@ immediately after it see the render reached by that interaction. Host-driven asy
 still need their own completion check. Each driver also throws a plain `Error` — never a
 silent no-op — when the requested interaction cannot actually happen: the target is disabled, the
 option owner/stepper is read-only or has no matching row/step currently rendered, or the confirm
-bar is already decided. That is the exact failure mode a hand-rolled event misses (for example
+bar is already decided, or a popover's lifecycle event was vetoed. That is the exact failure mode a hand-rolled event misses (for example
 dispatching a confirm event without `cancelable`, which makes a `preventDefault()`-based
 pending-state handler a silent no-op that still looks tested) — these drivers exercise the
 component for real, so a precondition that blocks the interaction is surfaced as a thrown error
 instead of quietly doing nothing.
 
-Pure DOM operations only (`Element.click()`, shadow-part queries, public properties) — no
+Pure DOM operations only (`Element.click()`, an Escape `KeyboardEvent`, shadow-part queries,
+public properties) — no
 `@web/test-runner`/CDP-only helper, so they also run under a downstream suite's own
 happy-dom/jsdom environment, not only a real browser.
 
@@ -5095,11 +5219,32 @@ These named interfaces and helper signatures are available to typed integrations
   `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
+- **`testing-jsdom-shims-contracts`** — Shared utility contracts.
+  `JsdomAdoptedStyleSheetsTargets {
+  documentPrototype?: object;
+  shadowRootPrototype?: object;
+  styleSheetPrototype?: object;
+  isJsdom?: () => boolean;
+}`
+  `installJsdomAdoptedStyleSheetsShim(targets?: JsdomAdoptedStyleSheetsTargets): () => void`
+  `installJsdomShims(): () => void`
+  See "jsdom: `installJsdomShims()`" above for the full contract.
+
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.
   `chooseOption(/* public names: owner, value */): unknown`
   `submitConfirmDecision(/* public names: owner, decision */): unknown`
   `toggleSwitch(/* public names: switchEl */): unknown`
   `activateStep(/* public names: stepper, target */): unknown`
+  `chooseSwatch(/* public names: picker, value */): unknown`
+  `chooseCurrency(/* public names: picker, code */): unknown`
+  `PopoverDriverOptions {
+  timeoutMs: unknown;
+}`
+  `ClosePopoverOptions {
+  via: unknown;
+}`
+  `openPopover(/* public names: popover, options */): unknown`
+  `closePopover(/* public names: popover, options */): unknown`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
 
 - **`testing-wait-for-mount-contracts`** — Shared utility contracts.
@@ -5196,6 +5341,7 @@ These named interfaces and helper signatures are available to typed integrations
   `parseLyraStyleRecord(value: unknown): Readonly<LyraStyle>`
   `resetLyraStyle(fields?: readonly LyraStyleField[]): Readonly<LyraStyle>`
   `setLyraStyle(choices: LyraStyleChoices): Readonly<LyraStyle>`
+  `startLyraStyle(): Readonly<LyraStyle>`
 
 - **`vue-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.

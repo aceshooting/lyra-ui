@@ -69095,6 +69095,12 @@
             "default": "var(--lr-icon-button-color, inherit)"
           },
           {
+            "name": "--lr-icon-button-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "--lr-icon-button-radius",
             "deprecated": null,
             "hasDefault": true,
