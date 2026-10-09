@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +7,7 @@ import test from 'node:test';
 
 import {
   COVERAGE_SHARD_TOTAL,
+  MAX_FILES_PER_COVERAGE_SESSION,
   coverageShardDirectory,
   executeCoverageCommand,
   mergeCoverageReports,
@@ -339,6 +340,48 @@ test('merge fails closed when any raw coverage, junit, or shard manifest is abse
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),
       /shard 3\/4.*test-files\.json/iu,
     );
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('splits an oversized shard into bounded sessions and merges their raw reports', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-sessions-'));
+  try {
+    const many = Array.from({ length: MAX_FILES_PER_COVERAGE_SESSION * COVERAGE_SHARD_TOTAL * 2 + 10 }, (_value, index) =>
+      `src/many-${String(index).padStart(4, '0')}.test.ts`,
+    );
+    const calls = [];
+    const status = runCoverageShard(1, many, {
+      coverageDirectory: fixture,
+      packageDirectory: fixture,
+      runNativeScrollbarVerification: () => 0,
+      spawn: (_executable, files, options) => {
+        const directory = options.env.WTR_COVERAGE_REPORT_DIR;
+        calls.push({ files, directory });
+        mkdirSync(directory, { recursive: true });
+        writeFileSync(
+          join(directory, 'coverage-final.json'),
+          JSON.stringify({ [`/src/part-${calls.length}.ts`]: fileCoverage(`/src/part-${calls.length}.ts`) }),
+        );
+        writeFileSync(
+          join(directory, 'junit.xml'),
+          `<?xml version="1.0"?><testsuites><testsuite name="part-${calls.length}"/></testsuites>`,
+        );
+        return { status: 0 };
+      },
+    });
+    assert.equal(status, 0);
+    const shardFiles = shardTestFiles(many, 1, COVERAGE_SHARD_TOTAL);
+    assert.ok(calls.length >= 2, 'an oversized shard runs in more than one session');
+    assert.ok(calls.every((call) => call.files.length <= MAX_FILES_PER_COVERAGE_SESSION));
+    assert.deepEqual(calls.flatMap((call) => call.files), shardFiles);
+    const directory = coverageShardDirectory(fixture, 1);
+    const merged = JSON.parse(await readFile(join(directory, 'coverage-final.json'), 'utf8'));
+    assert.equal(Object.keys(merged).length, calls.length);
+    const junit = await readFile(join(directory, 'junit.xml'), 'utf8');
+    assert.equal((junit.match(/<testsuite name=/gu) ?? []).length, calls.length);
+    assert.equal(existsSync(join(directory, 'part-1')), false, 'session directories are folded away');
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }

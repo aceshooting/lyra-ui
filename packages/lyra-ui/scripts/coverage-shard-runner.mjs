@@ -39,6 +39,7 @@ const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coverageDir = resolve(packageDir, 'coverage');
 const SHARD_MANIFEST = 'test-files.json';
 export const COVERAGE_SHARD_TOTAL = 4;
+export const MAX_FILES_PER_COVERAGE_SESSION = 140;
 
 function shardIndices() {
   return Array.from({ length: COVERAGE_SHARD_TOTAL }, (_unused, index) => index + 1);
@@ -135,37 +136,92 @@ export function runCoverageShard(
     '.bin',
     process.platform === 'win32' ? 'wtr.cmd' : 'wtr',
   );
-  const result = spawn(executable, files, {
-    cwd: packageDirectory,
-    env: {
-      ...environment,
-      WTR_COVERAGE: '1',
-      WTR_COVERAGE_REPORT_DIR: directory,
-    },
-    stdio: 'inherit',
-  });
-  if (result.error) throw result.error;
-  if (result.signal) {
-    throw new Error(
-      `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL} was terminated by signal ${result.signal}.`,
-    );
+  // One coverage-instrumented browser session is bounded in files, not only in shards: a session
+  // that ran 263 files passed every test and then exited 1 with no summary and no report, while
+  // each half of the same files completed cleanly. A shard therefore runs its files in sessions of
+  // at most MAX_FILES_PER_COVERAGE_SESSION and merges their raw reports back into the shard
+  // directory, so CI's matrix, artifacts and merge job are unchanged.
+  const chunks = [];
+  for (let start = 0; start < files.length; start += MAX_FILES_PER_COVERAGE_SESSION) {
+    chunks.push(files.slice(start, start + MAX_FILES_PER_COVERAGE_SESSION));
   }
-  const status = result.status ?? 1;
-  if (status !== 0) {
-    // A browser that dies while the page is torn down leaves wtr exiting nonzero with no summary
-    // line at all; name the shard and the files it ran so the red job is attributable.
-    console.error(
-      `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL}: wtr exited with status ${status} ` +
-        `after ${files.length} test files; last file: ${files.at(-1)}.`,
-    );
-    return status;
+  // Even split, so no session is a tiny remainder.
+  const balanced = [];
+  if (chunks.length > 1) {
+    const size = Math.ceil(files.length / chunks.length);
+    for (let start = 0; start < files.length; start += size) balanced.push(files.slice(start, start + size));
+  } else {
+    balanced.push(files);
   }
+  const partDirectories = [];
+  let status = 0;
+  for (const [partIndex, partFiles] of balanced.entries()) {
+    const reportDirectory = balanced.length === 1 ? directory : resolve(directory, `part-${partIndex + 1}`);
+    if (balanced.length > 1) {
+      mkdirSync(reportDirectory, { recursive: true });
+      partDirectories.push(reportDirectory);
+      console.log(
+        `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL}: session ${partIndex + 1}/${balanced.length}, ` +
+          `${partFiles.length} files.`,
+      );
+    }
+    const result = spawn(executable, partFiles, {
+      cwd: packageDirectory,
+      env: {
+        ...environment,
+        WTR_COVERAGE: '1',
+        WTR_COVERAGE_REPORT_DIR: reportDirectory,
+      },
+      stdio: 'inherit',
+    });
+    if (result.error) throw result.error;
+    if (result.signal) {
+      throw new Error(
+        `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL} was terminated by signal ${result.signal}.`,
+      );
+    }
+    const partStatus = result.status ?? 1;
+    if (partStatus !== 0) {
+      // A browser that dies while the page is torn down leaves wtr exiting nonzero with no summary
+      // line at all; name the shard and the files it ran so the red job is attributable.
+      console.error(
+        `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL}: wtr exited with status ${partStatus} ` +
+          `after ${partFiles.length} test files; last file: ${partFiles.at(-1)}.`,
+      );
+      status = partStatus;
+      break;
+    }
+  }
+  if (partDirectories.length > 0) mergeSessionReports(directory, partDirectories, status === 0);
+  if (status !== 0) return status;
   return runNative(files, {
     browser: environment.WTR_BROWSER,
     environment,
     packageDirectory,
     spawn,
   });
+}
+
+/** Folds the raw reports of a shard's sessions into the shard directory, in the single-session shape. */
+function mergeSessionReports(directory, partDirectories, requireAll) {
+  const map = libCoverage.createCoverageMap({});
+  const suites = [];
+  for (const part of partDirectories) {
+    const coverageFile = resolve(part, 'coverage-final.json');
+    const junitFile = resolve(part, 'junit.xml');
+    if (existsSync(coverageFile)) map.merge(JSON.parse(readFileSync(coverageFile, 'utf8')));
+    else if (requireAll) throw new Error(`Coverage session ${part} wrote no coverage-final.json.`);
+    if (existsSync(junitFile)) suites.push(extractTestsuites(readFileSync(junitFile, 'utf8'), 0));
+    else if (requireAll) throw new Error(`Coverage session ${part} wrote no junit.xml.`);
+  }
+  if (map.files().length > 0) writeFileSync(resolve(directory, 'coverage-final.json'), JSON.stringify(map.toJSON()));
+  if (suites.length > 0) {
+    writeFileSync(
+      resolve(directory, 'junit.xml'),
+      `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>${suites.join('')}</testsuites>\n`,
+    );
+  }
+  for (const part of partDirectories) rmSync(part, { recursive: true, force: true });
 }
 
 function requiredShardFile(coverageDirectory, shardIndex, filename) {

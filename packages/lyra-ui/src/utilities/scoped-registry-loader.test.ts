@@ -51,9 +51,10 @@ describe('optional scoped dependency loader', () => {
       expect(element.localName).to.equal(component.tag);
       expect(element instanceof Constructor!, 'construction uses the isolated definition').to.equal(true);
       expect(element.ownerDocument === document).to.equal(true);
-      for (const { tag } of components) {
-        expect(customElements.get(tag) === before.get(tag), `${tag} remains globally unchanged`).to.equal(true);
-      }
+      // One assertion over the whole catalog: a per-tag expect() here ran catalog-size squared
+      // assertions across the file, which coverage instrumentation turned into a runner that never finished.
+      const changed = components.filter(({ tag }) => customElements.get(tag) !== before.get(tag)).map(({ tag }) => tag);
+      expect(changed, 'tags whose global registration changed').to.deep.equal([]);
     });
   }
 });
