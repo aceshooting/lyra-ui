@@ -245,6 +245,7 @@ export type {
 } from './utilities/animation-registry.js';
 export { invalidateLyraTheme } from './utilities/theme.js';
 export type { LyraThemeRoot } from './utilities/theme.js';
+export { adoptLyraTokens } from './utilities/tokens.js';
 export { bridgeLyraLocale } from './localization.js';
 export { subscribeLyraLocale } from './internal/localization-runtime.js';
 export type {

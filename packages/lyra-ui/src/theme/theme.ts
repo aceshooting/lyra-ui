@@ -1874,7 +1874,22 @@ function applyStyleState(element: Element, state: StyleState, fields?: ReadonlyS
     writeStyleAttributes(element, attributes);
   }
   writeStyleProperties(element, desired);
+  adoptTokenLayerForScope(element);
   diagnoseStyleSheets(element, state, fields);
+}
+
+/**
+ * A scope inside an application shadow root needs the document token layer adopted in that root
+ * (selectors do not cross shadow boundaries). The layer module registers its adopter on this
+ * shared symbol when the first Lyra element connects, so theme.js stays free of imports; before any
+ * Lyra element exists there is nothing to re-derive, and the first one to connect below the scope
+ * adopts the layer itself.
+ */
+function adoptTokenLayerForScope(element: Element): void {
+  const root = element.getRootNode();
+  if (root === element.ownerDocument || root.nodeType !== 11) return;
+  const adopt = (globalThis as Record<symbol, unknown>)[Symbol.for('@aceshooting/lyra-ui.adopt-lyra-tokens.v1')];
+  if (typeof adopt === 'function') (adopt as (root: ShadowRoot) => void)(root as ShadowRoot);
 }
 
 function diagnoseStyleSheets(element: Element, state: StyleState, fields?: ReadonlySet<string>): void {

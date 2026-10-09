@@ -34,11 +34,36 @@ const esbuild = await import(path.join(hoisted, 'esbuild/lib/main.js'));
 
 const distA = path.join(here, 'dist-a');
 const out = path.join(here, 'out');
+// Release gate (27.0.0): A may come from a published tarball instead of the checkout
+// (LYRA_BASELINE_DIST=<unpacked package>/dist), and `--candidate <dist>` adds variant I, the
+// implementation exactly as built, with no rewriting.
+const baselineDist = process.env.LYRA_BASELINE_DIST ? path.resolve(process.env.LYRA_BASELINE_DIST) : null;
+/** A copied dist resolves the package's `#lyra-dev-*` imports through its own package.json. */
+function writeImportsMap(dir) {
+  const entry = (name) => ({ development: `./internal/${name}.development.js`, default: `./internal/${name}.production.js` });
+  writeFileSync(path.join(dir, 'package.json'), `${JSON.stringify({
+    private: true,
+    type: 'module',
+    imports: { '#lyra-dev-warning': entry('dev-warning'), '#lyra-dev-attributes': entry('dev-mode-attribute-warning') },
+  }, null, 2)}\n`);
+}
+const candidateArg = process.argv.indexOf('--candidate');
+const candidateDist = candidateArg > 0 ? path.resolve(process.argv[candidateArg + 1]) : null;
 
 if (process.argv.includes('--refresh') || !existsSync(distA)) {
   rmSync(distA, { recursive: true, force: true });
-  cpSync(path.join(pkgDir, 'dist'), distA, { recursive: true });
-  writeFileSync(path.join(here, 'SOURCE_COMMIT'), execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }));
+  cpSync(baselineDist ?? path.join(pkgDir, 'dist'), distA, { recursive: true });
+  writeImportsMap(distA);
+  const commit = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const baselineVersion = baselineDist
+    ? JSON.parse(readFileSync(path.join(baselineDist, '..', 'package.json'), 'utf8')).version
+    : null;
+  writeFileSync(path.join(here, 'SOURCE_COMMIT'), baselineVersion ? `A=npm:${baselineVersion} I=${commit}\n` : `${commit}\n`);
+}
+if (candidateDist) {
+  rmSync(path.join(here, 'dist-i'), { recursive: true, force: true });
+  cpSync(candidateDist, path.join(here, 'dist-i'), { recursive: true });
+  writeImportsMap(path.join(here, 'dist-i'));
 }
 try { lstatSync(path.join(here, 'node_modules')); } catch { symlinkSync(path.join(pkgDir, 'node_modules'), path.join(here, 'node_modules')); }
 
@@ -338,7 +363,8 @@ const components = [
 ];
 // The parity page also covers one component that adopts the specialist palettes.
 const PARITY_EXTRA = ['retrieval/graph-legend/graph-legend.js'];
-for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.keys(VARIANTS), ...(WANT_E ? ['e'] : [])]) {
+const WANT_I = !!candidateDist;
+for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.keys(VARIANTS), ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : [])]) {
   const entry = components.map((c) => `import '../dist-${variant}/components/${c}';`).join('\n');
   const entryPath = path.join(out, `entry-${variant}.js`);
   writeFileSync(entryPath, entry);
@@ -349,7 +375,7 @@ for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.
   });
 }
 // Parity bundles (A and E): the benchmark components plus one specialist-palette consumer.
-for (const variant of ['a', ...(WANT_E ? ['e'] : [])]) {
+for (const variant of ['a', ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : [])]) {
   const entryPath = path.join(out, `parity-entry-${variant}.js`);
   writeFileSync(entryPath, [...components, ...PARITY_EXTRA].map((c) => `import '../dist-${variant}/components/${c}';`).join('\n'));
   await esbuild.build({
@@ -378,7 +404,7 @@ const summary = {
       shadowRemainder: x.p.shadowCss.length + x.t.shadowCss.length, documentSheet: x.documentCss.length,
     }])),
   },
-  bundles: Object.fromEntries(['a', ...Object.keys(ALL_VARIANTS), 'e'].filter((v) => existsSync(path.join(out, `bundle-${v}.js`))).map((v) => [v, bundleStats(v)])),
+  bundles: Object.fromEntries(['a', ...Object.keys(ALL_VARIANTS), 'e', 'i'].filter((v) => existsSync(path.join(out, `bundle-${v}.js`))).map((v) => [v, bundleStats(v)])),
 };
 writeFileSync(path.join(out, ONLY ? `build-summary-${ONLY.join('')}.json` : 'build-summary.json'), JSON.stringify(summary, null, 2));
 console.log(JSON.stringify(summary, null, 2));

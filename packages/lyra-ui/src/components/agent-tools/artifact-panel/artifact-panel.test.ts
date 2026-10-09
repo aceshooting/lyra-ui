@@ -112,7 +112,7 @@ describe('lr-artifact-panel', () => {
 
   it('paints its resting buttons with the themed text colour instead of the system button colour', async () => {
     const el = (await fixture(html`
-      <lr-artifact-panel style="--lr-color-text: rgb(1, 2, 3)" copy-text="x" download-src="https://example.test/a.txt">
+      <lr-artifact-panel data-lr-theme-scope style="--lr-color-text: rgb(1, 2, 3)" copy-text="x" download-src="https://example.test/a.txt">
         <pre slot="code">code</pre>
       </lr-artifact-panel>
     `)) as LyraArtifactPanel;
@@ -512,7 +512,7 @@ describe('lr-artifact-panel', () => {
 
   it('paints rendered hover and focus feedback on artifact header controls', async () => {
     const el = await fixture<LyraArtifactPanel>(html`
-      <lr-artifact-panel
+      <lr-artifact-panel data-lr-theme-scope
         active-version-id="v1"
         copy-text="copy me"
         download-src="https://example.com/artifact.txt"
@@ -612,7 +612,7 @@ describe('lr-artifact-panel', () => {
 
 it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
   const el = (await fixture(html`
-    <lr-artifact-panel kind="text" style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;">
+    <lr-artifact-panel data-lr-theme-scope kind="text" style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;">
       <pre slot="code">code</pre>
     </lr-artifact-panel>
   `)) as LyraArtifactPanel;

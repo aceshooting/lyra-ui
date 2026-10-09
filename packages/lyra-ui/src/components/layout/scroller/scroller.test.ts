@@ -656,7 +656,7 @@ describe("<lr-scroller>", () => {
   it("gives the keyboard-focusable viewport a rendered hover affordance", async function () {
     this.timeout(10000);
     const el = await fixture<LyraScroller>(html`
-      <lr-scroller
+      <lr-scroller data-lr-theme-scope
         label="Items"
         style="inline-size: 200px; --lr-color-border: rgb(4, 5, 6)"
       >

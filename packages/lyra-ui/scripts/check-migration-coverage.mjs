@@ -183,6 +183,7 @@ export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = nu
       slotContent: profile.slotContent?.length ?? 0,
       moduleReviews: profile.moduleReviews?.length ?? 0,
       ...(Array.isArray(profile.globals) ? { globals: profile.globals.length } : {}),
+      ...(Array.isArray(profile.rules) ? { rules: profile.rules.length } : {}),
     };
     for (const entry of profile.renames ?? []) {
       if (entry?.kind !== 'attribute' && entry?.kind !== 'property') continue;
@@ -553,7 +554,7 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
       .map(
         ([origin, counts]) =>
           ` Lyra rename ledger ${origin}: ${counts.renames} rename(s), ${counts.defaults} default(s), ` +
-          `${counts.retiredEvents} retired event review(s), ${counts.detailChanges} detail change(s), ${counts.propertyChanges} property change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s), ${counts.moduleReviews} module review(s)${counts.globals === undefined ? '' : `, ${counts.globals} global(s)`}.`,
+          `${counts.retiredEvents} retired event review(s), ${counts.detailChanges} detail change(s), ${counts.propertyChanges} property change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s), ${counts.moduleReviews} module review(s)${counts.globals === undefined ? '' : `, ${counts.globals} global(s), ${counts.rules ?? 0} rule(s)`}.`,
       )
       .join('')
   );

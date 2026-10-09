@@ -55,13 +55,13 @@ land with that minor.
   `type`, `constant`, `class`, `window-event`, `root-attribute`) keyed by kind, module and name and
   projected from the canonical `exportDeprecations` records, so they carry no replacement text of
   their own. It covers what the draft called `document-event` and `attribute-selector` entries.
-- **`globals` (27.0.0).** Delivered as specified under "Module entries and structural rules",
-  scoped to what 27.0.0 needs: `module` (specifier rewrite), `export` (root-barrel re-binding) and
-  `locale-key` (report only) entries. `lyra-v26` carries `ToolCallStatus`/`ToolResultStatus` to
-  `ToolStatus`, the `translations/` prefix to `@aceshooting/lyra-translations/`, the four
-  editor-data files to `@aceshooting/lyra-ide/`, and five removed localization keys. The `rules`
-  list is not delivered in 27.0.0: no profile carries a structural rule and the ledger rejects the
-  field, so it ships with the first change that needs it (RFC 0002, deferred to 28.0.0).
+- **`globals` and `rules` (27.0.0).** Delivered as specified under "Module entries and structural
+  rules", scoped to what 27.0.0 needs: `module` (specifier rewrite), `export` (root-barrel
+  re-binding) and `locale-key` (report only) entries, and the `theme-scopes` rule. `lyra-v26`
+  carries `ToolCallStatus`/`ToolResultStatus` to `ToolStatus`, the `translations/` prefix to
+  `@aceshooting/lyra-translations/`, the four editor-data files to `@aceshooting/lyra-ide/`, five
+  removed localization keys, and the rule. The rule is the same implementation that
+  `lyra-ui-migrate --rule=theme-scopes` runs on its own, so there is one code path.
 - **Gates.** `validateRenameLedgerShape()` checks both lists (also in the packaged projection);
   `check-migration-coverage.mjs` checks each `globals` entry against the real surface (old subpath
   gone from `package.json#exports`, replacement exported by the target package, old root export
@@ -363,12 +363,17 @@ projects exactly as before, so published captures of earlier releases stay byte-
     replacement.
   - `locale-key`: a removed localization key. Reported only, at an object key or quoted string, in
     files that mention `registerLyraLocale`, `bridgeLyraLocale`, `.strings` or the package.
-- **`rules`** (reserved; not delivered in 27.0.0) lists named structural rules implemented and tested
-  in the codemod, such as RFC 0002's `theme-scopes`. A rule may insert markup or report, and its data
-  stays in the code that tests it. A profile with an enabled rule is never treated as empty.
+- **`rules`** is a sorted list of named structural rules implemented and tested in the codemod
+  (`theme-scopes` today). Running a profile with a rule runs the rule's analysis on each scanned file
+  and merges its edits and reports into the profile's: markers are inserted, reports go through the
+  profile's acknowledgement mechanism, and a rule is withheld like any entry when the installed
+  release is older than the profile's target major. A profile with an enabled rule is never treated
+  as empty.
 
 `GLOBAL_REVIEW` is acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>` (the old name or
-the full specifier).
+the full specifier); the rule's own codes (`THEME_SCOPE_CSS_INPUT_REVIEW`,
+`THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW`) are
+acknowledged the same way, by their reported member.
 
 Completeness covers `component-metadata.json` records. `globals` entries are not paired with
 records; `check-migration-coverage.mjs` checks them against the shipped surface instead (see the
@@ -419,7 +424,8 @@ spread reaches it, as in the Lyra 7 profile. The acknowledgement name for those 
 
 ### Packaged CLI (internal, compatible)
 
-- `dist/cli/` gains `lyra-rename-ledger.mjs`.
+- `dist/cli/` gains `lyra-rename-ledger.mjs` (and, with `rules`, `migration-theme-scopes.mjs`, its generated
+  vocabulary and `css-declarations.mjs`).
 - `migration-contract.json` gains `lyraRenames`, the validated projection: entries plus `since`,
   `reflects` for attribute renames, review replacement and removal text, and exposure lists for old
   and new names.
@@ -448,7 +454,8 @@ non-empty ledger list. With an empty ledger it states that no Lyra 21 names are 
 
 **States.**
 
-- An empty profile returns its input unscanned. With `globals`, "empty" means no entries.
+- An empty profile returns its input unscanned. With `globals` or `rules`, "empty" means no entries
+  and no enabled rules.
 - A malformed ledger or projection fails closed, listing every problem.
 - An unknown origin, no matching files and write failures behave as today.
 
@@ -675,7 +682,7 @@ The evidence is an implementation with an empty checked-in ledger, and synthetic
 6. In 23.0.0 the aliases and records are removed (see unresolved question 2).
 
 **Delivery record.** The profile, ledger and CLI shipped with 22.0.0. Each later profile was added
-with the release that deprecated what it covers; `globals` and `lyra-v26` ship with 27.0.0.
+with the release that deprecated what it covers; `globals`, `rules` and `lyra-v26` ship with 27.0.0.
 
 **Rollback.** Revert the profile, the ledger and the `dist/cli` module. Every run can be previewed,
 and every rewrite targets a name that keeps working until v23.

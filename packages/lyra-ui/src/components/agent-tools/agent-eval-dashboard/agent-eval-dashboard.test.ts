@@ -301,7 +301,7 @@ describe('lr-agent-eval-dashboard', () => {
 
   it('draws each run row with only a top separator on the decorative --lr-color-border-subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-agent-eval-dashboard
+      <lr-agent-eval-dashboard data-lr-theme-scope
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
         .runs=${[{ id: 'r1', label: 'Run 1', status: 'done' }]}
       ></lr-agent-eval-dashboard>
@@ -439,7 +439,7 @@ it('paints the selected metric from active-bg and ignores the retired active-bac
 // unselected surface, so the metric looked deselected mid-click. It now mixes from its own fill.
 it('mixes the pressed selected metric from --lr-agent-eval-dashboard-active-bg', async () => {
   const el = (await fixture(html`
-    <lr-agent-eval-dashboard
+    <lr-agent-eval-dashboard data-lr-theme-scope
       metric-id="first"
       style="--lr-transition-fast: 0s; --lr-agent-eval-dashboard-active-bg: rgb(200, 0, 0)"
       .metrics=${[

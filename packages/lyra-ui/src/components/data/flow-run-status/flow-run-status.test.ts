@@ -590,7 +590,7 @@ it('defaults to frame="card", rendering identically to that value restated', asy
 
 it('draws the card frame with the decorative --lr-color-border-subtle token', async () => {
   const el = (await fixture(
-    html`<lr-flow-run-status
+    html`<lr-flow-run-status data-lr-theme-scope
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
       .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
     ></lr-flow-run-status>`,

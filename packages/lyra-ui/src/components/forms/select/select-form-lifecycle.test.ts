@@ -521,7 +521,7 @@ it("force-closes when disabled and rejects every later open write without a veto
 
 it("does not let a closed disable-enable batch suppress or strand a same-task show transition", async () => {
   const el = (await fixture(html`
-    <lr-select style="--lr-transition-fast: 1ms linear">
+    <lr-select data-lr-theme-scope style="--lr-transition-fast: 1ms linear">
       <lr-option value="a">Apple</lr-option>
     </lr-select>
   `)) as LyraSelect;

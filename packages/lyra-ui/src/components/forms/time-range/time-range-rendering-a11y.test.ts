@@ -98,7 +98,7 @@ it("moves a drag handle’s painted fill on hover, and further again while it is
   // The reads below additionally poll rather than snapshot once, mirroring the same fix already
   // applied to slider.test.ts's thumb hover/active assertions.
   const el = (await fixture(
-    html`<lr-time-range
+    html`<lr-time-range data-lr-theme-scope
       min="0"
       max="100"
       start="20"
@@ -161,7 +161,7 @@ it("fills a hovered preset from the shared hover-bg name", async () => {
 
 it("themes preset and handle hover/pressed paint through independent component hooks", async () => {
   const el = (await fixture(html`
-    <lr-time-range
+    <lr-time-range data-lr-theme-scope
       min="0"
       max="100"
       start="10"
@@ -218,7 +218,7 @@ describe("preset-button hover specificity", () => {
             border-color: rgb(7, 8, 9);
           }
         </style>
-        <lr-time-range
+        <lr-time-range data-lr-theme-scope
           style="--lr-transition-fast: 0ms"
           .presets=${[{ label: "Last 7 days", start: 0, end: 7 }]}
         ></lr-time-range>
@@ -261,7 +261,7 @@ it('targets the real preset-button part in the reduced-motion override, not a no
   try {
     await setReducedMotion("no-preference");
     const el = (await fixture(
-      html`<lr-time-range
+      html`<lr-time-range data-lr-theme-scope
         style="--lr-transition-fast: 2s"
         min="0"
         max="100"
@@ -925,7 +925,7 @@ describe("active-preset pointer feedback", () => {
 
   async function themed(): Promise<LyraTimeRange> {
     const wrapper = (await fixture(html`
-      <div
+      <div data-lr-theme-scope
         style="
           --lr-transition-fast: 0s;
           --lr-time-range-preset-active-bg: rgb(0, 51, 102);

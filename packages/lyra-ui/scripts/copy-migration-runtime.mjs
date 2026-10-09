@@ -14,6 +14,9 @@ const runtimeModules = Object.freeze([
   'migration-transforms.mjs',
   'component-inventory.mjs',
   'lyra-rename-ledger.mjs',
+  'migration-theme-scopes.mjs',
+  'theme-scope-vocabulary.generated.mjs',
+  'css-declarations.mjs',
 ]);
 
 /** Copies the standalone CLIs' (lyra-ui, lyra-ui-migrate) module closure without contributor-only scripts or fixtures. */

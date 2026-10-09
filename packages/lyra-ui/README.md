@@ -239,9 +239,11 @@ density, mode and accent independently ([guide](./llms/shared/styles-and-tokens.
 
 `setLyraStyle({})` from `@aceshooting/lyra-ui/theme.js` restores saved choices (missing fields use the built-in
 profile); `setLyraStyle({ look: "lyra", surface: "solid", accent: null })` selects the earlier appearance and
-`resetLyraStyle()` restores the built-in profile. The resolved `--lr-color-*`/`--lr-space-*`/... layer exists only
-on each `lr-*` shadow `:host`, so retheme through the `--lr-theme-*` inputs, for example
-`:root { --lr-theme-color-brand-fill-loud: #60a5fa; }` ([where an override reaches](./llms/shared.md#where-an-override-actually-reaches),
+`resetLyraStyle()` restores the built-in profile. Since 27.0.0 the resolved `--lr-color-*`/`--lr-space-*`/... layer is
+declared once per document and re-derived only at **theme scopes** (`.lr-light`/`.lr-dark`, `data-lr-theme`, style-axis
+boundaries, or any element marked `data-lr-theme-scope`), so retheme through the `--lr-theme-*` inputs on `:root` or a
+theme scope, for example `:root { --lr-theme-color-brand-fill-loud: #60a5fa; }`; an input on a plain wrapper no longer
+re-derives components below it ([theme scopes](./llms/shared.md#theme-scopes), `lyra-ui-migrate --rule=theme-scopes`) ([where an override reaches](./llms/shared.md#where-an-override-actually-reaches),
 [tokens](./llms/tokens.md)). `theme.css` declares `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`,
 so an unlayered rule wins (name all five if you declare the order). Canvas components repaint on observable theme
 changes; otherwise call `invalidateLyraTheme(root?)` from `@aceshooting/lyra-ui/utilities/theme.js`. Optional
@@ -283,6 +285,8 @@ In the browser, make `@aceshooting/lyra-ui/hydration.js` the first import that c
 `diagnoseLyraHydration(document)` checks the result. A fallback renderer cannot serialize property bindings, so
 pass initial state as attributes or light DOM. Measurement, observers, canvas and media start after hydration; remote
 content stays client-only ([details](./llms/shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)).
+Declarative shadow roots don't carry the token layer: link `@aceshooting/lyra-ui/tokens-root.css` after `theme.css`
+in `<head>` for a correct first paint.
 
 ## Framework integration (React, Vue, Angular, Svelte)
 

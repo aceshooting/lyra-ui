@@ -946,7 +946,7 @@ describe("resting border and fill theme cssprops", () => {
 describe("hover border theme cssprop", () => {
   it("leaves the hovered trigger border at its resting color when the hover hook is unset", async () => {
     const el = (await fixture(html`
-      <lr-model-select .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-model-select>
+      <lr-model-select data-lr-theme-scope .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-model-select>
     `)) as LyraModelSelect;
     const restingBorder = getComputedStyle(trigger(el)).borderTopColor;
     try {
@@ -959,7 +959,7 @@ describe("hover border theme cssprop", () => {
 
   it("themes the hovered trigger border independently of the resting border through --lr-model-select-trigger-hover-border-color", async () => {
     const el = (await fixture(html`
-      <lr-model-select
+      <lr-model-select data-lr-theme-scope
         .catalog=${CATALOG}
         style="
           --lr-transition-fast: 0s;
@@ -2254,7 +2254,7 @@ it("is accessible with a visible label set", async () => {
 it("keeps populated open listbox ownership, active descendants, focus, and axe semantics in both modes", async () => {
   for (const allowCustom of [false, true]) {
     const el = (await fixture(html`
-      <lr-model-select
+      <lr-model-select data-lr-theme-scope
         label="Model"
         ?allow-custom=${allowCustom}
         .catalog=${CATALOG}
@@ -2639,7 +2639,7 @@ it("clamps the actual opened floating listbox through the shared popover viewpor
   const longCatalog = [`model-${"unbroken-identifier-".repeat(20)}`];
   for (const allowCustom of [false, true]) {
     const el = (await fixture(html`
-      <lr-model-select
+      <lr-model-select data-lr-theme-scope
         ?allow-custom=${allowCustom}
         .catalog=${longCatalog}
         style="--lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
@@ -2986,7 +2986,7 @@ describe("row state feedback on the already-selected option", () => {
 
   const openWithSelectedMiddleRow = async (): Promise<LyraModelSelect> => {
     const el = (await fixture(html`
-      <lr-model-select
+      <lr-model-select data-lr-theme-scope
         .catalog=${CATALOG}
         value="mistral"
         style="--lr-transition-fast: 0s; --lr-model-select-option-active-bg: rgb(1, 2, 3);"

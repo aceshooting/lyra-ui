@@ -37,7 +37,7 @@ const hideHost = (host: HTMLElement) => (host as Openable).hide();
 const adapters: SurfaceAdapter[] = [
   {
     name: 'lr-popover',
-    markup: () => html`<lr-popover style="--lr-transition-fast:0ms"
+    markup: () => html`<lr-popover data-lr-theme-scope style="--lr-transition-fast:0ms"
       ><button slot="trigger">Open</button><p style="margin:0; block-size:120px">Details</p></lr-popover
     >`,
     open: showHost,
@@ -46,7 +46,7 @@ const adapters: SurfaceAdapter[] = [
   },
   {
     name: 'lr-dropdown',
-    markup: () => html`<lr-dropdown hoist style="--lr-transition-fast:0ms"
+    markup: () => html`<lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast:0ms"
       ><button slot="trigger">Actions</button
       ><lr-dropdown-item value="a">Alpha</lr-dropdown-item
       ><lr-dropdown-item value="b">Beta</lr-dropdown-item
@@ -58,7 +58,7 @@ const adapters: SurfaceAdapter[] = [
   },
   {
     name: 'lr-tooltip',
-    markup: () => html`<lr-tooltip positioning-strategy="fixed" placement="bottom" style="--lr-transition-fast:0ms"
+    markup: () => html`<lr-tooltip data-lr-theme-scope positioning-strategy="fixed" placement="bottom" style="--lr-transition-fast:0ms"
       ><button slot="trigger">Hint</button><span style="display:block; block-size:80px">Tip</span></lr-tooltip
     >`,
     open: showHost,

@@ -8,7 +8,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 const CHILD_EVENTS = ['input', 'change', 'lr-input', 'lr-change', 'lr-activate', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide', 'lr-clear', 'lr-filter', 'lr-invalid'];
 
 async function everyKindBuilder(): Promise<{ el: LyraConditionBuilder; leaked: string[] }> {
-  const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder
+  const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder data-lr-theme-scope
     style="--lr-transition-fast:0ms"
     .fields=${[
       { name: 'name', type: 'string' }, { name: 'age', type: 'number' }, { name: 'active', type: 'boolean' },
@@ -69,7 +69,7 @@ for (const part of ['field-select', 'operator-select']) {
     const initial: ConditionBuilderValue = {
       combinator: 'and', conditions: [{ id: 'c1', field: 'name', operator: 'eq', value: 'Ada' }],
     };
-    const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder
+    const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder data-lr-theme-scope
       style="--lr-transition-fast:0ms"
       .fields=${[{ name: 'name', type: 'string' }, { name: 'age', type: 'number' }]}
       .value=${initial}

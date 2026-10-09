@@ -16,7 +16,7 @@ import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { extent, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
+import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { styles } from './embedding-explorer.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

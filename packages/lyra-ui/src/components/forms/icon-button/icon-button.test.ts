@@ -346,7 +346,7 @@ it('retunes the corner radius via --lr-icon-button-radius with no element-select
 it('keeps the public radius inheritable and consumes a private host fallback', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-icon-button-radius: 17px">
-      <lr-icon-button label="Close" style="--_lr-icon-button-radius-default: 11px; --lr-radius: 13px"></lr-icon-button>
+      <lr-icon-button data-lr-theme-scope label="Close" style="--_lr-icon-button-radius-default: 11px; --lr-radius: 13px"></lr-icon-button>
     </div>
   `);
   const el = wrapper.querySelector<LyraIconButton>('lr-icon-button')!;
@@ -585,7 +585,7 @@ for (const [name, backgrounds] of [
 ] as const) {
   it(`honours the ${name} hover and press override tokens on the rendered button`, async () => {
     const el = await fixture(html`
-      <lr-icon-button
+      <lr-icon-button data-lr-theme-scope
         icon="close"
         aria-label="Dismiss"
         style=${`--lr-transition-fast: 0s; ${backgrounds} --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9); --lr-icon-button-color-active: rgb(13, 14, 15); --lr-icon-button-border-active: 2px solid rgb(16, 17, 18);`}
@@ -621,7 +621,7 @@ for (const [name, backgrounds] of [
 
 it('falls the press tokens through to the hover ones when only those are set', async () => {
   const el = await fixture(html`
-    <lr-icon-button
+    <lr-icon-button data-lr-theme-scope
       icon="close"
       aria-label="Dismiss"
       style="--lr-transition-fast: 0s; --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9);"

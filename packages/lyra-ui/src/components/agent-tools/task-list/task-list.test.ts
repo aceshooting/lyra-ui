@@ -825,7 +825,7 @@ describe('card chrome theming hooks', () => {
   // (WCAG 2.2 SC 1.4.11): it stays on the control tier even when the decorative input is set.
   it('keeps the card edge and divider on the --lr-color-border control tier, not the subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-task-list
+      <lr-task-list data-lr-theme-scope
         .items=${items}
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
       ></lr-task-list>
@@ -843,7 +843,7 @@ describe('header text contrast at rest, hover and press', () => {
   for (const theme of ['light', 'dark'] as const) {
     it(`keeps the label and summary readable and following the header colour (${theme})`, async () => {
       const wrapper = await fixture<HTMLElement>(
-        html`<div data-lr-theme=${theme}><lr-task-list style="--lr-transition-fast: 0s" .items=${items}></lr-task-list></div>`,
+        html`<div data-lr-theme=${theme}><lr-task-list data-lr-theme-scope style="--lr-transition-fast: 0s" .items=${items}></lr-task-list></div>`,
       );
       const el = wrapper.querySelector('lr-task-list') as LyraTaskList;
       await el.updateComplete;
@@ -906,7 +906,7 @@ describe('lr-task-list deprecated --lr-task-list-background alias', () => {
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraTaskList>(html`
-      <lr-task-list .items=${items} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-task-list>
+      <lr-task-list data-lr-theme-scope .items=${items} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-task-list>
     `);
     for (const part of ['header']) {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;

@@ -242,7 +242,7 @@ it("transitions the listbox with the shared fast-transition token and respects r
   try {
     await setReducedMotion("no-preference");
     const el = (await fixture(html`
-      <lr-combobox style="--lr-transition-fast: 2s">
+      <lr-combobox data-lr-theme-scope style="--lr-transition-fast: 2s">
         <lr-option value="a">Apple</lr-option>
       </lr-combobox>
     `)) as LyraCombobox;
@@ -1546,7 +1546,7 @@ describe("clear affordance on the filter axis", () => {
   for (const asyncSource of [false, true]) {
     it(`reports a query-only clear after a native pointer click with ${asyncSource ? 'async' : 'slotted'} options`, async () => {
       const el = await fixture<LyraCombobox>(html`
-        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+        <lr-combobox data-lr-theme-scope clearable label="Fruit" style="--lr-transition-fast: 0s">
           <lr-option value="a">Apple</lr-option>
         </lr-combobox>
       `);
@@ -1591,7 +1591,7 @@ describe("clear affordance on the filter axis", () => {
 
   it('reports both axes exactly once when a native pointer clears selection and query', async () => {
     const el = await fixture<LyraCombobox>(html`
-      <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+      <lr-combobox data-lr-theme-scope clearable label="Fruit" style="--lr-transition-fast: 0s">
         <lr-option value="a" selected>Apple</lr-option>
       </lr-combobox>
     `);
@@ -1615,7 +1615,7 @@ describe("clear affordance on the filter axis", () => {
 
   it('clears a closed committed selection without opening the listbox', async () => {
     const el = await fixture<LyraCombobox>(html`
-      <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+      <lr-combobox data-lr-theme-scope clearable label="Fruit" style="--lr-transition-fast: 0s">
         <lr-option value="a" selected>Apple</lr-option>
       </lr-combobox>
     `);
@@ -1637,7 +1637,7 @@ describe("clear affordance on the filter axis", () => {
   for (const key of ['Enter', 'Space']) {
     it(`preserves the query while tabbing to clear and activates it with ${key}`, async () => {
       const el = await fixture<LyraCombobox>(html`
-        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+        <lr-combobox data-lr-theme-scope clearable label="Fruit" style="--lr-transition-fast: 0s">
           <lr-option value="a">Apple</lr-option>
         </lr-combobox>
       `);
@@ -1662,7 +1662,7 @@ describe("clear affordance on the filter axis", () => {
   it('closes and discards the query when Tab leaves the clear control', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div>
-        <lr-combobox clearable label="Fruit" style="--lr-transition-fast: 0s">
+        <lr-combobox data-lr-theme-scope clearable label="Fruit" style="--lr-transition-fast: 0s">
           <lr-option value="a">Apple</lr-option>
         </lr-combobox>
         <button id="after-clear">After</button>
@@ -1903,7 +1903,7 @@ describe("clear affordance on the filter axis", () => {
 
 it('clamps its focused floating surface width through the shared popover-viewport-clamp token', async () => {
   const el = (await fixture(html`
-    <lr-combobox
+    <lr-combobox data-lr-theme-scope
       style="--lr-popover-viewport-clamp: 10px; --lr-transition-fast: 0s"
     >
       <lr-option value="a">Apple</lr-option>
@@ -2078,7 +2078,7 @@ describe("focus indicator per appearance", () => {
   ] as const) {
     it(`retints the ${appearance} combobox border while focus is inside it (WCAG 2.4.7)`, async () => {
       const el = (await fixture(html`
-        <lr-combobox
+        <lr-combobox data-lr-theme-scope
           appearance=${appearance}
           style="--lr-transition-fast: 0s; --lr-color-brand: rgb(1, 2, 3);"
         >

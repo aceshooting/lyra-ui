@@ -24,7 +24,7 @@ async function paint(): Promise<void> {
 
 for (const part of ['rotate-button', 'fit-control', 'annotate-toggle']) {
   it(`keeps the unavailable ${part} resting paint under a native pointer`, async () => {
-    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer style="--lr-transition-fast: 0s;"></lr-image-viewer>`);
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer data-lr-theme-scope style="--lr-transition-fast: 0s;"></lr-image-viewer>`);
     const control = el.shadowRoot!.querySelector<HTMLButtonElement | HTMLSelectElement>(`[part="${part}"]`)!;
     await resetMouse();
     const resting = getComputedStyle(control).backgroundColor;
@@ -91,6 +91,7 @@ for (const theme of ['light', 'dark']) {
     await waitUntil(() => el.shadowRoot!.querySelector<HTMLImageElement>('[part="image"]')?.naturalWidth === 320);
     await el.updateComplete;
     const wrapper = el.shadowRoot!.querySelector<HTMLElement>('[part="image-wrapper"]')!;
+    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-focus-ring-width', '5px');
     el.style.setProperty('--lr-theme-border-width-thin', '2px');
     el.style.setProperty('--lr-theme-color-focus', 'rgb(21, 42, 63)');

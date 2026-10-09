@@ -6,3 +6,6 @@ export function warnUnknownAttributes(
   _observedAttributes: readonly string[] = [],
   _knownUnobservedAttributes: readonly string[] = []
 ): void {}
+
+/** Production entry: the theme-scope diagnostic is available in the development condition. */
+export function warnThemeScopeUsage(_host: Element): void {}

@@ -1131,7 +1131,7 @@ describe('lr-input', () => {
 
   it('renders canonical focus-ring and distinct pressed tokens on the native time indicator', async () => {
     const el = await fixture<LyraInput>(html`
-      <lr-input
+      <lr-input data-lr-theme-scope
         type="time"
         aria-label="Start time"
         style="

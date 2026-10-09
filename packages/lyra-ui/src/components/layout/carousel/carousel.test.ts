@@ -710,7 +710,7 @@ describe("Web Awesome carousel surface", () => {
     const el = await carousel(html`
       <lr-carousel autoplay loop>
         <lr-carousel-item>
-          <lr-dropdown style="--lr-transition-fast:0ms">
+          <lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms">
             <button slot="trigger" type="button">Actions</button>
             <lr-menu label="Actions"><lr-menu-item value="a">A</lr-menu-item></lr-menu>
           </lr-dropdown>

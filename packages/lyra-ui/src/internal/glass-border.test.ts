@@ -66,6 +66,7 @@ describe('opacity-aware glass control borders', () => {
       surface.style.removeProperty('--lr-theme-surface-opacity');
       expect(border()).to.deep.equal(qualified);
       const subtle = toRgba(resolvedColorToken(host, '--lr-color-border-subtle'));
+      host.setAttribute('data-lr-theme-scope', '');
       host.style.setProperty('--lr-theme-color-surface-border-subtle', 'rgb(27 39 51)');
       expect(toRgba(resolvedColorToken(surface, '--lr-color-border-subtle'))).to.deep.equal([27, 39, 51, 255]);
       host.style.removeProperty('--lr-theme-color-surface-border-subtle');
@@ -86,6 +87,7 @@ describe('opacity-aware glass control borders', () => {
         : html`<lr-popover><button slot="trigger">Details</button><lr-input label="Name" appearance="filled-outlined"></lr-input></lr-popover>`}</div>`);
       applyLyraStyleScope(scope, { look: 'shadcn', surface: 'glass', mode });
       scope.style.setProperty('--lr-theme-surface-opacity', '0.7');
+      scope.setAttribute('data-lr-theme-scope', '');
       scope.style.setProperty('--lr-theme-transition-fast', '0s');
       const overlay = scope.firstElementChild as LyraDialog | LyraPopover;
       const input = scope.querySelector<LyraInput>('lr-input')!;
@@ -181,9 +183,12 @@ describe('opacity-aware glass control borders', () => {
       const outlinedWrapper = outlined.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
       expect(contrastRatio(getComputedStyle(outlinedWrapper).borderTopColor, getComputedStyle(painted).backgroundColor)).to.be.at.least(3);
       const native = panel.querySelector<HTMLButtonElement>('button')!;
-      panel.style.setProperty('--lr-color-border', 'rgb(13 25 37)');
+      // The opaque interior restores the unqualified border, so an author reaches slotted content
+      // through the panel's theme input (the supported channel on a scope), not the resolved output.
+      panel.setAttribute('data-lr-theme-scope', '');
+      panel.style.setProperty('--lr-theme-color-surface-border', 'rgb(13 25 37)');
       expect(toRgba(getComputedStyle(native).borderTopColor)).to.deep.equal([13, 25, 37, 255]);
-      panel.style.removeProperty('--lr-color-border');
+      panel.style.removeProperty('--lr-theme-color-surface-border');
       panel.style.setProperty('--lr-theme-color-surface-border', 'rgb(29 41 53)');
       expect(toRgba(getComputedStyle(wrapper).borderTopColor)).to.deep.equal([29, 41, 53, 255]);
       panel.style.removeProperty('--lr-theme-color-surface-border');

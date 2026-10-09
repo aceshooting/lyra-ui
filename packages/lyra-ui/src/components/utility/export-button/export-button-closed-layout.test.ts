@@ -16,7 +16,7 @@ const menuOf = (el: Element): HTMLElement => el.shadowRoot!.querySelector('[part
 it('keeps a settled-closed lr-export-button menu out of the scrollable layout after a resize', async () => {
   const container = await fixture<HTMLDivElement>(html`
     <div style="position: relative; width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start; --lr-positioning-strategy: absolute">
-      <lr-export-button style="--lr-transition-fast: 0s" .formats=${['csv', 'json']}></lr-export-button>
+      <lr-export-button data-lr-theme-scope style="--lr-transition-fast: 0s" .formats=${['csv', 'json']}></lr-export-button>
     </div>
   `);
   const button = container.querySelector<LyraExportButton>('lr-export-button')!;
@@ -33,7 +33,7 @@ it('keeps a settled-closed lr-export-button menu out of the scrollable layout af
 
 it('preserves the menu opacity transition while removing the settled closed layout', async () => {
   const control = await fixture<LyraExportButton>(html`
-    <lr-export-button style="--lr-transition-fast: 120ms" .formats=${['csv', 'json']}></lr-export-button>
+    <lr-export-button data-lr-theme-scope style="--lr-transition-fast: 120ms" .formats=${['csv', 'json']}></lr-export-button>
   `);
   const menu = menuOf(control);
   for (let cycle = 0; cycle < 2; cycle++) {

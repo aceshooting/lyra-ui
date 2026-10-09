@@ -669,6 +669,7 @@ describe("data mode", () => {
     await el.updateComplete;
     await nextFrame();
     const list = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    list.setAttribute('data-lr-theme-scope', '');
     list.style.setProperty('--lr-color-surface-raised', 'rgb(1, 2, 3)');
     await waitUntil(() => list.shadowRoot!.querySelector('[part~="group-toggle"]') != null);
     const toggle = list.shadowRoot!.querySelector<HTMLElement>('[part~="group-toggle"]')!;
@@ -1271,7 +1272,7 @@ describe("data mode", () => {
 
   it('inherits the row-action font from its live row while its action glyph stays one em', async () => {
     const el = (await fixture(
-      html`<lr-thread-list
+      html`<lr-thread-list data-lr-theme-scope
         style="block-size:400px;--lr-theme-font-size-md-sm:20px"
         .threads=${threads}
         .rowActions=${['pin']}
@@ -2757,11 +2758,11 @@ it("exports the real viewport and hook wrappers as externally styleable parts", 
         }
         lr-thread-list::part(row-start) {
           color: rgb(12, 34, 56);
-          --lr-theme-color-brand-fill-loud: rgb(21, 43, 65);
         }
       </style>
       <lr-thread-list
-        style="block-size:400px"
+        data-lr-theme-scope
+        style="block-size:400px; --lr-theme-color-brand-fill-loud: rgb(21, 43, 65)"
         grouping="none"
         .threads=${threads.slice(0, 1)}
         .renderStart=${() => html`<lr-chip variant="brand">Purpose</lr-chip>`}
@@ -3286,20 +3287,16 @@ describe("data-mode row part forwarding", () => {
     expect(probe.fontSize).to.equal(baselineProbeFontSize);
   });
 
-  it("still leaks into renderActions content when density is set the old --lr-theme-* way", async () => {
-    const before = await mountRow();
-    expect(
-      getComputedStyle(before.row.querySelector<HTMLElement>(".probe")!)
-        .paddingBlockStart
-    ).to.not.equal("2px");
-
+  it("does not leak a --lr-theme-* input set through ::part(row) into renderActions content", async () => {
+    // A layer input only takes effect on a theme scope; a part rule is not one, so the old
+    // part-scoped way of setting density no longer reaches the content a consumer renders.
     injectStyle("lr-thread-list::part(row) { --lr-theme-space-s: 2px; }");
     const { row } = await mountRow();
 
     expect(
       getComputedStyle(row.querySelector<HTMLElement>(".probe")!)
         .paddingBlockStart
-    ).to.equal("2px");
+    ).to.not.equal("2px");
   });
 
   it("is accessible with a part-styled dense row and a renderActions control", async () => {
@@ -4270,7 +4267,7 @@ describe("row-action overlays escape the virtual viewport", () => {
 
   function renderRowActions(options: { strategy?: string; hideDuration?: string } = {}) {
     return (thread: { id: string }) => html`
-      <lr-dropdown
+      <lr-dropdown data-lr-theme-scope
         placement="bottom-end"
         positioning-strategy=${options.strategy ?? nothing}
         style="--lr-transition-fast:0ms; --hide-duration:${options.hideDuration ?? "0ms"}"
@@ -4332,7 +4329,7 @@ describe("row-action overlays escape the virtual viewport", () => {
 
   async function referenceMenuWidth(): Promise<number> {
     const reference = await fixture<LyraDropdown>(html`
-      <lr-dropdown style="--lr-transition-fast:0ms">
+      <lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms">
         <button slot="trigger" type="button">Reference</button>
         <lr-menu label="Conversation actions">
           <lr-menu-item value="rename">Rename</lr-menu-item>
@@ -4456,6 +4453,7 @@ describe("row-action overlays escape the virtual viewport", () => {
     const row = dataRow(el, "r0");
     const timestamp = row.shadowRoot!.querySelector<HTMLElement>('[part="timestamp"]')!;
     await expect(el).to.be.accessible();
+    row.setAttribute('data-lr-theme-scope', '');
     row.style.setProperty("--lr-color-text", "rgb(0, 0, 0)");
     expect(getComputedStyle(timestamp).color).to.equal("rgb(0, 0, 0)");
     await dropdown.hide({ focusTrigger: false });

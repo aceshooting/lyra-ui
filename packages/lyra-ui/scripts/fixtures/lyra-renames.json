@@ -7953,6 +7953,9 @@
           "summary": "search-input is now the lr-input host, not the native input.",
           "since": "27.0.0"
         }
+      ],
+      "rules": [
+        "theme-scopes"
       ]
     }
   ]

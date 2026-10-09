@@ -141,6 +141,30 @@ export function defineElementForPackageVersion(
   });
 }
 
+/**
+ * True when `element` is an instance of a constructor that some copy of Lyra registered through
+ * `defineElement()`, read from the `Symbol.for`-keyed registry every copy shares. A consumer
+ * subclass of the public `LyraElement` that the application defined itself is not one.
+ *
+ * @internal Used by document token adoption to tell library shadow roots from application ones.
+ */
+export function isRegisteredLyraElement(element: Element): boolean {
+  const name = element.localName;
+  if (!name.includes('-')) return false;
+  const shared = sharedDiagnostics();
+  const view = element.ownerDocument.defaultView;
+  const registries = new Set<CustomElementRegistry | undefined>([
+    typeof customElements === 'undefined' ? undefined : customElements,
+    view?.customElements,
+  ]);
+  for (const registry of registries) {
+    if (!registry) continue;
+    const known = shared.registries.get(registry)?.registrations.get(name);
+    if (known && known.ctor === element.constructor) return true;
+  }
+  return false;
+}
+
 export function defineElement(name: string, ctor: CustomElementConstructor): void {
   defineElementForPackageVersion(name, ctor, LYRA_PACKAGE_VERSION);
 }

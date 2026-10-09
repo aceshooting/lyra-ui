@@ -931,7 +931,7 @@ describe("item icon", () => {
     // the mask alpha across the WHOLE control rather than just its edges, rendering it uniformly
     // washed out with nothing pointing back at the shadow token as the cause.
     const el = (await fixture(
-      html`<lr-segmented
+      html`<lr-segmented data-lr-theme-scope
         style="max-inline-size: 80px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
         .items=${items()}
         value="week"
@@ -1024,7 +1024,7 @@ describe("segment hover specificity", () => {
         <style>
           lr-segmented::part(segment):hover { color: rgb(7, 8, 9); }
         </style>
-        <lr-segmented
+        <lr-segmented data-lr-theme-scope
           style="--lr-transition-fast: 0ms"
           .items=${items()}
           value="week"
@@ -1174,7 +1174,7 @@ describe("active-state cssprops", () => {
     // hover fill would pass unnoticed.
     const scoped = `--lr-transition-fast: 0ms;${style}`;
     const wrapper = (await fixture(
-      html`<div style=${scoped}>
+      html`<div data-lr-theme-scope style=${scoped}>
         <lr-segmented .items=${items()} value="week"></lr-segmented>
       </div>`
     )) as HTMLElement;
@@ -1274,7 +1274,7 @@ describe("active-state cssprops", () => {
 describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
   it("keeps the resting transparent background and absent shadow on hover when unset (regression)", async () => {
     const el = (await fixture(
-      html`<lr-segmented style="--lr-transition-fast: 0ms" .items=${items()}></lr-segmented>`
+      html`<lr-segmented data-lr-theme-scope style="--lr-transition-fast: 0ms" .items=${items()}></lr-segmented>`
     )) as LyraSegmented;
     const unchecked = segmentButtons(el)[0]!;
     const expectedHoverColor = resolvedInShadow(el, "color: var(--lr-color-text)", "color");
@@ -1296,7 +1296,7 @@ describe("--lr-segmented-hover-bg / --lr-segmented-hover-shadow", () => {
 
   it("overrides the hover background and shadow through the new hooks", async () => {
     const el = (await fixture(
-      html`<lr-segmented
+      html`<lr-segmented data-lr-theme-scope
         style="
           --lr-transition-fast: 0ms;
           --lr-segmented-hover-bg: rgb(1, 2, 3);

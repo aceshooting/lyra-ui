@@ -42,7 +42,7 @@ it('keeps small drop-offs, shares and values from reading as zero', async () => 
 });
 
 it('draws the comparison outline and overflow cap from the border-width ladder', async () => {
-  const element = await fixture<LyraFunnel>(html`<lr-funnel style="--lr-theme-border-width-thin: 2px; --lr-theme-border-width-thick: 5px"
+  const element = await fixture<LyraFunnel>(html`<lr-funnel data-lr-theme-scope style="--lr-theme-border-width-thin: 2px; --lr-theme-border-width-thick: 5px"
     .stages=${[{ label: 'A', value: 10 }, { label: 'B', value: 20 }]} .comparison=${[{ label: 'A', value: 10 }, { label: 'B', value: 5 }]}></lr-funnel>`);
   const outline = getComputedStyle(element.shadowRoot!.querySelector('[part="comparison-bar"]')!).borderTopWidth;
   const cap = getComputedStyle(element.shadowRoot!.querySelector('[part~="bar-overflow"]')!).borderInlineEndWidth;

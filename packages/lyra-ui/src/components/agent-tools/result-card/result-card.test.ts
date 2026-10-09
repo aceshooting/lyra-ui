@@ -343,7 +343,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge and header divider on the decorative --lr-color-border-subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-result-card
+      <lr-result-card data-lr-theme-scope
         heading="Result"
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
         >body</lr-result-card

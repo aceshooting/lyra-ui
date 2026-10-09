@@ -2,15 +2,22 @@
 
 # Design tokens
 
-Every `lr-*` component resolves its styling through this two-layer token system, inherited from
-`LyraElement`:
+Every `lr-*` component resolves its styling through this two-layer token system:
 
-1. **`--lr-theme-*` — the application input layer.** Set these (on `:root`, or any ancestor of a
-   subtree) to retheme. This is the only supported theming mechanism; never hardcode a color,
-   spacing, or font value that fights it.
+1. **`--lr-theme-*` — the application input layer.** Set these on `:root` or on a **theme scope**
+   to retheme. This is the only supported theming mechanism; never hardcode a color, spacing, or
+   font value that fights it.
 2. **`--lr-*` — the internal layer.** Direct theme-backed tokens read a `--lr-theme-*` input
    with a built-in fallback. Other tokens are aliases, computed or environment-backed values,
    or fixed contract constants. Every component renders correctly with no theme configured.
+
+Since 27.0.0 the shared `--lr-*` outputs form the **document token layer**: the first connected
+Lyra element adopts one stylesheet that declares them on `:root` and re-derives them only at theme
+scopes (`:root`, `.lr-light`/`.lr-dark`, `[data-lr-theme]`, the style-axis boundaries, the
+design-token fixture scopes, and the `data-lr-theme-scope` marker). Components inherit them;
+`@aceshooting/lyra-ui/tokens-root.css` is the same layer as a static file. See
+[Styles and tokens](./shared/styles-and-tokens.md) for theme scopes, application shadow roots and
+server rendering.
 
 Import `@aceshooting/lyra-ui/theme.css` once for the built-in Shadcn, Glass and Emerald profile.
 `theme.css` already includes Shadcn; no separate Shadcn look import is required.
@@ -19,55 +26,29 @@ Select `data-lr-look="shadcn"` on a scoped ancestor when needed. Choose light/da
 Other stylesheet looks, such as Material, require their optional `looks/<look>.css` sheet.
 The separate `looks/shadcn.css` sheet remains optional for its scoped `.light`/`.dark`
 compatibility aliases; look and mode remain independent.
-See [Styles and tokens](./shared/styles-and-tokens.md) for runtime and stylesheet options.
 Per-component `--lr-<component>-*` custom properties (listed in each component's own section)
 override a single element without touching the shared layer.
 
-**Consumer-scope exception: the focus ring.** `--lr-focus-ring` and its three parts
-(`-width`/`-color`/`-offset`) are the one layer-2 group `theme.css` also declares at document
-scope, on `:root` and on both mode selectors. They exist to serve a CONSUMER-authored idiom —
-the Web Awesome `outline: var(--wa-focus-ring)` that migrating projects already have — and that
-rule is written against the consumer's own element, where a `:host`-only token resolves to
-nothing. An empty `var()` makes the whole `outline` declaration invalid at computed-value time,
-and because `outline` does not inherit, the ring did not degrade: it DISAPPEARED, silently, with
-no console warning. So `outline: var(--lr-focus-ring); outline-offset:
-var(--lr-focus-ring-offset);` now works wherever you write it, provided `theme.css` is imported.
-Every component still re-derives all four on its own `:host`, so component rendering is
-unchanged.
+**Where an input takes effect.** An input the document layer consumes re-derives the layer only
+where it is set on a theme scope; set it on a plain wrapper and mark that wrapper with
+`data-lr-theme-scope`. The inputs listed under *Inputs read on the host* below are read by each
+component itself and keep working on any element. An `--lr-*` output set on an ancestor reaches
+everything below it until the next theme scope; the outputs derived from it follow only on a scope.
 
-> **Why layer 1 is not merely *preferred* but *required*: an ancestor `--lr-*` override does
-> not survive a nested component boundary.** Every component re-derives the whole `--lr-*` layer
-> from `--lr-theme-*` on its **own** `:host` (that is what `LyraElement`'s shared token
-> stylesheet does). So setting, say, `--lr-color-warning-quiet` on an application element does
-> apply to that element and to plain nested markup — it looks right in review and in a shallow
-> `getComputedStyle` probe — but it is **reset at the first `lr-*` element inside another
-> `lr-*` element's shadow root** (a badge inside a table cell, say), which re-derives it back to
-> the library fallback. The override degrades silently, the deeper it is consumed, with no
-> warning. Always set the `--lr-theme-*` input instead: that layer is read through `var()` at
-> every level, so it inherits across every boundary. Per-component `--lr-<component>-*`
-> properties are the other safe lever, because no component re-declares another component's
-> namespace — with six named exceptions declared by the shared base layer itself; see below.
+**The `--lr-*` names that resolve per element.** `--lr-icon-button-size` (it takes the
+coarse-pointer floor per element and reads the subtree input `--lr-icon-button-size-scope`),
+`--lr-radius-button` (it reads the form-control radius a control declares on itself) and the
+logical `--lr-safe-area-inline-*` aliases (mirrored under each element's own direction) are
+re-declared on every host, so an ancestor value for them is replaced at the first component.
+Every other shared output inherits. The focus ring (`--lr-focus-ring` and its three parts) is
+part of the document layer: `outline: var(--lr-focus-ring)` works on any application element
+once the layer applies.
 
-**The `--lr-*` names that look per-component but are not.** `--lr-focus-ring-width`,
-`--lr-focus-ring-color`, `--lr-focus-ring-offset` (the consumer-scope exception above),
-`--lr-icon-button-size`, `--lr-otp-input-segment-size`, and `--lr-popover-viewport-clamp` are
-the only tokens the shared base `:host` block in `internal/tokens.styles.ts` declares under a
-component-looking name — each reads its own `--lr-theme-*` input there. Because that block is
-mixed into every `lr-*` component, all six behave like the internal layer above, not like an
-ordinary per-component property: a rule that sets one of them directly on an ancestor is reset
-at the first intervening `lr-*` component and never reaches a nested target — even though
-setting it directly on the target element itself still works, which is what makes the failure
-look arbitrary rather than systematic. Reach through a subtree with `--lr-theme-focus-ring-*`,
-`--lr-theme-otp-input-segment-size`, or `--lr-theme-popover-viewport-clamp` instead.
-`--lr-icon-button-size` additionally has a dedicated subtree-scoped input,
-`--lr-icon-button-size-scope`, which an ancestor rule can set without reaching for the
-application-wide `--lr-theme-icon-button-size`. The subtree input wins where both are set,
-because the shipped `design-tokens.css` declares the theme tier on `:root` and a var() chain
-only falls through for a property that is unset everywhere. Every other `--lr-<component>-*`
-token — including
-the rest of `lr-icon-button`'s own (`-radius`, `-background`, `-color`, `-border`, and their
-`-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits
-normally from an ancestor.
+## Inputs read on the host (63)
+
+These work on any element, theme scope or not. Every other `--lr-theme-*` input needs a theme scope.
+
+`--lr-theme-border-radius-button`, `--lr-theme-color-chart-1`, `--lr-theme-color-chart-2`, `--lr-theme-color-chart-3`, `--lr-theme-color-chart-4`, `--lr-theme-color-chart-5`, `--lr-theme-color-chart-6`, `--lr-theme-color-chart-7`, `--lr-theme-color-chart-8`, `--lr-theme-color-chart-diverging-1`, `--lr-theme-color-chart-diverging-2`, `--lr-theme-color-chart-diverging-3`, `--lr-theme-color-chart-sequential-1`, `--lr-theme-color-chart-sequential-2`, `--lr-theme-color-chart-sequential-3`, `--lr-theme-form-control-height-2xs`, `--lr-theme-form-control-height-l`, `--lr-theme-form-control-height-m`, `--lr-theme-form-control-height-s`, `--lr-theme-form-control-height-xl`, `--lr-theme-form-control-height-xs`, `--lr-theme-form-control-radius`, `--lr-theme-graph-cat-1`, `--lr-theme-graph-cat-2`, `--lr-theme-graph-cat-3`, `--lr-theme-graph-cat-4`, `--lr-theme-graph-cat-5`, `--lr-theme-graph-cat-6`, `--lr-theme-graph-cat-7`, `--lr-theme-graph-cat-8`, `--lr-theme-icon-button-size`, `--lr-theme-terminal-bg-black`, `--lr-theme-terminal-bg-blue`, `--lr-theme-terminal-bg-bright-black`, `--lr-theme-terminal-bg-bright-blue`, `--lr-theme-terminal-bg-bright-cyan`, `--lr-theme-terminal-bg-bright-green`, `--lr-theme-terminal-bg-bright-magenta`, `--lr-theme-terminal-bg-bright-red`, `--lr-theme-terminal-bg-bright-white`, `--lr-theme-terminal-bg-bright-yellow`, `--lr-theme-terminal-bg-cyan`, `--lr-theme-terminal-bg-green`, `--lr-theme-terminal-bg-magenta`, `--lr-theme-terminal-bg-red`, `--lr-theme-terminal-bg-white`, `--lr-theme-terminal-bg-yellow`, `--lr-theme-terminal-color-black`, `--lr-theme-terminal-color-blue`, `--lr-theme-terminal-color-bright-black`, `--lr-theme-terminal-color-bright-blue`, `--lr-theme-terminal-color-bright-cyan`, `--lr-theme-terminal-color-bright-green`, `--lr-theme-terminal-color-bright-magenta`, `--lr-theme-terminal-color-bright-red`, `--lr-theme-terminal-color-bright-white`, `--lr-theme-terminal-color-bright-yellow`, `--lr-theme-terminal-color-cyan`, `--lr-theme-terminal-color-green`, `--lr-theme-terminal-color-magenta`, `--lr-theme-terminal-color-red`, `--lr-theme-terminal-color-white`, `--lr-theme-terminal-color-yellow`
 
 ## Direct theme-backed tokens (287)
 

@@ -613,7 +613,7 @@ describe('lr-agent-trace', () => {
   describe('--lr-agent-trace-handoff-active-bg', () => {
     const activeFixture = async (): Promise<LyraAgentTrace> => {
       const el = (await fixture(
-        html`<lr-agent-trace
+        html`<lr-agent-trace data-lr-theme-scope
           style="--lr-transition-fast: 0s;"
           .spans=${SPANS}
           .activeSpanId=${'sub-agent'}
@@ -652,7 +652,7 @@ describe('active-handoff pointer feedback', () => {
 
   async function themed(): Promise<LyraAgentTrace> {
     const el = (await fixture(html`
-      <lr-agent-trace
+      <lr-agent-trace data-lr-theme-scope
         style="--lr-transition-fast: 0s; --lr-agent-trace-handoff-active-bg: rgb(0, 51, 102);"
         .spans=${SPANS}
         .activeSpanId=${'sub-agent'}

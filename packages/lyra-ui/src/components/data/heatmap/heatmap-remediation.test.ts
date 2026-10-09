@@ -204,7 +204,7 @@ it('keeps an explicit empty aria-label on the internal canvas, in canvas mode', 
  */
 it('tracks --lr-theme-border-width-thin for the canvas hover ring', async () => {
   const el = (await fixture(html`
-    <lr-heatmap
+    <lr-heatmap data-lr-theme-scope
       style="--lr-theme-border-width-thin: 4px"
       .data=${{ kind: 'matrix', rowLabels: ['A'], colLabels: ['B'], values: [[1]] }}
     ></lr-heatmap>

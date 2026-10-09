@@ -30,13 +30,13 @@ for (const tag of ['lr-popover', 'lr-tooltip', 'lr-dropdown'] as const) {
     const container = await fixture<HTMLDivElement>(html`
       <div style="position: relative; width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start">
         ${tag === 'lr-tooltip'
-          ? html`<lr-tooltip content="An unbreakable tooltip label wide enough to overflow a shrunken container" style="--lr-transition-fast: 0s; white-space: nowrap"><button>Trigger</button></lr-tooltip>`
+          ? html`<lr-tooltip data-lr-theme-scope content="An unbreakable tooltip label wide enough to overflow a shrunken container" style="--lr-transition-fast: 0s; white-space: nowrap"><button>Trigger</button></lr-tooltip>`
           : tag === 'lr-dropdown'
-            ? html`<lr-dropdown style="--lr-transition-fast: 0s">
+            ? html`<lr-dropdown data-lr-theme-scope style="--lr-transition-fast: 0s">
                 <button slot="trigger">Trigger</button>
                 <lr-dropdown-item style="white-space: nowrap">An unbreakable dropdown item label wide enough to overflow a shrunken container</lr-dropdown-item>
               </lr-dropdown>`
-            : html`<lr-popover positioning-strategy="absolute" style="--lr-transition-fast: 0s">
+            : html`<lr-popover data-lr-theme-scope positioning-strategy="absolute" style="--lr-transition-fast: 0s">
                 <button slot="trigger">Trigger</button>
                 <span style="white-space: nowrap">An unbreakable popover body label wide enough to overflow a shrunken container</span>
               </lr-popover>`}
@@ -80,7 +80,7 @@ it('preserves lr-popover popup transitions while removing the settled closed lay
 
 it('preserves lr-tooltip popup transitions while removing the settled closed layout', async () => {
   const control = await fixture<LyraTooltip>(html`
-    <lr-tooltip content="Details" style="--lr-transition-fast: 1s">
+    <lr-tooltip data-lr-theme-scope content="Details" style="--lr-transition-fast: 1s">
       <button>Trigger</button>
     </lr-tooltip>
   `);

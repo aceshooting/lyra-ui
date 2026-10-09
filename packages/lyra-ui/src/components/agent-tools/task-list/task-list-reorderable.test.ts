@@ -396,7 +396,7 @@ describe('reorderable', () => {
 
   it('shows a rendered hover affordance and focus ring on a keyboard-reorderable row', async () => {
     const el = (await fixture(
-      html`<lr-task-list reorderable style="--lr-transition-fast:0s" .items=${clone()}></lr-task-list>`,
+      html`<lr-task-list data-lr-theme-scope reorderable style="--lr-transition-fast:0s" .items=${clone()}></lr-task-list>`,
     )) as LyraTaskList;
     const row = itemRow(el, 'prepare');
     row.scrollIntoView();

@@ -582,8 +582,8 @@ describe('<lr-tool-call-block>', () => {
 
   it('puts the chevron at inline-start and mirrors it only while collapsed under RTL', async () => {
     const wrapper = await fixture<HTMLElement>(html`<div>
-      <lr-tool-call-block style="--lr-transition-fast: 0s" dir="rtl" name="t"></lr-tool-call-block>
-      <lr-tool-call-block style="--lr-transition-fast: 0s" name="t"></lr-tool-call-block>
+      <lr-tool-call-block data-lr-theme-scope style="--lr-transition-fast: 0s" dir="rtl" name="t"></lr-tool-call-block>
+      <lr-tool-call-block data-lr-theme-scope style="--lr-transition-fast: 0s" name="t"></lr-tool-call-block>
     </div>`);
     const [rtl, ltr] = [...wrapper.querySelectorAll<Block>('lr-tool-call-block')] as [Block, Block];
     const toggleRect = part(rtl, 'toggle')!.getBoundingClientRect();

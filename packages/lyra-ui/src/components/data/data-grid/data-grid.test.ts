@@ -42,6 +42,7 @@ it('keeps each row-size baseline and measures the same minimum after inherited d
   expect(state.measurementRowHeight!).to.be.closeTo(minimum(), 0.05);
   expect(state.measuredItemHeights.has('row:number:offscreen')).to.equal(false);
 
+  scope.setAttribute('data-lr-theme-scope', '');
   scope.style.setProperty('--lr-theme-table-row-height', '80px');
   state.measureRenderedItems();
   expect(minimum()).to.be.closeTo(68, 0.05);
@@ -862,7 +863,7 @@ describe("grid-line colour tier", () => {
 
   it("draws grid lines on the subtle tier and keeps control boundaries on the control tier", async () => {
     const element = await dataGrid(html`
-      <lr-data-grid paginate with-search label="People" style=${themed} .columns=${columns} .data=${rows}></lr-data-grid>
+      <lr-data-grid paginate with-search label="People" data-lr-theme-scope style=${themed} .columns=${columns} .data=${rows}></lr-data-grid>
     `);
     expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(7, 8, 9)"));
     expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(10, 20, 30)"));
@@ -870,7 +871,7 @@ describe("grid-line colour tier", () => {
 
   it("lets --border-color recolour both, and --lr-data-grid-line-color only the grid lines", async () => {
     const element = await dataGrid(html`
-      <lr-data-grid paginate with-search label="People" style=${`${themed}; --border-color: rgb(40, 50, 60)`} .columns=${columns} .data=${rows}></lr-data-grid>
+      <lr-data-grid paginate with-search label="People" data-lr-theme-scope style=${`${themed}; --border-color: rgb(40, 50, 60)`} .columns=${columns} .data=${rows}></lr-data-grid>
     `);
     expect(Object.values(lines(element))).to.deep.equal(Array(5).fill("rgb(40, 50, 60)"));
     expect(Object.values(controls(element))).to.deep.equal(Array(2).fill("rgb(40, 50, 60)"));
@@ -881,7 +882,7 @@ describe("grid-line colour tier", () => {
 
   it("uses the Shadcn subtle grid-line default independently of the control border", async () => {
     const element = await dataGrid(html`
-      <lr-data-grid paginate with-search label="People" style="--lr-theme-color-surface-border: rgb(10, 20, 30)" .columns=${columns} .data=${rows}></lr-data-grid>
+      <lr-data-grid data-lr-theme-scope paginate with-search label="People" style="--lr-theme-color-surface-border: rgb(10, 20, 30)" .columns=${columns} .data=${rows}></lr-data-grid>
     `);
     expect(Object.values(lines(element)).map(toRgba)).to.deep.equal(Array(5).fill([229, 229, 229, 255]));
     expect(Object.values(controls(element)).map(toRgba)).to.deep.equal(Array(2).fill([10, 20, 30, 255]));

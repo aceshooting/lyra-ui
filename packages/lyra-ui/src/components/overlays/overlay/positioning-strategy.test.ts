@@ -268,7 +268,7 @@ async function fixedHeaderLayout(
         trigger=${options.trigger ?? 'click'}
         distance=${options.distance ?? 8}
         positioning-strategy=${options.strategy ?? 'fixed'}
-        style=${NO_MOTION}
+        data-lr-theme-scope style=${NO_MOTION}
       >
         <button slot="trigger">Account</button>
         <div style="inline-size: 220px; block-size: 140px">
@@ -451,7 +451,7 @@ describe('top-layer on lr-popover', () => {
 
   it('keeps a trapped popup promoted when top-layer is turned off while open', async () => {
     const wrapper = await fixture<HTMLElement>(html`<div style="transform: translateY(0); overflow: hidden; block-size: 40px">
-      <lr-popover top-layer style=${NO_MOTION}>
+      <lr-popover top-layer data-lr-theme-scope style=${NO_MOTION}>
         <button slot="trigger">Open</button>
         <div style="block-size: 120px">Details</div>
       </lr-popover>
@@ -516,7 +516,7 @@ describe('top-layer on lr-dropdown', () => {
   const build = async (topLayer: boolean) => {
     const wrapper = await fixture<HTMLElement>(html`<div>
       <div style=${HEADER_STYLE}>
-        <lr-dropdown ?top-layer=${topLayer} style=${NO_MOTION}>
+        <lr-dropdown ?top-layer=${topLayer} data-lr-theme-scope style=${NO_MOTION}>
           <button slot="trigger">Actions</button>
           <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
           <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
@@ -549,7 +549,7 @@ describe('top-layer on lr-dropdown', () => {
     await import('../../layout/menu/menu-item.js');
     const wrapper = await fixture<HTMLElement>(html`<div>
       <div style=${HEADER_STYLE}>
-        <lr-dropdown top-layer style=${NO_MOTION}>
+        <lr-dropdown top-layer data-lr-theme-scope style=${NO_MOTION}>
           <button slot="trigger">Actions</button>
           <lr-menu-item value="share" id="share">
             Share

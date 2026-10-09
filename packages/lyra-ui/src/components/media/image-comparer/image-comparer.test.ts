@@ -206,7 +206,7 @@ it('renders the handle slot and resolves both upstream sizing properties', async
 });
 
 it('draws the handle ring from the thin border-width token', async () => {
-  const el = (await fixture(html`<lr-image-comparer
+  const el = (await fixture(html`<lr-image-comparer data-lr-theme-scope
     style="--lr-theme-border-width-thin: 3px"
   ></lr-image-comparer>`)) as LyraImageComparer;
   const handleVisual = el.shadowRoot!.querySelector('.handle-visual') as HTMLElement;

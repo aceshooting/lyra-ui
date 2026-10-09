@@ -87,6 +87,7 @@ describe('independent accessibility preferences', () => {
           expect(getComputedStyle(quiet).color).to.equal(getComputedStyle(normal).color);
           expect(getComputedStyle(control).borderTopColor).to.equal(getComputedStyle(normal).color);
           expect(Number.parseFloat(getComputedStyle(control).outlineWidth)).to.be.at.least(3);
+          probe.setAttribute('data-lr-theme-scope', '');
           probe.style.setProperty('--lr-theme-focus-ring-width', '5px');
           expect(getComputedStyle(control).outlineWidth).to.equal('5px');
           probe.style.removeProperty('--lr-theme-focus-ring-width');
@@ -156,7 +157,7 @@ describe('independent accessibility preferences', () => {
   });
 
   it('does not overwrite inherited authored theme inputs at a preference-only boundary', async () => {
-    const outer = await fixture<HTMLElement>(html`<section style="--lr-theme-color-text-normal:rgb(17,23,29);--lr-theme-focus-ring-width:5px">
+    const outer = await fixture<HTMLElement>(html`<section data-lr-theme-scope style="--lr-theme-color-text-normal:rgb(17,23,29);--lr-theme-focus-ring-width:5px">
       <section data-lr-motion="system" style="color:var(--lr-color-text)">
         <span style="color:var(--lr-color-text-quiet);outline:var(--lr-focus-ring)">Quiet</span>
       </section>

@@ -8,7 +8,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
   it(`keeps a ${phase} voice-picker popup out of a transform ancestor's scrollable layout`, async () => {
     const container = await fixture<HTMLDivElement>(html`
       <div style="transform: translateZ(0); width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start">
-        <lr-voice-picker .catalog=${CATALOG} style="width: 120px; --lr-transition-fast: 0s"></lr-voice-picker>
+        <lr-voice-picker data-lr-theme-scope .catalog=${CATALOG} style="width: 120px; --lr-transition-fast: 0s"></lr-voice-picker>
       </div>
     `);
     const control = container.querySelector<LyraVoicePicker>('lr-voice-picker')!;
@@ -34,7 +34,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
 
 it('preserves the voice-picker listbox close transition while removing the settled-closed layout', async () => {
   const control = await fixture<LyraVoicePicker>(
-    html`<lr-voice-picker .catalog=${CATALOG} style="--lr-transition-fast: 1s"></lr-voice-picker>`,
+    html`<lr-voice-picker data-lr-theme-scope .catalog=${CATALOG} style="--lr-transition-fast: 1s"></lr-voice-picker>`,
   );
   const listbox = control.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
   for (let cycle = 0; cycle < 2; cycle++) {

@@ -266,10 +266,6 @@
     --lr-theme-terminal-color-red: var(--_lr-dark-on,var(--_lr-ll-terminal-color-red))var(--_lr-light-on,var(--_lr-ld-terminal-color-red));
     --lr-theme-terminal-color-white: var(--_lr-dark-on,var(--_lr-ll-terminal-color-white))var(--_lr-light-on,var(--_lr-ld-terminal-color-white));
     --lr-theme-terminal-color-yellow: var(--_lr-dark-on,var(--_lr-ll-terminal-color-yellow))var(--_lr-light-on,var(--_lr-ld-terminal-color-yellow));
-    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
-    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color,var(--lr-theme-color-focus,Highlight));
-    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset,2px);
-    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
   }
 }
 @layer lr-theme-preset.mode {

@@ -41,6 +41,7 @@ describe('tonal surface elevation', () => {
 
   it('preserves existing page and overlay hooks until a container role is selected, then restores them', async () => {
     const { scope, card, dialog, base, panel } = await surfaces();
+    scope.setAttribute('data-lr-theme-scope', '');
     scope.style.setProperty('--lr-theme-color-surface-default', '#123456');
     scope.style.setProperty('--lr-theme-color-surface-overlay', '#345678');
     const initial = { card: getComputedStyle(base).backgroundColor, panel: getComputedStyle(panel).backgroundColor, z: getComputedStyle(panel).zIndex };

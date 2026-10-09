@@ -23,6 +23,7 @@ import {
 } from './migration-analysis.mjs';
 import { invariant } from './migration-contract.mjs';
 import { htmlCommentEnd } from './html-comments.mjs';
+import { analyzeThemeScopes } from './migration-theme-scopes.mjs';
 
 
 // ---------------------------------------------------------------------------------------------
@@ -821,6 +822,19 @@ export function migrateRenameText(original, contract, options) {
   });
   reportModuleReviews(original, file, profile.data.moduleReviews, openingTokens, inComment, warn);
   applyGlobals(original, file, profile.data.globals, { inComment, inCss, openingTokens, rewrite, warn });
+  if (profile.data.rules.includes('theme-scopes')) {
+    const analysis = analyzeThemeScopes(original, { file });
+    for (const { offset, change } of analysis.insertions) {
+      rewrite(offset, offset, analysis.marker, {
+        tag: change.upstreamTag, member: change.upstreamMember, action: change.action, target: change.target, message: change.message,
+      });
+    }
+    for (const entry of analysis.warnings) {
+      warn(starts[entry.line - 1] + entry.column - 1, {
+        tag: entry.upstreamTag, member: entry.upstreamMember ?? entry.upstreamTag ?? entry.target, code: entry.warningCode, target: entry.target, message: entry.message,
+      });
+    }
+  }
   const unownedReviews = (kind, name, offset, owner) => {
     const own = owner ? profile.reviewFor(owner, kind, name) : null;
     if (own) reportReview(offset, own);

@@ -15,7 +15,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
   it(`keeps a ${phase} locale-picker listbox out of the scrollable layout`, async () => {
     const container = await fixture<HTMLDivElement>(html`
       <div style="transform: translateZ(0); width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start">
-        <lr-locale-picker style="width: 120px; --lr-transition-fast: 0s"></lr-locale-picker>
+        <lr-locale-picker data-lr-theme-scope style="width: 120px; --lr-transition-fast: 0s"></lr-locale-picker>
       </div>
     `);
     const el = container.querySelector<LyraLocalePicker>('lr-locale-picker')!;
@@ -36,7 +36,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
 
 it('preserves the locale-picker listbox close transition while removing the settled closed layout', async () => {
   const el = await fixture<LyraLocalePicker>(
-    html`<lr-locale-picker style="--lr-transition-fast: 1s"></lr-locale-picker>`
+    html`<lr-locale-picker data-lr-theme-scope style="--lr-transition-fast: 1s"></lr-locale-picker>`
   );
   const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
   el.open = true;

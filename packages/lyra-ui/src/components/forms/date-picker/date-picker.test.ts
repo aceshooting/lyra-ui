@@ -1748,7 +1748,7 @@ describe("date-picker coverage gaps", () => {
     expect(months.shadowRoot!.activeElement === day).to.equal(true);
 
     const years = (await fixture(html`
-      <lr-date-picker
+      <lr-date-picker data-lr-theme-scope
         view="years"
         value="2026-06-15"
         style="--lr-transition-fast: 0s"

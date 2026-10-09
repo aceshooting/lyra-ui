@@ -30,7 +30,7 @@ beforeEach(() => { previous = document.adoptedStyleSheets; document.adoptedStyle
 afterEach(() => { document.adoptedStyleSheets = previous; });
 
 it('applies distinct heading, body and code typography to native content and restores authored inputs', async () => {
-  const scope = await fixture<HTMLElement>(html`<section class="lr-native" style="--lr-theme-font-family-body: serif">
+  const scope = await fixture<HTMLElement>(html`<section data-lr-theme-scope class="lr-native" style="--lr-theme-font-family-body: serif">
     <h2>العربية · मराठी · English</h2><p>Body text</p><code>const value = 1;</code>
   </section>`);
   const heading = scope.querySelector('h2')!;
@@ -177,7 +177,7 @@ it('gives body-mounted confirmation actions the body scope shape and touch targe
 it('keeps virtual grid offsets and table rows aligned with scoped CSS math after rem changes', async () => {
   const columns = [{ field: 'name', key: 'name', label: 'Name', cell: (row: { name: string }) => row.name }];
   const data = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}` }));
-  const scope = await fixture<HTMLElement>(html`<section style="--lr-theme-font-size-m: 20px">
+  const scope = await fixture<HTMLElement>(html`<section data-lr-theme-scope style="--lr-theme-font-size-m: 20px">
     <lr-table aria-label="Rows" style="--lr-table-row-height: calc(2rem + 1em)" .columns=${columns} .rows=${data.slice(0, 2)}></lr-table>
     <lr-data-grid label="Rows" style="block-size: 240px; --row-height: calc(2rem + 1em)" .columns=${columns} .data=${data}></lr-data-grid>
   </section>`);

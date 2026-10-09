@@ -164,6 +164,7 @@ describe('GFM task items: geometry, tokens and parts', () => {
 
     it(`${name} wires the checkbox paint to theme tokens and beats a UA disabled fade`, async () => {
       const el = await mountTasks(name, '- [ ] Open\n- [x] Done\n');
+      el.setAttribute('data-lr-theme-scope', '');
       el.style.setProperty('--lr-theme-color-surface-border', 'rgb(1, 2, 3)');
       el.style.setProperty('--lr-theme-color-surface-default', 'rgb(10, 11, 12)');
       el.style.setProperty('--lr-theme-color-brand-fill-loud', 'rgb(4, 5, 6)');

@@ -305,7 +305,7 @@ it('treats non-array provenance sections as empty and omits malformed nested row
 
 it('renders the disclosure header hover/focus-visible feedback', async () => {
   const el = await fixture<LyraProvenancePanel>(html`
-    <lr-provenance-panel
+    <lr-provenance-panel data-lr-theme-scope
       style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
       .provenance=${provenance}
     ></lr-provenance-panel>

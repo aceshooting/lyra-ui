@@ -109,7 +109,7 @@ for (const mode of ['own', 'fieldset'] as const) {
   for (const field of ['day', 'month', 'year']) {
     it(`retains disabled ${field} resting paint for ${mode} disablement while enabled hover remains visible`, async () => {
       const root = await fixture<HTMLFieldSetElement>(html`<fieldset ?disabled=${mode === 'fieldset'}>
-        <lr-known-date ?disabled=${mode === 'own'} style="--lr-color-border:rgb(80,90,100);--lr-color-brand:rgb(1,130,40);--lr-transition-fast:0s"></lr-known-date>
+        <lr-known-date data-lr-theme-scope ?disabled=${mode === 'own'} style="--lr-color-border:rgb(80,90,100);--lr-color-brand:rgb(1,130,40);--lr-transition-fast:0s"></lr-known-date>
       </fieldset>`);
       const viewer = root.querySelector<LyraKnownDate>('lr-known-date')!;
       const input = viewer.shadowRoot!.querySelector<HTMLInputElement>(`[part="field-input"][data-field="${field}"]`)!;

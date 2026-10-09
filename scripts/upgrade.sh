@@ -173,6 +173,7 @@ pnpm --filter @aceshooting/lyra-ui exec node scripts/generate-terminal-palette.m
 pnpm --filter @aceshooting/lyra-ui run style-axes
 pnpm --filter @aceshooting/lyra-ui run option-presets
 pnpm --filter @aceshooting/lyra-ui run design-tokens
+pnpm --filter @aceshooting/lyra-ui run theme-scopes
 pnpm --filter @aceshooting/lyra-ui run generate-reservation-styles
 
 echo

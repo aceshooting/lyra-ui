@@ -16,6 +16,7 @@ import {
 } from './migration-contract.mjs';
 import { migrateText } from './migration-transforms.mjs';
 import { buildProjectDomFactoryBindings } from './migration-analysis.mjs';
+import { THEME_SCOPE_RULE, migrateThemeScopes } from './migration-theme-scopes.mjs';
 export {
   MIGRATION_RUNTIME_SCHEMA_VERSION,
   MIGRATION_ORIGINS,
@@ -26,6 +27,46 @@ export {
   buildMirrorMap,
 } from './migration-contract.mjs';
 export { scanUnrewrittenUpstreamReferences, migrateText } from './migration-transforms.mjs';
+export { migrateThemeScopes } from './migration-theme-scopes.mjs';
+
+/** Structural rules that run on their own, independent of an origin profile. */
+export const MIGRATION_RULES = Object.freeze([THEME_SCOPE_RULE]);
+
+/**
+ * Runs one structural rule over `files`. `theme-scopes` (Lyra 27, RFC 0002) marks elements whose
+ * inline style sets a token-layer input as theme scopes, and reports dynamic inputs, repeated
+ * markers, and stylesheet rules that set inputs or shared outputs outside a scope.
+ */
+export function migrateRuleFiles({ files, rule, dryRun = false, reportPath = null, cwd = process.cwd(), collectDiff = false }) {
+  invariant(MIGRATION_RULES.includes(rule), `unknown migration rule ${String(rule)}`);
+  const changes = [];
+  const warnings = [];
+  const diffs = [];
+  let filesChanged = 0;
+  for (const file of files) {
+    const original = fs.readFileSync(file, 'utf8');
+    const result = migrateThemeScopes(original, { file: reportPathName(file, cwd) });
+    changes.push(...result.changes);
+    warnings.push(...result.warnings);
+    if (result.content !== original) {
+      filesChanged += 1;
+      if (collectDiff) diffs.push(unifiedDiff(reportPathName(file, cwd), original, result.content));
+      if (!dryRun) fs.writeFileSync(file, result.content, 'utf8');
+    }
+  }
+  const report = {
+    schemaVersion: MIGRATION_REPORT_SCHEMA_VERSION,
+    rule,
+    dryRun,
+    filesScanned: files.length,
+    filesChanged,
+    changes,
+    warnings,
+    summary: { rewrites: changes.length, warnings: warnings.length },
+  };
+  if (reportPath) fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  return collectDiff ? { ...report, diff: diffs.join('') } : report;
+}
 
 
 export const MIGRATION_REPORT_SCHEMA_VERSION = 1;
@@ -398,6 +439,7 @@ export function parseArgs(argv) {
     lyraVersion: null,
     origin: null,
     report: null,
+    rule: null,
     targets: [],
   };
   let positional = false;
@@ -436,6 +478,9 @@ export function parseArgs(argv) {
       if (!MIGRATION_ORIGINS.includes(options.origin)) {
         throw new Error(`Unknown migration origin: ${options.origin}`);
       }
+    } else if (!positional && argument.startsWith('--rule=')) {
+      options.rule = argument.slice('--rule='.length);
+      if (!MIGRATION_RULES.includes(options.rule)) throw new Error(`Unknown migration rule: ${options.rule}`);
     } else if (!positional && argument.startsWith('-')) {
       throw new Error(`Unknown option: ${argument}`);
     } else {
@@ -446,7 +491,7 @@ export function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--diff] [--origin=${MIGRATION_ORIGINS.join('|')}] [--lyra-version=x.y.z] [--report=path] [--ext=html,ts,...] targets...
+  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--diff] [--origin=${MIGRATION_ORIGINS.join('|')}] [--rule=theme-scopes] [--lyra-version=x.y.z] [--report=path] [--ext=html,ts,...] targets...
 
 Only exact and fully rewritten inventory mappings change automatically. Conceptual, unsafe,
 unsupported, unknown, and unresolved deep-import uses remain unchanged with source-located
@@ -459,7 +504,7 @@ change what a site reaches, preserves changed defaults, and reports everything e
 listeners of events whose detail changed. --origin=lyra-v22 reports deprecated theme APIs,
 stylesheets, window events and root attributes; review their replacement semantics explicitly.
 --origin=lyra-v26 moves the package specifiers and root-barrel types that Lyra 27 relocated,
-reports removed localization keys. Lyra profiles never rewrite
+reports removed localization keys, and runs the theme-scopes rule. Lyra profiles never rewrite
 tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
 
   --dry-run, -n        report changes without writing source files
@@ -468,6 +513,10 @@ tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
   --origin=lyra-v21    migrate names and defaults that change from Lyra 21 to Lyra 22
   --origin=lyra-v22    review Lyra 22 module contracts retained through Lyra 23
   --origin=lyra-v26    move specifiers and types relocated in Lyra 27, report removed locale keys
+                       and apply --rule=theme-scopes
+  --rule=theme-scopes  Lyra 27: mark elements whose inline style sets a token-layer input with
+                       data-lr-theme-scope; report dynamic inputs, markers in loops, and CSS that
+                       sets inputs or shared outputs outside a theme scope (runs without --origin)
   --lyra-version=x.y.z apply only rename entries available in this release (default: the
                        @aceshooting/lyra-ui installed under the working directory, when found)
   --report=path        write the stable JSON migration report
@@ -574,7 +623,29 @@ export function run(argv, { compatibilityContext = null, currentExportDeprecatio
     console.error('No files matched the given path(s)/pattern(s).');
     return 1;
   }
+  if (options.rule !== null && options.origin !== null) {
+    console.error('--rule runs on its own; omit --origin.');
+    return 1;
+  }
   try {
+    if (options.rule !== null) {
+      const report = migrateRuleFiles({
+        files,
+        rule: options.rule,
+        dryRun: options.dryRun,
+        reportPath: options.report ? path.resolve(options.report) : null,
+        collectDiff: options.diff,
+      });
+      const log = options.diff ? console.error : console.log;
+      if (options.diff) process.stdout.write(report.diff);
+      for (const entry of report.changes) log(`${entry.file}:${entry.line}:${entry.column}  ${entry.action}: ${entry.message}`);
+      for (const entry of report.warnings) log(`${entry.file}:${entry.line}:${entry.column}  warning ${entry.warningCode}: ${entry.message}`);
+      log(`${report.filesScanned} file(s) scanned, ${report.filesChanged} changed, ${report.summary.rewrites} rewrite(s), ${report.summary.warnings} warning(s).`);
+      if (options.dryRun && report.filesChanged) log('Dry run only -- no source files were written.');
+      if (options.report) log(`JSON report written to ${options.report}.`);
+      if (options.check) return report.filesChanged > 0 || report.summary.warnings > 0 ? 1 : 0;
+      return 0;
+    }
     const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
     const renameOrigin = LYRA_RENAME_ORIGINS.includes(options.origin);
     const lyraVersion = renameOrigin ? options.lyraVersion ?? detectInstalledLyraVersion() : null;

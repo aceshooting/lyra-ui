@@ -13,7 +13,7 @@ import type { LyraNumberInput } from '../../forms/input/number-input.class.js';
 
 it('provides rendered hover feedback for native text and number controls', async () => {
   const el = await fixture<LyraToolParamForm>(html`
-    <lr-tool-param-form
+    <lr-tool-param-form data-lr-theme-scope
       style="--lr-transition-fast: 0s; --lr-color-brand: rgb(1, 2, 3)"
       .schema=${basicSchema}
     ></lr-tool-param-form>
@@ -478,8 +478,9 @@ it('joins description and touched-error ids into aria-describedby on a native co
 });
 
 it('retints only an invalid native control border through its component CSS property and restores the resting border', async () => {
-  const el = (await fixture(html`<lr-tool-param-form style="--lr-transition-fast: 0s;" .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const el = (await fixture(html`<lr-tool-param-form data-lr-theme-scope style="--lr-transition-fast: 0s;" .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   el.style.setProperty('--lr-tool-param-form-invalid-border-color', 'rgb(10, 20, 30)');
+  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-border', 'rgb(40, 50, 60)');
   const city = field(el, 'city').querySelector('input') as HTMLInputElement;
 

@@ -43,7 +43,7 @@ describe('lr-menubar-item', () => {
   });
 
   it('paints press and pointer focus from native state only, with no inline or data-attribute paint', async () => {
-    const wrapper = await fixture(html`<lr-menubar label="App" style="--lr-transition-fast:0ms;--lr-menubar-item-active-bg:rgb(65, 43, 21)"><lr-menubar-item id="help">Help</lr-menubar-item></lr-menubar>`);
+    const wrapper = await fixture(html`<lr-menubar data-lr-theme-scope label="App" style="--lr-transition-fast:0ms;--lr-menubar-item-active-bg:rgb(65, 43, 21)"><lr-menubar-item id="help">Help</lr-menubar-item></lr-menubar>`);
     const help = wrapper.querySelector<LyraMenubarItem>('#help')!;
     const base = help.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
     await hoverUntilMatched(help, 'Help should be hovered');

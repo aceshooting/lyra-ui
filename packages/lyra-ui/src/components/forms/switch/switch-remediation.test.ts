@@ -24,8 +24,8 @@ for (const attribute of ['hint', 'help-text', 'error-text']) {
 
 it('uses the checked track fill independently of the unchecked token in resting, hover, and active states', async () => {
   const style = '--lr-switch-track-fill: rgb(10, 20, 30); --lr-switch-checked-track-fill: rgb(100, 110, 120); --lr-transition-fast: 0s;';
-  const checked = await fixture<LyraSwitch>(html`<lr-switch checked style=${style}></lr-switch>`);
-  const unchecked = await fixture<LyraSwitch>(html`<lr-switch style=${style}></lr-switch>`);
+  const checked = await fixture<LyraSwitch>(html`<lr-switch checked data-lr-theme-scope style=${style}></lr-switch>`);
+  const unchecked = await fixture<LyraSwitch>(html`<lr-switch data-lr-theme-scope style=${style}></lr-switch>`);
   const checkedTrack = checked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
   const uncheckedTrack = unchecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
 

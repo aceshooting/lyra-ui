@@ -40,7 +40,7 @@ expectLocaleFallback('tr', [
 ]);
 it('provides rendered hover feedback for the native search input', async () => {
   const el = await fixture<LyraToolSelectDialog>(html`
-    <lr-tool-select-dialog open style="--lr-color-brand: rgb(1, 2, 3)"></lr-tool-select-dialog>
+    <lr-tool-select-dialog data-lr-theme-scope open style="--lr-color-brand: rgb(1, 2, 3)"></lr-tool-select-dialog>
   `);
   const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
   const rect = input.getBoundingClientRect();

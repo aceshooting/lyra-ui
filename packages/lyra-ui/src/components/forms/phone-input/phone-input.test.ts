@@ -1739,7 +1739,7 @@ it('is accessible with flags enabled', async () => {
 // elements -- a DOM node as chai's actual/expected hangs the whole file.
 it('tints the country trigger while the invisible select over it is hovered, and deepens it while pressed', async () => {
   const el = (await fixture(
-    html`<lr-phone-input
+    html`<lr-phone-input data-lr-theme-scope
       default-country="LU"
       style="--lr-transition-fast: 0s"
       .adapter=${adapter}

@@ -378,7 +378,7 @@ describe('anchored overlays in zoomed content', () => {
   async function zoomedDropdown(strategy: 'fixed' | 'absolute', positionedWrapper = false) {
     await import('../../overlays/overlay/dropdown.js');
     await import('../../layout/menu/dropdown-item.js');
-    const dropdown = html`<lr-dropdown positioning-strategy=${strategy} style="--lr-transition-fast:0ms">
+    const dropdown = html`<lr-dropdown data-lr-theme-scope positioning-strategy=${strategy} style="--lr-transition-fast:0ms">
       <button slot="trigger" style="margin: 10px">Actions</button>
       <lr-dropdown-item value="a">Alpha</lr-dropdown-item>
     </lr-dropdown>`;
@@ -437,7 +437,7 @@ describe('anchored overlays in zoomed content', () => {
     const el = await fixture<LyraPanZoom>(html`
       <lr-pan-zoom zoom="2" style="inline-size: 400px; block-size: 200px">
         <div style="inline-size: 180px; block-size: 90px">
-          <lr-tooltip placement="bottom-start" distance="0" style="--lr-transition-fast:0ms"
+          <lr-tooltip data-lr-theme-scope placement="bottom-start" distance="0" style="--lr-transition-fast:0ms"
             ><button slot="trigger" style="margin: 10px">Hint</button><span>Tip</span></lr-tooltip
           >
         </div>

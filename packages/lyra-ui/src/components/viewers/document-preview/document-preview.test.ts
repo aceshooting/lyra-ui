@@ -792,7 +792,7 @@ describe("generic-download fallback", () => {
 
   it('paints independently inherited and direct hover/active download hooks after settled pointer input', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div
+      <div data-lr-theme-scope
         style="--lr-transition-fast: 0s; --lr-document-preview-download-link-hover-bg: rgb(1, 2, 3); --lr-document-preview-download-link-active-bg: rgb(4, 5, 6)"
       >
         <lr-document-preview
@@ -834,7 +834,7 @@ describe("generic-download fallback", () => {
   it('keeps default download hover and active paint opaque when --lr-color-shadow is hostile in light and dark scopes', async () => {
     for (const themeClass of ['lr-light', 'lr-dark']) {
       const wrapper = await fixture<HTMLElement>(html`
-        <div
+        <div data-lr-theme-scope
           class=${themeClass}
           style="--lr-transition-fast: 0s; --lr-color-shadow: rgb(0 0 0 / 0)"
         >
@@ -969,7 +969,7 @@ describe('status="converting"', () => {
     // reads alpha only, so a translucent shadow theme -- entirely reasonable for a shadow color --
     // faded the entire ring rather than just cutting its centre out.
     const el = (await fixture(html`
-      <lr-document-preview
+      <lr-document-preview data-lr-theme-scope
         status="converting"
         progress="42"
         style="--lr-theme-color-shadow: rgb(0 0 0 / 0.25)"

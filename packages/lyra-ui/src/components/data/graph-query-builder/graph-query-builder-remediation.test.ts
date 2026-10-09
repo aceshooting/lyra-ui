@@ -12,7 +12,7 @@ function query(): GraphQuery {
 
 for (const part of ['min-hops', 'max-hops']) {
   it(`contains all select aliases while a real ${part} choice emits one full query`, async () => {
-    const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder style="--lr-transition-fast:0ms" .value=${query()}></lr-graph-query-builder>`);
+    const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder data-lr-theme-scope style="--lr-transition-fast:0ms" .value=${query()}></lr-graph-query-builder>`);
     const events: Array<{ type: string; hostOwned: boolean; detail: unknown }> = [];
     for (const type of ['input', 'change', 'lr-input', 'lr-change', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
       el.addEventListener(type, (event) => events.push({ type, hostOwned: event.composedPath()[0] === el, detail: (event as CustomEvent).detail }));
@@ -47,7 +47,7 @@ for (const part of ['min-hops', 'max-hops']) {
 }
 
 async function watchedBuilder(): Promise<{ el: LyraGraphQueryBuilder; leaked: string[] }> {
-  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder data-lr-theme-scope
     style="--lr-transition-fast:0ms"
     .value=${{ ...query(), startId: '' }}
     .relationshipTypeOptions=${[{ value: 'knows' }, { value: 'likes' }]}
@@ -185,7 +185,7 @@ it('keeps both path edits that land before the next render', async () => {
 });
 
 it('keeps a disabled Save at rest under the pointer and mixes Run hover from its own fill', async () => {
-  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder
+  const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder data-lr-theme-scope
     style="--lr-transition-fast: 0s; --lr-graph-query-builder-run-bg: rgb(0, 128, 0); --lr-color-mix-hover: 0%"
     .value=${query()}
   ></lr-graph-query-builder>`);

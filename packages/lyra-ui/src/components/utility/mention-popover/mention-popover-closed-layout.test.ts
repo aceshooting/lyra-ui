@@ -18,7 +18,7 @@ it('keeps a settled-closed lr-mention-popover listbox out of the scrollable layo
   const container = await fixture<HTMLDivElement>(html`
     <div style="position: relative; width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start; --lr-positioning-strategy: absolute">
       <input aria-label="Message" style="inline-size: 40px">
-      <lr-mention-popover style="--lr-transition-fast: 0s"></lr-mention-popover>
+      <lr-mention-popover data-lr-theme-scope style="--lr-transition-fast: 0s"></lr-mention-popover>
     </div>
   `);
   const input = container.querySelector('input')!;
@@ -40,7 +40,7 @@ it('preserves the listbox opacity transition while removing the settled closed l
   const wrapper = await fixture<HTMLDivElement>(html`
     <div>
       <input aria-label="Message">
-      <lr-mention-popover style="--lr-transition-fast: 120ms"></lr-mention-popover>
+      <lr-mention-popover data-lr-theme-scope style="--lr-transition-fast: 120ms"></lr-mention-popover>
     </div>
   `);
   const control = wrapper.querySelector<LyraMentionPopover>('lr-mention-popover')!;

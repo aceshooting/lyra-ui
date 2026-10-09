@@ -636,7 +636,7 @@ describe('app-rail-group collapse focus and glass hover', () => {
 
   it('paints its hover foreground like the items beside it on a glass surface', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="--_lr-glass-foreground-weight: 50%; --lr-theme-transition-fast: 0s">
+      <div data-lr-theme-scope style="--_lr-glass-foreground-weight: 50%; --lr-theme-transition-fast: 0s">
         <lr-app-rail-group heading="Projects" collapsible><lr-app-rail-item href="/one">One</lr-app-rail-item></lr-app-rail-group>
       </div>
     `);

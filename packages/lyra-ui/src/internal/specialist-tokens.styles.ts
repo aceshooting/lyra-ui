@@ -1,5 +1,10 @@
 import { css } from 'lit';
 
+// PER-MODE RECORD (since 27.0.0). Components adopt specialist-host-tokens.styles.ts, generated from
+// tokens/canonical-tokens.json with each value on the inherited mode switches. The chart and
+// terminal palette generators keep writing their ramps between the markers below, and
+// generate-design-tokens.mjs checks this record against canonical data.
+
 // Specialist visualization and terminal palettes are opt-in so primitive controls do not parse
 // token families they can never consume. Token names, values and mode selectors remain identical
 // to the shared catalog; components that reference one of these families adopt this sheet after

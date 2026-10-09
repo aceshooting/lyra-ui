@@ -302,7 +302,7 @@ it("keeps the historical 8px placement gap when the themeable hook is unset", as
 
 it('uses the live --lr-space-s token when no public placement-gap override is valid', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-theme-space-s: 20px">
+    <div data-lr-theme-scope style="--lr-theme-space-s: 20px">
       <lr-selection-toolbar
         open
         text="selected"
@@ -325,7 +325,7 @@ it("lets a valid public placement gap override the live token for anchor and vie
     1.5 *
     Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
   const wrapper = await fixture(html`
-    <div style="--lr-theme-space-s: 20px">
+    <div data-lr-theme-scope style="--lr-theme-space-s: 20px">
       <lr-selection-toolbar
         open
         text="selected"
@@ -376,7 +376,7 @@ it("inherits the placement gap hook from an ancestor", async () => {
 
 it('uses the live token after an invalid public placement gap', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-theme-space-s: 20px">
+    <div data-lr-theme-scope style="--lr-theme-space-s: 20px">
       <lr-selection-toolbar
         open
         text="selected"
@@ -397,7 +397,7 @@ it('uses the live token after an invalid public placement gap', async () => {
 
 it('resolves a density-scaled token for the rendered placement gap', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-theme-space-s: max(calc(20px * 0.75), 0px)">
+    <div data-lr-theme-scope style="--lr-theme-space-s: max(calc(20px * 0.75), 0px)">
       <lr-selection-toolbar open text="selected" .rect=${new DOMRect(240, 200, 20, 20)}></lr-selection-toolbar>
     </div>
   `);
@@ -410,7 +410,7 @@ it('resolves a density-scaled token for the rendered placement gap', async () =>
 
 it('uses a public math expression before the shared placement token', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-theme-space-s: 20px">
+    <div data-lr-theme-scope style="--lr-theme-space-s: 20px">
       <lr-selection-toolbar
         open text="selected" style="--lr-selection-toolbar-placement-gap: calc(10px + 2px)"
         .rect=${new DOMRect(240, 200, 20, 20)}

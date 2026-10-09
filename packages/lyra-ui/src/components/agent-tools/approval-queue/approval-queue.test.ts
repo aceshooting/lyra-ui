@@ -511,7 +511,7 @@ describe('lr-approval-queue', () => {
     // row's "must not move" reads below would otherwise sample the resting colour mid-transition
     // and report a row that DOES light up as inert.
     const el = await fixture<LyraApprovalQueue>(html`
-      <lr-approval-queue style="--lr-transition-fast: 0s" .requests=${mixed}></lr-approval-queue>
+      <lr-approval-queue data-lr-theme-scope style="--lr-transition-fast: 0s" .requests=${mixed}></lr-approval-queue>
     `);
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')];

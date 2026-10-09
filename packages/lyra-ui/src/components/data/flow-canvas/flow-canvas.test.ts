@@ -877,7 +877,7 @@ describe('static rendering', () => {
   });
 
   it('paints the decorative dot grid with --lr-color-border-subtle while edges keep --lr-color-border', async () => {
-    const el = (await fixture(html`<lr-flow-canvas
+    const el = (await fixture(html`<lr-flow-canvas data-lr-theme-scope
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
     ></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -2068,7 +2068,7 @@ describe('disabled nodes', () => {
 
   it('uses the shared disabled-opacity theme token when no component override is set', async () => {
     const el = (await fixture(
-      html`<lr-flow-canvas style="--lr-theme-opacity-disabled: 0.37"></lr-flow-canvas>`,
+      html`<lr-flow-canvas data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.37"></lr-flow-canvas>`,
     )) as LyraFlowCanvas;
     el.nodes = [{ id: 'disabled', position: { x: 0, y: 0 }, disabled: true }];
     await el.updateComplete;
@@ -4535,7 +4535,7 @@ describe('node overlays escape the canvas', () => {
     const el = (await fixture(html`
       <lr-flow-canvas nodes-draggable style="width:320px;height:120px;${options.style ?? ''}">
         <div node-id="a" style="padding:12px">
-          <lr-dropdown style="--lr-transition-fast:0ms">
+          <lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms">
             <button slot="trigger" type="button">Menu</button>
             ${Array.from({ length: count }, (_, i) => html`<lr-dropdown-item value=${`i${i}`}>Item ${i}</lr-dropdown-item>`)}
           </lr-dropdown>

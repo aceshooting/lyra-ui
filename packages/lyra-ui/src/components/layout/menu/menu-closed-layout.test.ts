@@ -23,7 +23,7 @@ it("keeps a closed-after-resize lr-menu submenu surface out of an ancestor's scr
       <lr-menu label="Row actions" style="width: 120px">
         <lr-menu-item value="share" id="share">
           Share
-          <lr-menu slot="submenu" id="share-menu" style="--lr-transition-fast: 0s">
+          <lr-menu data-lr-theme-scope slot="submenu" id="share-menu" style="--lr-transition-fast: 0s">
             <lr-menu-item value="email" id="email">A long submenu label that exceeds the trigger width</lr-menu-item>
           </lr-menu>
         </lr-menu-item>
@@ -49,7 +49,7 @@ it('preserves the submenu close transition while removing the settled-closed lay
       <lr-menu label="Row actions">
         <lr-menu-item value="share" id="share">
           Share
-          <lr-menu slot="submenu" id="share-menu" style="--lr-transition-fast: 1s">
+          <lr-menu data-lr-theme-scope slot="submenu" id="share-menu" style="--lr-transition-fast: 1s">
             <lr-menu-item value="email" id="email">Email</lr-menu-item>
           </lr-menu>
         </lr-menu-item>

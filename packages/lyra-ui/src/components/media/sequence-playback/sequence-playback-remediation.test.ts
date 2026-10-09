@@ -3,7 +3,7 @@ import './sequence-playback.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 
 it('keeps an unavailable play button at rest under hover and press, retaining enabled feedback', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-sequence-playback']>(html`<lr-sequence-playback style="--lr-transition-fast: 0s;"></lr-sequence-playback>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-sequence-playback']>(html`<lr-sequence-playback data-lr-theme-scope style="--lr-transition-fast: 0s;"></lr-sequence-playback>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="play-button"]')!;
   const read = (): string[] => { const style = getComputedStyle(button); return [style.backgroundColor, style.borderColor]; };
   await resetMouse();

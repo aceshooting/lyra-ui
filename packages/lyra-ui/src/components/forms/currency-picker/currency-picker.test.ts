@@ -229,7 +229,7 @@ describe('lr-currency-picker composed field ownership', () => {
   });
 
   it('projects outer custom validity and interactive invalid state to the child trigger', async () => {
-    const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker value="EUR" style="--lr-theme-color-danger-fill-loud: rgb(22, 33, 44)"
+    const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker data-lr-theme-scope value="EUR" style="--lr-theme-color-danger-fill-loud: rgb(22, 33, 44)"
       .currencies=${['EUR', 'USD']}></lr-currency-picker>`);
     await settled(picker);
     picker.setCustomValidity('Billing account disallows this currency');

@@ -32,6 +32,7 @@ it('retains content-driven rows until a theme or table minimum is supplied and r
   const row = element.shadowRoot!.querySelector<HTMLElement>('[part="row"]')!;
   const header = element.shadowRoot!.querySelector<HTMLElement>('[part="head"] > tr')!;
   const baseline = row.getBoundingClientRect().height;
+  scope.setAttribute('data-lr-theme-scope', '');
   scope.style.setProperty('--lr-theme-table-row-height', '80px');
   expect(row.getBoundingClientRect().height).to.be.at.least(80);
   expect(header.getBoundingClientRect().height).to.be.at.least(80);
@@ -1751,7 +1752,7 @@ describe('decorative edges versus control boundaries', () => {
       aria-label="People"
       filterable
       has-more
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
     ></lr-table>`)) as LyraTable<Row>;
     el.columns = stickyColumns;
     el.rows = rows;
@@ -1770,7 +1771,7 @@ describe('decorative edges versus control boundaries', () => {
     const el = (await fixture(html`<lr-table
       aria-label="People"
       has-more
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
       .columns=${columns}
       .rows=${rows}
     ></lr-table>`)) as LyraTable<Row>;
@@ -1786,7 +1787,7 @@ describe('decorative edges versus control boundaries', () => {
       aria-label="People"
       filterable
       error
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
       .columns=${columns}
       .rows=${rows}
     ></lr-table>`)) as LyraTable<Row>;

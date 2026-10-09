@@ -65,7 +65,7 @@ describe("lr-knowledge-base-admin", () => {
 
   it("lets a consumer retint the selected tab via scoped cssprops (regression)", async () => {
     const el = (await fixture(
-      html`<lr-knowledge-base-admin
+      html`<lr-knowledge-base-admin data-lr-theme-scope
         style="--lr-transition-fast: 0s; --lr-knowledge-base-admin-tab-selected-color: rgb(1, 2, 3); --lr-knowledge-base-admin-tab-selected-border: rgb(4, 5, 6);"
       ></lr-knowledge-base-admin>`
     )) as LyraKnowledgeBaseAdmin;

@@ -38,18 +38,20 @@ describe('optional decorative border fallback', () => {
       expect(await border(card)).to.deep.equal(toRgba(shadcn));
       scope.setAttribute('data-lr-look', 'lyra');
       expect(await border(card)).to.deep.equal(toRgba(lyra));
+      card.setAttribute('data-lr-theme-scope', '');
       card.style.setProperty('--lr-color-border', 'rgb(12 34 56)');
       expect(await border(card)).to.deep.equal([12, 34, 56, 255]);
-      scope.style.setProperty('--lr-theme-color-surface-border-subtle', 'rgb(78 90 123 / 0.6)');
+      // A theme scope re-resolves the layer inputs for itself, so the optional input is set on the card scope.
+      card.style.setProperty('--lr-theme-color-surface-border-subtle', 'rgb(78 90 123 / 0.6)');
       expect(await border(card)).to.deep.equal(toRgba('rgb(78 90 123 / 0.6)'));
-      scope.style.setProperty('--lr-theme-color-surface-border-subtle', 'initial');
+      card.style.setProperty('--lr-theme-color-surface-border-subtle', 'initial');
       expect(await border(card)).to.deep.equal([12, 34, 56, 255]);
       card.style.removeProperty('--lr-color-border');
       expect(await border(card)).to.deep.equal(toRgba(lyra));
-      scope.style.removeProperty('--lr-theme-color-surface-border-subtle');
+      card.style.removeProperty('--lr-theme-color-surface-border-subtle');
       scope.setAttribute('data-lr-look', 'shadcn');
       expect(await border(card)).to.deep.equal(toRgba(shadcn));
-      scope.style.setProperty('--lr-theme-color-surface-border-subtle', 'initial');
+      card.style.setProperty('--lr-theme-color-surface-border-subtle', 'initial');
       const control = mode === 'light' ? [145, 145, 145, 255] : [100, 100, 100, 255];
       expect(await border(card)).to.deep.equal(control);
     });

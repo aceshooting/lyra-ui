@@ -168,13 +168,11 @@ function modeAliasSelector(id, mode) {
   const explicit = ':not(:where([data-lr-mode], [data-lr-theme], .lr-light, .lr-dark))';
   return `:where([data-lr-look='${id}']).${mode}${explicit}, :where([data-lr-look='${id}']) .${mode}${explicit}`;
 }
-function focusResolverDeclarations() {
-  return [
-    ['--lr-focus-ring-width', 'max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px))'], ['--lr-focus-ring-color', 'var(--_lr-glass-qualified-focus-ring-color,var(--lr-theme-color-focus,Highlight))'], ['--lr-focus-ring-offset', 'var(--lr-theme-focus-ring-offset,2px)'], ['--lr-focus-ring', 'var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)'],
-  ];
-}
+// The focus-ring composite (--lr-focus-ring*) is a document-layer output since 27.0.0: every
+// boundary that resolves inputs here is also a theme scope that re-derives it, so the resolver no
+// longer declares it and no output name has two Lyra owners.
 export function modeResolverDeclarations(model) {
-  return model.paired.map(name => [name, resolvedInput(model, name)]).concat(focusResolverDeclarations());
+  return model.paired.map(name => [name, resolvedInput(model, name)]);
 }
 export function renderLook(model, look, { modeAliases = false } = {}) {
   const selector = `[data-lr-look='${look.id}']`;
@@ -253,7 +251,6 @@ export function renderTheme(model) {
   css += rule(':root', [['--_lr-dense-on', 'initial'], ['--_lr-dense-off', ''], ['--_lr-style-resolver', STYLE_VERSION]]);
   css += rule("[data-lr-accent]", model.names.filter(accentOwned).flatMap(name => [[slot(name, 'light', 'a'), 'initial'], [slot(name, 'dark', 'a'), 'initial']]).concat([['--lr-theme-accent', 'initial']]));
   css += rule(boundaries, modeResolverDeclarations(model));
-  css += rule('[data-lr-contrast], [data-lr-motion]', focusResolverDeclarations());
   css += rule(':root, [data-lr-look], [data-lr-density], [data-lr-theme-scope]', model.density.map(name => [name, resolvedInput(model, name)]));
   css += '}\n@layer lr-theme-preset.mode {\n';
   css += rule(":where(:root), [data-lr-mode='light'], [data-lr-mode='system']", modeRule(false));
@@ -296,6 +293,9 @@ export function renderNativeChrome(data = JSON.parse(readFileSync(new URL('../to
     ['fill', fill], ['restingFill', fill],
     ["scrolling ? css`var(--_lr-glass-viewport-width, 100%)` : css`auto`", 'auto'],
     ["scrolling ? css`var(--_lr-glass-viewport-height, 100%)` : css`auto`", 'auto'],
+    // The glass host restates the focus ring the document layer resolved at the scope; the native
+    // utility already declares the same pair on itself below, so the restatement is identical.
+    ['glassFocusRing', '--lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color)); --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)'],
   ]);
   const recipe = template.replace(/\$\{([^}]+)\}/g, (_, expression) => {
     if (!placeholders.has(expression)) throw new Error(`Unrecognized shared glass placeholder ${expression}`);
