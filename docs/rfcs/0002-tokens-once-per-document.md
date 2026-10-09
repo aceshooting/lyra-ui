@@ -1,7 +1,8 @@
 # RFC 0002: Declare design tokens once per document
 
-- **Status:** Accepted — implemented for 27.0.0; the status moves to Implemented once the
-  performance release gate (see [Delivery](#delivery-2700)) passes on the idle build host.
+- **Status:** Accepted — implemented for 28.0.0 (withdrawn from 27.0.0 after its performance gate
+  failed); the status moves to Implemented once the performance release gate (see
+  [Delivery](#delivery-2800)) passes on the idle build host.
 - **Decision:** Accepted by the maintainer on 2026-09-27, with the 22.0 switch still conditional on
   the performance release gate; the unresolved questions not marked closed stay open, and closed
   question 3's removal of bare `.light`/`.dark` follows the fixed stylesheet's removal release
@@ -258,6 +259,16 @@ performance goal, so the release gate (test plan) decides the 22.0 switch.
 
 ## Proposed public contract
 
+> **The 28.0.0 contract.** This section was written against v21 and states v21→v22 changes. Where
+> 28.0.0 differs, the [Delivery](#delivery-2800) section is authoritative, and the tables below are
+> updated in place: the layer has 253 declarations (244 public outputs and 9 private glass
+> companions) plus 4 host-local names; `theme.css` and `tokens-root.css` each carry the whole
+> layer, and a page links one of them, not both; the neutral marker is an output scope only (it
+> does not re-resolve inputs); the scope list matches the generated one below; with `theme.css`
+> about 1,006 custom properties are declared on `:root`; the layer consumes 224 inputs and
+> component or host-local declarations read 63. The Motivation, Appendix A and the measured tables
+> stay as historical evidence for v21.
+
 ### The document token layer — breaking
 
 The layer is every custom property that `internal/tokens/palette.styles.ts` and
@@ -325,13 +336,24 @@ generated list is closed:
 | `:root` | the document | compatible |
 | `.lr-light`, `.lr-dark`, `[data-lr-theme]` (any value) | existing mode scopes | compatible |
 | `.lr-token-light`, `.lr-token-dark`, `[data-lr-design-token-mode]` | `design-tokens.css` fixture scopes | compatible |
-| `.light`, `.dark` | nested regions of the deprecated fixed `themes/shadcn.css`; mode-neutral; removed with it no earlier than v24 | compatible in v22 and v23 |
-| `[data-lr-theme-scope]` (presence; any value) | new mode-neutral marker | new |
-| `[data-lr-mode]`, `[data-lr-look]`, `[data-lr-accent]`, `[data-lr-density]`, `[data-lr-surface]` | RFC 0001's axis boundaries | new with RFC 0001 |
+| `:where([data-lr-look]) .light`, `:where([data-lr-look]) .dark` | a look's scoped mode aliases (the fixed `themes/shadcn.css` and its bare `.light`/`.dark` were removed in v24) | compatible |
+| `[data-lr-theme-scope]` (presence; any value) | new mode-neutral marker; an output scope only | new |
+| `[data-lr-mode]`, `[data-lr-look]`, `[data-lr-accent]`, `[data-lr-density]`, `[data-lr-contrast]`, `[data-lr-motion]` | RFC 0001's axis boundaries (`[data-lr-surface]` sets no layer-consumed input and is not a scope) | new with RFC 0001 |
+
+**Input boundaries and output scopes (28.0.0).** Two stages re-derive tokens. RFC 0001's resolver in
+`theme.css` turns look, accent and mode slots into `--lr-theme-*` inputs at its *input boundaries*
+(`:root`, the mode scopes, the axis attributes, and a marked element that carries the inline private
+slots `applyLyraStyleScope()` writes, `[data-lr-theme-scope][style*='--_lr-']`). This RFC's layer
+turns inputs into `--lr-*` outputs at every *output scope* in the table. Every input boundary is an
+output scope, but the bare marker is not an input boundary: it re-derives the outputs from the
+inputs it inherits, so an input set on `:root` (inline, in an unlayered stylesheet, or by a runtime
+accent) or on an outer scope reaches a marked region exactly as it reaches an unmarked one, and a
+redundant marker is value-identical to its parent (a browser gate checks this in every engine).
 
 `:host` is not a scope. An application component that sets inputs on its own `:host` marks its host
-element, which is matched from the outer tree like any other element. A scope costs roughly what one
-element costs today, so a page pays per scope, not per component. RFC 0001's `applyLyraStyleScope()`
+element, which is matched from the outer tree like any other element. A neutral scope evaluates the
+253 layer declarations, a little less than one v21 host's 293; an input boundary also evaluates
+`theme.css`'s resolver (136 more). A page pays per scope, not per component. RFC 0001's `applyLyraStyleScope()`
 writes the marker whenever it writes inline inputs, and adopts the layer into the element's root.
 
 The marker follows HTML presence semantics: `data-lr-theme-scope="false"` still marks. React renders
@@ -378,6 +400,10 @@ wrappers).
 | 11 | `theme.css`'s `--lr-focus-ring*` rule | Declared on the mode selectors, fallback `Highlight` | Removed; the layer owns the four names. `theme.css` sets `--lr-theme-color-focus` in both modes, so values do not change | compatible |
 | 12 | `:host-context()` dark routes | Chromium only | Removed | compatible |
 | 13 | A mode scope or marker added inside an application shadow root after its Lyra elements connected | Without `theme.css`, Chromium follows an added `.lr-dark`; otherwise no effect | No effect until `adoptLyraTokens(root)` or the next Lyra connect under a scope there | behaviour change |
+| 14 | `--lr-color-border` / `--lr-color-border-strong` set on `lr-card`, `lr-details` or `lr-accordion-item` (28.0.0) | Reaches slotted native content (not nested Lyra hosts, which re-derived) | The opaque body restores the nearest scope's unqualified borders for its content; the output still applies to the chrome that reads it | behaviour change |
+| 15 | Shadcn's brand-following roles (neutral loud) in the default look (28.0.0) | Resolved once at `:root`: a brand input written on `:root` recoloured them inside every nested input boundary, where brand itself kept its own value | Re-read brand on every boundary, as the explicit look always did | fix |
+| 16 | Design-token fixture scopes and mode (28.0.0) | Inputs only; nested scopes, specialist palettes and input boundaries below followed the ancestor's mode | Also set the mode switches (in the mode sublayer, so a fixture on `<html>` beats the OS default; an explicit Lyra mode on the same element wins) | fix |
+| 17 | `theme.css` (28.0.0) | Inputs and the resolver only | Also ends with the whole layer; do not link `tokens-root.css` next to it (the migration report flags a double import) | behaviour change |
 
 ### Examples
 
@@ -401,10 +427,11 @@ adoptLyraTokens(this.shadowRoot);
 ```
 
 ```css
-/* Server-rendered pages, and pages that want application elements themed before any Lyra element
-   connects: pin Lyra's layer order first, then link the static layer. */
+/* Server-rendered pages, and pages that want application elements themed before Lyra loads: ONE
+   static copy of the layer. theme.css carries it (and pins Lyra's layer order). */
 @import '@aceshooting/lyra-ui/theme.css';
-@import '@aceshooting/lyra-ui/tokens-root.css';
+/* ...or, on a page that does not use theme.css, the layer alone: */
+/* @import '@aceshooting/lyra-ui/tokens-root.css'; */
 ```
 
 ## Composition and interaction
@@ -446,8 +473,10 @@ covers the first case; the development build re-checks on every Lyra update and 
 
 **Nesting.** Scopes nest like inheritance: a scope re-derives from the inputs and switches it
 inherits plus the ones set on it, and its descendants inherit the result until the next scope. An
-output set on an ancestor survives only until the next scope, because every scope re-declares all
-290 outputs. Component states (hover, active, variants, sizes) are unaffected; they resolve per host
+output set on an ancestor survives only until the next scope, because every scope re-declares every
+output. With `theme.css`, an input boundary (a mode scope or an axis attribute) also re-resolves the
+inputs from the look, accent and mode slots, so an input set above it does not pass it (RFC 0001);
+the neutral marker does not, so it nests exactly like inheritance. Component states (hover, active, variants, sizes) are unaffected; they resolve per host
 from component-local tokens.
 
 **Observers.** Canvas components repaint through `internal/theme-watcher.ts`, `watchDarkTheme`
@@ -544,6 +573,9 @@ and 183 instead of 17 in WebKit (`late-adopt.mjs`, 5 runs, medians, load 6–8).
 pay this once per document. Pages that link `tokens-root.css` avoid it: the static file declares a
 private sentinel on `:root`, and the first connect in a document skips the constructed copy when one
 computed-style read finds it. The spike did not prototype the skip; the release gate measures it.
+Since 28.0.0 `theme.css` carries the same layer, so every page that imports it skips the constructed
+copy, and a page with no Lyra stylesheet adopts it when the first Lyra class is registered, normally
+before the application has rendered a large DOM (see [Delivery](#delivery-2800)).
 
 **Browser support.** `Document.adoptedStyleSheets` and `ShadowRoot.adoptedStyleSheets` exist in
 every browser above the v22 floor (roadmap item 35: Firefox 125, Safari 17). The switches need only
@@ -698,9 +730,9 @@ it.
 
 Numbers are stable, because RFC 0001 cites them; closed questions keep their place.
 
-1. **Closed (27.0.0): marker name.** A dedicated `data-lr-theme-scope`, the name 21.x already
+1. **Closed (28.0.0): marker name.** A dedicated `data-lr-theme-scope`, the name 21.x already
    recognised in `theme.css` and `tokens-root.css` and that `applyLyraStyleScope()` writes.
-2. **Closed (27.0.0): adoption into application roots.** On demand, as proposed, with no opt-out:
+2. **Closed (28.0.0): adoption into application roots.** On demand, as proposed, with no opt-out:
    Lyra only ever appends, and `adoptLyraTokens()` covers scopes that appear later. The check also
    walks up through enclosing application roots, so an application host that is itself a marked
    scope inside another application root gets the layer in that outer root too.
@@ -711,36 +743,47 @@ Numbers are stable, because RFC 0001 cites them; closed questions keep their pla
 4. **Closed: composite components re-declaring shared outputs.** None do: every textual match is
    comment prose, and no parsed component sheet declares a layer name. The parser-based gate keeps
    it that way.
-5. **Closed (27.0.0): diagnostic depth.** No computed-style sampling. The development build walks
+5. **Closed (28.0.0): diagnostic depth.** No computed-style sampling. The development build walks
    inline styles only, and each warning is issued once per page under a fixed key
    (`lyra-theme-scope:unscoped-input`, `:false-marker`, `:layer-missing`, `:foreign-layer`) so the
    strict-console test lanes can seed a deliberate case; `findUnscopedThemeInputs()` and the
    `theme-scopes` migration report cover the rest.
-6. **Closed (27.0.0): two copies.** The layer declares a content hash as its sentinel value. A
+6. **Closed (28.0.0): two copies.** The layer declares a content hash as its sentinel value. A
    document that already resolves the same hash (a linked `tokens-root.css`, or another copy of the
    same release) keeps that copy; a different hash means a different layer, so the adopting copy
    appends its own (the later-adopted layer wins, as change 9 states) and the development build
    warns.
 7. **Closed: layer placement.** The layer stays in `lr-theme` (RFC 0001).
-8. **Closed (27.0.0): stable names.** The subset does not grow. The generator's list now also names
+8. **Closed (28.0.0): stable names.** The subset does not grow. The generator's list now also names
    `--lr-transition-interactive`, which the guide had already documented as stable.
-9. **Closed (27.0.0): specialist palettes.** Kept per host (alternative 10), on the mode switches.
+9. **Closed (28.0.0): specialist palettes.** Kept per host (alternative 10), on the mode switches.
 10. **Pending human evidence.** Windows High Contrast review; a run on representative mobile
     hardware; scrolling and animation on pages with many scopes.
 11. **Per-family scopes.** Each scope re-derives all 290 outputs. The generator could have each axis
     attribute re-derive only the outputs that depend on the inputs that axis sets (density only the
     spacing family, mode only the 55 paired outputs and their dependants), keeping the full set for
-    the neutral marker. This is the main lever if the scope regressions hold.
-12. **Closed (27.0.0): server-rendered application roots.** No server helper emits the layer: the
+    the neutral marker. This is the main lever if the scope regressions hold. **28.0.0 analysis:**
+    the 27 gate's largest scope regression (WebKit, accent change on the root, +200 % with 50 scopes
+    and with a scope on every row) had a trigger that per-family scopes do not touch: a
+    root-resolved follower in `theme.css` (see [Delivery](#delivery-2800)) made every scope's values
+    change on a root write. Equal timings for 50 and about 170 scopes do not by themselves prove that
+    per-scope work is irrelevant (both pages put every row below a scope), and the WebKit mechanism
+    is not yet established by a profile. Both design reviews defer the lever: it is applied only if a
+    profile attributes a regression to work at the scopes, and only after a dependency **and**
+    override/reset analysis proves that dropping a declaration at a given axis attribute is
+    equivalent (every full scope also resets ancestor output overrides, and an axis element can carry
+    an inline input of another family; with the marker an output scope and inline inputs a candidate
+    for automatic scopes, the latter can be solved).
+12. **Closed (28.0.0): server-rendered application roots.** No server helper emits the layer: the
     package has no response-level SSR helper to extend, and a per-response inline copy would defeat
     caching of the static file. Pages link `tokens-root.css` in `<head>` and inside application
     declarative shadow roots that contain scopes; change 4 stays breaking and is documented.
 13. **Accepting a measured regression.** If the release gate confirms a regression with scopes on an
     idle machine and per-family scopes do not remove it, ship with the documented cost or defer?
 
-## Delivery (27.0.0)
+## Delivery (28.0.0)
 
-The design ships in 27.0.0, against a codebase that had moved on since the spike (v21). Where the
+The design ships in 28.0.0, against a codebase that had moved on since the spike (v21). Where the
 code had changed, the implementation follows this RFC's intent:
 
 - **Generated from canonical data.** `scripts/document-token-layer.mjs` builds the layer from the
@@ -766,7 +809,7 @@ code had changed, the implementation follows this RFC's intent:
   `theme.css`, the look aliases and `LOOK_MODE_RESOLVER` stop declaring the focus-ring composite
   (change 11).
 - **Migration.** The `theme-scopes` rule ships as `lyra-ui-migrate --rule=theme-scopes`, not under
-  `--origin=lyra-v21` (the 21-to-22 profile), because the layer arrives in 27. It also marks inline
+  `--origin=lyra-v21` (the 21-to-22 profile), because the layer arrives in 28. It also marks inline
   outputs that other outputs derive from (`--lr-transition-fast`), where marking restores the v26
   result (change 2). The repository's own tests and stories are migrated by the same rule
   (`pnpm run theme-scopes`, enforced by `check:theme-scopes`).
@@ -780,6 +823,97 @@ code had changed, the implementation follows this RFC's intent:
   variant from the published 26.0.0 tarball (`LYRA_BASELINE_DIST`) and an implementation variant
   `i` (`--candidate`); results are recorded in the release notes before this RFC is marked
   Implemented. Open questions 10, 11 and 13 stay open until then.
+
+**After the 27.0.0 gate (28.0.0).** The 27 gate failed on a shared host: first connect on a page with
+20,000 application rows was 4–9.5× slower without `tokens-root.css` (parity with it), and WebKit's
+accent change on the root was about three times slower with 50 scopes or a scope on every row. The
+28.0.0 implementation changes:
+
+- **The layer ships inside `theme.css`.** `scripts/theme-document-layer.mjs` appends the generated
+  layer to `theme.css` (byte-identical to the body of `tokens-root.css`, gated by
+  `document-token-layer.test.mjs` and `check:style-axes`). Every page that imports `theme.css` has
+  the layer from its first style pass, the runtime finds the sentinel, and no first connect
+  invalidates the document. The cascade is unchanged: every name the layer shares with `theme.css`'s
+  own rules sits in a different cascade layer. `tokens-root.css` remains the layer alone, for pages
+  without `theme.css`; linking both is harmless but makes every scope match the layer twice.
+- **Adoption at registration.** Without a static copy, `LyraElement.observedAttributes` (read by
+  `customElements.define()`, never at import) adopts the layer into the global document, normally
+  while it is still small. Only a page that registers Lyra late, after building a large DOM, and
+  links neither stylesheet still pays the one-off whole-document invalidation; the gate measures that
+  case separately (`late-adopt.mjs --lazy --no-theme`).
+- **One document check per task.** The connect-time check (and the development diagnostic's layer
+  check) runs once per document per task instead of once per element; a wholesale replacement of
+  `adoptedStyleSheets` is still repaired by the next task's connect.
+- **Trigger of the WebKit accent regression.** The default look projects Shadcn's neutral loud
+  roles, which follow brand, into a `:root`-only rule as a raw `var(--lr-theme-color-brand-…)`
+  slot, so the value was substituted once at `:root` and inherited. Every theme scope re-resolves
+  brand from its slots, so a brand write on `:root` left brand unchanged inside each scope but
+  changed the followers there: every scope's computed custom properties then differed from both its
+  parent's and its own previous values. WebKit then gives each scope its own custom-property data
+  and, because its matched-declarations cache is keyed on the identity of the parent's
+  custom-property data, resolves each scope's whole subtree from scratch. Without the leak WebKit
+  finds each scope's new style equal to the old one and stops there. The style-axes compiler now
+  emits the same follow switch for the default look as for an explicit look (RFC 0001, "Roles that
+  follow brand"), and the follower reads the brand input resolved on the same boundary, so it can
+  never disagree with brand; on `:root` it still follows a brand input written there.
+  `bench.html?leak=1` (`run.mjs --leak`) restores the old compile on the new build to isolate the
+  trigger. The WebKit mechanism above is read from WebKit's source (`CustomPropertyData`,
+  `MatchedDeclarationsCache`) and stays a hypothesis: the `--leak` A/B establishes the trigger, not
+  the mechanism, and the 27 report also shows an inline write on `<html>` costing about twice an
+  attribute-driven mode switch even in A. The inline-on-`<html>` mutation path is therefore a
+  suspect of its own: the library's custom accent (`setLyraStyle({ accent })`) is exactly such a
+  write and does change every scope, so the 28.0.0 gate measures it with scopes (`runtime-accent`)
+  and profiles any WebKit cell above +10 % (`profile-webkit.mjs`) before attributing a cause.
+- **The neutral marker is an output scope only** (both design reviews). `theme.css`'s resolver no
+  longer lists `[data-lr-theme-scope]`; it lists `[data-lr-theme-scope][style*='--_lr-']`, the
+  marked element with inline private slots that `applyLyraStyleScope()` writes (also from older
+  copies of the runtime). An input set on `:root` or an outer scope now reaches a marked region, so
+  the `theme-scopes` codemod no longer changes rendering on pages that customise `:root`, and a
+  neutral scope evaluates 253 declarations instead of 389. Gates: a browser test that a bare marker
+  child equals its parent for every output and consumed input (situations: no override, inline,
+  unlayered and `lr-overrides` root inputs, a runtime custom accent, a design-token fixture, a look
+  boundary, a mode island; with and without `theme.css`; OS light and dark); a generator lint that
+  no root-only declaration in `theme.css` references a name a boundary re-declares (it fails on the
+  27 follower compile); and custom-property budgets (1,006 on `:root`, 253 at a neutral scope).
+- **Provider identity instead of a permanent "linked" flag.** The runtime identifies the stylesheet
+  that provides the layer in each tree scope (by reading the tail of each sheet for the sentinel, no
+  computed-style read per element), re-validates it cheaply, adopts its own copy when the provider
+  is removed, withdraws its own copy when a static provider arrives later (once after `load`, and
+  on every explicit `adoptLyraTokens()`; the development build warns), honours a `<link>` inside an
+  application shadow root, and checks each root once per microtask checkpoint. A copy with a
+  different layer takes over the shared adopter, because its sheet is adopted later and wins.
+- **Fixture modes take precedence correctly.** The design-token fixture switches sit in
+  `lr-theme-preset.mode` with a class or attribute selector, so a fixture on `<html>` beats
+  `theme.css`'s zero-specificity root and OS defaults in either stylesheet order, and an explicit
+  Lyra mode (`data-lr-mode`, `data-lr-theme="light|dark"`, `.lr-light`, `.lr-dark`) on the same
+  element wins over the fixture.
+- **Design-token fixture scopes set the mode switches**, so a neutral scope or a specialist palette
+  inside `.lr-token-dark` or `[data-lr-design-token-mode='dark']` stays dark with `theme.css`.
+- **Opaque content interiors.** The card, details and accordion-item bodies restore the nearest
+  scope's unqualified borders for their content, so a `--lr-color-border` output set on the
+  component no longer reaches slotted content. This follows from glass qualification without
+  per-host re-derivation and is documented ("Where an override actually reaches"); the supported
+  channels are the surface-border input on a scope and the component hooks. This is a migration
+  decision (behaviour change 14), not a proven necessity: restoring only below glass would need a
+  `:host` capture of the public token, which a scope-flattening resolver (happy-dom) reads as a
+  cycle (`check:custom-property-cycles`), and an alternative needs browser evidence first.
+- **Harness and decision rule.** Re-theme kinds that the library really uses (`runtime-accent`,
+  `named-accent`, `look`, `density`, `region`) beside the three continuity kinds; reset outside the
+  measured CDP interval; scope configurations with the real marker and with mode islands
+  (`--scope-kind marker|dark`), heterogeneous per-row inputs (`--row-inputs`), scopes inside
+  application roots and marked application hosts (`--roots --row-scopes`, `--host-scope`), nested
+  application roots (`--nested`), and a realistic fixed-seed application page (`--page app`: forms,
+  table, tabs, details, charts, a dialog, one dark island, one look boundary, one region accent);
+  `--no-theme`, `--leak`; `late-adopt.mjs --no-theme` / `--lazy` with total startup time. Derived
+  builds (`build.mjs --derived a2,i2,p,j`): A/A and I/I copies for calibration, `p` = the same
+  commit with the per-host delivery (only the delivery differs), `j` = automatic scopes for inline
+  inputs (experiment). `report.mjs` blocks a cell only when the 95 % bootstrap interval of the
+  ratio of medians lies above +3 % and the median delta exceeds 2 ms (1 MB), and marks sub-0.1 ms
+  cells as a timing floor; the rule is adopted only if it flags under 5 % of A/A cells. Results
+  record CSS hashes, the baseline tarball's integrity, the candidate's source identity including
+  uncommitted changes, CPU affinity and per-run load; the gate pins browsers to a cpuset of physical
+  cores (`taskset`) and runs one engine at a time.
+
 
 ## Appendix A: evidence summary
 

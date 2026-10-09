@@ -51,14 +51,13 @@ browser-bundle argument for excluding them does not apply to a server render. Us
   template; the component renders when its definition upgrades in the browser. Use this for initial
   renders that require light-DOM traversal, layout, canvas, observers, media, or other browser APIs.
 
-**Link the token layer in `<head>`.** Since 27.0.0 declarative shadow roots no longer carry the
-shared `--lr-*` layer (one server-rendered `lr-button` is about 34 KB smaller); the browser adopts it
-on the first connect, which for server-rendered markup is hydration. For a correct first paint
-before hydration, link the static copy after the no-flash bootstrap and with `theme.css`:
+**Link the token layer in `<head>`.** Since 28.0.0 declarative shadow roots no longer carry the
+shared `--lr-*` layer (one server-rendered `lr-button` is about 34 KB smaller). `theme.css` carries
+it, so for a correct first paint before hydration link `theme.css` after the no-flash bootstrap (a
+page that does not use `theme.css` links `styles/tokens-root.css`, the layer alone, instead):
 
 ```html
 <link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/theme.css" />
-<link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/styles/tokens-root.css" />
 ```
 
 Hydration then skips the constructed copy. An application's **own** declarative shadow roots that

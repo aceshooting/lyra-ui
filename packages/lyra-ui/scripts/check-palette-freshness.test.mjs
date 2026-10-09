@@ -11,7 +11,8 @@ import {
   checkPaletteFreshness,
 } from './check-palette-freshness.mjs';
 import { assertCanonicalPalette, canonicalPaletteColor, readCanonicalPalette } from './palette-canonical.mjs';
-import { readStyleModel, renderTheme } from './style-axes-model.mjs';
+import { readStyleModel } from './style-axes-model.mjs';
+import { renderThemeCss } from './theme-document-layer.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -48,7 +49,7 @@ for (const failure of [false, true]) {
       cpSync(join(packageDir, 'src/theme/gemstones-data.ts'), join(scratch, 'src/theme/gemstones-data.ts'));
       for (const file of PALETTE_ARTIFACTS) {
         mkdirSync(join(scratch, file, '..'), { recursive: true });
-        writeFileSync(join(scratch, file), file === 'src/theme.css' ? renderTheme(readStyleModel(scratch)) : file);
+        writeFileSync(join(scratch, file), file === 'src/theme.css' ? renderThemeCss(readStyleModel(scratch)) : file);
       }
       const before = PALETTE_ARTIFACTS.map(file => readFileSync(join(scratch, file), 'utf8'));
       mkdirSync(join(scratch, 'scripts'), { recursive: true });

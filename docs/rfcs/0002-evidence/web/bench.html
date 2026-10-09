@@ -4,18 +4,40 @@
     <meta charset="utf-8" />
     <title>tokens-once spike</title>
     <script>
-      // Each variant loads its own theme.css (27.0.0 dropped the focus-ring composite from it).
+      // Each variant loads its own theme.css (28.0.0 dropped the focus-ring composite from it).
       // link=1 also links the variant's tokens-root.css, for the first-adoption measurement.
       const pageParams = new URLSearchParams(location.search);
       const variantDist = `/dist-${pageParams.get('variant') ?? 'a'}`;
-      document.write(`<link rel="stylesheet" href="${variantDist}/theme.css" />`);
+      // theme=0 omits theme.css (a zero-configuration page; since 28.0.0 theme.css carries the layer).
+      if (pageParams.get('theme') !== '0') document.write(`<link rel="stylesheet" href="${variantDist}/theme.css" />`);
+      // The axis stylesheets the extra re-theme kinds need (named accents, density); loaded for
+      // every variant so the pages stay identical apart from the variant under test.
+      if (pageParams.get('theme') !== '0') {
+        document.write(`<link rel="stylesheet" href="${variantDist}/accents.css" />`);
+        document.write(`<link rel="stylesheet" href="${variantDist}/density.css" />`);
+      }
       if (pageParams.get('link') === '1') document.write(`<link rel="stylesheet" href="${variantDist}/styles/tokens-root.css" />`);
+      // leak=1 restores the pre-28 default-look compile of the brand-following neutral roles: a raw
+      // var() resolved once at :root, so a brand write on :root changes every scope's values. It
+      // isolates that cause of the WebKit accent regression on one build.
+      if (pageParams.get('leak') === '1') {
+        const roles = ['fill-loud', 'border-loud', 'on-loud'];
+        const decls = roles.flatMap((r) => [`--_lr-fl-color-neutral-${r}:initial`, `--_lr-ol-color-neutral-${r}: `, `--_lr-fd-color-neutral-${r}:initial`, `--_lr-od-color-neutral-${r}: `,
+          `--_lr-ll-color-neutral-${r}:var(--lr-theme-color-brand-${r})`, `--_lr-ld-color-neutral-${r}:var(--lr-theme-color-brand-${r})`]).join(';');
+        document.write(`<style>@layer lr-theme{:root:where(:not([data-lr-look])){${decls}}}</style>`);
+      }
     </script>
     <style>
       body { margin: 0; font: 14px system-ui, sans-serif; }
       .row, .app-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; align-items: center; }
       lr-card { inline-size: 12rem; }
       lr-input { inline-size: 12rem; }
+      .app-shell { display: grid; grid-template-columns: 14rem 1fr; gap: 8px; }
+      .app-toolbar { grid-column: 1 / -1; display: flex; gap: 8px; padding: 8px; }
+      .app-sidebar { display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+      .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 8px; }
+      .app-form { display: flex; flex-direction: column; gap: 6px; }
+      .app-item { display: flex; justify-content: space-between; padding: 2px 0; }
     </style>
   </head>
   <body>
@@ -44,6 +66,14 @@
       const scopes = Number(params.get('scopes') ?? 0);
       // rowScopes=1 marks every row as a theme scope (what a codemod does for per-row inline inputs).
       const rowScopes = params.get('rowScopes') === '1';
+      // rowInputs=1 (with rowScopes) also sets an inline input on every row scope, with a value that
+      // differs between rows (heterogeneous per-row theming, as a codemod leaves a repeated template).
+      const rowInputs = params.get('rowInputs') === '1';
+      // scopeKind for scopes=K: 'theme' (data-lr-theme="", the 27 gate's stand-in), 'marker' (the real
+      // data-lr-theme-scope marker) or 'dark' (mode islands, the most common real scope).
+      const scopeKind = params.get('scopeKind') ?? 'theme';
+      const SCOPE_OPEN = { theme: '<div data-lr-theme="">', marker: '<div data-lr-theme-scope>', dark: '<div class="lr-dark">' }[scopeKind];
+      const hostScope = params.get('hostScope') === '1';
       // roots=1 puts every row inside its own application shadow root (declarative shadow DOM on a
       // plain host), as in a Lit or Stencil application whose components contain Lyra elements.
       const roots = params.get('roots') === '1';
@@ -52,19 +82,111 @@
       // foreign=always (variant E only) adopts the layer into every application shadow root that
       // contains a Lyra element; the default adopts only where a scope needs it.
       if (params.get('foreign') === 'always') globalThis.__spikeForeignAdopt = 'always';
+      // nested=1 (with roots=1): every row sits in an application root inside another application
+      // root (a Lit app shell holding Lit panels). With rowScopes the innermost root holds a marked
+      // row and the outer root marks the region around the inner host, so adoption walks both roots;
+      // hostScope marks both application hosts.
+      const nested = params.get('nested') === '1';
+      // page=app: a realistic application page instead of uniform rows (appMarkup below).
+      const appPage = params.get('page') === 'app';
+      const seed = Number(params.get('seed') ?? 2802);
 
-      const wrapRow = (inner) => roots
-        ? `<div class="app-row"><template shadowrootmode="open">${inner}</template></div>`
-        : `<div class="row"${rowScopes ? ' data-lr-theme-scope' : ''}>${inner}</div>`;
+      const rowInput = (index) => rowInputs ? ` style="--lr-theme-space-m: ${(0.6 + (index % 9) * 0.05).toFixed(2)}rem"` : '';
+      const rowMarkup = (inner, index) => `<div class="row"${rowScopes ? ' data-lr-theme-scope' : ''}${rowInput(index)}>${inner}</div>`;
+      // roots=1 honours rowScopes / rowInputs inside each application root (the on-demand adoption
+      // path), and hostScope=1 marks each application host (a scope in the outer tree).
+      const marked = hostScope ? ' data-lr-theme-scope' : '';
+      const shadow = (content) => `<template shadowrootmode="open">${content}</template>`;
+      const wrapRow = (inner, index) => {
+        if (!roots) return rowMarkup(inner, index);
+        const content = rowScopes ? rowMarkup(inner, index) : inner;
+        if (!nested) return `<div class="app-row"${marked}>${shadow(content)}</div>`;
+        const panel = `<div class="app-panel"${marked}>${shadow(content)}</div>`;
+        return `<div class="app-row"${marked}>${shadow(rowScopes ? `<section data-lr-theme-scope>${panel}</section>` : panel)}</div>`;
+      };
+
+      /** Deterministic PRNG (mulberry32), so every variant and run builds the same application page. */
+      function prng(value) {
+        let state = value >>> 0;
+        return () => {
+          state = (state + 0x6d2b79f5) >>> 0;
+          let t = state;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      const APP_TYPES = ['lr-button', 'lr-input', 'lr-card', 'lr-badge', 'lr-icon', 'lr-switch', 'lr-select', 'lr-option', 'lr-checkbox',
+        'lr-textarea', 'lr-slider', 'lr-table', 'lr-dialog', 'lr-tab-group', 'lr-tab', 'lr-tab-panel', 'lr-details', 'lr-lite-chart'];
+      /**
+       * A realistic application page, about `n` Lyra elements in sections of ~40, built from a fixed
+       * seed: a toolbar, a dark sidebar island, tabs, form cards, a details list, a data table, small
+       * charts and a closed dialog, plus about ten application elements per Lyra element. Scopes the
+       * way applications use them: one dark island (the sidebar), one look boundary (a "classic"
+       * panel on the Lyra look) and one region accent (a marked promo section with an inline brand).
+       */
+      function appMarkup(n) {
+        const random = prng(seed);
+        const pick = (list) => list[Math.floor(random() * list.length)];
+        const words = ['Orders', 'Billing', 'Team', 'Usage', 'Reports', 'Alerts', 'Search', 'Export', 'Archive', 'Settings'];
+        const text = (count) => Array.from({ length: count }, () => pick(words)).join(' ');
+        const filler = (count) => Array.from({ length: count }, (_, i) => `<div class="app-item"><span>${text(2)}</span><span>${Math.floor(random() * 1000)}</span></div>`).join('');
+        const formCard = () => `<lr-card><div class="app-form">
+          <lr-input label="${pick(words)}" placeholder="${text(2)}"></lr-input>
+          <lr-select label="${pick(words)}">${Array.from({ length: 4 }, (_, i) => `<lr-option value="o${i}">${pick(words)}</lr-option>`).join('')}</lr-select>
+          <lr-checkbox ${random() < 0.5 ? 'checked' : ''}>${text(2)}</lr-checkbox>
+          <lr-switch ${random() < 0.5 ? 'checked' : ''}>${pick(words)}</lr-switch>
+          <lr-slider label="${pick(words)}" value="${Math.floor(random() * 100)}"></lr-slider>
+          <lr-textarea label="${pick(words)}"></lr-textarea>
+          <lr-button variant="${pick(['brand', 'neutral', 'success'])}">${pick(words)}</lr-button>
+          ${filler(8)}
+        </div></lr-card>`;
+        const sections = Math.max(1, Math.round(n / 40));
+        let main = '';
+        for (let k = 0; k < sections; k++) {
+          const cards = Array.from({ length: 3 }, formCard).join('');
+          main += `<section class="app-section">
+            <h2>${text(2)}</h2>
+            <lr-tab-group><lr-tab panel="a${k}">${pick(words)}</lr-tab><lr-tab panel="b${k}">${pick(words)}</lr-tab>
+              <lr-tab-panel name="a${k}"><div class="app-grid">${cards}</div></lr-tab-panel>
+              <lr-tab-panel name="b${k}">${filler(10)}</lr-tab-panel></lr-tab-group>
+            <lr-details summary="${text(2)}">${filler(10)}<lr-badge variant="${pick(['success', 'warning', 'danger'])}">${pick(words)}</lr-badge></lr-details>
+            <lr-table class="app-table" aria-label="${pick(words)}"></lr-table>
+            <lr-lite-chart class="app-chart" type="${pick(['bar', 'line'])}"></lr-lite-chart>
+            ${filler(40)}
+          </section>`;
+        }
+        const sidebar = `<aside class="lr-dark app-sidebar">${Array.from({ length: 8 }, () => `<lr-button variant="neutral">${pick(words)}</lr-button><lr-badge>${Math.floor(random() * 9)}</lr-badge>`).join('')}<lr-switch>${pick(words)}</lr-switch>${filler(20)}</aside>`;
+        const classic = `<section data-lr-look="lyra" class="app-classic">${formCard()}${formCard()}</section>`;
+        const promo = `<section data-lr-theme-scope data-region style="--lr-theme-color-brand-fill-loud: #7c3aed">${formCard()}<lr-button variant="brand">${pick(words)}</lr-button></section>`;
+        const toolbar = `<header class="app-toolbar"><lr-input placeholder="Search"></lr-input><lr-icon name="check" label="Done"></lr-icon><lr-button variant="brand">New</lr-button></header>`;
+        const dialog = `<lr-dialog label="${pick(words)}">${formCard()}</lr-dialog>`;
+        return `<div class="app-shell">${toolbar}${sidebar}<main>${main}${classic}${promo}</main>${dialog}</div>`;
+      }
+      /** Seeded data for the properties the application page sets after insertion. */
+      function fillAppData(container) {
+        const random = prng(seed + 1);
+        for (const table of container.querySelectorAll('lr-table.app-table')) {
+          table.columns = [
+            { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+            { key: 'value', label: 'Value', align: 'end', sortable: true, sortValue: (r) => r.value, cell: (r) => r.value },
+          ];
+          table.rows = Array.from({ length: 25 }, (_, i) => ({ id: i, name: `Row ${i}`, value: Math.floor(random() * 1000) }));
+        }
+        for (const chart of container.querySelectorAll('lr-lite-chart.app-chart')) {
+          chart.labels = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
+          chart.datasets = [0, 1].map((d) => ({ label: `S${d}`, data: Array.from({ length: 6 }, () => Math.floor(random() * 10)) }));
+        }
+      }
 
       function markup(n) {
         const rows = [];
         let row = [];
         for (let i = 0; i < n; i++) {
           row.push(UNIT[i % UNIT.length]);
-          if (row.length === UNIT.length) { rows.push(wrapRow(row.join(''))); row = []; }
+          if (row.length === UNIT.length) { rows.push(wrapRow(row.join(''), rows.length)); row = []; }
         }
-        if (row.length) rows.push(wrapRow(row.join('')));
+        if (row.length) rows.push(wrapRow(row.join(''), rows.length));
         if (!scopes) return rows.join('');
         const buckets = Array.from({ length: scopes }, () => []);
         rows.forEach((r, i) => buckets[i % scopes].push(r));
@@ -72,17 +194,20 @@
         for (let chain = 0; chain < scopes; chain += 5) {
           let inner = '';
           for (let level = Math.min(chain + 4, scopes - 1); level >= chain; level--) {
-            inner = `<div data-lr-theme="">${buckets[level].join('')}${inner}</div>`;
+            inner = `${SCOPE_OPEN}${buckets[level].join('')}${inner}</div>`;
           }
           html += inner;
         }
         return html;
       }
 
-      /** Lyra elements that are rows' children, inside application shadow roots too. */
-      function lyraTop(container) {
-        if (!roots) return Array.from(container.querySelectorAll(TYPES.join(',')));
-        return Array.from(container.querySelectorAll('.app-row'), (h) => Array.from(h.shadowRoot.children)).flat();
+      /** Lyra elements the page placed itself, inside (nested) application shadow roots too. */
+      function lyraTop(root, out = []) {
+        for (const el of root.querySelectorAll('*')) {
+          if (el.localName.startsWith('lr-')) out.push(el);
+          else if (el.shadowRoot) lyraTop(el.shadowRoot, out);
+        }
+        return out;
       }
 
       /** Every lr-* element, including ones a component composes inside its own shadow root. */
@@ -94,15 +219,26 @@
         return out;
       }
 
-      await import(`/out/bundle-${variant}.js`);
-      await Promise.all(Object.keys(ALL).map((t) => customElements.whenDefined(t)));
+      // lazy=1 registers the components only when lateAdopt() runs: a route that loads Lyra after
+      // the page already holds a large application DOM.
+      const lazy = params.get('lazy') === '1';
+      let lyra = {};
+      const load = async () => {
+        // The bundle also exports the style API (setLyraStyle, resetLyraStyle, applyLyraStyleScope).
+        lyra = await import(`/out/${appPage ? 'app-' : ''}bundle-${variant}.js`);
+        await Promise.all((appPage ? APP_TYPES : Object.keys(ALL)).map((t) => customElements.whenDefined(t)));
+      };
+      // Registration-through-first-paint cost of the bundle (module evaluation, define(), and, on a
+      // page without a static provider, the layer adoption that priming does at registration).
+      let loadMs = null;
+      if (!lazy) { const t = performance.now(); await load(); document.body.offsetHeight; loadMs = performance.now() - t; }
 
       window.spike = {
         variant,
         isolated: self.crossOriginIsolated,
         async render(n, incremental = false) {
           const container = document.getElementById('host');
-          const html = markup(n);
+          const html = appPage ? appMarkup(n) : markup(n);
           await frame();
           const t0 = performance.now();
           if (incremental) {
@@ -120,6 +256,7 @@
           } else {
             container.innerHTML = html;
           }
+          if (appPage) fillAppData(container);
           const top = lyraTop(container);
           await Promise.all(Array.from(top, (e) => e.updateComplete));
           const t1 = performance.now();
@@ -127,21 +264,26 @@
           const t2 = performance.now();
           await frame();
           const t3 = performance.now();
-          const nested = allLyra(container).length;
-          return { script: t1 - t0, styleLayout: t2 - t1, total: t2 - t0, toNextFrame: t3 - t0, top: top.length, allLyra: nested };
+          const every = allLyra(container).length;
+          return { script: t1 - t0, styleLayout: t2 - t1, total: t2 - t0, toNextFrame: t3 - t0, top: top.length, allLyra: every };
         },
         /** Plain application markup with no Lyra element, for the first-adoption measurement. */
         async appRows(n) {
+          const t0 = performance.now();
           const app = document.createElement('div');
           app.innerHTML = Array.from({ length: n }, (_, i) => `<div class="app"><span>Row ${i}</span><span>value</span></div>`).join('');
           document.body.append(app);
           document.body.offsetHeight;
+          const ms = performance.now() - t0;
           await frame();
+          return ms;
         },
+        get loadMs() { return loadMs; },
         /** Connect one Lyra element to a page that has none yet: the first adoption of the layer. */
         async lateAdopt() {
           await frame();
           const t0 = performance.now();
+          if (lazy) await load();
           const el = document.createElement('lr-badge');
           el.textContent = 'Late';
           document.body.prepend(el);
@@ -149,27 +291,50 @@
           document.body.offsetHeight;
           return performance.now() - t0;
         },
+        /**
+         * One re-theme kind, `reps` toggles, each timed through a forced style and layout flush.
+         * Reset is separate (resetTheme) so CDP counters taken around this call hold only toggles.
+         *   mode            data-lr-theme light/dark on <html>
+         *   accent          inline --lr-theme-color-brand-fill-loud on <html> (raw input write)
+         *   space           inline --lr-theme-space-m on <html>
+         *   runtime-accent  setLyraStyle({ accent: '#hex' }): the library's custom-accent path
+         *                   (inline accent slots on <html> plus data-lr-accent="custom")
+         *   named-accent    data-lr-accent between two gemstones (accents.css)
+         *   look            data-lr-look between lyra and shadcn
+         *   density         data-lr-density between compact and comfortable (density.css)
+         *   region          applyLyraStyleScope() with a custom accent on the row container
+         */
         async themeSwitch(kind, reps) {
           const root = document.documentElement;
+          const region = document.querySelector('[data-region]') ?? document.getElementById('host');
           const times = [];
           for (let i = 0; i < reps; i++) {
             await frame();
             const t0 = performance.now();
-            if (kind === 'mode') {
-              root.setAttribute('data-lr-theme', root.getAttribute('data-lr-theme') === 'dark' ? 'light' : 'dark');
-            } else if (kind === 'accent') {
-              root.style.setProperty('--lr-theme-color-brand-fill-loud', i % 2 ? '#035ec6' : '#8b008b');
-            } else if (kind === 'space') {
-              root.style.setProperty('--lr-theme-space-m', i % 2 ? '0.75rem' : '1rem');
-            }
+            const a = i % 2 ? '#035ec6' : '#8b008b';
+            if (kind === 'mode') root.setAttribute('data-lr-theme', root.getAttribute('data-lr-theme') === 'dark' ? 'light' : 'dark');
+            else if (kind === 'accent') root.style.setProperty('--lr-theme-color-brand-fill-loud', a);
+            else if (kind === 'space') root.style.setProperty('--lr-theme-space-m', i % 2 ? '0.75rem' : '1rem');
+            else if (kind === 'runtime-accent') lyra.setLyraStyle({ accent: a });
+            else if (kind === 'named-accent') root.setAttribute('data-lr-accent', i % 2 ? 'topaz' : 'peridot');
+            else if (kind === 'look') root.setAttribute('data-lr-look', i % 2 ? 'shadcn' : 'lyra');
+            else if (kind === 'density') root.setAttribute('data-lr-density', i % 2 ? 'comfortable' : 'compact');
+            else if (kind === 'region') lyra.applyLyraStyleScope(region, { accent: a });
+            else throw new Error(`unknown re-theme kind ${kind}`);
             document.body.offsetHeight;
             times.push(performance.now() - t0);
           }
-          root.removeAttribute('data-lr-theme');
+          return times;
+        },
+        async resetTheme(kind) {
+          const root = document.documentElement;
+          if (kind === 'runtime-accent') lyra.resetLyraStyle();
+          if (kind === 'region') lyra.applyLyraStyleScope(document.querySelector('[data-region]') ?? document.getElementById('host'), null);
+          for (const name of ['data-lr-theme', 'data-lr-accent', 'data-lr-look', 'data-lr-density']) if (kind !== 'runtime-accent') root.removeAttribute(name);
           root.style.removeProperty('--lr-theme-color-brand-fill-loud');
           root.style.removeProperty('--lr-theme-space-m');
+          document.body.offsetHeight;
           await frame();
-          return times;
         },
       };
       window.spikeReady = true;

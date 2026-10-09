@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   DOCUMENT_LAYER_SCOPES,
+  DOCUMENT_LAYER_SENTINEL,
   HOST_LOCAL_TOKENS,
   buildDocumentLayerCss,
   buildHostPreferenceCss,
@@ -65,6 +66,12 @@ test('the glass companions equal the per-mode record they replace', () => {
   const declarations = layerDeclarations(source);
   for (const [name, value] of light) {
     if (name === '--_lr-glass-dark-anchor') continue;
+    // A glass host derives its qualified focus colour itself; a scope-level declaration would be
+    // guaranteed-invalid there and would beat the host's own :host rule from the outer tree.
+    if (name === '--_lr-glass-qualified-focus-ring-color') {
+      assert.equal(declarations.has(name), false, name);
+      continue;
+    }
     assert.equal(declarations.get(name)?.light, value, name);
   }
 });
@@ -132,4 +139,26 @@ test('the theme-scopes rule marks inline inputs and feeding outputs, and reports
   ]);
   assert.match(migrateThemeScopes('<div style={{ "--lr-theme-space-m": "1rem" }} />', { file: 'a.tsx' }).content, /data-lr-theme-scope=""/);
   assert.equal(migrateThemeScopes(result.content, { file: 'fixture.ts' }).changes.length, 0, 'idempotent');
+  const double = migrateThemeScopes('@import "@aceshooting/lyra-ui/theme.css";\n@import "@aceshooting/lyra-ui/tokens-root.css";\n', { file: 'app.css' });
+  assert.deepEqual(double.warnings.map((warning) => [warning.warningCode, warning.line]), [['THEME_SCOPE_DOUBLE_LAYER_REVIEW', 2]]);
+  assert.deepEqual(migrateThemeScopes('@import "@aceshooting/lyra-ui/tokens-root.css";\n', { file: 'app.css' }).warnings, []);
+});
+
+test('theme.css ends with the same layer, so importing it makes the constructed copy unnecessary', () => {
+  const theme = read('src/theme.css');
+  const body = layerCss.slice(layerCss.indexOf('\n') + 1);
+  assert.equal(theme.endsWith(body), true);
+  assert.equal(theme.split(DOCUMENT_LAYER_SENTINEL).length, 2, 'one sentinel declaration');
+});
+
+test('custom-property cardinality stays within budget on :root and at a neutral scope', async () => {
+  const { customPropertyCardinality } = await import('./theme-boundary-lint.mjs');
+  const counts = customPropertyCardinality(read('src/theme.css'));
+  // Measured for 28.0.0: 1,006 on :root (inherited by every element), 253 at a bare marker (the
+  // layer only; the marker is not an input boundary). Raise a budget only with a changeset that
+  // explains the growth: these counts drive style cost in every engine.
+  const BUDGET = { root: 1030, marker: 260 };
+  assert.ok(counts.root <= BUDGET.root, `:root declares ${counts.root} custom properties (budget ${BUDGET.root})`);
+  assert.ok(counts.marker <= BUDGET.marker, `a neutral scope declares ${counts.marker} custom properties (budget ${BUDGET.marker})`);
+  assert.equal(counts.marker, layerDeclarations(source).size, 'a neutral scope re-derives the document layer and nothing else');
 });

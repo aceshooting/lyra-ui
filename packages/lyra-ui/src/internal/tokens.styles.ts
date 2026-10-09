@@ -1,6 +1,6 @@
 import { css } from 'lit';
 
-// PER-MODE TOKEN RECORD (since 27.0.0). No component adopts this sheet: the shared layer is the
+// PER-MODE TOKEN RECORD (since 28.0.0). No component adopts this sheet: the shared layer is the
 // generated document token layer (document-tokens.generated.ts, host-tokens.styles.ts), built from
 // tokens/canonical-tokens.json. This file remains the readable per-mode mirror that the palette,
 // contrast, interaction-state and style-axes tooling read and rewrite, and generate-design-tokens.mjs

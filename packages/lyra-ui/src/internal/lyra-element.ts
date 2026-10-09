@@ -7,7 +7,7 @@ import {
 } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostTokens } from './host-tokens.styles.js';
-import { ensureLyraTokens } from './document-tokens.js';
+import { ensureLyraTokens, primeLyraTokens } from './document-tokens.js';
 import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
@@ -330,6 +330,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       ]),
     ];
     this.collectionSupport?.installProperties(this);
+    // Registration time, not import time: class modules stay free of side effects.
+    primeLyraTokens();
     if (Object.hasOwn(this, 'deprecatedAliases') && this.deprecatedAliases && !deprecatedAliasSyncHook) {
       devWarnOnce(`lyra-deprecated-alias-installer:${this.name}`,
         `${this.name} declares deprecatedAliases; call installDeprecatedAliases() in a static block.`);

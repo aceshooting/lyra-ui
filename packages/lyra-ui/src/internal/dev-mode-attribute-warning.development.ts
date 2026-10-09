@@ -1,6 +1,6 @@
 import { devWarnOnce, litDevWarnings } from './dev-warning.js';
 import { DOCUMENT_TOKEN_SCOPE_SELECTOR, LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
-import { foreignLyraTokenLayer, hasLyraTokens } from './document-tokens.js';
+import { foreignLyraTokenLayer, hasLyraTokens, lyraTokenLayerArrivedLate } from './document-tokens.js';
 export { devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
 
 /**
@@ -238,9 +238,13 @@ function inlineLayerInputs(element: Element): string[] {
  *   re-derive from it. Stylesheet-applied inputs and later `setProperty()` calls are left to
  *   `findUnscopedThemeInputs()` and the migration report.
  * - `lyra-theme-scope:layer-missing` -- the layer could not be adopted into the host's document.
+ * - `lyra-theme-scope:late-static-layer` -- a static copy of the layer (theme.css, tokens-root.css)
+ *   applied only after this copy had adopted its own, which was then withdrawn.
  * - `lyra-theme-scope:foreign-layer` -- a different token layer (another Lyra release) was already
  *   present; the later-adopted layer wins where their values differ.
  */
+const layerVerifiedThisTask = new WeakSet<Document>();
+
 export function warnThemeScopeUsage(host: Element): void {
   if (!litDevWarnings()) return;
   if (host.getAttribute('data-lr-theme-scope') === 'false') {
@@ -250,10 +254,22 @@ export function warnThemeScopeUsage(host: Element): void {
     );
   }
   const doc = host.ownerDocument;
-  if (doc.defaultView && !hasLyraTokens(doc)) {
+  // Once per document per task, like the adoption check itself: a batch insert connects every
+  // element in one task.
+  if (doc.defaultView && !layerVerifiedThisTask.has(doc)) {
+    layerVerifiedThisTask.add(doc);
+    queueMicrotask(() => layerVerifiedThisTask.delete(doc));
+    if (!hasLyraTokens(doc)) {
+      devWarnOnce(
+        'lyra-theme-scope:layer-missing',
+        `<${host.localName}>: the Lyra document token layer is not adopted in this document; link @aceshooting/lyra-ui/theme.css (or tokens-root.css) or call adoptLyraTokens(document).`
+      );
+    }
+  }
+  if (lyraTokenLayerArrivedLate(doc)) {
     devWarnOnce(
-      'lyra-theme-scope:layer-missing',
-      `<${host.localName}>: the Lyra document token layer is not adopted in this document; link @aceshooting/lyra-ui/tokens-root.css or call adoptLyraTokens(document).`
+      'lyra-theme-scope:late-static-layer',
+      'theme.css (or tokens-root.css) was applied after Lyra registered its first element, so Lyra adopted its own copy of the token layer first and withdrew it later. Load the stylesheet before registering Lyra to avoid restyling the page twice.'
     );
   }
   const foreign = foreignLyraTokenLayer(doc);

@@ -17,11 +17,11 @@
 //       (forced colours, reduced motion) kept on every host as well; a closed scope list that also
 //       covers design-tokens.css and the new [data-lr-theme-scope] marker; and adoption into the
 //       shadow root of any host that is not a registered library component.
-import { cpSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, symlinkSync, lstatSync } from 'node:fs';
+import { cpSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, symlinkSync, lstatSync, renameSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // LYRA_CHECKOUT = root of a Lyra UI checkout whose package has been built (`pnpm build`).
 // Nothing inside it is written: dist/ is copied, and node_modules is only symlinked for resolution.
@@ -34,7 +34,7 @@ const esbuild = await import(path.join(hoisted, 'esbuild/lib/main.js'));
 
 const distA = path.join(here, 'dist-a');
 const out = path.join(here, 'out');
-// Release gate (27.0.0): A may come from a published tarball instead of the checkout
+// Release gate (28.0.0): A may come from a published tarball instead of the checkout
 // (LYRA_BASELINE_DIST=<unpacked package>/dist), and `--candidate <dist>` adds variant I, the
 // implementation exactly as built, with no rewriting.
 const baselineDist = process.env.LYRA_BASELINE_DIST ? path.resolve(process.env.LYRA_BASELINE_DIST) : null;
@@ -65,6 +65,66 @@ if (candidateDist) {
   cpSync(candidateDist, path.join(here, 'dist-i'), { recursive: true });
   writeImportsMap(path.join(here, 'dist-i'));
 }
+// Derived variants for the 28.0.0 gate (`--derived a2,i2,p,j`), built from dist-a / dist-i:
+//   a2, i2  byte-identical copies of A and I under another name, for A/A calibration of the rule;
+//   p       same-commit per-host delivery: I's code, with the whole layer back on every :host and
+//           only the mode switches in the document (and no layer in theme.css), so the only
+//           difference from I is where the layer is declared;
+//   j       I plus automatic scopes for inline inputs (`[style*='--lr-theme-']` in every scope
+//           list), the design review's recommendation 4, as an experiment only.
+const derivedArg = process.argv.indexOf('--derived');
+const DERIVED = derivedArg > 0 ? process.argv[derivedArg + 1].split(',').filter(Boolean) : [];
+const GENERATED = 'internal/document-tokens.generated.js';
+async function overrideGenerated(dist, overrides) {
+  const file = path.join(dist, GENERATED);
+  const original = path.join(dist, 'internal/document-tokens.generated.orig.js');
+  renameSync(file, original);
+  const values = await import(pathToFileURL(original).href);
+  const body = Object.entries(overrides(values)).map(([name, value]) => `export const ${name} = ${JSON.stringify(value)};`).join('\n');
+  // A local export shadows the same name from `export *`.
+  writeFileSync(file, `export * from './document-tokens.generated.orig.js';\n${body}\n`);
+}
+/** The layer's base block: every output, on the full scope list (outside the media arms). */
+function layerBase(css) {
+  const start = css.indexOf('\n:root,.lr-light,');
+  if (start < 0) throw new Error('document layer base block not found');
+  const open = css.indexOf('{', start);
+  return css.slice(open + 1, css.indexOf('}', open));
+}
+/** Removes the document layer from a built theme.css (compacted: no marker comment survives). */
+function stripLayer(css) {
+  const sentinel = css.indexOf('--_lr-document-tokens:');
+  const start = css.lastIndexOf('@layer lr-base{', sentinel);
+  if (sentinel < 0 || start < 0) throw new Error('theme.css carries no document layer');
+  return css.slice(0, start);
+}
+const AUTO_SCOPE = (css) => css.replace(/(:where\(\[data-lr-look\]\)\s*\.dark)\s*\{/g, "$1,[style*='--lr-theme-']{");
+for (const variant of DERIVED) {
+  const source = path.join(here, variant === 'a2' ? 'dist-a' : 'dist-i');
+  const dist = path.join(here, `dist-${variant}`);
+  if (!existsSync(source)) throw new Error(`--derived ${variant} needs ${source}`);
+  rmSync(dist, { recursive: true, force: true });
+  cpSync(source, dist, { recursive: true });
+  if (variant === 'p') {
+    writeFileSync(path.join(dist, 'theme.css'), stripLayer(readFileSync(path.join(dist, 'theme.css'), 'utf8')));
+    await overrideGenerated(dist, (v) => {
+      const modes = v.DOCUMENT_TOKEN_CSS.match(/@layer lr-base\{[\s\S]*?\}\}\n/)?.[0];
+      if (!modes) throw new Error('document layer mode rules not found');
+      return {
+        DOCUMENT_TOKEN_CSS: `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;\n${modes}@layer lr-theme{\n:root{--_lr-document-tokens:lrperhost0000}\n}\n`,
+        DOCUMENT_TOKEN_LAYER_ID: 'lrperhost0000',
+        HOST_TOKEN_CSS: `:host{${layerBase(v.DOCUMENT_TOKEN_CSS)}}\n${v.HOST_TOKEN_CSS}`,
+      };
+    });
+  } else if (variant === 'j') {
+    for (const file of ['theme.css', 'styles/tokens-root.css']) writeFileSync(path.join(dist, file), AUTO_SCOPE(readFileSync(path.join(dist, file), 'utf8')));
+    await overrideGenerated(dist, (v) => ({
+      DOCUMENT_TOKEN_CSS: AUTO_SCOPE(v.DOCUMENT_TOKEN_CSS),
+      DOCUMENT_TOKEN_SCOPE_SELECTOR: `${v.DOCUMENT_TOKEN_SCOPE_SELECTOR},[style*='--lr-theme-']`,
+    }));
+  }
+}
+
 try { lstatSync(path.join(here, 'node_modules')); } catch { symlinkSync(path.join(pkgDir, 'node_modules'), path.join(here, 'node_modules')); }
 
 const { palette } = await import('./dist-a/internal/tokens/palette.styles.js');
@@ -364,8 +424,10 @@ const components = [
 // The parity page also covers one component that adopts the specialist palettes.
 const PARITY_EXTRA = ['retrieval/graph-legend/graph-legend.js'];
 const WANT_I = !!candidateDist;
-for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.keys(VARIANTS), ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : [])]) {
-  const entry = components.map((c) => `import '../dist-${variant}/components/${c}';`).join('\n');
+for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.keys(VARIANTS), ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : []), ...DERIVED]) {
+  // The benchmark also drives the real style API (setLyraStyle, applyLyraStyleScope re-theme kinds).
+  const entry = [...components.map((c) => `import '../dist-${variant}/components/${c}';`),
+    `export { setLyraStyle, resetLyraStyle, applyLyraStyleScope } from '../dist-${variant}/theme/theme.js';`].join('\n');
   const entryPath = path.join(out, `entry-${variant}.js`);
   writeFileSync(entryPath, entry);
   await esbuild.build({
@@ -374,8 +436,26 @@ for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...Object.
     logLevel: 'warning', legalComments: 'none',
   });
 }
+// Realistic application page (bench.html?page=app): a broader, typical component set, bundled
+// separately so the six-type benchmark bundle and its numbers stay comparable with earlier runs.
+const APP_COMPONENTS = [
+  ...components,
+  'forms/select/select.js', 'forms/combobox/option.js', 'forms/checkbox/checkbox.js', 'forms/textarea/textarea.js',
+  'forms/slider/slider.js', 'data/table/table.js', 'overlays/dialog/dialog.js', 'layout/tab-group/tab-group.js',
+  'layout/tab-group/tab.js', 'layout/tab-group/tab-panel.js', 'layout/details/details.js', 'charts/chart/lite-chart.js',
+];
+for (const variant of [...(ONLY && !ONLY.includes('a') ? [] : ['a']), ...(WANT_I ? ['i'] : []), ...DERIVED]) {
+  const entryPath = path.join(out, `app-entry-${variant}.js`);
+  writeFileSync(entryPath, [...APP_COMPONENTS.map((c) => `import '../dist-${variant}/components/${c}';`),
+    `export { setLyraStyle, resetLyraStyle, applyLyraStyleScope } from '../dist-${variant}/theme/theme.js';`].join('\n'));
+  await esbuild.build({
+    entryPoints: [entryPath], bundle: true, format: 'esm', target: 'es2022', minify: true,
+    outfile: path.join(out, `app-bundle-${variant}.js`), nodePaths: [path.join(here, 'node_modules')],
+    logLevel: 'warning', legalComments: 'none',
+  });
+}
 // Parity bundles (A and E): the benchmark components plus one specialist-palette consumer.
-for (const variant of ['a', ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : [])]) {
+for (const variant of ['a', ...(WANT_E ? ['e'] : []), ...(WANT_I ? ['i'] : []), ...DERIVED]) {
   const entryPath = path.join(out, `parity-entry-${variant}.js`);
   writeFileSync(entryPath, [...components, ...PARITY_EXTRA].map((c) => `import '../dist-${variant}/components/${c}';`).join('\n'));
   await esbuild.build({
@@ -404,8 +484,40 @@ const summary = {
       shadowRemainder: x.p.shadowCss.length + x.t.shadowCss.length, documentSheet: x.documentCss.length,
     }])),
   },
-  bundles: Object.fromEntries(['a', ...Object.keys(ALL_VARIANTS), 'e', 'i'].filter((v) => existsSync(path.join(out, `bundle-${v}.js`))).map((v) => [v, bundleStats(v)])),
+  bundles: Object.fromEntries(['a', ...Object.keys(ALL_VARIANTS), 'e', 'i', ...DERIVED].filter((v) => existsSync(path.join(out, `bundle-${v}.js`))).map((v) => [v, bundleStats(v)])),
 };
 writeFileSync(path.join(out, ONLY ? `build-summary-${ONLY.join('')}.json` : 'build-summary.json'), JSON.stringify(summary, null, 2));
+
+// Provenance that run.mjs copies into every results file: the baseline tarball's integrity (set
+// LYRA_BASELINE_TARBALL to the packed .tgz) and the candidate's source identity, including its
+// uncommitted changes, so an uncommitted build is identifiable beyond `git rev-parse HEAD`.
+const git = (...args) => { try { return execFileSync('git', ['-C', checkout, ...args], { encoding: 'utf8', maxBuffer: 1 << 28 }); } catch { return ''; } };
+const sha = (text) => createHash('sha256').update(text).digest('hex').slice(0, 16);
+const newestMtime = (dir) => {
+  let newest = 0;
+  const walk = (d) => { for (const entry of readdirSync(d, { withFileTypes: true })) { const f = path.join(d, entry.name); if (entry.isDirectory()) walk(f); else newest = Math.max(newest, statSync(f).mtimeMs); } };
+  try { walk(dir); } catch { /* absent */ }
+  return newest ? new Date(newest).toISOString() : null;
+};
+const tarball = process.env.LYRA_BASELINE_TARBALL ? path.resolve(process.env.LYRA_BASELINE_TARBALL) : null;
+writeFileSync(path.join(out, 'provenance.json'), JSON.stringify({
+  baseline: {
+    dist: baselineDist,
+    version: baselineDist ? JSON.parse(readFileSync(path.join(baselineDist, '..', 'package.json'), 'utf8')).version : null,
+    tarball,
+    integrity: tarball ? `sha512-${createHash('sha512').update(readFileSync(tarball)).digest('base64')}` : null,
+  },
+  candidate: {
+    dist: candidateDist,
+    head: git('rev-parse', 'HEAD').trim() || null,
+    statusSha256: sha(git('status', '--porcelain', '--untracked-files=all')),
+    diffSha256: sha(git('diff', 'HEAD', '--binary')),
+    newestDistFile: candidateDist ? newestMtime(candidateDist) : null,
+    newestSourceFile: newestMtime(path.join(pkgDir, 'src')),
+  },
+  derived: DERIVED,
+  node: process.version,
+  builtAt: new Date().toISOString(),
+}, null, 2));
 console.log(JSON.stringify(summary, null, 2));
 

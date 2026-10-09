@@ -12,7 +12,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
-import { readStyleModel, renderTheme } from './style-axes-model.mjs';
+import { readStyleModel } from './style-axes-model.mjs';
+import { renderThemeCss } from './theme-document-layer.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
 
@@ -36,7 +37,7 @@ export function checkPaletteFreshness(dir = packageDir) {
     for (const generator of PALETTE_GENERATORS) {
       execFileSync(process.execPath, [join(dir, generator)], { cwd: dir, stdio: 'pipe' });
     }
-    const expectedTheme = Buffer.from(renderTheme(readStyleModel(dir)));
+    const expectedTheme = Buffer.from(renderThemeCss(readStyleModel(dir)));
     return PALETTE_ARTIFACTS.filter((relativePath, index) => {
       const actual = readFileSync(join(dir, relativePath));
       return !actual.equals(before[index]) || (relativePath === 'src/theme.css' && !actual.equals(expectedTheme));

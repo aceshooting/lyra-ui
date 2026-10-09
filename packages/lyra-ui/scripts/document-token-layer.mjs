@@ -30,8 +30,10 @@ export const DOCUMENT_LAYER_SCOPES = Object.freeze([
   '.lr-token-light',
   '.lr-token-dark',
   '[data-lr-design-token-mode]',
-  // A look's scoped mode aliases (generated for shadcn, and for runtime looks by look-css.ts).
-  ':where([data-lr-look]) :is(.light, .dark)',
+  // A look's scoped mode aliases (generated for shadcn, and for runtime looks by look-css.ts). Two
+  // selectors rather than :is(.light, .dark), so engines can bucket each by its class.
+  ':where([data-lr-look]) .light',
+  ':where([data-lr-look]) .dark',
 ]);
 
 /** Attributes whose presence makes an element a theme scope (the class scopes are listed apart). */

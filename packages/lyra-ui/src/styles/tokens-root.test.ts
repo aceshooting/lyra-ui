@@ -62,7 +62,7 @@ it('declares nothing at document scope until the stylesheet is opted into', () =
 });
 
 it('publishes the whole document layer, and names its stable subset in the header', () => {
-  // Since 27.0.0 the file is the document token layer itself: the same text components adopt.
+  // Since 28.0.0 the file is the document token layer itself: the same text components adopt.
   expect(curatedNames.length).to.be.greaterThan(200);
   const stable = stableNames(sheetText);
   expect(stable.length).to.be.greaterThan(40);

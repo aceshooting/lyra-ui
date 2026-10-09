@@ -7,7 +7,7 @@
       // theme=0 omits theme.css (zero-configuration page). design-tokens.css has no :root default, so
       // loading it only affects its own .lr-token-* / [data-lr-design-token-mode] scopes.
       const params = new URLSearchParams(location.search);
-      // Each variant loads its own stylesheets (27.0.0 dropped the focus-ring composite from theme.css).
+      // Each variant loads its own stylesheets (28.0.0 dropped the focus-ring composite from theme.css).
       const variantDist = `/dist-${params.get('variant') ?? 'a'}`;
       if (params.get('theme') !== '0') document.write(`<link rel="stylesheet" href="${variantDist}/theme.css" />`);
       // shadcn=1 adds the shadcn look on the root. Since v24 the fixed themes/shadcn.css is gone; the

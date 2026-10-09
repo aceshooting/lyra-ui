@@ -239,7 +239,7 @@ density, mode and accent independently ([guide](./llms/shared/styles-and-tokens.
 
 `setLyraStyle({})` from `@aceshooting/lyra-ui/theme.js` restores saved choices (missing fields use the built-in
 profile); `setLyraStyle({ look: "lyra", surface: "solid", accent: null })` selects the earlier appearance and
-`resetLyraStyle()` restores the built-in profile. Since 27.0.0 the resolved `--lr-color-*`/`--lr-space-*`/... layer is
+`resetLyraStyle()` restores the built-in profile. Since 28.0.0 the resolved `--lr-color-*`/`--lr-space-*`/... layer is
 declared once per document and re-derived only at **theme scopes** (`.lr-light`/`.lr-dark`, `data-lr-theme`, style-axis
 boundaries, or any element marked `data-lr-theme-scope`), so retheme through the `--lr-theme-*` inputs on `:root` or a
 theme scope, for example `:root { --lr-theme-color-brand-fill-loud: #60a5fa; }`; an input on a plain wrapper no longer
@@ -285,8 +285,8 @@ In the browser, make `@aceshooting/lyra-ui/hydration.js` the first import that c
 `diagnoseLyraHydration(document)` checks the result. A fallback renderer cannot serialize property bindings, so
 pass initial state as attributes or light DOM. Measurement, observers, canvas and media start after hydration; remote
 content stays client-only ([details](./llms/shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)).
-Declarative shadow roots don't carry the token layer: link `@aceshooting/lyra-ui/tokens-root.css` after `theme.css`
-in `<head>` for a correct first paint.
+Declarative shadow roots don't carry the token layer: link `@aceshooting/lyra-ui/theme.css` (which includes it) or,
+without `theme.css`, `@aceshooting/lyra-ui/tokens-root.css` in `<head>` for a correct first paint.
 
 ## Framework integration (React, Vue, Angular, Svelte)
 

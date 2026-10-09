@@ -291,3 +291,48 @@ test('native chrome compiles the shared protected surface without unresolved tem
   assert.equal(css.includes('$' + '{'), false);
   assert.equal(css.includes(':host'), false);
 });
+
+test('a default-look role that follows brand compiles to the follow switch, never a root-resolved reference', () => {
+  const model = readStyleModel(packageDir);
+  const css = renderTheme(model);
+  const defaults = css.match(/:root:where\(:not\(\[data-lr-look\]\)\) \{([^}]+)\}/)?.[1];
+  assert.ok(defaults);
+  // A slot that held var(--lr-theme-color-brand-*) would be substituted once at :root and inherited,
+  // so a brand input written on :root would reach every scope through the follower but not through
+  // brand itself. Only the mode-independent shadow colour may be referenced from a slot.
+  for (const match of defaults.matchAll(/(--[_a-z0-9-]+):([^;]*);/g)) {
+    if (/var\(--lr-theme-/.test(match[2])) assert.match(match[2], /var\(--lr-theme-shadow-color/, match[1]);
+  }
+  const look = model.looks.find((entry) => entry.id === model.defaults.look);
+  const followers = Object.entries(look.tokens).filter(([, value]) => typeof value === 'string' && /^var\(--lr-theme-color-brand-/.test(value));
+  assert.ok(followers.length > 0, 'the default look has roles that follow brand');
+  for (const [name] of followers) {
+    const role = name.slice('--lr-theme-'.length);
+    for (const key of ['l', 'd']) {
+      assert.match(defaults, new RegExp(`--_lr-f${key}-${role}: ;`));
+      assert.match(defaults, new RegExp(`--_lr-o${key}-${role}: initial;`));
+    }
+  }
+  // The contrast gates still measure a follower as the brand channel it follows.
+  const [light, dark] = concreteThemeCss(css).split('  .lr-dark,');
+  for (const [name, value] of followers) {
+    const target = value.match(/^var\((--lr-theme-color-brand-[a-z-]+)\)$/)[1];
+    for (const block of [light, dark]) {
+      const of = (token) => block.match(new RegExp(`${token}: ([^;]+);`))?.[1];
+      assert.equal(of(name), of(target), `${name} follows ${target}`);
+    }
+  }
+});
+
+test('no root-only declaration in theme.css references a name a boundary re-declares', async () => {
+  const { rootResolvedReferenceViolations } = await import('./theme-boundary-lint.mjs');
+  const css = readFileSync(new URL('../src/theme.css', import.meta.url), 'utf8');
+  assert.deepEqual(rootResolvedReferenceViolations(css), []);
+  // The 27 follower compile must fail the gate.
+  const leaked = css.replace('--_lr-fl-color-neutral-fill-loud: ;', '--_lr-ll-color-neutral-fill-loud: var(--lr-theme-color-brand-fill-loud);');
+  assert.notEqual(leaked, css);
+  assert.deepEqual(rootResolvedReferenceViolations(leaked), [':root:where(:not([data-lr-look])): --_lr-ll-color-neutral-fill-loud -> --lr-theme-color-brand-fill-loud']);
+  // Transitive references through other root-only names count; the shadow colour is allowed.
+  assert.deepEqual(rootResolvedReferenceViolations(':root { --_a: var(--_b); --_b: var(--x); } .lr-dark { --x: red; }'), [':root: --_a -> --x', ':root: --_b -> --x']);
+  assert.deepEqual(rootResolvedReferenceViolations(':root { --_a: rgb(var(--lr-theme-shadow-color) / 0.1); } [data-lr-look] { --lr-theme-shadow-color: 0 0 0; }'), []);
+});

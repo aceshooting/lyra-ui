@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>inline-style animation cost (auto-scope experiment)</title>
+    <script>
+      const pageParams = new URLSearchParams(location.search);
+      document.write(`<link rel="stylesheet" href="/dist-${pageParams.get('variant') ?? 'i'}/theme.css" />`);
+    </script>
+    <style>
+      body { margin: 0; font: 14px system-ui, sans-serif; }
+      .dot { position: absolute; inline-size: 8px; block-size: 8px; background: var(--lr-color-brand, #06c); }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="lyra"></div>
+    <div id="dots"></div>
+    <script type="module">
+      // Recommendation 4 makes `[style*='--lr-theme-']` a theme scope. Engines then have to match the
+      // serialised style attribute, which an animation library rewrites every frame. This page
+      // animates `count` absolutely positioned elements through inline transforms (GSAP / Framer
+      // Motion style) next to 300 Lyra elements and times each frame's style work.
+      //   inputs=1  the animated elements also carry an inline --lr-theme-* input (they ARE scopes in j)
+      const params = new URLSearchParams(location.search);
+      const count = Number(params.get('count') ?? 500);
+      const inputs = params.get('inputs') === '1';
+      await import(`/out/bundle-${params.get('variant') ?? 'i'}.js`);
+      const unit = '<lr-button variant="brand">Save</lr-button><lr-badge variant="success">New</lr-badge><lr-switch checked>On</lr-switch>';
+      document.getElementById('lyra').innerHTML = `<div class="row">${unit.repeat(100)}</div>`;
+      const dots = document.getElementById('dots');
+      for (let i = 0; i < count; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        if (inputs) dot.style.setProperty('--lr-theme-space-m', '0.75rem');
+        dots.append(dot);
+      }
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await Promise.all(Array.from(document.querySelectorAll('lr-button,lr-badge,lr-switch'), (el) => el.updateComplete));
+      document.body.offsetHeight;
+      window.animate = async (frames) => {
+        const work = [];
+        const children = Array.from(dots.children);
+        for (let f = 0; f < frames; f++) {
+          await frame();
+          const t0 = performance.now();
+          for (let i = 0; i < children.length; i++) {
+            children[i].style.transform = `translate(${(f * 3 + i * 7) % 1200}px, ${(f * 2 + i * 13) % 700}px) rotate(${(f + i) % 360}deg)`;
+          }
+          document.body.offsetHeight;
+          work.push(performance.now() - t0);
+        }
+        return work;
+      };
+      window.animReady = true;
+    </script>
+  </body>
+</html>

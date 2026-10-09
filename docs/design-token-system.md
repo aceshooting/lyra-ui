@@ -26,8 +26,9 @@ Generation is deterministic and produces:
 - `.storybook/token-preview.generated.js`, the grouped data used by Storybook token previews.
 - `scripts/fixtures/token-docs.generated.json` and `token-editor.generated.json`, stable inputs for
   authored-reference and editor-data generation. Those consumers never have to parse TypeScript.
-- **The document token layer** (RFC 0002, since 27.0.0): `src/internal/document-tokens.generated.ts`
-  and `src/styles/tokens-root.css`, whose body is byte-identical to the adopted text. The layer
+- **The document token layer** (RFC 0002, since 28.0.0): `src/internal/document-tokens.generated.ts`
+  and `src/styles/tokens-root.css`, whose body is byte-identical to the adopted text; `src/theme.css`
+  ends with the same text (`scripts/theme-document-layer.mjs`, run by `generate-style-axes.mjs`). The layer
   declares every shared output once on `:root` and re-derives it at the closed list of theme scopes,
   with mode carried by the inherited `--_lr-dark-on` / `--_lr-light-on` switches. The same module
   carries the per-host remainder (`HOST_TOKEN_CSS`: host-local names and the preference arms with

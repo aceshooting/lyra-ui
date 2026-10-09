@@ -169,10 +169,10 @@ translations and mirrored RTL layouts reflow without component-specific override
 
 ### The document token layer — one route into dark mode, resolved at theme scopes
 
-Since 27.0.0 (RFC 0002) components do not declare the shared `--lr-*` outputs on their own `:host`.
+Since 28.0.0 (RFC 0002) components do not declare the shared `--lr-*` outputs on their own `:host`.
 `src/internal/document-tokens.generated.ts` (generated from `tokens/canonical-tokens.json` by
-`scripts/generate-design-tokens.mjs`, the same text as `src/styles/tokens-root.css`) declares them
-once per document on `:root` and re-derives them at the closed list of theme scopes. Mode reaches
+`scripts/generate-design-tokens.mjs`, the same text as `src/styles/tokens-root.css` and the tail of
+`src/theme.css`) declares them once per document on `:root` and re-derives them at the closed list of theme scopes. Mode reaches
 every scope through two inherited private switches (`--_lr-dark-on` / `--_lr-light-on`): each
 mode-dependent output is one declaration, `var(--_lr-dark-on, <light>)var(--_lr-light-on, <dark>)`,
 so there is exactly one route into dark mode and it behaves identically in Chromium, Firefox and

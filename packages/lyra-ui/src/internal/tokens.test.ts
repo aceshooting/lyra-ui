@@ -399,7 +399,7 @@ it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component
 
 it('lets an ancestor --lr-* output reach nested components until the next theme scope, except the host-local icon-button size', async () => {
   // With the document token layer no component re-declares the shared outputs, so an output set on a
-  // plain ancestor now inherits all the way down (a v27 widening). It stops at the next theme scope,
+  // plain ancestor now inherits all the way down (a v28 widening). It stops at the next theme scope,
   // which re-derives every output from the inputs it sees. --lr-icon-button-size is the one name
   // here that stays element-scoped: every host re-declares it so the coarse-pointer floor applies
   // per element, and --lr-icon-button-size-scope is its inheriting subtree input.

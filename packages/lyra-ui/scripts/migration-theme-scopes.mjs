@@ -213,6 +213,17 @@ export function analyzeThemeScopes(text, { file = 'input' } = {}) {
     action: 'manual-review', target, warningCode: code, message,
   });
 
+  // Since 28.0.0 theme.css carries the whole layer; tokens-root.css next to it is a second copy that
+  // every scope then matches twice.
+  const theme = /@aceshooting\/lyra-ui\/(?:dist\/)?theme\.css/.exec(text);
+  const tokensRoot = /@aceshooting\/lyra-ui\/(?:dist\/)?(?:styles\/)?tokens-root\.css/.exec(text);
+  if (theme && tokensRoot) {
+    warn(lineColumn(text, tokensRoot.index), {
+      code: 'THEME_SCOPE_DOUBLE_LAYER_REVIEW',
+      member: 'tokens-root.css',
+      message: 'theme.css already carries the Lyra document token layer: remove the tokens-root.css import (it is the same layer alone, for pages without theme.css).',
+    });
+  }
   if (CSS_EXTENSIONS.has(extension)) {
     cssReports(text, 0, text, file, warn);
     return { insertions: [], warnings, marker };

@@ -1,12 +1,13 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderTheme, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, quote, STYLE_VERSION } from './style-axes-model.mjs';
+import { renderThemeCss } from './theme-document-layer.mjs';
+import { readStyleModel, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, quote, STYLE_VERSION } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const model = readStyleModel(packageDir);
 const outputs = new Map();
-outputs.set('src/theme.css', renderTheme(model));
+outputs.set('src/theme.css', renderThemeCss(model));
 const profileInputs = defaultStyleInputs(model);
 const tokenPath = 'src/internal/tokens.styles.ts';
 const glassData = JSON.parse(readFileSync(join(packageDir, 'tokens/surfaces/glass.json'), 'utf8'));

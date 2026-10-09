@@ -160,7 +160,7 @@ describe('production theme rendering', () => {
 // inherit, the property fell back to `outline-style: none` and the focus ring VANISHED, silently.
 // That is a WCAG 2.4.7 failure with no console signal and no test signal. The library evidenced the
 // gap itself: `styles/native.css` hand-expanded the ring rather than using the composite.
-// Since 27.0.0 the document token layer owns the four focus-ring names (theme.css no longer declares
+// Since 28.0.0 the document token layer owns the four focus-ring names (theme.css no longer declares
 // them), so an application element reads them wherever the layer applies: after the first Lyra
 // element connects, after `adoptLyraTokens(document)`, or with tokens-root.css linked.
 describe('focus-ring tokens at consumer scope', () => {

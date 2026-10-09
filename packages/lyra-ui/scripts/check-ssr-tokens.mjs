@@ -5,9 +5,10 @@
 //    outside the host-local set and the preference arms (the same rule as
 //    check-host-token-declarations.mjs, applied to the server's actual output).
 // 2. A server-rendered `lr-button` stays small: the shared layer is no longer inlined per element.
-// 3. A server-rendered page that links theme.css and tokens-root.css paints with resolved tokens
-//    with JavaScript DISABLED (Chromium), and a page without tokens-root.css does not resolve them:
-//    server-rendered pages must link the static layer for a correct first paint.
+// 3. A server-rendered page that links theme.css (which carries the layer since 28.0.0), or
+//    tokens-root.css alone, paints with resolved tokens with JavaScript DISABLED (Chromium), and a
+//    page that links neither does not resolve them: server-rendered pages must link one of the two
+//    static copies for a correct first paint.
 
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -43,8 +44,9 @@ const markup = await collectResult(render(html`
 
 const dist = path.join(packageDir, 'dist');
 const pages = {
-  '/linked.html': `<!doctype html><html><head><link rel="stylesheet" href="/theme.css"><link rel="stylesheet" href="/styles/tokens-root.css"></head><body>${markup}</body></html>`,
-  '/unlinked.html': `<!doctype html><html><head><link rel="stylesheet" href="/theme.css"></head><body>${markup}</body></html>`,
+  '/theme.html': `<!doctype html><html><head><link rel="stylesheet" href="/theme.css"></head><body>${markup}</body></html>`,
+  '/tokens-root.html': `<!doctype html><html><head><link rel="stylesheet" href="/styles/tokens-root.css"></head><body>${markup}</body></html>`,
+  '/unlinked.html': `<!doctype html><html><head></head><body>${markup}</body></html>`,
 };
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, 'http://localhost');
@@ -81,22 +83,26 @@ try {
     };
   });
 
-  await page.goto(`${origin}/linked.html`);
-  const linked = await probe();
-  assert.equal(linked.shadow, true, 'the declarative shadow root must attach without JavaScript');
-  assert.notEqual(linked.host, '', 'with tokens-root.css linked, a server-rendered host resolves the layer before hydration');
-  assert.equal(linked.host, linked.root, 'the host inherits the document layer');
-  assert.notEqual(linked.space, '');
-  assert.notEqual(linked.background, 'rgba(0, 0, 0, 0)', 'the brand button paints its resolved fill');
   const outputs = path.join(tmpdir(), 'lyra-ssr-token-paint');
   await mkdir(outputs, { recursive: true });
-  const capture = path.join(outputs, 'linked.png');
-  await writeFile(capture, await page.screenshot({ fullPage: true }));
+  const captures = [];
+  for (const [file, label] of [['theme', 'theme.css'], ['tokens-root', 'tokens-root.css']]) {
+    await page.goto(`${origin}/${file}.html`);
+    const linked = await probe();
+    assert.equal(linked.shadow, true, 'the declarative shadow root must attach without JavaScript');
+    assert.notEqual(linked.host, '', `with ${label} linked, a server-rendered host resolves the layer before hydration`);
+    assert.equal(linked.host, linked.root, 'the host inherits the document layer');
+    assert.notEqual(linked.space, '');
+    assert.notEqual(linked.background, 'rgba(0, 0, 0, 0)', 'the brand button paints its resolved fill');
+    const capture = path.join(outputs, `${file}.png`);
+    await writeFile(capture, await page.screenshot({ fullPage: true }));
+    captures.push(capture);
+  }
 
   await page.goto(`${origin}/unlinked.html`);
   const unlinked = await probe();
-  assert.equal(unlinked.host, '', 'without tokens-root.css and without JavaScript the layer is absent (the documented requirement)');
-  console.log(`SSR token gate passed: no layer in ${entries.length} declarative shadow roots; lr-button ${button.length} bytes; JS-disabled paint captured at ${capture}.`);
+  assert.equal(unlinked.host, '', 'without theme.css or tokens-root.css, and without JavaScript, the layer is absent (the documented requirement)');
+  console.log(`SSR token gate passed: no layer in ${entries.length} declarative shadow roots; lr-button ${button.length} bytes; JS-disabled paints captured at ${captures.join(', ')}.`);
 } finally {
   await browser.close();
   server.close();

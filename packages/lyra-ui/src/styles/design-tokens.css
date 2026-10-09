@@ -6,6 +6,8 @@
    to load first naming only lr-theme, every other Lyra layer would be ordered after it. */
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 
+@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
+
 @layer lr-theme {
   :where(.lr-token-light, [data-lr-design-token-mode='light']) {
     --lr-theme-border-radius-m: 0.5rem;
@@ -568,5 +570,22 @@
     --lr-theme-z-index-modal: 1000;
     --lr-theme-z-index-popover: 1000;
     --lr-theme-z-index-toast: 9999;
+  }
+}
+
+/* Each fixture scope is also a mode scope: it sets the two inherited mode switches, so mode-neutral
+   scopes, specialist palettes and boundaries that re-resolve inputs below it keep the fixture's
+   mode. The switches sit in theme.css's mode sublayer and outrank its zero-specificity root and
+   operating-system defaults in either stylesheet order; an explicit Lyra mode on the same element
+   (data-lr-mode, data-lr-theme="light|dark", .lr-light, .lr-dark) wins over the fixture. */
+@layer lr-theme-preset.mode {
+  .lr-token-light:not([data-lr-mode]):not([data-lr-theme='light']):not([data-lr-theme='dark']):not(.lr-light):not(.lr-dark), [data-lr-design-token-mode='light']:not([data-lr-mode]):not([data-lr-theme='light']):not([data-lr-theme='dark']):not(.lr-light):not(.lr-dark) {
+    --_lr-dark-on: initial;
+    --_lr-light-on: ;
+  }
+
+  .lr-token-dark:not([data-lr-mode]):not([data-lr-theme='light']):not([data-lr-theme='dark']):not(.lr-light):not(.lr-dark), [data-lr-design-token-mode='dark']:not([data-lr-mode]):not([data-lr-theme='light']):not([data-lr-theme='dark']):not(.lr-light):not(.lr-dark) {
+    --_lr-dark-on: ;
+    --_lr-light-on: initial;
   }
 }

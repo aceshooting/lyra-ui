@@ -61,13 +61,14 @@ Three layers, and **which one you set decides how far the override reaches**:
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
 
-**Layer 2 (`--lr-*`) is declared once per document, not on each component** (since 27.0.0). The
-first connected `lr-*` element adopts the _document token layer_: one constructed stylesheet that
-declares every shared output on `:root` and re-derives it only at [theme scopes](#theme-scopes).
-Components inherit the result, and so do your own elements — `body { color: var(--lr-color-text) }`
-resolves once any Lyra element has connected, or from first paint when you link
-[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), the same
-layer as a static file. Retheme through layer 1 (`--lr-theme-*`) **on a theme scope**: `:root`, a
+**Layer 2 (`--lr-*`) is declared once per document, not on each component** (since 28.0.0). The
+_document token layer_ declares every shared output on `:root` and re-derives it only at
+[theme scopes](#theme-scopes). `theme.css` carries it, so a page that imports `theme.css` has it from
+first paint; on a page without `theme.css`, registering the first `lr-*` element adopts the same text
+as a constructed stylesheet. Components inherit the result, and so do your own elements —
+`body { color: var(--lr-color-text) }` resolves everywhere the layer applies.
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss) is the
+layer alone, for pages that do not use `theme.css`. Retheme through layer 1 (`--lr-theme-*`) **on a theme scope**: `:root`, a
 mode scope, a style-axis boundary, or any element marked `data-lr-theme-scope`.
 See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
 inheritance rules, including per-component `--lr-<component>-*` hooks (layer 3), which inherit
@@ -85,7 +86,6 @@ mode; `accent: null` explicitly clears the accent, while `resetLyraStyle()` rest
 @layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
 @layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
 @import "@aceshooting/lyra-ui/theme.css";
-@import "@aceshooting/lyra-ui/tokens-root.css";
 ```
 
 Keep both layer-order statements before these imports. Bundlers can hoist statements from imported
@@ -265,23 +265,31 @@ design launcher. Keep these layout rules shared across application headers and a
 
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
-Since 27.0.0 the resolved layer lives in the document, so your own elements read it like any
-component does: `var(--lr-color-border)` inside **your** component resolves as soon as the first
-`lr-*` element has connected. `tokens-root.css` is that same layer as a static stylesheet, for the
-moments before any Lyra element exists:
+Since 28.0.0 the resolved layer lives in the document, so your own elements read it like any
+component does: `var(--lr-color-border)` inside **your** component resolves wherever the layer
+applies. `theme.css` carries the layer, so importing `theme.css` is enough, including for
+server-rendered pages and for application elements that paint before any Lyra element exists.
+`tokens-root.css` is the same layer alone, as a static stylesheet, for pages that do not use
+`theme.css`:
 
-- **Server-rendered pages.** Declarative shadow roots no longer carry the layer, so link it for a
-  correct first paint before hydration (see [Theme scopes](#theme-scopes) for application shadow
-  roots).
-- **Application elements that paint before the first Lyra element connects**, for example a lazily
-  loaded route; otherwise they change value at that first connect.
-- **Pages that want to skip the one-off style invalidation** the first adoption causes on a large
-  DOM: a document whose root already resolves the layer keeps the static copy and adopts no
-  constructed one.
+- **Server-rendered pages.** Declarative shadow roots no longer carry the layer, so link
+  `theme.css` (or `tokens-root.css`) for a correct first paint before hydration (see
+  [Theme scopes](#theme-scopes) for application shadow roots).
+- **Application elements that paint before the first Lyra element is registered**, for example
+  ahead of a lazily loaded route; otherwise they change value when the layer is adopted.
+- **Large pages that load Lyra late.** Without a static copy, the layer is adopted when the first
+  Lyra element is registered, which usually happens while the document is still small. A route that
+  imports Lyra only after the page already holds a large DOM pays a one-off, whole-document style
+  invalidation then. A document whose root already resolves the layer (it links `theme.css` or
+  `tokens-root.css`) keeps the static copy and adopts no constructed one.
+
+Link one of the two, not both: the second copy changes no value, but every scope matches the layer
+twice.
 
 ```css
-@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* input layer, and Lyra's layer order */
-@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer */
+@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* inputs, Lyra's layer order, and the resolved --lr-* layer */
+/* or, without theme.css: */
+@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer alone */
 ```
 
 ```css
@@ -368,8 +376,14 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
   renders `data-*={false}` as `"false"`, so write `data-lr-theme-scope=""` (or omit the attribute);
   the development build warns on the literal `"false"`.
 - **Nesting** works like inheritance: a scope re-derives from what it inherits plus what it sets, and
-  its descendants inherit the result until the next scope. A scope costs roughly what one component
-  cost before 27.0.0, so put inputs on a common ancestor rather than marking every row of a list.
+  its descendants inherit the result until the next scope. The marker only re-derives the `--lr-*`
+  outputs, so an input set on `:root` (inline, in your stylesheet, or by `setLyraStyle()`) or on an
+  outer scope reaches a marked region exactly as it reaches an unmarked one, and adding a marker
+  where nothing needs it changes nothing. With `theme.css`, mode scopes and the style-axis
+  boundaries also re-resolve the inputs from the selected look, accent and mode, so an input set
+  above one of them stops there (set it on that boundary, or below it). A scope costs a little less
+  than one component did before 28.0.0, so put inputs on a common ancestor rather than marking every
+  row of a list.
 - **`applyLyraStyleScope()`** writes the marker whenever it writes inline inputs.
 - **Which inputs need a scope.** Only the `--lr-theme-*` inputs the layer consumes (listed in
   `llms/tokens.md`). Inputs read on the host itself keep working on any element: the chart,
@@ -673,7 +687,7 @@ compatibility aliases above.
 
 **Shared computed `--lr-*` outputs are resolved at theme scopes and inherited everywhere else.** That
 includes palette, spacing, radius, typography and motion outputs such as `--lr-color-brand`,
-`--lr-space-m` and `--lr-radius`. No component re-declares them on its host (since 27.0.0), so:
+`--lr-space-m` and `--lr-radius`. No component re-declares them on its host (since 28.0.0), so:
 
 - **A `--lr-theme-*` input** retunes everything below it **when it is set on a theme scope**. Set on a
   plain wrapper, a component's inline style, or an application component's own `:host` rule, it no
@@ -683,6 +697,13 @@ includes palette, spacing, radius, typography and motion outputs such as `--lr-c
   `--lr-focus-ring-color`, `--lr-color-brand` from `--lr-color-brand-fill-loud`,
   `--lr-transition-interactive` from `--lr-transition-fast`) keep the scope's values unless the
   element is itself a scope.
+- **Border outputs stop at an opaque content interior.** The bodies of `lr-card`, `lr-details` and
+  `lr-accordion-item` restore the nearest scope's unqualified `--lr-color-border` and
+  `--lr-color-border-strong` for their content (inside a glass surface the surface would otherwise
+  hand its translucency-qualified borders to opaque content). A `--lr-color-border` set on such a
+  component, or above it, still applies to the chrome that reads it, but not to the content; set
+  `--lr-theme-color-surface-border` on a theme scope, or a component hook such as
+  `--lr-input-border-color`, to reach the content.
 
 ```css
 /* Reaches everything in the subtree, however deeply nested: the element is a theme scope. */
@@ -831,7 +852,7 @@ sets `color-scheme`. **Every engine follows the nearest mode scope, with or with
 document layer carries mode to every scope through two inherited private switches, so a `.lr-light`
 island inside a `.lr-dark` region is light, a mode-neutral scope keeps its ancestor's mode, and the
 OS preference decides the root unless the root carries an explicit mode. A real `--lr-theme-*` value
-still wins over the built-in light or dark default. (Before 27.0.0 an ancestor mode reached
+still wins over the built-in light or dark default. (Before 28.0.0 an ancestor mode reached
 components without `theme.css` only in Chromium, through `:host-context()`.)
 
 Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited

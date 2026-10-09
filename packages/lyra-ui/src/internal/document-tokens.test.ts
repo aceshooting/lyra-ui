@@ -160,6 +160,73 @@ describe('document token layer: adoption', () => {
     }
   });
 
+  it('keeps the copy theme.css carries, and adopts no constructed one', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameDocument = frame.contentDocument!;
+      const link = frameDocument.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = new URL('../theme.css', import.meta.url).href;
+      const loaded = new Promise((resolve, reject) => {
+        link.addEventListener('load', resolve, { once: true });
+        link.addEventListener('error', reject, { once: true });
+      });
+      frameDocument.head.append(link);
+      await loaded;
+      expect(frame.contentWindow!.getComputedStyle(frameDocument.documentElement).getPropertyValue(DOCUMENT_TOKEN_SENTINEL).trim()).to.equal(DOCUMENT_TOKEN_LAYER_ID);
+      const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+      frameDocument.body.append(frameDocument.adoptNode(probe));
+      await probe.updateComplete;
+      expect(layerSheet(frameDocument) === undefined, 'no constructed copy beside theme.css').to.equal(true);
+      expect(hasLyraTokens(frameDocument)).to.equal(true);
+      expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('has the layer in the document once a Lyra class is registered, before any of its elements connects', async () => {
+    class PrimeProbe extends LyraElement {}
+    customElements.define(tag('layer-prime-probe'), PrimeProbe);
+    expect(document.querySelector(tag('layer-prime-probe'))).to.equal(null);
+    expect(hasLyraTokens(document)).to.equal(true);
+  });
+
+  it('checks the document once per task, not once per connecting element', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'adoptedStyleSheets')!;
+    let reads = 0;
+    Object.defineProperty(Document.prototype, 'adoptedStyleSheets', {
+      ...descriptor,
+      get(this: Document) {
+        reads++;
+        return descriptor.get!.call(this);
+      },
+    });
+    const container = document.createElement('div');
+    try {
+      await Promise.resolve();
+      reads = 0;
+      container.innerHTML = Array.from({ length: 50 }, () => '<lr-layer-probe></lr-layer-probe>').join('');
+      document.body.append(container);
+      // One read for adoption, and one for the development diagnostic's layer check.
+      expect(reads, 'one verification for the whole batch').to.be.at.most(2);
+    } finally {
+      Object.defineProperty(Document.prototype, 'adoptedStyleSheets', descriptor);
+      container.remove();
+    }
+    // The next task verifies again, so a wholesale replacement is still repaired.
+    await new Promise((resolve) => setTimeout(resolve));
+    const previous = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = previous.filter((sheet) => sheet !== layerSheet());
+    try {
+      await fixture(html`<lr-layer-probe></lr-layer-probe>`);
+      expect(hasLyraTokens(document)).to.equal(true);
+    } finally {
+      document.adoptedStyleSheets = [...new Set([...previous, ...document.adoptedStyleSheets])];
+    }
+  });
+
   it('adopts its own layer, and reports it in development, when a different layer is already present', async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
@@ -184,6 +251,112 @@ describe('document token layer: adoption', () => {
     const response = await fetch(new URL('../styles/tokens-root.css', import.meta.url));
     const text = await response.text();
     expect(text.endsWith(DOCUMENT_TOKEN_CSS)).to.equal(true);
+  });
+});
+
+describe('document token layer: provider identity', () => {
+  async function frameWith(setup?: (doc: Document) => Promise<void> | void): Promise<{ frame: HTMLIFrameElement; doc: Document }> {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const doc = frame.contentDocument!;
+    await setup?.(doc);
+    return { frame, doc };
+  }
+  async function link(doc: Document | ShadowRoot, path: string): Promise<HTMLLinkElement> {
+    const owner = 'createElement' in doc ? doc : doc.ownerDocument;
+    const element = owner.createElement('link');
+    element.rel = 'stylesheet';
+    element.href = new URL(path, import.meta.url).href;
+    const loaded = new Promise((resolve, reject) => {
+      element.addEventListener('load', resolve, { once: true });
+      element.addEventListener('error', reject, { once: true });
+    });
+    ('head' in doc ? doc.head : doc).append(element);
+    await loaded;
+    return element;
+  }
+  async function connectProbe(doc: Document, parent: ParentNode = doc.body): Promise<LayerProbe> {
+    const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+    parent.append(doc.adoptNode(probe));
+    await probe.updateComplete;
+    return probe;
+  }
+  const constructedCopies = (root: Document | ShadowRoot) =>
+    root.adoptedStyleSheets.filter((sheet) => Array.from(sheet.cssRules).some((rule) => rule.cssText.includes(DOCUMENT_TOKEN_SENTINEL))).length;
+
+  it('repairs the document when the static provider is removed', async () => {
+    const { frame, doc } = await frameWith(async (d) => { await link(d, '../styles/tokens-root.css'); });
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+      doc.querySelector('link')!.remove();
+      await new Promise((resolve) => setTimeout(resolve));
+      const probe = await connectProbe(doc);
+      expect(constructedCopies(doc), 'the next connect adopts the constructed copy').to.equal(1);
+      expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('withdraws its own copy when a static provider arrives later, on explicit adoption', async () => {
+    const { frame, doc } = await frameWith();
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+      await link(doc, '../theme.css');
+      adoptLyraTokens(doc);
+      expect(constructedCopies(doc), 'no duplicate layer').to.equal(0);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      const warnings = await captureDevWarnings(async () => { await connectProbe(doc); });
+      expect(warnings.some((message) => message.includes('applied after Lyra registered'))).to.equal(true);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('reuses another copy\'s adopted sheet with the same layer instead of adding a second one', async () => {
+    const { frame, doc } = await frameWith((d) => {
+      const other = new (d.defaultView as unknown as { CSSStyleSheet: typeof CSSStyleSheet }).CSSStyleSheet();
+      other.replaceSync(DOCUMENT_TOKEN_CSS);
+      d.adoptedStyleSheets = [other];
+    });
+    try {
+      await connectProbe(doc);
+      expect(doc.adoptedStyleSheets.length).to.equal(1);
+      // When that copy's sheet goes away, this copy provides its own.
+      doc.adoptedStyleSheets = [];
+      await new Promise((resolve) => setTimeout(resolve));
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('adopts nothing into an application root that links its own static provider', async () => {
+    const host = (await fixture(html`<app-token-shell></app-token-shell>`)) as AppShell;
+    host.markup = '';
+    const root = host.shadowRoot!;
+    await link(root, '../styles/tokens-root.css');
+    const scope = document.createElement('div');
+    scope.setAttribute('data-lr-theme-scope', '');
+    root.append(scope);
+    const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+    scope.append(probe);
+    await probe.updateComplete;
+    expect(constructedCopies(root)).to.equal(0);
+    expect(hasLyraTokens(root)).to.equal(true);
+    root.querySelector('link')!.remove();
+    adoptLyraTokens(root);
+    expect(constructedCopies(root), 'explicit adoption repairs the root').to.equal(1);
+  });
+
+  it('hands the shared adopter to a copy with a different layer, and keeps it for the same layer', async () => {
+    const key = Symbol.for('@aceshooting/lyra-ui.adopt-lyra-tokens.v1');
+    const published = (globalThis as unknown as Record<symbol, { layerId?: string }>)[key];
+    expect(typeof published).to.equal('function');
+    expect(published!.layerId).to.equal(DOCUMENT_TOKEN_LAYER_ID);
   });
 });
 
@@ -324,7 +497,82 @@ describe('document token layer: theme scopes and mode', () => {
     }
   });
 
-  it('lets an ancestor output reach components until the next scope (a v27 widening)', async () => {
+  for (const order of ['theme.css first', 'design-tokens.css first'] as const) for (const os of ['light', 'dark'] as const) {
+    it(`gives design-token fixture scopes their mode over the OS preference (${order}, OS ${os})`, async () => {
+      const [theme, fixtureSheet] = await Promise.all(['../theme.css', '../styles/design-tokens.css'].map(async (path) => {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(await (await fetch(new URL(path, import.meta.url))).text());
+        return sheet;
+      }));
+      const sheets = order === 'theme.css first' ? [theme, fixtureSheet] : [fixtureSheet, theme];
+      const previous = document.adoptedStyleSheets;
+      document.adoptedStyleSheets = [...previous, ...sheets];
+      const root = document.documentElement;
+      const fixtureMode = os === 'light' ? 'dark' : 'light';
+      await setColorScheme(os);
+      try {
+        const tree = await fixture<HTMLElement>(html`
+          <div>
+            <section class="lr-dark" id="ref-dark"><lr-layer-probe></lr-layer-probe></section>
+            <section class="lr-light" id="ref-light"><lr-layer-probe></lr-layer-probe></section>
+            <section data-lr-design-token-mode=${fixtureMode} id="nested"><div data-lr-theme-scope><lr-layer-probe></lr-layer-probe></div></section>
+            <section class="lr-token-${fixtureMode}" data-lr-theme=${os} id="explicit"><lr-layer-probe></lr-layer-probe></section>
+            <div id="at-root"><lr-layer-probe></lr-layer-probe></div>
+          </div>
+        `);
+        const graph = async (id: string) => read(await probeIn(tree.querySelector(`#${id}`)!), '--lr-graph-cat-1');
+        const want = await graph(`ref-${fixtureMode}`);
+        const osValue = await graph(`ref-${os}`);
+        expect(want).to.not.equal(osValue);
+        // A nested fixture and a neutral scope below it follow the fixture, not the OS.
+        expect(await graph('nested')).to.equal(want);
+        // An explicit Lyra mode on the same element wins over the fixture.
+        expect(await graph('explicit')).to.equal(osValue);
+        // A fixture on <html> beats the root's OS-following default, in either stylesheet order.
+        root.classList.add(`lr-token-${fixtureMode}`);
+        expect(await graph('at-root')).to.equal(want);
+      } finally {
+        root.classList.remove(`lr-token-${fixtureMode}`);
+        document.adoptedStyleSheets = previous;
+        await setColorScheme('no-preference');
+      }
+    });
+  }
+
+  it('lets a brand input written on :root reach a marked scope, and keeps a mode island on its own slots', async () => {
+    // The neutral marker is an output scope only: it re-derives the layer from the inputs it
+    // inherits, so a :root input reaches a marked region exactly as it reaches an unmarked one.
+    // A mode island is an input boundary (theme.css re-resolves every input there from the slots).
+    // Followers (Shadcn's neutral loud roles) read brand on the same boundary, so they agree with
+    // brand everywhere; they were once resolved at :root and leaked :root's brand into every
+    // boundary below it.
+    const response = await fetch(new URL('../theme.css', import.meta.url));
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(await response.text());
+    const previous = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [...previous, sheet];
+    const root = document.documentElement;
+    try {
+      const tree = await fixture<HTMLElement>(html`<div>
+        <div data-lr-theme-scope id="marked"><lr-layer-probe></lr-layer-probe></div>
+        <div class="lr-light" id="island"><lr-layer-probe></lr-layer-probe></div>
+      </div>`);
+      const marked = await probeIn(tree.querySelector('#marked')!);
+      const island = await probeIn(tree.querySelector('#island')!);
+      const names = ['--lr-theme-color-brand-fill-loud', '--lr-theme-color-neutral-fill-loud', '--lr-color-neutral-fill-loud', '--lr-color-brand-fill-loud'];
+      const islandBefore = names.map((name) => read(island, name));
+      root.style.setProperty('--lr-theme-color-brand-fill-loud', '#8b008b');
+      for (const name of names) expect(toRgba(read(marked, name)), name).to.deep.equal([139, 0, 139, 255]);
+      expect(toRgba(read(root, '--lr-theme-color-neutral-fill-loud'))).to.deep.equal([139, 0, 139, 255]);
+      expect(names.map((name) => read(island, name))).to.deep.equal(islandBefore);
+      expect(read(island, '--lr-theme-color-neutral-fill-loud')).to.equal(read(island, '--lr-theme-color-brand-fill-loud'));
+    } finally {
+      root.style.removeProperty('--lr-theme-color-brand-fill-loud');
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+    }
+  });
+
+  it('lets an ancestor output reach components until the next scope (a v28 widening)', async () => {
     const tree = await fixture<HTMLElement>(html`
       <div style="--lr-space-m: 9px">
         <lr-layer-probe id="reached"></lr-layer-probe>

@@ -15,7 +15,10 @@ in [`results.md`](results.md).
 | C | Only the 56 literal-only properties move (the ramp and the mask constant). |
 | D | B, with the three host-local properties kept on the host (the first draft of the RFC). |
 | E | The proposal: D, plus the two inherited mode switches instead of per-route dark rules, the preference arms kept on every host with their derived outputs, the closed scope list (including `.light` and `.dark`), specialist palettes on the switches, and on-demand adoption into the shadow root of a host that is not a registered library component. |
-| I | The 27.0.0 implementation exactly as built (`--candidate <dist>`), compared with A taken from the published 26.0.0 tarball (`LYRA_BASELINE_DIST`). Release gate only. |
+| A2, I2 | Byte-identical copies of A and I under another name (`--derived a2,i2`), for A/A calibration of the decision rule. |
+| P | The 28.0.0 commit with the per-host delivery (`--derived p`): I's code, the whole layer back on every `:host`, only the mode switches in the document, no layer in `theme.css`. The only difference from I is where the layer is declared. |
+| J | I with automatic scopes for inline inputs (`[style*='--lr-theme-']` in every scope list; `--derived j`). Experiment only. |
+| I | The 28.0.0 implementation exactly as built (`--candidate <dist>`), compared with A taken from the published 27.0.0 tarball (`LYRA_BASELINE_DIST`). Release gate only. |
 
 The prototypes rewrite the built stylesheets; the implementation would generate the layer from
 `tokens/canonical-tokens.json`. The checkout is never written to.
@@ -27,7 +30,7 @@ The prototypes rewrite the built stylesheets; the implementation would generate 
 | `build.mjs` | Builds variants A–E and the benchmark and parity bundles; prints sheet and bundle sizes. |
 | `server.mjs` | Static server with cross-origin isolation, for fine `performance.now()` resolution. |
 | `server.test.mjs` | URL validation and response-header checks; run with `node --test server.test.mjs`. |
-| `web/bench.html`, `run.mjs` | Benchmark page and runner: render, re-theme, memory; scopes, per-row scopes, application shadow roots. |
+| `web/bench.html`, `run.mjs` | Benchmark page and runner: render, re-theme (eight kinds), memory; scopes (stand-in, marker, mode islands), per-row scopes and inputs, application and nested application roots, and a realistic fixed-seed application page (`--page app`). |
 | `report.mjs` | Turns a results file into the tables in `results.md`. |
 | `structure.mjs` | Per-host declaration counts and adopted-sheet structure. |
 | `web/parity.html`, `parity.mjs` | First-prototype parity (11 forms, 6 modes, A against B, C or D). |
@@ -38,6 +41,8 @@ The prototypes rewrite the built stylesheets; the implementation would generate 
 | `probe-ssr.mjs` | Server-rendered size per element, raw and compressed. |
 | `probe-forced.mjs` | Forced style recalculations per component type during first render (Chromium). |
 | `run-revised.sh` | The sequence that produced the proposal's runs. |
+| `profile-webkit.mjs` | 28.0.0 gate: `perf record` on WebKit's web process while one re-theme kind toggles; names the hot functions before a cause is attributed. |
+| `web/anim.html`, `anim.mjs` | 28.0.0 gate: frame-work cost of inline-style animation, I against `j` (automatic scopes for inline inputs). |
 
 ## Running
 
@@ -53,7 +58,7 @@ The prototypes rewrite the built stylesheets; the implementation would generate 
    `node structure.mjs a,e`, `node late-adopt.mjs`, `node probe-ssr.mjs e`, `node analyze-inputs.mjs`.
    `run-revised.sh` runs the proposal's sequence.
 
-**Release gate (27.0.0).** Unpack the published 26.0.0 tarball next to a built 27 checkout and run
+**Release gate (28.0.0).** Unpack the published 27.0.0 tarball next to a built 28 checkout and run
 `LYRA_CHECKOUT=<checkout> LYRA_BASELINE_DIST=<unpacked>/package/dist node build.mjs --refresh --only a
 --candidate <checkout>/packages/lyra-ui/dist`, then `run.mjs --variants a,i` for each scenario,
 `parity-e.mjs --variants a,i`, `parity-modes.mjs --variants a,i` and `late-adopt.mjs --variants a,i`
