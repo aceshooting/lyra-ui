@@ -1,15 +1,15 @@
 {
-  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. The 60% Glass default and contrast-preserving dark fill raise the standalone glass measurement to 1,542 bytes; its 1,603-byte ceiling follows the shared 4% headroom policy, rounded down to whole bytes. Other canaries remain unchanged.",
+  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. The 60% Glass default and contrast-preserving dark fill raise the standalone glass measurement to 1,542 bytes; its 1,603-byte ceiling follows the shared 4% headroom policy, rounded down to whole bytes. Other canaries remain unchanged. The v28 document token layer moves the resolved token outputs into theme.css, so theme.css and every composition containing it record their new measured bytes as reviewed; the ceilings follow the shared derivation from those reviewed bytes. Standalone look, surface, density, accent and native sheets are unchanged.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "accents": 1130,
-    "composition-theme-look-data": 11178,
-    "composition-theme-look-high-contrast": 11120,
-    "composition-theme-look-material": 10593,
-    "composition-theme-look-shadcn": 13446,
-    "composition-theme-look-terminal": 11197,
-    "composition-theme-native": 11324,
-    "composition-theme-native-shadcn-glass-density-accent": 17209,
+    "composition-theme-look-data": 14795,
+    "composition-theme-look-high-contrast": 14731,
+    "composition-theme-look-material": 14204,
+    "composition-theme-look-shadcn": 16894,
+    "composition-theme-look-terminal": 14815,
+    "composition-theme-native": 14860,
+    "composition-theme-native-shadcn-glass-density-accent": 20832,
     "density": 257,
     "look-data": 1610,
     "look-high-contrast": 1546,
@@ -18,17 +18,17 @@
     "look-terminal": 1612,
     "native-styles": 1595,
     "surface-glass": 1542,
-    "theme": 9950
+    "theme": 13575
   },
   "$maximumAllowedGzipKb": {
     "accents": 1.1474609375,
-    "composition-theme-look-data": 11.3525390625,
-    "composition-theme-look-high-contrast": 11.29296875,
-    "composition-theme-look-material": 10.7578125,
-    "composition-theme-look-shadcn": 13.6552734375,
-    "composition-theme-look-terminal": 11.37109375,
-    "composition-theme-native": 11.5,
-    "composition-theme-native-shadcn-glass-density-accent": 17.4775390625,
+    "composition-theme-look-data": 15.025390625,
+    "composition-theme-look-high-contrast": 14.9609375,
+    "composition-theme-look-material": 14.42578125,
+    "composition-theme-look-shadcn": 17.1572265625,
+    "composition-theme-look-terminal": 15.0458984375,
+    "composition-theme-native": 15.091796875,
+    "composition-theme-native-shadcn-glass-density-accent": 21.1572265625,
     "density": 0.2607421875,
     "look-data": 1.634765625,
     "look-high-contrast": 1.5693359375,
@@ -37,7 +37,7 @@
     "look-terminal": 1.63671875,
     "native-styles": 1.619140625,
     "surface-glass": 1.5654296875,
-    "theme": 10.10546875
+    "theme": 13.787109375
   },
   "measurements": [
     { "id": "theme", "kind": "standalone", "imports": ["dist/theme.css"] },
