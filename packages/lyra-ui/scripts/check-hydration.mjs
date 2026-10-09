@@ -1355,12 +1355,15 @@ page.on('pageerror', (error) =>
 page.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') {
     // This harness deliberately runs with no optional peers installed and no peer-registration
-    // entries imported -- it is testing the hydration contract, not peer setup. Both shapes of
-    // "an optional peer is absent" diagnostic are therefore expected here: the loader's own
-    // "needs the optional peer dependency" message, and <lr-flag>'s "no flag resolver is
-    // registered", which reports the same absence from the registration side.
+    // entries imported -- it is testing the hydration contract, not peer setup. Every shape of
+    // "an optional peer is absent" diagnostic is therefore expected here: the loader's own
+    // "needs the optional peer dependency" message, <lr-emoji-picker>'s "the optional peer
+    // dependency ... is not installed", and <lr-flag>'s "no flag resolver is registered", which
+    // reports the same absence from the registration side. A peer that is installed but fails to
+    // load still reaches the findings.
     if (
       /needs the optional peer dependenc(?:y|ies)/.test(message.text()) ||
+      /the optional peer dependency `[^`]+` is not installed/.test(message.text()) ||
       /no flag resolver is registered/.test(message.text())
     )
       return;
