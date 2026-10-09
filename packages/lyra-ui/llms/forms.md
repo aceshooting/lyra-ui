@@ -444,13 +444,14 @@ alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorre
 
 `ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
-number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
+number; readonly title?: string; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
 the async counterparts of `<lr-option>`'s `start`/`end` adornment slots and render as the
 `option-start` / `option-end` parts, inert and aria-hidden exactly like `icon`. A string or number `start`/`end` truncates with an ellipsis when it outgrows the part; template content should render an element at its top level to do the same. `icon` renders as a decorative leading
 visual whose rendered subtree stays visible but is inert and hidden from assistive technology;
 put independent actions outside it. `badge` renders as trailing metadata, `accessibleLabel` can
-provide richer spoken text than the visible label, and `data` is retained without being rendered
+provide richer spoken text than the visible label, `title` is the row's tooltip text (never part
+of the accessible name), and `data` is retained without being rendered
 for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
@@ -7121,6 +7122,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly start?: unknown;
     readonly end?: unknown;
     readonly badge?: string | number;
+    readonly title?: string;
     readonly accessibleLabel?: string;
     readonly data?: unknown;
     readonly dotColor?: string;

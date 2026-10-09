@@ -434,7 +434,8 @@ formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, 
 'autocomplete' | 'restore'): void }`. The exported subclass seam is
   `FormAssociatedSubclassInterface<TValue> { protected captureLiveValueCheckpoint(): { readonly
 value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {
-readonly value: TValue; readonly dirty: boolean }): void }`.
+readonly value: TValue; readonly dirty: boolean }): void; protected commitFormValue(value: TValue):
+void; protected isMissingValue(): boolean }`.
   `CheckedFormAssociated(Base)` is the checkbox-, switch- and radio-shaped variant of that mixin: the
   string `value` (default `'on'`) is submitted only while `checked`, `checked` has native
   dirty/default semantics, reset and state restore round-trip it, and `required` means "must be

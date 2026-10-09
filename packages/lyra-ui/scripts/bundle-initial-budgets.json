@@ -19,7 +19,7 @@
     "dist/components/conversation/usage-badge/usage-badge.js": 4.4375,
     "dist/components/conversation/voice-picker/voice-picker.js": 28.625,
     "dist/components/forms/color-picker/color-picker.js": 27,
-    "dist/components/forms/combobox/combobox.js": 39.125,
+    "dist/components/forms/combobox/combobox.js": 39.1875,
     "dist/components/forms/date-picker/date-input.js": 40.8125,
     "dist/components/forms/input/time-input.js": 26.25,
     "dist/components/forms/locale-picker/locale-picker.js": 27.5,

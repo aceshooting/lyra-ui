@@ -6812,7 +6812,7 @@
       "module": "src/components/forms/combobox/combobox.class.ts",
       "exportName": "ComboboxSourceResult",
       "kind": "interface",
-      "fingerprint": "1dd343ec70f2cb7a391e",
+      "fingerprint": "ce446663e368ab7e417f",
       "routes": [
         "src/all.ts",
         "src/components/forms/combobox/combobox.class.ts",
@@ -6834,7 +6834,7 @@
       "module": "src/components/forms/combobox/combobox.class.ts",
       "exportName": "ComboboxSourceRow",
       "kind": "interface",
-      "fingerprint": "48d7d09680e61b53cd64",
+      "fingerprint": "b25a8c515b58e99fbc88",
       "routes": [
         "src/all.ts",
         "src/components/forms/combobox/combobox.class.ts",
@@ -14123,7 +14123,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "6529924dd4f1ebdaff75",
+      "fingerprint": "d136a855d62765ea9f8b",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -14508,7 +14508,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociated",
       "kind": "function",
-      "fingerprint": "d61010403548791e725a",
+      "fingerprint": "d61e4d606621109eaee2",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14528,7 +14528,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociatedInterface",
       "kind": "interface",
-      "fingerprint": "2c3d855c887a4640070c",
+      "fingerprint": "a5f0805cf85491e9f1d0",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -15748,7 +15748,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "529986992bc8056ca24e",
+      "fingerprint": "c86a2336af6da650727f",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15764,7 +15764,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "eea25017accada627aad",
+      "fingerprint": "c883de4888c74360576e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16324,7 +16324,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "e76d24f5b68b463a0dc8",
+      "fingerprint": "3a8806878b4f606d8334",
       "routes": [
         "src/vue.ts"
       ],
@@ -16733,7 +16733,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "9a2cc60e53353d92cc95",
+      "fingerprint": "797e2ee7185aa27a3a23",
       "routes": [
         "src/framework-types.ts"
       ],

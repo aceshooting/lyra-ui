@@ -11,7 +11,7 @@ import { assertInstalledMigrationBanner, assertInstalledRetainedField, createV24
 function currentContractFromHistoricalCapture(publishedMigration) {
   const inventory = structuredClone(publishedMigration);
   assert.deepEqual(inventory.lyraRenames.profiles.map((profile) => profile.origin), ['lyra-v21', 'lyra-v22']);
-  inventory.lyraRenames.profiles.push(emptyRenameProjection().profiles[2]);
+  inventory.lyraRenames.profiles.push(...emptyRenameProjection().profiles.slice(2));
   return inventory;
 }
 
