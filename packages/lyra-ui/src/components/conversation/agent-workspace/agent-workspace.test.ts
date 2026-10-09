@@ -103,7 +103,7 @@ it("uses a plain-frame fallback composer without changing a supplied composer", 
 
 it("keeps the plain composer's dock edge on the control border while panel dividers take the subtle tier", async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
-    <lr-agent-workspace
+    <lr-agent-workspace data-lr-theme-scope
       style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(40, 50, 60);"
     ></lr-agent-workspace>
   `);

@@ -749,7 +749,7 @@ it('shows the exact value as a title tooltip on the headline value, and makes it
 
 it("renders [part='value']/[part='row-value'] focus rings from the focus tokens", async () => {
   const el = (await fixture(html`
-    <lr-stat
+    <lr-stat data-lr-theme-scope
       value="$1.2K"
       exact-value="$1,204.37"
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
@@ -980,7 +980,7 @@ it('retints the resting tile through --lr-stat-bg', async () => {
 
 it('leaves the resting tile on the shared surface token when --lr-stat-bg is unset', async () => {
   const el = (await fixture(
-    html`<lr-stat label="Revenue" value="12.4" style="--lr-color-surface: rgb(4, 5, 6)"></lr-stat>`
+    html`<lr-stat data-lr-theme-scope label="Revenue" value="12.4" style="--lr-color-surface: rgb(4, 5, 6)"></lr-stat>`
   )) as LyraStat;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
@@ -1145,7 +1145,7 @@ it('gives a linked plain stat a rendered text-underline hover/focus affordance, 
 
 it('inherits linked hover/pressed hooks while direct host values still win', async () => {
   const wrapper = await fixture(html`
-    <div
+    <div data-lr-theme-scope
       style="--lr-transition-fast: 0s; --lr-stat-link-hover-border-color: rgb(1, 2, 3); --lr-stat-link-active-bg: rgb(4, 5, 6)"
     >
       <lr-stat label="Memories" value="128" href="#memory-inventory"></lr-stat>
@@ -1178,7 +1178,7 @@ it('inherits linked hover/pressed hooks while direct host values still win', asy
 });
 
 it('shifts the linked tile border while the pointer rests on hit-testable slotted content', async () => {
-  const el = (await fixture(html`<lr-stat
+  const el = (await fixture(html`<lr-stat data-lr-theme-scope
     label="Memories"
     value="128"
     href="#memory-inventory"
@@ -1204,7 +1204,7 @@ it('shifts the linked tile border while the pointer rests on hit-testable slotte
 });
 
 it('keeps a linked plain stat shadow-free while the pointer rests on slotted content', async () => {
-  const el = (await fixture(html`<lr-stat
+  const el = (await fixture(html`<lr-stat data-lr-theme-scope
     frame="plain"
     label="Memories"
     value="128"
@@ -1229,7 +1229,7 @@ it('keeps a linked plain stat shadow-free while the pointer rests on slotted con
 });
 
 it('keeps the focus ring on a linked plain stat (an outline needs no border)', async () => {
-  const el = (await fixture(html`<lr-stat
+  const el = (await fixture(html`<lr-stat data-lr-theme-scope
     frame="plain"
     label="Memories"
     value="128"
@@ -1458,8 +1458,8 @@ it('no longer answers to the pre-8.0.0 appearance attribute — frame replaced i
 // (WCAG 2.2 SC 1.4.11), so only the passive tile moves to the subtle tier.
 it('rests a passive tile on the subtle tier and a linked tile on the control tier', async () => {
   const themed = '--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)';
-  const passive = (await fixture(html`<lr-stat label="Memories" value="128" style=${themed}></lr-stat>`)) as LyraStat;
-  const linked = (await fixture(html`<lr-stat label="Memories" value="128" href="/memories" style=${themed}></lr-stat>`)) as LyraStat;
+  const passive = (await fixture(html`<lr-stat label="Memories" value="128" data-lr-theme-scope style=${themed}></lr-stat>`)) as LyraStat;
+  const linked = (await fixture(html`<lr-stat label="Memories" value="128" href="/memories" data-lr-theme-scope style=${themed}></lr-stat>`)) as LyraStat;
   const edge = (el: LyraStat): string => getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!).borderTopColor;
   expect(edge(passive)).to.equal('rgb(7, 8, 9)');
   expect(edge(linked)).to.equal('rgb(10, 20, 30)');

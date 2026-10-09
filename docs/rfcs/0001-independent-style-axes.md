@@ -1,11 +1,11 @@
 # RFC 0001: Independent style axes
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Decision:** Accepted by the maintainer on 2026-09-27. The four feasibility items under "Stage 1 merge
-  gates" were not waived. The unresolved questions stay open. Anything first deprecated in
-  22.0.0 remains supported through v23 and is removable no earlier than v24; this also applies to
-  question 4 and the records' `removalNotBefore`
-  ([RFC 0003](0003-lyra-v21-migration-profile.md), question 11).
+  gates" were not waived. Anything first deprecated in 22.0.0 remained supported through v23 and was
+  removable no earlier than v24 ([RFC 0003](0003-lyra-v21-migration-profile.md), question 11). The
+  design shipped in 22.0.0; the [implementation note](#implementation-note-2700) records what changed
+  afterwards, and each unresolved question carries its disposition.
 - **Authors:** Lyra UI maintainers
 - **Created:** 2026-09-27
 - **Tracking issue:** None yet; this RFC is item 1 of the v22 plan's "Themes and styling" list in
@@ -37,9 +37,37 @@ input. A disposable prototype confirms it in Chromium, Firefox and WebKit:
 
 A new `setLyraStyle()` family in the zero-dependency `@aceshooting/lyra-ui/theme.js` becomes the
 canonical API. It shares v21's runtime, storage key, contrast floor and no-flash bootstrap.
-`setLyraTheme()` and the theme-preset API remain as a deprecated facade through v23 and are removable
-no earlier than v24. [Staged delivery](#staged-delivery) then orders the rest: token foundations, density and
+`setLyraTheme()` and the theme-preset API remained as a deprecated facade through v23 (removed in
+24.0.0). [Staged delivery](#staged-delivery) then orders the rest: token foundations, density and
 glass, the Material-inspired look, chart palettes for each look, and the preset gallery.
+
+## Implementation note (27.0.0)
+
+The design below shipped in 22.0.0 as written, with the staged delivery order and the five axes
+(`look`, `surface`, `density`, `mode`, `accent`). Later releases changed the following; the rest of
+this document keeps the original wording, so read it with these in mind.
+
+- **22.0.0.** `setLyraStyle()`/`getLyraStyle()`/`resetLyraStyle()`, `lr-style-change`,
+  `lyraStyleAttributes()`, `lyraLookCss()`/`defineLyraLook()`, the `shadcn` and `lyra` looks in
+  `theme.css`, the Material-inspired look (id `material`, `theme/looks/material.js`; `data`,
+  `terminal` and `high-contrast` looks followed), density, glass, the generated resolver, the
+  version-2 storage record and the extended bootstrap. The deprecated facade (`setLyraTheme()`,
+  `getLyraTheme()`, the preset API, `lr-theme-change`, `themes/shadcn.css`) shipped beside them.
+- **24.0.0.** The facade was removed: `setLyraTheme()`, `getLyraTheme()`, `LyraTheme`, the preset
+  API and `data-lr-theme-preset`, `lr-theme-change`/`lr-theme-preset-change`, `theme/presets.js`,
+  `theme/presets/shadcn.js` and `themes/shadcn.css`. `theme.css` includes the `shadcn` look and
+  `lyra`; `lyra-ui-migrate --origin=lyra-v22` reports each removed name
+  ([RFC 0003](0003-lyra-v21-migration-profile.md)). References to "the facade", "deprecated" rows
+  and "removal no earlier than v24" below describe the 22.0.0 state.
+- **25.0.0.** The built-in defaults changed from the `lyra` look, solid surface and no accent to
+  `shadcn`, `glass`, `emerald` and `system` mode, shared by first paint, restoration and
+  `resetLyraStyle()`; `accent: null` stays an explicit clear. The "Default" column of the axes
+  table has been refreshed. Saved choices stay independent and win. In 25.6.2 the default Glass
+  opacity became 60% (`--lr-theme-surface-opacity`); 25.0.0 had set 70%.
+- **27.0.0.** RFC 0002 delivered the document-level token layer, so a scope is any element carrying
+  a style-axis attribute or `data-lr-theme-scope` (`lyra-ui-migrate --rule=theme-scopes`).
+
+No new feature is added by this status change.
 
 ## Motivation
 
@@ -166,11 +194,11 @@ removable no earlier than v24); **breaking** (changed in v22).
 
 | Axis | Values | Default | Attribute | Owns |
 | --- | --- | --- | --- | --- |
-| look | `lyra`, `shadcn`, the Material-inspired look (item 3), application ids | `lyra` | `data-lr-look` | every `--lr-theme-*` input not owned below; role ramps through look slots |
-| surface | `solid`, `glass` | `solid` | `data-lr-surface` | `--lr-theme-surface-opacity`, `-blur`, `-saturation`, `-highlight` |
+| look | `lyra`, `shadcn`, `material`, `data`, `terminal`, `high-contrast`, application ids | `shadcn` (`lyra` through 24.x) | `data-lr-look` | every `--lr-theme-*` input not owned below; role ramps through look slots |
+| surface | `solid`, `glass` | `glass` (`solid` through 24.x) | `data-lr-surface` | `--lr-theme-surface-opacity`, `-blur`, `-saturation`, `-highlight` |
 | density | `compact`, `comfortable`, `touch` | `comfortable` | `data-lr-density` | private scale factors and target floor |
-| mode | `light`, `dark`, `system`; `unset` (runtime only) | `system` in the runtime; light when no attribute is present | `data-lr-mode` (requested); `data-lr-theme` (resolved) | private mode switches and `color-scheme` |
-| accent | the nine named accents, a CSS colour, a per-role record, `null` | `null` (the look's own) | `data-lr-accent` | role ramps, `--lr-theme-color-focus` and `--lr-theme-accent`, through accent slots |
+| mode | `light`, `dark`, `system`; `unset` (runtime only) | `system`; with no attribute `theme.css` follows `prefers-color-scheme` (light through 24.x) | `data-lr-mode` (requested); `data-lr-theme` (resolved) | private mode switches and `color-scheme` |
+| accent | the nine named accents, a CSS colour, a per-role record, `null` | `emerald` (`null`, the look's own, through 24.x; `null` remains an explicit clear) | `data-lr-accent` | role ramps, `--lr-theme-color-focus` and `--lr-theme-accent`, through accent slots |
 
 **Look ids.** Look ids follow today's preset-id rule: lowercase kebab-case, at most 64 characters.
 They form an open set, so applications can add their own. The id `custom` is reserved for a runtime
@@ -1354,42 +1382,71 @@ resolver is internal: reverting `theme.css` to per-mode blocks changes no public
 
 ## Unresolved questions
 
-1. **Slot names: private or public?** Keep slot names private and offer `lyraLookCss()`, as proposed,
+1. **Closed: private.** The slots are `--_lr-*` private names written by `lyraLookCss()` and the
+   runtime (`theme/look-css.ts`); the documented route for hand-written looks is
+   `defineLyraLook()`/`lyraLookCss()`, and no slot vocabulary is published. Original question:
+   **Slot names: private or public?** Keep slot names private and offer `lyraLookCss()`, as proposed,
    or publish a slot vocabulary so that hand-written CSS looks compose? Publishing freezes about 250
    names and the mechanism.
-2. **API names.**
+2. **Closed: shipped as proposed.** `setLyraStyle`, `LyraStyle`, `lr-style-change`, `data-lr-mode`,
+   `accentBackground` (API) and `treatment` (record) exist in `theme/theme.ts`. Original question:
+   **API names.**
    - `setLyraStyle`, `LyraStyle` and `lr-style-change` for the new family.
    - `data-lr-mode` for the requested mode.
    - `accentBackground` in the API for v21's `surface`.
    - `treatment` in the record for the surface axis.
-3. **The Material-inspired look's id.** Use `material`, or a neutral id such as `tonal` that implies
+3. **Closed: `material`.** The look is `theme/looks/material.js` with id `material`, documented as
+   Material-inspired and unaffiliated. Original question: **The Material-inspired look's id.** Use `material`, or a neutral id such as `tonal` that implies
    no affiliation with a trademarked design system? The documentation would state the inspiration
    either way.
-4. **Fixed stylesheet form.** Remove `themes/shadcn.css` no earlier than v24, or keep fixed
+4. **Closed: removed in 24.0.0.** `themes/shadcn.css` and `theme/presets/shadcn.js` were removed;
+   the `shadcn` look is part of `theme.css` and is selected with `data-lr-look`. Original question:
+   **Fixed stylesheet form.** Remove `themes/shadcn.css` no earlier than v24, or keep fixed
    `themes/<id>.css` forms permanently as a one-look convenience?
-5. **Future `data-theme` removal.** It is generic enough to collide with other libraries' theme attributes.
-6. **Named accents and CSS keywords.** Keep one API `accent` field in which names win (the
+5. **Closed: kept.** The runtime still reads and writes `data-theme` (the resolved mode, in the
+   mode-attribute list); no removal is scheduled. Original question: **Future `data-theme` removal.** It is generic enough to collide with other libraries' theme attributes.
+6. **Closed: one `accent` field.** A string that is a named palette selects it; the snapshot's
+   `accentName` distinguishes a named palette from an identically named CSS colour in saved records,
+   and the migration guide asks to review custom colours that share a gemstone name. Original
+   question: **Named accents and CSS keywords.** Keep one API `accent` field in which names win (the
    `aquamarine` overlap), or split named accents into their own API field, as the record already does?
-7. **Nesting guard scope.** Should a popover opened from a glass surface always be solid, as proposed,
+7. **Closed: nested glass chrome is opaque.** Nested glass chrome never repeats the blur, and
+   independently promoted menus and modal panels start a new material root
+   (`llms/shared/styles-and-tokens.md`). Original question: **Nesting guard scope.** Should a popover opened from a glass surface always be solid, as proposed,
    or only when it visually overlaps the glass?
-8. **Density values.** Item 5 sets the factors with visual review.
+8. **Closed: type never scales, factors private.** Density scales space and control sizes through
+   private `--_lr-density-*` factors and a target floor; no font size or line height reads them.
+   Original question: **Density values.** Item 5 sets the factors with visual review.
    - Confirm here that type never scales.
    - Confirm that the factors stay private in v22.
-9. **Look-owned accent derivation.** May a look supply its own accent derivation, such as tonal
+9. **Closed: no.** A `LyraLook` is `{ id, tokens }`; every look uses the one contrast-checked
+   accent derivation. Original question: **Look-owned accent derivation.** May a look supply its own accent derivation, such as tonal
    palettes from a seed colour? This RFC says no for v22: one contrast-checked derivation for every
    look.
-10. **Attributes-only bootstrap.** If the measured full bootstrap exceeds a ceiling that review
+10. **Closed: not shipped.** There is one bootstrap; `createLyraThemeBootstrap()` takes `storageKey`
+    and `restore: 'all' | 'mode'`, and no `inlineTokens` option or second asset exists. Original
+    question: **Attributes-only bootstrap.** If the measured full bootstrap exceeds a ceiling that review
     accepts, ship a second asset of roughly 1 KB, via `createLyraThemeBootstrap({ inlineTokens: false })`,
     for applications that use only stylesheet forms?
-11. **Transition suppression.** Should the runtime suppress interactive transitions for the frame in
+11. **Future work, not scheduled.** The runtime does not suppress transitions when an axis switches.
+    Original question: **Transition suppression.** Should the runtime suppress interactive transitions for the frame in
     which an axis switches, so that controls do not visibly fade between looks?
-12. **Resolver in foreign shadow roots.** Ship the resolver and mode rules (about 2 KB) inside RFC
+12. **Closed: explicit installation.** The adopted document layer (RFC 0002) does not carry the
+    resolver or mode rules; an application-owned shadow root with local style boundaries installs
+    `theme.css` and the selected look sheets itself, as the documentation says. Original question:
+    **Resolver in foreign shadow roots.** Ship the resolver and mode rules (about 2 KB) inside RFC
     0002's adopted document layer, which adds them to the component core, or require an explicit
     adoption call for application shadow roots that carry axis attributes?
-13. **Surfaces appended to `document.body`.** Should toast regions and `confirm()` accept a scope
+13. **Future work, not scheduled.** Toast regions mount on the owner document's body (or the native
+    modal's mount target) and follow the document; there is no scope element to mirror. Original
+    question: **Surfaces appended to `document.body`.** Should toast regions and `confirm()` accept a scope
     element to mirror, or should they keep following the document?
-14. **Web Awesome migration.** Web Awesome's public theming documentation offers separate theme,
+14. **Future work, not scheduled.** The Web Awesome migration reports nothing about its theme,
+    palette or brand choices and maps none onto `data-lr-look` or `data-lr-accent`. Original question:
+    **Web Awesome migration.** Web Awesome's public theming documentation offers separate theme,
     palette and brand choices. Should the migration script map those onto `data-lr-look` and
     `data-lr-accent` where Lyra has an equivalent, or only report them?
-15. **Default mode without an attribute.** Keep `theme.css` light when no mode attribute is present,
+15. **Closed: follows the operating system.** The default mode is `system`, and `theme.css` with no
+    mode attribute follows `prefers-color-scheme` (25.0.0). Original question:
+    **Default mode without an attribute.** Keep `theme.css` light when no mode attribute is present,
     as proposed for compatibility, or follow the operating system from v23?

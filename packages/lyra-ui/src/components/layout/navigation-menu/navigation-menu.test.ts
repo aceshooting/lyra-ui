@@ -1322,7 +1322,7 @@ describe('<lr-navigation-menu> motion', () => {
 
   it('times the resize from the duration token alone', async () => {
     const menu = await menuFixture(html`
-      <div style="--lr-theme-duration-normal: 400ms">
+      <div data-lr-theme-scope style="--lr-theme-duration-normal: 400ms">
         <lr-navigation-menu>${items()}</lr-navigation-menu>
       </div>
     `);
@@ -1728,7 +1728,7 @@ describe('<lr-navigation-menu> lifecycle', () => {
 describe('<lr-navigation-menu> styling', () => {
   it('declares a hover state and an interactive transition on the trigger, link and toggle', async () => {
     const container = await fixture<HTMLElement>(html`
-      <div style="--lr-theme-transition-fast: 0s linear">
+      <div data-lr-theme-scope style="--lr-theme-transition-fast: 0s linear">
         <lr-navigation-menu show-delay="100000">${items()}</lr-navigation-menu>
         <div style="inline-size: 320px">
           <lr-navigation-menu id="collapsed" mobile-breakpoint="40rem">${items('t-')}</lr-navigation-menu>
@@ -1873,7 +1873,7 @@ describe('navigation menu label and glass foregrounds', () => {
 
   it('qualifies bar-item hover, current and collapsed-toggle foregrounds for a glass surface', async () => {
     const menu = await menuFixture(html`
-      <div style="inline-size: 320px; --_lr-glass-foreground-weight: 100%; --lr-theme-color-text-normal: rgb(1, 2, 3); --lr-theme-transition-fast: 0s">
+      <div data-lr-theme-scope style="inline-size: 320px; --_lr-glass-foreground-weight: 100%; --lr-theme-color-text-normal: rgb(1, 2, 3); --lr-theme-transition-fast: 0s">
         <lr-navigation-menu mobile-breakpoint="40rem">${items('g-')}</lr-navigation-menu>
       </div>
     `);

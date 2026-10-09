@@ -984,7 +984,7 @@ describe('sticky + sortable header pointer feedback', () => {
 
   async function stickyTable(): Promise<LyraTable<Row>> {
     const el = (await fixture(html`
-      <lr-table
+      <lr-table data-lr-theme-scope
         style="--lr-transition-fast: 0s"
         aria-label="Scores"
         .columns=${stickySortableColumns}
@@ -1250,7 +1250,7 @@ describe("lr-table contains the composed lr-pagination's lr-before-page-change",
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraTable<{ label: string }>>(html`
-      <lr-table  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-table>
+      <lr-table data-lr-theme-scope  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-table>
     `);
     el.columns = [{ key: 'label', label: 'Synthetic', resizable: true, cell: row => row.label }];
     el.rows = [{ label: 'Synthetic entry' }];

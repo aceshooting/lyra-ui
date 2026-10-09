@@ -29,6 +29,7 @@ const LYRA_RENAME_PROFILES = Object.freeze([
   Object.freeze({ origin: 'lyra-v21', fromMajor: 21, toMajor: 22, aliasRemovalMajor: 23 }),
   Object.freeze({ origin: 'lyra-v22', fromMajor: 22, toMajor: 23, aliasRemovalMajor: 24 }),
   Object.freeze({ origin: 'lyra-v25', fromMajor: 25, toMajor: 26, aliasRemovalMajor: 28 }),
+  Object.freeze({ origin: 'lyra-v26', fromMajor: 26, toMajor: 27, aliasRemovalMajor: 29 }),
 ]);
 
 export const LYRA_RENAME_ORIGINS = Object.freeze(LYRA_RENAME_PROFILES.map((profile) => profile.origin));
@@ -90,8 +91,20 @@ const NAME_PATTERNS = Object.freeze({
 const MODULE_REVIEW_KINDS = ['entry-point', 'stylesheet', 'function', 'type', 'constant', 'class', 'window-event', 'root-attribute'];
 const MODULE_PATH_PATTERN = /^\.\/[A-Za-z0-9_./-]+\.(?:js|css)$/;
 const moduleReviewKey = (entry) => [entry.kind, entry.module ?? '', entry.name].join('\u0000');
-const PROFILE_LIST_KEYS = ['renames', 'defaults', 'detailChanges', 'detailFields', 'propertyChanges', 'retiredEvents', 'reviews', 'slotContent', 'moduleReviews'];
-const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMajor', ...PROFILE_LIST_KEYS];
+const PROFILE_LIST_KEYS = ['renames', 'defaults', 'detailChanges', 'detailFields', 'propertyChanges', 'retiredEvents', 'reviews', 'slotContent', 'moduleReviews', 'globals'];
+const OPTIONAL_PROFILE_LISTS = ['propertyChanges', 'retiredEvents', 'detailFields', 'globals'];
+const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMajor', ...PROFILE_LIST_KEYS, 'rules'];
+
+/**
+ * Entries that no `lr-*` tag owns (RFC 0003). `module` rewrites a package specifier (exactly, or by
+ * `prefix` minus `except`), `export` re-binds a removed root-barrel name onto its replacement, and
+ * `locale-key` reports a removed localization string key, `css-property` a removed custom property (or
+ * prefix of them) and `part` a part whose meaning changed on one component; the last three never edit.
+ */
+const GLOBAL_KINDS = Object.freeze(['module', 'export', 'locale-key', 'css-property', 'part']);
+/** Structural rules a profile can enable; each is implemented and tested in the codemod. */
+export const PROFILE_RULES = Object.freeze(['theme-scopes']);
+const PACKAGE_SPECIFIER_PATTERN = /^@aceshooting\/lyra-[a-z]+(?:\/[A-Za-z0-9_./-]*)?$/;
 const PROJECTED_PROFILE_KEYS = [...AUTHORED_PROFILE_KEYS, 'exposure'];
 
 function isPlainObject(value) {
@@ -130,7 +143,7 @@ export function emptyRenameLedger() {
     schemaVersion: LYRA_RENAME_LEDGER_SCHEMA_VERSION,
     profiles: LYRA_RENAME_PROFILES.map((header) => ({
       ...header,
-      ...Object.fromEntries(PROFILE_LIST_KEYS.filter((list) => list !== 'detailFields').map((list) => [list, []])),
+      ...Object.fromEntries(PROFILE_LIST_KEYS.filter((list) => !['detailFields', 'globals'].includes(list)).map((list) => [list, []])),
     })),
   };
 }
@@ -147,6 +160,7 @@ export function emptyRenameProjection() {
 }
 
 function entryLabel(origin, list, entry) {
+  if (list === 'globals') return `${origin}: global ${entry?.kind} ${entry?.from}`;
   if (list === 'moduleReviews') return `${origin}: module review ${entry?.kind} ${entry?.module ?? ''} ${entry?.name}`;
   if (list === 'renames') return `${origin}: rename ${entry?.tag} ${entry?.kind} ${entry?.from}`;
   if (list === 'defaults') return `${origin}: default ${entry?.tag} ${entry?.attribute}`;
@@ -160,6 +174,7 @@ function entryLabel(origin, list, entry) {
 
 function sortKey(list, entry) {
   if (list === 'moduleReviews') return moduleReviewKey(entry);
+  if (list === 'globals') return [entry.kind, entry.from, entry.tag ?? ''].join('\u0000');
   if (list === 'renames') return [entry.tag, entry.kind, entry.from].join('\u0000');
   if (list === 'defaults') return [entry.tag, entry.attribute].join('\u0000');
   if (list === 'detailChanges' || list === 'retiredEvents') return [entry.tag, entry.event].join('\u0000');
@@ -216,6 +231,71 @@ function validateModuleReviewEntry(findings, label, entry, projected) {
     validateRemovedIn(findings, label, entry);
   }
   validateProjectedSince(findings, label, entry, projected);
+}
+
+function validateGlobalEntry(findings, label, entry) {
+  const unknown = unknownKeys(entry, ['kind', 'from', 'to', 'module', 'prefix', 'except', 'tag', 'summary', 'since']);
+  if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
+  if (!GLOBAL_KINDS.includes(entry.kind)) {
+    findings.push(`${label}: kind must be one of ${GLOBAL_KINDS.join(', ')}`);
+    return;
+  }
+  if (typeof entry.summary !== 'string' || !entry.summary.trim()) findings.push(`${label}: summary text missing`);
+  if (!parseVersion(entry.since)) findings.push(`${label}: since must be a version`);
+  const optional = entry.kind === 'locale-key';
+  if (entry.kind === 'module') {
+    const valid = (value) => typeof value === 'string' && PACKAGE_SPECIFIER_PATTERN.test(value) && !value.includes('..');
+    if (!valid(entry.from)) findings.push(`${label}: from must be an @aceshooting package specifier`);
+    if (!valid(entry.to)) findings.push(`${label}: to must be an @aceshooting package specifier`);
+    if (valid(entry.from) && entry.from === entry.to) findings.push(`${label}: from and to must differ`);
+    if (Object.hasOwn(entry, 'module')) findings.push(`${label}: module entries do not take a module`);
+    if (Object.hasOwn(entry, 'prefix') && entry.prefix !== true) findings.push(`${label}: prefix may only be true`);
+    if (entry.prefix === true && !(entry.from?.endsWith('/') && entry.to?.endsWith('/'))) {
+      findings.push(`${label}: a prefix entry's from and to must end with a slash`);
+    }
+    if (Object.hasOwn(entry, 'except')) {
+      const exceptions = entry.except;
+      if (entry.prefix !== true || !Array.isArray(exceptions) || !exceptions.length ||
+        !exceptions.every((value) => typeof value === 'string' && value.startsWith(entry.from) && value.endsWith('/'))) {
+        findings.push(`${label}: except needs prefix and a list of slash-terminated prefixes below from`);
+      } else if (JSON.stringify(exceptions) !== JSON.stringify([...exceptions].sort(compareText))) {
+        findings.push(`${label}: except must be sorted`);
+      }
+    }
+    return;
+  }
+  if (entry.kind === 'css-property' || entry.kind === 'part') {
+    // `to` is the replacement guidance, not a name.
+    if (typeof entry.to !== 'string' || !entry.to.trim()) findings.push(`${label}: to must name the replacement`);
+    if (Object.hasOwn(entry, 'module') || Object.hasOwn(entry, 'except')) findings.push(`${label}: ${entry.kind} entries take no module or except`);
+    if (entry.kind === 'part') {
+      if (typeof entry.tag !== 'string' || !TAG_PATTERN.test(entry.tag)) findings.push(`${label}: tag must be an lr-* element name`);
+      if (Object.hasOwn(entry, 'prefix')) findings.push(`${label}: prefix applies to custom properties only`);
+      validateName(findings, label, 'part', 'from', entry.from);
+    } else {
+      if (Object.hasOwn(entry, 'tag')) findings.push(`${label}: custom properties are not tag-owned`);
+      validateName(findings, label, 'css-property', 'from', entry.from);
+      if (Object.hasOwn(entry, 'prefix') && (entry.prefix !== true || !entry.from.endsWith('-'))) findings.push(`${label}: a prefix needs prefix: true and a name ending in a hyphen`);
+    }
+    return;
+  }
+  for (const field of ['prefix', 'except', 'tag']) {
+    if (Object.hasOwn(entry, field)) findings.push(`${label}: ${field} applies to module, part and custom property entries only`);
+  }
+  if (typeof entry.from !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.from)) findings.push(`${label}: from must be an identifier`);
+  if (typeof entry.to !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.to)) findings.push(`${label}: to must be an identifier`);
+  if (entry.from === entry.to) findings.push(`${label}: from and to must differ`);
+  if (entry.kind === 'export' && entry.module !== '.') findings.push(`${label}: an export entry needs module "." (the package root)`);
+  if (optional && Object.hasOwn(entry, 'module')) findings.push(`${label}: locale keys do not take a module`);
+}
+
+function validateRulesList(findings, origin, rules) {
+  if (!Array.isArray(rules)) {
+    findings.push(`${origin}: rules must be an array`);
+    return;
+  }
+  for (const rule of rules) if (!PROFILE_RULES.includes(rule)) findings.push(`${origin}: unknown rule ${JSON.stringify(rule)}`);
+  if (JSON.stringify(rules) !== JSON.stringify([...new Set(rules)].sort(compareText))) findings.push(`${origin}: rules must be sorted and unique`);
 }
 
 function validateRenameEntry(findings, label, entry, projected) {
@@ -320,9 +400,12 @@ function validateRetiredEventEntry(findings, label, entry, projected) {
 }
 
 function validatePropertyChangeEntry(findings, label, entry, projected) {
-  const unknown = unknownKeys(entry, ['tag', 'property', 'summary', ...(projected ? ['since'] : [])]);
+  const unknown = unknownKeys(entry, ['tag', 'property', 'former', 'summary', ...(projected ? ['since'] : [])]);
   if (unknown.length) findings.push(`${label}: unknown key(s) ${unknown.join(', ')}`);
   validateName(findings, label, 'property', 'property', entry.property);
+  if (Object.hasOwn(entry, 'former') && validateName(findings, label, 'property', 'former', entry.former) && entry.former === entry.property) {
+    findings.push(`${label}: former must differ from property`);
+  }
   validateSummary(findings, label, entry.summary);
   validateProjectedSince(findings, label, entry, projected);
 }
@@ -447,10 +530,10 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
   const origins = ledger.profiles.map((profile) => profile?.origin);
   // A verified published capture can predate the v25 profile even when its package version is
   // 25.x. The captured source and packed projection are compared byte-for-byte by the reader.
-  const historicalTwoProfiles = Number.isInteger(historicalReleaseMajor) &&
-    historicalReleaseMajor >= 22 && historicalReleaseMajor < 26 &&
-    JSON.stringify(origins) === JSON.stringify(LYRA_RENAME_ORIGINS.slice(0, 2));
-  const expectedOrigins = historicalTwoProfiles ? LYRA_RENAME_ORIGINS.slice(0, 2) : LYRA_RENAME_ORIGINS;
+  const historicalCount = !Number.isInteger(historicalReleaseMajor) || historicalReleaseMajor < 22 ? 0
+    : historicalReleaseMajor < 26 ? 2 : historicalReleaseMajor < 27 ? 3 : 0;
+  const expectedOrigins = historicalCount && JSON.stringify(origins) === JSON.stringify(LYRA_RENAME_ORIGINS.slice(0, historicalCount))
+    ? LYRA_RENAME_ORIGINS.slice(0, historicalCount) : LYRA_RENAME_ORIGINS;
   if (JSON.stringify(origins) !== JSON.stringify(expectedOrigins)) {
     findings.push(`rename ledger profiles must be exactly ${expectedOrigins.join(', ')} in that order`);
   }
@@ -470,7 +553,7 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
       }
     }
     for (const list of PROFILE_LIST_KEYS) {
-      if (['propertyChanges', 'retiredEvents', 'detailFields'].includes(list) && profile[list] === undefined) continue;
+      if (OPTIONAL_PROFILE_LISTS.includes(list) && profile[list] === undefined) continue;
       if (!Array.isArray(profile[list])) {
         findings.push(`${origin}: ${list} must be an array`);
         continue;
@@ -483,10 +566,11 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
           findings.push(`${origin}: ${list} entries must be objects`);
           continue;
         }
-        if (list !== 'moduleReviews' && (typeof entry.tag !== 'string' || !TAG_PATTERN.test(entry.tag))) {
+        if (list !== 'moduleReviews' && list !== 'globals' && (typeof entry.tag !== 'string' || !TAG_PATTERN.test(entry.tag))) {
           findings.push(`${label}: tag must be an lr-* element name`);
         }
-        if (list === 'moduleReviews') {
+        if (list === 'globals') validateGlobalEntry(findings, label, entry);
+        else if (list === 'moduleReviews') {
           validateModuleReviewEntry(findings, label, entry, projected);
           if (projected && majorOf(entry.removalNotBefore) !== profile.aliasRemovalMajor) {
             findings.push(`${label}: removalNotBefore must match the profile's aliasRemovalMajor`);
@@ -510,9 +594,10 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
         keys.push(key);
       }
       if (JSON.stringify(keys) !== JSON.stringify([...keys].sort(compareText))) {
-        findings.push(`${origin}: ${list} must be sorted by ${list === 'moduleReviews' ? 'kind, module and name' : 'tag and name'}`);
+        findings.push(`${origin}: ${list} must be sorted by ${list === 'moduleReviews' ? 'kind, module and name' : list === 'globals' ? 'kind and name' : 'tag and name'}`);
       }
     }
+    if (profile.rules !== undefined) validateRulesList(findings, origin, profile.rules);
     if (!Array.isArray(profile.renames) || !Array.isArray(profile.reviews)) continue;
 
     // A rename target that is itself renamed would make a second run rewrite the first run's
@@ -837,6 +922,7 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
           : component;
         if (!surfaceEntry(propertyOwner, 'property', entry.property)) findings.push(`${label}: the property is not on the public surface`);
         else checkLyraOnly(label, entry.tag, 'property', entry.property);
+        if (entry.former && surfaceEntry(propertyOwner, 'property', entry.former)) findings.push(`${label}: the former property name is still on the public surface`);
       }
     }
 
@@ -877,6 +963,19 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       }
       if (attribute.hasDefault && String(attribute.default) === String(entry.value)) {
         findings.push(`${label}: the value equals the current default, so there is nothing to preserve`);
+      }
+    }
+
+    for (const entry of profile.globals ?? []) {
+      const label = entryLabel(origin, 'globals', entry);
+      if (entry.kind === 'part') {
+        const component = ownerFor(components, compatibilityContext, entry.tag);
+        if (!component) findings.push(`${label}: component is not in the inventory`);
+        else if (!surfaceEntry(component, 'part', entry.from)) findings.push(`${label}: the part is not on the public surface`);
+      } else if (entry.kind === 'css-property') {
+        const stillThere = [...components.values()].some((component) => (component.surface?.cssProperties ?? [])
+          .some((property) => entry.prefix ? property.name.startsWith(entry.from) : property.name === entry.from));
+        if (stillThere) findings.push(`${label}: a component still exposes the custom property`);
       }
     }
 
@@ -974,6 +1073,8 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
         detailChanges: profile.detailChanges.map((entry) => ({ ...structuredClone(entry), since: release })),
         ...(Array.isArray(profile.detailFields) ? { detailFields: profile.detailFields.map((entry) => structuredClone(entry)) } : {}),
         propertyChanges: (profile.propertyChanges ?? []).map((entry) => ({ ...structuredClone(entry), since: release })),
+        ...(Array.isArray(profile.globals) ? { globals: profile.globals.map((entry) => structuredClone(entry)) } : {}),
+        ...(Array.isArray(profile.rules) ? { rules: [...profile.rules] } : {}),
         reviews: profile.reviews.map((entry) => {
           const record = recordFor(entry, entry.kind, entry.name);
           const retired = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.name);
@@ -1059,7 +1160,10 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
         const { removedIn, ...beforeRemoval } = entry;
         return beforeRemoval;
       });
-    const data = { ...full, ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, available(list)])) };
+    // A structural rule belongs to the target release, like any entry that starts there.
+    const rulesApply = lyraVersion === null || compareVersions(lyraVersion, `${full.toMajor}.0.0`) >= 0;
+    if (!rulesApply) skipped.push(...(full.rules ?? []).map((rule) => ({ list: 'rules', rule })));
+    const data = { ...full, ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, available(list)])), rules: rulesApply ? [...(full.rules ?? [])] : [] };
     const renamesByOwner = new Map(data.renames.map((entry) => [ownerKey(entry.tag, entry.kind, entry.from), entry]));
     const renamesByName = indexBy(data.renames, (entry) => nameKey(entry.kind, entry.from));
     const renamesByTarget = indexBy(data.renames, (entry) => nameKey(entry.kind, entry.to));
@@ -1071,7 +1175,8 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
     const fieldsByEvent = indexBy(data.detailFields ?? [], (entry) => entry.event);
     const retiredByOwner = new Map(data.retiredEvents.map((entry) => [ownerKey(entry.tag, 'event', entry.event), entry]));
     const retiredByName = indexBy(data.retiredEvents, (entry) => entry.event);
-    const propertiesByOwner = new Map(data.propertyChanges.map((entry) => [ownerKey(entry.tag, 'property', entry.property), entry]));
+    const propertiesByOwner = new Map(data.propertyChanges.flatMap((entry) => [entry.property, ...(entry.former ? [entry.former] : [])]
+      .map((name) => [ownerKey(entry.tag, 'property', name), entry])));
     const exposure = new Map(
       EXPOSURE_KINDS.map((kind) => [kind, new Map(Object.entries(data.exposure[kind]).map(([name, tags]) => [name, new Set(tags)]))]),
     );
@@ -1094,7 +1199,7 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
       data,
       skipped,
       tags,
-      isEmpty: tags.size === 0 && data.moduleReviews.length === 0,
+      isEmpty: tags.size === 0 && data.moduleReviews.length === 0 && data.globals.length === 0 && data.rules.length === 0,
       renameFor: (tag, kind, name) => renamesByOwner.get(ownerKey(tag, kind, name)) ?? null,
       renamesNamed,
       renamesOnto: (kind, name) => renamesByTarget.get(nameKey(kind, name)) ?? [],

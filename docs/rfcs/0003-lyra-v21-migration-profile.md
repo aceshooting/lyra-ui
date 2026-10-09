@@ -1,8 +1,10 @@
 # RFC 0003: Lyra 21 to Lyra 22 migration profile and rename ledger
 
-- **Status:** Accepted
+- **Status:** Implemented
 - **Decision:** Accepted by the maintainer on 2026-09-27, with renames shipping additively in 21.x
-  minors under the unchanged deprecation rule (no policy amendment); questions 2–11 stay open.
+  minors under the unchanged deprecation rule (no policy amendment). Delivered across 22.0.0 to
+  27.0.0; see the [implementation note](#implementation-note-2700) for what shipped and where it
+  differs from the original text, and the dispositions under "Unresolved questions".
 - **Authors:** Lyra UI maintainers
 - **Created:** 2026-09-27
 - **Tracking issue:** None yet. Implements the migration half of the "Rename and removal policy" in
@@ -38,6 +40,36 @@ aliases. This RFC decides three things:
 
 A working implementation with an empty ledger, and its tests, exist as feasibility evidence. They
 land with that minor.
+
+## Implementation note (27.0.0)
+
+- **Profiles.** `lyra-v21` (21 to 22, aliases removed in 23), `lyra-v22` (22 to 23, removed in 24),
+  `lyra-v25` (25 to 26, removed in 28) and `lyra-v26` (26 to 27). The ledger holds exactly these
+  profiles in this order, and every release keeps all earlier ones, so a project that skips a major
+  runs the profiles in sequence (question 2). Each profile has its own `aliasRemovalMajor`;
+  `lyra-v26` uses 29 because 28 already belongs to `lyra-v25`, and the coverage gate pairs a
+  removal major with exactly one profile.
+- **Lists delivered beyond the first draft.** `retiredEvents`, `propertyChanges`, `detailFields`
+  and `moduleReviews`. `moduleReviews` is the delivered form of the module entries the draft
+  reserved for deprecated modules: report-only entries (`entry-point`, `stylesheet`, `function`,
+  `type`, `constant`, `class`, `window-event`, `root-attribute`) keyed by kind, module and name and
+  projected from the canonical `exportDeprecations` records, so they carry no replacement text of
+  their own. It covers what the draft called `document-event` and `attribute-selector` entries.
+- **`globals` and `rules` (27.0.0).** Delivered as specified under "Module entries and structural
+  rules", scoped to what 27.0.0 needs: `module` (specifier rewrite), `export` (root-barrel
+  re-binding) and `locale-key` (report only) entries, and the `theme-scopes` rule. `lyra-v26`
+  carries `ToolCallStatus`/`ToolResultStatus` to `ToolStatus`, the `translations/` prefix to
+  `@aceshooting/lyra-translations/`, the four editor-data files to `@aceshooting/lyra-ide/`, five
+  removed localization keys, and the rule. The rule is the same implementation that
+  `lyra-ui-migrate --rule=theme-scopes` runs on its own, so there is one code path.
+- **Gates.** `validateRenameLedgerShape()` checks both lists (also in the packaged projection);
+  `check-migration-coverage.mjs` checks each `globals` entry against the real surface (old subpath
+  gone from `package.json#exports`, replacement exported by the target package, old root export
+  gone and its replacement exported, old locale key gone and its replacement present).
+- **Not delivered.** Facade functions, `lr-theme-change`, `data-lr-theme-preset` selectors and the
+  `themes/shadcn.css` and `theme/presets/shadcn.js` imports were never given `globals` entries:
+  they were removed in 24.0.0 and are covered by `lyra-v22`'s `moduleReviews`. Item 16's
+  `DocumentFile` and `DocumentRendererDefinition` types are `lyra-v21` `moduleReviews` entries.
 
 ## Motivation
 
@@ -310,30 +342,42 @@ inventory in the repository.
 ### Module entries and structural rules (reconciles RFCs 0001 and 0002)
 
 RFC 0001's facade migration and RFC 0002's theme-scope marker are part of this one profile, not
-separate tools. The schema reserves two further lists. Each is implemented by the first change
-that needs it, with its tests: `globals` by item 16's module deprecations or RFC 0001's stage 1,
-whichever lands first; `rules` by RFC 0002's delivery.
+separate tools. Two optional profile fields carry what no `lr-*` tag owns. A profile that omits both
+projects exactly as before, so published captures of earlier releases stay byte-identical.
 
-- **`globals`** are entries not owned by an `lr-*` tag. Each has a `kind` (`module`, `export`,
-  `document-event`, `attribute-selector`), `from`, an optional `module` and `to`, and a one-line
-  `summary`.
-  - A `module` entry rewrites literal specifiers in `import`/`export … from`, `import()`, CSS
-    `@import` and `<link href>` when the new module is a drop-in replacement.
-  - An `export` entry rewrites only the import clause, as `New as Old`, so no scope analysis is
-    needed and local references keep working.
-  - Everything else is reported: facade functions, `lr-theme-change`, `data-lr-theme-preset`
-    selectors, and RFC 0001's `themes/shadcn.css` and `theme/presets/shadcn.js` imports, which are
-    not drop-in.
-  - Item 16's `DocumentFile` and `DocumentRendererDefinition` types and its retired localization
-    entry point are `globals` entries.
-  - A `module` entry is checked against `package.json#exports`, and an `export` entry against the
-    public declaration surface.
-- **`rules`** lists named structural rules that are implemented and tested in the codemod, such as
-  RFC 0002's `theme-scopes`. A rule may insert markup or report, and its data stays in the code
-  that tests it. A profile with an enabled rule is never treated as empty.
+- **`globals`** entries have a `kind`, `from`, `to`, a one-line `summary` and `since` (the first
+  release that ships the move; the list is withheld when the installed release is older). Sorted by
+  kind, then `from`.
+  - `module`: a package specifier. `from` and `to` are `@aceshooting/lyra-*` specifiers; with
+    `prefix: true` both end in `/` and an optional sorted `except` list names slash-terminated
+    prefixes below `from` that stay (`translations/pseudo/`).
+    - Rewritten where the string is provably a specifier: `import`/`export … from`, `import()`,
+      `require()`, CSS `@import`, `<link href>`/`<script src>`, a `…/node_modules/<from>` path, and
+      any string of a `.json` file (such as `.vscode/settings.json`, passed as an explicit target).
+    - Reported as `GLOBAL_REVIEW` anywhere else, and wherever the string is computed
+      (`` `…/${locale}.js` ``), because the dynamic part may select an excepted prefix.
+  - `export`: a name removed from the package root (`module` is `"."`). A named import or re-export
+    clause is rewritten to `New as Old`, or `New as Local` when already aliased, so no scope analysis
+    is needed and local references keep working. The same name imported from a deep specifier, or
+    read as a member of a namespace import of the root, is reported: no deep module exports the
+    replacement.
+  - `locale-key`: a removed localization key. Reported only, at an object key or quoted string, in
+    files that mention `registerLyraLocale`, `bridgeLyraLocale`, `.strings` or the package.
+- **`rules`** is a sorted list of named structural rules implemented and tested in the codemod
+  (`theme-scopes` today). Running a profile with a rule runs the rule's analysis on each scanned file
+  and merges its edits and reports into the profile's: markers are inserted, reports go through the
+  profile's acknowledgement mechanism, and a rule is withheld like any entry when the installed
+  release is older than the profile's target major. A profile with an enabled rule is never treated
+  as empty.
 
-Completeness covers `component-metadata.json` records. RFC 0001's stage 1 adds module-level records;
-from then the check pairs `globals` entries with them, and their window follows question 11.
+`GLOBAL_REVIEW` is acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>` (the old name or
+the full specifier); the rule's own codes (`THEME_SCOPE_CSS_INPUT_REVIEW`,
+`THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW`) are
+acknowledged the same way, by their reported member.
+
+Completeness covers `component-metadata.json` records. `globals` entries are not paired with
+records; `check-migration-coverage.mjs` checks them against the shipped surface instead (see the
+implementation note).
 
 ### Rewrite rules
 
@@ -380,7 +424,8 @@ spread reaches it, as in the Lyra 7 profile. The acknowledgement name for those 
 
 ### Packaged CLI (internal, compatible)
 
-- `dist/cli/` gains `lyra-rename-ledger.mjs`.
+- `dist/cli/` gains `lyra-rename-ledger.mjs` (and, with `rules`, `migration-theme-scopes.mjs`, its generated
+  vocabulary and `css-declarations.mjs`).
 - `migration-contract.json` gains `lyraRenames`, the validated projection: entries plus `since`,
   `reflects` for attribute renames, review replacement and removal text, and exposure lists for old
   and new names.
@@ -586,7 +631,7 @@ messages are byte-identical.
 The evidence is an implementation with an empty checked-in ledger, and synthetic fixtures under
 `scripts/fixtures/lyra-renames/`:
 
-- **`lyra-rename-ledger.test.mjs`, 42 tests.**
+- **`lyra-rename-ledger.test.mjs`.**
   - Every schema, record, window, mirroring, shared-token and default-meaning rejection.
   - Completeness in lint only.
   - Exposure of old and new names, version gating, and tampering.
@@ -598,7 +643,7 @@ The evidence is an implementation with an empty checked-in ledger, and synthetic
     inversion per file syntax; reflection; default slot and slot content; scoped, stale and
     Lit-template acknowledgements; dispatch-blocked events across files; linear time; `--diff`
     path safety; and the packaged CLI's diff, check, apply, version and acknowledge cycle.
-- **`migrate-wa.test.mjs`** keeps its 85 tests green.
+- **`migrate-wa.test.mjs`** stays green.
 - **`check-migration-coverage.mjs`**, `build-llms.test.mjs`, `llms-freshness`, `llms:check`,
   `check:script-paths`, `check:source-policy` and `check:test-assertions` pass.
 - **A throwaway ledger** of the planned renames produced the table in the motivation against the
@@ -636,6 +681,9 @@ The evidence is an implementation with an empty checked-in ledger, and synthetic
    0002, and the profile is then frozen.
 6. In 23.0.0 the aliases and records are removed (see unresolved question 2).
 
+**Delivery record.** The profile, ledger and CLI shipped with 22.0.0. Each later profile was added
+with the release that deprecated what it covers; `globals`, `rules` and `lyra-v26` ship with 27.0.0.
+
 **Rollback.** Revert the profile, the ledger and the `dist/cli` module. Every run can be previewed,
 and every rewrite targets a name that keeps working until v23.
 
@@ -645,26 +693,32 @@ Numbers are stable; closed questions keep their place.
 
 1. **Closed: deprecation window.** Renames ship additively in 21.x minors under the unchanged
    one-full-major rule; the deprecation policy is not amended.
-2. **Keep `--origin=lyra-v21` after v23?** It would help consumers who skip a major, but it needs a
-   "retired profile" validated against the Lyra 22 release manifest instead of live aliases.
-3. **Module-level deprecations made before RFC 0001's stage 1** (item 16): record them
-   retroactively, or keep their completeness a review duty?
-4. **A `token` kind** for shared design tokens (item 22's `--lr-graph-*`), validated against the
-   compatibility metadata in `tokens/canonical-tokens.json`.
-5. **An optional acknowledgement baseline file** for generated code that cannot carry comments.
-6. **Package budget.** Accept about 21.5 KB packed within the current headroom, or first move
-   repository-only validation out of `dist/cli`?
-7. **A code filter for `--check`** (for example `--ignore-code=DETAIL_SHAPE_REVIEW`), for teams that
-   want a permanent gate.
-8. **Side-by-side declarations** for shared custom properties instead of reports.
-9. **Narrower default-insertion blocking.** Today a single `querySelector('lr-x')` anywhere blocks
-   insertion for `lr-x` everywhere and needs an acknowledgement. Should only property writes through
-   the alias block it?
-10. **Recording `since` before the release.** The gate caps `since` at the package version, which
-    changesets raises only when it releases. Does a rename minor bump the version when its work
-    opens, or land its records with the release? Item 16's 21.1.0 records face the same choice.
-11. **Other deprecations made in 22.0.0.** The unchanged rule keeps them through v23, so RFC 0001's
-    theming facade, preset API and fixed `themes/shadcn.css` are removable no earlier than 24.0.0.
-    Their `globals` entries report them either way; the actual removal release remains open.
-    An earlier deprecation must ship in a real 21.x minor and cannot be backdated. RFC 0002's bare
-    `.light`/`.dark` scopes leave with that stylesheet.
+2. **Closed: profiles are kept.** `lyra-v21` and every later profile remain in the ledger and the
+   packaged CLI. Entries whose members are already removed validate against published policy
+   history (`retiredEvents`, `removedIn`, the compatibility captures under
+   `scripts/fixtures/compatibility-history/`) instead of live aliases, and the reference says
+   removed names are "migration inputs".
+3. **Closed: recorded retroactively.** Module-level deprecations are `exportDeprecations` records,
+   authored under `scripts/fixtures/component-metadata/families/` and projected into
+   `moduleReviews`; the coverage gate requires an entry for every record removed in a profile's
+   removal major (completeness is not left to review).
+4. **Deferred, not scheduled.** There is no `token` kind; the ledger still rejects any custom
+   property listed in `tokens/canonical-tokens.json`.
+5. **Deferred, not scheduled.** There is no acknowledgement baseline file; acknowledgements are
+   comments only.
+6. **Closed: accepted within the package budgets.** Repository-only validation stayed in the shared
+   modules; `check-package-size.mjs` and its `package-budgets.json` bound the published size, and the
+   `dist/cli` closure is the module list in `copy-migration-runtime.mjs`.
+7. **Deferred, not scheduled.** `parseArgs()` has no code filter; a permanent gate acknowledges
+   reports in place.
+8. **Deferred, not scheduled.** Shared custom properties are still reported, never duplicated.
+9. **Deferred, not scheduled.** Default insertion is still blocked by any `querySelector('lr-x')`-style
+   reference to the tag (`scanLocalMigrationHazards`); an acknowledgement unblocks it.
+10. **Closed: `since: 'unreleased'`.** A record after the current release tag carries `since:
+    'unreleased'`, stamped with the version at the bump. The projection withholds such an entry
+    whenever the installed version is known and applies it only when it is not; other `since` values
+    must not exceed the package version. `globals` entries name their release directly.
+11. **Closed: removed in 24.0.0.** The theming facade, preset API and fixed `themes/shadcn.css` were
+    deprecated in 22.0.0 and removed in 24.0.0, the earliest release the rule allows. `lyra-v22`'s
+    `moduleReviews` report them (with `removedIn`); no `globals` entry was needed. RFC 0002's bare
+    `.light`/`.dark` scopes left with that stylesheet.

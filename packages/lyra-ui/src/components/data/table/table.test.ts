@@ -1104,7 +1104,7 @@ it("lets a consumer's own ::part(header-cell):hover override win over the intern
   document.head.appendChild(style);
   try {
     const el = (await fixture(html`
-      <lr-table
+      <lr-table data-lr-theme-scope
         style="--lr-transition-fast: 0s"
         aria-label="Scores"
         .columns=${[{ key: 'name', label: 'Name', sortable: true, sticky: 'start', cell: (r: Row) => r.name }] as TableColumn<Row>[]}

@@ -673,7 +673,7 @@ describe('remove affordance', () => {
     // with the transition disabled so each read observes the state's target rather than WebKit's
     // still-transparent first transition frame.
     const el = (await fixture(
-      html`<lr-attachment-chip name="a.txt" style="--lr-transition-fast: 0s"></lr-attachment-chip>`,
+      html`<lr-attachment-chip data-lr-theme-scope name="a.txt" style="--lr-transition-fast: 0s"></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
     const resting = getComputedStyle(btn).backgroundColor;
@@ -1238,7 +1238,7 @@ describe('file-size unit localization', () => {
 
 it('honors inherited and direct public theme hooks', async () => {
   const wrapper = await fixture(html`
-    <div style="--lr-transition-fast: 0ms linear; --lr-attachment-chip-bg: rgb(1, 2, 3); --lr-attachment-chip-accent: rgb(4, 5, 6)">
+    <div data-lr-theme-scope style="--lr-transition-fast: 0ms linear; --lr-attachment-chip-bg: rgb(1, 2, 3); --lr-attachment-chip-accent: rgb(4, 5, 6)">
       <lr-attachment-chip status="uploading" name="report.pdf"></lr-attachment-chip>
     </div>
   `);
@@ -1407,7 +1407,7 @@ describe('attachment-chip defensive edges', () => {
 
 it('draws the resting chip edge in the subtle border tier while the progress track stays control-grade', async () => {
   const wrapper = (await fixture(html`
-    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+    <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
       <lr-attachment-chip name="a.zip"></lr-attachment-chip>
       <lr-attachment-chip name="b.zip" status="uploading" progress="42"></lr-attachment-chip>
     </div>

@@ -1046,7 +1046,7 @@ function declaredFormAssociation(declaration) {
   if (ownStatic) {
     return ownStatic.default === true || String(ownStatic.default).trim() === 'true';
   }
-  if ((declaration.mixins ?? []).some((mixin) => mixin.name === 'FormAssociated')) return true;
+  if ((declaration.mixins ?? []).some((mixin) => mixin.name === 'FormAssociated' || mixin.name === 'CheckedFormAssociated')) return true;
   return undefined;
 }
 
@@ -1061,7 +1061,7 @@ function canonicalModulePath(modulePath) {
  *
  * Public members such as `form`, `value`, and `setCustomValidity()` are deliberately irrelevant:
  * charts and filter controls can expose those words for unrelated APIs. FACE status comes only from
- * an own static declaration, the shared `FormAssociated` mixin, or JavaScript static inheritance.
+ * an own static declaration, the shared `FormAssociated`/`CheckedFormAssociated` mixins, or JavaScript static inheritance.
  */
 function manifestFormAssociations(manifest) {
   const declarations = [];

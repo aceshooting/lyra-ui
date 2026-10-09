@@ -1625,10 +1625,6 @@ describe('module side effects', () => {
 
 describe('CheckedFormAssociated', () => {
   class Chk extends CheckedFormAssociated(LyraElement) {
-    constructor() {
-      super();
-      this.value = 'on';
-    }
     override render() {
       return html``;
     }

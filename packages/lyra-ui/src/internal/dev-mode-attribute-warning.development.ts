@@ -265,7 +265,8 @@ export function warnThemeScopeUsage(host: Element): void {
   }
   for (let element: Element | null = host; element && !checkedScopeChains.has(element); element = composedParent(element)) {
     checkedScopeChains.add(element);
-    if (element.matches(THEME_SCOPE_LIST)) break;
+    // A partial DOM (an SSR-shaped host) may lack Element.matches(); there is no scope chain to read.
+    if (typeof element.matches !== 'function' || element.matches(THEME_SCOPE_LIST)) break;
     const inputs = inlineLayerInputs(element);
     if (inputs.length) {
       devWarnOnce(

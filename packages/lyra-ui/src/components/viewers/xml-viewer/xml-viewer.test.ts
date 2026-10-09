@@ -1075,7 +1075,7 @@ describe('toggle geometry', () => {
   it('mirrors a collapsed chevron for inherited RTL while keeping the expanded chevron downward', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`
       <div dir="ltr">
-        <lr-xml-viewer
+        <lr-xml-viewer data-lr-theme-scope
           style="--lr-transition-fast: 0ms"
           expand-depth="0"
           .xml=${SIMPLE_XML}

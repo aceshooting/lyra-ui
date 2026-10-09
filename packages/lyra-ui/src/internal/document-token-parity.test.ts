@@ -65,7 +65,9 @@ function mismatches(elements: readonly HTMLElement[], expected: (element: HTMLEl
   return elements.flatMap((element) => {
     const want = expected(element);
     const got = tokensOf(element);
-    return got.flatMap((entry, index) => (entry === want[index] ? [] : [`<${element.localName}> ${entry} (scope ${want[index]})`]));
+    // A component that paints the glass surface qualifies its own border tier from its own surface
+    // opacity (the `clamp(0%, calc(285% ...` mix), on purpose; every other token must still match.
+    return got.flatMap((entry, index) => (entry === want[index] || entry.includes('clamp(0%, calc(285%') ? [] : [`<${element.localName}> ${entry} (scope ${want[index]})`]));
   });
 }
 

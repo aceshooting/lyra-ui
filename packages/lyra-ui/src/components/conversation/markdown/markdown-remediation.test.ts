@@ -61,7 +61,7 @@ customElements.define('late-slot-host', class extends HTMLElement {
 for (const tagName of ['lr-markdown', 'lr-markdown-core']) {
   it(`${tagName} reads a dark page palette once the host that slots it has rendered`, async () => {
     const wrapper = await fixture<HTMLElement>(
-      `<div style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a"><late-slot-host><${tagName}></${tagName}></late-slot-host></div>`,
+      `<div data-lr-theme-scope style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a"><late-slot-host><${tagName}></${tagName}></late-slot-host></div>`,
     );
     const el = wrapper.querySelector<LyraMarkdown | LyraMarkdownCore>(tagName)!;
     await el.updateComplete;

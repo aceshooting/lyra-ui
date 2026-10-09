@@ -340,7 +340,7 @@ describe('popover peer and transition lifecycle', () => {
 
 it('coalesces same-target tooltip lifecycle reentry', async () => {
   const el = await fixture<LyraTooltip>(html`
-    <lr-tooltip manual style="--lr-transition-fast: 0ms">
+    <lr-tooltip data-lr-theme-scope manual style="--lr-transition-fast: 0ms">
       <button slot="trigger">Help</button>
       Helpful description
     </lr-tooltip>
@@ -428,7 +428,7 @@ it('force-closes a tooltip when its sole connected direct anchor is removed desp
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <button id="sole-tooltip-anchor">Anchor</button>
-      <lr-tooltip manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
+      <lr-tooltip data-lr-theme-scope manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
     </div>
   `);
   const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
@@ -472,7 +472,7 @@ it('force-closes a tooltip when its direct anchor property is cleared or replace
     const wrapper = await fixture<HTMLElement>(html`
       <div>
         <button id="property-tooltip-anchor">Anchor</button>
-        <lr-tooltip manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
+        <lr-tooltip data-lr-theme-scope manual style="--lr-transition-fast: 0ms">Helpful description</lr-tooltip>
       </div>
     `);
     const el = wrapper.querySelector<LyraTooltip>('lr-tooltip')!;
@@ -541,7 +541,7 @@ it('repositions an open tooltip to its for fallback when a direct anchor is remo
     <div>
       <button id="tooltip-primary-anchor" style="position: fixed; left: 250px; top: 20px">Anchor</button>
       <button id="tooltip-for-fallback" style="position: fixed; left: 10px; top: 80px">Fallback</button>
-      <lr-tooltip
+      <lr-tooltip data-lr-theme-scope
         manual
         for="tooltip-for-fallback"
         hoist
@@ -570,7 +570,7 @@ it('repositions an open tooltip to its for fallback when a direct anchor is remo
 
 it('restores data-hidden on the tooltip popup after a full open-then-close cycle', async () => {
   const el = await fixture<LyraTooltip>(html`
-    <lr-tooltip placement="top-start" distance="0" style="--lr-transition-fast: 0ms">
+    <lr-tooltip data-lr-theme-scope placement="top-start" distance="0" style="--lr-transition-fast: 0ms">
       <button slot="trigger" style="position: fixed; left: 10px; top: 400px">Trigger</button>
       Helpful description
     </lr-tooltip>
@@ -622,7 +622,7 @@ it('repositions an open tooltip to its for fallback when its direct anchor prope
       <div>
         <button id="property-tooltip-primary" style="position: fixed; left: 250px; top: 20px">Anchor</button>
         <button id=${fallbackId} style="position: fixed; left: 10px; top: 80px">Fallback</button>
-        <lr-tooltip
+        <lr-tooltip data-lr-theme-scope
           manual
           for=${fallbackId}
           hoist
@@ -843,7 +843,7 @@ it('removes DOM-trigger ownership while showAt owns popover and tooltip interact
         <button id="virtual-popover-trigger" slot="trigger">Popover trigger</button>
         <p>Details</p>
       </lr-popover>
-      <lr-tooltip show-delay="0" style="--lr-transition-fast: 0ms">
+      <lr-tooltip data-lr-theme-scope show-delay="0" style="--lr-transition-fast: 0ms">
         <button id="virtual-tooltip-trigger" slot="trigger">Tooltip trigger</button>
         Helpful description
       </lr-tooltip>
@@ -913,7 +913,7 @@ it('tracks tooltip for-target id loss, gain, and transfer without DOM insertion'
       <button id="tooltip-id-owner">First owner</button>
       <button id="tooltip-id-candidate">Second owner</button>
       <button id="tooltip-id-transfer">Transfer owner</button>
-      <lr-tooltip for="tooltip-id-owner" show-delay="0" style="--lr-transition-fast: 0ms">
+      <lr-tooltip data-lr-theme-scope for="tooltip-id-owner" show-delay="0" style="--lr-transition-fast: 0ms">
         Helpful description
       </lr-tooltip>
     </div>
@@ -3271,7 +3271,7 @@ describe('top-layer escape specifics', () => {
     it(`promotes a trapped hover bridge with a ${strategy} popup so the gap stays hoverable`, async () => {
       const wrapper = await fixture<HTMLElement>(html`
         <div style="transform: translateY(0); padding: 40px">
-          <lr-popover trigger="hover" hover-bridge distance="16" positioning-strategy=${strategy}
+          <lr-popover data-lr-theme-scope trigger="hover" hover-bridge distance="16" positioning-strategy=${strategy}
             style="--lr-transition-fast: 0ms">
             <button slot="trigger">Hover me</button>
             <p>Details</p>
@@ -3302,7 +3302,7 @@ describe('top-layer escape specifics', () => {
 
   it('rests an open popup at transform: none so a nested fixed surface is not trapped', async () => {
     const el = await fixture<LyraPopover>(html`
-      <lr-popover style="--lr-transition-fast: 0ms">
+      <lr-popover data-lr-theme-scope style="--lr-transition-fast: 0ms">
         <button slot="trigger">Open</button>
         <div id="probe" style="position: fixed; left: 0; top: 0; inline-size: 4px; block-size: 4px"></div>
       </lr-popover>
@@ -3320,7 +3320,7 @@ describe('top-layer escape specifics', () => {
   it('rests an open submenu surface at transform: none', async () => {
     await import('../../layout/menu/menu-item.js');
     const el = await fixture<LyraDropdown>(html`
-      <lr-dropdown style="--lr-transition-fast: 0ms">
+      <lr-dropdown data-lr-theme-scope style="--lr-transition-fast: 0ms">
         <button slot="trigger">Actions</button>
         <lr-menu-item value="share" id="share">
           Share

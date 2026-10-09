@@ -38,12 +38,22 @@ const out = path.join(here, 'out');
 // (LYRA_BASELINE_DIST=<unpacked package>/dist), and `--candidate <dist>` adds variant I, the
 // implementation exactly as built, with no rewriting.
 const baselineDist = process.env.LYRA_BASELINE_DIST ? path.resolve(process.env.LYRA_BASELINE_DIST) : null;
+/** A copied dist resolves the package's `#lyra-dev-*` imports through its own package.json. */
+function writeImportsMap(dir) {
+  const entry = (name) => ({ development: `./internal/${name}.development.js`, default: `./internal/${name}.production.js` });
+  writeFileSync(path.join(dir, 'package.json'), `${JSON.stringify({
+    private: true,
+    type: 'module',
+    imports: { '#lyra-dev-warning': entry('dev-warning'), '#lyra-dev-attributes': entry('dev-mode-attribute-warning') },
+  }, null, 2)}\n`);
+}
 const candidateArg = process.argv.indexOf('--candidate');
 const candidateDist = candidateArg > 0 ? path.resolve(process.argv[candidateArg + 1]) : null;
 
 if (process.argv.includes('--refresh') || !existsSync(distA)) {
   rmSync(distA, { recursive: true, force: true });
   cpSync(baselineDist ?? path.join(pkgDir, 'dist'), distA, { recursive: true });
+  writeImportsMap(distA);
   const commit = execFileSync('git', ['-C', checkout, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const baselineVersion = baselineDist
     ? JSON.parse(readFileSync(path.join(baselineDist, '..', 'package.json'), 'utf8')).version
@@ -53,6 +63,7 @@ if (process.argv.includes('--refresh') || !existsSync(distA)) {
 if (candidateDist) {
   rmSync(path.join(here, 'dist-i'), { recursive: true, force: true });
   cpSync(candidateDist, path.join(here, 'dist-i'), { recursive: true });
+  writeImportsMap(path.join(here, 'dist-i'));
 }
 try { lstatSync(path.join(here, 'node_modules')); } catch { symlinkSync(path.join(pkgDir, 'node_modules'), path.join(here, 'node_modules')); }
 

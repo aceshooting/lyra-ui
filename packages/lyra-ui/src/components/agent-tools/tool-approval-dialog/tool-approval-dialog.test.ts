@@ -403,7 +403,7 @@ describe('editing', () => {
 
   it('keeps the disabled Edit button visually disabled during pending hover and active pointer states', async () => {
     const el = (await fixture(html`
-      <lr-tool-approval-dialog
+      <lr-tool-approval-dialog data-lr-theme-scope
         open
         tool-name="web_search"
         .args=${ARGS}
@@ -436,7 +436,7 @@ describe('editing', () => {
 
   it('does not apply the args-editor hover border tint while a decision is pending (gated on pending, not disabled)', async () => {
     const el = (await fixture(
-      html`<lr-tool-approval-dialog
+      html`<lr-tool-approval-dialog data-lr-theme-scope
         open
         tool-name="web_search"
         .args=${ARGS}

@@ -503,14 +503,17 @@ deprecated Lyra 21 member names
 change what a site reaches, preserves changed defaults, and reports everything else, including
 listeners of events whose detail changed. --origin=lyra-v22 reports deprecated theme APIs,
 stylesheets, window events and root attributes; review their replacement semantics explicitly.
-Lyra profiles never rewrite tags or imports. Run a Lyra profile with the CLI of the installed
-release, after upgrading.
+--origin=lyra-v26 moves the package specifiers and root-barrel types that Lyra 27 relocated,
+reports removed localization keys, and runs the theme-scopes rule. Lyra profiles never rewrite
+tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
 
   --dry-run, -n        report changes without writing source files
   --check              exit nonzero when rewrites or warnings remain; never write source files
   --diff               print a unified diff of the changes instead of writing source files
   --origin=lyra-v21    migrate names and defaults that change from Lyra 21 to Lyra 22
   --origin=lyra-v22    review Lyra 22 module contracts retained through Lyra 23
+  --origin=lyra-v26    move specifiers and types relocated in Lyra 27, report removed locale keys
+                       and apply --rule=theme-scopes
   --rule=theme-scopes  Lyra 27: mark elements whose inline style sets a token-layer input with
                        data-lr-theme-scope; report dynamic inputs, markers in loops, and CSS that
                        sets inputs or shared outputs outside a theme scope (runs without --origin)

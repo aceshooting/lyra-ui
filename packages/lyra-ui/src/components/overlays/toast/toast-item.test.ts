@@ -1656,7 +1656,7 @@ it('keeps the region stack gap separate from inherited item geometry hooks', asy
 it('keeps shared item geometry fallbacks available at compact and large sizes', async () => {
   for (const size of ['2xs', 'xl'] as const) {
     const item = (await fixture(html`
-      <lr-toast-item
+      <lr-toast-item data-lr-theme-scope
         duration="0"
         size=${size}
         style="--lr-space-s: 13px; --lr-radius: 19px"
@@ -1875,7 +1875,7 @@ it('skips the JS-side show/hide delay (not just the CSS transition) under prefer
 
 it('renders the close-button focus-visible outline from the shared focus-ring tokens', async () => {
   const el = await fixture<LyraToastItem>(html`
-    <lr-toast-item
+    <lr-toast-item data-lr-theme-scope
       duration="0"
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
     >Focus test</lr-toast-item>
@@ -2137,7 +2137,7 @@ describe('lr-toast-item close-button name inside a hidden container', () => {
 });
 
 it('draws the panel edge in the subtle border tier while the neutral accent keeps the control-grade border', async () => {
-  const el = (await fixture(html`<lr-toast-item
+  const el = (await fixture(html`<lr-toast-item data-lr-theme-scope
     duration="0"
     style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)"
   >a</lr-toast-item>`)) as LyraToastItem;

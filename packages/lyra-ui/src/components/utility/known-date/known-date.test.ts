@@ -1482,7 +1482,7 @@ describe('field-input hover (mouse-user parity with :focus-visible)', () => {
   for (const appearance of ['outlined', 'filled', 'filled-outlined'] as const) {
     it(`changes the border color on hover in the ${appearance} appearance`, async () => {
       const el = (await fixture(html`
-        <lr-known-date appearance=${appearance} style="--lr-transition-fast: 0s"></lr-known-date>
+        <lr-known-date data-lr-theme-scope appearance=${appearance} style="--lr-transition-fast: 0s"></lr-known-date>
       `)) as LyraKnownDate;
       await el.updateComplete;
       const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;

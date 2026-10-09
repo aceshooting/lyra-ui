@@ -1,29 +1,20 @@
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './switch.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
-import {
-  getFormOwner,
-  isBarredFromValidation,
-  setFormOwner,
-  type FormOwnerValue,
-} from '../../../internal/form-associated.js';
+import { CheckedFormAssociated } from '../../../internal/form-associated.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -45,6 +36,8 @@ export interface LyraSwitchEventMap {
   // uses, with the direction in the detail rather than in two direction-named events.
   'lr-switch-toggle-request': CustomEvent<{ checked: boolean; value: string }>;
 }
+class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
+
 /**
  * `<lr-switch>` — a boolean toggle-switch form control. Structurally the
  * same idea as a checkbox (form-associated via `ElementInternals`, click and
@@ -52,11 +45,9 @@ export interface LyraSwitchEventMap {
  * `aria-checked` read to assistive tech as an on/off state rather than a
  * checked/unchecked one, and there is no indeterminate state.
  *
- * `checked` is not a plain string, so this attaches `ElementInternals`
- * directly and implements its own `updateValidity()` rather than using the
- * `FormAssociated` mixin (that mixin's `value` accessor assumes a string —
- * see `<lr-combobox>` for the same direct-`ElementInternals` shape with a
- * non-string value).
+ * Form association, dirty/default `checked` tracking, reset, state restore and the validity
+ * states come from the shared `CheckedFormAssociated` mixin, the same one `<lr-checkbox>` and
+ * `<lr-radio>` use; this class adds only the switch's own toggle veto and rendering.
  *
  * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
  * `hint`/`error` CSS parts), mirroring `<lr-select>`'s pattern for those two pieces -- left
@@ -180,7 +171,7 @@ export interface LyraSwitchEventMap {
  * @status stable
  * @since 4.0.0
  */
-export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
+export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -195,25 +186,8 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
     return [currentValidityValidator('required', 'disabled', 'checked', 'value')];
   }
   static override styles = [LyraElement.styles, sizes, styles];
-  static formAssociated = true;
-
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    checked: { attribute: false, noAccessor: true },
-    defaultChecked: {
-      attribute: 'checked',
-      type: Boolean,
-      reflect: true,
-      useDefault: true,
-      noAccessor: true,
-    },
-    disabled: { type: Boolean, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
-    required: { type: Boolean, reflect: true, noAccessor: true },
     size: { reflect: true },
-    // Hand-reflected by the accessor so a null write can restore the absent default while an
-    // explicit non-null `'on'` write remains observably present as `value="on"`.
-    value: { reflect: true, noAccessor: true },
   };
 
   /**
@@ -256,133 +230,22 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
   private readonly labelTextObserver = new AccessibleTextController(
     this, [''], () => this.recomputeHasLabelSlot(), ['slot'],
   );
-  /** Whether the user has acted on this control yet, which gates `user-valid`/`user-invalid` and
-   *  intrinsic `aria-invalid`: a toggle is an interaction the instant it happens, and so is
-   *  interactive validation — `reportValidity()` and a submission attempt alike, via
-   *  `installInteractionOnInvalid()` — as for native `:user-invalid`. A silent `checkValidity()`
-   *  alone never counts. */
-  @state() private hasInteracted = false;
-
-  private internals: ElementInternals;
-  private validityController: FormControlController;
-  /** Consumer-supplied validation message reflected through `custom-error`. */
-  declare customError: string | null;
-  private _defaultChecked = false;
-  private _checkedDirty = false;
-  private settingDefaultChecked = false;
-  private reflectingDefaultChecked = false;
-  private _fieldsetDisabled = false;
-  private _name = '';
-  private _checked = false;
-  private _disabled = false;
-  private _required = false;
-  private _value = 'on';
   // Shared with every other veto point in this library: `emit()` is synchronous, so a listener
   // that answers `lr-switch-toggle-request` by writing `checked` itself finishes before the
   // built-in commit runs, and a before/after value compare reads "unchanged" whenever it wrote
   // back the value the control already held. The guard records that a write happened.
   private toggleGuard = new VetoWriteGuard();
 
-  /** Whether the control is disabled explicitly or by an ancestor fieldset. */
-  get effectiveDisabled(): boolean {
-    return this.disabled || this._fieldsetDisabled;
-  }
-
-  get checked(): boolean {
-    return this._checked;
-  }
-  set checked(next: boolean) {
-    const old = this._checked;
-    if (!this.settingDefaultChecked) this._checkedDirty = true;
-    this._checked = Boolean(next);
-    // Unconditional, including a write of the value already held: the guard tracks that a write
-    // happened, not that a value differs. See {@link toggleGuard}.
+  /** Unconditional, including a write of the value already held: the guard tracks that a write
+   *  happened, not that a value differs. See {@link toggleGuard}. */
+  protected override checkedWritten(previous: boolean): void {
+    void previous;
     markVetoGuardWrite(this.toggleGuard);
-    this.syncFormState();
-    this.requestUpdate('checked', old);
-  }
-  /** Reflected current reset default; changing it never overwrites dirty live `checked` state. */
-  get defaultChecked(): boolean { return this._defaultChecked; }
-  set defaultChecked(next: boolean) {
-    if (this.reflectingDefaultChecked) return;
-    const old = this._defaultChecked;
-    this._defaultChecked = Boolean(next);
-    this.reflectingDefaultChecked = true;
-    try { this.toggleAttribute('checked', this._defaultChecked); }
-    finally { this.reflectingDefaultChecked = false; }
-    if (!this._checkedDirty) this.restoreCheckedFromDefault();
-    this.requestUpdate('defaultChecked', old);
   }
 
-  get disabled(): boolean {
-    return this._disabled;
+  protected override requiredMessage(): string {
+    return this.localize('switchRequired');
   }
-  set disabled(next: boolean) {
-    const old = this._disabled;
-    this._disabled = Boolean(next);
-    this.toggleAttribute('disabled', this._disabled);
-    this._fieldsetDisabled =
-      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
-    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
-    // the states republished.
-    this.updateValidity();
-    this.requestUpdate('disabled', old);
-  }
-
-  /** The form submission key, reflected synchronously for native form APIs. */
-  get name(): string {
-    return this._name;
-  }
-  set name(next: string | null) {
-    const old = this._name;
-    this._name = next ?? '';
-    reflectFormName(this, this._name);
-    this.requestUpdate('name', old);
-  }
-
-  get required(): boolean {
-    return this._required;
-  }
-  set required(next: boolean) {
-    const old = this._required;
-    this._required = Boolean(next);
-    this.toggleAttribute('required', this._required);
-    this.updateValidity();
-    this.requestUpdate('required', old);
-  }
-
-  get value(): string {
-    return this._value;
-  }
-  set value(next: string | null) {
-    const old = this._value;
-    this._value = next ?? 'on';
-    if (next == null) {
-      if (this.hasAttribute('value')) this.removeAttribute('value');
-    } else if (this.getAttribute('value') !== this._value) {
-      this.setAttribute('value', this._value);
-    }
-    this.syncFormState();
-    // Reflection is synchronous and source-sensitive above. Keep Lit's public reflection metadata,
-    // but never queue a second reflection that could turn a same-tick null reset back into `on`.
-    this.requestUpdate('value', old, { reflect: false });
-  }
-
-  constructor() {
-    super();
-    this.validityController = new FormControlController(this, {
-      invalid: (init) => this.emit('lr-invalid', null, init),
-      interacted: this.markInteracted,
-      customError: () => this.validityController.customValidityMessage,
-    });
-    this.internals = this.validityController.formInternals;
-    this.syncFormState();
-  }
-
-  get form(): HTMLFormElement | null {
-    return getFormOwner(this.internals);
-  }
-  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
 
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null {
@@ -435,7 +298,6 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.syncExternalDescription();
-    this.updateValidity();
     this.addEventListener('slotchange', this.onLabelSlotChange);
     if (this.hasUpdated) {
       // A reconnect is no longer a hydration boundary, so refresh immediately from the new tree.
@@ -467,122 +329,6 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
     super.willUpdate(changed);
   }
 
-  /** Shared with every other form control: disabled (own or fieldset-cascaded) bars validation. */
-  private get barredFromValidation(): boolean {
-    return isBarredFromValidation(this, this.internals);
-  }
-
-  private updateValidity(): void {
-    if (this.barredFromValidation) {
-      // A barred control reports no violation at all, exactly like a native disabled checkbox --
-      // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required
-      // switches, and with it the documented `:state(user-invalid)` error styling.
-      this.validityController.setValidity({});
-    } else if (this.required && !this.checked) {
-      this.validityController.setValidity(
-        { valueMissing: true },
-        this.localize('switchRequired'),
-      );
-    } else {
-      this.validityController.setValidity({});
-    }
-    this.reflectValidityStates();
-  }
-
-  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
-   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. Called from
-   *  every path that can move either validity or the interaction flag. */
-  private reflectValidityStates(): void {
-    syncValidityStates(this.internals, {
-      required: this.required,
-      hasInteracted: this.hasInteracted,
-      barred: this.barredFromValidation,
-    });
-    setCustomState(this.internals, 'checked', this.checked);
-    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
-  }
-
-  private syncFormState(): void {
-    this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
-    this.updateValidity();
-  }
-
-  formResetCallback(): void {
-    this.hasInteracted = false;
-    this.restoreCheckedFromDefault();
-    this.reflectValidityStates();
-  }
-  formStateRestoreCallback(
-    state: string | File | FormData | null,
-    reason: 'autocomplete' | 'restore',
-  ): void {
-    void reason;
-    this.checked = state === 'checked';
-  }
-  private restoreCheckedFromDefault(): void {
-    this.settingDefaultChecked = true;
-    try { this.checked = this._defaultChecked; }
-    finally { this.settingDefaultChecked = false; }
-    this._checkedDirty = false;
-  }
-  formDisabledCallback(disabled: boolean): void {
-    if (this.validityController?.reflectingDisabled) return;
-    const wasDisabled = this.effectiveDisabled;
-    this._fieldsetDisabled = disabled;
-    if (wasDisabled === this.effectiveDisabled) return;
-    // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
-    this.updateValidity();
-    this.requestUpdate();
-  }
-  private markInteracted = (): void => {
-    if (this.hasInteracted) return;
-    this.hasInteracted = true;
-    this.reflectValidityStates();
-  };
-
-  checkValidity(): boolean {
-    return this.validityController.checkValidity();
-  }
-  reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // Marked explicitly rather than left to the `installInteractionOnInvalid()` listener: that
-    // listener only fires when the check actually fails, but a `reportValidity()` call on an
-    // already-valid control still counts as interaction (native `:user-valid` matches on it too).
-    // A submission attempt reaches the same listener without ever calling this method at all --
-    // it drives `ElementInternals` directly. `checkValidity()` deliberately marks neither path:
-    // it is the silent query, and wraps its own call in `withStaticValidityCheck()` accordingly.
-    this.hasInteracted = true;
-    this.reflectValidityStates();
-    return this.internals.reportValidity();
-  }
-
-  /**
-   * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
-   * rejection ("notifications are disabled for your plan") that no client-side constraint can
-   * express. A non-empty `message` raises `customError` and becomes `validationMessage`, so the
-   * control fails `checkValidity()`, blocks form submission, and matches `:state(invalid)`; `''`
-   * clears it.
-   *
-   * Clearing restores the control's own computed validity rather than forcing it valid: a
-   * required-and-unchecked switch whose custom error is cleared stays `valueMissing`. The custom
-   * error also survives every intrinsic recomputation in between (each toggle re-runs
-   * `updateValidity()`) and a form reset, exactly like a native control — only another
-   * `setCustomValidity('')` clears it.
-   *
-   * The message is caller-supplied content, so it is used verbatim and never localized here.
-   */
-  setCustomValidity(message: string): void {
-    this.validityController.setCustomValidity(message ?? '');
-    this.reflectValidityStates();
-    // `aria-invalid` is rendered from `internals.validity`, which the call above just moved.
-    this.requestUpdate();
-  }
-
-  /** Clears consumer-supplied validity and restores the current required/checked constraint. */
-  resetValidity(): void {
-    this.setCustomValidity('');
-  }
-
   private setFromUser(next: boolean): void {
     if (this.liveDisabled) return;
     if (this.checked === next) return;
@@ -596,12 +342,12 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
         this.emit('lr-switch-toggle-request', detail, init),
       guard: this.toggleGuard,
       commit: () => {
-        // Set inside the commit, for `<lr-checkbox>`'s `toggle()` reason: `reflectValidityStates()`
-        // feeds this flag to `syncValidityStates()`, so marking it before the veto would let a
+        // Set inside the commit, for `<lr-checkbox>`'s `toggle()` reason: `syncValidityStates()`
+        // reads this flag, so marking it before the veto would let a
         // REFUSED first toggle start matching `:state(user-invalid)` for a change that never
         // happened. `onBlur` still marks a real user interacted when focus leaves,
         // which is the native `:user-invalid` timing.
-        this.hasInteracted = true;
+        this.setInteracted(true);
         this.checked = next;
         // Native `input` then `change`, then the library alias -- the same order (and the same
         // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
@@ -646,8 +392,7 @@ export class LyraSwitch extends LyraFormControlElement<LyraSwitchEventMap> {
     // dev-mode "scheduled an update after an update completed" warning, and would otherwise let a
     // later re-enable flash `user-invalid` styling for an interaction the user never actually had.
     if (!this.liveDisabled) {
-      this.hasInteracted = true;
-      this.reflectValidityStates();
+      this.setInteracted(true);
     }
     relayNativeEvent(this, event);
   };

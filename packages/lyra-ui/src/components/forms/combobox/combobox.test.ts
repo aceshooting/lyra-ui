@@ -2488,7 +2488,7 @@ it("registers the outside-click pointerdown listener on this.ownerDocument, not 
 
 it('leaves the default content-sized listbox clamp at 28rem when sync is unset', async () => {
   const el = (await fixture(html`
-    <lr-combobox style="width: 500px; --lr-transition-fast: 0s">
+    <lr-combobox data-lr-theme-scope style="width: 500px; --lr-transition-fast: 0s">
       <lr-option value="a">Apple</lr-option>
     </lr-combobox>
   `)) as LyraCombobox;
@@ -2511,7 +2511,7 @@ it('leaves the default content-sized listbox clamp at 28rem when sync is unset',
 
 it('syncs the listbox width to a wider trigger when sync="width" is set', async () => {
   const el = (await fixture(html`
-    <lr-combobox sync="width" style="width: 500px; --lr-transition-fast: 0s">
+    <lr-combobox data-lr-theme-scope sync="width" style="width: 500px; --lr-transition-fast: 0s">
       <lr-option value="a">Apple</lr-option>
     </lr-combobox>
   `)) as LyraCombobox;
@@ -2544,7 +2544,7 @@ it('syncs the listbox width to a wider trigger when sync="width" is set', async 
 // or the reposition guard cannot silently strand a listbox at its anchor's width.
 it('releases the synced inline width when sync is unset while the listbox is open', async () => {
   const el = (await fixture(html`
-    <lr-combobox sync="width" style="width: 500px; --lr-transition-fast: 0s">
+    <lr-combobox data-lr-theme-scope sync="width" style="width: 500px; --lr-transition-fast: 0s">
       <lr-option value="a">Apple</lr-option>
     </lr-combobox>
   `)) as LyraCombobox;
@@ -2590,7 +2590,7 @@ it('matches a width-synced listbox to an anchor wider than the viewport clamp', 
   // relationship deterministically at any test-runner window size. Before the fix the synced
   // listbox rendered at the clamp (200px) against a 500px anchor.
   const el = (await fixture(html`
-    <lr-combobox
+    <lr-combobox data-lr-theme-scope
       sync="width"
       style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
     >
@@ -2624,7 +2624,7 @@ it('still bounds a width-synced listbox by the measured available inline space',
   // The viewport-clamp term is gone, but the available-space term must still keep an anchor far
   // wider than the viewport from pushing the listbox off-screen.
   const el = (await fixture(html`
-    <lr-combobox sync="width" style="width: 3000px; --lr-transition-fast: 0s">
+    <lr-combobox data-lr-theme-scope sync="width" style="width: 3000px; --lr-transition-fast: 0s">
       <lr-option value="a">Apple</lr-option>
     </lr-combobox>
   `)) as LyraCombobox;
@@ -2661,7 +2661,7 @@ it('keeps the unsynced listbox capped by the viewport clamp under an over-wide t
   // The paired half of the two rules above: with `sync` unset the content clamp is unchanged, so
   // a wide trigger must NOT widen the listbox past `min(--lr-popover-viewport-clamp, 28rem)`.
   const el = (await fixture(html`
-    <lr-combobox
+    <lr-combobox data-lr-theme-scope
       style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
     >
       <lr-option value="a">Apple</lr-option>
@@ -2731,7 +2731,7 @@ describe("row state feedback on the already-selected option", () => {
 
   const openWithSelectedMiddleRow = async (): Promise<LyraCombobox> => {
     const el = (await fixture(html`
-      <lr-combobox
+      <lr-combobox data-lr-theme-scope
         value="b"
         style="--lr-transition-fast: 0s; --lr-combobox-option-active-bg: rgb(1, 2, 3);"
       >

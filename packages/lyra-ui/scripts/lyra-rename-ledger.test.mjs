@@ -34,6 +34,7 @@ import {
   createMigrationRuntimeInventory,
   migrateFiles,
   migrateText,
+  migrateThemeScopes,
   parseArgs,
   readExportDeprecations,
   readRenameLedger,
@@ -359,7 +360,7 @@ test('the checked-in ledger is valid and complete against the checked-in invento
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
-  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25']);
+  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26']);
   assert.ok(!MIGRATION_ORIGINS.includes('lyra-v7') && MIGRATION_ORIGINS.includes('lyra-v21'));
   assert.deepEqual(validateRenameLedger(emptyRenameLedger(), { inventory: checkedInventory }), []);
 });
@@ -592,6 +593,7 @@ test('the migration-coverage gate adds completeness and the prefix polarity rule
     'lyra-v21': { renames: 12, defaults: 1, detailChanges: 1, propertyChanges: 0, retiredEvents: 0, reviews: 5, slotContent: 1, moduleReviews: 0 },
     'lyra-v22': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
     'lyra-v25': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
+    'lyra-v26': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
   });
   assertFinding(analyzeRenameLedger(emptyRenameLedger(), inventory).errors, /has no rename or review entry/);
   const undeclared = syntheticLedger();
@@ -1626,6 +1628,7 @@ test('the repository CLI accepts --origin=lyra-v21 with the checked-in ledger', 
       lyraVersion: '22.1.0',
       origin: 'lyra-v21',
       report: null,
+      rule: null,
       targets: ['src'],
     });
     assert.throws(() => parseArgs(['--origin=lyra-v20', 'src']), /Unknown migration origin: lyra-v20/);
@@ -1899,4 +1902,296 @@ test('retired event exposure preserves global add/remove pairing and rejects a n
   assert.ok(conflict.warnings.length >= 2);
   assert.match(conflict.content, /addEventListener\('lr-panel-open-change'/u);
   assert.match(conflict.content, /removeEventListener\('lr-panel-open-change'/u);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Profile `globals` and `rules` (RFC 0003), exercised through the lyra-v26 profile.
+// ---------------------------------------------------------------------------------------------
+
+const PACKAGE = '@aceshooting/lyra-ui';
+const moduleEntry = (from, to, extra = {}) => ({ kind: 'module', from, to, ...extra, summary: 'Moved.', since: '27.0.0' });
+function globalsLedger(patch = (profile) => profile) {
+  const value = syntheticLedger();
+  const profile = value.profiles.find((entry) => entry.origin === 'lyra-v26');
+  profile.globals = [
+    { kind: 'export', module: '.', from: 'OldStatus', to: 'NewStatus', summary: 'One union.', since: '27.0.0' },
+    { kind: 'locale-key', from: 'oldLabel', to: 'newLabel', summary: 'Shared key.', since: '27.0.0' },
+    moduleEntry(`${PACKAGE}/data.json`, '@aceshooting/lyra-ide/data.json'),
+    moduleEntry(`${PACKAGE}/locales/`, '@aceshooting/lyra-translations/', { prefix: true, except: [`${PACKAGE}/locales/keep/`] }),
+  ];
+  profile.rules = ['theme-scopes'];
+  patch(profile);
+  return value;
+}
+const v26 = (text, file, options = {}) => migrateText(text, buildMigrationContract(inventory, { renameLedger: globalsLedger(), lyraVersion: options.lyraVersion ?? null }), { file, origin: 'lyra-v26' });
+
+test('a module global rewrites provable specifiers, keeps excepted prefixes, and reports computed ones', () => {
+  const result = v26([
+    `import '${PACKAGE}/locales/fr.js';`,
+    `import '${PACKAGE}/locales/fr/forms.js';`,
+    `import '${PACKAGE}/locales/keep/pseudo.js';`,
+    `import data from '${PACKAGE}/data.json' with { type: 'json' };`,
+    `const loaded = await import(\`${PACKAGE}/locales/\${locale}.js\`);`,
+    `const path = '${PACKAGE}/data.json';`,
+    `const unrelated = '${PACKAGE}/data.json.map';`,
+    '',
+  ].join('\n'), 'main.ts');
+  assert.equal(result.content, [
+    `import '@aceshooting/lyra-translations/fr.js';`,
+    `import '@aceshooting/lyra-translations/fr/forms.js';`,
+    `import '${PACKAGE}/locales/keep/pseudo.js';`,
+    `import data from '@aceshooting/lyra-ide/data.json' with { type: 'json' };`,
+    `const loaded = await import(\`${PACKAGE}/locales/\${locale}.js\`);`,
+    `const path = '${PACKAGE}/data.json';`,
+    `const unrelated = '${PACKAGE}/data.json.map';`,
+    '',
+  ].join('\n'));
+  assert.deepEqual(result.changes.map((change) => change.action), ['rewrite-module', 'rewrite-module', 'rewrite-module']);
+  assert.deepEqual(result.warnings.map((warning) => [warning.line, warning.warningCode]), [[5, 'GLOBAL_REVIEW'], [6, 'GLOBAL_REVIEW']]);
+  assert.equal(v26(result.content, 'main.ts').changes.length, 0, 'idempotent');
+});
+
+test('a module global rewrites node_modules paths and every string of a JSON file, and CSS imports', () => {
+  const settings = v26(`{ "html.customData": ["./node_modules/${PACKAGE}/data.json"], "a": "${PACKAGE}/data.json" }`, '.vscode/settings.json');
+  assert.equal(settings.content, '{ "html.customData": ["./node_modules/@aceshooting/lyra-ide/data.json"], "a": "@aceshooting/lyra-ide/data.json" }');
+  assert.equal(v26(`@import '${PACKAGE}/locales/a.css';\n`, 'a.css').content, "@import '@aceshooting/lyra-translations/a.css';\n");
+  assert.match(v26(`<link rel="x" href="${PACKAGE}/data.json">`, 'index.html').content, /href="@aceshooting\/lyra-ide\/data\.json"/);
+  assert.equal(v26(`<p>See ${PACKAGE}/data.json</p>`, 'doc.html').changes.length, 0, 'prose text is not a quoted specifier');
+});
+
+test('an export global re-binds root-barrel names, preserves local aliases and reports other uses', () => {
+  const result = v26([
+    `import type { OldStatus, Keep } from '${PACKAGE}';`,
+    `import { type OldStatus as Local, Other } from "${PACKAGE}";`,
+    `export type { OldStatus } from '${PACKAGE}';`,
+    `import type { OldStatus as Deep } from '${PACKAGE}/components/x/x.class.js';`,
+    `import type { Alias as OldStatus } from '${PACKAGE}';`,
+    `import * as lyra from '${PACKAGE}';`,
+    'type A = lyra.OldStatus;',
+    '',
+  ].join('\n'), 'types.ts');
+  assert.deepEqual(result.content.split('\n').slice(0, 5), [
+    `import type { NewStatus as OldStatus, Keep } from '${PACKAGE}';`,
+    `import { type NewStatus as Local, Other } from "${PACKAGE}";`,
+    `export type { NewStatus as OldStatus } from '${PACKAGE}';`,
+    `import type { OldStatus as Deep } from '${PACKAGE}/components/x/x.class.js';`,
+    `import type { Alias as OldStatus } from '${PACKAGE}';`,
+  ]);
+  assert.deepEqual(result.changes.map((change) => change.action), ['rewrite-export', 'rewrite-export', 'rewrite-export']);
+  assert.deepEqual(result.warnings.map((warning) => warning.line), [4, 7]);
+  assert.equal(v26(result.content, 'types.ts').changes.length, 0, 'idempotent');
+});
+
+test('a locale-key global reports keys and quoted strings, and an acknowledgement silences it', () => {
+  const source = [
+    "registerLyraLocale('fr', { oldLabel: 'a', 'oldLabel': 'b' });",
+    "const other = { oldLabelX: 1 }; const read = strings.oldLabel;",
+    '// lyra-migrate-reviewed: GLOBAL_REVIEW:oldLabel',
+    "registerLyraLocale('de', { oldLabel: 'c' });",
+    '',
+  ].join('\n');
+  const result = v26(source, 'locale.ts');
+  assert.deepEqual(result.warnings.map((warning) => [warning.line, warning.column]), [[1, 28], [1, 44]]);
+  assert.equal(result.acknowledged, 1);
+  assert.equal(result.content, source, 'locale keys are never rewritten');
+  assert.equal(v26("const oldLabel = { oldLabel: 1 };", 'unrelated.ts').warnings.length, 0, 'a file that never touches Lyra is left alone');
+});
+
+test('the theme-scopes rule runs through the profile, shares one implementation, and honors acknowledgements', () => {
+  const lit = [
+    "const t = html`<div style=\"--lr-theme-border-radius-m: 4px\"><lr-button></lr-button></div>`;",
+    '<section class="lr-dark" style="--lr-theme-border-radius-m: 2px"></section>',
+    '',
+  ].join('\n');
+  const profile = v26(lit, 'view.ts');
+  const standalone = migrateThemeScopes(lit, { file: 'view.ts' });
+  assert.equal(profile.content, standalone.content);
+  assert.deepEqual(profile.changes.map((change) => [change.line, change.action, change.target]), [[1, 'insert-theme-scope', 'data-lr-theme-scope']]);
+  assert.equal(v26("<div style={{ '--lr-theme-border-radius-m': '4px' }} />", 'view.tsx').content, "<div data-lr-theme-scope=\"\" style={{ '--lr-theme-border-radius-m': '4px' }} />");
+  const css = '.card { --lr-theme-border-radius-m: 4px; }\n';
+  const reported = v26(css, 'card.css');
+  assert.deepEqual(reported.warnings.map((warning) => warning.warningCode), ['THEME_SCOPE_CSS_INPUT_REVIEW']);
+  assert.equal(reported.content, css);
+  const acknowledged = v26(`/* lyra-migrate-reviewed: THEME_SCOPE_CSS_INPUT_REVIEW:--lr-theme-border-radius-m */\n${css}`, 'card.css');
+  assert.deepEqual([acknowledged.warnings.length, acknowledged.acknowledged], [0, 1]);
+  assert.equal(v26(profile.content, 'view.ts').changes.length, 0, 'idempotent');
+});
+
+test('globals and rules follow the installed release and keep an empty profile empty', () => {
+  const source = `import type { OldStatus } from '${PACKAGE}';\n<div style="--lr-theme-border-radius-m: 4px"></div>\n`;
+  const early = v26(source, 'old.ts', { lyraVersion: '26.9.0' });
+  assert.equal(early.content, source, 'a release before the target ships neither the globals nor the rule');
+  const contract = buildMigrationContract(inventory, { renameLedger: globalsLedger(), lyraVersion: '26.9.0' });
+  assert.equal(contract.renameProfiles.get('lyra-v26').skipped.length, 5, 'four globals and the rule are withheld');
+  assert.equal(v26(source, 'new.ts', { lyraVersion: '27.0.0' }).changes.length, 2);
+  const empty = buildMigrationContract(inventory, { renameLedger: syntheticLedger() });
+  assert.equal(empty.renameProfiles.get('lyra-v26').isEmpty, true);
+  assert.equal(migrateText(source, empty, { file: 'old.ts', origin: 'lyra-v26' }).content, source);
+  const onlyRule = buildMigrationContract(inventory, { renameLedger: globalsLedger((profile) => { profile.globals = []; }) });
+  assert.equal(onlyRule.renameProfiles.get('lyra-v26').isEmpty, false, 'an enabled rule is never an empty profile');
+});
+
+test('globals and rules are shape-validated in the authored ledger and its projection', () => {
+  assert.deepEqual(validateRenameLedgerShape(globalsLedger()), []);
+  const invalid = (patch, pattern) => assertFinding(validateRenameLedgerShape(globalsLedger(patch)), pattern);
+  invalid((profile) => { profile.globals[0].kind = 'tag'; }, /kind must be one of module, export, locale-key/);
+  invalid((profile) => { profile.globals[0].module = './x.js'; }, /needs module "\."/);
+  invalid((profile) => { delete profile.globals[0].since; }, /since must be a version/);
+  invalid((profile) => { profile.globals[0].summary = ' '; }, /summary text missing/);
+  invalid((profile) => { profile.globals[0].extra = 1; }, /unknown key\(s\) extra/);
+  invalid((profile) => { profile.globals[2].to = 'lodash/data.json'; }, /to must be an @aceshooting package specifier/);
+  invalid((profile) => { profile.globals[3].to = '@aceshooting/lyra-translations'; }, /prefix entry's from and to must end with a slash/);
+  invalid((profile) => { profile.globals[3].except = [`${PACKAGE}/other/`]; }, /except needs prefix/);
+  invalid((profile) => { profile.globals[2].except = [`${PACKAGE}/data.json/`]; }, /except needs prefix/);
+  invalid((profile) => { profile.globals.reverse(); }, /globals must be sorted by kind and name/);
+  invalid((profile) => { profile.globals.push(structuredClone(profile.globals[0])); }, /duplicate entry/);
+  invalid((profile) => { profile.rules = ['theme-scopes', 'other']; }, /unknown rule "other"/);
+  invalid((profile) => { profile.rules = ['theme-scopes', 'theme-scopes']; }, /rules must be sorted and unique/);
+  invalid((profile) => { profile.rules = 'theme-scopes'; }, /rules must be an array/);
+  const projection = projectRenameLedger(globalsLedger(), inventory);
+  const projected = projection.profiles.find((profile) => profile.origin === 'lyra-v26');
+  assert.equal(projected.globals.length, 4);
+  assert.deepEqual(projected.rules, ['theme-scopes']);
+  assert.equal(projection.profiles.find((profile) => profile.origin === 'lyra-v21').globals, undefined, 'profiles without them project unchanged');
+  assert.deepEqual(validateRenameLedgerShape(projection, { projected: true }), []);
+});
+
+test('the checked-in v26 profile carries the 27.0.0 moves and runs the theme-scopes rule', () => {
+  const profile = readRenameLedger().profiles.find((entry) => entry.origin === 'lyra-v26');
+  assert.deepEqual([profile.fromMajor, profile.toMajor, profile.aliasRemovalMajor], [26, 27, 29]);
+  assert.deepEqual(profile.rules, ['theme-scopes']);
+  const key = (entry) => `${entry.kind} ${entry.from} -> ${entry.to}`;
+  const entries = profile.globals.map(key);
+  for (const expected of [
+    'export ToolCallStatus -> ToolStatus',
+    'export ToolResultStatus -> ToolStatus',
+    `module ${PACKAGE}/custom-elements.json -> @aceshooting/lyra-ide/custom-elements.json`,
+    `module ${PACKAGE}/translations/ -> @aceshooting/lyra-translations/`,
+    `module ${PACKAGE}/vscode-css-data.json -> @aceshooting/lyra-ide/vscode-css-data.json`,
+    `module ${PACKAGE}/vscode-html-data.json -> @aceshooting/lyra-ide/vscode-html-data.json`,
+    `module ${PACKAGE}/web-types.json -> @aceshooting/lyra-ide/web-types.json`,
+    'locale-key videoPlaybackSpeed -> avPlayerPlaybackRate',
+  ]) assert.ok(entries.includes(expected), expected);
+  assert.deepEqual(profile.globals.find((entry) => entry.from.endsWith('/translations/')).except, [`${PACKAGE}/translations/pseudo/`]);
+  const contract = buildMigrationContract(checkedInventory, { compatibilityContext: checkedCompatibilityContext, renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+  const result = migrateText(`import type { ToolCallStatus } from '${PACKAGE}';\nimport '${PACKAGE}/translations/fr.js';\nimport '${PACKAGE}/translations/pseudo/en-XA.js';\n`, contract, { file: 'app.ts', origin: 'lyra-v26' });
+  assert.equal(result.content, `import type { ToolStatus as ToolCallStatus } from '${PACKAGE}';\nimport '@aceshooting/lyra-translations/fr.js';\nimport '${PACKAGE}/translations/pseudo/en-XA.js';\n`);
+});
+
+test('the packaged CLI applies a profile rule and rewrites through --origin=lyra-v26', () => {
+  const { scratch, invoke } = packagedCli(globalsLedger());
+  try {
+    const file = path.join(scratch, 'app.html');
+    fs.writeFileSync(file, `<div style="--lr-theme-border-radius-m: 4px"></div>\n<script type="module">import '${PACKAGE}/data.json';</script>\n`);
+    const check = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', '--check', file);
+    assert.equal(check.status, 1, check.stdout + check.stderr);
+    const apply = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', file);
+    assert.equal(apply.status, 0, apply.stdout + apply.stderr);
+    assert.equal(fs.readFileSync(file, 'utf8'),
+      `<div data-lr-theme-scope style="--lr-theme-border-radius-m: 4px"></div>\n<script type="module">import '@aceshooting/lyra-ide/data.json';</script>\n`);
+    const again = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', '--check', file);
+    assert.equal(again.status, 0, again.stdout + again.stderr);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The rest of the 27.0.0 breaking changes in the checked-in lyra-v26 profile.
+// ---------------------------------------------------------------------------------------------
+
+const checkedV26 = () => buildMigrationContract(checkedInventory, { compatibilityContext: checkedCompatibilityContext, renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations() });
+const real = (text, file) => migrateText(text, checkedV26(), { file, origin: 'lyra-v26' });
+
+test('the v26 profile pins the removed 27.0.0 heading defaults, only where the attribute is absent', () => {
+  const result = real('<lr-task-list></lr-task-list><lr-prompt-studio></lr-prompt-studio><lr-task-list heading-level="2"></lr-task-list>', 'a.html');
+  assert.equal(result.content, '<lr-task-list heading-level="3"></lr-task-list><lr-prompt-studio heading-level="2"></lr-prompt-studio><lr-task-list heading-level="2"></lr-task-list>');
+  assert.equal(real(result.content, 'a.html').changes.length, 0, 'idempotent');
+  assert.equal(real('<lr-task-list></lr-task-list>', 'a.html').changes[0].action, 'insert-default');
+});
+
+test('the v26 profile reports the string autoCorrect property of every field that dropped it', () => {
+  for (const tag of ['lr-phone-input', 'lr-date-input', 'lr-model-select', 'lr-voice-picker']) {
+    const result = real(`<${tag}></${tag}><script>document.querySelector('${tag}').autoCorrect = 'off'; el.autocorrect = false;</script>`, 'a.html');
+    assert.ok(result.warnings.length >= 1 && result.warnings.every((warning) => warning.warningCode === 'PROPERTY_CHANGE_REVIEW'), tag);
+    assert.match(result.warnings[0].message, /autoCorrect/);
+    assert.equal(result.content.includes('autoCorrect'), true, 'never rewritten');
+  }
+  assert.equal(real('<lr-phone-input autocorrect="off"></lr-phone-input>', 'a.html').warnings.length, 0, 'the HTML attribute spelling stays valid');
+  assert.equal(real('const el = {}; el.autoCorrect = 1;', 'a.js').warnings.length, 0, 'files that never mention the component are left alone');
+});
+
+test('the v26 profile reports label, detail and eval-dataset/permission-grant/connector-manager changes', () => {
+  const label = real("document.querySelector('lr-prompt-studio').label = ''; document.querySelector('lr-context-inspector').label = '';", 'a.js');
+  assert.deepEqual(label.warnings.map((warning) => warning.warningCode).filter((code) => code === 'PROPERTY_CHANGE_REVIEW'), ['PROPERTY_CHANGE_REVIEW', 'PROPERTY_CHANGE_REVIEW']);
+  const deny = real("<lr-tool-approval-dialog></lr-tool-approval-dialog><script>document.querySelector('lr-tool-approval-dialog').addEventListener('lr-deny-request', (event) => event.detail);</script>", 'a.html');
+  assert.ok(deny.warnings.some((warning) => warning.warningCode === 'DETAIL_SHAPE_REVIEW'));
+  const css = real([
+    '.x { --lr-eval-dataset-search-radius: 3px; --lr-eval-dataset-search-min-height: 2rem; }',
+    'lr-eval-dataset::part(search-input) { color: red; }',
+    'lr-eval-dataset::part(search-clear) { color: red; }',
+    'lr-eval-dataset::part(search) { color: red; }',
+    'lr-permission-grant::part(decision) { color: red; }',
+    'lr-connector-manager::part(action) { color: red; }',
+    'lr-other::part(search-input) { color: red; }',
+    '.host::part(decision) { color: red; }', // untyped, but the file names lr-permission-grant: reported
+    '',
+  ].join('\n'), 'a.css');
+  assert.deepEqual(css.warnings.map((warning) => [warning.line, warning.warningCode]), [1, 1, 2, 3, 5, 6, 8].map((line) => [line, 'GLOBAL_REVIEW']));
+  assert.equal(real('/* --lr-eval-dataset-search-radius */ .a { color: red; }', 'a.css').warnings.length, 0, 'comments are ignored');
+  const acknowledged = real('/* lyra-migrate-reviewed: GLOBAL_REVIEW:search-input */\nlr-eval-dataset::part(search-input) { color: red; }', 'a.css');
+  assert.deepEqual([acknowledged.warnings.length, acknowledged.acknowledged], [0, 1]);
+});
+
+test('globals of every kind and the former property name are shape- and surface-validated', () => {
+  const base = globalsLedger((profile) => {
+    profile.globals.push(
+      { kind: 'css-property', from: '--x-old-', to: 'tokens', prefix: true, summary: 'Gone.', since: '27.0.0' },
+      { kind: 'part', tag: 'lr-details', from: 'summary', to: 'Use x.', summary: 'Changed.', since: '27.0.0' },
+    );
+    profile.globals.sort((a, b) => (a.kind + a.from + (a.tag ?? '') < b.kind + b.from + (b.tag ?? '') ? -1 : 1));
+  });
+  assert.deepEqual(validateRenameLedgerShape(base), []);
+  const invalid = (patch, pattern) => assertFinding(validateRenameLedgerShape(globalsLedger((profile) => {
+    profile.globals.push({ kind: 'part', tag: 'lr-details', from: 'summary', to: 'Use x.', summary: 'Changed.', since: '27.0.0' },
+      { kind: 'css-property', from: '--x-old-', to: 'tokens', prefix: true, summary: 'Gone.', since: '27.0.0' });
+    profile.globals.sort((a, b) => (a.kind + a.from + (a.tag ?? '') < b.kind + b.from + (b.tag ?? '') ? -1 : 1));
+    patch(profile.globals.find((entry) => entry.kind === 'part'), profile.globals.find((entry) => entry.kind === 'css-property'));
+  })), pattern);
+  invalid((part) => { delete part.tag; }, /tag must be an lr-\* element name/);
+  invalid((part) => { part.to = ''; }, /to must name the replacement/);
+  invalid((part) => { part.prefix = true; }, /prefix applies to custom properties only/);
+  invalid((part, property) => { property.from = '--x-old'; }, /a prefix needs prefix: true and a name ending in a hyphen/);
+  invalid((part, property) => { property.tag = 'lr-details'; }, /custom properties are not tag-owned/);
+  const record = (patch) => {
+    const value = syntheticLedger();
+    const profile = value.profiles.find((entry) => entry.origin === 'lyra-v26');
+    profile.propertyChanges = [{ tag: 'lr-details', property: 'open', summary: 'The value semantics changed.', ...patch }];
+    return validateRenameLedgerShape(value);
+  };
+  assert.deepEqual(record({ former: 'oldOpen' }), []);
+  assertFinding(record({ former: 'open' }), /former must differ from property/);
+  assertFinding(record({ former: 'not-an-identifier' }), /former must be a valid property name/);
+  const inventoryFindings = (globals, propertyChanges) => {
+    const value = syntheticLedger();
+    const profile = value.profiles.find((entry) => entry.origin === 'lyra-v26');
+    Object.assign(profile, { globals, propertyChanges });
+    return validateRenameLedger(value, { inventory });
+  };
+  const part = (tag, from) => ({ kind: 'part', tag, from, to: 'x', summary: 'x', since: '27.0.0' });
+  assertFinding(inventoryFindings([part('lr-ghost', 'a')], []), /component is not in the inventory/);
+  assertFinding(inventoryFindings([part('lr-sample-panel', 'no-such-part')], []), /the part is not on the public surface/);
+  assert.deepEqual(inventoryFindings([part('lr-sample-panel', 'body')], []).filter((finding) => /global part/.test(finding)), []);
+  assertFinding(inventoryFindings([], [{ tag: 'lr-details', property: 'open', former: 'open', summary: 'x' }]), /former must differ|still on the public surface/);
+});
+
+test('the checked-in v26 profile covers the remaining 27.0.0 migration items', () => {
+  const profile = readRenameLedger().profiles.find((entry) => entry.origin === 'lyra-v26');
+  assert.deepEqual(profile.defaults.map((entry) => [entry.tag, entry.attribute, entry.value]),
+    [['lr-prompt-studio', 'heading-level', '2'], ['lr-task-list', 'heading-level', '3']]);
+  assert.deepEqual(profile.propertyChanges.filter((entry) => entry.former).map((entry) => entry.tag),
+    ['lr-date-input', 'lr-model-select', 'lr-phone-input', 'lr-voice-picker']);
+  assert.deepEqual(profile.detailChanges.map((entry) => `${entry.tag} ${entry.event}`), ['lr-tool-approval-dialog lr-deny-request']);
+  assert.deepEqual(profile.globals.filter((entry) => ['part', 'css-property'].includes(entry.kind)).map((entry) => `${entry.kind} ${entry.tag ?? ''} ${entry.from}`.replace('  ', ' ')).sort(),
+    ['css-property --lr-eval-dataset-search-', 'part lr-connector-manager action', 'part lr-eval-dataset search-clear', 'part lr-eval-dataset search-input', 'part lr-permission-grant decision']);
 });

@@ -183,10 +183,12 @@ describe('opacity-aware glass control borders', () => {
       const outlinedWrapper = outlined.shadowRoot!.querySelector<HTMLElement>('[part~="input-wrapper"]')!;
       expect(contrastRatio(getComputedStyle(outlinedWrapper).borderTopColor, getComputedStyle(painted).backgroundColor)).to.be.at.least(3);
       const native = panel.querySelector<HTMLButtonElement>('button')!;
+      // The opaque interior restores the unqualified border, so an author reaches slotted content
+      // through the panel's theme input (the supported channel on a scope), not the resolved output.
       panel.setAttribute('data-lr-theme-scope', '');
-      panel.style.setProperty('--lr-color-border', 'rgb(13 25 37)');
+      panel.style.setProperty('--lr-theme-color-surface-border', 'rgb(13 25 37)');
       expect(toRgba(getComputedStyle(native).borderTopColor)).to.deep.equal([13, 25, 37, 255]);
-      panel.style.removeProperty('--lr-color-border');
+      panel.style.removeProperty('--lr-theme-color-surface-border');
       panel.style.setProperty('--lr-theme-color-surface-border', 'rgb(29 41 53)');
       expect(toRgba(getComputedStyle(wrapper).borderTopColor)).to.deep.equal([29, 41, 53, 255]);
       panel.style.removeProperty('--lr-theme-color-surface-border');

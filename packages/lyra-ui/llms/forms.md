@@ -4495,6 +4495,7 @@ Explicit empty text stays empty; later supplied text renders normally.
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `defaultValue: string` — the native alias of `value` (a checkbox's `value` is its attribute)
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — WA supporting text below the control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text
@@ -4702,6 +4703,7 @@ normally.
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked`
+- `defaultValue: string` — the native alias of `value`
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both
@@ -5177,7 +5179,8 @@ applies to the button appearance of `lr-radio`.
 
 **Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
 reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
-and `value`. A selected standalone radio submits its value through `ElementInternals`.
+`value` and its native alias `defaultValue`. A selected standalone radio submits its value through
+`ElementInternals`.
 An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group.
 `effectiveName` and `effectiveSize` expose the owning group's aggregate projections while `name`
@@ -5308,7 +5311,7 @@ The exact-320px story shows that behavior in LTR and RTL.
 
 **Properties and methods:** exactly the same functional surface as `lr-radio`. Its writable fields
 are `appearance`, `checked`, `defaultChecked`, `customError`, `disabled`, `name`, `required`, `value`,
-`size`, and `pill`. Its effective form/validity state is also inherited: read-only
+`defaultValue`, `size`, and `pill`. Its effective form/validity state is also inherited: read-only
 `effectiveDisabled`, `effectiveRequired`, `form`, `labels`, `validity`, `validationMessage`, and
 `willValidate`. The delegated methods are `click()`, `focus()`, `blur()`, `getForm()`,
 `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()`; form reset,

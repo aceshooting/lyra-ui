@@ -26,6 +26,7 @@ import { expandManifestInheritance } from './manifest-compact.mjs';
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const EVENT_NAME_RE = /^(?:lr-[a-z0-9]+(?:-[a-z0-9]+)*|beforeinput|input|change|focus|blur|ended|error|load|loadedmetadata|pause|play|request|timeupdate|volumechange)$/;
 const RUNTIME_EVENT_MIXINS = new Set([
+  'CheckedFormAssociated',
   'DocumentAnchorTarget',
   'FormAssociated',
   'TextViewerTarget',

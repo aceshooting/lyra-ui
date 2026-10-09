@@ -14123,7 +14123,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "dbca2aff2355f5377de5",
+      "fingerprint": "6529924dd4f1ebdaff75",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15748,7 +15748,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "a9e4b1e825bea1b3789c",
+      "fingerprint": "529986992bc8056ca24e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15764,7 +15764,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "98ff09c85b106449e6ae",
+      "fingerprint": "eea25017accada627aad",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16324,7 +16324,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "70de3c42ca8545793d4f",
+      "fingerprint": "e76d24f5b68b463a0dc8",
       "routes": [
         "src/vue.ts"
       ],
@@ -16733,7 +16733,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "83baf61d62026f47990e",
+      "fingerprint": "9a2cc60e53353d92cc95",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17841,6 +17841,43 @@
         "kind": "utility",
         "name": "testing-happy-dom-shims-contracts",
         "declaration": "installHappyDomShims"
+      }
+    },
+    {
+      "module": "src/internal/document-tokens.ts",
+      "exportName": "adoptLyraTokens",
+      "kind": "function",
+      "fingerprint": "aa83857718a01786754c",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/index.ts",
+        "src/utilities/tokens.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-document-tokens-contracts",
+        "declaration": "adoptLyraTokens"
+      }
+    },
+    {
+      "module": "src/internal/theme-scopes.ts",
+      "exportName": "findUnscopedThemeInputs",
+      "kind": "function",
+      "fingerprint": "ae9b8bd789a1b7df42ff",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/theme-scopes.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-theme-scopes-contracts",
+        "declaration": "findUnscopedThemeInputs"
       }
     }
   ],

@@ -449,7 +449,7 @@ describe('localization', () => {
 
 it('ties the key-cap bevel shadow offset to the border-width ladder so it retints with the real border', async () => {
   const el = (await fixture(html`
-    <div style="--lr-theme-border-width-thin: 5px">
+    <div data-lr-theme-scope style="--lr-theme-border-width-thin: 5px">
       <lr-kbd keys="mod"></lr-kbd>
     </div>
   `)) as HTMLDivElement;
@@ -472,7 +472,7 @@ it('is accessible in a populated multi-modifier state', async () => {
 
 it('draws the key-cap border and its inset edge in the subtle border tier', async () => {
   const el = (await fixture(html`
-    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+    <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
       <lr-kbd keys="mod"></lr-kbd>
     </div>
   `)) as HTMLDivElement;

@@ -1,29 +1,19 @@
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { FormControlController } from '../../../internal/form-control-controller.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './radio.styles.js';
 import { appearanceStyles } from './radio-button.styles.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../../internal/native-event-relay.js';
-import {
-  getFormOwner,
-  isBarredFromValidation,
-  setFormOwner,
-  type FormOwnerValue,
-} from '../../../internal/form-associated.js';
-import {
-  declaredDefaultConverter,
-  omittedEmptyStringConverter,
-} from '../../../internal/converters.js';
+import { CheckedFormAssociated } from '../../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { hasRealContent } from '../../../internal/a11y.js';
 import { isActionableElement } from '../../../internal/focus-navigation.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
@@ -63,6 +53,8 @@ export type RadioAppearance = 'default' | 'button';
 // `buttonRunPosition` getter is part of this class's public signature, and an alias would make that
 // internal type publicly reachable. The two unions are identical, so group projections still assign.
 type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
+
+class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
 
 /**
  * `<lr-radio>` — a form-associated single-choice control. Radios can be used
@@ -177,7 +169,7 @@ type RadioButtonRunPosition = 'standalone' | 'start' | 'middle' | 'end';
  * @status stable
  * @since 4.0.0
  */
-export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
+export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   // GENERATED DEFAULT-STRING SLICE: START
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
@@ -191,27 +183,12 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
     return [currentValidityValidator('required', 'disabled', 'checked', 'value')];
   }
   static override styles = [LyraElement.styles, sizes, styles, appearanceStyles];
-  static formAssociated = true;
-
   static override properties = {
-    customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    checked: { attribute: false, noAccessor: true },
-    defaultChecked: {
-      attribute: 'checked',
-      type: Boolean,
-      reflect: true,
-      useDefault: true,
-      noAccessor: true,
-    },
     appearance: { reflect: true,
       converter: declaredDefaultConverter<RadioAppearance>('default'),
     },
-    disabled: { type: Boolean, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     pill: { type: Boolean, reflect: true },
-    required: { type: Boolean, reflect: true, noAccessor: true },
     size: { reflect: true, converter: declaredDefaultConverter<LyraSize>('m') },
-    value: { reflect: true, noAccessor: true },
   };
 
   /**
@@ -246,86 +223,29 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
       this.recomputeButtonAdornments();
     }, ['slot'],
   );
-  /** Whether the user has acted on this radio yet, which gates `user-valid`/`user-invalid` and
-   *  intrinsic `aria-invalid`: a selection, a blur, or interactive validation (`reportValidity()`
-   *  or a submission attempt, via `installInteractionOnInvalid()`). A silent `checkValidity()`
-   *  alone never counts. */
-  @state() private hasInteracted = false;
   /** Set while an `appearance` change replaces the focused control; its blur is not interaction. */
   private swappingControl = false;
-  private internals: ElementInternals;
-  private validityController: FormControlController;
-  /** Consumer-supplied validation message reflected through `custom-error`. */
-  declare customError: string | null;
-  private _checked = false;
-  private _disabled = false;
-  private _required = false;
-  private _name = '';
-  private _value = 'on';
-  private _fieldsetDisabled = false;
+  // Radio keeps its own `name`/`value` storage: unlike the other checked controls it skips a write
+  // that changes nothing, which is what keeps `value="on"` from being written for the default.
+  private committingCustomError = false;
+  private resettingCustomError = false;
+  private _radioName = '';
+  private _radioValue = 'on';
   private _groupDisabled = false;
   private _groupRequired = false;
   private _groupSize: LyraSize | null = null;
   private _tabbable = true;
   private _buttonRunPosition: RadioButtonRunPosition = 'standalone';
   private groupOwner: RadioGroupController | null = null;
-  private _defaultChecked = false;
-  private _checkedDirty = false;
-  private settingDefaultChecked = false;
-  private reflectingDefaultChecked = false;
-
-  get checked(): boolean { return this._checked; }
-  set checked(value: boolean) {
-    const old = this._checked;
-    const next = Boolean(value);
-    if (!this.settingDefaultChecked) this._checkedDirty = true;
-    if (old === next) return;
-    this._checked = next;
-    this.syncFormState();
-    this.requestUpdate('checked', old);
-    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
-  }
-  /** Reflected current reset default; changing it never overwrites dirty live `checked` state. */
-  get defaultChecked(): boolean { return this._defaultChecked; }
-  set defaultChecked(value: boolean) {
-    if (this.reflectingDefaultChecked) return;
-    const old = this._defaultChecked;
-    this._defaultChecked = Boolean(value);
-    this.reflectingDefaultChecked = true;
-    try { this.toggleAttribute('checked', this._defaultChecked); }
-    finally { this.reflectingDefaultChecked = false; }
-    if (!this._checkedDirty) this.restoreCheckedFromDefault();
-    this.requestUpdate('defaultChecked', old);
-  }
-  get disabled(): boolean { return this._disabled; }
-  set disabled(value: boolean) {
-    const old = this._disabled;
-    this._disabled = Boolean(value);
-    this.toggleAttribute('disabled', this._disabled);
-    this._fieldsetDisabled =
-      this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
-    // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
-    // the states republished.
-    this.updateValidity();
-    this.requestUpdate('disabled', old);
-  }
-  get required(): boolean { return this._required; }
-  set required(value: boolean) {
-    const old = this._required;
-    this._required = Boolean(value);
-    this.toggleAttribute('required', this._required);
-    this.updateValidity();
-    this.requestUpdate('required', old);
-  }
-  get name(): string { return this._name; }
-  set name(value: string | null) {
-    const old = this._name;
+  override get name(): string { return this._radioName; }
+  override set name(value: string | null) {
+    const old = this._radioName;
     const next = value ?? '';
     if (old === next) {
       if (!next && this.hasAttribute('name')) this.removeAttribute('name');
       return;
     }
-    this._name = next;
+    this._radioName = next;
     if (next) {
       if (this.getAttribute('name') !== next) this.setAttribute('name', next);
     } else if (this.hasAttribute('name')) {
@@ -333,12 +253,12 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
     }
     this.requestUpdate('name', old);
   }
-  get value(): string { return this._value; }
-  set value(value: string) {
-    const old = this._value;
+  override get value(): string { return this._radioValue; }
+  override set value(value: string) {
+    const old = this._radioValue;
     const next = value ?? 'on';
     if (old === next) return;
-    this._value = next;
+    this._radioValue = next;
     if (value == null) {
       if (this.hasAttribute('value')) this.removeAttribute('value');
     } else if (this.getAttribute('value') !== next) {
@@ -347,12 +267,68 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
     this.syncFormState();
     this.requestUpdate('value', old);
   }
-  get effectiveDisabled(): boolean {
-    return (
-      this.disabled || this._fieldsetDisabled ||
-      (Boolean(this.currentGroup()) && this._groupDisabled)
-    );
+  /** The consumer error: the owning group's while grouped, otherwise this radio's own. */
+  private radioCustomMessage(): string {
+    return this.currentGroup()?.customError ?? this.validityController.customValidityMessage;
   }
+
+  override get customError(): string | null {
+    return this.radioCustomMessage() || null;
+  }
+
+  override set customError(next: string | null) {
+    this.setCustomValidity(next ?? '');
+  }
+
+  /** A write that changes nothing is not a state change (and never notifies the group). */
+  protected override acceptsCheckedWrite(previous: boolean, next: boolean): boolean {
+    return previous !== next;
+  }
+
+  protected override checkedWritten(previous: boolean): void {
+    void previous;
+    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
+  }
+
+  protected override isDisabledByOwner(): boolean {
+    return Boolean(this.currentGroup()) && this._groupDisabled;
+  }
+
+  protected override reportsRequired(): boolean {
+    return this.effectiveRequired;
+  }
+
+  protected override requiredMessage(): string {
+    return this.localize('radioRequired');
+  }
+
+  /** A grouped radio contributes nothing itself: the group is the form-associated owner. */
+  protected override commitFormValue(value: string): void {
+    if (this.currentGroup()) this.internals.setFormValue(null);
+    else this.internals.setFormValue(this.checked ? value : null, this.checked ? 'checked' : 'unchecked');
+  }
+
+  protected override updateValidity(): void {
+    const owned = Boolean(this.currentGroup());
+    const violates =
+      !this.isBarredFromValidation() && !owned && this.effectiveRequired && !this.checked;
+    this[SET_ANCHORED_VALIDITY](violates ? { valueMissing: true } : {}, this.requiredMessage());
+  }
+
+  override formResetCallback(): void {
+    if (this.currentGroup()) return;
+    super.formResetCallback();
+  }
+
+  override formStateRestoreCallback(
+    state: string | File | FormData | null,
+    reason: 'autocomplete' | 'restore',
+  ): void {
+    void reason;
+    if (this.currentGroup()) return;
+    this.checked = state === 'checked';
+  }
+
   get effectiveRequired(): boolean {
     return this.required || (this.currentGroup() ? this._groupRequired : false);
   }
@@ -364,20 +340,10 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
   get effectiveSize(): LyraSize {
     return this.currentGroup()?.size ?? this._groupSize ?? this.size;
   }
-  get form(): HTMLFormElement | null { return getFormOwner(this.internals); }
-  set form(owner: FormOwnerValue) { setFormOwner(this, owner); }
-
-  constructor() {
-    super();
-    this.validityController = new FormControlController(this, {
-      invalid: (init) => this.emit('lr-invalid', null, init),
-      interacted: this.markInteracted,
-      customError: () => this.currentGroup()?.customError ?? this.validityController.customValidityMessage,
-    });
-    this.internals = this.validityController.formInternals;
-    this.syncFormState();
+  private syncFormState(): void {
+    this.commitFormValue(this.value);
+    this.updateValidity();
   }
-
   /** @internal Matches on a part *token*, not the whole attribute: `<lr-radio-button>` encodes
    *  `checked`/`disabled` into the same part name (state after `::part()` never matches, so it has
    *  to live there), and an exact `[part="base"]` would silently stop finding the anchor the moment
@@ -437,80 +403,10 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
     super.disconnectedCallback();
   }
 
-  formResetCallback(): void {
-    // An owning radio group is the aggregate FACE/reset authority. Every radio is itself
-    // form-associated, so the browser also invokes this callback on each child during the same
-    // form reset; letting those child callbacks participate would overwrite the selection the
-    // group has just restored (or is about to restore) from its own default value.
-    if (this.currentGroup()) return;
-    this.hasInteracted = false;
-    this.restoreCheckedFromDefault();
-    this.reflectValidityStates();
-  }
   /** @internal Aggregate groups restore every owned option in one synchronous normalization pass. */
   resetFromGroup(): void {
-    this.hasInteracted = false;
+    this.setInteracted(false);
     this.restoreCheckedFromDefault();
-  }
-  private restoreCheckedFromDefault(): void {
-    this.settingDefaultChecked = true;
-    try { this.checked = this._defaultChecked; }
-    finally { this.settingDefaultChecked = false; }
-    this._checkedDirty = false;
-  }
-  formStateRestoreCallback(
-    state: string | File | FormData | null,
-    reason: 'autocomplete' | 'restore',
-  ): void {
-    void reason;
-    if (this.currentGroup()) return;
-    const old = this._checked;
-    this._checked = state === 'checked';
-    this._checkedDirty = true;
-    this.syncFormState();
-    this.requestUpdate('checked', old);
-    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
-  }
-  formDisabledCallback(disabled: boolean): void {
-    if (this.validityController?.reflectingDisabled) return;
-    const wasDisabled = this.effectiveDisabled;
-    this._fieldsetDisabled = disabled;
-    if (wasDisabled === this.effectiveDisabled) return;
-    // Cascaded disablement bars constraint validation exactly like the radio's own `disabled`.
-    this.updateValidity();
-    this.requestUpdate();
-  }
-
-  /** Shared with every other form control: disabled (own, fieldset, or group) bars validation. */
-  private get barredFromValidation(): boolean {
-    return isBarredFromValidation(this, this.internals);
-  }
-
-  private updateValidity(): void {
-    const owned = Boolean(this.currentGroup());
-    // A barred control reports no violation at all, exactly like a native disabled radio --
-    // leaving `valueMissing` raised is what leaked `:state(invalid)` onto disabled required radios.
-    const violates =
-      !this.barredFromValidation && !owned && this.effectiveRequired && !this.checked;
-    this.validityController.setValidity(
-      violates ? { valueMissing: true } : {},
-      this.localize('radioRequired'),
-    );
-    this.reflectValidityStates();
-  }
-
-  /** Republishes the six validity custom states (`required`/`optional`, `valid`/`invalid`,
-   *  `user-valid`/`user-invalid`) from whatever `ElementInternals` currently holds. `required`
-   *  here is the EFFECTIVE one -- a radio inside a `required` `<lr-radio-group>` is required even
-   *  with no attribute of its own, and that is what its validity is already computed from. */
-  private reflectValidityStates(): void {
-    syncValidityStates(this.internals, {
-      required: this.effectiveRequired,
-      hasInteracted: this.hasInteracted,
-      barred: this.barredFromValidation,
-    });
-    setCustomState(this.internals, 'checked', this.checked);
-    setCustomState(this.internals, 'disabled', this.effectiveDisabled);
   }
   /** @internal Driven by an owning `<lr-radio-group>`; released when the radio leaves the group's control. */
   setGroupDisabled(value: boolean): void {
@@ -572,33 +468,6 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
     this.syncFormState();
   }
 
-  private markInteracted = (): void => {
-    if (this.hasInteracted) return;
-    this.hasInteracted = true;
-    this.reflectValidityStates();
-  };
-
-  /** Whether the radio currently satisfies its constraints — the silent query, so it deliberately
-   *  does not count as interaction for the `user-*` custom states.
-   *  `withStaticValidityCheck()` tells the `installInteractionOnInvalid()` listener above that
-   *  whatever `invalid` event fires synchronously inside this call is this call, not a
-   *  submission attempt. */
-  checkValidity(): boolean {
-    return this.validityController.checkValidity();
-  }
-
-  /** `checkValidity()`, plus the browser's own validation UI on failure. */
-  reportValidity(): boolean {
-    this.validityController.syncConstraints();
-    // A submit attempt runs this, and native `:user-invalid` starts matching at exactly that
-    // point, so it counts as interaction for the `user-*` custom states. (A submission attempt
-    // itself never calls this method -- it drives `ElementInternals` directly -- which is what
-    // `installInteractionOnInvalid()` above covers.)
-    this.hasInteracted = true;
-    this.reflectValidityStates();
-    return this.internals.reportValidity();
-  }
-
   /**
    * Sets or clears a consumer-supplied validation error — the standard channel for a server-side
    * rejection ("that plan is no longer available") that no client-side constraint can express. A
@@ -616,20 +485,57 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
    *
    * The message is caller-supplied content, so it is used verbatim and never localized here.
    */
-  setCustomValidity(message: string): void {
-    const group = this.currentGroup();
-    if (group?.setCustomValidity) {
-      group.setCustomValidity(message ?? '');
+  override setCustomValidity(message: string): void {
+    if (this.committingCustomError) {
+      if (this.resettingCustomError) this.applyCustomValidity(message ?? '');
       return;
     }
-    this.validityController.setCustomValidity(message ?? '');
-    this.reflectValidityStates();
+    const old = this.radioCustomMessage() || null;
+    this.committingCustomError = true;
+    try {
+      this.applyCustomValidity(message ?? '');
+      this.reflectCustomError(this.radioCustomMessage());
+    } finally {
+      this.committingCustomError = false;
+    }
+    this.requestUpdate('customError', old);
+  }
+
+  private applyCustomValidity(message: string): void {
+    const group = this.currentGroup();
+    if (group?.setCustomValidity) {
+      group.setCustomValidity(message);
+      return;
+    }
+    this.validityController.setCustomValidity(message);
+    this.syncValidityStates();
     this.requestUpdate();
   }
 
+  /** Mirrors the effective message to the `custom-error` attribute. Re-entrant writes made by that
+   *  mirroring (or by a group republishing the message) are ignored while a commit is running. */
+  private reflectCustomError(message: string): void {
+    if (message) {
+      if (this.getAttribute('custom-error') !== message) this.setAttribute('custom-error', message);
+    } else if (this.hasAttribute('custom-error')) {
+      this.removeAttribute('custom-error');
+    }
+  }
+
   /** Clears consumer-supplied validity on the standalone radio or its owning group. */
-  resetValidity(): void {
-    this.setCustomValidity('');
+  override resetValidity(): void {
+    if (this.committingCustomError) return;
+    const old = this.radioCustomMessage() || null;
+    this.committingCustomError = true;
+    this.resettingCustomError = true;
+    try {
+      this.applyCustomValidity('');
+      this.reflectCustomError(this.radioCustomMessage());
+    } finally {
+      this.resettingCustomError = false;
+      this.committingCustomError = false;
+    }
+    this.requestUpdate('customError', old);
   }
 
   override click(): void {
@@ -640,12 +546,6 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
   }
   override blur(): void {
     this[VALIDITY_ANCHOR]()?.blur();
-  }
-  private syncFormState(): void {
-    const owned = Boolean(this.currentGroup());
-    if (owned) this.internals.setFormValue(null);
-    else this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
-    this.updateValidity();
   }
   private currentGroup(): RadioGroupController | null {
     // Construction and nested Lit SSR happen before usable light-DOM ancestry exists. Defer
@@ -676,7 +576,7 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
   private select(): void {
     const group = this.group();
     if (this.effectiveDisabled) return;
-    if (!this.checked) this.hasInteracted = true;
+    if (!this.checked) this.setInteracted(true);
     if (group) {
       group.selectRadio?.(this);
       return;
@@ -743,8 +643,7 @@ export class LyraRadio extends LyraFormControlElement<LyraRadioEventMap> {
   protected onBlur = (event: FocusEvent): void => {
     // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
     if (!this.effectiveDisabled && !this.matches(':disabled') && !this.swappingControl) {
-      this.hasInteracted = true;
-      this.reflectValidityStates();
+      this.setInteracted(true);
     }
     relayNativeEvent(this, event);
   };

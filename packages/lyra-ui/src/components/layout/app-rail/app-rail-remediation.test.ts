@@ -10,7 +10,7 @@ describe('resize request continuation', () => {
     for (const interaction of ['keyboard', 'pointer'] as const) {
       it(`preserves listener state when ${interaction} resize revokes ${revoke}`, async () => {
         const el = await fixture<LyraAppRail>(html`
-          <lr-app-rail force-mode="full" resizable rail-width="240"
+          <lr-app-rail data-lr-theme-scope force-mode="full" resizable rail-width="240"
             style="block-size: 16rem; --lr-transition-fast: 0ms;"></lr-app-rail>
         `);
         const resizer = el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;

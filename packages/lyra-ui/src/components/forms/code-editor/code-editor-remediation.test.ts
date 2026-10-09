@@ -303,7 +303,7 @@ it('extends the wrapped gutter background and border through the final logical l
 
 
 it('keeps native text, measurement and gutter on the live monospace family token', async () => {
-  const wrapper = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-family-mono: monospace; font-weight: 700; font-style: italic">
+  const wrapper = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-font-family-mono: monospace; font-weight: 700; font-style: italic">
     <lr-code-editor wrap="soft" resize="none" style="inline-size: 250px; block-size: 160px"
       .value=${'wrapped source '.repeat(20) + '\nsecond line'}></lr-code-editor>
   </div>`);

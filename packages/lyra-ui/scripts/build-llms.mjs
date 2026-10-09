@@ -608,7 +608,27 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
     const from = `Lyra ${profile.fromMajor}`;
     const to = `Lyra ${profile.toMajor}`;
     const hasRetired = [...profile.reviews, ...profile.moduleReviews].some(entry => entry.removedIn) || Object.values(compatibilityContext?.records ?? {}).some(entry => entry.state === 'retired' && Number(entry.policy.removalNotBefore.split('.')[0]) === profile.aliasRemovalMajor);
-    lines.push(
+    const structuralOnly = Boolean(profile.globals?.length) && [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews]
+      .every((entries) => entries.length === 0);
+    if (structuralOnly) {
+      lines.push(
+        `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
+        '',
+        `${to} relocates package entry points and types and removes some localization keys, and its token layer`,
+        'changes which elements re-derive theme inputs. No component member is renamed. Run the CLI of the installed',
+        `package after upgrading to ${to}; the profile applies only the entries that release ships:`,
+        '',
+        '```bash',
+        `npx lyra-ui-migrate --origin=${profile.origin} --diff src > ${profile.origin}.patch`,
+        `npx lyra-ui-migrate --origin=${profile.origin} --check --report=${profile.origin}-migration.json src`,
+        '```',
+        '',
+        '`--diff` prints a patch and writes nothing. After reviewing a report, add a comment containing',
+        '`lyra-migrate-reviewed: CODE:name` on the reported line, alone on the line above it, or directly before the',
+        'element\'s opening tag. Re-running the profile is idempotent.',
+        '',
+      );
+    } else lines.push(
       `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
       '',
       `${from} minor releases and ${to} rename some Lyra-only attributes, properties, events, CSS parts,`,
@@ -644,6 +664,8 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       '| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |',
       '| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |',
       '| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |',
+      '| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |',
+      '| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |',
       '| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |',
       '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |',
       '| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |',
@@ -655,7 +677,7 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       'hydration compares template strings.',
       '',
     );
-    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews]
+    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews, profile.globals ?? [], profile.rules ?? []]
       .reduce((sum, entries) => sum + entries.length, 0);
     if (total === 0) {
       lines.push(`No ${from} names are scheduled to change yet.`, '');
@@ -751,6 +773,37 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
         ...profile.moduleReviews.map((entry) => {
           return `| ${entry.kind} | \`${cell(entry.module ? `${entry.module}#${entry.name}` : entry.name)}\` | ${cell(entry.replacement)} | ${entry.removedIn ? `Removed in ${entry.removedIn}` : entry.removalNotBefore} |`;
         }),
+        '',
+      );
+    }
+    if (profile.globals?.length) {
+      lines.push(
+        `Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,`,
+        'dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any',
+        'string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is',
+        'reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep',
+        'working; other uses (a deep import, a namespace member) and removed localization keys are reported as',
+        '`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.',
+        '',
+        '| Kind | From | To | Handling |',
+        '|---|---|---|---|',
+        ...profile.globals.map((entry) => {
+          const from = entry.kind === 'export' ? `${entry.from} (package root)` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.prefix ? `${entry.from}*` : entry.from;
+          const handling = entry.kind === 'module'
+            ? `Rewritten${entry.except ? ` except ${entry.except.map((prefix) => `\`${cell(prefix)}\``).join(', ')}` : ''}. ${entry.summary}`
+            : entry.kind === 'export' ? `Import clause re-bound; other uses reported. ${entry.summary}` : `Reported only. ${entry.summary}`;
+          const to = entry.kind === 'part' || entry.kind === 'css-property' ? cell(entry.to) : `\`${cell(entry.to)}${entry.prefix ? '*' : ''}\``;
+          return `| ${entry.kind} | \`${cell(from)}\` | ${to} | ${cell(handling)} |`;
+        }),
+        '',
+      );
+    }
+    if (profile.rules?.length) {
+      lines.push(
+        `This profile also runs the structural ${profile.rules.length === 1 ? 'rule' : 'rules'} ${profile.rules.map((rule) => `\`${rule}\``).join(', ')}, the same implementation as \`--rule=<name>\`.`,
+        'It adds `data-lr-theme-scope` to elements whose inline style sets a token-layer input, and reports dynamic inputs,',
+        'markers inside loops, and stylesheet rules that set an input or a shared output outside a theme scope',
+        '(`THEME_SCOPE_*_REVIEW`, acknowledged like any other code).',
         '',
       );
     }

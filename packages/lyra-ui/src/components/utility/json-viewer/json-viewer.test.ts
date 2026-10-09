@@ -991,7 +991,7 @@ it("keeps the tree LTR in RTL: a collapsed chevron still points right, expanded 
   // than mirroring -- collapsed points right (rotate 0), expanded points down (rotate 90).
   const wrapper = await fixture(html`
     <div dir="rtl">
-      <lr-json-viewer
+      <lr-json-viewer data-lr-theme-scope
         .data=${{ nested: true }}
         expand-depth="0"
         style="--lr-transition-fast: 0s"
@@ -1899,7 +1899,7 @@ describe('template whitespace', () => {
 
   async function mount(wrapperStyle: string): Promise<LyraJsonViewer> {
     const wrapper = await fixture<HTMLDivElement>(
-      html`<div style=${wrapperStyle}><lr-json-viewer .data=${data}></lr-json-viewer></div>`,
+      html`<div data-lr-theme-scope style=${wrapperStyle}><lr-json-viewer .data=${data}></lr-json-viewer></div>`,
     );
     const el = wrapper.querySelector('lr-json-viewer') as LyraJsonViewer;
     await el.updateComplete;

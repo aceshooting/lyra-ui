@@ -593,7 +593,7 @@ it("contains all badge states with long localized content in an exact 320px RTL 
 
 it("renders the interactive base hover and keyboard-focus treatment", async () => {
   const el = await fixture<LyraUsageBadge>(html`
-    <lr-usage-badge
+    <lr-usage-badge data-lr-theme-scope
       tokens-in="1204"
       style="--lr-color-surface-raised: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 3px"
     ></lr-usage-badge>

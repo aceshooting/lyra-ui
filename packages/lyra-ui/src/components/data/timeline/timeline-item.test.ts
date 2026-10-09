@@ -247,7 +247,7 @@ it('inherits marker and rail theme hooks from an ancestor while direct item over
 
 it('defaults the connecting rail to the decorative --lr-color-border-subtle token', async () => {
   const el = (await fixture(html`
-    <lr-timeline-item
+    <lr-timeline-item data-lr-theme-scope
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
     >Event</lr-timeline-item>
   `)) as LyraTimelineItem;

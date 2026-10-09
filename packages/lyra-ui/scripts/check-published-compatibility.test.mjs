@@ -120,7 +120,7 @@ test('published eligible cohort remains migratable after simulated 23 source rem
   const archive = decodeEvidence(await readFile(join(root, 'evidence.json.gz')));
   const input = role => JSON.parse(Buffer.from(archive.payloads[capture.inputs.find(entry => entry.origin === 'source' && entry.role === role).sha256], 'base64'));
   const metadata = input('metadata'); const original = input('inventory'); const ledger = input('renameLedger');
-  ledger.profiles.push(emptyRenameLedger().profiles.find(profile => profile.origin === 'lyra-v25'));
+  ledger.profiles.push(...emptyRenameLedger().profiles.filter(profile => ['lyra-v25', 'lyra-v26'].includes(profile.origin)));
   const facts = (await checkPublishedCompatibility(directory)).captures.find(entry => entry.capture.sourceVersion === '22.0.0').facts;
   const candidate = structuredClone(original);
   const eligible = facts.records.filter(entry => entry.policy.removalNotBefore === '23.0.0');

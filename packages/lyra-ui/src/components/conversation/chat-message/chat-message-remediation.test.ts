@@ -48,7 +48,7 @@ it('paints the collapse button from the shared icon-button tokens', async () => 
 });
 
 it('paints the themed focus ring on a keyboard-focused bubble', async () => {
-  const el = await fixture<LyraChatMessage>(html`<lr-chat-message style="--lr-focus-ring-color: rgb(1, 2, 3)">hi</lr-chat-message>`);
+  const el = await fixture<LyraChatMessage>(html`<lr-chat-message data-lr-theme-scope style="--lr-focus-ring-color: rgb(1, 2, 3)">hi</lr-chat-message>`);
   const bubble = el.shadowRoot!.querySelector<HTMLElement>('[part~="bubble"]')!;
   await focusByKeyboard(bubble);
   expect(getComputedStyle(bubble).outlineColor).to.equal('rgb(1, 2, 3)');

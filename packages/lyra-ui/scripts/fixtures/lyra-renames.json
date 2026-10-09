@@ -7756,6 +7756,207 @@
       "propertyChanges": [],
       "retiredEvents": [],
       "detailFields": []
+    },
+    {
+      "origin": "lyra-v26",
+      "fromMajor": 26,
+      "toMajor": 27,
+      "aliasRemovalMajor": 29,
+      "renames": [],
+      "defaults": [
+        {
+          "tag": "lr-prompt-studio",
+          "attribute": "heading-level",
+          "value": "2"
+        },
+        {
+          "tag": "lr-task-list",
+          "attribute": "heading-level",
+          "value": "3"
+        }
+      ],
+      "detailChanges": [
+        {
+          "tag": "lr-tool-approval-dialog",
+          "event": "lr-deny-request",
+          "summary": "The detail is now { waitUntil } instead of null."
+        }
+      ],
+      "reviews": [],
+      "slotContent": [],
+      "moduleReviews": [],
+      "propertyChanges": [
+        {
+          "tag": "lr-context-inspector",
+          "property": "label",
+          "summary": "label=\"\" is now honored verbatim (no fallback to the heading or localized default); omit label to keep the default."
+        },
+        {
+          "tag": "lr-date-input",
+          "property": "autocorrect",
+          "former": "autoCorrect",
+          "summary": "The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect=\"off\" in HTML), so a string assigned to it, or a framework binding of the string \"off\", is truthy."
+        },
+        {
+          "tag": "lr-model-select",
+          "property": "autocorrect",
+          "former": "autoCorrect",
+          "summary": "The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect=\"off\" in HTML), so a string assigned to it, or a framework binding of the string \"off\", is truthy."
+        },
+        {
+          "tag": "lr-phone-input",
+          "property": "autocorrect",
+          "former": "autoCorrect",
+          "summary": "The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect=\"off\" in HTML), so a string assigned to it, or a framework binding of the string \"off\", is truthy."
+        },
+        {
+          "tag": "lr-prompt-studio",
+          "property": "label",
+          "summary": "label=\"\" is now honored verbatim (no fallback to the heading or localized default); omit label to keep the default."
+        },
+        {
+          "tag": "lr-voice-picker",
+          "property": "autocorrect",
+          "former": "autoCorrect",
+          "summary": "The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect=\"off\" in HTML), so a string assigned to it, or a framework binding of the string \"off\", is truthy."
+        }
+      ],
+      "retiredEvents": [],
+      "globals": [
+        {
+          "kind": "css-property",
+          "from": "--lr-eval-dataset-search-",
+          "to": "the lr-input tokens (--lr-input-* and --lr-form-control-*)",
+          "prefix": true,
+          "summary": "lr-eval-dataset's search field is a composed lr-input.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "export",
+          "module": ".",
+          "from": "ToolCallStatus",
+          "to": "ToolStatus",
+          "summary": "One ToolStatus union replaces the per-component status types; import it from the package root.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "export",
+          "module": ".",
+          "from": "ToolResultStatus",
+          "to": "ToolStatus",
+          "summary": "One ToolStatus union replaces the per-component status types; import it from the package root.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "evaluationRunStatusCancelled",
+          "to": "agentRunStatusCancelled",
+          "summary": "lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "evaluationRunStatusIdle",
+          "to": "agentRunStatusIdle",
+          "summary": "lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "evaluationRunStatusWaitingApproval",
+          "to": "agentRunStatusWaitingApproval",
+          "summary": "lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "evaluationRunStatusWaitingInput",
+          "to": "agentRunStatusWaitingInput",
+          "summary": "lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "videoPlaybackSpeed",
+          "to": "avPlayerPlaybackRate",
+          "summary": "lr-video names its speed select with the key lr-av-player shares; a string override under the old key no longer applies.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "module",
+          "from": "@aceshooting/lyra-ui/custom-elements.json",
+          "to": "@aceshooting/lyra-ide/custom-elements.json",
+          "summary": "Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "module",
+          "from": "@aceshooting/lyra-ui/translations/",
+          "to": "@aceshooting/lyra-translations/",
+          "prefix": true,
+          "except": [
+            "@aceshooting/lyra-ui/translations/pseudo/"
+          ],
+          "summary": "Install @aceshooting/lyra-translations at the same version; the pseudo-locales stay in @aceshooting/lyra-ui.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "module",
+          "from": "@aceshooting/lyra-ui/vscode-css-data.json",
+          "to": "@aceshooting/lyra-ide/vscode-css-data.json",
+          "summary": "Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "module",
+          "from": "@aceshooting/lyra-ui/vscode-html-data.json",
+          "to": "@aceshooting/lyra-ide/vscode-html-data.json",
+          "summary": "Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "module",
+          "from": "@aceshooting/lyra-ui/web-types.json",
+          "to": "@aceshooting/lyra-ide/web-types.json",
+          "summary": "Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "part",
+          "tag": "lr-connector-manager",
+          "from": "action",
+          "to": "Style the label through action-label and the inner button through action-base.",
+          "summary": "action is now the lr-button host.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "part",
+          "tag": "lr-permission-grant",
+          "from": "decision",
+          "to": "Style the label through decision-label and the inner button through decision-base.",
+          "summary": "decision is now the lr-button host.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "part",
+          "tag": "lr-eval-dataset",
+          "from": "search-clear",
+          "to": "Style the clear button through part search-clear on the field, and the native input through search-input-field.",
+          "summary": "search-clear is now the composed lr-input clear button.",
+          "since": "27.0.0"
+        },
+        {
+          "kind": "part",
+          "tag": "lr-eval-dataset",
+          "from": "search-input",
+          "to": "Style the native input through search-input-field.",
+          "summary": "search-input is now the lr-input host, not the native input.",
+          "since": "27.0.0"
+        }
+      ],
+      "rules": [
+        "theme-scopes"
+      ]
     }
   ]
 }

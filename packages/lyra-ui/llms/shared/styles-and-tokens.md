@@ -405,7 +405,9 @@ layers), or leave application overrides of `--lr-*` outputs unlayered.
 `@aceshooting/lyra-ui/utilities/theme-scopes.js`; `findUnscopedThemeInputs(root?: Document |
 DocumentFragment | Element): Element[]`) returns, without logging, every element under `root`
 (through open shadow roots) whose inline style sets a layer-consumed input and that is not a scope. `lyra-ui-migrate --rule=theme-scopes`
-adds the marker in HTML, Lit and JSX templates and reports dynamic inputs and stylesheet rules.
+adds the marker in HTML, Lit and JSX templates and reports dynamic inputs and stylesheet rules;
+`lyra-ui-migrate --origin=lyra-v26` runs the same rule together with the other Lyra 27 moves (relocated
+locale and editor-data specifiers, `ToolStatus`) and reports removed localization keys.
 
 ### The colour ramp and the semantic grid
 

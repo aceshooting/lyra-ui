@@ -181,7 +181,7 @@ describe('rendered glass foreground qualification', () => {
   }
 
   it('preserves explicit foreground hooks during hover and press', async () => {
-    const host = await fixture<GlassContrastFixture>(html`<test-glass-contrast style="--lr-theme-transition-fast:0s"><lr-button appearance="plain" variant="brand" style="--lr-button-hover-color:rgb(7, 8, 9)">Action</lr-button><lr-tree label="Tree"><lr-tree-item selected style="--lr-tree-selected-color:rgb(10, 11, 12)">Selected</lr-tree-item></lr-tree></test-glass-contrast>`);
+    const host = await fixture<GlassContrastFixture>(html`<test-glass-contrast data-lr-theme-scope style="--lr-theme-transition-fast:0s"><lr-button appearance="plain" variant="brand" style="--lr-button-hover-color:rgb(7, 8, 9)">Action</lr-button><lr-tree label="Tree"><lr-tree-item selected style="--lr-tree-selected-color:rgb(10, 11, 12)">Selected</lr-tree-item></lr-tree></test-glass-contrast>`);
     const button = host.firstElementChild as LyraButton;
     const selected = host.querySelector<LyraTreeItem>('lr-tree-item')!;
     await Promise.all([button.updateComplete, selected.updateComplete]);

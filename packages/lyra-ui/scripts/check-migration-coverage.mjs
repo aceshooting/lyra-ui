@@ -182,6 +182,8 @@ export function analyzeRenameLedger(renameLedger, inventory, { sharedTokens = nu
       reviews: profile.reviews?.length ?? 0,
       slotContent: profile.slotContent?.length ?? 0,
       moduleReviews: profile.moduleReviews?.length ?? 0,
+      ...(Array.isArray(profile.globals) ? { globals: profile.globals.length } : {}),
+      ...(Array.isArray(profile.rules) ? { rules: profile.rules.length } : {}),
     };
     for (const entry of profile.renames ?? []) {
       if (entry?.kind !== 'attribute' && entry?.kind !== 'property') continue;
@@ -245,7 +247,52 @@ function namedReadmeUpstream(readme) {
  * Returns every migration-coverage defect without mutating its inputs. This is exported so the
  * safety assertions can be exercised with synthetic fixtures rather than by rewriting repo files.
  */
-export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null, exportDeprecations = [], retiredEventHistory = null, compatibilityContext = null }) {
+/**
+ * Profile `globals` against the real public surface (RFC 0003): a `module` entry's old subpath must
+ * be gone from the package exports and its replacement present in the target package's exports, an
+ * `export` entry's old name must be absent from the root barrel and its replacement exported, and
+ * a `locale-key` entry's old key must be gone from the default strings with its replacement present.
+ * `surface` is `{ exports, packages: { [name]: exports }, rootBarrel, stringKeys }`.
+ */
+export function analyzeGlobalsSurface(renameLedger, surface) {
+  const errors = [];
+  const patternMatches = (exportsMap, subpath) => Object.hasOwn(exportsMap, subpath) || Object.keys(exportsMap).some((key) => {
+    const star = key.indexOf('*');
+    return star !== -1 && subpath.startsWith(key.slice(0, star)) && subpath.endsWith(key.slice(star + 1));
+  });
+  const resolve = (specifier, sample) => {
+    const [, scope, name, rest = ''] = /^(@[^/]+)\/([^/]+)(\/.*)?$/.exec(specifier) ?? [];
+    return { packageName: `${scope}/${name}`, subpath: `.${rest}${sample}` };
+  };
+  const hasName = (text, name) => new RegExp(`(?<![$\\w])${name}(?![$\\w])`).test(text);
+  for (const profile of Array.isArray(renameLedger?.profiles) ? renameLedger.profiles : []) {
+    for (const entry of profile.globals ?? []) {
+      const label = `${profile.origin}: global ${entry.kind} ${entry.from}`;
+      if (entry.kind === 'module') {
+        const sample = entry.prefix ? 'x.js' : '';
+        const from = resolve(entry.from, sample);
+        const to = resolve(entry.to, sample);
+        if (patternMatches(surface.exports, from.subpath)) errors.push(`${label}: ${from.subpath} is still exported by ${from.packageName}`);
+        const target = surface.packages[to.packageName];
+        if (!target) errors.push(`${label}: ${to.packageName} is not a workspace package`);
+        else if (!patternMatches(target, to.subpath)) errors.push(`${label}: ${to.packageName} does not export ${to.subpath}`);
+        for (const prefix of entry.except ?? []) {
+          const kept = resolve(prefix, '');
+          if (!Object.keys(surface.exports).some((key) => key.startsWith(kept.subpath))) errors.push(`${label}: excepted prefix ${prefix} is not exported by ${kept.packageName}`);
+        }
+      } else if (entry.kind === 'export') {
+        if (hasName(surface.rootBarrel, entry.from)) errors.push(`${label}: ${entry.from} is still exported by the package root`);
+        if (!hasName(surface.rootBarrel, entry.to)) errors.push(`${label}: ${entry.to} is not exported by the package root`);
+      } else if (entry.kind === 'locale-key') {
+        if (surface.stringKeys.has(entry.from)) errors.push(`${label}: the key still exists in the default strings`);
+        if (!surface.stringKeys.has(entry.to)) errors.push(`${label}: ${entry.to} is not a default string key`);
+      }
+    }
+  }
+  return errors;
+}
+
+export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest, readme, renameLedger = null, sharedTokens = null, exportDeprecations = [], retiredEventHistory = null, compatibilityContext = null, globalsSurface = null }) {
   const errors = [];
   const polarityCheckablePairs = [];
   const expected = catalog(upstreamTags);
@@ -477,6 +524,7 @@ export function analyzeMigrationCoverage({ inventory, upstreamTags, lyraManifest
   );
   const renameAnalysis = renameLedger ? analyzeRenameLedger(renameLedger, inventory, { sharedTokens, exportDeprecations, retiredEventHistory, compatibilityContext }) : null;
   if (renameAnalysis) errors.push(...renameAnalysis.errors);
+  if (renameLedger && globalsSurface) errors.push(...analyzeGlobalsSurface(renameLedger, globalsSurface));
   return {
     errors: [...new Set(errors)].sort(),
     summary: {
@@ -506,10 +554,30 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
       .map(
         ([origin, counts]) =>
           ` Lyra rename ledger ${origin}: ${counts.renames} rename(s), ${counts.defaults} default(s), ` +
-          `${counts.retiredEvents} retired event review(s), ${counts.detailChanges} detail change(s), ${counts.propertyChanges} property change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s), ${counts.moduleReviews} module review(s).`,
+          `${counts.retiredEvents} retired event review(s), ${counts.detailChanges} detail change(s), ${counts.propertyChanges} property change(s), ${counts.reviews} review(s), ${counts.slotContent} slot-content review(s), ${counts.moduleReviews} module review(s)${counts.globals === undefined ? '' : `, ${counts.globals} global(s), ${counts.rules ?? 0} rule(s)`}.`,
       )
       .join('')
   );
+}
+
+/** The public surface `globals` entries are checked against, read from the sibling workspace packages. */
+function readGlobalsSurface() {
+  const readJsonFile = (...segments) => JSON.parse(fs.readFileSync(path.join(...segments), 'utf8'));
+  const workspace = path.dirname(packageDir);
+  const packages = {};
+  for (const directory of fs.readdirSync(workspace)) {
+    const manifestPath = path.join(workspace, directory, 'package.json');
+    if (!fs.existsSync(manifestPath)) continue;
+    const manifest = readJsonFile(manifestPath);
+    packages[manifest.name] = manifest.exports ?? {};
+  }
+  const strings = fs.readFileSync(path.join(packageDir, 'src', 'internal', 'localization.ts'), 'utf8');
+  return {
+    exports: packages['@aceshooting/lyra-ui'] ?? {},
+    packages,
+    rootBarrel: fs.readFileSync(path.join(packageDir, 'src', 'lyra.ts'), 'utf8'),
+    stringKeys: new Set([...strings.matchAll(/^  ([A-Za-z0-9_$]+):/gm)].map((match) => match[1])),
+  };
 }
 
 async function run() {
@@ -528,6 +596,7 @@ async function run() {
     retiredEventHistory: readJson('scripts', 'fixtures', 'retired-event-history.json'),
     exportDeprecations: assembleComponentMetadata(readComponentMetadataSources(packageDir)).exportDeprecations,
     sharedTokens: new Set(Object.keys(readJson('tokens', 'canonical-tokens.json').tokens)),
+    globalsSurface: readGlobalsSurface(),
   });
 
   if (result.errors.length) {

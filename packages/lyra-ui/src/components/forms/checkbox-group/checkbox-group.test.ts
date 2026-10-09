@@ -394,7 +394,7 @@ it('releases and reacquires host descriptions through the adopted owner realm', 
           relationshipObservations += 1;
         }
         if (
-          (target === frameDocument || target === frameDocument.documentElement) &&
+          (target === frameDocument || target === frameDocument?.documentElement) &&
           options.childList &&
           options.subtree &&
           options.attributeFilter?.includes('id')
@@ -1986,10 +1986,10 @@ function recordCheckedWrites(box: LyraCheckbox): {
   writes: boolean[];
   release: () => void;
 } {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    Object.getPrototypeOf(box) as object,
-    'checked',
-  )!;
+  // The accessor lives on a mixin prototype, so walk the chain to the class that defines it.
+  let owner = Object.getPrototypeOf(box) as object;
+  while (!Object.prototype.hasOwnProperty.call(owner, 'checked')) owner = Object.getPrototypeOf(owner) as object;
+  const descriptor = Object.getOwnPropertyDescriptor(owner, 'checked')!;
   const writes: boolean[] = [];
   Object.defineProperty(box, 'checked', {
     configurable: true,

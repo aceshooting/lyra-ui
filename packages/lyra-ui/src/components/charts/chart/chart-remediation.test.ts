@@ -490,7 +490,7 @@ for (const direction of ['ltr', 'rtl']) {
 for (const direction of ['ltr', 'rtl']) {
   it(`refits lite-chart titles after inherited font changes without resizing the SVG in ${direction}`, async () => {
     const original = 'W'.repeat(70);
-    const parent = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-size-xs: 12px"><lr-lite-chart
+    const parent = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-font-size-xs: 12px"><lr-lite-chart
       dir=${direction} style="inline-size: 220px" height="16rem" x-label=${original} y-label=${original}
       .labels=${['A', 'B']} .datasets=${[{ label: 'Values', data: [1, 2] }]}
     ></lr-lite-chart></div>`);
@@ -514,7 +514,7 @@ for (const direction of ['ltr', 'rtl']) {
 
 it('restores an unpainted lite-chart axis title after its inherited font shrinks enough to fit', async () => {
   const original = 'W'.repeat(70);
-  const parent = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-size-xs: 64px"><lr-lite-chart
+  const parent = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-font-size-xs: 64px"><lr-lite-chart
     style="inline-size: 90px" height="16rem" x-label=${original} y-label=${original}
     .labels=${['A', 'B']} .datasets=${[{ label: 'Values', data: [1, 2] }]}
   ></lr-lite-chart></div>`);

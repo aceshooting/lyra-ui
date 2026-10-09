@@ -163,7 +163,7 @@ it('keeps compact node pointer targets at the 36px floor and activates through t
 
 it('builds the node circle hover/press ring stroke-width from the border-width ladder', async () => {
   const el = (await fixture(html`
-    <div style="--lr-theme-border-width-thick: 9px">
+    <div data-lr-theme-scope style="--lr-theme-border-width-thick: 9px">
       <lr-mind-map></lr-mind-map>
     </div>
   `)) as HTMLDivElement;

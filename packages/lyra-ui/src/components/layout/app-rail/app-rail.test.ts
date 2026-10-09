@@ -191,7 +191,7 @@ it("inherits independent toggle and resizer hover/pressed paint from an ancestor
   mobileWrapper.remove();
 
   const fullWrapper = await fixture<HTMLElement>(html`
-    <div
+    <div data-lr-theme-scope
       style="
       --lr-transition-fast: 0ms;
       --lr-app-rail-resizer-hover-bg: rgb(13, 14, 15);
@@ -1818,7 +1818,7 @@ describe("resizable", () => {
     // rail's own inline-end edge (WCAG 2.2 SC 1.4.11); every other rail keeps the subtle tier.
     // Distinct theme inputs stop the two border tiers resolving to the same colour.
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="
+      <div data-lr-theme-scope style="
         --lr-theme-color-surface-border: rgb(4, 5, 6);
         --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
       ">

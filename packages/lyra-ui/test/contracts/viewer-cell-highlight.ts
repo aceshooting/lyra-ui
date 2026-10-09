@@ -96,7 +96,7 @@ export function describeCellHighlightStyling(options: CellHighlightStylingOption
     }
 
     const create = async (attrs = ''): Promise<HighlightHost> =>
-      (await fixture(`<${tag} ${attrs}></${tag}>`)) as HighlightHost;
+      (await fixture(`<${tag} data-lr-theme-scope ${attrs}></${tag}>`)) as HighlightHost;
 
     it('paints a highlighted cell with an outline no plain cell has', async () => {
       injectStyle(`${tag} { --lr-theme-color-brand-fill-loud: rgb(1, 2, 3); }`);

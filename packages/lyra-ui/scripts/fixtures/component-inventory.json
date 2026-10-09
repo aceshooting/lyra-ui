@@ -23106,7 +23106,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "with-hint",
@@ -23149,6 +23150,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "defaultValue",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "disabled",
@@ -23293,7 +23304,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "willValidate",
@@ -23602,22 +23614,6 @@
             ]
           },
           {
-            "name": "formDisabledCallback",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "disabled",
-                    "type": "boolean",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "formResetCallback",
             "overloads": [
               {
@@ -23707,6 +23703,7 @@
           "properties": [
             "checked",
             "defaultChecked",
+            "defaultValue",
             "disabled",
             "form",
             "labels",
@@ -108317,7 +108314,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           }
         ],
         "properties": [
@@ -108358,7 +108356,18 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "defaultValue",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "disabled",
@@ -108500,7 +108509,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "willValidate",
@@ -108799,22 +108809,6 @@
             ]
           },
           {
-            "name": "formDisabledCallback",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "disabled",
-                    "type": "boolean",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "formResetCallback",
             "overloads": [
               {
@@ -108904,6 +108898,7 @@
           "properties": [
             "checked",
             "defaultChecked",
+            "defaultValue",
             "disabled",
             "form",
             "labels",
@@ -109083,7 +109078,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           }
         ],
         "properties": [
@@ -109124,7 +109120,18 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "defaultValue",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "disabled",
@@ -109275,7 +109282,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "willValidate",
@@ -109666,22 +109674,6 @@
             ]
           },
           {
-            "name": "formDisabledCallback",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "disabled",
-                    "type": "boolean",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "formResetCallback",
             "overloads": [
               {
@@ -109799,6 +109791,7 @@
           "properties": [
             "checked",
             "defaultChecked",
+            "defaultValue",
             "disabled",
             "form",
             "labels",
@@ -129708,7 +129701,8 @@
             "reflects": true,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "with-hint",
@@ -129751,6 +129745,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "defaultValue",
+            "attribute": null,
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "disabled",
@@ -129885,7 +129889,8 @@
             "readonly": false,
             "reflects": true,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "on"
           },
           {
             "name": "willValidate",
@@ -130219,22 +130224,6 @@
             ]
           },
           {
-            "name": "formDisabledCallback",
-            "overloads": [
-              {
-                "parameters": [
-                  {
-                    "name": "disabled",
-                    "type": "boolean",
-                    "optional": false,
-                    "hasDefault": false
-                  }
-                ],
-                "returnType": "void"
-              }
-            ]
-          },
-          {
             "name": "formResetCallback",
             "overloads": [
               {
@@ -130324,6 +130313,7 @@
           "properties": [
             "checked",
             "defaultChecked",
+            "defaultValue",
             "disabled",
             "form",
             "labels",

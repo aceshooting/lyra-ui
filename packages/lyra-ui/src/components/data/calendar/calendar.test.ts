@@ -211,13 +211,13 @@ it('gives the previous/next month nav buttons the shared minimum hit area and ma
 
 it('renders hover and keyboard focus-visible treatment on nav, day, and agenda-event buttons', async () => {
   const month = (await fixture(html`
-    <lr-calendar
+    <lr-calendar data-lr-theme-scope
       view-date="2026-07-01"
       style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6);"
     ></lr-calendar>
   `)) as LyraCalendar;
   const agenda = (await fixture(html`
-    <lr-calendar
+    <lr-calendar data-lr-theme-scope
       view="agenda"
       view-date="2026-07-01"
       style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6);"
@@ -377,7 +377,7 @@ it('shows hover and pressed feedback layered on top of an already-selected day, 
 
 it('renders the selected-day paint hook and falls back to brand quiet only when the hook is unset', async () => {
   const overriddenWrapper = (await fixture(html`
-    <div style="--lr-calendar-day-selected-bg: rgb(1, 2, 3); --lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
+    <div data-lr-theme-scope style="--lr-calendar-day-selected-bg: rgb(1, 2, 3); --lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
       <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
     </div>
   `)) as HTMLElement;
@@ -387,7 +387,7 @@ it('renders the selected-day paint hook and falls back to brand quiet only when 
   expect(getComputedStyle(overriddenSelected).backgroundColor).to.equal('rgb(1, 2, 3)');
 
   const fallbackWrapper = (await fixture(html`
-    <div style="--lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
+    <div data-lr-theme-scope style="--lr-theme-color-brand-fill-quiet: rgb(4, 5, 6)">
       <lr-calendar view-date="2026-07-01" value="2026-07-15"></lr-calendar>
     </div>
   `)) as HTMLElement;
@@ -831,7 +831,7 @@ it('accepts a string weekday name ("sun") for first-day-of-week, overriding an o
 
 it('narrows the day-cell floor inside a narrow container, resolving it through the shared 4rem size token', async () => {
   const wrapper = (await fixture(html`
-    <div style="container-type: inline-size; inline-size: 300px; --lr-theme-size-4rem: 5rem">
+    <div data-lr-theme-scope style="container-type: inline-size; inline-size: 300px; --lr-theme-size-4rem: 5rem">
       <lr-calendar view-date="2026-07-01"></lr-calendar>
     </div>
   `)) as HTMLElement;

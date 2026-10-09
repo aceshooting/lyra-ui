@@ -586,7 +586,7 @@ describe('resting border and fill theme cssprops', () => {
 describe('hover border theme cssprop', () => {
   it('retains the resting border and changes the fill when the hover border hook is unset', async () => {
     const el = (await fixture(
-      html`<lr-voice-picker .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-voice-picker>`,
+      html`<lr-voice-picker data-lr-theme-scope .catalog=${CATALOG} style="--lr-transition-fast: 0s;"></lr-voice-picker>`,
     )) as LyraVoicePicker;
     const restingBorder = getComputedStyle(trigger(el)).borderTopColor;
     const restingFill = getComputedStyle(trigger(el)).backgroundColor;
@@ -604,7 +604,7 @@ describe('hover border theme cssprop', () => {
 
   it('themes the hovered and pressed trigger border independently of the resting border through --lr-voice-picker-trigger-hover-border-color', async () => {
     const el = (await fixture(html`
-      <lr-voice-picker
+      <lr-voice-picker data-lr-theme-scope
         .catalog=${CATALOG}
         style="
           --lr-transition-fast: 0s;
@@ -749,7 +749,7 @@ describe('row state feedback on the already-selected option', () => {
 
   const openWithSelectedMiddleRow = async (): Promise<LyraVoicePicker> => {
     const el = (await fixture(html`
-      <lr-voice-picker
+      <lr-voice-picker data-lr-theme-scope
         value="verse"
         .catalog=${THREE_VOICES}
         style="--lr-transition-fast: 0s; --lr-voice-picker-option-active-bg: rgb(1, 2, 3);"
@@ -1647,7 +1647,7 @@ it('is accessible in free-text mode', async () => {
 it('keeps populated open listbox ownership, active descendants, focus, previews, and axe semantics in both modes', async () => {
   for (const allowCustom of [false, true]) {
     const el = (await fixture(html`
-      <lr-voice-picker
+      <lr-voice-picker data-lr-theme-scope
         label="Voice"
         ?allow-custom=${allowCustom}
         .catalog=${OBJECT_CATALOG}
@@ -2495,7 +2495,7 @@ it('clamps the actual opened floating listbox through the shared popover viewpor
   const longCatalog = [`voice-${'unbroken-identifier-'.repeat(20)}`];
   for (const allowCustom of [false, true]) {
     const el = (await fixture(html`
-      <lr-voice-picker
+      <lr-voice-picker data-lr-theme-scope
         ?allow-custom=${allowCustom}
         .catalog=${longCatalog}
         style="--lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
@@ -2606,7 +2606,7 @@ it('renders hover treatment on the trigger and standalone preview button', async
 
 it('uses the same preview hover tokens on the visible row action', async () => {
   const el = (await fixture(html`
-    <lr-voice-picker
+    <lr-voice-picker data-lr-theme-scope
       value="aria"
       style="--lr-transition-fast: 0s; --lr-voice-picker-preview-hover-bg: rgb(4, 5, 6); --lr-voice-picker-preview-hover-color: rgb(7, 8, 9)"
       .catalog=${OBJECT_CATALOG}

@@ -1666,7 +1666,7 @@ describe('scrollMode', () => {
     const surface = 'rgb(10, 20, 30)';
     expect(bg(base(el))).to.equal(surface);
     expect(bg(el.shadowRoot!.querySelector('[part="header-cell"][data-sticky]')!)).to.equal(surface);
-    const [striped, row] = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'));
+    const [striped, row] = Array.from(el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]')) as [HTMLElement, HTMLElement];
     expect(striped.hasAttribute('data-stripe') && !row.hasAttribute('data-stripe')).to.equal(true);
     const stripedSticky = striped.querySelector('[part="cell"][data-sticky]') as HTMLElement;
     const stickyCell = row.querySelector('[part="cell"][data-sticky]') as HTMLElement;
@@ -1752,7 +1752,7 @@ describe('decorative edges versus control boundaries', () => {
       aria-label="People"
       filterable
       has-more
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
     ></lr-table>`)) as LyraTable<Row>;
     el.columns = stickyColumns;
     el.rows = rows;
@@ -1771,7 +1771,7 @@ describe('decorative edges versus control boundaries', () => {
     const el = (await fixture(html`<lr-table
       aria-label="People"
       has-more
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
       .columns=${columns}
       .rows=${rows}
     ></lr-table>`)) as LyraTable<Row>;
@@ -1787,7 +1787,7 @@ describe('decorative edges versus control boundaries', () => {
       aria-label="People"
       filterable
       error
-      style=${borderTokens}
+      data-lr-theme-scope style=${borderTokens}
       .columns=${columns}
       .rows=${rows}
     ></lr-table>`)) as LyraTable<Row>;

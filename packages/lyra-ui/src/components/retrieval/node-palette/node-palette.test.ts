@@ -796,7 +796,7 @@ it('every item carries the sr-only drag hint via aria-describedby', async () => 
 
 it('dims a disabled item through the shared disabled-opacity token', async () => {
   const wrapper = (await fixture(
-    html`<div style="--lr-theme-opacity-disabled: 0.25">
+    html`<div data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.25">
       <lr-node-palette .items=${items}></lr-node-palette>
     </div>`
   )) as HTMLElement;
@@ -1039,7 +1039,7 @@ it("adoptedCallback re-arms the announcer's timer host in the new owner window",
 
 it('renders the search focus ring', async () => {
   const el = await fixture<LyraNodePalette>(html`
-    <lr-node-palette
+    <lr-node-palette data-lr-theme-scope
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
     ></lr-node-palette>
   `);
@@ -1159,7 +1159,7 @@ it("lets a consumer's ::part(item):hover override win under a real pointer", asy
 it("falls a palette item's unset hover fill back to the neutral fill token, not the border token", async function () {
   if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
   const el = (await fixture(
-    html`<lr-node-palette
+    html`<lr-node-palette data-lr-theme-scope
       style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
       .items=${items}
     ></lr-node-palette>`

@@ -540,7 +540,7 @@ describe('checked-state cssprops', () => {
     // instead of observing its resting value -- zero the token on the fixture, matching
     // button.test.ts's identical `style="--lr-transition-fast: 0ms"` pattern for the same
     // race, rather than polling three separate assertions with waitUntil.
-    const el = (await fixture(html`<lr-menu-item
+    const el = (await fixture(html`<lr-menu-item data-lr-theme-scope
       type="checkbox"
       value="wrap"
       style="--lr-transition-fast: 0ms; --lr-menu-item-checked-bg: rgb(9, 9, 9);"
@@ -2246,7 +2246,7 @@ describe('lr-menu-item name stability inside a hidden container', () => {
       <lr-menu>
         <lr-menu-item id="parent">
           Parent
-          <lr-menu slot="submenu" id="submenu" style="--lr-transition-fast: 0s">
+          <lr-menu data-lr-theme-scope slot="submenu" id="submenu" style="--lr-transition-fast: 0s">
             <lr-menu-item id="child"><span id="child-label">Child</span></lr-menu-item>
           </lr-menu>
         </lr-menu-item>

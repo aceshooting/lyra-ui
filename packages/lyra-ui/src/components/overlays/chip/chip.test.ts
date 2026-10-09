@@ -871,7 +871,7 @@ describe('selected', () => {
 
   it('retints the hovered remove fill through --lr-chip-remove-hover-bg, like lr-tag', async () => {
     const el = (await fixture(
-      html`<lr-chip removable style="--lr-transition-fast: 0s; --lr-chip-remove-hover-bg: rgb(1, 2, 3);">Tag</lr-chip>`,
+      html`<lr-chip data-lr-theme-scope removable style="--lr-transition-fast: 0s; --lr-chip-remove-hover-bg: rgb(1, 2, 3);">Tag</lr-chip>`,
     )) as LyraChip;
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
     try {
@@ -1222,7 +1222,7 @@ describe('pressed-background override', () => {
 
   it('hovered and pressed colors of a selected chip come from --lr-chip-pressed-bg, independent of --lr-chip-bg', async () => {
     const a = (await fixture(html`
-      <lr-chip
+      <lr-chip data-lr-theme-scope
         toggleable
         selected
         style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(10, 20, 30); --lr-chip-pressed-bg: rgb(200, 100, 50);"
@@ -1230,7 +1230,7 @@ describe('pressed-background override', () => {
       >
     `)) as LyraChip;
     const b = (await fixture(html`
-      <lr-chip
+      <lr-chip data-lr-theme-scope
         toggleable
         selected
         style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(90, 90, 90); --lr-chip-pressed-bg: rgb(200, 100, 50);"
@@ -1281,14 +1281,14 @@ describe('pressed-background override', () => {
 
   it('does not leak --lr-chip-pressed-bg into an unselected chip hover color', async () => {
     const a = (await fixture(html`
-      <lr-chip
+      <lr-chip data-lr-theme-scope
         toggleable
         style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(50, 60, 70); --lr-chip-pressed-bg: rgb(200, 100, 50);"
         >Tag</lr-chip
       >
     `)) as LyraChip;
     const b = (await fixture(html`
-      <lr-chip
+      <lr-chip data-lr-theme-scope
         toggleable
         style="--lr-transition-fast: 0s; --lr-chip-bg: rgb(50, 60, 70); --lr-chip-pressed-bg: rgb(9, 9, 9);"
         >Tag</lr-chip

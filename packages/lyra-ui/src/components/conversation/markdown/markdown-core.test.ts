@@ -515,7 +515,7 @@ describe("inline code / code-block theming hooks (shared stylesheet, lr-markdown
 
   it("falls back to the ambient --lr-color-brand-quiet for both surfaces when --lr-markdown-code-bg is unset", async () => {
     const el = (await fixture(
-      html`<lr-markdown-core
+      html`<lr-markdown-core data-lr-theme-scope
         style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
         content=${dualContent}
       ></lr-markdown-core>`
@@ -655,7 +655,7 @@ describe("table header theming hook (shared stylesheet, lr-markdown-core)", () =
 
   it("falls back to the ambient --lr-color-brand-quiet for the table header background when --lr-markdown-table-header-bg is unset", async () => {
     const el = (await fixture(
-      html`<lr-markdown-core
+      html`<lr-markdown-core data-lr-theme-scope
         style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
         content=${tableContent}
       ></lr-markdown-core>`
@@ -2377,7 +2377,7 @@ it("paints highlighted fenced code from --shiki-dark once the resolved tokens ar
   const cached = `<pre part="code-block"><code class="language-ts"><span data-lr-shiki-light="${LIGHT}" data-lr-shiki-dark="${DARK}">x</span></code></pre>\n`;
 
   const wrapper = (await fixture(html`
-    <div
+    <div data-lr-theme-scope
       style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;"
     >
       <lr-markdown-core></lr-markdown-core>
@@ -2414,7 +2414,7 @@ it("restores trusted-mode Shiki styles and resolves contextual modern colors", a
   const cached =
     '<pre part="code-block"><code class="language-ts"><span data-lr-shiki-light="#24292f" data-lr-shiki-dark="#e6edf3">x</span></code></pre>\n';
   const wrapper = (await fixture(html`
-    <div
+    <div data-lr-theme-scope
       style="color:#f2f2f2; --lr-theme-color-text-normal:currentColor; --lr-theme-color-surface-default:oklch(12% 0 0);"
     >
       <lr-markdown-core html-mode="trusted"></lr-markdown-core>
@@ -2442,7 +2442,7 @@ it("refreshes the core highlighted palette after a live CSSOM theme mutation", a
   const cached =
     '<pre part="code-block"><code class="language-ts"><span data-lr-shiki-light="#24292f" data-lr-shiki-dark="#e6edf3">x</span></code></pre>\n';
   const wrapper = (await fixture(html`
-    <div
+    <div data-lr-theme-scope
       style="--lr-theme-color-text-normal:#202020; --lr-theme-color-surface-default:#f8f8f8;"
     >
       <lr-markdown-core></lr-markdown-core>

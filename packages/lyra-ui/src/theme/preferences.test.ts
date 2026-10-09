@@ -157,7 +157,7 @@ describe('independent accessibility preferences', () => {
   });
 
   it('does not overwrite inherited authored theme inputs at a preference-only boundary', async () => {
-    const outer = await fixture<HTMLElement>(html`<section style="--lr-theme-color-text-normal:rgb(17,23,29);--lr-theme-focus-ring-width:5px">
+    const outer = await fixture<HTMLElement>(html`<section data-lr-theme-scope style="--lr-theme-color-text-normal:rgb(17,23,29);--lr-theme-focus-ring-width:5px">
       <section data-lr-motion="system" style="color:var(--lr-color-text)">
         <span style="color:var(--lr-color-text-quiet);outline:var(--lr-focus-ring)">Quiet</span>
       </section>

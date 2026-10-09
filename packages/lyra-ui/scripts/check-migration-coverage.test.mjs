@@ -14,6 +14,7 @@
 
 import assert from 'node:assert/strict';
 import {
+  analyzeGlobalsSurface,
   analyzeMigrationCoverage,
   formatMigrationCoverageSummary,
   hasInvertedPolarity,
@@ -187,4 +188,36 @@ const polarityErrors = (result) =>
   );
 }
 
-console.log('migration-coverage attribute-polarity tests passed.');
+// --- profile globals against the public surface -------------------------------------------------
+
+{
+  const surface = {
+    exports: { './translations/pseudo/en-XA.js': './x.js', './kept.js': './kept.js' },
+    packages: { '@aceshooting/lyra-translations': { './*.js': './dist/*.js' }, '@aceshooting/lyra-ide': { './data.json': './data.json' } },
+    rootBarrel: "export type { NewStatus } from './status.js';",
+    stringKeys: new Set(['newLabel']),
+  };
+  const entries = [
+    { kind: 'module', from: '@aceshooting/lyra-ui/translations/', to: '@aceshooting/lyra-translations/', prefix: true, except: ['@aceshooting/lyra-ui/translations/pseudo/'] },
+    { kind: 'module', from: '@aceshooting/lyra-ui/data.json', to: '@aceshooting/lyra-ide/data.json' },
+    { kind: 'export', module: '.', from: 'OldStatus', to: 'NewStatus' },
+    { kind: 'locale-key', from: 'oldLabel', to: 'newLabel' },
+  ];
+  const ledger = (list) => ({ profiles: [{ origin: 'lyra-v26', globals: list }] });
+  assert.deepEqual(analyzeGlobalsSurface(ledger(entries), surface), [], 'a consistent set passes');
+  const finding = (patch, pattern) => {
+    const messages = analyzeGlobalsSurface(ledger(entries.map((entry) => ({ ...entry, ...patch(entry) }))), surface);
+    assert.ok(messages.some((message) => pattern.test(message)), `${pattern}: ${messages.join('; ')}`);
+  };
+  const only = (kind, change) => (entry) => (entry.kind === kind ? change : {});
+  finding(only('module', { from: '@aceshooting/lyra-ui/kept.js', prefix: undefined, except: undefined }), /is still exported by @aceshooting\/lyra-ui/);
+  finding(only('module', { to: '@aceshooting/lyra-ide/missing.json', prefix: undefined, except: undefined }), /does not export \.\/missing\.json/);
+  finding((entry) => (entry.kind === 'module' && !entry.prefix ? { to: '@aceshooting/lyra-nope/data.json' } : {}), /is not a workspace package/);
+  finding((entry) => (entry.except ? { except: ['@aceshooting/lyra-ui/translations/ghost/'] } : {}), /excepted prefix .* is not exported/);
+  finding(only('export', { from: 'NewStatus' }), /is still exported by the package root/);
+  finding(only('export', { to: 'MissingStatus' }), /MissingStatus is not exported by the package root/);
+  finding(only('locale-key', { from: 'newLabel' }), /the key still exists/);
+  finding(only('locale-key', { to: 'missingLabel' }), /missingLabel is not a default string key/);
+}
+
+console.log('migration-coverage tests passed.');

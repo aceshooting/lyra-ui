@@ -899,6 +899,40 @@ export default {
           },
         };
 
+        // The checked family (`CheckedFormAssociated`) overrides the string-value surface: `value` is
+        // the content attribute with a default of `'on'`, and `defaultValue` is its native alias.
+        const CHECKED_MIXIN_FIELDS = {
+          checked: { type: 'boolean', default: 'false' },
+          defaultChecked: {
+            type: 'boolean',
+            attribute: 'checked',
+            reflects: true,
+            default: 'false',
+            description:
+              'Reflected current reset default; changing it never overwrites dirty live `checked` state.',
+          },
+          defaultValue: { type: 'string', default: "'on'" },
+          effectiveDisabled: {
+            type: 'boolean',
+            readonly: true,
+            description:
+              'Whether the control is disabled explicitly, by an ancestor fieldset, or by an owning group.',
+          },
+          value: {
+            type: 'string',
+            attribute: 'value',
+            reflects: true,
+            default: "'on'",
+          },
+        };
+        const CHECKED_MIXIN_METHODS = {
+          formResetCallback: {
+            returnType: 'void',
+            description:
+              'Restores the reset default `checked` state and clears the interaction flag.',
+          },
+        };
+
         const declarationEntries = (
           customElementsManifest.modules ?? []
         ).flatMap((module) =>
@@ -914,10 +948,19 @@ export default {
         // synthesized mixin contract through subclasses here as well, otherwise a class such as
         // LyraNativeTimeInput inherits LyraInput at runtime but loses the form surface in CEM.
         const formAssociated = new Map();
+        // `CheckedFormAssociated` wraps `FormAssociated` and adds the checked state, the
+        // attribute-backed `value` (default `'on'`) and `effectiveDisabled`.
+        const checkedFamily = new Set();
         for (const { declaration } of declarationEntries) {
+          const mixins = declaration.mixins ?? [];
+          if (mixins.some((mixin) => mixin.name === 'CheckedFormAssociated')) {
+            checkedFamily.add(declaration);
+          }
           if (
-            (declaration.mixins ?? []).some(
-              (mixin) => mixin.name === 'FormAssociated'
+            mixins.some(
+              (mixin) =>
+                mixin.name === 'FormAssociated' ||
+                mixin.name === 'CheckedFormAssociated'
             )
           ) {
             formAssociated.set(declaration, true);
@@ -937,6 +980,7 @@ export default {
             // tagged `inheritedFrom` -- see the comment before the projection loop), so the value
             // only needs to mark this declaration as discovered, not record where from.
             formAssociated.set(declaration, true);
+            if (checkedFamily.has(parentEntry.declaration)) checkedFamily.add(declaration);
             discoveredSubclass = true;
           }
         }
@@ -972,7 +1016,13 @@ export default {
           declaration.attributes ??= [];
           declaration.cssParts ??= [];
 
-          for (const [name, metadata] of Object.entries(MIXIN_FIELDS)) {
+          const fields = checkedFamily.has(declaration)
+            ? { ...MIXIN_FIELDS, ...CHECKED_MIXIN_FIELDS }
+            : MIXIN_FIELDS;
+          const methods = checkedFamily.has(declaration)
+            ? { ...MIXIN_METHODS, ...CHECKED_MIXIN_METHODS }
+            : MIXIN_METHODS;
+          for (const [name, metadata] of Object.entries(fields)) {
             let member = declaration.members.find(
               (candidate) =>
                 candidate.kind === 'field' && candidate.name === name
@@ -1048,7 +1098,7 @@ export default {
             }
           }
 
-          for (const [name, metadata] of Object.entries(MIXIN_METHODS)) {
+          for (const [name, metadata] of Object.entries(methods)) {
             let member = declaration.members.find(
               (candidate) =>
                 candidate.kind === 'method' && candidate.name === name

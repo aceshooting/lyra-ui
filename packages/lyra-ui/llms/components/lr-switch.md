@@ -40,6 +40,7 @@ normally.
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`)
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked`
+- `defaultValue: string` — the native alias of `value`
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — hint text below the switch. Unset: no hint chrome renders.
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for `hint`; `hint` wins when both

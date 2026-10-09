@@ -159,6 +159,18 @@
       "reviews": [],
       "slotContent": [],
       "moduleReviews": []
+    },
+    {
+      "origin": "lyra-v26",
+      "fromMajor": 26,
+      "toMajor": 27,
+      "aliasRemovalMajor": 29,
+      "renames": [],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [],
+      "slotContent": [],
+      "moduleReviews": []
     }
   ]
 }

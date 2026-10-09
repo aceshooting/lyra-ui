@@ -1139,7 +1139,7 @@ it("lets a consumer comment-part hover override win in rendered computed style",
           background-color: rgb(1, 2, 3);
         }
       </style>
-      <lr-message-feedback
+      <lr-message-feedback data-lr-theme-scope
         style="--lr-transition-fast: 0s"
         .detail=${{ commentable: true }}
       ></lr-message-feedback>
@@ -1221,7 +1221,7 @@ describe("thumb-button hover specificity", () => {
             background-color: rgb(4, 5, 6);
           }
         </style>
-        <lr-message-feedback
+        <lr-message-feedback data-lr-theme-scope
           style="--lr-transition-fast: 0s"
         ></lr-message-feedback>
       </div>

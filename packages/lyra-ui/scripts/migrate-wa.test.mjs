@@ -320,7 +320,7 @@ test('the packaged runtime projection stays narrow, complete, and fail-closed', 
   assert.equal(runtimeInventory.migrationRuntimeSchemaVersion, MIGRATION_RUNTIME_SCHEMA_VERSION);
   assert.deepEqual(
     runtimeInventory.lyraRenames.profiles.map((profile) => profile.origin),
-    ['lyra-v21', 'lyra-v22', 'lyra-v25'],
+    ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26'],
     'the packaged CLI must carry every reviewed rename profile, projected from the authored ledger',
   );
   assert.throws(
@@ -2389,6 +2389,7 @@ test('CLI argument parsing includes check mode, dry-run, and a stable report tar
     lyraVersion: null,
     origin: 'lyra-v21',
     report: 'out/report.json',
+    rule: null,
     targets: ['src'],
   });
   assert.throws(() => parseArgs(['--origin=lyra-v6', 'src']), /Unknown migration origin/);

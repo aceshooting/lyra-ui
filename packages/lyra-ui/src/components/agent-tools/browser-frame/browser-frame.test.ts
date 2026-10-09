@@ -310,7 +310,7 @@ describe('lr-browser-frame', () => {
   });
 
   it('draws its borders from the shared border-width ladder and buttons from the button tokens', async () => {
-    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame data-lr-theme-scope
       style="--lr-theme-border-width-thin: 2px; --lr-theme-border-width-medium: 4px; --lr-button-radius: 7px"
       .pings=${[{ id: 'p', x: 10, y: 10, kind: 'click' }]}
     ></lr-browser-frame>`);

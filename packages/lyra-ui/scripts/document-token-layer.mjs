@@ -70,12 +70,14 @@ const TOOLING = /^--lr-ramp-/;
  * layer's own mode rules or theme.css; preference and motion switches from preferences.css and the
  * preference arms; `--_lr-subtle-mix` from the look resolver; the two glass weights are set only on
  * glass surfaces, which re-derive the qualified outputs locally (the layer's qualified values are
- * guaranteed-invalid everywhere else, so the outputs take their unqualified fallback).
+ * guaranteed-invalid everywhere else, so the outputs take their unqualified fallback). The focus
+ * ring's qualified colour is the exception: the layer does not declare it, a glass host derives it.
  */
 const LAYER_PRIVATE_INPUTS = Object.freeze([
   '--_lr-dark-on',
   '--_lr-glass-border-weight',
   '--_lr-glass-foreground-weight',
+  '--_lr-glass-qualified-focus-ring-color',
   '--_lr-light-on',
   '--_lr-motion-duration',
   '--_lr-motion-easing',
@@ -155,10 +157,15 @@ export function layerDeclarations(source) {
         light: lightGlass.original,
         dark: darkGlass.original,
       });
-      declarations.set(lightGlass.qualified, {
-        light: `color-mix(in srgb, ${lightGlass.original}, var(--lr-color-text) var(${weight}))`,
-        dark: `color-mix(in srgb, ${darkGlass.original}, var(--lr-color-text) var(${weight}))`,
-      });
+      // The focus ring's qualified colour is derived on the surface host itself (`:host`), where the
+      // ring outputs are composed. A layer declaration would also match a host that is itself a
+      // scope and, as an outer-tree rule, beat that host rule with a guaranteed-invalid value.
+      if (lightGlass.qualified !== '--_lr-glass-qualified-focus-ring-color') {
+        declarations.set(lightGlass.qualified, {
+          light: `color-mix(in srgb, ${lightGlass.original}, var(--lr-color-text) var(${weight}))`,
+          dark: `color-mix(in srgb, ${darkGlass.original}, var(--lr-color-text) var(${weight}))`,
+        });
+      }
     }
     declarations.set(name, { light, dark });
   }

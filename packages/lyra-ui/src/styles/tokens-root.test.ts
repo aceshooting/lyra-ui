@@ -4,6 +4,7 @@ import { setColorScheme, setForcedColors, setReducedMotion } from '../../test/wt
 import { toRgba } from '../../test/color-contrast.js';
 
 import '../components/layout/card/card.js';
+import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 
 // Captured at module evaluation, i.e. BEFORE the `before()` hook links the stylesheet and before any
 // Lyra element connects: until one of the two happens, the layer does not exist at document scope.
@@ -96,8 +97,12 @@ it('resolves every curated token to a non-empty value at document scope', async 
   const root = getComputedStyle(document.documentElement);
   const plainElement = await fixture<HTMLElement>(html`<div></div>`);
   const plain = getComputedStyle(plainElement);
-  const emptyOnRoot = curatedNames.filter((name) => root.getPropertyValue(name).trim() === '');
-  const emptyOnPlainElement = curatedNames.filter((name) => plain.getPropertyValue(name).trim() === '');
+  // These three default to the CSS-wide keyword `inherit`: unset, they deliberately resolve to nothing
+  // so the consuming declaration keeps the authored value instead of forcing one.
+  const inheritsWhenUnset = new Set(['--lr-font-heading', '--lr-line-break', '--lr-word-break']);
+  const checked = curatedNames.filter((name) => !inheritsWhenUnset.has(name));
+  const emptyOnRoot = checked.filter((name) => root.getPropertyValue(name).trim() === '');
+  const emptyOnPlainElement = checked.filter((name) => plain.getPropertyValue(name).trim() === '');
 
   expect(emptyOnRoot).to.deep.equal([]);
   expect(emptyOnPlainElement).to.deep.equal([]);
@@ -158,9 +163,11 @@ it('stays in the lr-theme layer so an unlayered application rule wins', async ()
 });
 
 it('re-derives an input set on a theme scope, and not one set on a plain wrapper', async () => {
+  // The plain wrapper is the point of this test, so the development diagnostic about it is expected.
+  expectDevWarning('lyra-theme-scope:unscoped-input');
   const scope = await fixture<HTMLElement>(html`
     <div>
-      <div id="plain" style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6)"><lr-card id="plain-card">Plain</lr-card></div>
+      <div data-lr-not-a-scope id="plain" style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6)"><lr-card id="plain-card">Plain</lr-card></div>
       <div id="marked" data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6)"><lr-card id="themed-card">Themed</lr-card></div>
     </div>
   `);

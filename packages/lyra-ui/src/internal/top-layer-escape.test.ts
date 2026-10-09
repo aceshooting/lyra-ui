@@ -297,7 +297,7 @@ describe('promoteToTopLayer / releaseTopLayer', () => {
     it(`does not promote under a polyfill (${label})`, async () => {
       const wrapper = await fixture<HTMLElement>(html`
         <div style="transform: translateY(0)">
-          <lr-dropdown hoist style="--lr-transition-fast: 0ms">
+          <lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast: 0ms">
             <button slot="trigger">Actions</button>
             <lr-dropdown-item value="a">A</lr-dropdown-item>
           </lr-dropdown>
@@ -331,7 +331,7 @@ describe('promoteToTopLayer / releaseTopLayer', () => {
   it('promotes a fixed dropdown when a trap appears while it is open', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="block-size: 40px">
-        <lr-dropdown hoist style="--lr-transition-fast: 0ms">
+        <lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast: 0ms">
           <button slot="trigger">Actions</button>
           <lr-dropdown-item value="a">Alpha</lr-dropdown-item>
           <lr-dropdown-item value="b">Beta</lr-dropdown-item>

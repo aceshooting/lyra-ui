@@ -199,13 +199,15 @@ function readDeclarationsWithOffsets(css) {
 }
 
 /**
- * Applies the rule to one file's text. Returns `{ content, changes, warnings }`, where entries
- * follow the migration report schema (`file`, `line`, `column`, `action`, ...).
+ * Analyzes one file's text without editing it. Returns `{ insertions, warnings, marker }`: each
+ * insertion is `{ offset, change }` (insert `marker` at `offset`), and entries follow the migration
+ * report schema (`file`, `line`, `column`, `action`, ...). Shared by the standalone rule and the
+ * `rules` of a migration profile.
  */
-export function migrateThemeScopes(text, { file = 'input' } = {}) {
+export function analyzeThemeScopes(text, { file = 'input' } = {}) {
   const extension = extensionOf(file);
-  const changes = [];
   const warnings = [];
+  const marker = JSX_EXTENSIONS.has(extension) ? ` ${THEME_SCOPE_MARKER}=""` : ` ${THEME_SCOPE_MARKER}`;
   const warn = (position, { code, tag = null, member = null, target = null, message }) => warnings.push({
     file, ...position, rule: THEME_SCOPE_RULE, upstreamTag: tag, upstreamMember: member,
     action: 'manual-review', target, warningCode: code, message,
@@ -213,9 +215,9 @@ export function migrateThemeScopes(text, { file = 'input' } = {}) {
 
   if (CSS_EXTENSIONS.has(extension)) {
     cssReports(text, 0, text, file, warn);
-    return { content: text, changes, warnings };
+    return { insertions: [], warnings, marker };
   }
-  if (!MARKUP_EXTENSIONS.has(extension) && extension !== '') return { content: text, changes, warnings };
+  if (!MARKUP_EXTENSIONS.has(extension) && extension !== '') return { insertions: [], warnings, marker };
 
   const insertions = [];
   for (const tag of startTags(text)) {
@@ -233,17 +235,18 @@ export function migrateThemeScopes(text, { file = 'input' } = {}) {
       }
       continue;
     }
+    // `data-lr-not-a-scope` documents a deliberate negative control (a test that proves a plain wrapper is not a scope).
+    if (/\sdata-lr-not-a-scope(?=[\s=>]|$)/.test(tag.attributes)) continue;
     if (tag.tag.toLowerCase() === 'html' || SCOPE_ATTRIBUTE.test(tag.attributes) || SCOPE_CLASS.test(classValue(tag.attributes))) continue;
     const position = lineColumn(text, tag.start);
-    insertions.push(tag.attributesStart);
     const members = [...inputs, ...feeding];
-    changes.push({
+    insertions.push({ offset: tag.attributesStart, change: {
       file, ...position, rule: THEME_SCOPE_RULE, upstreamTag: tag.tag, upstreamMember: members.join(' '),
       action: 'insert-theme-scope', target: THEME_SCOPE_MARKER,
       message: inputs.length
         ? `Mark <${tag.tag}> with ${THEME_SCOPE_MARKER}: its inline ${inputs.join(', ')} must re-derive the Lyra token layer for the components below it.`
         : `Mark <${tag.tag}> with ${THEME_SCOPE_MARKER}: other shared outputs derive from its inline ${feeding.join(', ')}, and only a theme scope re-derives them.`,
-    });
+    } });
     if (insideRepeat(text, tag.start)) {
       warn(position, {
         code: 'THEME_SCOPE_REPEATED_REVIEW',
@@ -271,12 +274,20 @@ export function migrateThemeScopes(text, { file = 'input' } = {}) {
     }
   }
 
-  const marker = JSX_EXTENSIONS.has(extension) ? ` ${THEME_SCOPE_MARKER}=""` : ` ${THEME_SCOPE_MARKER}`;
+  return { insertions, warnings, marker };
+}
+
+/**
+ * Applies the rule to one file's text. Returns `{ content, changes, warnings }`, where entries
+ * follow the migration report schema (`file`, `line`, `column`, `action`, ...).
+ */
+export function migrateThemeScopes(text, { file = 'input' } = {}) {
+  const { insertions, warnings, marker } = analyzeThemeScopes(text, { file });
   let content = text;
-  for (const offset of insertions.sort((left, right) => right - left)) {
+  for (const { offset } of [...insertions].sort((left, right) => right.offset - left.offset)) {
     content = `${content.slice(0, offset)}${marker}${content.slice(offset)}`;
   }
-  return { content, changes, warnings };
+  return { content, changes: insertions.map(({ change }) => change), warnings };
 }
 
 /** The text of the tag's class/className binding, or '' (any form). */

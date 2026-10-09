@@ -65,7 +65,7 @@ Theme/preset facade, nested registration routes and `ssr-loader.js` were removed
 
 ## Upgrading to v27
 
-V27 is a major release; each change below has a migration note in the [changelog](CHANGELOG.md).
+V27 is a major release; each change below has a migration note in the [changelog](CHANGELOG.md). Run `npx lyra-ui-migrate --origin=lyra-v26 --check src` first.
 
 - **Package split.** Locale catalogs moved to [`@aceshooting/lyra-translations`](../lyra-translations)
   (`@aceshooting/lyra-ui/translations/<locale>.js` becomes `@aceshooting/lyra-translations/<locale>.js`; the

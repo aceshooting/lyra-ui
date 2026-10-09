@@ -8,7 +8,7 @@ import {
   SET_ANCHORED_VALIDITY,
   VALIDITY_ANCHOR,
 } from './anchored-validity.js';
-import { syncValidityStates } from './custom-states.js';
+import { setCustomState, syncValidityStates } from './custom-states.js';
 import { omittedEmptyStringConverter } from './converters.js';
 import { attachInternalsSafely, createFallbackInternals } from './element-internals.js';
 import {
@@ -435,11 +435,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
 
     constructor(...args: any[]) {
       super(...args);
-      const markInteracted = (): void => {
-        if (this._hasInteracted) return;
-        this._hasInteracted = true;
-        this.syncValidityStates();
-      };
+      const markInteracted = (): void => this.setInteracted(true);
       this.validityController = new FormControlController(this, {
         invalid: (init) => (this as unknown as {
           emit(name: string, detail?: null, options?: { cancelable: boolean }): CustomEvent<null>;
@@ -461,12 +457,16 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // Idempotent: a drag-driven control (`lr-slider`) fires `input` per pointermove, and only
       // the first one can change anything here.
 
-      this.addEventListener('input', markInteracted);
-      this.addEventListener('change', markInteracted);
-      this.addEventListener('focusout', () => {
+      this.addEventListener('input', (event) => {
+        if (this.countsAsInteraction(event)) markInteracted();
+      });
+      this.addEventListener('change', (event) => {
+        if (this.countsAsInteraction(event)) markInteracted();
+      });
+      this.addEventListener('focusout', (event) => {
         // A fieldset force-blur fires before `formDisabledCallback()`, so `:disabled` leads `effectiveDisabled`.
         if (this.effectiveDisabled || this.matches(':disabled')) return;
-        markInteracted();
+        if (this.countsAsInteraction(event)) markInteracted();
       });
       this.syncValidityStates();
     }
@@ -563,10 +563,66 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
     /** Publishes the six validity states shared by value-adapted and direct FACE controls. */
     protected syncValidityStates(): void {
       syncValidityStates(this.internals, {
-        required: this.required,
+        required: this.reportsRequired(),
         hasInteracted: this._hasInteracted,
         barred: this.isBarredFromValidation(),
       });
+      this.publishCustomStates();
+    }
+
+    /** Hook: whether the `required`/`optional` states report required (a group can require it). */
+    protected reportsRequired(): boolean {
+      return this.required;
+    }
+
+    /** Hook: custom states a subclass publishes next to the six shared validity states. */
+    protected publishCustomStates(): void {}
+
+    /** Whether the user has acted on this control yet (gates the `user-*` states). */
+    protected get hasInteracted(): boolean {
+      return this._hasInteracted;
+    }
+
+    /**
+     * Records or clears the interaction flag, republishes the validity states and tells a subclass
+     * that renders from the flag (an `aria-invalid` that waits for the user) to re-render.
+     */
+    protected setInteracted(next: boolean): void {
+      if (this._hasInteracted === next) return;
+      this._hasInteracted = next;
+      this.syncValidityStates();
+      this.interactionChanged();
+    }
+
+    /** Hook: the interaction flag changed. */
+    protected interactionChanged(): void {}
+
+    /**
+     * Whether a host-level `input`, `change` or `focusout` counts as the user acting on this
+     * control. A control that shows its own focus target inside a wider host (a label with
+     * interactive content) narrows it to the events its own control produced.
+     */
+    protected countsAsInteraction(event: Event): boolean {
+      void event;
+      return true;
+    }
+
+    /** Hook: disablement a subclass inherits from an owner (a group) beyond its own and the fieldset's. */
+    protected isDisabledByOwner(): boolean {
+      return false;
+    }
+
+    /** The `valueMissing` message; a subclass with its own catalog key overrides it. */
+    protected requiredMessage(): string {
+      const overrides = (this as unknown as { strings?: LyraLocaleStrings }).strings;
+      return resolveLyraString(
+        this,
+        'fieldRequired',
+        overrides,
+        undefined,
+        undefined,
+        FORM_ASSOCIATED_DEFAULT_STRINGS,
+      );
     }
 
     /**
@@ -719,7 +775,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
      *  `<fieldset disabled>`'s inherited state — mirrors native `<input>`, whose
      *  own `disabled` IDL property/attribute is never mutated by a fieldset. */
     get effectiveDisabled(): boolean {
-      return this.disabled || this._fieldsetDisabled;
+      return this.disabled || this._fieldsetDisabled || this.isDisabledByOwner();
     }
 
     /** Programmatically set the submitted value (alias kept for clarity). */
@@ -750,16 +806,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // Emptiness is the adapter's answer, never `=== ''`: a `[]`, a `null` date and a `0` rating
       // are each "missing" for their own control and none of them is the empty string.
       if (this.required && this.isMissingValue()) {
-        const overrides = (this as unknown as { strings?: LyraLocaleStrings }).strings;
-        const message = resolveLyraString(
-          this,
-          'fieldRequired',
-          overrides,
-          undefined,
-          undefined,
-          FORM_ASSOCIATED_DEFAULT_STRINGS,
-        );
-        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, message);
+        this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.requiredMessage());
       } else {
         this[SET_ANCHORED_VALIDITY]({});
       }
@@ -798,6 +845,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // `:user-invalid` starts matching — so it counts as interaction.
       this._hasInteracted = true;
       this.syncValidityStates();
+      this.interactionChanged();
       return this.internals.reportValidity();
     }
 
@@ -810,6 +858,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       // matching. The custom error deliberately survives (native `setCustomValidity()` semantics).
       this._hasInteracted = false;
       this.syncValidityStates();
+      this.interactionChanged();
     }
 
     private restoreLiveValueFromDefault(): void {
@@ -902,26 +951,94 @@ export interface CheckedFormAssociatedInterface {
   set defaultChecked(next: boolean);
 }
 
+/** The slice of the shared validity controller a checked subclass with its own error channel uses. */
+export interface CheckedValidityChannel {
+  readonly customValidityMessage: string;
+  setCustomValidity(message: string): void;
+}
+
 /**
- * `FormAssociated` for checkbox, switch and radio shaped controls: the string `value` is submitted
- * only while `checked`, `checked` has native dirty/default semantics, reset and restore round-trip
- * it, and `required` means "must be checked".
+ * Subclass-only seams of `CheckedFormAssociated`. Every hook has a default that is correct for a
+ * plain checkbox-shaped control; a subclass overrides only what its own owner (a group, a
+ * tri-state) changes.
  */
+export declare class CheckedFormAssociatedSubclassInterface {
+  /** The shared controller, for a subclass that owns a custom-validity channel of its own. */
+  protected readonly validityController: CheckedValidityChannel;
+  protected updateValidity(): void;
+  protected syncValidityStates(): void;
+  protected isBarredFromValidation(): boolean;
+  /** Whether the user has acted on this control yet (gates the `user-*` states and `aria-invalid`). */
+  protected get hasInteracted(): boolean;
+  /** Records or clears the interaction flag, republishing the states and re-rendering. */
+  protected setInteracted(next: boolean): void;
+  /** Disablement inherited from an owning group, on top of own and fieldset disablement. */
+  protected isDisabledByOwner(): boolean;
+  /** Whether the `required`/`optional` states report required. */
+  protected reportsRequired(): boolean;
+  /** The `valueMissing` message. */
+  protected requiredMessage(): string;
+  /** Custom states published next to the shared validity states; override and call `super`. */
+  protected publishCustomStates(): void;
+  /** Return `false` to ignore a `checked` write that changes nothing (a radio). Default `true`. */
+  protected acceptsCheckedWrite(previous: boolean, next: boolean): boolean;
+  /** Runs after every accepted `checked` write (veto-guard bookkeeping, owner notification). */
+  protected checkedWritten(previous: boolean): void;
+  /** Runs after every `value` write. */
+  protected valueWritten(previous: string): void;
+  /** Restores the live checked state from the reset default and clears the dirty flag. */
+  protected restoreCheckedFromDefault(): void;
+}
+
+/**
+ * `FormAssociated` for checkbox, switch and radio shaped controls: the string `value` (default
+ * `'on'`, mirrored to the `value` attribute like a native checkbox) is submitted only while
+ * `checked`, `checked` has native dirty/default semantics, reset and restore round-trip it, and
+ * `required` means "must be checked".
+ *
+ * Group-owned controls extend it through the {@linkcode CheckedFormAssociatedSubclassInterface}
+ * hooks: `isDisabledByOwner()` for group disablement, `acceptsCheckedWrite()` /
+ * `checkedWritten()` / `valueWritten()` for veto-guard and owner bookkeeping,
+ * `updateValidity()` / `requiredMessage()` for the violation and its message, and
+ * `publishCustomStates()` for extra `:state()` flags. Interaction is the subclass's own signal (the
+ * internal control's blur, a committed toggle), so host-level `input`/`change`/`focusout` never
+ * count.
+ */
+/** The base mixin's members the checked layer calls; they are not part of its public typing. */
+interface CheckedBaseMembers {
+  updateValidity(): void;
+  syncValidityStates(): void;
+  setInteracted(next: boolean): void;
+}
+const baseOf = (element: object): CheckedBaseMembers => element as unknown as CheckedBaseMembers;
+
 export function CheckedFormAssociated<T extends Constructor<LitElement>>(
   Base: T,
 ): T &
   Constructor<
     FormAssociatedInterface &
       FormAssociatedSubclassInterface &
-      CheckedFormAssociatedInterface
+      CheckedFormAssociatedInterface &
+      CheckedFormAssociatedSubclassInterface
   > {
   class CheckedElement extends FormAssociated(Base) {
     static properties = {
       checked: { attribute: false, noAccessor: true },
-      defaultChecked: { attribute: 'checked', type: Boolean, reflect: true, noAccessor: true },
+      defaultChecked: {
+        attribute: 'checked',
+        type: Boolean,
+        reflect: true,
+        useDefault: true,
+        noAccessor: true,
+      },
+      // `value` is the content attribute, exactly as on a native checkbox; the base mixin's
+      // separate reset-default channel does not apply to a checked control.
+      defaultValue: { attribute: false, noAccessor: true },
+      value: { reflect: true, noAccessor: true },
     };
 
     private _checked = false;
+    private _checkedValue = 'on';
     private _defaultChecked = false;
     private _checkedDirty = false;
     private settingDefaultChecked = false;
@@ -933,11 +1050,14 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
 
     set checked(next: boolean) {
       const old = this._checked;
+      const value = Boolean(next);
       if (!this.settingDefaultChecked) this._checkedDirty = true;
-      this._checked = Boolean(next);
+      if (!this.acceptsCheckedWrite(old, value)) return;
+      this._checked = value;
       this.commitFormValue(this.value);
-      (this as unknown as { updateValidity(): void }).updateValidity();
+      baseOf(this).updateValidity();
       this.requestUpdate('checked', old);
+      this.checkedWritten(old);
     }
 
     get defaultChecked(): boolean {
@@ -955,7 +1075,65 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
         this.reflectingDefaultChecked = false;
       }
       if (!this._checkedDirty) this.restoreCheckedFromDefault();
-      this.requestUpdate('defaultChecked', old, { reflect: false });
+      this.requestUpdate('defaultChecked', old);
+    }
+
+    /** The submitted value while checked; `null` restores the absent-attribute default `'on'`. */
+    override get value(): string {
+      return this._checkedValue;
+    }
+
+    override set value(next: string | null) {
+      const old = this._checkedValue;
+      this._checkedValue = next ?? 'on';
+      if (next == null) {
+        if (this.hasAttribute('value')) this.removeAttribute('value');
+      } else if (this.getAttribute('value') !== this._checkedValue) {
+        this.setAttribute('value', this._checkedValue);
+      }
+      this.commitFormValue(this._checkedValue);
+      baseOf(this).updateValidity();
+      this.valueWritten(old);
+      // Reflection is synchronous and source-sensitive above. Keep Lit's public reflection
+      // metadata, but never queue a second reflection that could turn a same-tick null reset back
+      // into `on`.
+      this.requestUpdate('value', old, { reflect: false });
+    }
+
+    /** Native `defaultValue` of a checkbox is the `value` attribute itself. */
+    override get defaultValue(): string {
+      return this.value;
+    }
+
+    override set defaultValue(next: string | null) {
+      this.value = next;
+    }
+
+    protected acceptsCheckedWrite(previous: boolean, next: boolean): boolean {
+      void previous;
+      void next;
+      return true;
+    }
+
+    protected checkedWritten(previous: boolean): void {
+      void previous;
+    }
+
+    protected valueWritten(previous: string): void {
+      void previous;
+    }
+
+    protected interactionChanged(): void {
+      this.requestUpdate();
+    }
+
+    protected countsAsInteraction(): boolean {
+      return false;
+    }
+
+    protected publishCustomStates(): void {
+      setCustomState(this.internals, 'checked', Boolean(this._checked));
+      setCustomState(this.internals, 'disabled', this.effectiveDisabled);
     }
 
     protected override commitFormValue(value: string): void {
@@ -967,7 +1145,7 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
       return !this._checked;
     }
 
-    private restoreCheckedFromDefault(): void {
+    protected restoreCheckedFromDefault(): void {
       this.settingDefaultChecked = true;
       try {
         this.checked = this._defaultChecked;
@@ -978,8 +1156,10 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
     }
 
     override formResetCallback(): void {
-      super.formResetCallback();
       this.restoreCheckedFromDefault();
+      // A reset form is pristine again; the custom error deliberately survives.
+      baseOf(this).setInteracted(false);
+      baseOf(this).syncValidityStates();
     }
 
     override formStateRestoreCallback(
@@ -995,6 +1175,7 @@ export function CheckedFormAssociated<T extends Constructor<LitElement>>(
     Constructor<
       FormAssociatedInterface &
         FormAssociatedSubclassInterface &
-        CheckedFormAssociatedInterface
+        CheckedFormAssociatedInterface &
+        CheckedFormAssociatedSubclassInterface
     >;
 }

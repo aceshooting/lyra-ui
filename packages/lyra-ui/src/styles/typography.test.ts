@@ -605,7 +605,7 @@ describe('typography precedence', () => {
   it('leaves lr-prose and unclassed markup exactly as before', async () => {
     const el = await fixture(html`
       <div>
-        <article class="lr-prose" style="--lr-theme-color-brand-fill-loud: rgb(7, 8, 9)">
+        <article data-lr-theme-scope class="lr-prose" style="--lr-theme-color-brand-fill-loud: rgb(7, 8, 9)">
           <h1 id="h1">One</h1>
           <h2 id="h2">Two</h2>
           <h3 id="h3">Three</h3>
@@ -712,7 +712,7 @@ describe('typography tokens, themes and environments', () => {
 
   it('reads the decorative subtle border tier before the control border', async () => {
     const el = await fixture(html`
-      <div class="lr-typography" style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)">
+      <div data-lr-theme-scope class="lr-typography" style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)">
         <h2>Heading</h2>
         <blockquote>Quote</blockquote>
         <table>

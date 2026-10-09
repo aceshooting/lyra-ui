@@ -328,7 +328,10 @@ describe('lr-file-tree', () => {
     expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
   });
 
-  it('shows a localized notice when the source listing exceeds its snapshot', async () => {
+  it('shows a localized notice when the source listing exceeds its snapshot', async function () {
+    // Renders the full 10,000-row snapshot twice (default and overridden notice text), which WebKit
+    // needs well over the 6 s default for when the host is loaded.
+    this.timeout(30_000);
     const el = await fixture<LyraFileTree>(html`<lr-file-tree></lr-file-tree>`);
     el.nodes = Array.from({ length: 10_001 }, (_, index) => ({ path: `file-${index}` }));
     await el.updateComplete;

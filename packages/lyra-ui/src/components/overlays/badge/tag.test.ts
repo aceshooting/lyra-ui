@@ -722,7 +722,7 @@ describe('remove-button hover background', () => {
   ] as const) {
     it(`checks hovered remove fill reach for ${name}`, async () => {
       const el = (await fixture(
-        html`<lr-tag with-remove style=${`--lr-transition-fast: 0s; ${style}`}>Tag</lr-tag>`,
+        html`<lr-tag data-lr-theme-scope with-remove style=${`--lr-transition-fast: 0s; ${style}`}>Tag</lr-tag>`,
       )) as LyraTag;
       const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]')!;
       try {

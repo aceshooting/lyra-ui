@@ -335,7 +335,7 @@ describe('zoom controls and interaction', () => {
 
   it('ignores the retired hover-background token while canonical hover-bg paints', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="--lr-transition-fast: 0s; --lr-zoomable-frame-control-hover-background: rgb(39, 40, 41)">
+      <div data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-zoomable-frame-control-hover-background: rgb(39, 40, 41)">
         <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
         <lr-zoomable-frame
           .srcdoc=${INLINE_DOCUMENT}
@@ -1115,7 +1115,7 @@ it('constructs iframe focus relays in the host owner realm, preserves payload, a
 
 it('draws the frame and toolbar edges in the subtle border tier while the zoom buttons stay control-grade', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+    <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
       <lr-zoomable-frame .srcdoc=${INLINE_DOCUMENT}></lr-zoomable-frame>
     </div>
   `);

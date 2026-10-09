@@ -23,6 +23,7 @@ import {
 } from './migration-analysis.mjs';
 import { invariant } from './migration-contract.mjs';
 import { htmlCommentEnd } from './html-comments.mjs';
+import { analyzeThemeScopes } from './migration-theme-scopes.mjs';
 
 
 // ---------------------------------------------------------------------------------------------
@@ -573,6 +574,132 @@ function reportModuleReviews(text, file, reviews, openingTokens, inComment, warn
   }
 }
 
+const GLOBAL_REVIEW = 'GLOBAL_REVIEW';
+const LYRA_PACKAGE = '@aceshooting/lyra-ui';
+const NODE_MODULES_LEAD = /(?:^|\/)node_modules\/$/;
+const JSON_FILE = /\.json$/i;
+const IDENTIFIER = '[$A-Za-z_][$\\w]*';
+
+/**
+ * Profile `globals`: entries no `lr-*` tag owns. A `module` entry rewrites a package specifier where
+ * it is provably a specifier (import/export-from, dynamic import, require, CSS @import, `<link href>`
+ * and `<script src>`, a `node_modules/...` path, any string in a JSON file) and reports it anywhere
+ * else. An `export` entry rewrites a root-barrel named import or re-export to `New as Old` (or
+ * `New as Local` when already aliased), so no scope analysis is needed, and reports every other use.
+ * A `locale-key` entry only reports.
+ */
+function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, rewrite, warn }) {
+  const modules = entries.filter((entry) => entry.kind === 'module');
+  const exported = entries.filter((entry) => entry.kind === 'export');
+  const localeKeys = entries.filter((entry) => entry.kind === 'locale-key');
+  const review = (offset, entry, member, message) =>
+    warn(offset, { member, code: GLOBAL_REVIEW, target: entry.to, message });
+
+  if (modules.length) {
+    const inMarkup = (offset) => openingTokens.some((token) => offset >= token.nameEnd && offset < token.end);
+    const handle = (entry, specifierStart, specifier, safe) => {
+      if (safe) {
+        rewrite(specifierStart, specifierStart + entry.from.length, entry.to, {
+          tag: null, member: specifier, action: 'rewrite-module', target: entry.to,
+          message: `Rewrite ${entry.from} to ${entry.to}: ${entry.summary}`,
+        });
+      } else {
+        review(specifierStart, entry, specifier,
+          `${specifier} is not provably a module specifier here (or is computed): ${entry.summary} Use ${entry.to}${entry.prefix ? '...' : ''} instead.`);
+      }
+    };
+    const entryFor = (specifier) => modules.find((entry) => entry.prefix
+      ? specifier.startsWith(entry.from) && !(entry.except ?? []).some((prefix) => specifier.startsWith(prefix))
+      : specifier === entry.from);
+    for (const match of text.matchAll(/(['"`])([^'"`\n]*?@aceshooting\/lyra-ui\/[^'"`\n]*)\1/g)) {
+      if (inComment(match.index)) continue;
+      const at = match[2].indexOf('@aceshooting/');
+      const lead = match[2].slice(0, at);
+      if (lead && !NODE_MODULES_LEAD.test(lead)) continue;
+      const specifier = match[2].slice(at);
+      const entry = entryFor(specifier);
+      if (!entry) continue;
+      const specifierStart = match.index + 1 + at;
+      const before = text.slice(Math.max(0, match.index - 500), match.index);
+      const context = moduleSpecifierContext(text, match.index);
+      const cssImport = inCss(match.index) && /@import\s+(?:url\(\s*)?$/.test(before);
+      const resource = inMarkup(match.index) && /\b(?:href|src)\s*=\s*$/.test(before);
+      const safe = !specifier.includes('${') && Boolean(lead || JSON_FILE.test(file) || context || cssImport || resource);
+      handle(entry, specifierStart, specifier, safe);
+    }
+    for (const match of text.matchAll(/@import\s+url\(\s*(@aceshooting\/lyra-ui\/[^\s)'";]+)\s*\)/g)) {
+      const entry = entryFor(match[1]);
+      if (inComment(match.index) || !inCss(match.index) || !entry) continue;
+      handle(entry, match.index + match[0].indexOf(match[1]), match[1], true);
+    }
+  }
+
+  if (exported.length) {
+    const bindingsPattern = new RegExp(
+      `\\b(?:import|export)\\s+(?:type\\s+)?(?:${IDENTIFIER}\\s*,\\s*)?\\{(?<body>[^{};]*)\\}\\s*from\\s*(?<quote>['"])(?<source>${regexEscape(LYRA_PACKAGE)}(?:\\/[^'"\\s]+)?)\\k<quote>`, 'g');
+    const segment = new RegExp(`^(\\s*(?:type\\s+)?)(${IDENTIFIER})(\\s+as\\s+${IDENTIFIER})?\\s*$`, 'd');
+    for (const match of text.matchAll(bindingsPattern)) {
+      if (inComment(match.index)) continue;
+      const bodyStart = match.index + match[0].indexOf('{') + 1;
+      for (const part of match.groups.body.matchAll(/[^,]+/g)) {
+        const parsed = segment.exec(part[0]);
+        const entry = parsed && exported.find((candidate) => candidate.from === parsed[2]);
+        if (!entry) continue;
+        const nameStart = bodyStart + part.index + parsed.indices[2][0];
+        if (inComment(nameStart)) continue;
+        if (match.groups.source === LYRA_PACKAGE) {
+          rewrite(nameStart, nameStart + entry.from.length, parsed[3] ? entry.to : `${entry.to} as ${entry.from}`, {
+            tag: null, member: entry.from, action: 'rewrite-export', target: entry.to,
+            message: `${entry.from} no longer exists; import ${entry.to}${parsed[3] ? '' : ` as ${entry.from}`}: ${entry.summary}`,
+          });
+        } else {
+          review(nameStart, entry, entry.from,
+            `${entry.from} is not exported by ${match.groups.source} any more: ${entry.summary} Import ${entry.to} from ${LYRA_PACKAGE}.`);
+        }
+      }
+    }
+    const aliases = [...text.matchAll(new RegExp(`import\\s+(?:type\\s+)?\\*\\s+as\\s+(${IDENTIFIER})\\s+from\\s*(['"])${regexEscape(LYRA_PACKAGE)}\\2`, 'g'))].map((match) => match[1]);
+    const receivers = [...aliases.map(regexEscape), `import\\(\\s*['"]${regexEscape(LYRA_PACKAGE)}['"]\\s*\\)`];
+    for (const entry of exported) {
+      for (const match of text.matchAll(new RegExp(`(?<![$\\w.])(?:${receivers.join('|')})\\s*\\.\\s*${entry.from}(?![$\\w])`, 'g'))) {
+        if (!inComment(match.index)) review(match.index + match[0].lastIndexOf(entry.from), entry, entry.from, `${entry.from} no longer exists: ${entry.summary} Use ${entry.to}.`);
+      }
+    }
+  }
+
+  for (const entry of entries.filter((candidate) => candidate.kind === 'css-property')) {
+    const pattern = new RegExp(`${regexEscape(entry.from)}${entry.prefix ? '[\\w-]*' : '(?![\\w-])'}`, 'g');
+    for (const match of text.matchAll(pattern)) {
+      if (inComment(match.index)) continue;
+      review(match.index, entry, match[0], `The custom property ${match[0]} was removed: ${entry.summary} Use ${entry.to}.`);
+    }
+  }
+  const parts = entries.filter((candidate) => candidate.kind === 'part');
+  if (parts.length) {
+    for (const match of text.matchAll(/::part\(([^)]*)\)/g)) {
+      if (inComment(match.index)) continue;
+      const names = match[1].trim().split(/\s+/);
+      const type = compoundTypeBefore(text, match.index);
+      for (const entry of parts) {
+        if (!names.includes(entry.from) || !(type === entry.tag || (!type && text.includes(entry.tag)))) continue;
+        review(match.index + match[0].indexOf(entry.from), entry, entry.from, `The ${entry.tag} part ${entry.from} changed: ${entry.summary} ${entry.to}`);
+      }
+    }
+  }
+
+  if (localeKeys.length && /registerLyraLocale|bridgeLyraLocale|\.strings\b|@aceshooting\/lyra-ui/.test(text)) {
+    for (const entry of localeKeys) {
+      for (const match of text.matchAll(new RegExp(`(?<![$\\w.-])${entry.from}(?![$\\w-])`, 'g'))) {
+        const before = text[match.index - 1] ?? '';
+        const after = text.slice(match.index + entry.from.length, match.index + entry.from.length + 12);
+        const quoted = /['"`]/.test(before) && /^['"`]/.test(after);
+        if (inComment(match.index) || !(quoted || /^\s*:/.test(after))) continue;
+        review(match.index, entry, entry.from, `The localization key ${entry.from} was removed; use ${entry.to}: ${entry.summary}`);
+      }
+    }
+  }
+}
+
 export function migrateRenameText(original, contract, options) {
   const file = options.file ?? '<memory>';
   const origin = options.origin;
@@ -694,6 +821,20 @@ export function migrateRenameText(original, contract, options) {
     message: `Review ${entry.tag}.${entry.property} for ${release}: ${entry.summary}`,
   });
   reportModuleReviews(original, file, profile.data.moduleReviews, openingTokens, inComment, warn);
+  applyGlobals(original, file, profile.data.globals, { inComment, inCss, openingTokens, rewrite, warn });
+  if (profile.data.rules.includes('theme-scopes')) {
+    const analysis = analyzeThemeScopes(original, { file });
+    for (const { offset, change } of analysis.insertions) {
+      rewrite(offset, offset, analysis.marker, {
+        tag: change.upstreamTag, member: change.upstreamMember, action: change.action, target: change.target, message: change.message,
+      });
+    }
+    for (const entry of analysis.warnings) {
+      warn(starts[entry.line - 1] + entry.column - 1, {
+        tag: entry.upstreamTag, member: entry.upstreamMember ?? entry.upstreamTag ?? entry.target, code: entry.warningCode, target: entry.target, message: entry.message,
+      });
+    }
+  }
   const unownedReviews = (kind, name, offset, owner) => {
     const own = owner ? profile.reviewFor(owner, kind, name) : null;
     if (own) reportReview(offset, own);
@@ -957,7 +1098,7 @@ export function migrateRenameText(original, contract, options) {
     ...profile.data.renames.filter((entry) => entry.tag === owner && ['attribute', 'property', 'event'].includes(entry.kind)).map((entry) => entry.from),
     ...profile.data.reviews.filter((entry) => entry.tag === owner && ['attribute', 'property', 'event'].includes(entry.kind)).map((entry) => entry.name),
     ...profile.data.retiredEvents.filter((entry) => entry.tag === owner).map((entry) => entry.event),
-    ...profile.data.propertyChanges.filter((entry) => entry.tag === owner).map((entry) => entry.property),
+    ...profile.data.propertyChanges.filter((entry) => entry.tag === owner).flatMap((entry) => [entry.property, ...(entry.former ? [entry.former] : [])]),
   ]);
 
   // --- Markup: event listeners on any element; attributes, properties, spreads and exportparts on the owner.
@@ -1458,7 +1599,8 @@ export function migrateRenameText(original, contract, options) {
     }
   }
   for (const entry of profile.data.propertyChanges) {
-    if (mentioned.has(entry.tag)) addAccess(entry.property, { tag: entry.tag, propertyChange: entry, call: false });
+    if (!mentioned.has(entry.tag)) continue;
+    for (const name of [entry.property, ...(entry.former ? [entry.former] : [])]) addAccess(name, { tag: entry.tag, propertyChange: entry, call: false });
   }
   if (accessRules.size) {
     const inString = rangeTester(mergeRanges(quotedStringRanges(original, inComment)));

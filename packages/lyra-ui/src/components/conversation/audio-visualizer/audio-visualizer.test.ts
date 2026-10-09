@@ -815,7 +815,7 @@ describe('media-query change handlers', () => {
 
   it('refreshes cached colors and ambient duration when a theme input mutates', async () => {
     const el = (await fixture(html`
-      <lr-audio-visualizer
+      <lr-audio-visualizer data-lr-theme-scope
         style="color: var(--visualizer-probe); --visualizer-probe: rgb(1, 2, 3); --lr-audio-visualizer-color: currentColor; --lr-theme-duration-slow: 800ms;"
       ></lr-audio-visualizer>
     `)) as LyraAudioVisualizer;

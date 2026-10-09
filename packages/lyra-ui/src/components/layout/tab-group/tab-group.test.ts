@@ -164,7 +164,7 @@ it("keeps the edge fade opaque when a consumer themes the shadow color transluce
   // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
   // dropped mask alpha across the whole tablist rather than just its edges.
   const el = (await fixture(html`
-    <lr-tab-group
+    <lr-tab-group data-lr-theme-scope
       style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
     >
       <lr-tab panel="input">Raw input document</lr-tab>

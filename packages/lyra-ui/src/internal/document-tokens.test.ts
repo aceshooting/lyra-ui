@@ -18,6 +18,8 @@ import { setColorScheme, setForcedColors, setReducedMotion } from '../../test/wt
 import { captureDevWarnings, expectDevWarning } from '../../test/expected-dev-warnings.js';
 import { toRgba } from '../../test/color-contrast.js';
 import '../components/layout/card/card.js';
+// Mode-attribute fixtures without theme.css exercise the missing-resolver diagnostic on purpose.
+expectDevWarning('lyra-style:resolver');
 
 // A library-shaped probe: registered through customElements.define, so like a consumer subclass of
 // the public LyraElement it is NOT a registered library component, and its shadow root is an
@@ -83,7 +85,8 @@ describe('document token layer: adoption', () => {
     expect(read(document.documentElement, '--lr-color-brand')).to.not.equal('');
     expect(read(document.documentElement, DOCUMENT_TOKEN_SENTINEL)).to.equal(DOCUMENT_TOKEN_LAYER_ID);
     // The host carries only the host-local remainder; the shared names are inherited.
-    expect(HOST_TOKEN_CSS).to.not.match(/:host\{[^}]*--lr-color-surface:/);
+    // (Only the base block: the forced-colors arm deliberately restates system colors per host.)
+    expect(HOST_TOKEN_CSS.split('@media')[0]).to.not.match(/:host\{[^}]*--lr-color-surface:/);
     expect(read(probe, '--lr-color-brand')).to.equal(read(document.documentElement, '--lr-color-brand'));
   });
 
@@ -112,7 +115,7 @@ describe('document token layer: adoption', () => {
       const sheet = layerSheet(frameDocument);
       expect(sheet !== undefined, 'the iframe document adopts its own copy').to.equal(true);
       expect(sheet === layerSheet(document)).to.equal(false);
-      expect(sheet instanceof frame.contentWindow!.CSSStyleSheet).to.equal(true);
+      expect(sheet instanceof (frame.contentWindow as unknown as { CSSStyleSheet: typeof CSSStyleSheet }).CSSStyleSheet).to.equal(true);
       expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
     } finally {
       frame.remove();
@@ -238,7 +241,7 @@ describe('document token layer: application shadow roots', () => {
 describe('document token layer: theme scopes and mode', () => {
   it('re-derives an input set on a marked scope, and not one set on a plain wrapper', async () => {
     expectDevWarning('lyra-theme-scope:unscoped-input');
-    const plain = await fixture<HTMLElement>(html`<div style="--lr-theme-space-m: 2rem"><lr-layer-probe></lr-layer-probe></div>`);
+    const plain = await fixture<HTMLElement>(html`<div data-lr-not-a-scope style="--lr-theme-space-m: 2rem"><lr-layer-probe></lr-layer-probe></div>`);
     expect(read(await probeIn(plain), '--lr-space-m')).to.equal('0.75rem');
     const marked = await fixture<HTMLElement>(html`<div data-lr-theme-scope style="--lr-theme-space-m: 2rem"><lr-layer-probe></lr-layer-probe></div>`);
     expect(read(await probeIn(marked), '--lr-space-m')).to.equal('2rem');
@@ -257,7 +260,7 @@ describe('document token layer: theme scopes and mode', () => {
 
   it('warns once in development about an inline layer input on an element that is not a scope', async () => {
     const warnings = await captureDevWarnings(async () => {
-      await fixture(html`<div style="--lr-theme-color-brand-fill-loud: red"><lr-layer-probe></lr-layer-probe></div>`);
+      await fixture(html`<div data-lr-not-a-scope style="--lr-theme-color-brand-fill-loud: red"><lr-layer-probe></lr-layer-probe></div>`);
       await fixture(html`<div data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: red"><lr-layer-probe></lr-layer-probe></div>`);
       // Host-read inputs (the specialist palettes) work on any element and are not reported.
       await fixture(html`<div style="--lr-theme-color-chart-1: red"><lr-layer-probe></lr-layer-probe></div>`);
@@ -381,13 +384,13 @@ describe('document token layer: inventory and observation', () => {
     expectDevWarning('lyra-theme-scope:unscoped-input');
     const tree = await fixture<HTMLElement>(html`
       <div>
-        <div id="unscoped" style="--lr-theme-space-m: 1px"></div>
+        <div data-lr-not-a-scope id="unscoped" style="--lr-theme-space-m: 1px"></div>
         <div id="scoped" data-lr-theme-scope style="--lr-theme-space-m: 1px"></div>
         <div id="host-read" style="--lr-theme-color-chart-1: red"></div>
         <app-token-shell id="app"></app-token-shell>
       </div>
     `);
-    (tree.querySelector('#app') as AppShell).markup = '<p id="inside" style="--lr-theme-color-surface-default: red"></p>';
+    (tree.querySelector('#app') as AppShell).markup = '<p data-lr-not-a-scope id="inside" style="--lr-theme-color-surface-default: red"></p>';
     const found = findUnscopedThemeInputs(tree).map((element) => element.id);
     expect(found).to.deep.equal(['unscoped', 'inside']);
   });

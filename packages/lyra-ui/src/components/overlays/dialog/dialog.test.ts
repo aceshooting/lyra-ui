@@ -13,7 +13,7 @@ expectStaleAttribute('lr-dialog', 'accessible-label');
 
 it('inherits heading fonts across a component boundary without changing body fonts or explicit part styling', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-font-family-body: monospace">
+    <div data-lr-theme-scope style="--lr-theme-font-family-body: monospace">
       <lr-dialog open label="Heading" style="--lr-duration-base: 0ms">Body</lr-dialog>
     </div>
   `);
@@ -2139,7 +2139,7 @@ it('still caps --lr-dialog-height at the viewport via max-block-size: 100%', asy
 
 it('draws the header and footer dividing rules in the subtle border tier while --lr-overlay-border is unset', async () => {
   const el = (await fixture(html`
-    <lr-dialog
+    <lr-dialog data-lr-theme-scope
       open
       label="Untitled"
       style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9); --lr-duration-base: 0ms"

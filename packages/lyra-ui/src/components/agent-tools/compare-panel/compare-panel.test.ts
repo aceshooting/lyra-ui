@@ -366,7 +366,7 @@ describe('lr-compare-panel', () => {
 
   it('dims a disabled vote button through the shared disabled-opacity token', async () => {
     const wrapper = (await fixture(
-      html`<div style="--lr-theme-opacity-disabled: 0.25"><lr-compare-panel disabled></lr-compare-panel></div>`,
+      html`<div data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.25"><lr-compare-panel disabled></lr-compare-panel></div>`,
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-compare-panel') as LyraComparePanel;
     await el.updateComplete;
@@ -442,7 +442,7 @@ describe('lr-compare-panel', () => {
 
   it('paints a real vote-button hover state', async () => {
     const el = await fixture<LyraComparePanel>(html`
-      <lr-compare-panel style="--lr-transition-fast: 0ms"></lr-compare-panel>
+      <lr-compare-panel data-lr-theme-scope style="--lr-transition-fast: 0ms"></lr-compare-panel>
     `);
     const button = el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement;
     const rest = getComputedStyle(button).backgroundColor;
@@ -482,7 +482,7 @@ describe('selected vote-button pointer feedback', () => {
 
   async function themed(): Promise<LyraComparePanel> {
     const el = (await fixture(html`
-      <lr-compare-panel
+      <lr-compare-panel data-lr-theme-scope
         vote="a"
         style="--lr-transition-fast: 0s; --lr-compare-panel-selected-bg: rgb(0, 51, 102);"
       ></lr-compare-panel>
