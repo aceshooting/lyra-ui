@@ -93016,6 +93016,16 @@
             "default": ""
           },
           {
+            "name": "title",
+            "property": "title",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string",
@@ -93127,6 +93137,16 @@
           {
             "name": "sub",
             "attribute": "sub",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "title",
+            "attribute": "title",
             "type": "string",
             "readonly": false,
             "reflects": false,

@@ -11128,7 +11128,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2733,
+              "line": 2739,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20944,7 +20944,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1490,
+              "line": 1491,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20979,6 +20979,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/filter-bar/filter-bar-end-alignment.test.ts",
           "src/components/layout/filter-bar/filter-bar-remediation.test.ts",
           "src/components/layout/filter-bar/filter-bar.test.ts"
         ],
@@ -33817,7 +33818,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2733,
+              "line": 2739,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43042,6 +43043,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/select/option-refresh.test.ts",
+          "src/components/forms/select/option-title.test.ts",
           "src/components/forms/select/positioning-strategy.test.ts",
           "src/components/forms/select/select-change-request.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",

@@ -151,7 +151,15 @@ export function runCoverageShard(
     );
   }
   const status = result.status ?? 1;
-  if (status !== 0) return status;
+  if (status !== 0) {
+    // A browser that dies while the page is torn down leaves wtr exiting nonzero with no summary
+    // line at all; name the shard and the files it ran so the red job is attributable.
+    console.error(
+      `Coverage shard ${shardIndex}/${COVERAGE_SHARD_TOTAL}: wtr exited with status ${status} ` +
+        `after ${files.length} test files; last file: ${files.at(-1)}.`,
+    );
+    return status;
+  }
   return runNative(files, {
     browser: environment.WTR_BROWSER,
     environment,

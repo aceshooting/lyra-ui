@@ -2979,7 +2979,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

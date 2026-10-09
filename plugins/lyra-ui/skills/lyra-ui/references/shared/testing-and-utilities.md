@@ -404,7 +404,7 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   `FormValueAdapter<T>` has readonly `empty`, required `toFormValue(value)`, and optional
   `toFormState(value)`, `isEmpty(value)`, `fromAttribute(attribute)`, `toAttribute(value)`, and
   `fromFormState(state)`. `FormAssociatedInterface<T>` exposes `internals`; the `name` getter/setter
-  (`next`); `value`; `defaultValue`; `customError`; `disabled`; `required`; readonly
+  (`next`); the `value` getter/setter (`next`); `defaultValue`; `customError`; `disabled`; `required`; readonly
   `effectiveDisabled`; the `form` getter/setter (`owner`); readonly `labels`, `validity`,
   `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
   `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
@@ -423,7 +423,7 @@ toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
 FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
 toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
   and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
-name(next: string | null); value: TValue; get defaultValue(): TValue;
+name(next: string | null); get value(): TValue; set value(next: TValue | null); get defaultValue(): TValue;
 set defaultValue(next: TValue | null); customError: string | null;
 disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
 HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly

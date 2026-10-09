@@ -294,7 +294,9 @@ export interface FormAssociatedInterface<TValue = string> {
   internals: ElementInternals;
   get name(): string;
   set name(next: string | null);
-  value: TValue;
+  /** Reads the current value; writing `null` restores the control's empty/default value. */
+  get value(): TValue;
+  set value(next: TValue | null);
   /** Reset default on read; null on write removes its markup value. */
   get defaultValue(): TValue;
   set defaultValue(next: TValue | null);

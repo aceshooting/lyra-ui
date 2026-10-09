@@ -8359,6 +8359,7 @@ export interface LyraComponentTypeMap {
       | 'selected'
       | 'strings'
       | 'sub'
+      | 'title'
       | 'value',
       {}
     >;

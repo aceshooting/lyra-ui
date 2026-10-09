@@ -5,6 +5,8 @@ export default {
         '.storybook/{main,preview,manager,story-theme}.js',
         // The upgrade script invokes this peer synchronizer directly.
         'scripts/sync-docx-engine-peer.mjs',
+        // The upgrade script also invokes the Playwright container-image synchronizer directly.
+        'scripts/sync-playwright-images.mjs',
         // TypeScript resolves this declaration as the authored contract for theme-contract.js.
         '.storybook/theme-contract.d.ts',
         '.storybook/**/*.mdx',

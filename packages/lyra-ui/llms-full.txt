@@ -3173,7 +3173,7 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   `FormValueAdapter<T>` has readonly `empty`, required `toFormValue(value)`, and optional
   `toFormState(value)`, `isEmpty(value)`, `fromAttribute(attribute)`, `toAttribute(value)`, and
   `fromFormState(state)`. `FormAssociatedInterface<T>` exposes `internals`; the `name` getter/setter
-  (`next`); `value`; `defaultValue`; `customError`; `disabled`; `required`; readonly
+  (`next`); the `value` getter/setter (`next`); `defaultValue`; `customError`; `disabled`; `required`; readonly
   `effectiveDisabled`; the `form` getter/setter (`owner`); readonly `labels`, `validity`,
   `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
   `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
@@ -3192,7 +3192,7 @@ toFormValue(value: TValue): FormSubmissionValue; toFormState?(value: TValue):
 FormSubmissionValue; isEmpty?(value: TValue): boolean; fromAttribute?(attribute: string): TValue;
 toAttribute?(value: TValue): string | null; fromFormState?(state: FormSubmissionValue): TValue }`
   and `FormAssociatedInterface<TValue> { internals: ElementInternals; get name(): string; set
-name(next: string | null); value: TValue; get defaultValue(): TValue;
+name(next: string | null); get value(): TValue; set value(next: TValue | null); get defaultValue(): TValue;
 set defaultValue(next: TValue | null); customError: string | null;
 disabled: boolean; required: boolean; readonly effectiveDisabled: boolean; get form():
 HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeList; readonly
@@ -6705,6 +6705,8 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
   attribute or `defaultSelected`
+- `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
+  for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
@@ -23977,6 +23979,10 @@ flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-siz
 `--lr-filter-bar-gap` (default `var(--lr-space-s)`) themes the gap between filter fields, the
 `end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
 to the previous hardcoded values when unset.
+
+The reset button and the `end` slot form one wrapping action group, and the `end` wrapper reserves the
+same trailing validation spacer as a field, so slotted end actions sit on the field frames' bottom
+edge (level with Reset) and wrap to the next row together.
 
 Each field wrapper also carries a second, per-filter part token, `field-<filterId>` (for example
 `part="field field-status"`), so a single field can be targeted directly --
