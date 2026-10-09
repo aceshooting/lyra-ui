@@ -773,7 +773,7 @@ function attributeSelectorMatches(compound, candidate) {
   // attributes on another element cannot authorize the target floor. State-qualified
   // overrides are checked conservatively in every state they could affect.
   if (compound.includes('::') || lastCompound(compound) !== compound) return false;
-  const match = compound.match(/^([a-z][a-z0-9-]*)?((?:\[data-[a-z0-9-]+(?:=['"][^'"]*['"])?\])+)((?::[a-z-]+(?:\([\s\S]*\))?)*)$/);
+  const match = compound.match(/^([a-z][a-z0-9-]*)?((?:\[data-[a-z0-9-]+(?:=['"][^'"]*['"])?\])+)((?::[a-z-]+(?:\((?:[^()]|\([^()]*\))*\))?)*)$/);
   if (!match || (match[1] && match[1] !== candidate.tagName)) return false;
   for (const attribute of match[2].matchAll(/\[(data-[a-z0-9-]+)(?:=(['"])(.*?)\2)?\]/g)) {
     const actual = getAttr(candidate.attrText, attribute[1]);

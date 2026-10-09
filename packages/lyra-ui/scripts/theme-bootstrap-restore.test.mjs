@@ -93,7 +93,7 @@ test('mode-only leaves previously owned axes and properties untouched', () => {
 });
 test('factory policy serialization stays script-safe', () => {
   const script = api.createLyraThemeBootstrap({ restore: 'mode', storageKey: '</script>\u2028\u2029' });
-  assert.doesNotMatch(script, /<\/|<!--|<script|\u2028|\u2029/);
+  assert.doesNotMatch(script, /<\/|<!--|<script|\u2028|\u2029/i);
   assert.doesNotThrow(() => new vm.Script(script));
 });
 console.log('In-memory standalone bootstrap bytes:', measureThemeBootstrap(api.lyraThemeBootstrap));
