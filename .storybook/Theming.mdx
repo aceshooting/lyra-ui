@@ -134,6 +134,11 @@ getLyraStyle(); // requested choices plus the currently resolved mode
 resetLyraStyle(['surface', 'density']); // reset only those axes
 ```
 
+A page that inlines the no-flash bootstrap and loads `theme.js` later calls `startLyraStyle()`
+once from that deferred bundle. It adopts the saved style and, while the mode is `system`, attaches
+the live `prefers-color-scheme` listener; unlike `setLyraStyle({})`, it never writes storage and
+emits no `lr-style-change` of its own.
+
 Look, surface, density, mode and accent are independent choices. `system` follows
 `prefers-color-scheme`; `unset` leaves mode selection to the surrounding application. `null` resets
 the named field to its default, and omitted fields remain unchanged. `setLyraStyle()` persists the

@@ -1935,23 +1935,7 @@ function commitStyle(before: StyleState, next: StyleState): Readonly<LyraStyle> 
   }
   persistStyle(next);
   if (typeof document !== 'undefined') {
-    const root = document.documentElement;
-    if (next.mode !== 'system' || styleModeRoot?.deref() !== root) {
-      styleModeCleanup?.();
-      styleModeCleanup = undefined;
-      styleModeRoot = undefined;
-    }
-    adoptLegacyOwnership(root);
-    const requestedAccent = next.accent;
-    applyStyleState(root, next);
-    if (!accentsEqual(requestedAccent, next.accent)) persistStyle(next);
-    if (next.mode === 'system' && !styleModeCleanup) {
-      styleModeRoot = new WeakRef(root);
-      styleModeCleanup = attachStyleMode(root, element => {
-        applyStyleState(element, lastStyle);
-        emitStyleChange(lastStyle, ['resolvedMode']);
-      });
-    }
+    if (applyRootStyle(next)) persistStyle(next);
     const changed = STYLE_FIELDS.filter(field => field === 'look'
       ? before.look !== next.look || !tokensEqual(before.tokens, next.tokens)
       : field === 'accent' ? before.accentName !== next.accentName || !accentsEqual(before.accent, next.accent)
@@ -1959,6 +1943,29 @@ function commitStyle(before: StyleState, next: StyleState): Readonly<LyraStyle> 
     emitStyleChange(next, changed);
   }
   return styleSnapshot(next, typeof window === 'undefined' ? undefined : window);
+}
+/**
+ * Applies a state to the document root and keeps the shared system-mode listener in step with it.
+ * Never touches storage; returns whether painting corrected the requested accent.
+ */
+function applyRootStyle(next: StyleState): boolean {
+  const root = document.documentElement;
+  if (next.mode !== 'system' || styleModeRoot?.deref() !== root) {
+    styleModeCleanup?.();
+    styleModeCleanup = undefined;
+    styleModeRoot = undefined;
+  }
+  adoptLegacyOwnership(root);
+  const requestedAccent = next.accent;
+  applyStyleState(root, next);
+  if (next.mode === 'system' && !styleModeCleanup) {
+    styleModeRoot = new WeakRef(root);
+    styleModeCleanup = attachStyleMode(root, element => {
+      applyStyleState(element, lastStyle);
+      emitStyleChange(lastStyle, ['resolvedMode']);
+    });
+  }
+  return !accentsEqual(requestedAccent, next.accent);
 }
 function adoptLegacyOwnership(root: HTMLElement): void {
   // Bootstrap v1 stored only the names it painted. Adopt once before the v2 writer takes over.
@@ -1975,6 +1982,28 @@ function adoptLegacyOwnership(root: HTMLElement): void {
 /** Reads the persisted selection, falling back to the applied state if persistence failed. */
 export function getLyraStyle(): Readonly<LyraStyle> {
   return styleSnapshot(readStyleState(), typeof window === 'undefined' ? undefined : window);
+}
+/**
+ * Starts the style runtime without writing storage. Adopts the saved style (the one the inline
+ * bootstrap restored before first paint, or the defaults when nothing is saved) on the document root
+ * and, while its mode is `system`, attaches the live `prefers-color-scheme` listener that keeps
+ * `data-lr-theme`/`data-theme` and the accent ramps following the operating system.
+ *
+ * Call it once from a deferred bundle on pages that inline only `lyraThemeBootstrap`. It is
+ * idempotent: repeated calls never stack listeners. It emits no `lr-style-change` itself, since no
+ * choice changed; a later operating-system flip emits `changed: ['resolvedMode']` as usual. It never
+ * calls `localStorage.setItem()`/`removeItem()`, so a start never creates, migrates or rewrites a
+ * saved record. Without a document (server rendering) it only returns the saved snapshot.
+ */
+export function startLyraStyle(): Readonly<LyraStyle> {
+  const state = readStyleState();
+  if (typeof document === 'undefined') return styleSnapshot(state);
+  state.accent = normalizeAccent(state.accent);
+  if (typeof state.accentBackground === 'string') state.accentBackground = normalizeColor(state.accentBackground);
+  if (!state.accent) state.accentName = null;
+  lastStyle = state;
+  applyRootStyle(state);
+  return styleSnapshot(state, window);
 }
 /** Resets selected fields to defaults, or all fields when no list is supplied. */
 export function resetLyraStyle(fields: readonly LyraStyleField[] = STYLE_FIELDS): Readonly<LyraStyle> {

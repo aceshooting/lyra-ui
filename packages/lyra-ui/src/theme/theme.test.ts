@@ -5,6 +5,7 @@ import {
   getLyraStyle,
   lyraThemeBootstrap,
   setLyraStyle,
+  startLyraStyle,
   type LyraAccentBackground,
   type LyraMode,
   type LyraStyleChangeDetail,
@@ -710,6 +711,170 @@ describe('theme runtime', () => {
       );
     } finally {
       window.matchMedia = originalMatchMedia;
+    }
+  });
+});
+
+describe('startLyraStyle', () => {
+  type ModeListener = (event: MediaQueryListEvent) => void;
+  let originalMatchMedia: typeof window.matchMedia;
+  let originalSetItem: typeof Storage.prototype.setItem;
+  let originalRemoveItem: typeof Storage.prototype.removeItem;
+  let originalClear: typeof Storage.prototype.clear;
+  let listeners: Set<ModeListener>;
+  let matches: boolean;
+  let writes: string[];
+
+  beforeEach(() => {
+    originalMatchMedia = window.matchMedia;
+    originalSetItem = Storage.prototype.setItem;
+    originalRemoveItem = Storage.prototype.removeItem;
+    originalClear = Storage.prototype.clear;
+    listeners = new Set();
+    matches = true;
+    writes = [];
+    const media = {
+      get matches() { return matches; },
+      media: '(prefers-color-scheme: dark)',
+      onchange: null,
+      addEventListener: (_type: string, listener: ModeListener) => listeners.add(listener),
+      removeEventListener: (_type: string, listener: ModeListener) => listeners.delete(listener),
+      addListener: (listener: ModeListener) => listeners.add(listener),
+      removeListener: (listener: ModeListener) => listeners.delete(listener),
+      dispatchEvent: () => true,
+    } as MediaQueryList;
+    window.matchMedia = (() => media) as typeof window.matchMedia;
+  });
+
+  /** Record every storage mutation from here on; reads stay real. */
+  function watchStorageWrites(): void {
+    Storage.prototype.setItem = function setItem(this: Storage, key: string, value: string) {
+      writes.push(`set:${key}`);
+      originalSetItem.call(this, key, value);
+    };
+    Storage.prototype.removeItem = function removeItem(this: Storage, key: string) {
+      writes.push(`remove:${key}`);
+      originalRemoveItem.call(this, key);
+    };
+    Storage.prototype.clear = function clear(this: Storage) {
+      writes.push('clear');
+      originalClear.call(this);
+    };
+  }
+
+  function flip(next: boolean): void {
+    matches = next;
+    for (const listener of [...listeners]) listener({ matches } as MediaQueryListEvent);
+  }
+
+  afterEach(() => {
+    Storage.prototype.setItem = originalSetItem;
+    Storage.prototype.removeItem = originalRemoveItem;
+    Storage.prototype.clear = originalClear;
+    resetRoot();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('adopts the default System style and follows the OS without creating a saved record', () => {
+    resetRoot();
+    watchStorageWrites();
+    const style = startLyraStyle();
+    expect(writes).to.deep.equal([]);
+    expect(localStorage.getItem(STORAGE_KEY)).to.equal(null);
+    expect(style.mode).to.equal('system');
+    expect(style.resolvedMode).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+    expect(listeners.size).to.equal(1);
+
+    flip(false);
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('light');
+    expect(writes, 'an OS flip after a start never writes').to.deep.equal([]);
+    expect(localStorage.getItem(STORAGE_KEY)).to.equal(null);
+  });
+
+  it('adopts the saved style byte-for-byte and attaches no listener for an explicit mode', () => {
+    const saved = JSON.stringify({ mode: 'dark', accent: '#e63950' });
+    localStorage.setItem(STORAGE_KEY, saved);
+    watchStorageWrites();
+    const style = startLyraStyle();
+    expect(writes).to.deep.equal([]);
+    expect(localStorage.getItem(STORAGE_KEY)).to.equal(saved);
+    expect(style.mode).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+    expect(appliedThemeValue('--lr-theme-accent')).to.equal('#e63950');
+    expect(listeners.size).to.equal(0);
+  });
+
+  it('leaves a legacy v1 record unmigrated in storage while applying it', () => {
+    const saved = JSON.stringify({ mode: 'auto', accent: null });
+    localStorage.setItem(STORAGE_KEY, saved);
+    watchStorageWrites();
+    expect(startLyraStyle().mode).to.equal('system');
+    expect(writes).to.deep.equal([]);
+    expect(localStorage.getItem(STORAGE_KEY)).to.equal(saved);
+    expect(listeners.size).to.equal(1);
+  });
+
+  it('is idempotent, emits no lr-style-change itself, and emits resolvedMode on an OS flip', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, mode: 'system', accent: null }));
+    watchStorageWrites();
+    const events: LyraStyleChangeDetail[] = [];
+    const record = (event: Event): void => { events.push((event as CustomEvent<LyraStyleChangeDetail>).detail); };
+    window.addEventListener('lr-style-change', record);
+    try {
+      startLyraStyle();
+      startLyraStyle();
+      expect(listeners.size, 'repeated starts never stack listeners').to.equal(1);
+      expect(events).to.deep.equal([]);
+      flip(false);
+      expect(events.map(detail => [...detail.changed])).to.deep.equal([['resolvedMode']]);
+      expect(events[0]!.style.resolvedMode).to.equal('light');
+      expect(writes).to.deep.equal([]);
+    } finally {
+      window.removeEventListener('lr-style-change', record);
+    }
+  });
+
+  it('hands the listener over to setLyraStyle, which detaches it when leaving System', () => {
+    resetRoot();
+    startLyraStyle();
+    expect(listeners.size).to.equal(1);
+    setLyraStyle({ mode: 'system' });
+    expect(listeners.size, 'a write after a start reuses the same listener').to.equal(1);
+    setLyraStyle({ mode: 'light' });
+    expect(listeners.size).to.equal(0);
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
+  });
+
+  it('continues the bootstrap: same root attributes, then a live listener, still without writes', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, mode: 'system', accent: null }));
+    new Function(lyraThemeBootstrap)();
+    const bootstrapped = document.documentElement.getAttribute('data-lr-theme');
+    expect(bootstrapped).to.equal('dark');
+    watchStorageWrites();
+    startLyraStyle();
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal(bootstrapped);
+    flip(false);
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('light');
+    expect(writes).to.deep.equal([]);
+  });
+
+  it('applies the last applied style when storage cannot be read', () => {
+    setLyraStyle({ mode: 'system', accent: null });
+    const originalGetItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = () => { throw new Error('unavailable'); };
+    watchStorageWrites();
+    try {
+      let style: ReturnType<typeof startLyraStyle> | undefined;
+      expect(() => { style = startLyraStyle(); }).to.not.throw();
+      expect(style?.mode).to.equal('system');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+      expect(listeners.size).to.equal(1);
+      expect(writes).to.deep.equal([]);
+    } finally {
+      Storage.prototype.getItem = originalGetItem;
     }
   });
 });

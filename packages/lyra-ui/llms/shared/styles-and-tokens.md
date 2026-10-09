@@ -639,6 +639,13 @@ first statement the browser sees is appended at the end, so an older four-name s
 `lr-theme-preset`) would rank an imported look preset above `lr-overrides` and your own layer. Every Lyra stylesheet that declares an order repeats the same five names for exactly this
 reason.
 
+The same rule decides application **fallback fills**. A page that keeps plain `background` rules
+for dialogs or panels (so it also renders without the component bundle) and uses an unlayered rule
+on an `.lr-surface-chrome` element overrides the Glass fill; declare a low-priority layer before
+Lyra's names (`@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;`)
+for those fallbacks, or set `--lr-surface-background`. See
+[Application fallback fills and cascade layers](native-styles-and-utilities.md#application-fallback-fills-and-cascade-layers).
+
 <a id="the-shadcn-look--themesshadcncss"></a>
 
 ### The shadcn look — looks/shadcn.css
@@ -868,7 +875,10 @@ import {
   getLyraStyle,
   resetLyraStyle,
   setLyraStyle,
+  startLyraStyle,
 } from "@aceshooting/lyra-ui/theme.js";
+
+startLyraStyle(); // adopt the saved style and follow the OS without writing storage
 
 setLyraStyle({ mode: "dark" }); // unspecified axes keep their current value
 setLyraStyle({ accent: "sapphire" }); // named palette accent
@@ -939,6 +949,27 @@ selection unset and clears the configured resolved-mode attributes. The bootstra
 initial snapshot; it does not install a live system-mode listener. This option configures only
 the bootstrap. Later runtime calls such as `setLyraStyle()` follow their own style and persistence
 policy, so choose that policy explicitly if the application initializes the runtime afterward.
+
+**Starting the runtime after the bootstrap — `startLyraStyle()`.** A page that inlines only the
+bootstrap and loads `theme.js` later in a deferred bundle calls `startLyraStyle()` once. It adopts
+the saved style (the defaults when nothing is saved) on the document root and, while the mode is
+System, attaches the live `prefers-color-scheme` listener. It never writes storage: no record is
+created, a v1 record is not migrated, and an operating-system flip afterwards repaints without
+saving. Repeated calls do not stack listeners. The call emits no `lr-style-change`; a later
+operating-system flip emits `changed: ["resolvedMode"]`. The first `setLyraStyle()` takes over the
+same listener. Do not call `setLyraStyle({})` for this: it persists the current record.
+
+~~~ts
+// deferred bundle, after <script>lyraThemeBootstrap</script> in <head>
+import { startLyraStyle } from "@aceshooting/lyra-ui/theme.js";
+
+startLyraStyle(); // adopts the saved style, follows the OS while mode is System, never writes
+~~~
+
+`startLyraStyle()` always reads the runtime's own `localStorage['lyra-theme']` record and applies
+the whole profile in it. A page whose bootstrap uses `data-lr-theme-restore="mode"` or an
+application-owned storage key does not pair with it: the start would apply axes or a record the
+bootstrap deliberately ignored. Such pages call `setLyraStyle()` with the policy they want.
 
 **Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
 
