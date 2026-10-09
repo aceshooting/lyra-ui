@@ -1,5 +1,41 @@
 # @aceshooting/lyra-docs
 
+## 0.4.1
+
+### Patch Changes
+
+- fe2bb4e: The editor toolbar memoizes capability queries per published snapshot instead of re-querying the engine on every render, and its popover focus-return paths share one implementation. The contributor "Development checks" section moved out of the published README into the repository-only `CONTRIBUTING.md`. No API change.
+- fe2bb4e: Components no longer read their own shadow root's focused element while disconnected. A Lit update queued before a host was removed now skips focus bookkeeping instead of reading `activeElement` on a detached host, which threw under Happy DOM and surfaced as an unhandled rejection.
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [902c90b]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [ee0b543]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [902c90b]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+- Updated dependencies [fe2bb4e]
+  - @aceshooting/lyra-ui@27.0.0
+
 ## 0.4.0
 
 ### Minor Changes
