@@ -11,7 +11,7 @@ function layerBody(css) {
 
 export const STYLE_VERSION = '1';
 /** A marked element carrying inline private slots: what applyLyraStyleScope() writes (any copy). */
-export const RUNTIME_SLOT_SCOPE = `[data-lr-theme-scope][style*='--_lr-']`;
+const RUNTIME_SLOT_SCOPE = `[data-lr-theme-scope][style*='--_lr-']`;
 const short = name => name.slice('--lr-theme-'.length);
 const slot = (name, mode, kind = 'l') => `--_lr-${kind}${mode === 'light' ? 'l' : 'd'}-${short(name)}`;
 const accentOwned = name => /^--lr-theme-color-(?:brand|success|warning|danger|neutral)-(?:fill|border|on)-(?:quiet|normal|loud)$/.test(name) || name === '--lr-theme-color-focus';

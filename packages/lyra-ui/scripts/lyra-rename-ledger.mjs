@@ -103,7 +103,7 @@ const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMa
  */
 const GLOBAL_KINDS = Object.freeze(['module', 'export', 'locale-key', 'css-property', 'part']);
 /** Structural rules a profile can enable; each is implemented and tested in the codemod. */
-export const PROFILE_RULES = Object.freeze(['theme-scopes']);
+const PROFILE_RULES = Object.freeze(['theme-scopes']);
 const PACKAGE_SPECIFIER_PATTERN = /^@aceshooting\/lyra-[a-z]+(?:\/[A-Za-z0-9_./-]*)?$/;
 const PROJECTED_PROFILE_KEYS = [...AUTHORED_PROFILE_KEYS, 'exposure'];
 
