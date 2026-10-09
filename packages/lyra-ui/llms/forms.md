@@ -711,6 +711,8 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
   attribute or `defaultSelected`
+- `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
+  for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)

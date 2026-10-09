@@ -2600,6 +2600,7 @@ export class LyraSelect<
           data-index=${i}
           data-value=${o.value}
           ?data-unknown-value=${unknown}
+          title=${o.title || nothing}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${this.isOptionAvailable(o) ? 'false' : 'true'}
           ?data-active=${id === activeId}
@@ -2644,7 +2645,7 @@ export class LyraSelect<
     if (this.getTag && option) return this.getTag(option, index);
     const label = this.labelFor(value, index);
     const unknown = this.isUnknownValue(value, index);
-    return html`<span part="tag tag__base" ?data-unknown-value=${unknown}>
+    return html`<span part="tag tag__base" title=${option?.title || nothing} ?data-unknown-value=${unknown}>
       <span part="tag-label"
         ><span part="tag__content" aria-hidden="true">${label}</span
         >${unknown

@@ -213,6 +213,8 @@ export interface ComboboxSourceRow {
   readonly end?: unknown;
   /** Optional trailing metadata badge. */
   readonly badge?: string | number;
+  /** Tooltip text for the rendered row; never part of the accessible name. */
+  readonly title?: string;
   /** Spoken option label when the visible row needs additional context. */
   readonly accessibleLabel?: string;
   /** Opaque application payload retained in `selectedRows`. */
@@ -335,6 +337,7 @@ function normalizeSourceResult(input: unknown): {
       const sub = optionalText('sub');
       const accessibleLabel = optionalText('accessibleLabel');
       const dotColor = optionalText('dotColor');
+      const title = optionalText('title');
       const group = optionalText('group');
       const badgeCandidate = source['badge'];
       const badge =
@@ -351,6 +354,7 @@ function normalizeSourceResult(input: unknown): {
         (sub?.length ?? 0) +
         (accessibleLabel?.length ?? 0) +
         (dotColor?.length ?? 0) +
+        (title?.length ?? 0) +
         (group?.length ?? 0) +
         (typeof badge === 'string' ? badge.length : 0);
       if (textUnits + units > MAX_SOURCE_TEXT_UNITS) break;
@@ -366,6 +370,7 @@ function normalizeSourceResult(input: unknown): {
         ...(accessibleLabel === undefined ? {} : { accessibleLabel }),
         ...(source['data'] === undefined ? {} : { data: source['data'] }),
         ...(dotColor === undefined ? {} : { dotColor }),
+        ...(title === undefined ? {} : { title }),
         ...(group === undefined ? {} : { group }),
         ...(typeof source['disabled'] === 'boolean'
           ? { disabled: source['disabled'] }
@@ -2397,6 +2402,7 @@ export class LyraCombobox<
       label: option.label || option.value,
       sub: option.sub || undefined,
       dotColor: option.dotColor || undefined,
+      title: option.title || undefined,
       group: option.group || undefined,
       disabled: option.disabled || option.inert || option.closest('[inert]') !== null,
       // By reference, never cloned -- `option.data` is opaque caller payload, the light-DOM
@@ -3411,6 +3417,7 @@ export class LyraCombobox<
           data-value=${o.value}
           ?data-create=${o.createInput !== undefined}
           ?data-unknown-value=${o.unknownValue !== undefined}
+          title=${o.title || nothing}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${o.disabled ? 'true' : 'false'}
           aria-label=${o.accessibleLabel || nothing}
@@ -3453,7 +3460,7 @@ export class LyraCombobox<
     if (this.getTag && option) return this.getTag(option, index);
     const label = this.labelFor(value);
     const unknown = this.isUnknownValue(value);
-    return html`<span part="tag" ?data-unknown-value=${unknown}>
+    return html`<span part="tag" title=${option?.title || nothing} ?data-unknown-value=${unknown}>
       <span part="tag-label"
         ><span part="tag__content" aria-hidden="true">${label}</span
         >${unknown

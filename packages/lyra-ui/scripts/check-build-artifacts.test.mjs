@@ -207,3 +207,13 @@ test('requires exact exported stylesheets to exist in the emitted package', () =
     [],
   );
 });
+
+test('flags a built JSON import that lost its import attribute', () => {
+  const contents = new Map([
+    ['dist/a.js', "const f=()=>import(\"x/data.json\");"],
+    ['dist/b.js', "const f=()=>import(\"x/data.json\",{with:{type:\"json\"}});"],
+  ]);
+  const findings = findBuildArtifactFindings([...contents.keys()], (file) => contents.get(file) ?? '');
+  assert.equal(findings.length, 1);
+  assert.match(findings[0], /dist\/a\.js: imports JSON without/);
+});

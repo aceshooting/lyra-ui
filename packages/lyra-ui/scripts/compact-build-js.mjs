@@ -157,6 +157,9 @@ export async function compactBuildJavaScript(directory) {
       sourcemap: false,
       sourcefile: path.relative(directory, file),
       target: 'es2022',
+      // Import attributes postdate the es2022 target; without this esbuild strips them, so a
+      // JSON import loses `with { type: 'json' }` and native ESM loaders reject it.
+      supported: { 'import-attributes': true },
     });
     if (result.map) throw new Error(`${file}: JavaScript compaction unexpectedly produced a map`);
     // A type-only source file (all `import type`/`export type`) compiles to a bare `export {};`

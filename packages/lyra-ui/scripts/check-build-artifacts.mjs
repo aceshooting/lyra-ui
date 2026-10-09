@@ -28,6 +28,7 @@ import { findDeclarationLinkFindings } from './check-declaration-links.mjs';
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Emitted text files worth reading; anything else in `dist` is a copied asset. */
+const BARE_JSON_IMPORT = /\bimport\(\s*(['"`])[^'"`]+\.json\1\s*\)/;
 const TEXT_EXTENSIONS = ['.js', '.mjs', '.cjs', '.ts', '.css'];
 
 /** Both comment spellings tsc emits (`//# ...` for JS/d.ts, `/*# ... *\/` for CSS). */
@@ -73,6 +74,9 @@ export function findBuildArtifactFindings(files, read, { packageDirectory, expor
       continue;
     }
     if (!TEXT_EXTENSIONS.includes(path.extname(file))) continue;
+    if (file.endsWith('.js') && BARE_JSON_IMPORT.test(read(file))) {
+      findings.push(`${file}: imports JSON without \`with { type: 'json' }\` -- native ESM loaders (Node, browsers) reject it`);
+    }
     if (MAP_REFERENCE.test(read(file))) {
       findings.push(`${file}: carries a sourceMappingURL comment -- the referenced map is not published, so a consumer's devtools 404s on it`);
     }

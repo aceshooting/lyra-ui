@@ -996,9 +996,10 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   else (another filter type, or a range picked/typed by hand).
  * @event lr-validity-change - The computed `{ valid, invalidFilterIds }` changed.
  * @event lr-reset - `reset()` ran (via the reset button or a direct call). `detail: { value }`.
- * @slot end - Extra host-supplied controls rendered inside `controls`, next to the reset button
+ * @slot end - Extra host-supplied controls rendered inside `controls`, grouped with the reset button
  *   (for example, a "Save search" or "Export" action) -- this component renders no default
- *   content into it.
+ *   content into it. The end actions and Reset wrap together and sit on the same bottom edge as the
+ *   field frames (the wrapper reserves the same trailing validation spacer).
  * @csspart base - The root `role="group"` wrapper.
  * @csspart controls - The row holding every filter control, the `end` slot, the reset button, and
  *   the loading status.
@@ -2349,20 +2350,23 @@ export class LyraFilterBar<
               ?hidden=${this.rendersValidationError(def)}
             ></span>
           </div>`)}
-          <div class="reset-field">
-            <lr-button
-              part="reset-button"
-              appearance="quiet"
-              ?disabled=${this.disabled || this.loading || !this.hasResettableFilters}
-              @click=${() => this.reset()}
-            >
-              ${this.localize('filterBarReset')}
-            </lr-button>
-            <span class="validation-spacer" aria-hidden="true"></span>
+          <div class="actions">
+            <div class="reset-field">
+              <lr-button
+                part="reset-button"
+                appearance="quiet"
+                ?disabled=${this.disabled || this.loading || !this.hasResettableFilters}
+                @click=${() => this.reset()}
+              >
+                ${this.localize('filterBarReset')}
+              </lr-button>
+              <span class="validation-spacer" aria-hidden="true"></span>
+            </div>
+            <span part="end" ?hidden=${!this.slotPresence.has('end')}>
+              <span class="end-actions"><slot name="end"></slot></span>
+              <span class="validation-spacer" aria-hidden="true"></span>
+            </span>
           </div>
-          <span part="end" ?hidden=${!this.slotPresence.has('end')}>
-            <slot name="end"></slot>
-          </span>
           ${this.loading
             ? html`<lr-spinner part="status"></lr-spinner>`
             : nothing}

@@ -42,8 +42,35 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
-  [part='end'] {
+  /* Reset and the end actions are one wrapping unit, so a narrow bar never splits them. */
+  .actions {
+    display: flex;
     flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--lr-filter-bar-gap, var(--lr-space-s));
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  /* Both columns reserve the same trailing validation-spacer as a field wrapper, so their buttons
+     sit on the field frames' bottom edge. */
+  [part='end'] {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='end'][hidden] {
+    display: none;
+  }
+  .end-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--lr-filter-bar-gap, var(--lr-space-s));
+    min-inline-size: 0;
   }
   [part='filter-control'] {
     inline-size: 100%;
@@ -116,7 +143,10 @@ export const styles = css`
     display: none;
   }
   .reset-field {
+    display: flex;
     flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-start;
   }
   [part='status'] {
     flex: 0 0 auto;

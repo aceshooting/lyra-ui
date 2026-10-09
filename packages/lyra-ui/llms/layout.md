@@ -4924,6 +4924,10 @@ flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-siz
 `end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
 to the previous hardcoded values when unset.
 
+The reset button and the `end` slot form one wrapping action group, and the `end` wrapper reserves the
+same trailing validation spacer as a field, so slotted end actions sit on the field frames' bottom
+edge (level with Reset) and wrap to the next row together.
+
 Each field wrapper also carries a second, per-filter part token, `field-<filterId>` (for example
 `part="field field-status"`), so a single field can be targeted directly --
 `lr-filter-bar::part(field-status) { flex: 2 1 20rem; }` -- setting any layout property, not just a

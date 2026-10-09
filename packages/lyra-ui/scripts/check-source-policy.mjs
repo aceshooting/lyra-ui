@@ -50,6 +50,9 @@ import { isSuppressed, stripJsComments } from './lib/source-text.mjs';
 //                           pin `direction: ltr`, or at explicitly suppressed declarations.
 //   shipped-review-token    Private C-###/O-### review identifiers must not ship in source
 //                           comments or package documentation; use a public technical rationale.
+//   json-import-attribute   A `.json` module import (static or dynamic) must carry
+//                           `with { type: 'json' }`; Node's native ESM loader rejects it otherwise
+//                           (ERR_IMPORT_ATTRIBUTE_MISSING) even though bundlers accept it.
 //   type-only-import-form   An all-inline-type import/export block emits an empty runtime import
 //                           under verbatim module syntax; use import type/export type instead.
 // Suppressions (pointercancel-pairing / rtl-arrow-keys / physical-css only): a comment on the
@@ -1168,6 +1171,16 @@ export function findAllInlineTypeBlocks(source) {
   return blocks;
 }
 
+export function findJsonImportsWithoutAttribute(source) {
+  const stripped = stripJsComments(source);
+  const found = [];
+  for (const match of stripped.matchAll(/\bimport\s*\(\s*(['"`])[^'"`]+\.json\1\s*\)/gu)) found.push(lineOf(source, match.index));
+  for (const match of stripped.matchAll(/\b(?:import|export)\b[^;'"`]*?\bfrom\s*(['"])[^'"]+\.json\1(?!\s*with\b)/gu))
+    found.push(lineOf(source, match.index));
+  for (const match of stripped.matchAll(/\bimport\s*(['"])[^'"]+\.json\1(?!\s*with\b)/gu)) found.push(lineOf(source, match.index));
+  return found;
+}
+
 export function collectSourcePolicyFindings({
   file,
   source,
@@ -1198,6 +1211,9 @@ export function collectSourcePolicyFindings({
   }
 
   const stripped = stripJsComments(source);
+  for (const line of findJsonImportsWithoutAttribute(source)) {
+    findings.push(`${rel(file)}:${line} [json-import-attribute] add \`with { type: 'json' }\` to the JSON import`);
+  }
   for (const { line, kind } of findAllInlineTypeBlocks(source)) {
     findings.push(`${rel(file)}:${line} [type-only-import-form] use ${kind} type for an all-type block`);
   }

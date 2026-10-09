@@ -177,6 +177,10 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.setLiveSelected(next, false);
   }
 
+  /** Tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders for this
+   * option (and to a multiple-mode tag). It never changes the accessible name. */
+  @property() override title = '';
+
   /** Optional section header this option belongs under. */
   @property() group = '';
 
@@ -406,6 +410,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       changed.has('value') ||
       changed.has('disabled') ||
       changed.has('group') ||
+      changed.has('title') ||
       changed.has('searchText') ||
       changed.has('sub') ||
       changed.has('dotColor') ||

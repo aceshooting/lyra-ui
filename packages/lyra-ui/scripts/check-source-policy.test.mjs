@@ -15,6 +15,7 @@ import {
   findUnboundAnnouncementSinks,
   findImplicitShadowLiveComponents,
   findAllInlineTypeBlocks,
+  findJsonImportsWithoutAttribute,
   findShadowLiveRegionMarkup,
   isSafeIntlLocaleExpression,
 } from './check-source-policy.mjs';
@@ -439,4 +440,15 @@ test('colocated coverage includes behavior splits without borrowing another comp
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('JSON module imports must carry the json import attribute', () => {
+  const source = [
+    "import('pkg/a/data.json');",
+    "import('pkg/b/data.json', { with: { type: 'json' } });",
+    "import data from './c.json';",
+    "import ok from './d.json' with { type: 'json' };",
+    "// import('pkg/e.json');",
+  ].join('\n');
+  assert.deepEqual(findJsonImportsWithoutAttribute(source), [1, 3]);
 });
